@@ -120,8 +120,8 @@ namespace Akka.Persistence.Sqlite.Snapshot
                 manifestColumnName: "manifest",
                 timestampColumnName: "created_at",
                 serializerIdColumnName: "serializer_id",
-                timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer"),
+                timeout: config.GetTimeSpan("connection-timeout", null),
+                defaultSerializer: config.GetString("serializer", null),
                 useSequentialAccess: config.GetBoolean("use-sequential-access")),
                 Context.System.Serialization);
         }

@@ -98,7 +98,7 @@ namespace Akka.Cluster.Routing
 
             return new ClusterRouterGroupSettings(
                 GetMaxTotalNrOfInstances(config),
-                ImmutableHashSet.Create(config.GetStringList("routees.paths", new List<string>()).ToArray()),
+                ImmutableHashSet.Create(config.GetStringList("routees.paths", new string[] { }).ToArray()),
                 config.GetBoolean("cluster.allow-local-routees"),
                 UseRoleOption(config.GetString("cluster.use-role", null)));
         }

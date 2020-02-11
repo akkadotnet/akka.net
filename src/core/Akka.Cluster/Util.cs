@@ -109,7 +109,7 @@ namespace Akka.Cluster
         public static TimeSpan? GetTimeSpanWithOffSwitch(this Config @this, string key)
         {
             TimeSpan? ret = null;
-            if (@this.GetString(key).ToLower() != "off") ret = @this.GetTimeSpan(key);
+            if (@this.GetString(key, null).ToLower() != "off") ret = @this.GetTimeSpan(key, null);
             return ret;
         }
 

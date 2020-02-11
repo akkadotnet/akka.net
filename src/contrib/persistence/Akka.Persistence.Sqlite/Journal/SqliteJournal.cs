@@ -31,8 +31,8 @@ namespace Akka.Persistence.Sqlite.Journal
             var config = journalConfig.WithFallback(Extension.DefaultJournalConfig);
             QueryExecutor = new SqliteQueryExecutor(new QueryConfiguration(
                 schemaName: null,
-                journalEventsTableName: config.GetString("table-name"),
-                metaTableName: config.GetString("metadata-table-name"),
+                journalEventsTableName: config.GetString("table-name", null),
+                metaTableName: config.GetString("metadata-table-name", null),
                 persistenceIdColumnName: "persistence_id",
                 sequenceNrColumnName: "sequence_nr",
                 payloadColumnName: "payload",
@@ -42,11 +42,11 @@ namespace Akka.Persistence.Sqlite.Journal
                 tagsColumnName: "tags",
                 orderingColumnName: "ordering",
                 serializerIdColumnName: "serializer_id",
-                timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer"),
+                timeout: config.GetTimeSpan("connection-timeout", null),
+                defaultSerializer: config.GetString("serializer", null),
                 useSequentialAccess: config.GetBoolean("use-sequential-access")), 
                     Context.System.Serialization, 
-                    GetTimestampProvider(config.GetString("timestamp-provider")));
+                    GetTimestampProvider(config.GetString("timestamp-provider", null)));
         }
 
         /// <summary>

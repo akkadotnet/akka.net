@@ -255,7 +255,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
-            var connectionString = config.GetString("connection-string");
+            var connectionString = config.GetString("connection-string", null);
 #if CONFIGURATION
             if (string.IsNullOrWhiteSpace(connectionString))
             {
@@ -291,7 +291,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
-            DefaultSerializer = config.GetString("serializer");
+            DefaultSerializer = config.GetString("serializer", null);
         }
 
         /// <summary>

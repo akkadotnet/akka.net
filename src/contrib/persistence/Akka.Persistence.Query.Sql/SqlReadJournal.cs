@@ -40,9 +40,9 @@ namespace Akka.Persistence.Query.Sql
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refreshInterval = config.GetTimeSpan("refresh-interval");
-            _writeJournalPluginId = config.GetString("write-plugin");
-            _maxBufferSize = config.GetInt("max-buffer-size");
+            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
+            _writeJournalPluginId = config.GetString("write-plugin", null);
+            _maxBufferSize = config.GetInt("max-buffer-size", 0);
         }
 
         /// <summary>

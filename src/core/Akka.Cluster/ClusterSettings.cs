@@ -39,36 +39,36 @@ namespace Akka.Cluster
             LogInfo = clusterConfig.GetBoolean("log-info");
             _failureDetectorConfig = clusterConfig.GetConfig("failure-detector");
             FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class", null);
-            HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval");
-            HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after");
+            HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
+            HeartbeatExpectedResponseAfter = _failureDetectorConfig.GetTimeSpan("expected-response-after", null);
             MonitoredByNrOfMembers = _failureDetectorConfig.GetInt("monitored-by-nr-of-members", 0);
 
-            SeedNodes = clusterConfig.GetStringList("seed-nodes", new List<string>()).Select(Address.Parse).ToImmutableList();
-            SeedNodeTimeout = clusterConfig.GetTimeSpan("seed-node-timeout");
+            SeedNodes = clusterConfig.GetStringList("seed-nodes", new string[] { }).Select(Address.Parse).ToImmutableList();
+            SeedNodeTimeout = clusterConfig.GetTimeSpan("seed-node-timeout", null);
             RetryUnsuccessfulJoinAfter = clusterConfig.GetTimeSpanWithOffSwitch("retry-unsuccessful-join-after");
             ShutdownAfterUnsuccessfulJoinSeedNodes = clusterConfig.GetTimeSpanWithOffSwitch("shutdown-after-unsuccessful-join-seed-nodes");
-            PeriodicTasksInitialDelay = clusterConfig.GetTimeSpan("periodic-tasks-initial-delay");
-            GossipInterval = clusterConfig.GetTimeSpan("gossip-interval");
-            GossipTimeToLive = clusterConfig.GetTimeSpan("gossip-time-to-live");
-            LeaderActionsInterval = clusterConfig.GetTimeSpan("leader-actions-interval");
-            UnreachableNodesReaperInterval = clusterConfig.GetTimeSpan("unreachable-nodes-reaper-interval");
+            PeriodicTasksInitialDelay = clusterConfig.GetTimeSpan("periodic-tasks-initial-delay", null);
+            GossipInterval = clusterConfig.GetTimeSpan("gossip-interval", null);
+            GossipTimeToLive = clusterConfig.GetTimeSpan("gossip-time-to-live", null);
+            LeaderActionsInterval = clusterConfig.GetTimeSpan("leader-actions-interval", null);
+            UnreachableNodesReaperInterval = clusterConfig.GetTimeSpan("unreachable-nodes-reaper-interval", null);
             PublishStatsInterval = clusterConfig.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
             var key = "down-removal-margin";
             DownRemovalMargin = clusterConfig.GetString(key, null).ToLowerInvariant().Equals("off") 
                 ? TimeSpan.Zero
-                : clusterConfig.GetTimeSpan("down-removal-margin");
+                : clusterConfig.GetTimeSpan("down-removal-margin", null);
 
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
-            Roles = clusterConfig.GetStringList("roles", new List<string>()).ToImmutableHashSet();
+            Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
             _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
             if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
             GossipDifferentViewProbability = clusterConfig.GetDouble("gossip-different-view-probability", 0);
             ReduceGossipDifferentViewProbability = clusterConfig.GetInt("reduce-gossip-different-view-probability", 0);
-            SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration");
+            SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);
             SchedulerTicksPerWheel = clusterConfig.GetInt("scheduler.ticks-per-wheel", 0);
 
             MinNrOfMembersOfRole = clusterConfig.GetObject("role")

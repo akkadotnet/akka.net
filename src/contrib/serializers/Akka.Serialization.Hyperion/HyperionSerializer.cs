@@ -177,7 +177,7 @@ namespace Akka.Serialization
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.serializers.hyperion");
 
-            var typeName = config.GetString("known-types-provider");
+            var typeName = config.GetString("known-types-provider", null);
             var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
 
             return new HyperionSerializerSettings(
