@@ -59,7 +59,7 @@ namespace Akka.Serialization
 
         private static IEnumerable<Type> GetConverterTypes(Config config)
         {
-            var converterNames = config.GetStringList("converters");
+            var converterNames = config.GetStringList("converters", new string[] { });
 
             if (converterNames != null)
                 foreach (var converterName in converterNames)

@@ -347,13 +347,13 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public ConsistentHashingPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
                   usePoolDispatcher: config.HasPath("pool-dispatcher"))
         {
-            VirtualNodesFactor = config.GetInt("virtual-nodes-factor");
+            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
         }
 
         /// <summary>
@@ -620,7 +620,7 @@ namespace Akka.Routing
         /// </note>
         /// </param>
         public ConsistentHashingGroup(Config config)
-            : this(config.GetStringList("routees.paths"))
+            : this(config.GetStringList("routees.paths", new string[] { }))
         {
             VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
         }

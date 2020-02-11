@@ -61,7 +61,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public BroadcastPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
@@ -250,7 +250,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration to use to lookup paths used by the group router.</param>
         public BroadcastGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
+                  config.GetStringList("routees.paths", new string[] { }),
                   Dispatchers.DefaultDispatcherId)
         {
         }
