@@ -130,7 +130,7 @@ namespace Akka.DistributedData
         public IImmutableSet<string> DurableKeys { get; }
 
         /// <summary>
-        /// 
+        /// How long the tombstones of a removed node are kept on their CRDTs.
         /// </summary>
         public TimeSpan PruningMarkerTimeToLive { get; }
 

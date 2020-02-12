@@ -363,6 +363,11 @@ namespace Akka.Remote.TestKit
                       @"akka {
                         loglevel = ""WARNING""
                         stdout-loglevel = ""WARNING""
+                        coordinated-shutdown.terminate-actor-system = off
+                        coordinated-shutdown.run-by-actor-system-terminate = off
+                        coordinated-shutdown.run-by-clr-shutdown-hook = off
+                        log-dead-letters = off 
+                        log-dead-letters-during-shutdown = on
                         actor {
                           default-dispatcher {
                             executor = ""fork-join-executor""
