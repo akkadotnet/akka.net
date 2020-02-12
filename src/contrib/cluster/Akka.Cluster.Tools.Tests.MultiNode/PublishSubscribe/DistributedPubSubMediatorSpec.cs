@@ -36,7 +36,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = cluster
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.actor.serialize-messages = off
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
@@ -142,32 +143,16 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         public class TestChatUser : ReceiveActor
         {
-            private bool RegisterToMediator { get; }
-            private IActorRef Mediator { get; }
-
-            public TestChatUser(bool registerToMediator, IActorRef testActor)
+            public TestChatUser(IActorRef mediator, IActorRef testActorRef)
             {
-                RegisterToMediator = registerToMediator;
-                Mediator = DistributedPubSub.Get(Context.System).Mediator;
-                
-                Receive<Whisper>(w => Mediator.Tell(new Send(w.Path, w.Message, true)));
-                Receive<Talk>(t => Mediator.Tell(new SendToAll(t.Path, t.Message)));
-                Receive<TalkToOthers>(t => Mediator.Tell(new SendToAll(t.Path, t.Message, true)));
-                Receive<Shout>(s => Mediator.Tell(new Publish(s.Topic, s.Message)));
-                Receive<ShoutToGroup>(s => Mediator.Tell(new Publish(s.Topic, s.Message, true)));
-                Receive<JoinGroup>(j => Mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
-                Receive<ExitGroup>(j => Mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
-
-                ReceiveAny(msg => testActor.Tell(msg));
-            }
-
-            public override void AroundPreStart()
-            {
-                if (RegisterToMediator)
-                {
-                    Mediator.Tell(new Put(Self));
-                }
-                base.AroundPreStart();
+                Receive<Whisper>(w => mediator.Tell(new Send(w.Path, w.Message, true)));
+                Receive<Talk>(t => mediator.Tell(new SendToAll(t.Path, t.Message)));
+                Receive<TalkToOthers>(t => mediator.Tell(new SendToAll(t.Path, t.Message, true)));
+                Receive<Shout>(s => mediator.Tell(new Publish(s.Topic, s.Message)));
+                Receive<ShoutToGroup>(s => mediator.Tell(new Publish(s.Topic, s.Message, true)));
+                Receive<JoinGroup>(j => mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
+                Receive<ExitGroup>(j => mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
+                ReceiveAny(msg => testActorRef.Tell(msg));
             }
         }
 
@@ -253,11 +238,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
 
-        private readonly TestProbe _countProbe;
-
         public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {
-            _countProbe = CreateTestProbe();
         }
 
         protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config, typeof(DistributedPubSubMediatorSpec))
@@ -269,21 +251,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         public IActorRef Mediator { get { return DistributedPubSub.Get(Sys).Mediator; } }
 
-        private IActorRef CreateChatUser(string name, bool registerToMediator=true)
+        private IActorRef CreateChatUser(string name)
         {
-            var actorRef = Sys.ActorOf(Props.Create(() => new TestChatUser(registerToMediator, TestActor)), name);
-            _chatUsers.TryAdd(name, actorRef);
-            return actorRef;
-        }
-
-        private IActorRef CreateRemoteChatUser(string name, RoleName remoteRole, bool registerToMediator=true)
-        {
-            var address = Node(remoteRole).Address;
-            var actorRef = Sys.ActorOf(
-                Props.Create(() => new TestChatUser(registerToMediator, TestActor)).
-                    WithDeploy(Deploy.None.WithScope(new RemoteScope(address))), name);
-            _chatUsers.TryAdd(name, actorRef);
-            return actorRef;
+            var a = Sys.ActorOf(Props.Create(() => new TestChatUser(Mediator, TestActor)), name);
+            _chatUsers.TryAdd(name, a);
+            return a;
         }
 
         private IActorRef ChatUser(string name)
@@ -310,8 +282,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             AwaitAssert(() =>
             {
-                Mediator.Tell(Count.Instance, _countProbe);
-                _countProbe.ExpectMsg<int>(TimeSpan.FromMilliseconds(50)).Should().Be(expected);
+                Mediator.Tell(Count.Instance);
+                Assert.Equal(expected, ExpectMsg<int>());
             });
         }
 
@@ -319,8 +291,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             AwaitAssert(() =>
             {
-                Mediator.Tell(new CountSubscribers(topic), _countProbe);
-                _countProbe.ExpectMsg<int>(TimeSpan.FromMilliseconds(50)).Should().Be(expected);
+                Mediator.Tell(new CountSubscribers(topic));
+                Assert.Equal(expected, ExpectMsg<int>());
             });
         }
 
@@ -341,7 +313,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             DistributedPubSubMediator_must_SendAll_to_all_other_nodes();
             DistributedPubSubMediator_must_send_one_message_to_each_group();
             DistributedPubSubMediator_must_transfer_delta_correctly();
-            DistributedPubSubMediator_must_publish_remote();
             DistributedPubSubMediator_must_remove_entries_when_node_is_removed();
             DistributedPubSubMediator_must_receive_proper_UnsubscribeAck_message();
             DistributedPubSubMediator_must_get_topics_after_simple_publish();
@@ -365,8 +336,10 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u1 = CreateChatUser("u1");
+                    Mediator.Tell(new Put(u1));
 
                     var u2 = CreateChatUser("u2");
+                    Mediator.Tell(new Put(u2));
 
                     AwaitCount(2);
 
@@ -379,6 +352,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u3 = CreateChatUser("u3");
+                    Mediator.Tell(new Put(u3));
                 }, _second);
 
                 RunOn(() =>
@@ -390,6 +364,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u4 = CreateChatUser("u4");
+                    Mediator.Tell(new Put(u4));
                 }, _second);
 
                 RunOn(() =>
@@ -421,6 +396,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u5 = CreateChatUser("u5");
+                    Mediator.Tell(new Put(u5));
                 }, _third);
 
                 AwaitCount(5);
@@ -447,6 +423,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u6 = CreateChatUser("u6");
+                    Mediator.Tell(new Put(u6));
                 }, _first);
                 AwaitCount(6);
                 EnterBarrier("6-registered");
@@ -482,6 +459,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u7 = CreateChatUser("u7");
+                    Mediator.Tell(new Put(u7));
                 }, _first, _second);
                 AwaitCount(6);
                 EnterBarrier("7-registered");
@@ -512,17 +490,17 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 RunOn(() =>
                 {
-                    var s8 = new Subscribe("topic1", CreateChatUser("u8", false));
+                    var s8 = new Subscribe("topic1", CreateChatUser("u8"));
                     Mediator.Tell(s8);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s8));
-                    var s9 = new Subscribe("topic1", CreateChatUser("u9", false));
+                    var s9 = new Subscribe("topic1", CreateChatUser("u9"));
                     Mediator.Tell(s9);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s9));
                 }, _first);
 
                 RunOn(() =>
                 {
-                    var s10 = new Subscribe("topic1", CreateChatUser("u10", false));
+                    var s10 = new Subscribe("topic1", CreateChatUser("u10"));
                     Mediator.Tell(s10);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s10));
                 }, _second);
@@ -615,6 +593,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 RunOn(() =>
                 {
                     var u11 = CreateChatUser("u11");
+                    Mediator.Tell(new Put(u11));
                 }, _first, _second, _third);
                 AwaitCount(15);
                 EnterBarrier("11-registered");
@@ -644,7 +623,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 RunOn(() =>
                 {
-                    var u12 = CreateChatUser("u12", false);
+                    var u12 = CreateChatUser("u12");
                     u12.Tell(new JoinGroup("topic2", "group1"));
                     var message = ExpectMsg<SubscribeAck>();
                     message.Subscribe.Topic.Should().Be("topic2");
@@ -654,14 +633,14 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                 RunOn(() =>
                 {
-                    var u12 = CreateChatUser("u12", false);
+                    var u12 = CreateChatUser("u12");
                     u12.Tell(new JoinGroup("topic2", "group2"));
                     var message1 = ExpectMsg<SubscribeAck>();
                     message1.Subscribe.Topic.ShouldBe("topic2");
                     message1.Subscribe.Group.ShouldBe("group2");
                     message1.Subscribe.Ref.ShouldBe(u12);
 
-                    var u13 = CreateChatUser("u13", false);
+                    var u13 = CreateChatUser("u13");
                     u13.Tell(new JoinGroup("topic2", "group2"));
                     var message2 = ExpectMsg<SubscribeAck>();
                     message2.Subscribe.Topic.ShouldBe("topic2");
@@ -736,7 +715,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 for (int i = 1; i <= many; i++)
                 {
-                    CreateChatUser($@"u{1000 + i}");
+                    Mediator.Tell(new Put(CreateChatUser("u" + (1000 + i))));
                 }
 
                 Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>(), isReplyToStatus: false));
@@ -764,8 +743,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                Mediator.Tell(Count.Instance , _countProbe);
-                var countBefore = _countProbe.ExpectMsg<int>();
+                Mediator.Tell(Count.Instance);
+                var countBefore = ExpectMsg<int>();
 
                 RunOn(() =>
                 {
@@ -773,10 +752,10 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _first);
                 EnterBarrier("third-shutdown");
 
-                // third had 3 entries (u5, u11, xxx), and those should be removed everywhere
+                // third had 2 entries u5 and u11, and those should be removed everywhere
                 RunOn(() =>
                 {
-                    AwaitCount(countBefore - 3);
+                    AwaitCount(countBefore - 2);
                 }, _first, _second);
                 EnterBarrier("after-14");
             });
@@ -788,7 +767,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 RunOn(() =>
                 {
-                    var user = CreateChatUser("u111", false);
+                    var user = CreateChatUser("u111");
                     var topic = "sample-topic-14";
                     var s1 = new Subscribe(topic, user);
                     Mediator.Tell(s1);
@@ -807,15 +786,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             {
                 RunOn(() =>
                 {
-                    var s1 = new Subscribe("topic_a1", CreateChatUser("u14", false));
+                    var s1 = new Subscribe("topic_a1", CreateChatUser("u14"));
                     Mediator.Tell(s1);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s1));
 
-                    var s2 = new Subscribe("topic_a1", CreateChatUser("u15", false));
+                    var s2 = new Subscribe("topic_a1", CreateChatUser("u15"));
                     Mediator.Tell(s2);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s2));
 
-                    var s3 = new Subscribe("topic_a2", CreateChatUser("u16", false));
+                    var s3 = new Subscribe("topic_a2", CreateChatUser("u16"));
                     Mediator.Tell(s3);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s3));
 
@@ -823,7 +802,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
                 RunOn(() =>
                 {
-                    var s3 = new Subscribe("topic_a1", CreateChatUser("u17", false));
+                    var s3 = new Subscribe("topic_a1", CreateChatUser("u17"));
                     Mediator.Tell(s3);
                     ExpectMsg<SubscribeAck>(x => x.Subscribe.Equals(s3));
 
@@ -869,44 +848,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _first);
                 EnterBarrier("after-15");
             });
-        }
-
-        public void DistributedPubSubMediator_must_publish_remote()
-        {
-            const string actorName = "xxx";
-            const string message = "hi Dude !";
-
-            Within(TimeSpan.FromSeconds(20), () =>
-            {
-                Mediator.Tell(Count.Instance, _countProbe);
-                var countBefore = _countProbe.ExpectMsg<int>();
-
-                EnterBarrier("DistributedPubSubMediator_must_publish_remote-0");
-
-                RunOn(() =>
-                {
-                    CreateChatUser(actorName);
-                }, _second);
-
-                RunOn(() =>
-                {
-                    CreateRemoteChatUser(actorName, _third);
-                    AwaitCount(countBefore + 2);
-                    ChatUser("u1").Tell(new Talk($@"/user/{actorName}", message));
-                }, _first);
-
-                AwaitCount(countBefore + 2);
-
-                EnterBarrier("DistributedPubSubMediator_must_publish_remote-1");
-
-                RunOn(() =>
-                {
-                    ExpectMsg(message);
-                    LastSender.Path.Name.Should().Be(actorName);
-                }, _second, _third);
-            });
-
-            EnterBarrier("DistributedPubSubMediator_must_publish_remote-2");
         }
     }
 }
