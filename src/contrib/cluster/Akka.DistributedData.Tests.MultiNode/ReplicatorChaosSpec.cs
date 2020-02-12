@@ -17,6 +17,34 @@ using Akka.TestKit;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
+
+    public class ReplicatorChaosSpecConfig : MultiNodeConfig
+    {
+        public RoleName First { get; }
+        public RoleName Second { get; }
+        public RoleName Third { get; }
+        public RoleName Fourth { get; }
+        public RoleName Fifth { get; }
+
+        public ReplicatorChaosSpecConfig()
+        {
+            First = Role("first");
+            Second = Role("second");
+            Third = Role("third");
+            Fourth = Role("fourth");
+            Fifth = Role("fifth");
+
+            CommonConfig = ConfigurationFactory.ParseString(@"
+                akka.loglevel = INFO
+                akka.actor.provider = cluster
+                akka.cluster.roles = [""backend""]
+                akka.log-dead-letters-during-shutdown = off")
+                .WithFallback(DistributedData.DefaultConfig());
+
+            TestTransport = true;
+        }
+    }
+
     public class ReplicatorChaosSpec : MultiNodeClusterSpec
     {
         public static readonly RoleName First = new RoleName("first");
@@ -129,10 +157,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             EnterBarrier("initial-updates-done");
 
-            AssertValue(KeyA, 25);
-            AssertValue(KeyB, 15);
-            AssertValue(KeyC, 25);
-            AssertValue(KeyD, 40);
+            AssertValue(KeyA, 25U);
+            AssertValue(KeyB, 15U);
+            AssertValue(KeyC, 25U);
+            AssertValue(KeyD, 40U);
             AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             AssertDeleted(KeyX);
@@ -182,18 +210,18 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                AssertValue(KeyA, 26);
-                AssertValue(KeyB, 15);
-                AssertValue(KeyD, 41);
+                AssertValue(KeyA, 26U);
+                AssertValue(KeyB, 15U);
+                AssertValue(KeyD, 41U);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3"}));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             }, side1);
 
             RunOn(() =>
             {
-                AssertValue(KeyA, 27);
-                AssertValue(KeyB, 15);
-                AssertValue(KeyD, 41);
+                AssertValue(KeyA, 27U);
+                AssertValue(KeyB, 15U);
+                AssertValue(KeyD, 41U);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3", "e4" }));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e3" }));
             }, side2);
@@ -218,10 +246,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             EnterBarrier("split-repaired");
 
-            AssertValue(KeyA, 28);
-            AssertValue(KeyB, 15);
-            AssertValue(KeyC, 25);
-            AssertValue(KeyD, 41);
+            AssertValue(KeyA, 28U);
+            AssertValue(KeyB, 15U);
+            AssertValue(KeyC, 25U);
+            AssertValue(KeyD, 41U);
             AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3", "e4" }));
             AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e3" }));
             AssertDeleted(KeyX);
@@ -264,33 +292,6 @@ namespace Akka.DistributedData.Tests.MultiNode
                     ExpectMsg(new DataDeleted(key));
                 });
             });
-        }
-    }
-    
-    public class ReplicatorChaosSpecConfig : MultiNodeConfig
-    {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
-        public RoleName Fourth { get; }
-        public RoleName Fifth { get; }
-
-        public ReplicatorChaosSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-            Fourth = Role("fourth");
-            Fifth = Role("fifth");
-            
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.cluster.roles = [""backend""]
-                akka.log-dead-letters-during-shutdown = off")
-                .WithFallback(DistributedData.DefaultConfig());
-
-            TestTransport = true;
         }
     }
 }
