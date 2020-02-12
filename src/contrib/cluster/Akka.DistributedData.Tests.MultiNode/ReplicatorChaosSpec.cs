@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -159,7 +160,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("initial-updates-done");
 
             AssertValue(KeyA, 25UL);
-            AssertValue(KeyB, 15.0);
+            AssertValue(KeyB, new BigInteger(15.0));
             AssertValue(KeyC, 25UL);
             AssertValue(KeyD, 40UL);
             AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
@@ -212,7 +213,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 AssertValue(KeyA, 26UL);
-                AssertValue(KeyB, 15.0);
+                AssertValue(KeyB, new BigInteger(15.0));
                 AssertValue(KeyD, 41UL);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3"}));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
@@ -221,7 +222,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             RunOn(() =>
             {
                 AssertValue(KeyA, 27UL);
-                AssertValue(KeyB, 15.0);
+                AssertValue(KeyB, new BigInteger(15.0));
                 AssertValue(KeyD, 41UL);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3", "e4" }));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e3" }));
@@ -248,7 +249,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("split-repaired");
 
             AssertValue(KeyA, 28UL);
-            AssertValue(KeyB, 15.0);
+            AssertValue(KeyB, new BigInteger(15.0));
             AssertValue(KeyC, 25UL);
             AssertValue(KeyD, 41UL);
             AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3", "e4" }));
