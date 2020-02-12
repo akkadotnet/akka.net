@@ -253,8 +253,11 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
 
+        private readonly TestProbe _countProbe;
+
         public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {
+            _countProbe = CreateTestProbe();
         }
 
         protected DistributedPubSubMediatorSpec(DistributedPubSubMediatorSpecConfig config) : base(config, typeof(DistributedPubSubMediatorSpec))
@@ -307,8 +310,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             AwaitAssert(() =>
             {
-                Mediator.Tell(Count.Instance);
-                ExpectMsg<int>(TimeSpan.FromMilliseconds(50)).Should().Be(expected);
+                Mediator.Tell(Count.Instance, _countProbe);
+                _countProbe.ExpectMsg<int>(TimeSpan.FromMilliseconds(50)).Should().Be(expected);
             });
         }
 
@@ -316,8 +319,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             AwaitAssert(() =>
             {
-                Mediator.Tell(new CountSubscribers(topic));
-                Assert.Equal(expected, ExpectMsg<int>());
+                Mediator.Tell(new CountSubscribers(topic), _countProbe);
+                _countProbe.ExpectMsg<int>(TimeSpan.FromMilliseconds(50)).Should().Be(expected);
             });
         }
 
@@ -893,6 +896,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 }, _first);
 
                 AwaitCount(countBefore + 2);
+
                 EnterBarrier("DistributedPubSubMediator_must_publish_remote-1");
 
                 RunOn(() =>
