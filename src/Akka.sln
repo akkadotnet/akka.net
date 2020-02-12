@@ -213,10 +213,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Metrics.Tests"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Cluster.Metrics.Tests.MultiNode", "contrib\cluster\Akka.Cluster.Metrics.Tests.MultiNode\Akka.Cluster.Metrics.Tests.MultiNode.csproj", "{FC5216C2-3C98-4691-8E72-205EBF9594D0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hocon", "..\..\HOCON\src\HOCON\Hocon.csproj", "{92A5FD94-B16F-45B8-8E1E-92D782B01E34}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hocon.Configuration", "..\..\HOCON\src\Hocon.Configuration\Hocon.Configuration.csproj", "{B25A184D-99CC-4687-9FA4-B912DC94DF64}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -952,30 +948,6 @@ Global
 		{FC5216C2-3C98-4691-8E72-205EBF9594D0}.Release|x64.Build.0 = Release|Any CPU
 		{FC5216C2-3C98-4691-8E72-205EBF9594D0}.Release|x86.ActiveCfg = Release|Any CPU
 		{FC5216C2-3C98-4691-8E72-205EBF9594D0}.Release|x86.Build.0 = Release|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Debug|x64.Build.0 = Debug|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Debug|x86.Build.0 = Debug|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Release|Any CPU.Build.0 = Release|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Release|x64.ActiveCfg = Release|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Release|x64.Build.0 = Release|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Release|x86.ActiveCfg = Release|Any CPU
-		{92A5FD94-B16F-45B8-8E1E-92D782B01E34}.Release|x86.Build.0 = Release|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Debug|x64.Build.0 = Debug|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Debug|x86.Build.0 = Debug|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Release|x64.ActiveCfg = Release|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Release|x64.Build.0 = Release|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Release|x86.ActiveCfg = Release|Any CPU
-		{B25A184D-99CC-4687-9FA4-B912DC94DF64}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
