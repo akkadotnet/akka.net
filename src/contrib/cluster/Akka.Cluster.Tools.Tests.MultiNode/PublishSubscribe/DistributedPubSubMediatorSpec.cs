@@ -36,8 +36,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.actor.serialize-messages = off
+                akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
@@ -146,10 +145,10 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             private bool RegisterToMediator { get; }
             private IActorRef Mediator { get; }
 
-            public TestChatUser(bool registerToMediator)
+            public TestChatUser(bool registerToMediator, IActorRef mediator, IActorRef testActor)
             {
                 RegisterToMediator = registerToMediator;
-                Mediator = DistributedPubSub.Get(Context.System).Mediator;
+                Mediator = mediator;
                 
                 Receive<Whisper>(w => Mediator.Tell(new Send(w.Path, w.Message, true)));
                 Receive<Talk>(t => Mediator.Tell(new SendToAll(t.Path, t.Message)));
@@ -159,7 +158,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 Receive<JoinGroup>(j => Mediator.Tell(new Subscribe(j.Topic, Self, j.Group)));
                 Receive<ExitGroup>(j => Mediator.Tell(new Unsubscribe(j.Topic, Self, j.Group)));
 
-                var testActor = DistributedPubSubMediatorSpec.Current.TestActor;
                 ReceiveAny(msg => testActor.Tell(msg));
             }
 
@@ -255,8 +253,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private readonly ConcurrentDictionary<string, IActorRef> _chatUsers = new ConcurrentDictionary<string, IActorRef>();
 
-        public static DistributedPubSubMediatorSpec Current = null;
-
         public DistributedPubSubMediatorSpec() : this(new DistributedPubSubMediatorSpecConfig())
         {
         }
@@ -266,15 +262,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             _first = config.First;
             _second = config.Second;
             _third = config.Third;
-
-            Current = this;
         }
 
         public IActorRef Mediator { get { return DistributedPubSub.Get(Sys).Mediator; } }
 
         private IActorRef CreateChatUser(string name, bool registerToMediator=true)
         {
-            var actorRef = Sys.ActorOf(Props.Create(() => new TestChatUser(registerToMediator)), name);
+            var actorRef = Sys.ActorOf(Props.Create(() => new TestChatUser(registerToMediator, Mediator, TestActor)), name);
             _chatUsers.TryAdd(name, actorRef);
             return actorRef;
         }
@@ -283,7 +277,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             var address = Node(remoteRole).Address;
             var actorRef = Sys.ActorOf(
-                Props.Create<TestChatUser>(registerToMediator).
+                Props.Create(() => new TestChatUser(registerToMediator, Mediator, TestActor)).
                     WithDeploy(Deploy.None.WithScope(new RemoteScope(address))), name);
             _chatUsers.TryAdd(name, actorRef);
             return actorRef;
@@ -309,18 +303,12 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             var m = DistributedPubSub.Get(Sys).Mediator;
         }
 
-        private int MediatorCount {
-            get {
-                Mediator.Tell(Count.Instance);
-                return ExpectMsg<int>();
-            }
-        }
-
         private void AwaitCount(int expected)
         {
             AwaitAssert(() =>
             {
-                Assert.Equal(expected, MediatorCount);
+                Mediator.Tell(Count.Instance);
+                ExpectMsg<int>(TimeSpan.FromMilliseconds(50)).Should().Be(expected);
             });
         }
 
@@ -773,7 +761,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                var countBefore = MediatorCount;
+                Mediator.Tell(Count.Instance);
+                var countBefore = ExpectMsg<int>();
 
                 RunOn(() =>
                 {
@@ -886,7 +875,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                int countBefore = MediatorCount;
+                Mediator.Tell(Count.Instance);
+                var countBefore = ExpectMsg<int>();
 
                 EnterBarrier("DistributedPubSubMediator_must_publish_remote-0");
 
