@@ -145,10 +145,10 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             private bool RegisterToMediator { get; }
             private IActorRef Mediator { get; }
 
-            public TestChatUser(bool registerToMediator, IActorRef mediator, IActorRef testActor)
+            public TestChatUser(bool registerToMediator, IActorRef testActor)
             {
                 RegisterToMediator = registerToMediator;
-                Mediator = mediator;
+                Mediator = DistributedPubSub.Get(Context.System).Mediator;
                 
                 Receive<Whisper>(w => Mediator.Tell(new Send(w.Path, w.Message, true)));
                 Receive<Talk>(t => Mediator.Tell(new SendToAll(t.Path, t.Message)));
@@ -268,7 +268,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
         private IActorRef CreateChatUser(string name, bool registerToMediator=true)
         {
-            var actorRef = Sys.ActorOf(Props.Create(() => new TestChatUser(registerToMediator, Mediator, TestActor)), name);
+            var actorRef = Sys.ActorOf(Props.Create(() => new TestChatUser(registerToMediator, TestActor)), name);
             _chatUsers.TryAdd(name, actorRef);
             return actorRef;
         }
@@ -277,7 +277,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             var address = Node(remoteRole).Address;
             var actorRef = Sys.ActorOf(
-                Props.Create(() => new TestChatUser(registerToMediator, Mediator, TestActor)).
+                Props.Create(() => new TestChatUser(registerToMediator, TestActor)).
                     WithDeploy(Deploy.None.WithScope(new RemoteScope(address))), name);
             _chatUsers.TryAdd(name, actorRef);
             return actorRef;
@@ -900,9 +900,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     ExpectMsg(message);
                     LastSender.Path.Name.Should().Be(actorName);
                 }, _second, _third);
-
-                EnterBarrier("DistributedPubSubMediator_must_publish_remote-2");
             });
+
+            EnterBarrier("DistributedPubSubMediator_must_publish_remote-2");
         }
     }
 }
