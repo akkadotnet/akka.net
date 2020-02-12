@@ -214,7 +214,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             {
                 AssertValue(KeyA, 26UL);
                 AssertValue(KeyB, new BigInteger(15.0));
-                AssertValue(KeyD, 41UL);
+                AssertValue(KeyD, 40UL);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3"}));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             }, side1);
