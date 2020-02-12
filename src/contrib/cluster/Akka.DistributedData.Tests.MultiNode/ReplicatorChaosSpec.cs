@@ -36,7 +36,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Fifth = Role("fifth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.cluster.roles = [""backend""]
                 akka.log-dead-letters-during-shutdown = off")
