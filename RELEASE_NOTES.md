@@ -1,3 +1,62 @@
+#### 1.4.0-beta4 January 28 2020 ####
+**Fourth pre-release candidate for Akka.NET 1.4**
+
+Akka.NET v1.4.0-beta4 represents a significant advancement against the v1.4.0 milestone, with numerous changes and fixes. 
+
+**Akka.NET now targets .NET Standard 2.0 going forward** - this first big change in this release is that we've dropped support for .NET Framework 4.5. We will only target .NET Standard 2.0 going forward with the v1.4.0 milestone from this point onward. .NET Standard 2.0 can be consumed by .NET Framework 4.6.1+ and .NET Core 2.0 and higher.
+
+**Introduction to Akka.Cluster.Metrics** - in this release we introduce a brand new Akka.NET NuGet package, Akka.Cluster.Metrics, which is designed to allow users to share data about the relative busyness of each node in their cluster. Akka.Cluster.Metrics can be consumed inside routers, i.e. "route this message to the node with the most available memory," and Akka.Cluster.Metrics also supports the publication of custom metrics types.
+
+If you want to [learn more about how to use Akka.Cluster.Metrics, read the official documentation here](https://getakka.net/articles/clustering/cluster-metrics.html).
+
+**Significant Akka.Remote Performance Improvements** - as part of this release we've introduced some new changes that are enabled by default in the Akka.Remote DotNetty transport: "flush batching" or otherwise known as I/O batching. The idea behind this is to group multiple logical writes into a smaller number of system writes. 
+
+You will want to tune this setting to match the behavior of your specific application, and you can read our [brand new "Akka.Remote Performance Optimization" page](https://getakka.net/articles/remoting/performance.html).
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 27 | 15375 | 5575 | Igor Fedchenko |
+| 26 | 2131 | 2468 | Aaron Stannard |
+| 25 | 34 | 34 | dependabot-preview[bot] |
+| 8 | 765 | 203 | Ismael Hamed |
+| 4 | 75 | 70 | Jonathan Nagy |
+| 3 | 108 | 11 | Andre Loker |
+| 2 | 380 | 43 | Valdis Zobēla |
+| 1 | 62 | 15 | Mathias Feitzinger |
+| 1 | 6 | 1 | cptjazz |
+| 1 | 14 | 0 | Kaiwei Li |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Christoffer Jedbäck |
+
+#### 1.3.16 November 14 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+
+1.3.16 consists of non-breaking bugfixes and additions that have been contributed against the [Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17) thus far.
+
+This patch includes some small fixes, such as:
+
+* [fix: NuGet symbols not published](https://github.com/akkadotnet/akka.net/pull/3966)
+* [Akka.Cluster.Sharding: Consolidated passivation check on settings used in region and shard](https://github.com/akkadotnet/akka.net/pull/3961)
+* [Akka.Cluster.Tools: Singleton - missing state change fix](https://github.com/akkadotnet/akka.net/pull/4003)
+* [Akka.Cluster.Tools: Fixed singleton issue when leaving several nodes](https://github.com/akkadotnet/akka.net/pull/3962)
+
+However, the biggest fix is for .NET Core 3.0 users. When .NET Core 3.0 was introduced, it broke some of the APIs in prior versions of [Hyperion](https://github.com/akkadotnet/Hyperion) which subsequently caused Akka.Cluster.Sharding and Akka.DistributedData users to have problems when attempting to run on .NET Core 3.0. These have been fixed as Akka.NET v1.3.16 is now running using the latest versions of Hyperion, which resolve this issue.
+
+To [see the full set of changes in Akka.NET v1.3.16, click here](https://github.com/akkadotnet/akka.net/pull/4037).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 119 | 6 | Aaron Stannard |
+| 3 | 531 | 126 | Ismael Hamed |
+| 3 | 108 | 11 | Andre Loker |
+| 2 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 6 | 1 | cptjazz |
+| 1 | 1 | 1 | zbynek001 |
+
 #### 1.4.0-beta3 October 30 2019 ####
 **Third pre-release candidate for Akka.NET 1.4**
 This release contains some more significant changes for Akka.NET v1.4.0.

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Akka.Util
@@ -49,6 +50,22 @@ namespace Akka.Util
         /// <returns>The result of the conversion.</returns>
         public static implicit operator Option<T>(T value) => new Option<T>(value);
 
+        /// <summary>
+        /// Gets option value, if any, otherwise returns default value provided
+        /// </summary>
+        public T GetOrElse(T fallbackValue) => HasValue ? Value : fallbackValue;
+
+        /// <summary>
+        /// Applies selector to option value, if value is set
+        /// </summary>
+        public Option<TNew> Select<TNew>(Func<T, TNew> selector)
+        {
+            if (!HasValue)
+                return Option<TNew>.None;
+
+            return selector(Value);
+        }
+
         /// <inheritdoc/>
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
@@ -60,7 +77,7 @@ namespace Akka.Util
                 return false;
             return obj is Option<T> && Equals((Option<T>)obj);
         }
-
+        
         /// <inheritdoc/>
         public override int GetHashCode()
         {
@@ -72,5 +89,15 @@ namespace Akka.Util
 
         /// <inheritdoc/>
         public override string ToString() => HasValue ? $"Some<{Value}>" : "None";
+
+        /// <summary>
+        /// Applies specified action to this option, if there is a value
+        /// </summary>
+        /// <param name="action"></param>
+        public void OnSuccess(Action<T> action)
+        {
+            if (HasValue)
+                action(Value);
+        }
     }
 }

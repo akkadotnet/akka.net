@@ -187,6 +187,9 @@ namespace Akka.Actor.Internal
         {
             try
             {
+                // Force TermInfoDriver to initialize in order to protect us from the issue seen in #2432
+                typeof(Console).GetProperty("BackgroundColor").GetValue(null); // HACK: Only needed for MONO
+
                 RegisterOnTermination(StopScheduler);
                 _provider.Init(this);
                 LoadExtensions();
@@ -493,6 +496,8 @@ namespace Akka.Actor.Internal
         public override Task Terminate()
         {
             Log.Debug("System shutdown initiated");
+            if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null) 
+                Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
             return WhenTerminated;
         }

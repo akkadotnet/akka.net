@@ -165,7 +165,19 @@ namespace Akka.Remote.Tests
            //Non-specified hostnames should default to IPAddress.Any
            Assert.Equal(IPAddress.Any.ToString(), s.Hostname);
            Assert.Equal(IPAddress.Any.ToString(), s.PublicHostname);
-      }
+        }
+
+        [Fact]
+        public void Remoting_should_contain_correct_BatchWriter_settings_in_ReferenceConf()
+        {
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
+
+            s.BatchWriterSettings.EnableBatching.Should().BeTrue();
+            s.BatchWriterSettings.FlushInterval.Should().Be(BatchWriterSettings.DefaultFlushInterval);
+            s.BatchWriterSettings.MaxPendingBytes.Should().Be(BatchWriterSettings.DefaultMaxPendingBytes);
+            s.BatchWriterSettings.MaxPendingWrites.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
+        }
    }
 }
 

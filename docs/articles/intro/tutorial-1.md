@@ -77,7 +77,7 @@ the system:
 
  - `/` the so-called _root guardian_. This is the parent of all actors in the
    system, and the last one to stop when the system itself is terminated.
- - `/user` the _guardian_. **This is the parent actor for all user created
+ - `/user` the _user guardian_. **This is the parent actor for all user created
    actors**. The name `user` should not confuse you, it has nothing to do with
    the logged in user, nor user handling in general. This name really means
    _userspace_ as this is the place where actors that do not access Akka.NET

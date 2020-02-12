@@ -1050,7 +1050,6 @@ namespace Akka.IO
             Settings = settings;
             FileIoDispatcher = system.Dispatchers.Lookup(Settings.FileIODispatcher);
             BufferPool = CreateBufferPool(system, bufferPoolConfig);
-            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(settings.InitialSocketAsyncEventArgs, OnComplete);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new TcpManager(this)).WithDispatcher(Settings.ManagementDispatcher).WithDeploy(Deploy.Local),
                 name: "IO-TCP");
@@ -1074,11 +1073,6 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal ISocketEventArgsPool SocketEventArgsPool { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal MessageDispatcher FileIoDispatcher { get; }
 
         private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
@@ -1097,35 +1091,6 @@ namespace Akka.IO
             {
                 // try to construct via `BufferPool(ExtendedActorSystem)` ctor
                 return (IBufferPool)Activator.CreateInstance(type, system);
-            }
-        }
-
-        private static void OnComplete(object sender, SocketAsyncEventArgs e)
-        {
-            var actorRef = e.UserToken as IActorRef;
-            actorRef?.Tell(ResolveMessage(e));
-        }
-
-        // Disabled pending resolution: https://github.com/akkadotnet/akka.net/issues/3092
-        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Tcp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
-        {
-            switch (e.LastOperation)
-            {
-                case SocketAsyncOperation.Receive:
-                case SocketAsyncOperation.ReceiveFrom:
-                case SocketAsyncOperation.ReceiveMessageFrom:
-                    return Tcp.SocketReceived.Instance;
-                case SocketAsyncOperation.Send:
-                case SocketAsyncOperation.SendTo:
-                case SocketAsyncOperation.SendPackets:
-                    return Tcp.SocketSent.Instance;
-                case SocketAsyncOperation.Accept:
-                    return Tcp.SocketAccepted.Instance;
-                case SocketAsyncOperation.Connect:
-                    return Tcp.SocketConnected.Instance;
-                default:
-                    throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
             }
         }
     }

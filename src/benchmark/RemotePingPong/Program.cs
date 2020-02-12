@@ -81,7 +81,7 @@ namespace RemotePingPong
 
         private static async void Start(uint timesToRun)
         {
-            const long repeat = 10000L;
+            const long repeat = 100000L;
 
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)

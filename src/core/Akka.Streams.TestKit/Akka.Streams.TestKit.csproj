@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Streams.TestKit</AssemblyTitle>
     <Description>Testkit for Reactive stream support for Akka.NET</Description>
-    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);reactive;stream;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
