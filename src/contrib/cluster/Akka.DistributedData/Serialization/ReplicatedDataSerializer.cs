@@ -185,7 +185,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                Vvector = o.VersionVector.ToProto()
+                Vvector = SerializationSupport.VersionVectorToProto(o.VersionVector)
             };
 
             foreach (var e in o.ElementsMap)
@@ -201,13 +201,13 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                Vvector = o.VersionVector.ToProto()
+                Vvector = SerializationSupport.VersionVectorToProto(o.VersionVector)
             };
 
             foreach (var e in o.ElementsMap)
             {
                 proto.LongElements.Add(e.Key);
-                proto.Dots.Add(e.Value.ToProto());
+                proto.Dots.Add(SerializationSupport.VersionVectorToProto(e.Value));
             }
             return proto;
         }
@@ -217,7 +217,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                Vvector = o.VersionVector.ToProto()
+                Vvector = SerializationSupport.VersionVectorToProto(o.VersionVector)
             };
 
             foreach (var e in o.ElementsMap)
@@ -233,7 +233,7 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                Vvector = o.VersionVector.ToProto()
+                Vvector = SerializationSupport.VersionVectorToProto(o.VersionVector)
             };
 
             foreach (var e in o.ElementsMap)
@@ -249,12 +249,12 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.ORSet
             {
-                Vvector = o.VersionVector.ToProto()
+                Vvector = SerializationSupport.VersionVectorToProto(o.VersionVector)
             };
 
             foreach (var e in o.ElementsMap)
             {
-                proto.OtherElements.Add(this.OtherMessageToProto(e.Key));
+                proto.OtherElements.Add(OtherMessageToProto(e.Key));
                 proto.Dots.Add(SerializationSupport.VersionVectorToProto(e.Value));
             }
             return proto;
