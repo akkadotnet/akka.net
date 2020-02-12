@@ -81,7 +81,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             _nodeCount = _nodes.Count;
             _timeout = Dilated(TimeSpan.FromSeconds(3));
             _expectedData = Enumerable.Range(0, _totalCount).ToArray();
-            var nodeindex = _nodes.Zip(Enumerable.Range(0, _nodes.Count - 1), (name, i) => new KeyValuePair<int, RoleName>(i, name))
+            var nodeindex = _nodes.Zip(Enumerable.Range(0, _nodes.Count), (name, i) => new KeyValuePair<int, RoleName>(i, name))
                 .ToImmutableDictionary();
             _data = Enumerable.Range(0, _totalCount).GroupBy(i => nodeindex[i % _nodeCount])
                 .ToImmutableDictionary(x => x.Key, x => (IEnumerable<int>)x.Reverse().ToArray());
