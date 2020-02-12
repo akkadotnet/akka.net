@@ -764,8 +764,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
-                Mediator.Tell(Count.Instance);
-                var countBefore = ExpectMsg<int>();
+                Mediator.Tell(Count.Instance , _countProbe);
+                var countBefore = _countProbe.ExpectMsg<int>();
 
                 RunOn(() =>
                 {
@@ -878,8 +878,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
             Within(TimeSpan.FromSeconds(20), () =>
             {
-                Mediator.Tell(Count.Instance);
-                var countBefore = ExpectMsg<int>();
+                Mediator.Tell(Count.Instance, _countProbe);
+                var countBefore = _countProbe.ExpectMsg<int>();
 
                 EnterBarrier("DistributedPubSubMediator_must_publish_remote-0");
 
