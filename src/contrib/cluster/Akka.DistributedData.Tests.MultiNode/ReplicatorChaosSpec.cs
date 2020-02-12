@@ -103,10 +103,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                for (int i = 0; i < 5; i++)
+                for (var i = 0; i < 5; i++)
                 {
                     _replicator.Tell(Dsl.Update(KeyA, GCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
-                    _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Increment(_cluster, 1)));
+                    _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, WriteLocal.Instance, x => x.Decrement(_cluster, 1)));
                     _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 1)));
                 }
                 ReceiveN(15).Select(x => x.GetType()).ToImmutableHashSet().ShouldBe(new[] { typeof(UpdateSuccess) });
