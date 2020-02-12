@@ -39,14 +39,6 @@ namespace Akka.Remote.TestKit
     /// </summary>
     internal class RemoteConnection
     {
-        static RemoteConnection()
-        {
-            var f = new LoggerFactory();
-            f.AddProvider(new ConsoleLoggerProvider());
-            f.CreateLogger("Akka.Remote.TestKit").LogDebug("Using StandardOut as the default logging system.");
-            InternalLoggerFactory.DefaultFactory = f;
-        }
-
         private static void ApplyChannelPipeline(IChannel channel, IChannelHandler handler)
         {
             var encoders = new IChannelHandler[]
