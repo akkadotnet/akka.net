@@ -12,6 +12,7 @@ using Google.Protobuf;
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Akka.DistributedData.Serialization.Proto.Msg;
 
 namespace Akka.DistributedData.Serialization
 {
@@ -179,7 +180,7 @@ namespace Akka.DistributedData.Serialization
 
         #region serialize ORSet
 
-        private byte[] ToBinary(ORSet<int> o) => ToProto(o).Compress();
+        private byte[] ToBinary(ORSet<int> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.ORSet ToProto(ORSet<int> o)
         {
             var proto = new Proto.Msg.ORSet
@@ -190,12 +191,12 @@ namespace Akka.DistributedData.Serialization
             foreach (var e in o.ElementsMap)
             {
                 proto.IntElements.Add(e.Key);
-                proto.Dots.Add(e.Value.ToProto());
+                proto.Dots.Add(SerializationSupport.VersionVectorToProto(e.Value));
             }
             return proto;
         }
 
-        private byte[] ToBinary(ORSet<long> o) => ToProto(o).Compress();
+        private byte[] ToBinary(ORSet<long> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.ORSet ToProto(ORSet<long> o)
         {
             var proto = new Proto.Msg.ORSet
@@ -211,7 +212,7 @@ namespace Akka.DistributedData.Serialization
             return proto;
         }
 
-        private byte[] ToBinary(ORSet<string> o) => ToProto(o).Compress();
+        private byte[] ToBinary(ORSet<string> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.ORSet ToProto(ORSet<string> o)
         {
             var proto = new Proto.Msg.ORSet
@@ -222,12 +223,12 @@ namespace Akka.DistributedData.Serialization
             foreach (var e in o.ElementsMap)
             {
                 proto.StringElements.Add(e.Key);
-                proto.Dots.Add(e.Value.ToProto());
+                proto.Dots.Add(SerializationSupport.VersionVectorToProto(e.Value));
             }
             return proto;
         }
 
-        private byte[] ToBinary(ORSet<IActorRef> o) => ToProto(o).Compress();
+        private byte[] ToBinary(ORSet<IActorRef> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.ORSet ToProto(ORSet<IActorRef> o)
         {
             var proto = new Proto.Msg.ORSet
@@ -238,12 +239,12 @@ namespace Akka.DistributedData.Serialization
             foreach (var e in o.ElementsMap)
             {
                 proto.ActorRefElements.Add(Akka.Serialization.Serialization.SerializedActorPath(e.Key));
-                proto.Dots.Add(e.Value.ToProto());
+                proto.Dots.Add(SerializationSupport.VersionVectorToProto(e.Value));
             }
             return proto;
         }
 
-        private byte[] ToBinary<T>(ORSet<T> o) => ToProto<T>(o).Compress();
+        private byte[] ToBinary<T>(ORSet<T> o) => SerializationSupport.Compress(ToProto<T>(o));
         private Proto.Msg.ORSet ToProto<T>(ORSet<T> o)
         {
             var proto = new Proto.Msg.ORSet
@@ -254,7 +255,7 @@ namespace Akka.DistributedData.Serialization
             foreach (var e in o.ElementsMap)
             {
                 proto.OtherElements.Add(this.OtherMessageToProto(e.Key));
-                proto.Dots.Add(e.Value.ToProto());
+                proto.Dots.Add(SerializationSupport.VersionVectorToProto(e.Value));
             }
             return proto;
         }
@@ -493,15 +494,15 @@ namespace Akka.DistributedData.Serialization
         {
             return new Proto.Msg.LWWRegister
             {
-                Node = o.UpdatedBy.ToProto(),
+                Node = SerializationSupport.UniqueAddressToProto(o.UpdatedBy),
                 Timestamp = o.Timestamp,
-                State = this.OtherMessageToProto(o.Value)
+                State = _ser.OtherMessageToProto(o.Value)
             };
         }
 
         #region serialize PNCounterDictionary
 
-        private byte[] ToBinary(PNCounterDictionary<int> o) => ToProto(o).Compress();
+        private byte[] ToBinary(PNCounterDictionary<int> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.PNCounterMap ToProto(PNCounterDictionary<int> o)
         {
             var proto = new Proto.Msg.PNCounterMap
@@ -521,7 +522,7 @@ namespace Akka.DistributedData.Serialization
             return proto;
         }
 
-        private byte[] ToBinary(PNCounterDictionary<long> o) => ToProto(o).Compress();
+        private byte[] ToBinary(PNCounterDictionary<long> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.PNCounterMap ToProto(PNCounterDictionary<long> o)
         {
             var proto = new Proto.Msg.PNCounterMap
@@ -541,7 +542,7 @@ namespace Akka.DistributedData.Serialization
             return proto;
         }
 
-        private byte[] ToBinary(PNCounterDictionary<string> o) => ToProto(o).Compress();
+        private byte[] ToBinary(PNCounterDictionary<string> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.PNCounterMap ToProto(PNCounterDictionary<string> o)
         {
             var proto = new Proto.Msg.PNCounterMap
@@ -561,7 +562,7 @@ namespace Akka.DistributedData.Serialization
             return proto;
         }
 
-        private byte[] ToBinary<TKey>(PNCounterDictionary<TKey> o) => ToProto<TKey>(o).Compress();
+        private byte[] ToBinary<TKey>(PNCounterDictionary<TKey> o) => SerializationSupport.Compress(ToProto<TKey>(o));
         private Proto.Msg.PNCounterMap ToProto<TKey>(PNCounterDictionary<TKey> o)
         {
             var proto = new Proto.Msg.PNCounterMap
@@ -585,7 +586,7 @@ namespace Akka.DistributedData.Serialization
 
         #region serialize ORDictionary 
 
-        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal> o) where TVal : IReplicatedData<TVal> => ToProto<TKey, TVal>(o).Compress();
+        private byte[] ToBinary<TKey, TVal>(ORDictionary<TKey, TVal> o) where TVal : IReplicatedData<TVal> => SerializationSupport.Compress(ToProto<TKey, TVal>(o));
         private Proto.Msg.ORMap ToProto<TKey, TVal>(ORDictionary<TKey, TVal> o) where TVal : IReplicatedData<TVal>
         {
             dynamic keySet = o.KeySet;
@@ -610,6 +611,12 @@ namespace Akka.DistributedData.Serialization
             Value = this.OtherMessageToProto(value),
             IntKey = key
         };
+
+        private OtherMessage OtherMessageToProto(object value)
+        {
+            return _ser.OtherMessageToProto(value);
+        }
+
         private Proto.Msg.ORMap.Types.Entry ToORDictionaryEntry(long key, object value) => new Proto.Msg.ORMap.Types.Entry
         {
             Value = this.OtherMessageToProto(value),
@@ -679,7 +686,7 @@ namespace Akka.DistributedData.Serialization
 
         #region serialize LWWDictionary
 
-        private byte[] ToBinary<TKey, TVal>(LWWDictionary<TKey, TVal> o) => ToProto(o).Compress();
+        private byte[] ToBinary<TKey, TVal>(LWWDictionary<TKey, TVal> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.LWWMap ToProto<TKey, TVal>(LWWDictionary<TKey, TVal> o)
         {
             throw new NotImplementedException();
@@ -689,7 +696,7 @@ namespace Akka.DistributedData.Serialization
 
         #region serialize ORMultiValueDictionary
 
-        private byte[] ToBinary<TKey, TVal>(ORMultiValueDictionary<TKey, TVal> o) => ToProto(o).Compress();
+        private byte[] ToBinary<TKey, TVal>(ORMultiValueDictionary<TKey, TVal> o) => SerializationSupport.Compress(ToProto(o));
         private Proto.Msg.ORMultiMap ToProto<TKey, TVal>(ORMultiValueDictionary<TKey, TVal> o)
         {
             throw new NotImplementedException();
@@ -723,7 +730,7 @@ namespace Akka.DistributedData.Serialization
             {
                 proto.Entries.Add(new Proto.Msg.GCounter.Types.Entry
                 {
-                    Node = entry.Key.ToProto(),
+                    Node = SerializationSupport.UniqueAddressToProto(entry.Key),
                     Value = ByteString.CopyFrom(BitConverter.GetBytes(entry.Value))
                 });
             }
