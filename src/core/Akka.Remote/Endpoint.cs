@@ -1892,7 +1892,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
+           
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;
@@ -1935,12 +1935,13 @@ namespace Akka.Remote
                             }
                             catch (Exception e)
                             {
-                                throw e;
+                                throw;
                             }
                         }
                     }
                 }
             });
+            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 SaveState();
