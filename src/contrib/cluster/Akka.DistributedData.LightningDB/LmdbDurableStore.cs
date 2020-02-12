@@ -65,10 +65,10 @@ namespace Akka.DistributedData.LightningDB
                 useWriteBehind == "false" ||
                 useWriteBehind == "no" ? 
                     TimeSpan.Zero : 
-                    config.GetTimeSpan("write-behind-interval", null);
+                    config.GetTimeSpan("write-behind-interval");
 
-            var mapSize = config.GetByteSize("map-size", null);
-            var dirPath = config.GetString("dir", null);
+            var mapSize = config.GetByteSize("map-size");
+            var dirPath = config.GetString("dir");
             if (dirPath.EndsWith("ddata"))
             {
                 dirPath = $"path-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}";

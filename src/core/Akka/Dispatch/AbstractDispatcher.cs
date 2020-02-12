@@ -191,11 +191,10 @@ namespace Akka.Dispatch
             if (!dtp.IsNullOrEmpty())
             {
                 var settings = new DedicatedThreadPoolSettings(
-                    dtp.GetInt("thread-count", 0),
+                    dtp.GetInt("thread-count"),
                     DedicatedThreadPoolConfigHelpers.ConfigureThreadType(
-                        dtp.GetString("threadtype",
-                        ThreadType.Background.ToString())),
-                    config.GetString("id", null),
+                        dtp.GetString("threadtype", ThreadType.Background.ToString())),
+                    config.GetString("id"),
                     DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
                 return settings;
             }
@@ -203,10 +202,10 @@ namespace Akka.Dispatch
             {
                 var settings = new DedicatedThreadPoolSettings(
                     ThreadPoolConfig.ScaledPoolSize(
-                        fje.GetInt("parallelism-min", 0), 
+                        fje.GetInt("parallelism-min"), 
                         1.0, 
-                        fje.GetInt("parallelism-max", 0)),
-                        name:config.GetString("id", null));
+                        fje.GetInt("parallelism-max")),
+                        name:config.GetString("id"));
                 return settings;
             }
             

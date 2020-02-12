@@ -461,11 +461,11 @@ namespace Akka.Dispatch
             if (Config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<DispatcherConfigurator>();
 
-            _instance = new Dispatcher(this, Config.GetString("id", null),
-                Config.GetInt("throughput", 0),
+            _instance = new Dispatcher(this, Config.GetString("id"),
+                Config.GetInt("throughput"),
                 deadlineTimeTicks,
                 ConfigureExecutor(),
-                Config.GetTimeSpan("shutdown-timeout", null));
+                Config.GetTimeSpan("shutdown-timeout"));
         }
 
 
