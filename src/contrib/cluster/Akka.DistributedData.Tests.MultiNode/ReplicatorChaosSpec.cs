@@ -157,10 +157,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             EnterBarrier("initial-updates-done");
 
-            AssertValue(KeyA, 25U);
-            AssertValue(KeyB, 15U);
-            AssertValue(KeyC, 25U);
-            AssertValue(KeyD, 40U);
+            AssertValue(KeyA, 25UL);
+            AssertValue(KeyB, 15.0);
+            AssertValue(KeyC, 25UL);
+            AssertValue(KeyD, 40UL);
             AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             AssertDeleted(KeyX);
@@ -210,23 +210,23 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                AssertValue(KeyA, 26U);
-                AssertValue(KeyB, 15U);
-                AssertValue(KeyD, 41U);
+                AssertValue(KeyA, 26UL);
+                AssertValue(KeyB, 15.0);
+                AssertValue(KeyD, 41UL);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3"}));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3" }));
             }, side1);
 
             RunOn(() =>
             {
-                AssertValue(KeyA, 27U);
-                AssertValue(KeyB, 15U);
-                AssertValue(KeyD, 41U);
+                AssertValue(KeyA, 27UL);
+                AssertValue(KeyB, 15.0);
+                AssertValue(KeyD, 41UL);
                 AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3", "e4" }));
                 AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e3" }));
             }, side2);
 
-            EnterBarrier("update-durin-split-verified");
+            EnterBarrier("update-during-split-verified");
 
             RunOn(() => TestConductor.Exit(Fourth, 0).Wait(TimeSpan.FromSeconds(5)), First);
 
@@ -246,10 +246,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             EnterBarrier("split-repaired");
 
-            AssertValue(KeyA, 28U);
-            AssertValue(KeyB, 15U);
-            AssertValue(KeyC, 25U);
-            AssertValue(KeyD, 41U);
+            AssertValue(KeyA, 28UL);
+            AssertValue(KeyB, 15.0);
+            AssertValue(KeyC, 25UL);
+            AssertValue(KeyD, 41UL);
             AssertValue(KeyE, ImmutableHashSet.CreateRange(new[] { "e1", "e2", "e3", "e4" }));
             AssertValue(KeyF, ImmutableHashSet.CreateRange(new[] { "e1", "e3" }));
             AssertDeleted(KeyX);
@@ -272,11 +272,23 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Get(key, ReadLocal.Instance));
                 var g = ExpectMsg<GetSuccess>().Get(key);
                 object value;
-                if (g is GCounter) value = ((GCounter)g).Value;
-                else if (g is PNCounter) value = ((PNCounter)g).Value;
-                else if (g is GSet<string>) value = ((GSet<string>)g).Elements;
-                else if (g is ORSet<string>) value = ((ORSet<string>)g).Elements;
-                else throw new ArgumentException("input doesn't match");
+                switch (g)
+                {
+                    case GCounter counter:
+                        value = counter.Value;
+                        break;
+                    case PNCounter pnCounter:
+                        value = pnCounter.Value;
+                        break;
+                    case GSet<string> set:
+                        value = set.Elements;
+                        break;
+                    case ORSet<string> orSet:
+                        value = orSet.Elements;
+                        break;
+                    default:
+                        throw new ArgumentException("input doesn't match");
+                }
 
                 value.ShouldBe(expected);
             }));
