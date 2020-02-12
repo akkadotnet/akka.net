@@ -167,7 +167,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                         // need to make sure that no dead contacts are hanging around
                         _clusterClient.Tell(GetContactPoints.Instance);
                         var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
-                        contacts.Count.Should().Be(2);
                         contacts.Select(x => x.Address).Should().Contain(Node(_config.Second).Address);
                     });
                 });
