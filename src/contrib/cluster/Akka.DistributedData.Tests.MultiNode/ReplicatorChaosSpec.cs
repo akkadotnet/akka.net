@@ -47,7 +47,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 .WithGossipInterval(TimeSpan.FromSeconds(1))), "replicator");
         }
 
-        [MultiNodeFact(Skip = "FIXME")]
+        [MultiNodeFact()]
         public void ReplicatorChaos_Tests()
         {
             Replicator_in_chaotic_cluster_should_replicate_data_in_initial_phase();
