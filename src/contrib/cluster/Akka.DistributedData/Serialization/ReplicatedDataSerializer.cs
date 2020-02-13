@@ -84,6 +84,12 @@ namespace Akka.DistributedData.Serialization
                 case PNCounter _: return PNCounterManifest;
                 case Flag _: return FlagManifest;
                 case ILWWRegister _: return LWWRegisterManifest;
+                case IORDictionary _: return ORMapManifest;
+                case ORDictionary.IPutDeltaOp _: return ORMapPutManifest;
+                case ORDictionary.IRemoveDeltaOp _: return ORMapRemoveManifest;
+                case ORDictionary.IRemoveKeyDeltaOp _: return ORMapRemoveKeyManifest;
+                case ORDictionary.IUpdateDeltaOp _: return ORMapUpdateManifest;
+                case 
             }
         }
     }
