@@ -227,9 +227,9 @@ namespace Akka.DistributedData.Tests.Serialization
         {
             var serializer = Sys.Serialization.FindSerializerFor(expected);
             serializer.Should().BeOfType<ReplicatedDataSerializer>();
-
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, expected);
             var blob = serializer.ToBinary(expected);
-            var actual = serializer.FromBinary(blob, expected.GetType());
+            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, manifest);
 
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
