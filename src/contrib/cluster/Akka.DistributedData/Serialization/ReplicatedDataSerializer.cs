@@ -47,6 +47,7 @@ namespace Akka.DistributedData.Serialization
         private const string LWWMapManifest = "I";
         private const string LWWMapKeyManifest = "i";
         private const string PNCounterMapManifest = "J";
+        private const string PNCounterMapDeltaOperationManifest = "Jo";
         private const string PNCounterMapKeyManifest = "j";
         private const string ORMultiMapManifest = "K";
         private const string ORMultiMapKeyManifest = "k";
@@ -89,7 +90,10 @@ namespace Akka.DistributedData.Serialization
                 case ORDictionary.IRemoveDeltaOp _: return ORMapRemoveManifest;
                 case ORDictionary.IRemoveKeyDeltaOp _: return ORMapRemoveKeyManifest;
                 case ORDictionary.IUpdateDeltaOp _: return ORMapUpdateManifest;
-                case 
+                case ILWWDictionary _: return LWWMapManifest;
+                case IPNCounterDictionary _: return PNCounterMapManifest;
+                case IPNCounterDictionaryDeltaOperation _: return PNCounterMapDeltaOperationManifest;
+                
             }
         }
     }

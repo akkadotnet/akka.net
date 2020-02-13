@@ -17,6 +17,20 @@ using UniqueAddress = Akka.Cluster.UniqueAddress;
 namespace Akka.DistributedData
 {
     /// <summary>
+    /// INTERNAL API.
+    ///
+    /// Marker interface for serialization.
+    /// </summary>
+    public interface IPNCounterDictionary { }
+
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// For serialization purposes.
+    /// </summary>
+    internal interface IPNCounterDictionaryDeltaOperation { }
+
+    /// <summary>
     /// Map of named counters. Specialized <see cref="ORDictionary{TKey,TValue}"/> 
     /// with <see cref="PNCounter"/> values. 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
@@ -26,7 +40,7 @@ namespace Akka.DistributedData
         IRemovedNodePruning<PNCounterDictionary<TKey>>,
         IReplicatedDataSerialization,
         IEquatable<PNCounterDictionary<TKey>>,
-        IEnumerable<KeyValuePair<TKey, BigInteger>>
+        IEnumerable<KeyValuePair<TKey, BigInteger>>, IPNCounterDictionary
     {
         public static readonly PNCounterDictionary<TKey> Empty = new PNCounterDictionary<TKey>(ORDictionary<TKey, PNCounter>.Empty);
 
@@ -194,7 +208,7 @@ namespace Akka.DistributedData
 
         #region delta 
 
-        internal sealed class PNCounterDictionaryDelta : ORDictionary<TKey, PNCounter>.IDeltaOperation, IReplicatedDeltaSize
+        internal sealed class PNCounterDictionaryDelta : ORDictionary<TKey, PNCounter>.IDeltaOperation, IReplicatedDeltaSize, IPNCounterDictionaryDeltaOperation
         {
             internal readonly ORDictionary<TKey, PNCounter>.IDeltaOperation Underlying;
 
