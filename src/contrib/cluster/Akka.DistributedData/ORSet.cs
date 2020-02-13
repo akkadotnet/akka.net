@@ -22,10 +22,30 @@ namespace Akka.DistributedData
         public ORSetKey(string id) : base(id) { }
     }
 
-    internal interface IORSet { }
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal interface IORSet
+    {
+        
+    }
+
 
     public static class ORSet
     {
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IAddDeltaOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        internal interface IRemoveDeltaOperation { }
+
         public static ORSet<T> Create<T>(UniqueAddress node, T element) =>
             ORSet<T>.Empty.Add(node, element);
 
@@ -442,7 +462,7 @@ namespace Akka.DistributedData
             public override int GetHashCode() => GetType().GetHashCode() ^ Underlying.GetHashCode();
         }
 
-        internal sealed class AddDeltaOperation : AtomicDeltaOperation
+        internal sealed class AddDeltaOperation : AtomicDeltaOperation, ORSet.IAddDeltaOperation
         {
             public AddDeltaOperation(ORSet<T> underlying)
             {
@@ -484,7 +504,7 @@ namespace Akka.DistributedData
             }
         }
 
-        internal sealed class RemoveDeltaOperation : AtomicDeltaOperation
+        internal sealed class RemoveDeltaOperation : AtomicDeltaOperation, ORSet.IRemoveDeltaOperation
         {
             public RemoveDeltaOperation(ORSet<T> underlying)
             {
@@ -533,7 +553,7 @@ namespace Akka.DistributedData
             }
         }
 
-        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize
+        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize, IORSetDeltaOperation
         {
             public ImmutableArray<IReplicatedData> Operations { get; }
 
