@@ -597,30 +597,21 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Placeholder used to represent deleted data that has not yet been pruned or is permanently tombstoned.
     /// </summary>
-    /// <returns>TBD</returns>
     [Serializable]
-    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
+    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>, IReplicatedDataSerialization
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public static readonly DeletedData Instance = new DeletedData();
 
         private DeletedData() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IReplicatedData{T}"/>
         public DeletedData Merge(DeletedData other) => this;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IReplicatedData{T}"/>
         public IReplicatedData Merge(IReplicatedData other) => Merge((DeletedData)other);
         /// <inheritdoc/>
         public bool Equals(DeletedData other) => true;
