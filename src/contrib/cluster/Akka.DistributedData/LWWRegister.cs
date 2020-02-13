@@ -37,6 +37,11 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
+    /// Marker interface for serialization
+    /// </summary>
+    public interface ILWWRegister { }
+
+    /// <summary>
     /// Implements a 'Last Writer Wins Register' CRDT, also called a 'LWW-Register'.
     /// 
     /// It is described in the paper
@@ -60,7 +65,7 @@ namespace Akka.DistributedData
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     [Serializable]
-    public sealed partial class LWWRegister<T> : IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>
+    public sealed class LWWRegister<T> : IReplicatedData<LWWRegister<T>>, IReplicatedDataSerialization, IEquatable<LWWRegister<T>>, ILWWRegister
     {
         /// <summary>
         /// Default clock is using max between DateTime.UtcNow.Ticks and current timestamp + 1.
