@@ -5,14 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections;
-using System.Linq;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
 using Hocon;
 using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -226,15 +225,16 @@ namespace Akka.DistributedData.Tests.Serialization
 
         private void CheckSerialization<T>(T expected)
         {
-            var g = expected as ORDictionary<string, GSet<string>>.DeltaGroup;
             var serializer = Sys.Serialization.FindSerializerFor(expected);
+            serializer.Should().BeOfType<ReplicatedDataSerializer>();
+
             var blob = serializer.ToBinary(expected);
             var actual = serializer.FromBinary(blob, expected.GetType());
 
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
             // fails on structural equality
-            Assert.True(expected.Equals(actual), $"Expected: {expected}\nActual: {actual}");
+            expected.Should().Be(actual);
         }
 
         private void CheckSameContent(object a, object b)
