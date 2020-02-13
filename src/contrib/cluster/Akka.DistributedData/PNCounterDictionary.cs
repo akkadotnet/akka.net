@@ -17,11 +17,11 @@ using UniqueAddress = Akka.Cluster.UniqueAddress;
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// INTERNAL API.
-    ///
-    /// Marker interface for serialization.
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
     /// </summary>
-    public interface IPNCounterDictionary { }
+    internal interface IPNCounterDictionary { }
 
     /// <summary>
     /// INTERNAL API.

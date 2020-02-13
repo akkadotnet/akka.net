@@ -37,9 +37,11 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
+    /// INTERNAL API
+    /// 
     /// Marker interface for serialization
     /// </summary>
-    public interface ILWWRegister { }
+    internal interface ILWWRegister { }
 
     /// <summary>
     /// Implements a 'Last Writer Wins Register' CRDT, also called a 'LWW-Register'.

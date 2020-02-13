@@ -16,8 +16,13 @@ using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal interface IORSetKey { }
+
     [Serializable]
-    public sealed class ORSetKey<T> : Key<ORSet<T>>
+    public sealed class ORSetKey<T> : Key<ORSet<T>>, IORSetKey
     {
         public ORSetKey(string id) : base(id) { }
     }

@@ -93,7 +93,13 @@ namespace Akka.DistributedData.Serialization
                 case ILWWDictionary _: return LWWMapManifest;
                 case IPNCounterDictionary _: return PNCounterMapManifest;
                 case IPNCounterDictionaryDeltaOperation _: return PNCounterMapDeltaOperationManifest;
-                
+                case IORMultiValueDictionary _: return ORMultiMapManifest;
+                case DeletedData _: return DeletedDataManifest;
+                case VersionVector _: return VersionVectorManifest;
+
+                // key types
+                case IORSetKey _: return ORSetKeyManifest;
+                case IGSetKey _: return GSetKeyManifest;
             }
         }
     }

@@ -16,7 +16,7 @@ using Akka.Util.Internal;
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     internal interface IGSet
     {
@@ -27,7 +27,7 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// TBD
+    /// GSet helper methods.
     /// </summary>
     public static class GSet
     {
@@ -211,7 +211,9 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Marker interface for serialization.
     /// </summary>
     internal interface IGSetKey
     { }

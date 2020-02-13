@@ -24,17 +24,24 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface IORMultiValueDictionary { }
+
+    /// <summary>
     /// An immutable multi-map implementation. This class wraps an
     /// <see cref="ORDictionary{TKey,TValue}"/> with an <see cref="ORSet{T}"/> for the map's value.
     /// 
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed partial class ORMultiValueDictionary<TKey, TValue> :
+    public sealed class ORMultiValueDictionary<TKey, TValue> :
         IDeltaReplicatedData<ORMultiValueDictionary<TKey, TValue>, ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation>,
         IRemovedNodePruning<ORMultiValueDictionary<TKey, TValue>>,
         IReplicatedDataSerialization, IEquatable<ORMultiValueDictionary<TKey, TValue>>,
-        IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>
+        IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>, IORMultiValueDictionary
     {
         public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
         public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
