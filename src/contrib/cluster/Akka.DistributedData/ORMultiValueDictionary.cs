@@ -15,8 +15,16 @@ using Akka.Cluster;
 
 namespace Akka.DistributedData
 {
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface IORMultiValueDictionaryKey { }
+
+
     [Serializable]
-    public sealed class ORMultiValueDictionaryKey<TKey, TValue> : Key<ORMultiValueDictionary<TKey, TValue>>
+    public sealed class ORMultiValueDictionaryKey<TKey, TValue> : Key<ORMultiValueDictionary<TKey, TValue>>, IORMultiValueDictionaryKey
     {
         public ORMultiValueDictionaryKey(string id) : base(id)
         {

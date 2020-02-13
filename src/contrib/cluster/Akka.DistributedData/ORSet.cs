@@ -49,7 +49,22 @@ namespace Akka.DistributedData
         /// INTERNAL API
         ///
         /// Used for serialization purposes.
+        /// </summary>
         internal interface IRemoveDeltaOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IDeltaGroupOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IFullStateDeltaOperation { }
 
         public static ORSet<T> Create<T>(UniqueAddress node, T element) =>
             ORSet<T>.Empty.Add(node, element);
@@ -535,7 +550,7 @@ namespace Akka.DistributedData
             }
         }
 
-        internal sealed class FullStateDeltaOperation : AtomicDeltaOperation
+        internal sealed class FullStateDeltaOperation : AtomicDeltaOperation, ORSet.IFullStateDeltaOperation
         {
             public FullStateDeltaOperation(ORSet<T> underlying)
             {
@@ -558,7 +573,7 @@ namespace Akka.DistributedData
             }
         }
 
-        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize, IORSetDeltaOperation
+        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize, ORSet.IDeltaGroupOperation
         {
             public ImmutableArray<IReplicatedData> Operations { get; }
 
@@ -668,7 +683,7 @@ namespace Akka.DistributedData
                 {
                     var curr = deleteDots.Current;
                     deleteDotNodes.Add(curr.Key);
-                    deleteDotsAreGreater &= (thisDot != null ? (thisDot.VersionAt(curr.Key) <= curr.Value) : false);
+                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(curr.Key) <= curr.Value));
                 }
             }
 

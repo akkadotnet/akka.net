@@ -21,11 +21,18 @@ namespace Akka.DistributedData
     public delegate long Clock<in T>(long currentTimestamp, T value);
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface ILWWRegisterKey { }
+
+    /// <summary>
+    /// Key types for <see cref="LWWRegister{T}"/>
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     [Serializable]
-    public sealed class LWWRegisterKey<T> : Key<LWWRegister<T>>
+    public sealed class LWWRegisterKey<T> : Key<LWWRegister<T>>, ILWWRegisterKey
     {
         /// <summary>
         /// TBD

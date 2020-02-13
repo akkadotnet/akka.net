@@ -285,7 +285,14 @@ namespace Akka.DistributedData
         #endregion
     }
 
-    public class PNCounterDictionaryKey<T> : Key<PNCounterDictionary<T>>
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface IPNCounterDictionaryKey { }
+
+    public class PNCounterDictionaryKey<T> : Key<PNCounterDictionary<T>>, IPNCounterDictionaryKey
     {
         public PNCounterDictionaryKey(string id) : base(id)
         {

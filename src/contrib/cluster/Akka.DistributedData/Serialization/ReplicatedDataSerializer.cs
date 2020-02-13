@@ -100,6 +100,22 @@ namespace Akka.DistributedData.Serialization
                 // key types
                 case IORSetKey _: return ORSetKeyManifest;
                 case IGSetKey _: return GSetKeyManifest;
+                case GCounterKey _: return GCounterKeyManifest;
+                case PNCounterKey _: return PNCounterKeyManifest;
+                case FlagKey _: return FlagKeyManifest;
+                case ILWWRegisterKey _: return LWWRegisterKeyManifest;
+                case IORDictionaryKey _: return ORMapKeyManifest;
+                case ILWWDictionaryKey _: return LWWMapKeyManifest;
+                case IPNCounterDictionaryKey _: return PNCounterMapKeyManifest;
+                case IORMultiValueDictionaryKey _: return ORMultiMapKeyManifest;
+
+                // less common delta types
+                case ORSet.IDeltaGroupOperation _: return ORSetDeltaGroupManifest;
+                case ORDictionary.IDeltaGroupOp _: return ORMapDeltaGroupManifest;
+                case ORSet.IFullStateDeltaOperation _: return ORSetFullManifest;
+
+                default:
+                    throw new ArgumentException($"Can't serialize object of type [{o.GetType().FullName}] in [{GetType().FullName}]");
             }
         }
     }

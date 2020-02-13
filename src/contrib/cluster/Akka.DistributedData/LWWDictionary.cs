@@ -16,6 +16,14 @@ using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface ILWWDictionaryKey { }
+
     /// <summary>
     /// Typed key used to store <see cref="LWWDictionary{TKey,TValue}"/> replica 
     /// inside current <see cref="Replicator"/> key-value store.
@@ -23,7 +31,7 @@ namespace Akka.DistributedData
     /// <typeparam name="TKey">Type of a key used by corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</typeparam>
     /// <typeparam name="TValue">Type of a value used by corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</typeparam>
     [Serializable]
-    public sealed class LWWDictionaryKey<TKey, TValue> : Key<LWWDictionary<TKey, TValue>>
+    public sealed class LWWDictionaryKey<TKey, TValue> : Key<LWWDictionary<TKey, TValue>>, ILWWDictionaryKey
     {
         /// <summary>
         /// Creates a new instance of a <see cref="LWWDictionaryKey{TKey,TValue}"/> with provided key identifier.
@@ -33,9 +41,11 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// Marker interface for serialization.
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
     /// </summary>
-    public interface ILWWDictionary { }
+    internal interface ILWWDictionary { }
 
     /// <summary>
     /// A static class with various constructor methods for <see cref="LWWDictionary{TKey,TValue}"/>.

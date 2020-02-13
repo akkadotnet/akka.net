@@ -16,16 +16,25 @@ using Akka.Pattern;
 
 namespace Akka.DistributedData
 {
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface IORDictionaryKey { }
+
     [Serializable]
-    public sealed class ORDictionaryKey<TKey, TValue> : Key<ORDictionary<TKey, TValue>> where TValue : IReplicatedData<TValue>
+    public sealed class ORDictionaryKey<TKey, TValue> : Key<ORDictionary<TKey, TValue>>, IORDictionaryKey where TValue : IReplicatedData<TValue>
     {
         public ORDictionaryKey(string id) : base(id) { }
     }
 
     /// <summary>
-    /// Marker interface for IORDictionary
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
     /// </summary>
-    public interface IORDictionary{}
+    internal interface IORDictionary {}
 
     public static class ORDictionary
     {
@@ -33,7 +42,7 @@ namespace Akka.DistributedData
         internal interface IRemoveDeltaOp { }
         internal interface IRemoveKeyDeltaOp { }
         internal interface IUpdateDeltaOp { }
-        internal interface IDeltaGroup { }
+        internal interface IDeltaGroupOp { }
 
         public static ORDictionary<TKey, TValue> Create<TKey, TValue>(UniqueAddress node, TKey key, TValue value) where TValue : IReplicatedData<TValue> =>
             ORDictionary<TKey, TValue>.Empty.SetItem(node, key, value);
