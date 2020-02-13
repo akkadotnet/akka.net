@@ -118,5 +118,23 @@ namespace Akka.DistributedData.Serialization
                     throw new ArgumentException($"Can't serialize object of type [{o.GetType().FullName}] in [{GetType().FullName}]");
             }
         }
+
+        private Proto.Msg.ORSet ToBinary(IORSet orset)
+        {
+            Proto.Msg.ORSet ToORSet<T>(ORSet<T> setty)
+            {
+                var p = new Proto.Msg.ORSet();
+                p.Vvector = SerializationSupport.VersionVectorToProto(setty.VersionVector);
+                p.
+            }
+
+            switch (orset)
+            {
+                case ORSet<int> ints:
+                {
+                    
+                }
+            }
+        }
     }
 }
