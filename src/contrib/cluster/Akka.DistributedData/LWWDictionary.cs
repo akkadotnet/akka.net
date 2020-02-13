@@ -33,6 +33,11 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
+    /// Marker interface for serialization.
+    /// </summary>
+    public interface ILWWDictionary { }
+
+    /// <summary>
     /// A static class with various constructor methods for <see cref="LWWDictionary{TKey,TValue}"/>.
     /// </summary>
     public static class LWWDictionary
@@ -90,12 +95,12 @@ namespace Akka.DistributedData
     /// <typeparam name="TKey">TBD</typeparam>
     /// <typeparam name="TValue">TBD</typeparam>
     [Serializable]
-    public sealed partial class LWWDictionary<TKey, TValue> :
+    public sealed class LWWDictionary<TKey, TValue> :
         IDeltaReplicatedData<LWWDictionary<TKey, TValue>, ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation>,
         IRemovedNodePruning<LWWDictionary<TKey, TValue>>,
         IReplicatedDataSerialization,
         IEquatable<LWWDictionary<TKey, TValue>>,
-        IEnumerable<KeyValuePair<TKey, TValue>>
+        IEnumerable<KeyValuePair<TKey, TValue>>, ILWWDictionary
     {
         /// <summary>
         /// An empty instance of the <see cref="LWWDictionary{TKey,TValue}"/>
