@@ -21,6 +21,36 @@ using FluentAssertions;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
+    public class JepsenInspiredInsertSpecConfig : MultiNodeConfig
+    {
+        public RoleName Controller { get; }
+        public RoleName N1 { get; }
+        public RoleName N2 { get; }
+        public RoleName N3 { get; }
+        public RoleName N4 { get; }
+        public RoleName N5 { get; }
+        public JepsenInspiredInsertSpecConfig()
+        {
+            Controller = Role("controller");
+            N1 = Role("n1");
+            N2 = Role("n2");
+            N3 = Role("n3");
+            N4 = Role("n4");
+            N5 = Role("n5");
+
+            CommonConfig = ConfigurationFactory.ParseString(@"
+                akka.loglevel = INFO
+                akka.actor.provider = cluster
+                akka.log-dead-letters = off
+                akka.log-dead-letters-during-shutdown = off
+                akka.remote.log-remote-lifecycle-events = ERROR
+                akka.testconductor.barrier-timeout = 60s")
+                .WithFallback(DistributedData.DefaultConfig());
+
+            TestTransport = true;
+        }
+    }
+
     public class JepsenInspiredInsertSpec : MultiNodeClusterSpec
     {
         public static readonly RoleName Controller = new RoleName("controller");
@@ -51,13 +81,13 @@ namespace Akka.DistributedData.Tests.MultiNode
             _nodeCount = _nodes.Count;
             _timeout = Dilated(TimeSpan.FromSeconds(3));
             _expectedData = Enumerable.Range(0, _totalCount).ToArray();
-            var nodeindex = _nodes.Zip(Enumerable.Range(0, _nodes.Count - 1), (name, i) => new KeyValuePair<int, RoleName>(i, name))
+            var nodeindex = _nodes.Zip(Enumerable.Range(0, _nodes.Count), (name, i) => new KeyValuePair<int, RoleName>(i, name))
                 .ToImmutableDictionary();
             _data = Enumerable.Range(0, _totalCount).GroupBy(i => nodeindex[i % _nodeCount])
                 .ToImmutableDictionary(x => x.Key, x => (IEnumerable<int>)x.Reverse().ToArray());
         }
 
-        [MultiNodeFact(Skip = "FIXME")]
+        [MultiNodeFact]
         public void JepsenInspiredInsert_Tests()
         {
             Insert_from_5_nodes_should_setup_cluster();
@@ -315,36 +345,6 @@ namespace Akka.DistributedData.Tests.MultiNode
         private void SleepDuringPartition()
         {
             Thread.Sleep(Math.Max(5000, _delayMillis * _totalCount / _nodeCount / 2));
-        }
-    }
-    
-    public class JepsenInspiredInsertSpecConfig : MultiNodeConfig
-    {
-        public RoleName Controller { get; }
-        public RoleName N1 { get; }
-        public RoleName N2 { get; }
-        public RoleName N3 { get; }
-        public RoleName N4 { get; }
-        public RoleName N5 { get; }
-        public JepsenInspiredInsertSpecConfig()
-        {
-            Controller = Role("controller");
-            N1 = Role("n1");
-            N2 = Role("n2");
-            N3 = Role("n3");
-            N4 = Role("n4");
-            N5 = Role("n5");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.log-dead-letters = off
-                akka.log-dead-letters-during-shutdown = off
-                akka.remote.log-remote-lifecycle-events = ERROR
-                akka.testconductor.barrier-timeout = 60s")
-                .WithFallback(DistributedData.DefaultConfig());
-
-            TestTransport = true;
         }
     }
 }

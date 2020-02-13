@@ -35,11 +35,21 @@ namespace Akka.DistributedData.Tests
             d2.Pruning[node1].Should().BeOfType<PruningInitialized>();
             ((PruningInitialized)d2.Pruning[node1]).Owner.Should().Be(node2);
 
+            // bug check for https://github.com/akkadotnet/akka.net/issues/4200
+            var merged = d1.Merge(d2);
+            merged.Data.As<GCounter>().Value.Should().Be(1);
+
             var d3 = d2.AddSeen(node3.Address);
             ((PruningInitialized)d3.Pruning[node1]).Seen.Should().BeEquivalentTo(node3.Address);
 
             var d4 = d3.Prune(node1, new PruningPerformed(obsoleteTimeInFuture));
             ((GCounter)d4.Data).ModifiedByNodes.Should().BeEquivalentTo(node2);
+
+            // bug check for https://github.com/akkadotnet/akka.net/issues/4200
+            var merged2 = d2.Merge(d4);
+            merged2.Data.As<GCounter>().Value.Should().Be(1);
+            merged2.NeedPruningFrom(node1).Should().BeFalse();
+            merged2.Pruning[node1].Should().BeOfType<PruningPerformed>();
         }
 
         [Fact]
@@ -71,6 +81,50 @@ namespace Akka.DistributedData.Tests
 
             d5.Merge(d7).Pruning[node1].Should().Be(new PruningPerformed(obsoleteTimeInFuture));
             d7.Merge(d5).Pruning[node1].Should().Be(new PruningPerformed(obsoleteTimeInFuture));
+        }
+
+        /// <summary>
+        /// Need to validate that DataEnvelope instances with identical content produce identical hashcodes, and vice versa.
+        /// </summary>
+        [Fact()]
+        public void DataEnvelopes_with_identical_content_must_match()
+        {
+            var g1 = GCounter.Empty.Increment(node1, 1);
+            var d1 = new DataEnvelope(g1);
+            var d1a = new DataEnvelope(g1);
+            var g2 = GCounter.Empty.Increment(node2, 2);
+            var d2 = new DataEnvelope(g2);
+
+            d1.Should().NotBe(d2);
+            d1a.Should().Be(d1);
+            d1a.GetHashCode().Should().Be(d1.GetHashCode());
+
+            // add some delta versions
+            var d1b = d1.WithDeltaVersions(VersionVector.Create(node1, 1));
+            d1.Should().NotBe(d1b);
+            d1.GetHashCode().Should().NotBe(d1b.GetHashCode());
+
+            // add identical delta version on different instance
+            var d1b2 = d1.WithDeltaVersions(VersionVector.Create(node1, 1));
+            d1b2.Should().Be(d1b);
+            d1b2.GetHashCode().Should().Be(d1b.GetHashCode());
+
+            // merge with another instance
+            var d2b1 = d1b2.Merge(d2);
+            d2b1.Should().NotBe(d1b2);
+            d2b1.GetHashCode().Should().NotBe(d1b2.GetHashCode());
+
+            // prune
+            var d3 = d2b1.WithPruning(
+                ImmutableDictionary<UniqueAddress, IPruningState>.Empty.Add(node2, new PruningPerformed(obsoleteTime)));
+            d3.Should().NotBe(d2b1);
+            d3.GetHashCode().Should().NotBe(d2b1.GetHashCode());
+
+            // create identical instance
+            var d3b = d2b1.WithPruning(
+                ImmutableDictionary<UniqueAddress, IPruningState>.Empty.Add(node2, new PruningPerformed(obsoleteTime)));
+            d3.Should().Be(d3b);
+            d3.GetHashCode().Should().Be(d3b.GetHashCode());
         }
     }
 }

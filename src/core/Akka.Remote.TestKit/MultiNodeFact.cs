@@ -12,6 +12,11 @@ namespace Akka.Remote.TestKit
 {
     public class MultiNodeFactAttribute : FactAttribute
     {
+        /// <summary>
+        /// Set by MultiNodeTestRunner when running multi-node tests
+        /// </summary>
+        public const string MultiNodeTestEnvironmentName = "__AKKA_MULTI_NODE_ENVIRONMENT";
+        
         public static Lazy<bool> ExecutedByMultiNodeRunner =
             new Lazy<bool>(() =>
             {
@@ -19,7 +24,8 @@ namespace Akka.Remote.TestKit
                 if (args.Length == 0) return false;
                 var firstArg = args[0];
                 return firstArg.Contains("Akka.MultiNodeTestRunner") 
-                    || firstArg.Contains("Akka.NodeTestRunner");
+                    || firstArg.Contains("Akka.NodeTestRunner")
+                    || Environment.GetEnvironmentVariable(MultiNodeTestEnvironmentName) != null;
             });
 
         public override string Skip
