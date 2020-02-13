@@ -74,7 +74,17 @@ namespace Akka.DistributedData.Serialization
 
         public override string Manifest(object o)
         {
-            throw new NotImplementedException();
+            switch (o)
+            {
+                case IORSet _: return ORSetManifest;
+                case ORSet.IAddDeltaOperation _: return ORSetAddManifest;
+                case ORSet.IRemoveDeltaOperation _: return ORSetRemoveManifest;
+                case IGSet _: return GSetManifest;
+                case GCounter _: return GCounterManifest;
+                case PNCounter _: return PNCounterManifest;
+                case Flag _: return FlagManifest;
+                case ILWWRegister _: return LWWRegisterManifest;
+            }
         }
     }
 }
