@@ -53,7 +53,7 @@ namespace Akka.DistributedData.Serialization
 
         private readonly SerializationSupport _ser;
 
-        private readonly byte[] _emptyArray = new byte[0];
+        private readonly byte[] _emptyArray = Array.Empty<byte>();
 
         public ReplicatedDataSerializer(ExtendedActorSystem system) : base(system)
         {
