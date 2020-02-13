@@ -408,7 +408,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_Config()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.Empty;
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));
