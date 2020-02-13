@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.InteropServices;
 using Akka.Configuration.Hocon;
 using System.Linq;
 using System.Threading;
@@ -66,11 +67,15 @@ namespace Akka.Tests.Configuration
         [Fact]
         public void Deserializes_hocon_configuration_from_net_config_file()
         {
-            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
-            Assert.NotNull(section);
-            Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
-            var akkaConfig = section.AkkaConfig;
-            Assert.NotNull(akkaConfig);
+            // Skip this test for Linux targets
+            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
+                Assert.NotNull(section);
+                Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
+                var akkaConfig = section.AkkaConfig;
+                Assert.NotNull(akkaConfig);
+            }
         }
     }
 }
