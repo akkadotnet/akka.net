@@ -8,7 +8,9 @@
   </PropertyGroup>
  
   <ItemGroup>
-    <Content Include="App.config" />
+    <Content Include="App.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
@@ -48,7 +50,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'">
     <None Update="App.config">
       <Link>xunit.console.dll.config</Link>
-      <CopyToOutputDirectory>CopyAlways</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
