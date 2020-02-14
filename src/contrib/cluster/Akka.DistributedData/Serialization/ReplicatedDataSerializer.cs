@@ -180,7 +180,6 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-
         private IORSet FromProto(Proto.Msg.ORSet orset)
         {
             var dots = orset.Dots.Select(x => _ser.VersionVectorFromProto(x));

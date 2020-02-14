@@ -74,6 +74,7 @@ namespace Akka.DistributedData.Tests.Serialization
             var s4 = ORSet.Create<object>(_address2, 17).Remove(_address3, 17).Add(_address1, "a");
 
             CheckSameContent(s3.Merge(s4), s4.Merge(s3));
+            CheckSerialization(ORSet<object>.Empty);
         }
 
         [Fact()]
