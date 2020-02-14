@@ -9,7 +9,7 @@
  
   <ItemGroup>
     <Content Include="App.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
@@ -47,6 +47,7 @@
   <!-- This is a hack so that `App.config` gets copied to the output directory of the dotnet core test folder -->
   <!-- By default, dotnet core test are run through testhost.dll that uses testhost.dll.config file instead,
        this causes tests to unable to access emmbedded App.config anymore. -->
+  <!--
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'">
     <None Update="App.config">
       <Link>xunit.console.dll.config</Link>
@@ -58,4 +59,5 @@
     <Copy SourceFiles="App.config" DestinationFiles="$(OutDir)\testhost.x86.dll.config" />
     <Copy SourceFiles="App.config" DestinationFiles="$(OutDir)\testhost.x64.dll.config" />
   </Target>
+  -->
 </Project>
