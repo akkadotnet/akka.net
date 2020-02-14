@@ -10,6 +10,8 @@ using Akka.DistributedData.Internal;
 using Akka.Serialization;
 using Google.Protobuf;
 using System;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
@@ -119,22 +121,68 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
+        private static Proto.Msg.ORSet ToProto<T>(ORSet<T> set)
+        {
+            var p = new Proto.Msg.ORSet();
+            p.Vvector = SerializationSupport.VersionVectorToProto(set.VersionVector);
+            p.Dots.Add(set.ElementsMap.Values.Select(SerializationSupport.VersionVectorToProto));
+            return p;
+        }
+
         private Proto.Msg.ORSet ToBinary(IORSet orset)
         {
-            Proto.Msg.ORSet ToORSet<T>(ORSet<T> setty)
-            {
-                var p = new Proto.Msg.ORSet();
-                p.Vvector = SerializationSupport.VersionVectorToProto(setty.VersionVector);
-                p.
-            }
-
             switch (orset)
             {
                 case ORSet<int> ints:
                 {
-                    
+                    var p = ToProto(ints);
+                    p.IntElements.Add(ints.Elements);
+                    return p;
                 }
+                case ORSet<long> longs:
+                {
+                    var p = ToProto(longs);
+                    p.LongElements.Add(longs.Elements);
+                    return p;
+                }
+                case ORSet<string> strings:
+                {
+                    var p = ToProto(strings);
+                    p.StringElements.Add(strings.Elements);
+                    return p;
+                }
+                case ORSet<IActorRef> refs:
+                {
+                    var p = ToProto(refs);
+                    p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
+                    return p;
+                }
+                default: // unknown type
+                    dynamic d = orset;
+                    return ToBinary(d);
             }
+        }
+
+
+        private IORSet FromProto(Proto.Msg.ORSet orset)
+        {
+            var dots = orset.Dots.Select(x => _ser.VersionVectorFromProto(x));
+            var vector = _ser.VersionVectorFromProto(orset.Vvector);
+
+            if (orset.IntElements.Count > 0)
+            {
+                var el = orset.IntElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                    .ToImmutableDictionary(x => x.i, y => y.versionVector);
+            }
+        }
+        /// <summary>
+        /// Called when we're serializing none of the standard object types
+        /// </summary>
+        private Proto.Msg.ORSet ToBinary<T>(ORSet<T> orset)
+        {
+            var p = ToProto(orset);
+            p.OtherElements.Add(orset.Elements.Select(x => _ser.OtherMessageToProto(x)));
+            return p;
         }
     }
 }
