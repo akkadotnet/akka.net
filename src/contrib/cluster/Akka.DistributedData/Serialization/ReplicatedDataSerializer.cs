@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
+using Akka.Util;
 
 
 namespace Akka.DistributedData.Serialization
@@ -137,6 +138,7 @@ namespace Akka.DistributedData.Serialization
             var p = new Proto.Msg.ORSet();
             p.Vvector = SerializationSupport.VersionVectorToProto(set.VersionVector);
             p.Dots.Add(set.ElementsMap.Values.Select(SerializationSupport.VersionVectorToProto));
+            p.TypeInfo = new TypeDescriptor();
             return p;
         }
 
@@ -147,25 +149,28 @@ namespace Akka.DistributedData.Serialization
                 case ORSet<int> ints:
                 {
                     var p = ToProto(ints);
-                    
+                    p.TypeInfo.Type = ValType.Int;
                     p.IntElements.Add(ints.Elements);
                     return p;
                 }
                 case ORSet<long> longs:
                 {
                     var p = ToProto(longs);
+                    p.TypeInfo.Type = ValType.Long;
                     p.LongElements.Add(longs.Elements);
                     return p;
                 }
                 case ORSet<string> strings:
                 {
                     var p = ToProto(strings);
+                    p.TypeInfo.Type = ValType.String;
                     p.StringElements.Add(strings.Elements);
                     return p;
                 }
                 case ORSet<IActorRef> refs:
                 {
                     var p = ToProto(refs);
+                    p.TypeInfo.Type = ValType.ActorRef;
                     p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
                     return p;
                 }
@@ -181,7 +186,7 @@ namespace Akka.DistributedData.Serialization
             var dots = orset.Dots.Select(x => _ser.VersionVectorFromProto(x));
             var vector = _ser.VersionVectorFromProto(orset.Vvector);
 
-            if (orset.IntElements.Count > 0)
+            if (orset.IntElements.Count > 0 || orset.TypeInfo.Type == ValType.Int)
             {
                 var eInt = orset.IntElements.Zip(dots, (i, versionVector) => (i, versionVector))
                     .ToImmutableDictionary(x => x.i, y => y.versionVector);
@@ -189,34 +194,47 @@ namespace Akka.DistributedData.Serialization
                 return new ORSet<int>(eInt, vector);
             }
 
-            if (orset.LongElements.Count > 0)
+            if (orset.LongElements.Count > 0 || orset.TypeInfo.Type == ValType.Long)
             {
                 var eLong = orset.LongElements.Zip(dots, (i, versionVector) => (i, versionVector))
                     .ToImmutableDictionary(x => x.i, y => y.versionVector);
                 return new ORSet<long>(eLong, vector);
             }
 
-            if (orset.StringElements.Count > 0)
+            if (orset.StringElements.Count > 0 || orset.TypeInfo.Type == ValType.String)
             {
                 var eStr = orset.StringElements.Zip(dots, (i, versionVector) => (i, versionVector))
                     .ToImmutableDictionary(x => x.i, y => y.versionVector);
                 return new ORSet<string>(eStr, vector);
             }
 
-            if (orset.ActorRefElements.Count > 0)
+            if (orset.ActorRefElements.Count > 0 || orset.TypeInfo.Type == ValType.ActorRef)
             {
                 var eRef = orset.ActorRefElements.Zip(dots, (i, versionVector) => (i, versionVector))
                     .ToImmutableDictionary(x => _ser.ResolveActorRef(x.i), y => y.versionVector);
                 return new ORSet<IActorRef>(eRef, vector);
             }
 
-            // runtime type
-            var eOther = orset.OtherElements.Zip(dots, (i, versionVector) => (i, versionVector))
-                .ToImmutableDictionary(x => _ser.OtherMessageFromProto(x.i), y => y.versionVector);
-            var setContentType = eOther.First().Key.GetType();
+            // runtime type - enter horrible serialization shit
+           
+            var setContentType = Type.GetType(orset.TypeInfo.TypeName);
 
-            var setType = typeof(ORSet<>).MakeGenericType(setContentType);
-            return (IORSet)Activator.CreateInstance(setType, eOther, vector);
+            var eOther = orset.OtherElements.Zip(dots,
+                (i, versionVector) => (_ser.OtherMessageFromProto(i), versionVector))
+                .ToImmutableDictionary(x => x.Item1, x => x.versionVector);
+
+            var setType = ORSetMaker.MakeGenericMethod(setContentType);
+            return (IORSet)setType.Invoke(this, new object[]{ eOther, vector });
+        }
+
+        private static readonly MethodInfo ORSetMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ToGenericORSet), BindingFlags.Static | BindingFlags.NonPublic);
+
+        private static ORSet<T> ToGenericORSet<T>(ImmutableDictionary<object, VersionVector> elems, VersionVector vector)
+        {
+            var finalInput = elems.ToImmutableDictionary(x => (T)x.Key, v => v.Value);
+
+            return new ORSet<T>(finalInput, vector);
         }
 
         /// <summary>
@@ -225,6 +243,8 @@ namespace Akka.DistributedData.Serialization
         private Proto.Msg.ORSet ToBinary<T>(ORSet<T> orset)
         {
             var p = ToProto(orset);
+            p.TypeInfo.Type = ValType.Other;
+            p.TypeInfo.TypeName = typeof(T).TypeQualifiedName();
             p.OtherElements.Add(orset.Elements.Select(x => _ser.OtherMessageToProto(x)));
             return p;
         }
