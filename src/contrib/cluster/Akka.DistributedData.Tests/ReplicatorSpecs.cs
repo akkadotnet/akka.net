@@ -20,6 +20,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.DistributedData.Tests
 {

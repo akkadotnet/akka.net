@@ -12,6 +12,7 @@ using Hocon;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Configuration;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
 {
@@ -58,7 +59,7 @@ namespace Akka.Actor
         public Settings(ActorSystem system, Config config)
         {
             _userConfig = config;
-            _fallbackConfig = AkkaConfigurationFactory.DefaultConfig;
+            _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;

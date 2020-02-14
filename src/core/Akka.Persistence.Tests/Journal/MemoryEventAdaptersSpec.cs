@@ -13,6 +13,7 @@ using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Persistence.Tests.Journal
 {

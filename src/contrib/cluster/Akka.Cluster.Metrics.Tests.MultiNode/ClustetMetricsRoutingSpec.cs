@@ -23,6 +23,7 @@ using Akka.Routing;
 using FluentAssertions;
 using Hocon;
 using Address = Akka.Actor.Address;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics.Tests.MultiNode
 {

@@ -9,6 +9,7 @@ using System;
 using Hocon;
 using Xunit;
 using Xunit.Abstractions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Persistence.Query.Tests
 {

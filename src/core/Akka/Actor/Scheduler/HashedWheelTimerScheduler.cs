@@ -40,10 +40,10 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="scheduler">TBD</param>
         /// <param name="log">TBD</param>
         /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
-        public HashedWheelTimerScheduler(Config config, ILoggingAdapter log) : base(config, log)
+        public HashedWheelTimerScheduler(Config scheduler, ILoggingAdapter log) : base(scheduler, log)
         {
             if (SchedulerConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();

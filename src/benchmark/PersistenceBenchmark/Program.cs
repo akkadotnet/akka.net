@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
 using Akka.Pattern;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace PersistenceBenchmark
 {

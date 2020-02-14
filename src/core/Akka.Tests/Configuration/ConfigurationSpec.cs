@@ -17,12 +17,13 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Tests.Configuration
 {
     public class ConfigurationSpec : AkkaSpec
     {
-        public ConfigurationSpec(ITestOutputHelper output) : base(AkkaConfigurationFactory.DefaultConfig, output)
+        public ConfigurationSpec(ITestOutputHelper output) : base(ConfigurationFactory.Default(), output)
         {
         }
 

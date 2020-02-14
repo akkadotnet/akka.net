@@ -18,7 +18,7 @@ using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
-using Akka.Configuration;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor.Internal
 {
@@ -53,7 +53,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, AkkaConfigurationFactory.Default())
+            : this(name, ConfigurationFactory.Default())
         {
         }
 

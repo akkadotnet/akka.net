@@ -16,6 +16,7 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Streams.Tests
 {

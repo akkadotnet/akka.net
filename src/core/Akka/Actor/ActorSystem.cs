@@ -13,8 +13,8 @@ using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
-using Hocon;
 using Akka.Configuration;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
 {
@@ -111,7 +111,7 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name, AkkaConfigurationFactory.Default());
+            return CreateAndStartSystem(name, ConfigurationFactory.Default());
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
