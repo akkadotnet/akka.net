@@ -67,7 +67,7 @@ namespace Akka.Tests.Configuration
         [Fact]
         public void Deserializes_hocon_configuration_from_net_config_file()
         {
-#if CONFIGURATION
+#if !CORECLR
             var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
             Assert.NotNull(section);
             Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
