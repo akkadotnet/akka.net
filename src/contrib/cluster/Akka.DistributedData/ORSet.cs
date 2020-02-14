@@ -37,6 +37,8 @@ namespace Akka.DistributedData
         ORSet.IAddDeltaOperation ToAddDeltaOperation();
 
         ORSet.IRemoveDeltaOperation ToRemoveDeltaOperation();
+
+        ORSet.IFullStateDeltaOperation ToFullStateDeltaOperation();
     }
 
 
@@ -741,6 +743,11 @@ namespace Akka.DistributedData
         ORSet.IRemoveDeltaOperation IORSet.ToRemoveDeltaOperation()
         {
             return new RemoveDeltaOperation(this);
+        }
+
+        ORSet.IFullStateDeltaOperation IORSet.ToFullStateDeltaOperation()
+        {
+            return new FullStateDeltaOperation(this);
         }
     }
 }

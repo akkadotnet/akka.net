@@ -15,6 +15,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Util;
@@ -270,9 +271,11 @@ namespace Akka.DistributedData.Serialization
             return set.ToRemoveDeltaOperation();
         }
 
-        private Proto.Msg.ORSetDeltaGroup ToProto(ORSet.IDeltaGroupOperation orset)
+        private Proto.Msg.ORSetDeltaGroup ToProto<T>(ORSet<T>.DeltaGroup orset)
         {
             var deltaGroup = new Proto.Msg.ORSetDeltaGroup();
+
+
             foreach (var op in orset.OperationsSerialization)
             {
                 switch (op)
@@ -297,6 +300,46 @@ namespace Akka.DistributedData.Serialization
         {
             var deltaGroup = Proto.Msg.ORSetDeltaGroup.Parser.ParseFrom(bytes);
             var ops = new List<ORSet.IDeltaOperation>();
+
+            foreach (var op in deltaGroup.Entries)
+            {
+                switch (op.Operation)
+                {
+                    case ORSetDeltaOp.Add:
+                        ops.Add(FromProto(op.Underlying).ToAddDeltaOperation());
+                        break;
+                    case ORSetDeltaOp.Remove:
+                        ops.Add(FromProto(op.Underlying).ToRemoveDeltaOperation());
+                        break;
+                    case ORSetDeltaOp.Full:
+                        ops.Add(FromProto(op.Underlying).ToFullStateDeltaOperation());
+                        break;
+                    default:
+                        throw new SerializationException($"Unknown ORSet delta operation ${op.Operation}");
+
+                }
+            }
+
+            var arr = ops.Cast<IReplicatedData>().ToImmutableArray();
+
+            switch (deltaGroup.TypeInfo.Type)
+            {
+                case ValType.Int:
+                    return new ORSet<int>.DeltaGroup(arr);
+                case ValType.Long:
+                    return new ORSet<long>.DeltaGroup(arr);
+                case ValType.String:
+                    return new ORSet<string>.DeltaGroup(arr);
+                case ValType.ActorRef:
+                    return new ORSet<IActorRef>.DeltaGroup(arr);
+            }
+
+            // if we made it this far, we're working with an object type
+            // enter reflection magic
+
+            var type = Type.GetType(deltaGroup.TypeInfo.TypeName);
+            var orDeltaGroupType = typeof(ORSet<>.DeltaGroup).MakeGenericType(type);
+
         }
 
     }
