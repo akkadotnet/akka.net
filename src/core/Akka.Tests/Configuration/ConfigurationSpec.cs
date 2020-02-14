@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.InteropServices;
+using System.IO;
 using Akka.Configuration.Hocon;
 using System.Linq;
 using System.Threading;
@@ -22,7 +22,7 @@ namespace Akka.Tests.Configuration
 {
     public class ConfigurationSpec : AkkaSpec
     {
-        public ConfigurationSpec() : base(AkkaConfigurationFactory.DefaultConfig)
+        public ConfigurationSpec(ITestOutputHelper output) : base(AkkaConfigurationFactory.DefaultConfig, output)
         {
         }
 
@@ -68,13 +68,58 @@ namespace Akka.Tests.Configuration
         public void Deserializes_hocon_configuration_from_net_config_file()
         {
             // Skip this test for Linux targets
-            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            var OS = new OSInfo();
+            if (OS.IsWindows)
             {
+                Output.WriteLine("This test is NOT skipped.");
                 var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka");
                 Assert.NotNull(section);
                 Assert.False(string.IsNullOrEmpty(section.Hocon.Content));
                 var akkaConfig = section.AkkaConfig;
                 Assert.NotNull(akkaConfig);
+            } else
+            {
+                Output.WriteLine("This test is skipped.");
+            }
+        }
+
+    }
+    class OSInfo
+    {
+        public bool IsWindows { get; }
+        public bool IsLinux { get; }
+        public bool IsMacOSX { get; }
+        public bool IsUnknownLinux { get; }
+        public bool IsUnknown { get; }
+
+        public OSInfo()
+        {
+            string windir = Environment.GetEnvironmentVariable("windir");
+            if (!string.IsNullOrEmpty(windir) && windir.Contains(@"\") && Directory.Exists(windir))
+            {
+                IsWindows = true;
+            }
+            else if (File.Exists(@"/proc/sys/kernel/ostype"))
+            {
+                string osType = File.ReadAllText(@"/proc/sys/kernel/ostype");
+                if (osType.StartsWith("Linux", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Note: Android gets here too
+                    IsLinux = true;
+                }
+                else
+                {
+                    IsUnknownLinux = true;
+                }
+            }
+            else if (File.Exists(@"/System/Library/CoreServices/SystemVersion.plist"))
+            {
+                // Note: iOS gets here too
+                IsMacOSX = true;
+            }
+            else
+            {
+                IsUnknown = true;
             }
         }
     }
