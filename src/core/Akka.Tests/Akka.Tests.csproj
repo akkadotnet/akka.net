@@ -44,20 +44,4 @@
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
 
-  <!-- This is a hack so that `App.config` gets copied to the output directory of the dotnet core test folder -->
-  <!-- By default, dotnet core test are run through testhost.dll that uses testhost.dll.config file instead,
-       this causes tests to unable to access emmbedded App.config anymore. -->
-  <!--
-  <ItemGroup Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'">
-    <None Update="App.config">
-      <Link>xunit.console.dll.config</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <Target Name="CopyCustomContent" AfterTargets="AfterBuild">
-    <Copy SourceFiles="App.config" DestinationFiles="$(OutDir)\testhost.x86.dll.config" />
-    <Copy SourceFiles="App.config" DestinationFiles="$(OutDir)\testhost.x64.dll.config" />
-  </Target>
-  -->
 </Project>
