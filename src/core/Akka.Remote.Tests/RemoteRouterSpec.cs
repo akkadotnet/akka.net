@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -303,7 +304,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteRouter_must_set_supplied_SupervisorStrategy()
+        public async Task RemoteRouter_must_set_supplied_SupervisorStrategy()
         {
             var probe = CreateTestProbe(masterSystem);
             var escalator = new OneForOneStrategy(ex =>
@@ -320,9 +321,9 @@ namespace Akka.Remote.Tests
 
             // Need to be able to bind EventFilter to additional actor system (masterActorSystem in this case) before this code works
             // EventFilter.Exception<ActorKilledException>().ExpectOne(() => 
-            probe.ExpectMsg<Routees>().Members.Head().Send(Kill.Instance, TestActor);
+            probe.ExpectMsg<Routees>(TimeSpan.FromSeconds(10)).Members.Head().Send(Kill.Instance, TestActor);
             //);
-            probe.ExpectMsg<ActorKilledException>();
+            probe.ExpectMsg<ActorKilledException>(TimeSpan.FromSeconds(10));
         }
 
         [Fact(Skip = "Remote actor's DCN is currently not supported")]
