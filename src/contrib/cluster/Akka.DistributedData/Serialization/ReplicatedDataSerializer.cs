@@ -147,6 +147,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSet<int> ints:
                 {
                     var p = ToProto(ints);
+                    
                     p.IntElements.Add(ints.Elements);
                     return p;
                 }
