@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Serialization;
 using Akka.Routing;
 using Akka.TestKit;
@@ -32,7 +32,7 @@ namespace Akka.Remote.Tests.Serialization
 
         public DaemonMsgCreateSerializerSpec()
             : base(@"
-            akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote"" 
+            akka.actor.provider = remote
             akka.remote.dot-netty.tcp {
                 hostname = 127.0.0.1
                 port = 0

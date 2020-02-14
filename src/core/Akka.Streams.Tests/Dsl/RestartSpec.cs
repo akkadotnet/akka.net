@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public RestartSpec(ITestOutputHelper output) : base("", output)
+        public RestartSpec(ITestOutputHelper output) : base("{}", output)
         {
             Materializer = Sys.Materializer();
         }

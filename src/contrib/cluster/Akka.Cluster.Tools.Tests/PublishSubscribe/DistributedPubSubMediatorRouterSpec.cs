@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using Akka.Routing;
 using Akka.TestKit;
@@ -197,9 +197,10 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             {
                 var config =
                     DistributedPubSubMediatorRouterConfig.GetConfig("random")
+                        .WithFallback(DistributedPubSub.DefaultConfig())
                         .WithFallback(Sys.Settings.Config)
                         .GetConfig("akka.cluster.pub-sub");
-
+                Assert.False(config.IsNullOrEmpty());
                 DistributedPubSubSettings.Create(config).WithRoutingLogic(new ConsistentHashingRoutingLogic(Sys));
             });
         }

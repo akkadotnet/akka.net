@@ -8,7 +8,7 @@
 using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
@@ -302,24 +302,34 @@ namespace Akka.Streams
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
-            return Create(config ?? Config.Empty);
+
+            // No need to check for Config.IsEmpty because this function expects empty Config.
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<ActorMaterializerSettings>("akka.stream.materializer");
+
+            return Create(config);
         }
 
+        // NOTE: Make sure that this class can handle empty Config
         private static ActorMaterializerSettings Create(Config config)
         {
+            // No need to check for Config.IsEmpty because this function expects empty Config.
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<ActorMaterializerSettings>();
+
             return new ActorMaterializerSettings(
                 initialInputBufferSize: config.GetInt("initial-input-buffer-size", 4),
                 maxInputBufferSize: config.GetInt("max-input-buffer-size", 16),
                 dispatcher: config.GetString("dispatcher", string.Empty),
                 supervisionDecider: Deciders.StoppingDecider,
                 subscriptionTimeoutSettings: StreamSubscriptionTimeoutSettings.Create(config),
-                isDebugLogging: config.GetBoolean("debug-logging"),
+                isDebugLogging: config.GetBoolean("debug-logging", false),
                 outputBurstLimit: config.GetInt("output-burst-limit", 1000),
-                isFuzzingMode: config.GetBoolean("debug.fuzzing-mode"),
+                isFuzzingMode: config.GetBoolean("debug.fuzzing-mode", false),
                 isAutoFusing: config.GetBoolean("auto-fusing", true),
                 maxFixedBufferSize: config.GetInt("max-fixed-buffer-size", 1000000000),
                 syncProcessingLimit: config.GetInt("sync-processing-limit", 1000),
-                streamRefSettings: StreamRefSettings.Create(config.GetConfig("stream-ref") ?? Config.Empty));
+                streamRefSettings: StreamRefSettings.Create(config.GetConfig("stream-ref")));
         }
 
         private const int DefaultlMaxFixedbufferSize = 1000;
@@ -521,7 +531,11 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static StreamSubscriptionTimeoutSettings Create(Config config)
         {
-            var c = config.GetConfig("subscription-timeout") ?? Config.Empty;
+            // No need to check for Config.IsEmpty because this function expects empty Config.
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<StreamSubscriptionTimeoutSettings>();
+
+            var c = config.GetConfig("subscription-timeout");
             var configMode = c.GetString("mode", "cancel").ToLowerInvariant();
             StreamSubscriptionTimeoutTerminationMode mode;
             switch (configMode)

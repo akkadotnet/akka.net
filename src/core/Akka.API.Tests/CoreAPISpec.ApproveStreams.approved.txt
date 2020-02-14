@@ -46,7 +46,7 @@ namespace Akka.Streams
         public abstract Akka.Actor.ActorSystem System { get; }
         public abstract Akka.Actor.IActorRef ActorOf(Akka.Streams.MaterializationContext context, Akka.Actor.Props props);
         public static Akka.Streams.ActorMaterializer Create(Akka.Actor.IActorRefFactory context, Akka.Streams.ActorMaterializerSettings settings = null, string namePrefix = null) { }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
         public void Dispose() { }
         public abstract Akka.Streams.ActorMaterializerSettings EffectiveSettings(Akka.Streams.Attributes attributes);
         public abstract Akka.Event.ILoggingAdapter MakeLogger(object logSource);
@@ -817,7 +817,7 @@ namespace Akka.Streams
         public readonly Akka.Streams.StreamSubscriptionTimeoutTerminationMode Mode;
         public readonly System.TimeSpan Timeout;
         public StreamSubscriptionTimeoutSettings(Akka.Streams.StreamSubscriptionTimeoutTerminationMode mode, System.TimeSpan timeout) { }
-        public static Akka.Streams.StreamSubscriptionTimeoutSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Streams.StreamSubscriptionTimeoutSettings Create(Hocon.Config config) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.Streams.StreamSubscriptionTimeoutSettings other) { }
         public override int GetHashCode() { }
@@ -1922,7 +1922,7 @@ namespace Akka.Streams.Dsl
         public string ProductPrefix { get; }
         public System.TimeSpan SubscriptionTimeout { get; }
         public Akka.Streams.Dsl.StreamRefSettings Copy(System.Nullable<int> bufferCapacity = null, System.Nullable<System.TimeSpan> demandRedeliveryInterval = null, System.Nullable<System.TimeSpan> subscriptionTimeout = null, System.Nullable<System.TimeSpan> finalTerminationSignalDeadline = null) { }
-        public static Akka.Streams.Dsl.StreamRefSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Streams.Dsl.StreamRefSettings Create(Hocon.Config config) { }
         public Akka.Streams.Dsl.StreamRefSettings WithBufferCapacity(int value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithSubscriptionTimeout(System.TimeSpan value) { }

@@ -15,7 +15,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         [Fact]
         public void TestEventListener_is_in_config_by_default()
         {
-            var configLoggers = Sys.Settings.Config.GetStringList("akka.loggers");
+            var configLoggers = Sys.Settings.Config.GetStringList("akka.loggers", new string[] { });
             configLoggers.Any(logger => logger.Contains("Akka.TestKit.TestEventListener")).ShouldBeTrue();
             configLoggers.Any(logger => logger.Contains("Akka.Event.DefaultLogger")).ShouldBeFalse();
         }

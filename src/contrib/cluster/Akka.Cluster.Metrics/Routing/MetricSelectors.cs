@@ -12,6 +12,7 @@ using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Util;
+using Hocon;
 
 namespace Akka.Cluster.Metrics
 {
@@ -37,6 +38,9 @@ namespace Akka.Cluster.Metrics
         /// <returns></returns>
         public static IMetricsSelector BuildFromConfig(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<IMetricsSelector>();
+
             var selectorTypeName = config.GetString("metrics-selector");
             switch (selectorTypeName)
             {

@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.TestKit.TestActors;
@@ -329,7 +329,12 @@ akka.actor {
         [Fact]
         public void CanSerializeConfig()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.ParseString(@"
+my-settings{
+    a: 1
+    b: 2
+    c: 3
+}");
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));

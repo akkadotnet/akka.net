@@ -7,11 +7,12 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Dispatch
 {
@@ -62,7 +63,7 @@ namespace Akka.Tests.Dispatch
 
         #endregion
 
-        public DispatchersSpec() : base(DispatcherConfiguration) { }
+        public DispatchersSpec(ITestOutputHelper helper) : base(DispatcherConfiguration, helper) { }
 
         
 
@@ -142,7 +143,7 @@ namespace Akka.Tests.Dispatch
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithDispatcher("my-pinned-dispatcher"), "echo2");
             actor.Tell("what's in a name?");
             var expected = "myapp.my-fork-join-dispatcher";
-            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(200));
             actual.ShouldBe(expected);
         }
 

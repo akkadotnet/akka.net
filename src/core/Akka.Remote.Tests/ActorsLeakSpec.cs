@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;

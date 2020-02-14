@@ -7,11 +7,11 @@
 
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
 using Akka.Remote.Routing;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using Hocon;
 using Xunit;
 
 namespace Akka.Remote.Tests

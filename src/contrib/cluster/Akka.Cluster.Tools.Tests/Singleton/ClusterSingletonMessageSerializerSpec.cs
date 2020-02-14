@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Cluster.Tools.Singleton;
-using Akka.Configuration;
+using Hocon;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;

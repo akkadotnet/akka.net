@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 
 namespace Akka.Cluster
@@ -23,8 +23,10 @@ namespace Akka.Cluster
         {
             _clusterSettings = Cluster.Get(system).Settings;
             var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolver>("akka.cluster.split-brain-resolver");
 
-            StableAfter = config.GetTimeSpan("stable-after");
+            StableAfter = config.GetTimeSpan("stable-after", null);
             Strategy = ResolveSplitBrainStrategy(config);
         }
 
@@ -36,7 +38,7 @@ namespace Akka.Cluster
 
         private ISplitBrainStrategy ResolveSplitBrainStrategy(Config config)
         {
-            var activeStrategy = config.GetString("active-strategy");
+            var activeStrategy = config.GetString("active-strategy", null);
             switch (activeStrategy)
             {
                 case "static-quorum": return new StaticQuorum(config.GetConfig("static-quorum"));
@@ -85,11 +87,12 @@ namespace Akka.Cluster
         IEnumerable<Member> Apply(NetworkPartitionContext context);
     }
 
+    // TODO: Can quorum size be 0 and role be null?
     internal sealed class StaticQuorum : ISplitBrainStrategy
     {
         public StaticQuorum(Config config) : this(
-           quorumSize: config.GetInt("quorum-size"),
-           role: config.GetString("role"))
+           quorumSize: config.GetInt("quorum-size", 0),
+           role: config.GetString("role", null))
         { }
 
         public StaticQuorum(int quorumSize, string role)
@@ -117,7 +120,7 @@ namespace Akka.Cluster
     internal sealed class KeepMajority : ISplitBrainStrategy
     {
         public KeepMajority(Config config) : this(
-            role: config.GetString("role"))
+            role: config.GetString("role", null))
         { }
 
         public KeepMajority(string role = null)
@@ -154,7 +157,7 @@ namespace Akka.Cluster
     {
         public KeepOldest(Config config) : this(
             downIfAlone: config.GetBoolean("down-if-alone", true),
-            role: config.GetString("role"))
+            role: config.GetString("role", null))
         { }
 
         public KeepOldest(bool downIfAlone, string role = null)
@@ -200,7 +203,7 @@ namespace Akka.Cluster
     internal sealed class KeepReferee : ISplitBrainStrategy
     {
         public KeepReferee(Config config) : this(
-            address: Address.Parse(config.GetString("address")),
+            address: Address.Parse(config.GetString("address", null)),
             downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes", 1))
         { }
 

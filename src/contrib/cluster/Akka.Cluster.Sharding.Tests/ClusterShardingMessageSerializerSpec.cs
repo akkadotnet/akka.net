@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Serialization;
 using Akka.Cluster.Tools.Singleton;
-using Akka.Configuration;
+using Hocon;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.Util.Internal;

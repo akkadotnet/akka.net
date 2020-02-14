@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
@@ -144,8 +144,11 @@ namespace Akka.Persistence.Tests
                 State = new List<int>();
 
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.sender.chaos");
-                _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
-                _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
+                if (_config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<ChaosSender>("akka.persistence.sender.chaos");
+
+                _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate", 0);
+                _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate", 0);
             }
 
             public override string PersistenceId { get { return "chaosSender"; } }
@@ -242,7 +245,7 @@ namespace Akka.Persistence.Tests
                 Probe = probe;
                 State = new List<int>();
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.destination.chaos");
-                _confirmFailureRate = _config.GetDouble("confirm-failure-rate");
+                _confirmFailureRate = _config.GetDouble("confirm-failure-rate", 0);
 
                 Receive<Msg>(m =>
                 {

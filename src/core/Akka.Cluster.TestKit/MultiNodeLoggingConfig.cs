@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.TestKit;
 
 namespace Akka.Cluster.Tests.MultiNode

@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Cluster.Tools.Singleton
 {
@@ -26,8 +26,8 @@ namespace Akka.Cluster.Tools.Singleton
         {
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
-            if (config == null)
-                throw new ConfigurationException($"Cannot create {typeof(ClusterSingletonProxySettings)}: akka.cluster.singleton-proxy configuration node not found");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>("akka.cluster.singleton-proxy");
 
             return Create(config);
         }
@@ -39,14 +39,17 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(Config config)
         {
-            var role = config.GetString("role");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>();
+
+            var role = config.GetString("role", null);
             if (role == string.Empty) role = null;
 
             return new ClusterSingletonProxySettings(
                 singletonName: config.GetString("singleton-name"),
                 role: role,
                 singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
-                bufferSize: config.GetInt("buffer-size"));
+                bufferSize: config.GetInt("buffer-size", 0));
         }
 
         /// <summary>

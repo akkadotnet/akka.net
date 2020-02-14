@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
@@ -45,8 +45,11 @@ namespace Akka.Actor
         /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
         public HashedWheelTimerScheduler(Config scheduler, ILoggingAdapter log) : base(scheduler, log)
         {
-            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
-            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
+            if (SchedulerConfig.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();
+
+            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel", 0);
+            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
             if (tickDuration.TotalMilliseconds < 10.0d)
                 throw new ArgumentOutOfRangeException("minimum supported akka.scheduler.tick-duration on Windows is 10ms");
 
@@ -62,7 +65,7 @@ namespace Akka.Actor
                 throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", _tickDuration,
                     $"akka.scheduler.tick-duration: {_tickDuration} (expected: 0 < tick-duration in ticks < {long.MaxValue / _wheel.Length}");
 
-            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
         }
 
         private long _startTime = 0;

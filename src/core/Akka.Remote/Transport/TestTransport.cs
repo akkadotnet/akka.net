@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Util;
 using Google.Protobuf;
 
@@ -69,7 +69,7 @@ namespace Akka.Remote.Transport
             : this(
                 Address.Parse(GetConfigString(conf, "local-address")),
                 AssociationRegistry.Get(GetConfigString(conf, "registry-key")),
-                conf.GetByteSize("maximum-payload-bytes") ?? 32000,
+                conf.GetByteSize("maximum-payload-bytes", null) ?? 32000L,
                 GetConfigString(conf, "scheme-identifier")
                 )
         {
@@ -107,7 +107,7 @@ namespace Akka.Remote.Transport
 
         private static string GetConfigString(Config conf, string name)
         {
-            var value = conf.GetString(name);
+            var value = conf.GetString(name, null);
             if (value == null)
                 throw new ConfigurationException("Please specify a value for config setting \"" + name + "\"");
             return value;

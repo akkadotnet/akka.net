@@ -7,7 +7,7 @@
 
 using System;
 using System.Collections.Specialized;
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Remote.TestKit
 {   

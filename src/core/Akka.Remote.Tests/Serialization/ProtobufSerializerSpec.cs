@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
@@ -19,7 +19,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class ProtobufSerializerSpec : AkkaSpec
     {
-        public ProtobufSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public ProtobufSerializerSpec() : base(RemoteConfigFactory.Default())
         {
         }
 

@@ -7,7 +7,7 @@
 
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Hocon;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;

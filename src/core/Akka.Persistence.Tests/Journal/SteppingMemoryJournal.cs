@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.Tests.Journal
@@ -53,7 +53,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public SteppingMemoryJournal()
         {
-            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id");
+            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id", null);
         }
 
         public static void Step(IActorRef journal)

@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Text;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;
@@ -54,12 +54,18 @@ namespace Akka.DistributedData.LightningDB
         public LmdbDurableStore(Config config)
         {
             config = config.GetConfig("lmdb");
-            if (config == null) throw new ArgumentException("Couldn't find config for LMDB durable store. Default path: `akka.cluster.distributed-data.durable.lmdb`");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<LmdbDurableStore>("akka.cluster.distributed-data.durable.lmdb");
 
             _log = Context.GetLogger();
 
-            _writeBehindInterval = config.GetString("write-behind-interval") == "off" 
-                ? TimeSpan.Zero : config.GetTimeSpan("write-behind-interval");
+            var useWriteBehind = config.GetString("write-behind-interval", "").ToLowerInvariant();
+            _writeBehindInterval = 
+                useWriteBehind == "off" ||
+                useWriteBehind == "false" ||
+                useWriteBehind == "no" ? 
+                    TimeSpan.Zero : 
+                    config.GetTimeSpan("write-behind-interval");
 
             var mapSize = config.GetByteSize("map-size");
             var dirPath = config.GetString("dir");

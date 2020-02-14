@@ -11,7 +11,7 @@ using System.Linq;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
-using Akka.Configuration;
+using Hocon;
 using Akka.DistributedData.Internal;
 using Xunit;
 using Xunit.Abstractions;

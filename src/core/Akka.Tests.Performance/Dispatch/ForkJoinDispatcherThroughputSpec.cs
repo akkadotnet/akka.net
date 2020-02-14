@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 
 namespace Akka.Tests.Performance.Dispatch

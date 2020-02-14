@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.TCK.Serialization;
 using Akka.Util.Internal;
 using Xunit;

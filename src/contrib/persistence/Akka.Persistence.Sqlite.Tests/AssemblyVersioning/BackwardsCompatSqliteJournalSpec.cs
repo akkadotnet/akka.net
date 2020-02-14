@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.TCK.Journal;
 using Akka.Util.Internal;
 using Xunit;

@@ -17,6 +17,7 @@ using Akka.Annotations;
 using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
+using Hocon;
 
 namespace Akka.Serialization
 {
@@ -171,7 +172,7 @@ namespace Akka.Serialization
 
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
-                var serializer = serializerConfig != null
+                var serializer = !serializerConfig.IsNullOrEmpty()
                     ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
                     : (Serializer)Activator.CreateInstance(serializerType, system);
 

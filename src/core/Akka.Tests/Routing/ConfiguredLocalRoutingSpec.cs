@@ -10,11 +10,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
+using Hocon;
 using FluentAssertions;
 using Xunit;
 
@@ -178,7 +178,7 @@ namespace Akka.Tests.Routing
 
             public override Routee Select(object message, Routee[] routees)
             {
-                return new MyRoutee(_config.GetString(message.ToString()));
+                return new MyRoutee(_config.GetString(message.ToString(), null));
             }
         }
 

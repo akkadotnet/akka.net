@@ -13,11 +13,11 @@ NUGET_URL=https://dist.nuget.org/win-x86-commandline/v4.3.0/nuget.exe
 FAKE_VERSION=4.63.0
 FAKE_EXE=$TOOLS_DIR/FAKE/tools/FAKE.exe
 DOTNET_EXE=$SCRIPT_DIR/.dotnet/dotnet
-DOTNET_VERSION=2.1.500
-DOTNET_INSTALLER_URL=https://raw.githubusercontent.com/dotnet/cli/v$DOTNET_VERSION/scripts/obtain/dotnet-install.sh
+DOTNET_VERSION=3.1.100
+DOTNET_INSTALLER_URL=https://dot.net/v1/dotnet-install.sh
 DOTNET_CHANNEL=LTS
 PROTOBUF_VERSION=3.4.0
-INCREMENTALIST_VERSION=0.2.1
+INCREMENTALIST_VERSION=0.2.2
 
 # Define default arguments.
 TARGET="Default"

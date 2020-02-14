@@ -38,9 +38,9 @@ namespace Akka.Persistence.Snapshot
             _publish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = CircuitBreaker.Create(
-                config.GetInt("circuit-breaker.max-failures"),
-                config.GetTimeSpan("circuit-breaker.call-timeout"),
-                config.GetTimeSpan("circuit-breaker.reset-timeout"));
+                config.GetInt("circuit-breaker.max-failures", 0),
+                config.GetTimeSpan("circuit-breaker.call-timeout", null),
+                config.GetTimeSpan("circuit-breaker.reset-timeout", null));
         }
 
         /// <inheritdoc/>

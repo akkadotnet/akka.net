@@ -9,7 +9,7 @@ using System;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;

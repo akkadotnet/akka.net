@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;
@@ -53,6 +53,7 @@ namespace Akka.Remote.Tests
             common-helios-settings {
               port = 0
               hostname = ""localhost""
+              #enforce-ip-family = true
             }
 
             akka {
@@ -99,6 +100,7 @@ namespace Akka.Remote.Tests
             common-helios-settings {
               port = 0
               hostname = ""localhost""
+              #enforce-ip-family = true
             }
 
             akka {
@@ -667,7 +669,7 @@ namespace Akka.Remote.Tests
         {
             get
             {
-                var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes");
+                var byteSize = Sys.Settings.Config.GetByteSize("akka.remote.test.maximum-payload-bytes", null);
                 if (byteSize != null)
                     return (int)byteSize.Value;
                 return 0;
