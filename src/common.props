@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2019 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2019 Akka.NET Team UPDATED</Copyright>
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.4.0</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
@@ -15,7 +15,7 @@
     <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
     <NBenchVersion>1.2.2</NBenchVersion>
     <ProtobufVersion>3.11.2</ProtobufVersion>
-    <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
+    <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
