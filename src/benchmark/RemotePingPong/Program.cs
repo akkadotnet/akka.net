@@ -37,6 +37,7 @@ namespace RemotePingPong
             return sp;
 #else
             return 0;
+            
 #endif
         }
 
