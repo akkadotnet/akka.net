@@ -10,6 +10,19 @@ package Akka.DistributedData.Serialization.Proto.Msg;
 option optimize_for = SPEED;
 import "ReplicatorMessages.proto";
 
+enum ValType{
+  Int = 0;
+  Long = 1;
+  String = 2;
+  ActorRef = 3;
+  Other = 4;
+}
+
+message TypeDescriptor{
+  ValType type = 1;
+  string TypeName = 2; // used when ValType.Other is selected  
+}
+
 message GSet {
   repeated string stringElements = 1;
   repeated sint32 intElements = 2 [packed=true];
@@ -30,8 +43,8 @@ message ORSet {
 
 message ORSetDeltaGroup {
   message Entry {
-     ORSetDeltaOp operation = 1;
-     ORSet underlying = 2;
+    ORSetDeltaOp operation = 1;
+    ORSet underlying = 2;
   }
   
   repeated Entry entries = 1;
@@ -76,8 +89,9 @@ message ORMap {
     OtherMessage otherKey = 5;
   }
   
-   ORSet keys = 1;
+  ORSet keys = 1;
   repeated Entry entries = 2;
+  TypeDescriptor typeInfo = 3;
 }
 
 message ORMapDeltaGroup {
@@ -114,7 +128,7 @@ message LWWMap {
      OtherMessage otherKey = 5;
   }
   
-   ORSet keys = 1;
+  ORSet keys = 1;
   repeated Entry entries = 2;
 }
 
@@ -127,7 +141,7 @@ message PNCounterMap {
     OtherMessage otherKey = 5;
   }
   
-   ORSet keys = 1;
+  ORSet keys = 1;
   repeated Entry entries = 2;
 }
 
