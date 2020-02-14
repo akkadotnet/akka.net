@@ -71,7 +71,7 @@ namespace Akka.DistributedData.Serialization
         {
             switch (obj)
             {
-                case IORSet o: return ToProto(o).ToByteArray();
+                case IORSet o: return SerializationSupport.Compress(ToProto(o));
                 default:
                     throw new ArgumentException($"Can't serialize object of type [{obj.GetType().FullName}] in [{GetType().FullName}]");
             }
@@ -81,7 +81,7 @@ namespace Akka.DistributedData.Serialization
         {
             switch (manifest)
             {
-                case ORSetManifest: return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+                case ORSetManifest: return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(SerializationSupport.Decompress(bytes)));
                 default:
                     throw new ArgumentException($"Can't deserialize object with unknown manifest [{manifest}]");
             }

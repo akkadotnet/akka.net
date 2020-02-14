@@ -76,8 +76,8 @@ namespace Akka.DistributedData.Serialization
 
         public static byte[] Compress(IMessage msg)
         {
-            using (var memStream = new MemoryStream())
-            using (var gzip = new GZipStream(memStream, CompressionLevel.Fastest, false))
+            using (var memStream = new MemoryStream(BufferSize))
+            using (var gzip = new GZipStream(memStream, CompressionMode.Compress))
             {
                 msg.WriteTo(gzip);
                 return memStream.ToArray();
@@ -86,8 +86,8 @@ namespace Akka.DistributedData.Serialization
 
         public static byte[] Decompress(byte[] input)
         {
-            using (var gzipStream = new GZipStream(new MemoryStream(input), CompressionLevel.Fastest))
-            using (var memStream = new MemoryStream())
+            using (var memStream = new MemoryStream(BufferSize))
+            using (var gzipStream = new GZipStream(new MemoryStream(input), CompressionMode.Decompress))
             {
                 var buf = new byte[BufferSize];
                 while (gzipStream.CanRead)
