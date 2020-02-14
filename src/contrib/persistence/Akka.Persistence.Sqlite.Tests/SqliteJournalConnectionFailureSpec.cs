@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Sql.TestKit;
 using Xunit.Abstractions;
 

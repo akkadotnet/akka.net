@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 

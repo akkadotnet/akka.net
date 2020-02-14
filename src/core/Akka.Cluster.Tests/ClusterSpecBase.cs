@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.TestKit;
 
 namespace Akka.Cluster.Tests

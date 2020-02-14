@@ -8,7 +8,7 @@
 using System;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.TestKit.Tests;

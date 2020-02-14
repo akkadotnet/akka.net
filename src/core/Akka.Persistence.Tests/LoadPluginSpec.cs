@@ -6,9 +6,10 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Journal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -40,9 +41,9 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        public LoadPluginSpec() : base(Configuration("LoadPluginSpec", extraConfig:
+        public LoadPluginSpec(ITestOutputHelper helper) : base(Configuration("LoadPluginSpec", extraConfig:
   @"akka.persistence.journal.inmem.class = ""Akka.Persistence.Tests.LoadPluginSpec+JournalWithConfig, Akka.Persistence.Tests""
-  akka.persistence.journal.inmem.extra-property = 17"))
+  akka.persistence.journal.inmem.extra-property = 17"), helper)
         {
         }
 
@@ -51,7 +52,7 @@ namespace Akka.Persistence.Tests
         {
             var pluginRef = Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
             pluginRef.Tell(GetConfig.Instance);
-            ExpectMsg<Config>(c => c.GetInt("extra-property") == 17);
+            ExpectMsg<Config>(c => c.GetInt("extra-property", 0) == 17);
         }
     }
 }

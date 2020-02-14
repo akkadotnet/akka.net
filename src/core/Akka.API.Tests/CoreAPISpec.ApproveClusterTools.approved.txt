@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientReceptionist(Akka.Actor.ExtendedActorSystem system) { }
         public bool IsTerminated { get; }
         public Akka.Actor.IActorRef Underlying { get; }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
         public static Akka.Cluster.Tools.Client.ClusterClientReceptionist Get(Akka.Actor.ActorSystem system) { }
         public void RegisterService(Akka.Actor.IActorRef actorRef) { }
         public void RegisterSubscriber(string topic, Akka.Actor.IActorRef actorRef) { }
@@ -59,7 +59,7 @@ namespace Akka.Cluster.Tools.Client
         public System.Nullable<System.TimeSpan> ReconnectTimeout { get; }
         public System.TimeSpan RefreshContactsInterval { get; }
         public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Tools.Client.ClusterClientSettings Create(Hocon.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithEstablishingGetContactsInterval(System.TimeSpan value) { }
         public Akka.Cluster.Tools.Client.ClusterClientSettings WithHeartbeatInterval(System.TimeSpan value) { }
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Tools.Client
         public System.TimeSpan ResponseTunnelReceiveTimeout { get; }
         public string Role { get; }
         public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Hocon.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithHeartbeat(System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan failureDetectionInterval) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(System.TimeSpan responseTunnelReceiveTimeout) { }
@@ -185,7 +185,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public DistributedPubSub(Akka.Actor.ExtendedActorSystem system) { }
         public bool IsTerminated { get; }
         public Akka.Actor.IActorRef Mediator { get; }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub Get(Akka.Actor.ActorSystem system) { }
     }
     public sealed class DistributedPubSubExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub>
@@ -211,7 +211,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public string Role { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Hocon.Config config) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithMaxDeltaElements(int maxDeltaElements) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRemovedTimeToLive(System.TimeSpan removedTtl) { }
@@ -330,7 +330,7 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonManager : Akka.Actor.FSM<Akka.Cluster.Tools.Singleton.ClusterSingletonState, Akka.Cluster.Tools.Singleton.IClusterSingletonData>
     {
         public ClusterSingletonManager(Akka.Actor.Props singletonProps, object terminationMessage, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Actor.Props singletonProps, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings settings) { }
@@ -348,7 +348,7 @@ namespace Akka.Cluster.Tools.Singleton
         public string Role { get; }
         public string SingletonName { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Hocon.Config config) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithHandOverRetryInterval(System.TimeSpan handOverRetryInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRemovalMargin(System.TimeSpan removalMargin) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRole(string role) { }
@@ -357,7 +357,7 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonProxy : Akka.Actor.ReceiveActor
     {
         public ClusterSingletonProxy(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(string singletonManagerPath, Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings settings) { }
@@ -370,7 +370,7 @@ namespace Akka.Cluster.Tools.Singleton
         public System.TimeSpan SingletonIdentificationInterval { get; }
         public string SingletonName { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Hocon.Config config) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }

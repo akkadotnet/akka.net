@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
@@ -29,7 +29,7 @@ namespace Akka.Persistence.TCK
 
         protected static Config FromConfig(Config config = null)
         {
-            return config == null
+            return config.IsNullOrEmpty()
                 ? Persistence.DefaultConfig()
                 : config.WithFallback(Persistence.DefaultConfig());
         }

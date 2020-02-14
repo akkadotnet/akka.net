@@ -22,7 +22,7 @@ using FluentAssertions;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
-using Config = Akka.Configuration.Config;
+using Config = Hocon.Config;
 
 namespace Akka.Tests.Dispatch
 {

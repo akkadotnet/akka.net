@@ -9,7 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.IO
 {
@@ -31,9 +31,9 @@ namespace Akka.IO
         public InetAddressDnsResolver(SimpleDnsCache cache, Config config)
         {
             _cache = cache;
-            _positiveTtl = (long) config.GetTimeSpan("positive-ttl").TotalMilliseconds;
-            _negativeTtl = (long) config.GetTimeSpan("negative-ttl").TotalMilliseconds;
-            _useIpv6 = config.GetBoolean( "use-ipv6" );
+            _positiveTtl = (long) config.GetTimeSpan("positive-ttl", null).TotalMilliseconds;
+            _negativeTtl = (long) config.GetTimeSpan("negative-ttl", null).TotalMilliseconds;
+            _useIpv6 = config.GetBoolean( "use-ipv6" , false);
         }
 
         /// <summary>

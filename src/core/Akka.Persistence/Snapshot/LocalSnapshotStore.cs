@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Dispatch;
 using Akka.Event;
+using Hocon;
 
 namespace Akka.Persistence.Snapshot
 {
@@ -45,12 +46,17 @@ namespace Akka.Persistence.Snapshot
         public LocalSnapshotStore()
         {
             var config = Context.System.Settings.Config.GetConfig("akka.persistence.snapshot-store.local");
-            _maxLoadAttempts = config.GetInt("max-load-attempts");
+            /*
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot create {typeof(LocalSnapshotStore)}: akka.persistence.snapshot-store.local configuration node not found");
+            */
 
-            _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher"));
-            _dir = new DirectoryInfo(config.GetString("dir"));
+            _maxLoadAttempts = config.GetInt("max-load-attempts", 0);
 
-            _defaultSerializer = config.GetString("serializer");
+            _streamDispatcher = Context.System.Dispatchers.Lookup(config.GetString("stream-dispatcher", null));
+            _dir = new DirectoryInfo(config.GetString("dir", null));
+
+            _defaultSerializer = config.GetString("serializer", null);
 
             _serialization = Context.System.Serialization;
             _wrapperSerializer = _serialization.FindSerializerForType(WrapperType);

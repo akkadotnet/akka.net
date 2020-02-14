@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 using Akka.DistributedData;
 using Akka.DistributedData.Internal;
 using Akka.DistributedData.Serialization;

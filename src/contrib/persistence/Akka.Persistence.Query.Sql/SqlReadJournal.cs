@@ -8,7 +8,7 @@
 using System;
 using Reactive.Streams;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
 using Akka.Util.Internal;
@@ -40,9 +40,9 @@ namespace Akka.Persistence.Query.Sql
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refreshInterval = config.GetTimeSpan("refresh-interval");
-            _writeJournalPluginId = config.GetString("write-plugin");
-            _maxBufferSize = config.GetInt("max-buffer-size");
+            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
+            _writeJournalPluginId = config.GetString("write-plugin", null);
+            _maxBufferSize = config.GetInt("max-buffer-size", 0);
         }
 
         /// <summary>

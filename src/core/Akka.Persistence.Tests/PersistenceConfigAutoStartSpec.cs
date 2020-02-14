@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Snapshot;
 using Akka.TestKit;
@@ -34,7 +34,7 @@ namespace Akka.Persistence.Tests
 
             public TestJournal(Config config)
             {
-                _testValue = config.GetString("test-value");
+                _testValue = config.GetString("test-value", null);
             }
 
             protected override bool AroundReceive(Receive receive, object message)
@@ -54,7 +54,7 @@ namespace Akka.Persistence.Tests
 
             public TestSnapshotStore(Config config)
             {
-                _testValue = config.GetString("test-value");
+                _testValue = config.GetString("test-value", null);
             }
 
             protected override bool AroundReceive(Receive receive, object message)

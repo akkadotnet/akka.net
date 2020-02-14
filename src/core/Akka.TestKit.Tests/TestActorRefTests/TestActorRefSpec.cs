@@ -8,7 +8,7 @@
 using System;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Dispatch;
 using Akka.TestKit.Internal;
 using Xunit;
@@ -31,7 +31,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private static Config GetConfig()
         {
-            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName);
+            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName) + @"""";
             //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 

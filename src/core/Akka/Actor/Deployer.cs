@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Hocon;
 using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
@@ -38,9 +39,12 @@ namespace Akka.Actor
             var config = settings.Config.GetConfig("akka.actor.deployment");
             Default = config.GetConfig("default");
 
+            if (config.IsNullOrEmpty())
+                return;
+
             var rootObj = config.Root.GetObject();
-            if (rootObj == null) return;
-            var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
+            // if (rootObj == null) return;
+            var unwrapped = rootObj.Where(d => !d.Key.Equals("default")).ToArray();
             foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
                 SetDeploy(d);
@@ -127,11 +131,16 @@ namespace Akka.Actor
         /// <returns>A configured actor deployment to the given path.</returns>
         public virtual Deploy ParseConfig(string key, Config config)
         {
+            /*
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<Deploy>();
+            */
+
             var deployment = config.WithFallback(Default);
-            var routerType = deployment.GetString("router");
+            var routerType = deployment.GetString("router", null);
             var router = CreateRouterConfig(routerType, deployment);
-            var dispatcher = deployment.GetString("dispatcher");
-            var mailbox = deployment.GetString("mailbox");
+            var dispatcher = deployment.GetString("dispatcher", null);
+            var mailbox = deployment.GetString("mailbox", null);
             var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox);
             return deploy;
         }
@@ -141,8 +150,12 @@ namespace Akka.Actor
             if (routerTypeAlias == "from-code")
                 return NoRouter.Instance;
 
+            if (deployment.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<RouterConfig>();
+
+
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
-            var routerTypeName = _settings.Config.GetString(path);
+            var routerTypeName = _settings.Config.GetString(path, null);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");
             var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);

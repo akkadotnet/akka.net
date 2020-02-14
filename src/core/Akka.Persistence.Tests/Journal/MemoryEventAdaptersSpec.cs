@@ -8,11 +8,12 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Persistence.Tests.Journal
 {
@@ -52,7 +53,7 @@ akka.persistence.journal {
       """ + typeof(ReadMeTwiceEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader]
     }
   }
-}").WithFallback(ConfigurationFactory.Load());
+}").WithFallback(ConfigurationFactory.Default());
 
             _extendedActorSystem = (ExtendedActorSystem) Sys;
             _memoryConfig = config.GetConfig("akka.persistence.journal.inmem");

@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Cluster
 {
@@ -109,7 +109,11 @@ namespace Akka.Cluster
         public static TimeSpan? GetTimeSpanWithOffSwitch(this Config @this, string key)
         {
             TimeSpan? ret = null;
-            if (@this.GetString(key).ToLower() != "off") ret = @this.GetTimeSpan(key);
+            var useTimeSpanOffSwitch = @this.GetString(key, "");
+            if (useTimeSpanOffSwitch.ToLower() != "off" &&
+                useTimeSpanOffSwitch.ToLower() != "false" &&
+                useTimeSpanOffSwitch.ToLower() != "no")
+                ret = @this.GetTimeSpan(key, null);
             return ret;
         }
 

@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Remote.Tests.Performance.Transports
 {

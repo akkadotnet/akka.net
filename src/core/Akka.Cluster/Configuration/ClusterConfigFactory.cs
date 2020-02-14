@@ -8,7 +8,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using Akka.Configuration;
+using Hocon;
 
 namespace Akka.Cluster.Configuration
 {

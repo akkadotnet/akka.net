@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon;
 using Helios.Concurrency;
 
 namespace Akka.Dispatch
@@ -241,7 +241,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// The <see cref="Configuration.Config"/> for the default dispatcher.
+        /// The <see cref="Hocon.Config"/> for the default dispatcher.
         /// </summary>
         public Config DefaultDispatcherConfig
         {
@@ -318,7 +318,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Creates a dispatcher from a <see cref="Configuration.Config"/>. Internal test purpose only.
+        /// Creates a dispatcher from a <see cref="Hocon.Config"/>. Internal test purpose only.
         /// <code>
         /// From(Config.GetConfig(id));
         /// </code>
@@ -388,10 +388,14 @@ namespace Akka.Dispatch
         private static readonly Config TaskExecutorConfig = ConfigurationFactory.ParseString(@"executor=task-executor");
         private MessageDispatcherConfigurator ConfiguratorFrom(Config cfg)
         {
-            if (!cfg.HasPath("id")) throw new ConfigurationException($"Missing dispatcher `id` property in config: {cfg.Root}");
+            if (cfg.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<MessageDispatcherConfigurator>();
 
-            var id = cfg.GetString("id");
-            var type = cfg.GetString("type");
+            if (!cfg.HasPath("id"))
+                throw new ConfigurationException($"Missing dispatcher `id` property in config: {cfg.Root}");
+
+            var id = cfg.GetString("id", null);
+            var type = cfg.GetString("type", null);
 
 
             MessageDispatcherConfigurator dispatcher;
@@ -449,16 +453,19 @@ namespace Akka.Dispatch
             : base(config, prerequisites)
         {
             // Need to see if a non-zero value is available for this setting
-            TimeSpan deadlineTime = config.GetTimeSpan("throughput-deadline-time");
+            TimeSpan deadlineTime = Config.GetTimeSpan("throughput-deadline-time", null);
             long? deadlineTimeTicks = null;
             if (deadlineTime.Ticks > 0)
                 deadlineTimeTicks = deadlineTime.Ticks;
 
-            _instance = new Dispatcher(this, config.GetString("id"), 
-                config.GetInt("throughput"),
+            if (Config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DispatcherConfigurator>();
+
+            _instance = new Dispatcher(this, Config.GetString("id"),
+                Config.GetInt("throughput"),
                 deadlineTimeTicks,
                 ConfigureExecutor(),
-                config.GetTimeSpan("shutdown-timeout"));
+                Config.GetTimeSpan("shutdown-timeout"));
         }
 
 
