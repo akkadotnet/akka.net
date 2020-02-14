@@ -51,6 +51,7 @@ message ORSetDeltaGroup {
   }
   
   repeated Entry entries = 1;
+  TypeDescriptor typeInfo = 2;
 }
 
 enum ORSetDeltaOp {
@@ -112,6 +113,7 @@ message ORMapDeltaGroup {
   }
 
   repeated Entry entries = 1;
+  TypeDescriptor typeInfo = 2;
 }
 
 enum ORMapDeltaOp {
