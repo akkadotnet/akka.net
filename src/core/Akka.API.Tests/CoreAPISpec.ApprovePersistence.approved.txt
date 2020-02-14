@@ -254,7 +254,7 @@ namespace Akka.Persistence
     public interface IJournalMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage { }
     public interface IJournalPlugin
     {
-        Akka.Configuration.Config DefaultConfig { get; }
+        Hocon.Config DefaultConfig { get; }
         string JournalPath { get; }
     }
     public interface IJournalRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
@@ -313,7 +313,7 @@ namespace Akka.Persistence
     public interface IStashOverflowStrategy { }
     public interface IStashOverflowStrategyConfigurator
     {
-        Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
+        Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config);
     }
     public sealed class LoadSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
@@ -365,7 +365,7 @@ namespace Akka.Persistence
         public Persistence() { }
         public static Akka.Persistence.Persistence Instance { get; }
         public override Akka.Persistence.PersistenceExtension CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
     }
     public class PersistenceExtension : Akka.Actor.IExtension
     {
@@ -379,14 +379,14 @@ namespace Akka.Persistence
     }
     public sealed class PersistenceSettings : Akka.Actor.Settings
     {
-        public PersistenceSettings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
+        public PersistenceSettings(Akka.Actor.ActorSystem system, Hocon.Config config) { }
         public Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
         public Akka.Persistence.PersistenceSettings.InternalSettings Internal { get; }
         public Akka.Persistence.PersistenceSettings.ViewSettings View { get; }
         public sealed class AtLeastOnceDeliverySettings
         {
             public AtLeastOnceDeliverySettings(System.TimeSpan redeliverInterval, int redeliveryBurstLimit, int warnAfterNumberOfUnconfirmedAttempts, int maxUnconfirmedMessages) { }
-            public AtLeastOnceDeliverySettings(Akka.Configuration.Config config) { }
+            public AtLeastOnceDeliverySettings(Hocon.Config config) { }
             public int MaxUnconfirmedMessages { get; }
             public System.TimeSpan RedeliverInterval { get; }
             public int RedeliveryBurstLimit { get; }
@@ -398,13 +398,13 @@ namespace Akka.Persistence
         }
         public sealed class InternalSettings
         {
-            public InternalSettings(Akka.Configuration.Config config) { }
+            public InternalSettings(Hocon.Config config) { }
             public bool PublishConfirmations { get; }
             public bool PublishPluginCommands { get; }
         }
         public sealed class ViewSettings
         {
-            public ViewSettings(Akka.Configuration.Config config) { }
+            public ViewSettings(Hocon.Config config) { }
             public bool AutoUpdate { get; }
             public System.TimeSpan AutoUpdateInterval { get; }
             public long AutoUpdateReplayMax { get; }
@@ -668,7 +668,7 @@ namespace Akka.Persistence
     public sealed class ThrowExceptionConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {
         public ThrowExceptionConfigurator() { }
-        public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
+        public Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config) { }
     }
     public class ThrowOverflowExceptionStrategy : Akka.Persistence.IStashOverflowStrategy
     {
@@ -954,7 +954,7 @@ namespace Akka.Persistence.Journal
     public class EventAdapters
     {
         protected EventAdapters(System.Collections.Concurrent.ConcurrentDictionary<System.Type, Akka.Persistence.Journal.IEventAdapter> map, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Persistence.Journal.IEventAdapter>> bindings, Akka.Event.ILoggingAdapter log) { }
-        public static Akka.Persistence.Journal.EventAdapters Create(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public static Akka.Persistence.Journal.EventAdapters Create(Akka.Actor.ExtendedActorSystem system, Hocon.Config config) { }
         public Akka.Persistence.Journal.IEventAdapter Get<T>() { }
         public virtual Akka.Persistence.Journal.IEventAdapter Get(System.Type type) { }
     }

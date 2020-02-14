@@ -188,7 +188,7 @@ namespace Akka.Cluster
         [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public System.TimeSpan DownRemovalMargin { get; }
         public System.Type DowningProviderType { get; }
-        public Akka.Configuration.Config FailureDetectorConfig { get; }
+        public Hocon.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
         public double GossipDifferentViewProbability { get; }
         public System.TimeSpan GossipInterval { get; }
@@ -344,7 +344,7 @@ namespace Akka.Cluster.Routing
         public ClusterRouterGroupSettings(int totalInstances, bool allowLocalRoutees, string useRole, System.Collections.Immutable.ImmutableHashSet<string> routeesPaths) { }
         public ClusterRouterGroupSettings(int totalInstances, System.Collections.Generic.IEnumerable<string> routeesPaths, bool allowLocalRoutees, string useRole = null) { }
         public System.Collections.Generic.IEnumerable<string> RouteesPaths { get; }
-        public static Akka.Cluster.Routing.ClusterRouterGroupSettings FromConfig(Akka.Configuration.Config config) { }
+        public static Akka.Cluster.Routing.ClusterRouterGroupSettings FromConfig(Hocon.Config config) { }
     }
     public sealed class ClusterRouterPool : Akka.Routing.Pool
     {

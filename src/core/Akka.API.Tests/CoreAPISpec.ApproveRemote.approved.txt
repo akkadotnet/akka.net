@@ -81,7 +81,7 @@ namespace Akka.Remote
             "nstead. [1.1.2]")]
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, Akka.Remote.Clock clock = null) { }
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, System.TimeSpan heartbeatInterval, Akka.Remote.Clock clock = null) { }
-        public DeadlineFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream eventStream) { }
+        public DeadlineFailureDetector(Hocon.Config config, Akka.Event.EventStream eventStream) { }
         public override bool IsAvailable { get; }
         public override bool IsMonitoring { get; }
         public override void HeartBeat() { }
@@ -114,8 +114,8 @@ namespace Akka.Remote
     [Akka.Annotations.InternalApiAttribute()]
     public class static FailureDetectorLoader
     {
-        public static Akka.Remote.FailureDetector Load(string fqcn, Akka.Configuration.Config config, Akka.Actor.ActorSystem system) { }
-        public static Akka.Remote.FailureDetector LoadFailureDetector(this Akka.Actor.IActorContext context, string fqcn, Akka.Configuration.Config config) { }
+        public static Akka.Remote.FailureDetector Load(string fqcn, Hocon.Config config, Akka.Actor.ActorSystem system) { }
+        public static Akka.Remote.FailureDetector LoadFailureDetector(this Akka.Actor.IActorContext context, string fqcn, Hocon.Config config) { }
     }
     public interface IFailureDetectorRegistry<in T>
     {
@@ -144,7 +144,7 @@ namespace Akka.Remote
     public class PhiAccrualFailureDetector : Akka.Remote.FailureDetector
     {
         public PhiAccrualFailureDetector(double threshold, int maxSampleSize, System.TimeSpan minStdDeviation, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan firstHeartbeatEstimate, Akka.Remote.Clock clock = null) { }
-        public PhiAccrualFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
+        public PhiAccrualFailureDetector(Hocon.Config config, Akka.Event.EventStream ev) { }
         protected PhiAccrualFailureDetector(Akka.Remote.Clock clock) { }
         public override bool IsAvailable { get; }
         public override bool IsMonitoring { get; }
@@ -220,11 +220,11 @@ namespace Akka.Remote
     public class RemoteSettings
     {
         public static readonly string AkkaScheme;
-        public RemoteSettings(Akka.Configuration.Config config) { }
+        public RemoteSettings(Hocon.Config config) { }
         public System.Collections.Generic.IDictionary<string, string> Adapters { get; set; }
         public System.TimeSpan BackoffPeriod { get; set; }
         public System.TimeSpan CommandAckTimeout { get; set; }
-        public Akka.Configuration.Config Config { get; }
+        public Hocon.Config Config { get; }
         public string Dispatcher { get; set; }
         public System.TimeSpan FlushWait { get; set; }
         public System.TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
@@ -246,7 +246,7 @@ namespace Akka.Remote
         public System.Collections.Generic.HashSet<string> TrustedSelectionPaths { get; set; }
         public bool UntrustedMode { get; set; }
         public bool UsePassiveConnections { get; set; }
-        public Akka.Configuration.Config WatchFailureDetectorConfig { get; set; }
+        public Hocon.Config WatchFailureDetectorConfig { get; set; }
         public string WatchFailureDetectorImplementationClass { get; set; }
         public System.TimeSpan WatchHeartBeatInterval { get; set; }
         public System.TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
@@ -254,9 +254,9 @@ namespace Akka.Remote
         public Akka.Actor.Props ConfigureDispatcher(Akka.Actor.Props props) { }
         public class TransportSettings
         {
-            public TransportSettings(Akka.Configuration.Config config) { }
+            public TransportSettings(Hocon.Config config) { }
             public System.Collections.Generic.IList<string> Adapters { get; set; }
-            public Akka.Configuration.Config Config { get; set; }
+            public Hocon.Config Config { get; set; }
             public string TransportClass { get; set; }
         }
     }
@@ -663,7 +663,7 @@ namespace Akka.Remote.Transport
         public readonly Akka.Actor.Address LocalAddress;
         public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<bool, bool> ShutdownBehavior;
         public readonly Akka.Remote.Transport.SwitchableLoggedBehavior<System.ValueTuple<Akka.Remote.Transport.TestAssociationHandle, Google.Protobuf.ByteString>, bool> WriteBehavior;
-        public TestTransport(Akka.Actor.ActorSystem system, Akka.Configuration.Config conf) { }
+        public TestTransport(Akka.Actor.ActorSystem system, Hocon.Config conf) { }
         public TestTransport(Akka.Actor.Address localAddress, Akka.Remote.Transport.AssociationRegistry registry, long maximumPayloadBytes = 32000, string schemeIdentifier = "test") { }
         public override System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress) { }
         public System.Threading.Tasks.Task<bool> DefaultDisassociate(Akka.Remote.Transport.TestAssociationHandle handle) { }
@@ -704,7 +704,7 @@ namespace Akka.Remote.Transport
     public abstract class Transport
     {
         protected Transport() { }
-        public Akka.Configuration.Config Config { get; set; }
+        public Hocon.Config Config { get; set; }
         public virtual long MaximumPayloadBytes { get; set; }
         public virtual string SchemeIdentifier { get; set; }
         public Akka.Actor.ActorSystem System { get; set; }
