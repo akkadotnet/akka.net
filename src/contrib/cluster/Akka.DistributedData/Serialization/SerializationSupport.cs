@@ -134,13 +134,18 @@ namespace Akka.DistributedData.Serialization
         public static Proto.Msg.VersionVector VersionVectorToProto(VersionVector versionVector)
         {
             var b = new Proto.Msg.VersionVector();
-            while (versionVector.VersionEnumerator.MoveNext())
+
+            using (var enumerator = versionVector.VersionEnumerator)
             {
-                var current = versionVector.VersionEnumerator.Current;
-                b.Entries.Add(new Proto.Msg.VersionVector.Types.Entry()
+                while (enumerator.MoveNext())
                 {
-                    Node = UniqueAddressToProto(current.Key), Version = current.Value
-                });
+                    var current = enumerator.Current;
+                    b.Entries.Add(new Proto.Msg.VersionVector.Types.Entry()
+                    {
+                        Node = UniqueAddressToProto(current.Key),
+                        Version = current.Value
+                    });
+                }
             }
 
             return b;

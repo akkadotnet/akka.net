@@ -26,12 +26,15 @@ namespace Akka.DistributedData.Tests.Serialization
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
 
-        private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
-        private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);
-        private readonly UniqueAddress _address3 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 3);
+        private readonly UniqueAddress _address1;
+        private readonly UniqueAddress _address2;
+        private readonly UniqueAddress _address3;
 
         public ReplicatedDataSerializerSpec(ITestOutputHelper output) : base(BaseConfig, "ReplicatedDataSerializerSpec", output: output)
         {
+            _address1 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 1);
+            _address2 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "other.host.org", 4711), 2);
+            _address3 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 3);
         }
 
         [Fact()]
@@ -234,7 +237,7 @@ namespace Akka.DistributedData.Tests.Serialization
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
             // fails on structural equality
-            expected.Should().Be(actual);
+            expected.Equals(actual).Should().BeTrue($"Expected actual [{actual}] to be [{expected}]");
         }
 
         private void CheckSameContent(object a, object b)

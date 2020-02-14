@@ -12,6 +12,7 @@ using Google.Protobuf;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
@@ -67,12 +68,22 @@ namespace Akka.DistributedData.Serialization
 
         public override byte[] ToBinary(object obj)
         {
-            throw new NotImplementedException();
+            switch (obj)
+            {
+                case IORSet o: return ToProto(o).ToByteArray();
+                default:
+                    throw new ArgumentException($"Can't serialize object of type [{obj.GetType().FullName}] in [{GetType().FullName}]");
+            }
         }
 
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            throw new NotImplementedException();
+            switch (manifest)
+            {
+                case ORSetManifest: return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+                default:
+                    throw new ArgumentException($"Can't deserialize object with unknown manifest [{manifest}]");
+            }
         }
 
         public override string Manifest(object o)
@@ -129,7 +140,7 @@ namespace Akka.DistributedData.Serialization
             return p;
         }
 
-        private Proto.Msg.ORSet ToBinary(IORSet orset)
+        private Proto.Msg.ORSet ToProto(IORSet orset)
         {
             switch (orset)
             {
@@ -171,10 +182,42 @@ namespace Akka.DistributedData.Serialization
 
             if (orset.IntElements.Count > 0)
             {
-                var el = orset.IntElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                var eInt = orset.IntElements.Zip(dots, (i, versionVector) => (i, versionVector))
                     .ToImmutableDictionary(x => x.i, y => y.versionVector);
+
+                return new ORSet<int>(eInt, vector);
             }
+
+            if (orset.LongElements.Count > 0)
+            {
+                var eLong = orset.LongElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                    .ToImmutableDictionary(x => x.i, y => y.versionVector);
+                return new ORSet<long>(eLong, vector);
+            }
+
+            if (orset.StringElements.Count > 0)
+            {
+                var eStr = orset.StringElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                    .ToImmutableDictionary(x => x.i, y => y.versionVector);
+                return new ORSet<string>(eStr, vector);
+            }
+
+            if (orset.ActorRefElements.Count > 0)
+            {
+                var eRef = orset.ActorRefElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                    .ToImmutableDictionary(x => _ser.ResolveActorRef(x.i), y => y.versionVector);
+                return new ORSet<IActorRef>(eRef, vector);
+            }
+
+            // runtime type
+            var eOther = orset.OtherElements.Zip(dots, (i, versionVector) => (i, versionVector))
+                .ToImmutableDictionary(x => _ser.OtherMessageFromProto(x.i), y => y.versionVector);
+            var setContentType = eOther.First().Key.GetType();
+
+            var setType = typeof(ORSet<>).MakeGenericType(setContentType);
+            return (IORSet)Activator.CreateInstance(setType, eOther, vector);
         }
+
         /// <summary>
         /// Called when we're serializing none of the standard object types
         /// </summary>
