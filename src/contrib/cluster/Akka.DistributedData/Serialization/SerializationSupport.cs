@@ -77,34 +77,41 @@ namespace Akka.DistributedData.Serialization
         public static byte[] Compress(IMessage msg)
         {
             using (var memStream = new MemoryStream(BufferSize))
-            using (var gzip = new GZipStream(memStream, CompressionMode.Compress))
             {
-                msg.WriteTo(gzip);
+                using (var gzip = new GZipStream(memStream, CompressionMode.Compress))
+                {
+                    msg.WriteTo(gzip);
+                }
+
                 return memStream.ToArray();
             }
         }
 
         public static byte[] Decompress(byte[] input)
         {
-            using (var memStream = new MemoryStream(BufferSize))
-            using (var gzipStream = new GZipStream(new MemoryStream(input), CompressionMode.Decompress))
+            using (var memStream = new MemoryStream())
             {
-                var buf = new byte[BufferSize];
-                while (gzipStream.CanRead)
+                using(var inputStr = new MemoryStream(input))
+                using (var gzipStream = new GZipStream(inputStr, CompressionMode.Decompress))
                 {
-                    var read = gzipStream.Read(buf, 0, BufferSize);
-                    if (read > 0)
+                    var buf = new byte[BufferSize];
+                    while (gzipStream.CanRead)
                     {
-                        memStream.Write(buf, 0, read);
-                    }
-                    else
-                    {
-                        break;
+                        var read = gzipStream.Read(buf, 0, BufferSize);
+                        if (read > 0)
+                        {
+                            memStream.Write(buf, 0, read);
+                        }
+                        else
+                        {
+                            break;
+                        }
                     }
                 }
 
                 return memStream.ToArray();
             }
+           
         }
 
         public static Proto.Msg.Address AddressToProto(Address address)
