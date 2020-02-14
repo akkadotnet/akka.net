@@ -29,10 +29,14 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// INTERNAL API
+    ///
+    /// Used for serialization help.
     /// </summary>
     internal interface IORSet
     {
-        
+        ORSet.IAddDeltaOperation ToAddDeltaOperation();
+
+        ORSet.IRemoveDeltaOperation ToRemoveDeltaOperation();
     }
 
 
@@ -43,28 +47,41 @@ namespace Akka.DistributedData
         ///
         /// Used for serialization purposes.
         /// </summary>
-        internal interface IAddDeltaOperation { }
+        internal interface IDeltaOperation
+        {
+            IORSet UnderlyingSerialization { get; }
+        }
 
         /// <summary>
         /// INTERNAL API
         ///
         /// Used for serialization purposes.
         /// </summary>
-        internal interface IRemoveDeltaOperation { }
+        internal interface IAddDeltaOperation : IDeltaOperation { }
 
         /// <summary>
         /// INTERNAL API
         ///
         /// Used for serialization purposes.
         /// </summary>
-        internal interface IDeltaGroupOperation { }
+        internal interface IRemoveDeltaOperation : IDeltaOperation { }
 
         /// <summary>
         /// INTERNAL API
         ///
         /// Used for serialization purposes.
         /// </summary>
-        internal interface IFullStateDeltaOperation { }
+        internal interface IDeltaGroupOperation
+        {
+            IEnumerable<IReplicatedData> OperationsSerialization { get; }
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IFullStateDeltaOperation : IDeltaOperation { }
 
         public static ORSet<T> Create<T>(UniqueAddress node, T element) =>
             ORSet<T>.Empty.Add(node, element);
@@ -452,7 +469,7 @@ namespace Akka.DistributedData
         {
         }
 
-        internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize
+        internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize, ORSet.IDeltaOperation
         {
             public abstract ORSet<T> Underlying { get; }
             public abstract IReplicatedData Merge(IReplicatedData other);
@@ -480,6 +497,7 @@ namespace Akka.DistributedData
             }
 
             public override int GetHashCode() => GetType().GetHashCode() ^ Underlying.GetHashCode();
+            public IORSet UnderlyingSerialization => Underlying;
         }
 
         internal sealed class AddDeltaOperation : AtomicDeltaOperation, ORSet.IAddDeltaOperation
@@ -592,9 +610,9 @@ namespace Akka.DistributedData
                         ? new DeltaGroup(Operations.SetItem(Operations.Length - 1, other.Merge(last)))
                         : new DeltaGroup(Operations.Add(other));
                 }
-                else if (other is DeltaGroup)
+                else if (other is DeltaGroup @group)
                 {
-                    var otherVector = ((DeltaGroup)other).Operations;
+                    var otherVector = @group.Operations;
                     return new DeltaGroup(Operations.AddRange(otherVector));
                 }
                 else
@@ -636,6 +654,8 @@ namespace Akka.DistributedData
                     return hash;
                 }
             }
+
+            public IEnumerable<IReplicatedData> OperationsSerialization => Operations;
         }
 
         [NonSerialized]
@@ -712,5 +732,15 @@ namespace Akka.DistributedData
         }
 
         #endregion
+
+        ORSet.IAddDeltaOperation IORSet.ToAddDeltaOperation()
+        {
+            return new AddDeltaOperation(this);
+        }
+
+        ORSet.IRemoveDeltaOperation IORSet.ToRemoveDeltaOperation()
+        {
+            return new RemoveDeltaOperation(this);
+        }
     }
 }
