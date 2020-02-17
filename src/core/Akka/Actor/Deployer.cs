@@ -153,8 +153,7 @@ namespace Akka.Actor
             if (deployment.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<RouterConfig>();
 
-
-            var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
+            var path = new HoconPath(new string[] { "akka", "actor", "router", "type-mapping", routerTypeAlias }); ;
             var routerTypeName = _settings.Config.GetString(path, null);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");
