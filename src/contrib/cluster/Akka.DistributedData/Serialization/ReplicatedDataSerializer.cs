@@ -82,6 +82,7 @@ namespace Akka.DistributedData.Serialization
                 case PNCounter p: return ToProto(p).ToByteArray();
                 case Flag f: return ToProto(f).ToByteArray();
                 case ILWWRegister l: return ToProto(l).ToByteArray();
+                case IORDictionary o: return SerializationSupport.Compress(ToProto(o));
                 // key types
 
                 // less common delta types
@@ -96,7 +97,7 @@ namespace Akka.DistributedData.Serialization
         {
             switch (manifest)
             {
-                case ORSetManifest: return ORSetFromBinary(bytes);
+                case ORSetManifest: return ORSetFromBinary(SerializationSupport.Decompress(bytes));
                 case ORSetAddManifest: return ORAddDeltaOperationFromBinary(bytes);
                 case ORSetRemoveManifest: return ORRemoveOperationFromBinary(bytes);
                 case GSetManifest: return GSetFromBinary(bytes);
@@ -104,6 +105,7 @@ namespace Akka.DistributedData.Serialization
                 case PNCounterManifest: return PNCounterFromBytes(bytes);
                 case FlagManifest: return FlagFromBinary(bytes);
                 case LWWRegisterManifest: return LWWRegisterFromBinary(bytes);
+                case ORMapManifest: return ORDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 // key types
 
                 // less common delta types
@@ -188,6 +190,28 @@ namespace Akka.DistributedData.Serialization
             return typeInfo;
         }
 
+        private static Type GetTypeFromDescriptor(TypeDescriptor t)
+        {
+            switch (t.Type)
+            {
+                case ValType.Int:
+                    return typeof(int);
+                case ValType.Long:
+                    return typeof(long);
+                case ValType.String:
+                    return typeof(string);
+                case ValType.ActorRef:
+                    return typeof(IActorRef);
+                case ValType.Other:
+                    {
+                        var type = Type.GetType(t.TypeName);
+                        return type;
+                    }
+                default:
+                    throw new SerializationException($"Unknown ValType of [{t.Type}] detected");
+            }
+        }
+
         #region ORSet
 
         private static Proto.Msg.ORSet ORSetToProto<T>(ORSet<T> set)
@@ -200,7 +224,7 @@ namespace Akka.DistributedData.Serialization
         }
         private IORSet ORSetFromBinary(byte[] bytes)
         {
-            return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(SerializationSupport.Decompress(bytes)));
+            return FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
         }
 
         private Proto.Msg.ORSet ToProto(IORSet orset)
@@ -470,10 +494,10 @@ namespace Akka.DistributedData.Serialization
                         return p;
                     }
                 default: // unknown type
-                {
-                    var protoMaker = GSetUnknownToProtoMaker.MakeGenericMethod(gset.SetType);
-                    return (Proto.Msg.GSet)protoMaker.Invoke(this, new object[] { gset });
-                }
+                    {
+                        var protoMaker = GSetUnknownToProtoMaker.MakeGenericMethod(gset.SetType);
+                        return (Proto.Msg.GSet)protoMaker.Invoke(this, new object[] { gset });
+                    }
             }
         }
 
@@ -537,7 +561,7 @@ namespace Akka.DistributedData.Serialization
         {
             var gProto = new Proto.Msg.GCounter();
 
-            gProto.Entries.AddRange(counter.State.Select(x => new Proto.Msg.GCounter.Types.Entry(){ Node = SerializationSupport.UniqueAddressToProto(x.Key), Value = ByteString.CopyFrom(BitConverter.GetBytes(x.Value))}));
+            gProto.Entries.AddRange(counter.State.Select(x => new Proto.Msg.GCounter.Types.Entry() { Node = SerializationSupport.UniqueAddressToProto(x.Key), Value = ByteString.CopyFrom(BitConverter.GetBytes(x.Value)) }));
 
             return gProto;
         }
@@ -609,7 +633,7 @@ namespace Akka.DistributedData.Serialization
             return (Proto.Msg.LWWRegister)protoMaker.Invoke(this, new object[] { register });
         }
 
-        private static readonly MethodInfo LWWProtoMaker = 
+        private static readonly MethodInfo LWWProtoMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(LWWToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
         private Proto.Msg.LWWRegister LWWToProto<T>(ILWWRegister r)
@@ -634,9 +658,9 @@ namespace Akka.DistributedData.Serialization
             switch (proto.TypeInfo.Type)
             {
                 case ValType.Int:
-                {
-                    return GenericLWWRegisterFromProto<int>(proto);
-                }
+                    {
+                        return GenericLWWRegisterFromProto<int>(proto);
+                    }
                 case ValType.Long:
                     {
                         return GenericLWWRegisterFromProto<long>(proto);
@@ -672,6 +696,107 @@ namespace Akka.DistributedData.Serialization
             var updatedBy = _ser.UniqueAddressFromProto(proto.Node);
 
             return new LWWRegister<T>(updatedBy, msg, proto.Timestamp);
+        }
+
+        #endregion
+
+        #region ORMap
+
+        private Proto.Msg.ORMap ToProto(IORDictionary ormap)
+        {
+            var protoMaker = ORDictProtoMaker.MakeGenericMethod(ormap.KeyType, ormap.ValueType);
+            return (Proto.Msg.ORMap)protoMaker.Invoke(this, new object[] { ormap });
+        }
+
+        private static readonly MethodInfo ORDictProtoMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ORDictToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private Proto.Msg.ORMap ORDictToProto<TKey, TValue>(IORDictionary o) where TValue : IReplicatedData<TValue>
+        {
+            var ormap = (ORDictionary<TKey, TValue>)o;
+            var proto = new Proto.Msg.ORMap();
+            ToORMapEntries(ormap.Entries, proto);
+            proto.Keys = ToProto(ormap.KeySet);
+            proto.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
+            return proto;
+        }
+
+        private void ToORMapEntries<TKey, TValue>(IImmutableDictionary<TKey, TValue> ormapEntries, ORMap proto) where TValue : IReplicatedData<TValue>
+        {
+            var entries = new List<ORMap.Types.Entry>();
+            foreach (var e in ormapEntries)
+            {
+                var entry = new ORMap.Types.Entry();
+                switch (e.Key)
+                {
+                    case int i:
+                        entry.IntKey = i;
+                        break;
+                    case long l:
+                        entry.LongKey = l;
+                        break;
+                    case string str:
+                        entry.StringKey = str;
+                        break;
+                    default:
+                        entry.OtherKey = _ser.OtherMessageToProto(e.Key);
+                        break;
+                }
+
+                entry.Value = _ser.OtherMessageToProto(e.Value);
+                entries.Add(entry);
+            }
+            proto.Entries.Add(entries);
+        }
+
+        private static readonly MethodInfo ORDictMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericORDictionaryFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private IORDictionary ORDictionaryFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ORMap.Parser.ParseFrom(bytes);
+            return ORDictionaryFromProto(proto);
+        }
+
+        private IORDictionary ORDictionaryFromProto(Proto.Msg.ORMap proto)
+        {
+            var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
+            var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
+            var protoMaker = ORDictMaker.MakeGenericMethod(keyType, valueType);
+            return (IORDictionary)protoMaker.Invoke(this, new object[] { proto });
+        }
+
+        private IORDictionary GenericORDictionaryFromProto<TKey, TValue>(Proto.Msg.ORMap proto) where TValue : IReplicatedData<TValue>
+        {
+            var keys = FromProto(proto.Keys);
+            switch (proto.Keys.TypeInfo.Type)
+            {
+                case ValType.Int:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                        return new ORDictionary<int, TValue>((ORSet<int>)keys, entries);
+                    }
+                case ValType.Long:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
+                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                        return new ORDictionary<long, TValue>((ORSet<long>)keys, entries);
+                    }
+                case ValType.String:
+                {
+                    var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                        v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                    return new ORDictionary<string, TValue>((ORSet<string>)keys, entries);
+                }
+                default:
+                {
+                    var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                        v => (TValue)_ser.OtherMessageFromProto(v.Value));
+
+                    return new ORDictionary<TKey,TValue>((ORSet<TKey>)keys, entries);
+                }
+            }
         }
 
         #endregion

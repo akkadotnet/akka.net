@@ -34,7 +34,12 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface IORDictionary {}
+    internal interface IORDictionary
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
 
     public static class ORDictionary
     {
@@ -845,5 +850,8 @@ namespace Akka.DistributedData
             var withDeltas = DryMergeDeltas(delta, true);
             return MergeRetainingDeletedValues(withDeltas);
         }
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
     }
 }
