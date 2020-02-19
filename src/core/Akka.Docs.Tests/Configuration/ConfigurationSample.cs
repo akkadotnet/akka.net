@@ -94,9 +94,9 @@ a = ${a} [3, 4]
         [Fact]
         public void PlusEqualOperatorSample()
         {
-            // These += operations will create an array field `a` with value [1, 2, 3, 4, 5]
+            // These += operations will create an array field `a` with value [1, 2, 3, [4, 5] ]
             // the first operation appends the value 3 to the array [1, 2]
-            // the second operation appends the array [4, 5] to the array [1, 2, 3]
+            // the second operation _inserts_ the array [4, 5] to the array [1, 2, 3]
             var hoconString = @"
 a = [ 1, 2 ]
 a += 3
@@ -105,7 +105,11 @@ b = [ 4, 5 ]
 ";
 
             Config config = hoconString;
-            new int[] { 1, 2, 3, 4, 5 }.ShouldAllBeEquivalentTo(config.GetIntList("a"));
+            var array = config.GetValue("a").GetArray();
+            array[0].GetInt().Should().Be(1);
+            array[1].GetInt().Should().Be(2);
+            array[2].GetInt().Should().Be(3);
+            array[3].GetIntList().ShouldAllBeEquivalentTo(new int[] { 4, 5 });
         }
 
         // All these are circular reference and will throw an exception during parsing
