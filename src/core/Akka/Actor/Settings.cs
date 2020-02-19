@@ -30,7 +30,7 @@ namespace Akka.Actor
 
         private void RebuildConfig()
         {
-            Config = new FlatConfig(_userConfig.SafeWithFallback(_fallbackConfig));
+            Config = _userConfig.SafeWithFallback(_fallbackConfig);
 
             //if we get a new config definition loaded after all ActorRefProviders have been started, such as Akka.Persistence...
             System?.Dispatchers?.ReloadPrerequisites(new DefaultDispatcherPrerequisites(System.EventStream, System.Scheduler, this, System.Mailboxes));
@@ -148,7 +148,7 @@ namespace Akka.Actor
         ///     Gets the configuration.
         /// </summary>
         /// <value>The configuration.</value>
-        public FlatConfig Config { get; private set; }
+        public Config Config { get; private set; }
 
         /// <summary>
         ///     Gets the configuration version.
