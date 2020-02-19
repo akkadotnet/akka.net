@@ -39,6 +39,8 @@ namespace Akka.DistributedData
         ORSet.IRemoveDeltaOperation ToRemoveDeltaOperation();
 
         ORSet.IFullStateDeltaOperation ToFullStateDeltaOperation();
+
+        Type SetType { get; }
     }
 
 
@@ -749,5 +751,7 @@ namespace Akka.DistributedData
         {
             return new FullStateDeltaOperation(this);
         }
+
+        public Type SetType { get; } = typeof(T);
     }
 }

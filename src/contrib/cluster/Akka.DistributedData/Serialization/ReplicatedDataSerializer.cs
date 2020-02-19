@@ -19,6 +19,7 @@ using System.Runtime.Serialization;
 using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Util;
+using IActorRef = Akka.Actor.IActorRef;
 
 
 namespace Akka.DistributedData.Serialization
@@ -77,6 +78,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSet.IAddDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 case ORSet.IRemoveDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 case ORSet.IDeltaGroupOperation o: return ToProto(o).ToByteArray();
+                case ORSet.IFullStateDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 default:
                     throw new ArgumentException($"Can't serialize object of type [{obj.GetType().FullName}] in [{GetType().FullName}]");
             }
@@ -89,6 +91,12 @@ namespace Akka.DistributedData.Serialization
                 case ORSetManifest: return ORSetFromBinary(bytes);
                 case ORSetAddManifest: return ORAddDeltaOperationFromBinary(bytes);
                 case ORSetRemoveManifest: return ORRemoveOperationFromBinary(bytes);
+
+                // key types
+
+                // less common delta types
+                case ORSetDeltaGroupManifest: return ORDeltaGroupOperationFromBinary(bytes);
+                case ORSetFullManifest: return ORFullStateDeltaOperationFromBinary(bytes);
                 default:
                     throw new ArgumentException($"Can't deserialize object with unknown manifest [{manifest}]");
             }
@@ -139,6 +147,8 @@ namespace Akka.DistributedData.Serialization
                     throw new ArgumentException($"Can't serialize object of type [{o.GetType().FullName}] in [{GetType().FullName}]");
             }
         }
+
+        #region ORSet
 
         private static Proto.Msg.ORSet ToProto<T>(ORSet<T> set)
         {
@@ -247,6 +257,34 @@ namespace Akka.DistributedData.Serialization
             return new ORSet<T>(finalInput, vector);
         }
 
+        private static TypeDescriptor GetTypeInfo(IORSet orset)
+        {
+            var typeInfo = new TypeDescriptor();
+            if(orset.SetType == typeof(string))
+            {
+                typeInfo.Type = ValType.String;
+            }
+            else if (orset.SetType == typeof(int))
+            {
+                typeInfo.Type = ValType.Int;
+            }
+            else if (orset.SetType == typeof(long))
+            {
+                typeInfo.Type = ValType.Long;
+            }
+            else if (orset.SetType == typeof(IActorRef))
+            {
+                typeInfo.Type = ValType.ActorRef;
+            }
+            else
+            {
+                typeInfo.Type = ValType.Other;
+                typeInfo.TypeName = orset.SetType.TypeQualifiedName();
+            }
+
+            return typeInfo;
+        }
+
         /// <summary>
         /// Called when we're serializing none of the standard object types with ORSet
         /// </summary>
@@ -271,10 +309,26 @@ namespace Akka.DistributedData.Serialization
             return set.ToRemoveDeltaOperation();
         }
 
-        private Proto.Msg.ORSetDeltaGroup ToProto<T>(ORSet<T>.DeltaGroup orset)
+        private ORSet.IFullStateDeltaOperation ORFullStateDeltaOperationFromBinary(byte[] bytes)
+        {
+            var set = FromProto(Proto.Msg.ORSet.Parser.ParseFrom(bytes));
+            return set.ToFullStateDeltaOperation();
+        }
+
+        private Proto.Msg.ORSetDeltaGroup ToProto(ORSet.IDeltaGroupOperation orset)
         {
             var deltaGroup = new Proto.Msg.ORSetDeltaGroup();
 
+            var gatheredTypeInfo = false;
+
+            void SetType(IORSet underlying)
+            {
+                if (!gatheredTypeInfo) // only need to do this once - all Deltas must have ORSet<T> of same <T>
+                {
+                    deltaGroup.TypeInfo = GetTypeInfo(underlying);
+                }
+                gatheredTypeInfo = true;
+            }
 
             foreach (var op in orset.OperationsSerialization)
             {
@@ -282,12 +336,15 @@ namespace Akka.DistributedData.Serialization
                 {
                     case ORSet.IAddDeltaOperation add:
                         deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Add, Underlying = ToProto(add.UnderlyingSerialization) });
+                        SetType(add.UnderlyingSerialization);
                         break;
                     case ORSet.IRemoveDeltaOperation remove:
                         deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Remove, Underlying = ToProto(remove.UnderlyingSerialization) });
+                        SetType(remove.UnderlyingSerialization);
                         break;
                     case ORSet.IFullStateDeltaOperation full:
                         deltaGroup.Entries.Add(new ORSetDeltaGroup.Types.Entry() { Operation = ORSetDeltaOp.Full, Underlying = ToProto(full.UnderlyingSerialization) });
+                        SetType(full.UnderlyingSerialization);
                         break;
                     default: throw new ArgumentException($"{op} should not be nested");
                 }
@@ -339,8 +396,9 @@ namespace Akka.DistributedData.Serialization
 
             var type = Type.GetType(deltaGroup.TypeInfo.TypeName);
             var orDeltaGroupType = typeof(ORSet<>.DeltaGroup).MakeGenericType(type);
-
+            return (ORSet.IDeltaGroupOperation)Activator.CreateInstance(orDeltaGroupType, arr);
         }
 
+        #endregion
     }
 }
