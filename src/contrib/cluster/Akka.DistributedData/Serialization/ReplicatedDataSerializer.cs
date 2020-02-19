@@ -19,6 +19,7 @@ using System.Runtime.Serialization;
 using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Util;
+using Akka.Util.Internal;
 using IActorRef = Akka.Actor.IActorRef;
 
 
@@ -799,10 +800,87 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private Proto.Msg.ORMapDeltaGroup ORDictionaryDeltaGroupToProto(
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryDeltasToProto(
             List<ORDictionary.IDeltaOperation> deltaGroupOps)
         {
+            var keyType = deltaGroupOps[0].KeyType;
+            var valueType = deltaGroupOps[1].ValueType;
 
+            var protoMaker = ORDeltaGroupProtoMaker.MakeGenericMethod(keyType, valueType);
+            return (Proto.Msg.ORMapDeltaGroup)protoMaker.Invoke(this, new object[] { deltaGroupOps });
+        }
+
+        private static readonly MethodInfo ORDeltaGroupProtoMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ORDictionaryDeltaGroupToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryDeltaGroupToProto<TKey, TValue>(
+            List<ORDictionary.IDeltaOperation> deltaGroupOps) where TValue : IReplicatedData<TValue>
+        {
+            var group = new ORMapDeltaGroup();
+            group.KeyTypeInfo = GetTypeDescriptor(typeof(TKey));
+            group.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
+
+            ORMapDeltaGroup.Types.MapEntry CreateMapEntry(TKey key, object value = null)
+            {
+                var entry = new ORMapDeltaGroup.Types.MapEntry();
+                switch (key)
+                {
+                    case int i:
+                        entry.IntKey = i;
+                        break;
+                    case long l:
+                        entry.LongKey = l;
+                        break;
+                    case string s:
+                        entry.StringKey = s;
+                        break;
+                    default:
+                        entry.OtherKey = _ser.OtherMessageToProto(key);
+                        break;
+                }
+
+                if(value != null)
+                    entry.Value = _ser.OtherMessageToProto(value);
+                return entry;
+            }
+            
+            ORMapDeltaGroup.Types.Entry CreateEntry(ORDictionary<TKey, TValue>.IDeltaOperation op)
+            {
+                var entry = new ORMapDeltaGroup.Types.Entry();
+                switch (op)
+                {
+                    case ORDictionary<TKey, TValue>.PutDeltaOperation putDelta:
+                        entry.Operation = ORMapDeltaOp.OrmapPut;
+                        entry.Underlying = ToProto(putDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                            .UnderlyingSerialization);
+                        entry.EntryData.Add(CreateMapEntry(putDelta.Key, putDelta.Value));
+                        break;
+                    case ORDictionary<TKey, TValue>.UpdateDeltaOperation upDelta:
+                        entry.Operation = ORMapDeltaOp.OrmapUpdate;
+                        entry.Underlying = ToProto(upDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                            .UnderlyingSerialization);
+                        entry.EntryData.AddRange(upDelta.Values.Select(x => CreateMapEntry(x.Key, x.Value)).ToList());
+                        break;
+                    case ORDictionary<TKey, TValue>.RemoveDeltaOperation removeDelta:
+                        entry.Operation = ORMapDeltaOp.OrmapRemove;
+                        entry.Underlying = ToProto(removeDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                            .UnderlyingSerialization);
+                        break;
+                    case ORDictionary<TKey, TValue>.RemoveKeyDeltaOperation removeKeyDelta:
+                        entry.Operation = ORMapDeltaOp.OrmapRemoveKey;
+                        entry.Underlying = ToProto(removeKeyDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
+                            .UnderlyingSerialization);
+                        entry.EntryData.Add(CreateMapEntry(removeKeyDelta.Key));
+                        break;
+                    default:
+                        throw new SerializationException($"Unknown ORDictionary delta type {op.GetType()}");
+                }
+
+                return entry;
+            }
+
+            group.Entries.Add(deltaGroupOps.Cast<ORDictionary<TKey, TValue>.IDeltaOperation>().Select(x => CreateEntry(x)).ToList());
+            return group;
         }
 
         #endregion
