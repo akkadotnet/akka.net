@@ -6,9 +6,12 @@ using Hocon;
 
 namespace Akka.Configuration
 {
-    public sealed class FlatConfig : Config
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class FlatConfig : Config
     {
-        private ConcurrentDictionary<string, HoconValue> _cache = new ConcurrentDictionary<string, HoconValue>();
+        private readonly ConcurrentDictionary<string, HoconValue> _cache;
 
         public FlatConfig(HoconRoot root, Config fallback) : base(root, fallback)
         {
