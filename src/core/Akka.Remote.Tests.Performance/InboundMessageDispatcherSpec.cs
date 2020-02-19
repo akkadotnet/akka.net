@@ -77,6 +77,7 @@ namespace Akka.Remote.Tests.Performance
                   local-address = ""test://MessageDispatcher@0.0.0.0:1111""
                 }
               }
+            }
         ");
 
         [PerfSetup]

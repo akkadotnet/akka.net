@@ -11,7 +11,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Helios.Concurrency;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Dispatch
 {
@@ -213,7 +215,7 @@ namespace Akka.Dispatch
         public static readonly string SynchronizedDispatcherId = "akka.actor.synchronized-dispatcher";
 
         private readonly ActorSystem _system;
-        private CachingConfig _cachingConfig;
+        private FlatConfig _cachingConfig;
         private readonly MessageDispatcher _defaultGlobalDispatcher;
 
         /// <summary>
@@ -230,7 +232,7 @@ namespace Akka.Dispatch
         {
             _system = system;
             Prerequisites = prerequisites;
-            _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
+            _cachingConfig = new FlatConfig(prerequisites.Settings.Config);
             _defaultGlobalDispatcher = Lookup(DefaultDispatcherId);
         }
 
@@ -262,7 +264,7 @@ namespace Akka.Dispatch
         internal void ReloadPrerequisites(IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
+            _cachingConfig = new FlatConfig(prerequisites.Settings.Config);
         }
 
         /// <summary>
