@@ -68,7 +68,7 @@ b : ${a}
         {
             // This is not an invalid substitution, it is a self referencing substitution, you can think of it as `a = a + 'bar'`
             // ${a} will be substituted with its previous value, which is 'foo', concatenated with 'bar' to make 'foobar', 
-            // and then stored back into a
+            // and then stored back into `a`
             var hoconString = @"
 a = foo
 a = ${a}bar
@@ -89,6 +89,47 @@ a = ${a} [3, 4]
 ";
             Config config = hoconString;
             (new int[] { 1, 2, 3, 4 }).ShouldAllBeEquivalentTo(config.GetIntList("a"));
+        }
+
+        [Fact]
+        public void PlusEqualOperatorSample()
+        {
+            // These += operations will create an array field `a` with value [1, 2, 3, 4, 5]
+            // the first operation appends the value 3 to the array [1, 2]
+            // the second operation appends the array [4, 5] to the array [1, 2, 3]
+            var hoconString = @"
+a = [ 1, 2 ]
+a += 3
+a += ${b}
+b = [ 4, 5 ]
+";
+
+            Config config = hoconString;
+            new int[] { 1, 2, 3, 4, 5 }.ShouldAllBeEquivalentTo(config.GetIntList("a"));
+        }
+
+        // All these are circular reference and will throw an exception during parsing
+        [Theory]
+        [InlineData(@"
+bar : ${foo}
+foo : ${bar}")]
+        [InlineData(@"
+a : ${b}
+b : ${c}
+c : ${a}")]
+        [InlineData(@"
+a : 1
+b : 2
+a : ${b}
+b : ${a}")]
+        public void CircularReferenceSubstitutionError(string hoconString)
+        {
+            var ex = Assert.Throws<HoconParserException>(() =>
+            {
+                Config config = hoconString;
+            });
+            ex.Should().NotBeNull();
+            ex.Message.Should().Contain("cyclic");
         }
 
         [Fact]
