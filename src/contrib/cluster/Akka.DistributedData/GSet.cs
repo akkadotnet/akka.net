@@ -20,10 +20,7 @@ namespace Akka.DistributedData
     /// </summary>
     internal interface IGSet
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        IImmutableSet<object> Elements { get; }
+        Type SetType { get; }
     }
 
     /// <summary>
@@ -148,8 +145,6 @@ namespace Akka.DistributedData
             return AssignAncestor(new GSet<T>(Elements.Add(element), newDelta));
         }
 
-        IImmutableSet<object> IGSet.Elements => Elements.Cast<object>().ToImmutableHashSet();
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -208,6 +203,7 @@ namespace Akka.DistributedData
 
         public GSet<T> ResetDelta() => Delta == null ? this : AssignAncestor(new GSet<T>(Elements));
         IDeltaReplicatedData IReplicatedDelta.Zero => Empty;
+        public Type SetType { get; } = typeof(T);
     }
 
     /// <summary>

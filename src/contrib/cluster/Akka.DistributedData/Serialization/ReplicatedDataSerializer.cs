@@ -77,6 +77,10 @@ namespace Akka.DistributedData.Serialization
                 case IORSet o: return SerializationSupport.Compress(ToProto(o));
                 case ORSet.IAddDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 case ORSet.IRemoveDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
+                case IGSet g: return ToProto(g).ToByteArray();
+                // key types
+
+                // less common delta types
                 case ORSet.IDeltaGroupOperation o: return ToProto(o).ToByteArray();
                 case ORSet.IFullStateDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 default:
@@ -91,7 +95,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSetManifest: return ORSetFromBinary(bytes);
                 case ORSetAddManifest: return ORAddDeltaOperationFromBinary(bytes);
                 case ORSetRemoveManifest: return ORRemoveOperationFromBinary(bytes);
-
+                case GSetManifest: return GSetFromBinary(bytes);
                 // key types
 
                 // less common delta types
@@ -196,36 +200,39 @@ namespace Akka.DistributedData.Serialization
             switch (orset)
             {
                 case ORSet<int> ints:
-                {
-                    var p = ORSetToProto(ints);
-                    p.TypeInfo.Type = ValType.Int;
-                    p.IntElements.Add(ints.Elements);
-                    return p;
-                }
+                    {
+                        var p = ORSetToProto(ints);
+                        p.TypeInfo.Type = ValType.Int;
+                        p.IntElements.Add(ints.Elements);
+                        return p;
+                    }
                 case ORSet<long> longs:
-                {
-                    var p = ORSetToProto(longs);
-                    p.TypeInfo.Type = ValType.Long;
-                    p.LongElements.Add(longs.Elements);
-                    return p;
-                }
+                    {
+                        var p = ORSetToProto(longs);
+                        p.TypeInfo.Type = ValType.Long;
+                        p.LongElements.Add(longs.Elements);
+                        return p;
+                    }
                 case ORSet<string> strings:
-                {
-                    var p = ORSetToProto(strings);
-                    p.TypeInfo.Type = ValType.String;
-                    p.StringElements.Add(strings.Elements);
-                    return p;
-                }
+                    {
+                        var p = ORSetToProto(strings);
+                        p.TypeInfo.Type = ValType.String;
+                        p.StringElements.Add(strings.Elements);
+                        return p;
+                    }
                 case ORSet<IActorRef> refs:
-                {
-                    var p = ORSetToProto(refs);
-                    p.TypeInfo.Type = ValType.ActorRef;
-                    p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
-                    return p;
-                }
+                    {
+                        var p = ORSetToProto(refs);
+                        p.TypeInfo.Type = ValType.ActorRef;
+                        p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
+                        return p;
+                    }
                 default: // unknown type
-                    dynamic d = orset;
-                    return ToBinary(d);
+                    {
+                        // runtime type - enter horrible dynamic serialization stuff
+                        var makeProto = ORSetUnknownMaker.MakeGenericMethod(orset.SetType);
+                        return (Proto.Msg.ORSet)makeProto.Invoke(this, new object[] { orset });
+                    }
             }
         }
 
@@ -264,7 +271,7 @@ namespace Akka.DistributedData.Serialization
             }
 
             // runtime type - enter horrible dynamic serialization stuff
-           
+
             var setContentType = Type.GetType(orset.TypeInfo.TypeName);
 
             var eOther = orset.OtherElements.Zip(dots,
@@ -272,7 +279,7 @@ namespace Akka.DistributedData.Serialization
                 .ToImmutableDictionary(x => x.Item1, x => x.versionVector);
 
             var setType = ORSetMaker.MakeGenericMethod(setContentType);
-            return (IORSet)setType.Invoke(this, new object[]{ eOther, vector });
+            return (IORSet)setType.Invoke(this, new object[] { eOther, vector });
         }
 
         private static readonly MethodInfo ORSetMaker =
@@ -285,12 +292,16 @@ namespace Akka.DistributedData.Serialization
             return new ORSet<T>(finalInput, vector);
         }
 
+        private static readonly MethodInfo ORSetUnknownMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ORSetUnknownToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
         /// <summary>
         /// Called when we're serializing none of the standard object types with ORSet
         /// </summary>
-        private Proto.Msg.ORSet ORSetUnknownToProto<T>(ORSet<T> orset)
+        private Proto.Msg.ORSet ORSetUnknownToProto<T>(IORSet o)
         {
-            var p = ToProto(orset);
+            var orset = (ORSet<T>)o;
+            var p = ORSetToProto(orset);
             p.TypeInfo.Type = ValType.Other;
             p.TypeInfo.TypeName = typeof(T).TypeQualifiedName();
             p.OtherElements.Add(orset.Elements.Select(x => _ser.OtherMessageToProto(x)));
@@ -403,20 +414,24 @@ namespace Akka.DistributedData.Serialization
 
         #region GSet
 
-        private Proto.Msg.GSet ToProto<T>(GSet<T> gset)
+        private Proto.Msg.GSet GSetToProto<T>(GSet<T> gset)
         {
             var p = new Proto.Msg.GSet();
             p.TypeInfo = GetTypeDescriptor(typeof(T));
             return p;
         }
 
-        private Proto.Msg.GSet GSetToProtoUnknown<T>(GSet<T> gset)
+        private Proto.Msg.GSet GSetToProtoUnknown<T>(IGSet g)
         {
+            var gset = (GSet<T>)g;
             var p = new Proto.Msg.GSet();
             p.TypeInfo = GetTypeDescriptor(typeof(T));
             p.OtherElements.Add(gset.Select(x => _ser.OtherMessageToProto(x)));
             return p;
         }
+
+        private static readonly MethodInfo GSetUnknownToProtoMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GSetToProtoUnknown), BindingFlags.Instance | BindingFlags.NonPublic);
 
         private Proto.Msg.GSet ToProto(IGSet gset)
         {
@@ -424,32 +439,86 @@ namespace Akka.DistributedData.Serialization
             {
                 case GSet<int> ints:
                     {
-                        var p = ToProto(ints);
+                        var p = GSetToProto(ints);
                         p.IntElements.Add(ints.Elements);
                         return p;
                     }
                 case GSet<long> longs:
                     {
-                        var p = ToProto(longs);
+                        var p = GSetToProto(longs);
                         p.LongElements.Add(longs.Elements);
                         return p;
                     }
                 case GSet<string> strings:
                     {
-                        var p = ToProto(strings);
+                        var p = GSetToProto(strings);
                         p.StringElements.Add(strings.Elements);
                         return p;
                     }
                 case GSet<IActorRef> refs:
                     {
-                        var p = ToProto(refs);
+                        var p = GSetToProto(refs);
                         p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
                         return p;
                     }
                 default: // unknown type
-                    dynamic d = gset;
-                    return GSetToProtoUnknown(d);
+                {
+                    var protoMaker = GSetUnknownToProtoMaker.MakeGenericMethod(gset.SetType);
+                    return (Proto.Msg.GSet)protoMaker.Invoke(this, new object[] { gset });
+                }
             }
+        }
+
+        private IGSet GSetFromBinary(byte[] bytes)
+        {
+            var gset = Proto.Msg.GSet.Parser.ParseFrom(bytes);
+
+            switch (gset.TypeInfo.Type)
+            {
+                case ValType.Int:
+                    {
+                        var eInt = gset.IntElements.ToImmutableHashSet();
+
+                        return new GSet<int>(eInt);
+                    }
+                case ValType.Long:
+                    {
+                        var eLong = gset.LongElements.ToImmutableHashSet();
+
+                        return new GSet<long>(eLong);
+                    }
+                case ValType.String:
+                    {
+                        var eStr = gset.StringElements.ToImmutableHashSet();
+                        return new GSet<string>(eStr);
+                    }
+                case ValType.ActorRef:
+                    {
+                        var eRef = gset.ActorRefElements.Select(x => _ser.ResolveActorRef(x)).ToImmutableHashSet();
+                        return new GSet<IActorRef>(eRef);
+                    }
+                case ValType.Other:
+                    {
+                        // runtime type - enter horrible dynamic serialization stuff
+
+                        var setContentType = Type.GetType(gset.TypeInfo.TypeName);
+
+                        var eOther = gset.OtherElements.Select(x => _ser.OtherMessageFromProto(x));
+
+                        var setType = GSetMaker.MakeGenericMethod(setContentType);
+                        return (IGSet)setType.Invoke(this, new object[] { eOther });
+                    }
+                default:
+                    throw new SerializationException($"Unknown ValType of [{gset.TypeInfo.Type}] detected while deserializing GSet");
+            }
+        }
+
+        private static readonly MethodInfo GSetMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ToGenericGSet), BindingFlags.Static | BindingFlags.NonPublic);
+
+        private static GSet<T> ToGenericGSet<T>(IEnumerable<object> items)
+        {
+            return new GSet<T>(items.Cast<T>().ToImmutableHashSet());
         }
 
         #endregion
