@@ -79,6 +79,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSet.IRemoveDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 case IGSet g: return ToProto(g).ToByteArray();
                 case GCounter g: return ToProto(g).ToByteArray();
+                case PNCounter p: return ToProto(p).ToByteArray();
                 // key types
 
                 // less common delta types
@@ -98,6 +99,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSetRemoveManifest: return ORRemoveOperationFromBinary(bytes);
                 case GSetManifest: return GSetFromBinary(bytes);
                 case GCounterManifest: return GCounterFromBytes(bytes);
+                case PNCounterManifest: return PNCounterFromBytes(bytes);
                 // key types
 
                 // less common delta types
@@ -540,10 +542,36 @@ namespace Akka.DistributedData.Serialization
         {
             var gProto = Proto.Msg.GCounter.Parser.ParseFrom(bytes);
 
+            return GCounterFromProto(gProto);
+        }
+
+        private GCounter GCounterFromProto(Proto.Msg.GCounter gProto)
+        {
             var entries = gProto.Entries.ToImmutableDictionary(k => _ser.UniqueAddressFromProto(k.Node),
                 v => BitConverter.ToUInt64(v.Value.ToByteArray(), 0));
 
             return new GCounter(entries);
+        }
+
+        #endregion
+
+        #region PNCounter
+
+        private Proto.Msg.PNCounter ToProto(PNCounter counter)
+        {
+            var pProto = new Proto.Msg.PNCounter();
+            pProto.Increments = ToProto(counter.Increments);
+            pProto.Decrements = ToProto(counter.Decrements);
+            return pProto;
+        }
+
+        private PNCounter PNCounterFromBytes(byte[] bytes)
+        {
+            var pProto = Proto.Msg.PNCounter.Parser.ParseFrom(bytes);
+            var increments = GCounterFromProto(pProto.Increments);
+            var decrements = GCounterFromProto(pProto.Decrements);
+
+            return new PNCounter(increments, decrements);
         }
 
         #endregion
