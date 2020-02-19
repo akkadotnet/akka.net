@@ -141,6 +141,7 @@ namespace Akka.DistributedData.Tests.Serialization
         {
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty);
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")));
+            CheckSerialization(ORDictionary<IActorRef, GSet<string>>.Empty.SetItem(_address1, TestActor, GSet.Create("A")));
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")).SetItem(_address2, "b", GSet.Create("B")));
         }
 
