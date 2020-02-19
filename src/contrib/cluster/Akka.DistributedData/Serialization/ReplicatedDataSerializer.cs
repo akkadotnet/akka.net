@@ -20,6 +20,7 @@ using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Util;
 using Akka.Util.Internal;
+using ArgumentOutOfRangeException = System.ArgumentOutOfRangeException;
 using IActorRef = Akka.Actor.IActorRef;
 
 
@@ -785,18 +786,18 @@ namespace Akka.DistributedData.Serialization
                         return new ORDictionary<long, TValue>((ORSet<long>)keys, entries);
                     }
                 case ValType.String:
-                {
-                    var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
-                        v => (TValue)_ser.OtherMessageFromProto(v.Value));
-                    return new ORDictionary<string, TValue>((ORSet<string>)keys, entries);
-                }
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                        return new ORDictionary<string, TValue>((ORSet<string>)keys, entries);
+                    }
                 default:
-                {
-                    var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
-                        v => (TValue)_ser.OtherMessageFromProto(v.Value));
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                            v => (TValue)_ser.OtherMessageFromProto(v.Value));
 
-                    return new ORDictionary<TKey,TValue>((ORSet<TKey>)keys, entries);
-                }
+                        return new ORDictionary<TKey, TValue>((ORSet<TKey>)keys, entries);
+                    }
             }
         }
 
@@ -839,11 +840,11 @@ namespace Akka.DistributedData.Serialization
                         break;
                 }
 
-                if(value != null)
+                if (value != null)
                     entry.Value = _ser.OtherMessageToProto(value);
                 return entry;
             }
-            
+
             ORMapDeltaGroup.Types.Entry CreateEntry(ORDictionary<TKey, TValue>.IDeltaOperation op)
             {
                 var entry = new ORMapDeltaGroup.Types.Entry();
@@ -881,6 +882,93 @@ namespace Akka.DistributedData.Serialization
 
             group.Entries.Add(deltaGroupOps.Cast<ORDictionary<TKey, TValue>.IDeltaOperation>().Select(x => CreateEntry(x)).ToList());
             return group;
+        }
+
+        private List<ORDictionary.IDeltaOperation> ORDictionaryDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup deltaGroup)
+        {
+            var keyType = GetTypeFromDescriptor(deltaGroup.KeyTypeInfo);
+            var valueType = GetTypeFromDescriptor(deltaGroup.ValueTypeInfo);
+
+            var groupMaker = ORDeltaGroupMaker.MakeGenericMethod(keyType, valueType);
+            return (List<ORDictionary.IDeltaOperation>)groupMaker.Invoke(this, new object[] { deltaGroup });
+        }
+
+        private static readonly MethodInfo ORDeltaGroupMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericORDictionaryDeltaGroupFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private List<ORDictionary.IDeltaOperation> GenericORDictionaryDeltaGroupFromProto<TKey, TValue>(Proto.Msg.ORMapDeltaGroup deltaGroup) where TValue : IReplicatedData<TValue>
+        {
+            var deltaOps = new List<ORDictionary.IDeltaOperation>();
+
+            (object key, TValue value) MapEntryFromProto(ORMapDeltaGroup.Types.MapEntry entry)
+            {
+                object k = null;
+                switch (deltaGroup.KeyTypeInfo.Type)
+                {
+                    case ValType.Int:
+                        k = entry.IntKey;
+                        break;
+                    case ValType.Long:
+                        k = entry.LongKey;
+                        break;
+                    case ValType.String:
+                        k = entry.StringKey;
+                        break;
+                    default:
+                        k = _ser.OtherMessageFromProto(entry.OtherKey);
+                        break;
+                }
+
+                if (entry.Value != null)
+                {
+                    return (k, (TValue)_ser.OtherMessageFromProto(entry.Value));
+                }
+
+                return (k, default(TValue));
+            }
+
+            foreach (var entry in deltaGroup.Entries)
+            {
+                var underlying = FromProto(entry.Underlying);
+                switch (entry.Operation)
+                {
+                    case ORMapDeltaOp.OrmapPut:
+                        {
+                            if (entry.EntryData.Count > 0)
+                                throw new ArgumentOutOfRangeException(
+                                    $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
+                            var (key, value) = MapEntryFromProto(entry.EntryData[0]);
+                            
+                            deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, value));
+                        }
+                        break;
+                    case ORMapDeltaOp.OrmapRemove:
+                        { 
+                            deltaOps.Add(new ORDictionary<TKey, TValue>.RemoveDeltaOperation(new ORSet<TKey>.RemoveDeltaOperation((ORSet<TKey>)underlying)));
+                        }
+                        break;
+                    case ORMapDeltaOp.OrmapRemoveKey:
+                        {
+                            if (entry.EntryData.Count > 0)
+                                throw new ArgumentOutOfRangeException(
+                                    $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
+                            var (key, value) = MapEntryFromProto(entry.EntryData[0]);
+                            deltaOps.Add(new ORDictionary<TKey, TValue>.RemoveKeyDeltaOperation(new ORSet<TKey>.RemoveDeltaOperation((ORSet<TKey>)underlying), (TKey)key));
+                        }
+                        break;
+                    case ORMapDeltaOp.OrmapUpdate:
+                    {
+                        var entries = entry.EntryData.Select(x => MapEntryFromProto(x))
+                            .ToImmutableDictionary(x => (TKey)x.key, v => (IReplicatedData)v.value);
+                            deltaOps.Add(new ORDictionary<TKey, TValue>.UpdateDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), entries));
+                        }
+                        break;
+                    default:
+                        throw new SerializationException($"Unknown ORDictionary delta operation ${entry.Operation}");
+                }
+            }
+
+            return deltaOps;
         }
 
         #endregion
