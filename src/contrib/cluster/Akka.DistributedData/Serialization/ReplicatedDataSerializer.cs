@@ -799,6 +799,12 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryDeltaGroupToProto(
+            List<ORDictionary.IDeltaOperation> deltaGroupOps)
+        {
+
+        }
+
         #endregion
     }
 }

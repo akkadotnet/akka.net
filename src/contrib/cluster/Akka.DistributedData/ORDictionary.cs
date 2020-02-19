@@ -43,11 +43,55 @@ namespace Akka.DistributedData
 
     public static class ORDictionary
     {
-        internal interface IPutDeltaOp { }
-        internal interface IRemoveDeltaOp { }
-        internal interface IRemoveKeyDeltaOp { }
-        internal interface IUpdateDeltaOp { }
-        internal interface IDeltaGroupOp { }
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IDeltaOperation
+        {
+            Type KeyType { get; }
+
+            Type ValueType { get; }
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IPutDeltaOp : IDeltaOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IRemoveDeltaOp : IDeltaOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IRemoveKeyDeltaOp : IDeltaOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IUpdateDeltaOp : IDeltaOperation { }
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Used for serialization purposes.
+        /// </summary>
+        internal interface IDeltaGroupOp
+        {
+            IEnumerable<IDeltaOperation> OperationsSerialization { get; }
+        }
 
         public static ORDictionary<TKey, TValue> Create<TKey, TValue>(UniqueAddress node, TKey key, TValue value) where TValue : IReplicatedData<TValue> =>
             ORDictionary<TKey, TValue>.Empty.SetItem(node, key, value);
@@ -396,7 +440,7 @@ namespace Akka.DistributedData
         {
         }
 
-        internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize
+        internal abstract class AtomicDeltaOperation : IDeltaOperation, IReplicatedDeltaSize, ORDictionary.IDeltaOperation
         {
             public abstract ORSet<TKey>.IDeltaOperation Underlying { get; }
             public virtual IReplicatedData Merge(IReplicatedData other)
@@ -424,6 +468,9 @@ namespace Akka.DistributedData
                 if (obj.GetType() != this.GetType()) return false;
                 return Equals((IDeltaOperation)obj);
             }
+
+            public Type KeyType { get; } = typeof(TKey);
+            public Type ValueType { get; } = typeof(TValue);
         }
 
         internal sealed class PutDeltaOperation : AtomicDeltaOperation, ORDictionary.IPutDeltaOp
@@ -630,7 +677,7 @@ namespace Akka.DistributedData
             }
         }
 
-        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize
+        internal sealed class DeltaGroup : IDeltaOperation, IReplicatedDeltaSize, ORDictionary.IDeltaGroupOp
         {
             public readonly IDeltaOperation[] Operations;
 
@@ -701,6 +748,8 @@ namespace Akka.DistributedData
                     return hash;
                 }
             }
+
+            public IEnumerable<ORDictionary.IDeltaOperation> OperationsSerialization => Operations.Cast<ORDictionary.IDeltaOperation>();
         }
 
         [NonSerialized]

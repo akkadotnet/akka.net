@@ -111,11 +111,12 @@ message ORMapDeltaGroup {
      ORMapDeltaOp operation = 1;
      ORSet underlying = 2;
      sint32 zeroTag = 3;
-    repeated MapEntry entryData = 4;
+     repeated MapEntry entryData = 4;
   }
 
   repeated Entry entries = 1;
-  TypeDescriptor typeInfo = 2;
+  TypeDescriptor keyTypeInfo = 2;
+  TypeDescriptor valueTypeInfo = 3;
 }
 
 enum ORMapDeltaOp {
