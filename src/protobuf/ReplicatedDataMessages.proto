@@ -96,6 +96,7 @@ message ORMap {
   
   ORSet keys = 1;
   repeated Entry entries = 2;
+  TypeDescriptor valueTypeInfo = 4;
 }
 
 message ORMapDeltaGroup {
@@ -135,12 +136,13 @@ message LWWMap {
   
   ORSet keys = 1;
   repeated Entry entries = 2;
+  TypeDescriptor valueTypeInfo = 3;
 }
 
 message PNCounterMap {
   message Entry {
     string stringKey = 1;
-     PNCounter value = 2;
+    PNCounter value = 2;
     sint32 intKey = 3;
     sint64 longKey = 4;
     OtherMessage otherKey = 5;
@@ -153,7 +155,7 @@ message PNCounterMap {
 message ORMultiMap {
    message Entry {
      string stringKey = 1;
-      ORSet value = 2;
+     ORSet value = 2;
      sint32 intKey = 3;
      sint64 longKey = 4;
      OtherMessage otherKey = 5;
