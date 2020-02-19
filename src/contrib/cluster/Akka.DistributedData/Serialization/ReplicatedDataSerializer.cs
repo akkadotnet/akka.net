@@ -78,6 +78,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSet.IAddDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 case ORSet.IRemoveDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
                 case IGSet g: return ToProto(g).ToByteArray();
+                case GCounter g: return ToProto(g).ToByteArray();
                 // key types
 
                 // less common delta types
@@ -96,6 +97,7 @@ namespace Akka.DistributedData.Serialization
                 case ORSetAddManifest: return ORAddDeltaOperationFromBinary(bytes);
                 case ORSetRemoveManifest: return ORRemoveOperationFromBinary(bytes);
                 case GSetManifest: return GSetFromBinary(bytes);
+                case GCounterManifest: return GCounterFromBytes(bytes);
                 // key types
 
                 // less common delta types
@@ -519,6 +521,29 @@ namespace Akka.DistributedData.Serialization
         private static GSet<T> ToGenericGSet<T>(IEnumerable<object> items)
         {
             return new GSet<T>(items.Cast<T>().ToImmutableHashSet());
+        }
+
+        #endregion
+
+        #region GCounter
+
+        private Proto.Msg.GCounter ToProto(GCounter counter)
+        {
+            var gProto = new Proto.Msg.GCounter();
+
+            gProto.Entries.AddRange(counter.State.Select(x => new Proto.Msg.GCounter.Types.Entry(){ Node = SerializationSupport.UniqueAddressToProto(x.Key), Value = ByteString.CopyFrom(BitConverter.GetBytes(x.Value))}));
+
+            return gProto;
+        }
+
+        private GCounter GCounterFromBytes(byte[] bytes)
+        {
+            var gProto = Proto.Msg.GCounter.Parser.ParseFrom(bytes);
+
+            var entries = gProto.Entries.ToImmutableDictionary(k => _ser.UniqueAddressFromProto(k.Node),
+                v => BitConverter.ToUInt64(v.Value.ToByteArray(), 0));
+
+            return new GCounter(entries);
         }
 
         #endregion
