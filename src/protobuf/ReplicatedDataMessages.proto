@@ -68,6 +68,7 @@ message LWWRegister {
    sint64 timestamp = 1;
    UniqueAddress node = 2;
    OtherMessage state = 3;
+   TypeDescriptor typeInfo = 4;
 }
 
 message GCounter {
