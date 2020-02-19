@@ -148,9 +148,37 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
+        private static TypeDescriptor GetTypeDescriptor(Type t)
+        {
+            var typeInfo = new TypeDescriptor();
+            if (t == typeof(string))
+            {
+                typeInfo.Type = ValType.String;
+            }
+            else if (t == typeof(int))
+            {
+                typeInfo.Type = ValType.Int;
+            }
+            else if (t == typeof(long))
+            {
+                typeInfo.Type = ValType.Long;
+            }
+            else if (t == typeof(IActorRef))
+            {
+                typeInfo.Type = ValType.ActorRef;
+            }
+            else
+            {
+                typeInfo.Type = ValType.Other;
+                typeInfo.TypeName = t.TypeQualifiedName();
+            }
+
+            return typeInfo;
+        }
+
         #region ORSet
 
-        private static Proto.Msg.ORSet ToProto<T>(ORSet<T> set)
+        private static Proto.Msg.ORSet ORSetToProto<T>(ORSet<T> set)
         {
             var p = new Proto.Msg.ORSet();
             p.Vvector = SerializationSupport.VersionVectorToProto(set.VersionVector);
@@ -169,28 +197,28 @@ namespace Akka.DistributedData.Serialization
             {
                 case ORSet<int> ints:
                 {
-                    var p = ToProto(ints);
+                    var p = ORSetToProto(ints);
                     p.TypeInfo.Type = ValType.Int;
                     p.IntElements.Add(ints.Elements);
                     return p;
                 }
                 case ORSet<long> longs:
                 {
-                    var p = ToProto(longs);
+                    var p = ORSetToProto(longs);
                     p.TypeInfo.Type = ValType.Long;
                     p.LongElements.Add(longs.Elements);
                     return p;
                 }
                 case ORSet<string> strings:
                 {
-                    var p = ToProto(strings);
+                    var p = ORSetToProto(strings);
                     p.TypeInfo.Type = ValType.String;
                     p.StringElements.Add(strings.Elements);
                     return p;
                 }
                 case ORSet<IActorRef> refs:
                 {
-                    var p = ToProto(refs);
+                    var p = ORSetToProto(refs);
                     p.TypeInfo.Type = ValType.ActorRef;
                     p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
                     return p;
@@ -257,38 +285,10 @@ namespace Akka.DistributedData.Serialization
             return new ORSet<T>(finalInput, vector);
         }
 
-        private static TypeDescriptor GetTypeInfo(IORSet orset)
-        {
-            var typeInfo = new TypeDescriptor();
-            if(orset.SetType == typeof(string))
-            {
-                typeInfo.Type = ValType.String;
-            }
-            else if (orset.SetType == typeof(int))
-            {
-                typeInfo.Type = ValType.Int;
-            }
-            else if (orset.SetType == typeof(long))
-            {
-                typeInfo.Type = ValType.Long;
-            }
-            else if (orset.SetType == typeof(IActorRef))
-            {
-                typeInfo.Type = ValType.ActorRef;
-            }
-            else
-            {
-                typeInfo.Type = ValType.Other;
-                typeInfo.TypeName = orset.SetType.TypeQualifiedName();
-            }
-
-            return typeInfo;
-        }
-
         /// <summary>
         /// Called when we're serializing none of the standard object types with ORSet
         /// </summary>
-        private Proto.Msg.ORSet ToBinary<T>(ORSet<T> orset)
+        private Proto.Msg.ORSet ORSetUnknownToProto<T>(ORSet<T> orset)
         {
             var p = ToProto(orset);
             p.TypeInfo.Type = ValType.Other;
@@ -325,7 +325,7 @@ namespace Akka.DistributedData.Serialization
             {
                 if (!gatheredTypeInfo) // only need to do this once - all Deltas must have ORSet<T> of same <T>
                 {
-                    deltaGroup.TypeInfo = GetTypeInfo(underlying);
+                    deltaGroup.TypeInfo = GetTypeDescriptor(underlying.SetType);
                 }
                 gatheredTypeInfo = true;
             }
@@ -397,6 +397,59 @@ namespace Akka.DistributedData.Serialization
             var type = Type.GetType(deltaGroup.TypeInfo.TypeName);
             var orDeltaGroupType = typeof(ORSet<>.DeltaGroup).MakeGenericType(type);
             return (ORSet.IDeltaGroupOperation)Activator.CreateInstance(orDeltaGroupType, arr);
+        }
+
+        #endregion
+
+        #region GSet
+
+        private Proto.Msg.GSet ToProto<T>(GSet<T> gset)
+        {
+            var p = new Proto.Msg.GSet();
+            p.TypeInfo = GetTypeDescriptor(typeof(T));
+            return p;
+        }
+
+        private Proto.Msg.GSet GSetToProtoUnknown<T>(GSet<T> gset)
+        {
+            var p = new Proto.Msg.GSet();
+            p.TypeInfo = GetTypeDescriptor(typeof(T));
+            p.OtherElements.Add(gset.Select(x => _ser.OtherMessageToProto(x)));
+            return p;
+        }
+
+        private Proto.Msg.GSet ToProto(IGSet gset)
+        {
+            switch (gset)
+            {
+                case GSet<int> ints:
+                    {
+                        var p = ToProto(ints);
+                        p.IntElements.Add(ints.Elements);
+                        return p;
+                    }
+                case GSet<long> longs:
+                    {
+                        var p = ToProto(longs);
+                        p.LongElements.Add(longs.Elements);
+                        return p;
+                    }
+                case GSet<string> strings:
+                    {
+                        var p = ToProto(strings);
+                        p.StringElements.Add(strings.Elements);
+                        return p;
+                    }
+                case GSet<IActorRef> refs:
+                    {
+                        var p = ToProto(refs);
+                        p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
+                        return p;
+                    }
+                default: // unknown type
+                    dynamic d = gset;
+                    return GSetToProtoUnknown(d);
+            }
         }
 
         #endregion
