@@ -80,6 +80,8 @@ namespace Akka.DistributedData.Serialization
                 case IGSet g: return ToProto(g).ToByteArray();
                 case GCounter g: return ToProto(g).ToByteArray();
                 case PNCounter p: return ToProto(p).ToByteArray();
+                case Flag f: return ToProto(f).ToByteArray();
+                case ILWWRegister l: return ToProto(l).ToByteArray();
                 // key types
 
                 // less common delta types
@@ -100,6 +102,8 @@ namespace Akka.DistributedData.Serialization
                 case GSetManifest: return GSetFromBinary(bytes);
                 case GCounterManifest: return GCounterFromBytes(bytes);
                 case PNCounterManifest: return PNCounterFromBytes(bytes);
+                case FlagManifest: return FlagFromBinary(bytes);
+                case LWWRegisterManifest: return LWWRegisterFromBinary(bytes);
                 // key types
 
                 // less common delta types
@@ -572,6 +576,102 @@ namespace Akka.DistributedData.Serialization
             var decrements = GCounterFromProto(pProto.Decrements);
 
             return new PNCounter(increments, decrements);
+        }
+
+        #endregion
+
+        #region Flag
+
+        private Proto.Msg.Flag ToProto(Flag flag)
+        {
+            var pFlag = new Proto.Msg.Flag();
+            pFlag.Enabled = flag;
+            return pFlag;
+        }
+
+        private Flag FlagFromProto(Proto.Msg.Flag flag)
+        {
+            return flag.Enabled ? Flag.True : Flag.False;
+        }
+
+        private Flag FlagFromBinary(byte[] bytes)
+        {
+            return FlagFromProto(Proto.Msg.Flag.Parser.ParseFrom(bytes));
+        }
+
+        #endregion
+
+        #region LWWRegister
+
+        private Proto.Msg.LWWRegister ToProto(ILWWRegister register)
+        {
+            var protoMaker = LWWProtoMaker.MakeGenericMethod(register.RegisterType);
+            return (Proto.Msg.LWWRegister)protoMaker.Invoke(this, new object[] { register });
+        }
+
+        private static readonly MethodInfo LWWProtoMaker = 
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(LWWToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private Proto.Msg.LWWRegister LWWToProto<T>(ILWWRegister r)
+        {
+            var register = (LWWRegister<T>)r;
+            var pLww = new Proto.Msg.LWWRegister();
+            pLww.Node = SerializationSupport.UniqueAddressToProto(register.UpdatedBy);
+            pLww.State = _ser.OtherMessageToProto(register.Value);
+            pLww.Timestamp = register.Timestamp;
+            pLww.TypeInfo = GetTypeDescriptor(r.RegisterType);
+            return pLww;
+        }
+
+        private ILWWRegister LWWRegisterFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.LWWRegister.Parser.ParseFrom(bytes);
+            return LWWRegisterFromProto(proto);
+        }
+
+        private ILWWRegister LWWRegisterFromProto(Proto.Msg.LWWRegister proto)
+        {
+            switch (proto.TypeInfo.Type)
+            {
+                case ValType.Int:
+                {
+                    return GenericLWWRegisterFromProto<int>(proto);
+                }
+                case ValType.Long:
+                    {
+                        return GenericLWWRegisterFromProto<long>(proto);
+                    }
+                case ValType.String:
+                    {
+                        return GenericLWWRegisterFromProto<string>(proto);
+                    }
+                case ValType.ActorRef:
+                    {
+                        return GenericLWWRegisterFromProto<IActorRef>(proto);
+                    }
+                case ValType.Other:
+                    {
+                        // runtime type - enter horrible dynamic serialization stuff
+
+                        var setContentType = Type.GetType(proto.TypeInfo.TypeName);
+
+                        var setType = LWWRegisterMaker.MakeGenericMethod(setContentType);
+                        return (ILWWRegister)setType.Invoke(this, new object[] { proto });
+                    }
+                default:
+                    throw new SerializationException($"Unknown ValType of [{proto.TypeInfo.Type}] detected while deserializing LWWRegister");
+            }
+        }
+
+        private static readonly MethodInfo LWWRegisterMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericLWWRegisterFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private LWWRegister<T> GenericLWWRegisterFromProto<T>(Proto.Msg.LWWRegister proto)
+        {
+            var msg = (T)_ser.OtherMessageFromProto(proto.State);
+            var updatedBy = _ser.UniqueAddressFromProto(proto.Node);
+
+            return new LWWRegister<T>(updatedBy, msg, proto.Timestamp);
         }
 
         #endregion

@@ -48,7 +48,10 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface ILWWRegister { }
+    internal interface ILWWRegister
+    {
+        Type RegisterType { get; }
+    }
 
     /// <summary>
     /// Implements a 'Last Writer Wins Register' CRDT, also called a 'LWW-Register'.
@@ -206,5 +209,7 @@ namespace Akka.DistributedData
 
         /// <inheritdoc/>
         public override string ToString() => $"LWWRegister(value={Value}, timestamp={Timestamp}, updatedBy={UpdatedBy})";
+
+        public Type RegisterType { get; } = typeof(T);
     }
 }
