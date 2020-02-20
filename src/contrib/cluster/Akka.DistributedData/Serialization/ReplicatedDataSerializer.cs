@@ -1064,8 +1064,7 @@ namespace Akka.DistributedData.Serialization
             var lwwmap = (LWWDictionary<TKey, TValue>)o;
             var proto = new Proto.Msg.LWWMap();
             ToLWWMapEntries(lwwmap.Underlying.Entries, proto);
-            proto.Keys = ORSetToProto(lwwmap.Underlying.KeySet);
-            proto.Keys.TypeInfo = GetTypeDescriptor(typeof(TKey));
+            proto.Keys = ToProto(lwwmap.Underlying.KeySet);
             proto.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
             return proto;
         }
