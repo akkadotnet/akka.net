@@ -120,15 +120,24 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk9SU2V0",
             "Eg4KBmludEtleRgDIAEoERIPCgdsb25nS2V5GAQgASgSEkwKCG90aGVyS2V5",
             "GAUgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlKkEKB1ZhbFR5cGUSBwoDSW50EAASCAoE",
-            "TG9uZxABEgoKBlN0cmluZxACEgwKCEFjdG9yUmVmEAMSCQoFT3RoZXIQBCot",
-            "CgxPUlNldERlbHRhT3ASBwoDQWRkEAASCgoGUmVtb3ZlEAESCAoERnVsbBAC",
-            "KlIKDE9STWFwRGVsdGFPcBIMCghPUk1hcFB1dBAAEg8KC09STWFwUmVtb3Zl",
-            "EAESEgoOT1JNYXBSZW1vdmVLZXkQAhIPCgtPUk1hcFVwZGF0ZRADQgJIAWIG",
-            "cHJvdG8z"));
+            "cm90by5Nc2cuT3RoZXJNZXNzYWdlIoQCCgNLZXkSDQoFa2V5SWQYASABKAkS",
+            "RgoHa2V5VHlwZRgCIAEoDjI1LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlh",
+            "bGl6YXRpb24uUHJvdG8uTXNnLktleVR5cGUSUQoLa2V5VHlwZUluZm8YAyAB",
+            "KAsyPC5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3Rv",
+            "Lk1zZy5UeXBlRGVzY3JpcHRvchJTCg12YWx1ZVR5cGVJbmZvGAQgASgLMjwu",
+            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
+            "VHlwZURlc2NyaXB0b3IqQQoHVmFsVHlwZRIHCgNJbnQQABIICgRMb25nEAES",
+            "CgoGU3RyaW5nEAISDAoIQWN0b3JSZWYQAxIJCgVPdGhlchAEKi0KDE9SU2V0",
+            "RGVsdGFPcBIHCgNBZGQQABIKCgZSZW1vdmUQARIICgRGdWxsEAIqUgoMT1JN",
+            "YXBEZWx0YU9wEgwKCE9STWFwUHV0EAASDwoLT1JNYXBSZW1vdmUQARISCg5P",
+            "Uk1hcFJlbW92ZUtleRACEg8KC09STWFwVXBkYXRlEAMqrQEKB0tleVR5cGUS",
+            "DAoIT1JTZXRLZXkQABILCgdHU2V0S2V5EAESDwoLR0NvdW50ZXJLZXkQAhIQ",
+            "CgxQTkNvdW50ZXJLZXkQAxILCgdGbGFnS2V5EAQSEgoOTFdXUmVnaXN0ZXJL",
+            "ZXkQBRIMCghPUk1hcEtleRAGEg0KCUxXV01hcEtleRAHEhMKD1BOQ291bnRl",
+            "ck1hcEtleRAIEhEKDU9STXVsdGlNYXBLZXkQCUICSAFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatorMessagesReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ValType), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaOp), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaOp), }, new pbr::GeneratedClrTypeInfo[] {
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ValType), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSetDeltaOp), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaOp), typeof(global::Akka.DistributedData.Serialization.Proto.Msg.KeyType), }, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor), global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor.Parser, new[]{ "Type", "TypeName" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GSet), global::Akka.DistributedData.Serialization.Proto.Msg.GSet.Parser, new[]{ "StringElements", "TypeInfo", "IntElements", "LongElements", "OtherElements", "ActorRefElements" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORSet), global::Akka.DistributedData.Serialization.Proto.Msg.ORSet.Parser, new[]{ "Vvector", "TypeInfo", "Dots", "StringElements", "IntElements", "LongElements", "OtherElements", "ActorRefElements" }, null, null, null),
@@ -142,7 +151,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMapDeltaGroup.Types.Entry.Parser, new[]{ "Operation", "Underlying", "ZeroTag", "EntryData" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Parser, new[]{ "Keys", "Entries", "ValueTypeInfo" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.LWWMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Parser, new[]{ "Keys", "Entries" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.PNCounterMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Parser, new[]{ "Keys", "Entries", "WithValueDeltas", "ValueTypeInfo" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)})
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Parser, new[]{ "Keys", "Entries", "WithValueDeltas", "ValueTypeInfo" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.ORMultiMap.Types.Entry.Parser, new[]{ "StringKey", "Value", "IntKey", "LongKey", "OtherKey" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Key), global::Akka.DistributedData.Serialization.Proto.Msg.Key.Parser, new[]{ "KeyId", "KeyType", "KeyTypeInfo", "ValueTypeInfo" }, null, null, null)
           }));
     }
     #endregion
@@ -168,6 +178,19 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     [pbr::OriginalName("ORMapRemove")] OrmapRemove = 1,
     [pbr::OriginalName("ORMapRemoveKey")] OrmapRemoveKey = 2,
     [pbr::OriginalName("ORMapUpdate")] OrmapUpdate = 3,
+  }
+
+  internal enum KeyType {
+    [pbr::OriginalName("ORSetKey")] OrsetKey = 0,
+    [pbr::OriginalName("GSetKey")] GsetKey = 1,
+    [pbr::OriginalName("GCounterKey")] GcounterKey = 2,
+    [pbr::OriginalName("PNCounterKey")] PncounterKey = 3,
+    [pbr::OriginalName("FlagKey")] FlagKey = 4,
+    [pbr::OriginalName("LWWRegisterKey")] LwwregisterKey = 5,
+    [pbr::OriginalName("ORMapKey")] OrmapKey = 6,
+    [pbr::OriginalName("LWWMapKey")] LwwmapKey = 7,
+    [pbr::OriginalName("PNCounterMapKey")] PncounterMapKey = 8,
+    [pbr::OriginalName("ORMultiMapKey")] OrmultiMapKey = 9,
   }
 
   #endregion
@@ -4201,6 +4224,219 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
     }
     #endregion
+
+  }
+
+  internal sealed partial class Key : pb::IMessage<Key> {
+    private static readonly pb::MessageParser<Key> _parser = new pb::MessageParser<Key>(() => new Key());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<Key> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.DistributedData.Serialization.Proto.Msg.ReplicatedDataMessagesReflection.Descriptor.MessageTypes[13]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Key() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Key(Key other) : this() {
+      keyId_ = other.keyId_;
+      keyType_ = other.keyType_;
+      KeyTypeInfo = other.keyTypeInfo_ != null ? other.KeyTypeInfo.Clone() : null;
+      ValueTypeInfo = other.valueTypeInfo_ != null ? other.ValueTypeInfo.Clone() : null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Key Clone() {
+      return new Key(this);
+    }
+
+    /// <summary>Field number for the "keyId" field.</summary>
+    public const int KeyIdFieldNumber = 1;
+    private string keyId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string KeyId {
+      get { return keyId_; }
+      set {
+        keyId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "keyType" field.</summary>
+    public const int KeyTypeFieldNumber = 2;
+    private global::Akka.DistributedData.Serialization.Proto.Msg.KeyType keyType_ = 0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.DistributedData.Serialization.Proto.Msg.KeyType KeyType {
+      get { return keyType_; }
+      set {
+        keyType_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "keyTypeInfo" field.</summary>
+    public const int KeyTypeInfoFieldNumber = 3;
+    private global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor keyTypeInfo_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor KeyTypeInfo {
+      get { return keyTypeInfo_; }
+      set {
+        keyTypeInfo_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "valueTypeInfo" field.</summary>
+    public const int ValueTypeInfoFieldNumber = 4;
+    private global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor valueTypeInfo_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor ValueTypeInfo {
+      get { return valueTypeInfo_; }
+      set {
+        valueTypeInfo_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as Key);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(Key other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (KeyId != other.KeyId) return false;
+      if (KeyType != other.KeyType) return false;
+      if (!object.Equals(KeyTypeInfo, other.KeyTypeInfo)) return false;
+      if (!object.Equals(ValueTypeInfo, other.ValueTypeInfo)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (KeyId.Length != 0) hash ^= KeyId.GetHashCode();
+      if (KeyType != 0) hash ^= KeyType.GetHashCode();
+      if (keyTypeInfo_ != null) hash ^= KeyTypeInfo.GetHashCode();
+      if (valueTypeInfo_ != null) hash ^= ValueTypeInfo.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (KeyId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(KeyId);
+      }
+      if (KeyType != 0) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) KeyType);
+      }
+      if (keyTypeInfo_ != null) {
+        output.WriteRawTag(26);
+        output.WriteMessage(KeyTypeInfo);
+      }
+      if (valueTypeInfo_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(ValueTypeInfo);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (KeyId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(KeyId);
+      }
+      if (KeyType != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) KeyType);
+      }
+      if (keyTypeInfo_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(KeyTypeInfo);
+      }
+      if (valueTypeInfo_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ValueTypeInfo);
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(Key other) {
+      if (other == null) {
+        return;
+      }
+      if (other.KeyId.Length != 0) {
+        KeyId = other.KeyId;
+      }
+      if (other.KeyType != 0) {
+        KeyType = other.KeyType;
+      }
+      if (other.keyTypeInfo_ != null) {
+        if (keyTypeInfo_ == null) {
+          keyTypeInfo_ = new global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor();
+        }
+        KeyTypeInfo.MergeFrom(other.KeyTypeInfo);
+      }
+      if (other.valueTypeInfo_ != null) {
+        if (valueTypeInfo_ == null) {
+          valueTypeInfo_ = new global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor();
+        }
+        ValueTypeInfo.MergeFrom(other.ValueTypeInfo);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            KeyId = input.ReadString();
+            break;
+          }
+          case 16: {
+            keyType_ = (global::Akka.DistributedData.Serialization.Proto.Msg.KeyType) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            if (keyTypeInfo_ == null) {
+              keyTypeInfo_ = new global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(keyTypeInfo_);
+            break;
+          }
+          case 34: {
+            if (valueTypeInfo_ == null) {
+              valueTypeInfo_ = new global::Akka.DistributedData.Serialization.Proto.Msg.TypeDescriptor();
+            }
+            input.ReadMessage(valueTypeInfo_);
+            break;
+          }
+        }
+      }
+    }
 
   }
 

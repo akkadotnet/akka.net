@@ -168,4 +168,22 @@ message ORMultiMap {
   TypeDescriptor valueTypeInfo = 4;
  }
 
+enum KeyType{
+  ORSetKey = 0;
+  GSetKey = 1;
+  GCounterKey = 2;
+  PNCounterKey = 3;
+  FlagKey = 4;
+  LWWRegisterKey = 5;
+  ORMapKey = 6;
+  LWWMapKey = 7;
+  PNCounterMapKey = 8;
+  ORMultiMapKey = 9;
+}
 
+message Key{
+  string keyId = 1;
+  KeyType keyType = 2;
+  TypeDescriptor keyTypeInfo = 3;
+  TypeDescriptor valueTypeInfo = 4;
+}
