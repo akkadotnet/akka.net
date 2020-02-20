@@ -91,6 +91,7 @@ namespace Akka.DistributedData.Serialization
                 case ORDictionary.IUpdateDeltaOp u: return ORDictionaryUpdateToProto(u).ToByteArray();
                 case ORDictionary.IDeltaGroupOp g:
                     return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList()).ToByteArray();
+                case ILWWDictionary l: return SerializationSupport.Compress(ToProto(l));
                 // key types
 
                 // less common delta types
@@ -119,6 +120,7 @@ namespace Akka.DistributedData.Serialization
                 case ORMapRemoveKeyManifest: return ORDictionaryRemoveKeyFromBinary(bytes);
                 case ORMapUpdateManifest: return ORDictionaryUpdateFromBinary(bytes);
                 case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
+                case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 // key types
 
                 // less common delta types
@@ -969,12 +971,12 @@ namespace Akka.DistributedData.Serialization
                                 throw new ArgumentOutOfRangeException(
                                     $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
-                            
+
                             deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, value));
                         }
                         break;
                     case ORMapDeltaOp.OrmapRemove:
-                        { 
+                        {
                             deltaOps.Add(new ORDictionary<TKey, TValue>.RemoveDeltaOperation(new ORSet<TKey>.RemoveDeltaOperation((ORSet<TKey>)underlying)));
                         }
                         break;
@@ -988,9 +990,9 @@ namespace Akka.DistributedData.Serialization
                         }
                         break;
                     case ORMapDeltaOp.OrmapUpdate:
-                    {
-                        var entries = entry.EntryData.Select(x => MapEntryFromProto(x))
-                            .ToImmutableDictionary(x => (TKey)x.key, v => (IReplicatedData)v.value);
+                        {
+                            var entries = entry.EntryData.Select(x => MapEntryFromProto(x))
+                                .ToImmutableDictionary(x => (TKey)x.key, v => (IReplicatedData)v.value);
                             deltaOps.Add(new ORDictionary<TKey, TValue>.UpdateDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), entries));
                         }
                         break;
@@ -999,7 +1001,7 @@ namespace Akka.DistributedData.Serialization
                 }
             }
 
-            return new ORDictionary<TKey,TValue>.DeltaGroup(deltaOps);
+            return new ORDictionary<TKey, TValue>.DeltaGroup(deltaOps);
         }
 
         private ORDictionary.IDeltaGroupOp ORDictionaryDeltaGroupFromBinary(byte[] bytes)
@@ -1042,6 +1044,112 @@ namespace Akka.DistributedData.Serialization
                 groupOp.OperationsSerialization.First() is ORDictionary.IUpdateDeltaOp update)
                 return update;
             throw new SerializationException($"Improper ORDictionary delta update operation size or kind");
+        }
+
+        #endregion
+
+        #region LWWDictionary
+
+        private Proto.Msg.LWWMap ToProto(ILWWDictionary lwwDictionary)
+        {
+            var protoMaker = LWWDictProtoMaker.MakeGenericMethod(lwwDictionary.KeyType, lwwDictionary.ValueType);
+            return (Proto.Msg.LWWMap)protoMaker.Invoke(this, new object[] { lwwDictionary });
+        }
+
+        private static readonly MethodInfo LWWDictProtoMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(LWWDictToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private Proto.Msg.LWWMap LWWDictToProto<TKey, TValue>(ILWWDictionary o)
+        {
+            var lwwmap = (LWWDictionary<TKey, TValue>)o;
+            var proto = new Proto.Msg.LWWMap();
+            ToLWWMapEntries(lwwmap.Underlying.Entries, proto);
+            proto.Keys = ORSetToProto(lwwmap.Underlying.KeySet);
+            proto.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
+            return proto;
+        }
+
+        private void ToLWWMapEntries<TKey, TValue>(IImmutableDictionary<TKey, LWWRegister<TValue>> underlyingEntries, LWWMap proto)
+        {
+            var entries = new List<LWWMap.Types.Entry>();
+            foreach (var e in underlyingEntries)
+            {
+                var thisEntry = new LWWMap.Types.Entry();
+                switch (e.Key)
+                {
+                    case int i:
+                        thisEntry.IntKey = i;
+                        break;
+                    case long l:
+                        thisEntry.LongKey = l;
+                        break;
+                    case string str:
+                        thisEntry.StringKey = str;
+                        break;
+                    default:
+                        thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
+                        break;
+                }
+
+                thisEntry.Value = LWWToProto<TValue>(e.Value);
+                entries.Add(thisEntry);
+            }
+
+            proto.Entries.Add(entries);
+        }
+
+        private static readonly MethodInfo LWWDictMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericLWWDictFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private ILWWDictionary LWWDictFromProto(Proto.Msg.LWWMap proto)
+        {
+            var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
+            var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
+
+            var dictMaker = LWWDictMaker.MakeGenericMethod(keyType, valueType);
+            return (ILWWDictionary)dictMaker.Invoke(this, new object[] { proto });
+        }
+
+        private ILWWDictionary GenericLWWDictFromProto<TKey, TValue>(Proto.Msg.LWWMap proto)
+        {
+            var keys = FromProto(proto.Keys);
+            switch (proto.Keys.TypeInfo.Type)
+            {
+                case ValType.Int:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
+                        var orDict = new ORDictionary<int, LWWRegister<TValue>>((ORSet<int>)keys, entries);
+                        return new LWWDictionary<int, TValue>(orDict);
+                    }
+                case ValType.Long:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
+                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
+                        var orDict = new ORDictionary<long, LWWRegister<TValue>>((ORSet<long>)keys, entries);
+                        return new LWWDictionary<long, TValue>(orDict);
+                    }
+                case ValType.String:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
+                        var orDict = new ORDictionary<string, LWWRegister<TValue>>((ORSet<string>)keys, entries);
+                        return new LWWDictionary<string, TValue>(orDict);
+                    }
+                default:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                            v => GenericLWWRegisterFromProto<TValue>(v.Value));
+                        var orDict = new ORDictionary<TKey, LWWRegister<TValue>>((ORSet<TKey>)keys, entries);
+                        return new LWWDictionary<TKey, TValue>(orDict);
+                    }
+            }
+        }
+
+        private ILWWDictionary LWWDictionaryFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.LWWMap.Parser.ParseFrom(bytes);
+            return LWWDictFromProto(proto);
         }
 
         #endregion
