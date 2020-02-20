@@ -96,7 +96,7 @@ namespace Akka.Persistence.Tests
                 }
             }";
 
-        public PersistenceConfigSpec(ITestOutputHelper output = null) : base(SpecConfig, output)
+        public PersistenceConfigSpec(ITestOutputHelper output) : base(SpecConfig, output)
         {
         }
 
