@@ -11,12 +11,8 @@ using Akka.Util.Internal;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using Akka.Util;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
-using System.Threading;
-using System.Runtime.CompilerServices;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using DataEnvelope = Akka.DistributedData.Internal.DataEnvelope;
 using DeltaPropagation = Akka.DistributedData.Internal.DeltaPropagation;
@@ -474,7 +470,6 @@ namespace Akka.DistributedData.Serialization
 
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            dynamic d;
             switch (manifest)
             {
                 case DataEnvelopeManifest: return DataEnvelopeFromBinary(bytes);

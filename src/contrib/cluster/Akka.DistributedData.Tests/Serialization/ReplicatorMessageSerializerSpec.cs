@@ -79,8 +79,9 @@ namespace Akka.DistributedData.Tests.Serialization
         private void CheckSerialization(object expected)
         {
             var serializer = Sys.Serialization.FindSerializerFor(expected);
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, expected);
             var blob = serializer.ToBinary(expected);
-            var actual = serializer.FromBinary(blob, expected.GetType());
+            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, manifest);
 
             Assert.True(expected.Equals(actual), $"Expected: {expected}\nActual: {actual}");
         }
