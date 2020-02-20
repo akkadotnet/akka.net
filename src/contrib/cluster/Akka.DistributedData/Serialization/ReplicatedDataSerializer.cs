@@ -1294,5 +1294,11 @@ namespace Akka.DistributedData.Serialization
         }
 
         #endregion
+
+        #region ORMultiDictionary
+
+
+
+        #endregion
     }
 }

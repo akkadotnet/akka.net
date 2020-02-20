@@ -165,6 +165,7 @@ message ORMultiMap {
   ORSet keys = 1;
   repeated Entry entries = 2;
   bool withValueDeltas = 3;
+  TypeDescriptor valueTypeInfo = 4;
  }
 
 
