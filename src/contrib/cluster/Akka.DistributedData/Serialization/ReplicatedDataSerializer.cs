@@ -88,6 +88,8 @@ namespace Akka.DistributedData.Serialization
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
+                case DeletedData _: return _emptyArray;
+                case VersionVector v: return SerializationSupport.VersionVectorToProto(v).ToByteArray();
                 // key types
 
                 // less common delta types
@@ -120,6 +122,8 @@ namespace Akka.DistributedData.Serialization
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
                 case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case DeletedDataManifest: return DeletedData.Instance;
+                case VersionVectorManifest: return _ser.VersionVectorFromBinary(bytes);
                 // key types
 
                 // less common delta types
@@ -1404,6 +1408,12 @@ namespace Akka.DistributedData.Serialization
                     }
             }
         }
+
+        #endregion
+
+        #region DeletedData and VersionVector
+
+
 
         #endregion
     }
