@@ -92,6 +92,7 @@ namespace Akka.DistributedData.Serialization
                 case ORDictionary.IDeltaGroupOp g:
                     return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList()).ToByteArray();
                 case ILWWDictionary l: return SerializationSupport.Compress(ToProto(l));
+                case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 // key types
 
                 // less common delta types
@@ -121,6 +122,7 @@ namespace Akka.DistributedData.Serialization
                 case ORMapUpdateManifest: return ORDictionaryUpdateFromBinary(bytes);
                 case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
                 case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 // key types
 
                 // less common delta types
@@ -611,6 +613,11 @@ namespace Akka.DistributedData.Serialization
         private PNCounter PNCounterFromBytes(byte[] bytes)
         {
             var pProto = Proto.Msg.PNCounter.Parser.ParseFrom(bytes);
+            return PNCounterFromProto(pProto);
+        }
+
+        private PNCounter PNCounterFromProto(Proto.Msg.PNCounter pProto)
+        {
             var increments = GCounterFromProto(pProto.Increments);
             var decrements = GCounterFromProto(pProto.Decrements);
 
@@ -1150,6 +1157,110 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = Proto.Msg.LWWMap.Parser.ParseFrom(bytes);
             return LWWDictFromProto(proto);
+        }
+
+        #endregion
+
+        #region PNCounterDictionary
+
+        private Proto.Msg.PNCounterMap ToProto(IPNCounterDictionary pnCounterDictionary)
+        {
+            var protoMaker = PNCounterDictProtoMaker.MakeGenericMethod(pnCounterDictionary.KeyType);
+            return (Proto.Msg.PNCounterMap)protoMaker.Invoke(this, new object[] { pnCounterDictionary });
+        }
+
+        private static readonly MethodInfo PNCounterDictProtoMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericPNCounterDictionaryToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+
+        private Proto.Msg.PNCounterMap GenericPNCounterDictionaryToProto<TKey>(IPNCounterDictionary pnCounterDictionary)
+        {
+            var pnDict = (PNCounterDictionary<TKey>)pnCounterDictionary;
+            var proto = new Proto.Msg.PNCounterMap();
+            proto.Keys = ToProto(pnDict.Underlying.KeySet);
+            ToPNCounterEntries(pnDict.Underlying.Entries, proto);
+            return proto;
+        }
+
+        private void ToPNCounterEntries<TKey>(IImmutableDictionary<TKey, PNCounter> underlyingEntries, PNCounterMap proto)
+        {
+            var entries = new List<PNCounterMap.Types.Entry>();
+            foreach (var e in underlyingEntries)
+            {
+                var thisEntry = new PNCounterMap.Types.Entry();
+                switch (e.Key)
+                {
+                    case int i:
+                        thisEntry.IntKey = i;
+                        break;
+                    case long l:
+                        thisEntry.LongKey = l;
+                        break;
+                    case string str:
+                        thisEntry.StringKey = str;
+                        break;
+                    default:
+                        thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
+                        break;
+                }
+
+                thisEntry.Value = ToProto(e.Value);
+                entries.Add(thisEntry);
+            }
+
+            proto.Entries.Add(entries);
+        }
+
+        private IPNCounterDictionary PNCounterDictionaryFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.PNCounterMap.Parser.ParseFrom(bytes);
+            return PNCounterDictionaryFromProto(proto);
+        }
+
+        private IPNCounterDictionary PNCounterDictionaryFromProto(Proto.Msg.PNCounterMap proto)
+        {
+            var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
+            var dictMaker = PNCounterDictMaker.MakeGenericMethod(keyType);
+            return (IPNCounterDictionary)dictMaker.Invoke(this, new object[] { proto });
+        }
+
+        private static readonly MethodInfo PNCounterDictMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericPNCounterDictionaryFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private IPNCounterDictionary GenericPNCounterDictionaryFromProto<TKey>(Proto.Msg.PNCounterMap proto)
+        {
+            var keys = FromProto(proto.Keys);
+            switch (proto.Keys.TypeInfo.Type)
+            {
+                case ValType.Int:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                            v => PNCounterFromProto(v.Value));
+                        var orDict = new ORDictionary<int, PNCounter>((ORSet<int>)keys, entries);
+                        return new PNCounterDictionary<int>(orDict);
+                    }
+                case ValType.Long:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
+                            v => PNCounterFromProto(v.Value));
+                        var orDict = new ORDictionary<long, PNCounter>((ORSet<long>)keys, entries);
+                        return new PNCounterDictionary<long>(orDict);
+                    }
+                case ValType.String:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                            v => PNCounterFromProto(v.Value));
+                        var orDict = new ORDictionary<string, PNCounter>((ORSet<string>)keys, entries);
+                        return new PNCounterDictionary<string>(orDict);
+                    }
+                default:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                            v => PNCounterFromProto(v.Value));
+                        var orDict = new ORDictionary<TKey, PNCounter>((ORSet<TKey>)keys, entries);
+                        return new PNCounterDictionary<TKey>(orDict);
+                    }
+            }
         }
 
         #endregion

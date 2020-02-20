@@ -21,7 +21,10 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface IPNCounterDictionary { }
+    internal interface IPNCounterDictionary
+    {
+        Type KeyType { get; }
+    }
 
     /// <summary>
     /// INTERNAL API.
@@ -283,6 +286,8 @@ namespace Akka.DistributedData
             new PNCounterDictionary<TKey>(Underlying.ResetDelta());
 
         #endregion
+
+        public Type KeyType { get; } = typeof(TKey);
     }
 
     /// <summary>
