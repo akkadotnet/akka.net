@@ -88,7 +88,7 @@ namespace Akka.DistributedData
         ///
         /// Used for serialization purposes.
         /// </summary>
-        internal interface IDeltaGroupOp
+        internal interface IDeltaGroupOp : IDeltaOperation
         {
             IReadOnlyList<IDeltaOperation> OperationsSerialization { get; }
         }
@@ -750,6 +750,8 @@ namespace Akka.DistributedData
             }
 
             public IReadOnlyList<ORDictionary.IDeltaOperation> OperationsSerialization => Operations.Cast<ORDictionary.IDeltaOperation>().ToList();
+            public Type KeyType { get; } = typeof(TKey);
+            public Type ValueType { get; } = typeof(TValue);
         }
 
         [NonSerialized]

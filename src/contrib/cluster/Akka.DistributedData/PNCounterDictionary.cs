@@ -31,7 +31,10 @@ namespace Akka.DistributedData
     ///
     /// For serialization purposes.
     /// </summary>
-    internal interface IPNCounterDictionaryDeltaOperation { }
+    internal interface IPNCounterDictionaryDeltaOperation
+    {
+        ORDictionary.IDeltaOperation Underlying { get; }
+    }
 
     /// <summary>
     /// Map of named counters. Specialized <see cref="ORDictionary{TKey,TValue}"/> 
@@ -239,8 +242,28 @@ namespace Akka.DistributedData
             }
 
             public IDeltaReplicatedData Zero => PNCounterDictionary<TKey>.Empty;
+
+            public override bool Equals(object obj)
+            {
+                return obj is PNCounterDictionary<TKey>.PNCounterDictionaryDelta operation && Equals(operation.Underlying);
+            }
+
             public bool Equals(ORDictionary<TKey, PNCounter>.IDeltaOperation other)
             {
+                if (other is ORDictionary<TKey, PNCounter>.DeltaGroup group)
+                {
+                    if (Underlying is ORDictionary<TKey, PNCounter>.DeltaGroup ourGroup)
+                    {
+                        return ourGroup.Operations.SequenceEqual(group.Operations);
+                    }
+
+                    if (group.Operations.Length == 1)
+                    {
+                        return Underlying.Equals(group.Operations.First());
+                    }
+
+                    return false;
+                }
                 return Underlying.Equals(other);
             }
 
@@ -250,6 +273,7 @@ namespace Akka.DistributedData
             }
 
             public int DeltaSize { get; }
+            ORDictionary.IDeltaOperation IPNCounterDictionaryDeltaOperation.Underlying => (ORDictionary.IDeltaOperation)Underlying;
         }
 
         // TODO: optimize this so it doesn't allocate each time it's called

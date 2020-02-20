@@ -188,11 +188,29 @@ namespace Akka.DistributedData.Tests.Serialization
         public void ReplicatedDataSerializer_should_serialize_PNCounterDictionary()
         {
             CheckSerialization(PNCounterDictionary<string>.Empty);
+            CheckSerialization(PNCounterDictionary<int>.Empty);
+            CheckSerialization(PNCounterDictionary<long>.Empty);
+            CheckSerialization(PNCounterDictionary<IActorRef>.Empty.Increment(_address1, TestActor));
             CheckSerialization(PNCounterDictionary<string>.Empty.Increment(_address1, "a", 3));
             CheckSerialization(PNCounterDictionary<string>.Empty
                 .Increment(_address1, "a", 3)
                 .Decrement(_address2, "a", 2)
                 .Increment(_address2, "b", 5));
+        }
+
+        [Fact()]
+        public void ReplicatedDataSerializer_should_serialize_PNCounterDictionary_delta()
+        {
+            CheckSerialization(PNCounterDictionary<string>.Empty.Increment(_address1, "a", 3).Delta);
+            CheckSerialization(PNCounterDictionary<string>.Empty
+                .Increment(_address1, "a", 3)
+                .Decrement(_address2, "a", 2)
+                .Increment(_address2, "b", 5).Delta);
+            CheckSerialization(PNCounterDictionary<string>.Empty
+                .Increment(_address1, "a", 3)
+                .Decrement(_address2, "a", 2)
+                .Increment(_address2, "b", 5)
+                .Remove(_address1, "b").Delta);
         }
 
         [Fact()]

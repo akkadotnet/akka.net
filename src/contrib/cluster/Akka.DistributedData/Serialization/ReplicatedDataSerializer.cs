@@ -85,14 +85,10 @@ namespace Akka.DistributedData.Serialization
                 case Flag f: return ToProto(f).ToByteArray();
                 case ILWWRegister l: return ToProto(l).ToByteArray();
                 case IORDictionary o: return SerializationSupport.Compress(ToProto(o));
-                case ORDictionary.IPutDeltaOp p: return ORDictionaryPutToProto(p).ToByteArray();
-                case ORDictionary.IRemoveDeltaOp r: return ORDictionaryRemoveToProto(r).ToByteArray();
-                case ORDictionary.IRemoveKeyDeltaOp r: return ORDictionaryRemoveKeyToProto(r).ToByteArray();
-                case ORDictionary.IUpdateDeltaOp u: return ORDictionaryUpdateToProto(u).ToByteArray();
-                case ORDictionary.IDeltaGroupOp g:
-                    return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList()).ToByteArray();
+                case ORDictionary.IDeltaOperation p: return ToProto(p).ToByteArray();
                 case ILWWDictionary l: return SerializationSupport.Compress(ToProto(l));
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
+                case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 // key types
 
                 // less common delta types
@@ -123,6 +119,7 @@ namespace Akka.DistributedData.Serialization
                 case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
                 case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
                 // key types
 
                 // less common delta types
@@ -904,6 +901,21 @@ namespace Akka.DistributedData.Serialization
             return group;
         }
 
+        private Proto.Msg.ORMapDeltaGroup ToProto(ORDictionary.IDeltaOperation op)
+        {
+            switch (op)
+            {
+                case ORDictionary.IPutDeltaOp p: return ORDictionaryPutToProto(p);
+                case ORDictionary.IRemoveDeltaOp r: return ORDictionaryRemoveToProto(r);
+                case ORDictionary.IRemoveKeyDeltaOp r: return ORDictionaryRemoveKeyToProto(r);
+                case ORDictionary.IUpdateDeltaOp u: return ORDictionaryUpdateToProto(u);
+                case ORDictionary.IDeltaGroupOp g: return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList());
+                default:
+                    throw new SerializationException($"Unrecognized delta operation [{op}]");
+            }
+
+        }
+
         private Proto.Msg.ORMapDeltaGroup ORDictionaryPutToProto(ORDictionary.IPutDeltaOp op)
         {
             return ORDictionaryDeltasToProto(new List<ORDictionary.IDeltaOperation>() { op });
@@ -1261,6 +1273,24 @@ namespace Akka.DistributedData.Serialization
                         return new PNCounterDictionary<TKey>(orDict);
                     }
             }
+        }
+
+        private IPNCounterDictionaryDeltaOperation PNCounterDeltaFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+            var maker = PNCounterDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
+            return (IPNCounterDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+        }
+
+        private static readonly MethodInfo PNCounterDeltaMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(PNCounterDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+
+        private IPNCounterDictionaryDeltaOperation PNCounterDeltaFromProto<TKey>(ORDictionary.IDeltaOperation op)
+        {
+            var casted = (ORDictionary<TKey, PNCounter>.IDeltaOperation)op;
+            return new PNCounterDictionary<TKey>.PNCounterDictionaryDelta(casted);
         }
 
         #endregion
