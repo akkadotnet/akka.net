@@ -4,6 +4,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
@@ -11,6 +12,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests")]
@@ -4774,11 +4776,6 @@ namespace Akka.Util.Internal
         public void Reset() { }
         public override string ToString() { }
     }
-    public class static DictionaryExtensions
-    {
-        public static void Put<TKey, TVal>(this System.Collections.Generic.IDictionary<TKey, TVal> dict, TKey key, TVal value) { }
-        public static bool TryAdd<TKey, TVal>(this System.Collections.Generic.IDictionary<TKey, TVal> dict, TKey key, TVal value) { }
-    }
     public class static Extensions
     {
         public static System.Collections.Generic.IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
@@ -4820,45 +4817,10 @@ namespace Akka.Util.Internal
         public static T Swap<T>(ref T reference, System.Func<T, T> updater)
             where T :  class { }
     }
-    public class static StringBuilderExtensions
-    {
-        public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values) { }
-        public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values, System.Action<System.Text.StringBuilder, T, int> valueAppender) { }
-    }
     [Akka.Annotations.InternalApiAttribute()]
     public class static TaskExtensions
     {
         public static System.Threading.Tasks.Task WithCancellation(this System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
-    }
-}
-namespace Akka.Util.Internal.Collections
-{
-    public class EmptyReadOnlyCollections<T>
-    {
-        public EmptyReadOnlyCollections() { }
-        public static System.Collections.Generic.IReadOnlyCollection<T> Collection { get; }
-        public static System.Collections.Generic.IReadOnlyList<T> List { get; }
-    }
-    public class static EnumeratorExtensions
-    {
-        public static Akka.Util.Internal.Collections.Iterator<T> Iterator<T>(this System.Collections.Generic.IEnumerable<T> enumerable) { }
-    }
-    public interface IBinaryTreeNode<out TKey, out TValue> : Akka.Util.Internal.Collections.IKeyValuePair<TKey, TValue>
-    {
-        Akka.Util.Internal.Collections.IBinaryTreeNode<TKey, TValue> Left { get; }
-        Akka.Util.Internal.Collections.IBinaryTreeNode<TKey, TValue> Right { get; }
-    }
-    public interface IKeyValuePair<out TKey, out TValue>
-    {
-        TKey Key { get; }
-        TValue Value { get; }
-    }
-    public class Iterator<T>
-    {
-        public Iterator(System.Collections.Generic.IEnumerable<T> enumerator) { }
-        public bool IsEmpty() { }
-        public T Next() { }
-        public System.Collections.Generic.IEnumerable<T> ToVector() { }
     }
 }
 namespace Akka.Util.Reflection
