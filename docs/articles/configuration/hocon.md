@@ -7,14 +7,66 @@ title: Hocon module
 
 This is an abridged version of HOCON for its use in Akka.NET. A full .NET implementation of HOCON spec can be read [here](https://github.com/akkadotnet/HOCON/blob/dev/README.md)
 
+You can play around with HOCON syntax in real-time by going to [hocon-playground](https://hocon-playground.herokuapp.com/)
+
 ## Definitions
 
- - A _field_ is a key-value pair consisting a _key_, _separator_, and a _value_.
- - A _separator_ is the ':' or '=' character.
- - A _key_ is a string to the left of the _separator_.
- - A _value_ is any "value" to the right of the _separator_, as defined in the JSON spec, plus unquoted, quoted, triple quoted strings and substitutions.
- - A _simple value_ or a _literal value_ is any value that are not objects or arrays.
- - References to a _file_ ("the file being parsed") can be understood to mean any byte stream being parsed, not just literal files in a filesystem.
+ - A **field** is a key-value pair consisting a _key_, _separator_, and a _value_.
+ - A **separator** is the `:` or `=` character.
+ - A **key** is a string to the left of the _separator_.
+ - A **value** is any "value" to the right of the _separator_, as defined in the JSON spec, plus unquoted strings, triple quoted strings and substitutions.
+ - A **simple value** or a **literal value** is any value that are not objects or arrays.
+ - A **newline** is defined as the newline character `\n` (unicode value `0x000A`)
+ - References to a **file** ("the file being parsed") can be understood to mean any byte stream being parsed, not just literal files in a filesystem.
+
+## Syntax
+
+Much of this is defined with reference to JSON; you can find the JSON spec at http://json.org/.
+
+### Unchanged from JSON
+
+ - files must be valid UTF-8
+ - quoted strings are in the same format as JSON strings
+ - values have possible types: string, number, object, array, boolean, null
+ - allowed number formats matches JSON.
+
+### Comments
+
+Anything between `//` or `#` and the next newline is considered a comment and ignored, unless the `//` or `#` is inside a quoted string.
+
+### Omit root braces
+
+JSON documents must have an array or object at the root. Empty
+files are invalid documents, as are files containing only a
+non-array non-object value such as a string.
+
+In HOCON, if the file does not begin with a square bracket or
+curly brace, it is parsed as if it were enclosed with `{}` curly
+braces.
+
+A HOCON file is invalid if it omits the opening `{` but still has
+a closing `}`; the curly braces must be balanced.
+
+### Key-value separator
+
+You can use the `=` character instead of the standard JSON `:` separator.
+
+If a key is followed by `{`, the `:` or `=` may be omitted. So `"foo" {}` means `"foo" : {}`
+
+### Commas
+
+Values in arrays, and fields in objects, need not have a comma between them as long as they have at least one ASCII newline (`\n`, unicode value `0x000A`) between them.
+
+The last element in an array or last field in an object may be followed by a single comma. This extra comma is ignored.
+
+These same comma rules apply to fields in objects.
+
+Examples:
+ - `[1,2,3,]` and `[1,2,3]` are the same array.
+ - `[1\n2\n3]` and `[1,2,3]` are the same array.
+ - `[1,2,3,,]` is invalid because it has two trailing commas.
+ - `[,1,2,3]` is invalid because it has an initial comma.
+ - `[1,,2,3]` is invalid because it has two commas in a row.
 
 ### Duplicate keys and object merging
 
@@ -30,33 +82,32 @@ Objects are merged by:
  - Non-object fields in overriding object will override field with the same path on previous object.
  - Object fields with the same path in both objects will be recursively merged according to these same rules.
 
-```
+
     {
         "foo" : { "a" : 42 },
         "foo" : { "b" : 43 }
     }
-```
+
 will be merged to:
-```
+
     {
         "foo" : { "a" : 42, "b" : 43 }
     }
-```
+
 
 In this example:
-```
+
     {
         "foo" : { "a" : 42 },
         "foo" : null,
         "foo" : { "b" : 43 }
     }
-```
+
 the declaration of `"foo" : null` blocks the merge, so that the final result is:
-```
+
     {
         "foo" : { "b" : 43 }
     }
-```
 
 #### Array and object concatenation
 
@@ -124,8 +175,6 @@ If this gets confusing, just use commas. The concatenation behavior is useful ra
     [ This is an unquoted string my name is ${name}, Hello ${world} ]
     [ ${a} ${b}, ${x} ${y} ]
 
-Non-newline whitespace is never an element or field separator.
-
 ### Path expressions
 
 Path expressions are used to write out a path through the object graph. They appear in two places; in substitutions, like `${foo.bar}`, and as the keys in objects like `{ foo.bar : 42 }`.
@@ -156,7 +205,8 @@ is equivalent to:
 
 and so on. These values are merged in the usual way; which implies that:
 
-    a.x : 42, a.y : 43
+    a.x : 42,
+    a.y : 43
 
 is equivalent to:
 
@@ -184,9 +234,8 @@ Substitutions are a way of referring to other parts of the configuration tree.
 
 The syntax is `${pathexpression}` or `${?pathexpression}` where the `pathexpression` is a path expression as described above. This path expression has the same syntax that you could use for an object key.
 
- - When you start a substitution with `${?`, the substitution is an _optional substitution_.
-   The `?` in `${?pathexpression}` must not have whitespace before it; the three characters `${?` must be exactly like that, grouped together.
- - When you start a substitution without the question mark (`${`), the substitution is called a _required substitution_.
+ - When you start a substitution with `${?`, the substitution is an _optional substitution_. The `?` in `${?pathexpression}` must not have whitespace before it; the three characters `${?` must be exactly like that, grouped together.
+ - A substitution without question mark (`${`) is called a _required substitution_.
 
 Substitutions are not parsed inside quoted strings. To get a string containing a substitution, you must use value concatenation with the substitution in the unquoted portion:
 
@@ -230,21 +279,17 @@ For substitutions which are not found in the configuration tree, it will be reso
 
 [!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=EnvironmentVariableSample)]
 
-If a configuration sets a value to `null` then it would not be looked up in the external source. Unfortunately there is no way to "undo" this in a later configuration file; if you have `{ "HOME" : null }` in a root object, then `${HOME}` will never look at the environment variable.
+An application can explicitly block looking up a substitution in the environment by setting a value in the configuration, with the same name as the environment variable. You could set `HOME : null` in your root object to avoid expanding `${HOME}` from the environment, for example:
 
 [!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=BlockedEnvironmentVariableSample)]
 
-It's recommended that HOCON keys always use lowercase, because environment variables generally are capitalized. This avoids naming collisions between environment variables and configuration properties. (While on Windows getenv() is generally not case-sensitive, the lookup will be case sensitive all the way until the env variable fallback lookup is reached).
-
-An application can explicitly block looking up a substitution in the environment by setting a value in the configuration, with the same name as the environment variable. You could set `HOME : null` in your root object to avoid expanding `${HOME}` from the environment, for example.
-
-[!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=BlockedEnvironmentVariableSample)]
+It's recommended that HOCON keys always use lowercase, because environment variables generally are capitalized. This avoids naming collisions between environment variables and configuration properties. (While on Windows `Environment.GetEnvironmentVariable()` is generally not case-sensitive, the lookup will be case sensitive all the way until the env variable fallback lookup is reached).
 
 Environment variables are interpreted as follows:
 
  - Env variables set to the empty string are kept as such (set to empty string, rather than undefined)
- - If `Environment.GetEnvironmentVariable` throws SecurityException, then it is treated as not present
- - Encoding is handled by C# (`Environment.GetEnvironmentVariable` already returns a Unicode string)
+ - If `Environment.GetEnvironmentVariable()` throws SecurityException, then it is treated as not present
+ - Encoding is handled by C# (`Environment.GetEnvironmentVariable()` already returns a Unicode string)
  - Environment variables always become a string value, though if an app asks for another type automatic type conversion would kick in
 
 ##### Note on Windows and case sensitivity of environment variables
@@ -255,6 +300,7 @@ Linux allows one to define multiple environment variables with the same name but
 
 Windows is more confusing. Windows environment variables names may contain a mix of upper and lowercase characters, eg "Path", however Windows does not allow one to define multiple instances of the same name but differing in case.
 Whilst accessing env vars in Windows is case insensitive, accessing env vars in HOCON is case sensitive.
+
 So if you know that you HOCON needs "PATH" then you must ensure that the variable is defined as "PATH" rather than some other name such as "Path" or "path".
 However, Windows does not allow us to change the case of an existing env var; we can't simply redefine the var with an upper case name.
 The only way to ensure that your environment variables have the desired case is to first undefine all the env vars that you will depend on then redefine them with the required case.
@@ -340,7 +386,7 @@ It would be an error if these two fields were reversed, so:
 
 Here the `${foo}` self-reference comes before `foo` has a value, so it is undefined, exactly as if the substitution referenced a path not found in the document.
 
-Because `foo : ${foo}` conceptually looks to previous definitions of `foo` for a value, the error should be treated as "undefined" rather than "intractable cycle"; as a result, the optional substitution syntax `${?foo}` does not create a cycle:
+Because `foo : ${foo}` conceptually looks to previous definitions of `foo` for a value, the optional substitution syntax `${?foo}` does not create a cycle:
 
     foo : ${?foo} // this field just disappears silently
 
@@ -349,7 +395,7 @@ If a substitution is hidden by a value that could not be merged with it (by a no
     foo : ${does-not-exist}
     foo : 42
 
-In this case, no matter what `${does-not-exist}` resolves to, we know `foo` is `42`, so `${does-not-exist}` is never evaluated and there is no error. The same is true for cycles like `foo : ${foo}, foo : 42`, where the initial self-reference must simply be ignored.
+In this case, no matter what `${does-not-exist}` resolves to, we know `foo` is `42`, so `${does-not-exist}` is never evaluated and there is no error. The same is true for cycles like `foo : ${foo}, foo : 42`, where the initial self-reference are simply ignored.
 
 A self-reference resolves to the value "below" even if it's part of a path expression. So for example:
 
@@ -367,7 +413,7 @@ Substitution can refer to paths within themselves, for example:
             baz : ${bar.foo}
           }
 
-Because there is no inherent cycle here, the substitution must "look forward" (including looking at the field currently being defined). To make this clearer, in the example below, `bar.baz` would be `43`:
+Because there is no inherent cycle here, the substitution will "look forward" (including looking at the field currently being defined). To make this clearer, in the example below, `bar.baz` would be `43`:
 
     bar : { foo : 42,
             baz : ${bar.foo}
@@ -376,10 +422,9 @@ Because there is no inherent cycle here, the substitution must "look forward" (i
 
 Mutually-referring objects would also work, and are not self-referential (so they look forward):
 
-    // bar.a should end up as 4
+    // bar.a will end up as 4 and foo.c will end up as 3
     bar : { a : ${foo.d}, b : 1 }
     bar.b = 3
-    // foo.c should end up as 3
     foo : { c : ${bar.b}, d : 2 }
     foo.d = 4
 
