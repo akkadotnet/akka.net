@@ -836,9 +836,7 @@ namespace Akka.DistributedData
         {
             if (Equals(envelope.Data, DeletedData.Instance)) return DeletedDigest;
 
-            // TODO: need to serialize the content of the envelope, but Hyperion doesn't produce stable output
-            // Workaround: using the string representation of the envelope for now
-            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions().ToString());
+            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions());
             var serialized = SHA1.Create().ComputeHash(bytes);
             return ByteString.CopyFrom(serialized);
         }
