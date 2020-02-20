@@ -319,12 +319,17 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface IPNCounterDictionaryKey { }
+    internal interface IPNCounterDictionaryKey
+    {
+        Type KeyType { get; }
+    }
 
     public class PNCounterDictionaryKey<T> : Key<PNCounterDictionary<T>>, IPNCounterDictionaryKey
     {
         public PNCounterDictionaryKey(string id) : base(id)
         {
         }
+
+        public Type KeyType { get; } = typeof(T);
     }
 }

@@ -25,7 +25,10 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface ILWWRegisterKey { }
+    internal interface ILWWRegisterKey
+    {
+        Type RegisterType { get; }
+    }
 
     /// <summary>
     /// Key types for <see cref="LWWRegister{T}"/>
@@ -41,6 +44,8 @@ namespace Akka.DistributedData
         public LWWRegisterKey(string id) : base(id)
         {
         }
+
+        public Type RegisterType { get; } = typeof(T);
     }
 
     /// <summary>

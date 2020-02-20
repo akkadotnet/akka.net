@@ -21,12 +21,19 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface IORDictionaryKey { }
+    internal interface IORDictionaryKey
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
 
     [Serializable]
     public sealed class ORDictionaryKey<TKey, TValue> : Key<ORDictionary<TKey, TValue>>, IORDictionaryKey where TValue : IReplicatedData<TValue>
     {
         public ORDictionaryKey(string id) : base(id) { }
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
     }
 
     /// <summary>

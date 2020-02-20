@@ -212,13 +212,15 @@ namespace Akka.DistributedData
     /// Marker interface for serialization.
     /// </summary>
     internal interface IGSetKey
-    { }
+    {
+        Type SetType { get; }
+    }
 
     /// <summary>
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class GSetKey<T> : Key<GSet<T>>, IKeyWithGenericType, IGSetKey, IReplicatedDataSerialization
+    public sealed class GSetKey<T> : Key<GSet<T>>, IGSetKey, IReplicatedDataSerialization
     {
         /// <summary>
         /// TBD
@@ -227,12 +229,9 @@ namespace Akka.DistributedData
         public GSetKey(string id)
             : base(id)
         {
-            Type = typeof(T);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Type Type { get; }
+
+        public Type SetType { get; } = typeof(T);
     }
 }

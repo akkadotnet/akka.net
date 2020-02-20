@@ -20,7 +20,12 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface IORMultiValueDictionaryKey { }
+    internal interface IORMultiValueDictionaryKey
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
 
 
     [Serializable]
@@ -29,6 +34,9 @@ namespace Akka.DistributedData
         public ORMultiValueDictionaryKey(string id) : base(id)
         {
         }
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
     }
 
     /// <summary>

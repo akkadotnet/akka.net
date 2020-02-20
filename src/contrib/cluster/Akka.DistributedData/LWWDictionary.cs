@@ -22,7 +22,12 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface ILWWDictionaryKey { }
+    internal interface ILWWDictionaryKey
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
 
     /// <summary>
     /// Typed key used to store <see cref="LWWDictionary{TKey,TValue}"/> replica 
@@ -38,6 +43,9 @@ namespace Akka.DistributedData
         /// </summary>
         /// <param name="id">Identifier used to find corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</param>
         public LWWDictionaryKey(string id) : base(id) { }
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
     }
 
     /// <summary>

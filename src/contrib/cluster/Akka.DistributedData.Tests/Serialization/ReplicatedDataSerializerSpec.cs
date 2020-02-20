@@ -246,6 +246,19 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSameContent(v1.Merge(v2), v2.Merge(v1));
         }
 
+        [Fact]
+        public void ReplicatedDataSerializer_should_serialize_Keys()
+        {
+            CheckSerialization(new GSetKey<IActorRef>("foo"));
+            CheckSerialization(new ORSetKey<int>("foo"));
+            CheckSerialization(new FlagKey("foo"));
+            CheckSerialization(new PNCounterKey("id"));
+            CheckSerialization(new GCounterKey("id"));
+            CheckSerialization(new ORDictionaryKey<IActorRef, LWWRegister<string>>("bar"));
+            CheckSerialization(new LWWDictionaryKey<IActorRef, string>("bar"));
+            CheckSerialization(new ORMultiValueDictionaryKey<IActorRef, string>("bar"));
+        }
+
         private void CheckSerialization<T>(T expected)
         {
             var serializer = Sys.Serialization.FindSerializerFor(expected);

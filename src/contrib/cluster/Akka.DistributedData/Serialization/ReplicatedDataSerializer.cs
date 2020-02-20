@@ -91,7 +91,7 @@ namespace Akka.DistributedData.Serialization
                 case DeletedData _: return _emptyArray;
                 case VersionVector v: return SerializationSupport.VersionVectorToProto(v).ToByteArray();
                 // key types
-
+                case IKey k: return ToProto(k).ToByteArray();
                 // less common delta types
                 case ORSet.IDeltaGroupOperation o: return ToProto(o).ToByteArray();
                 case ORSet.IFullStateDeltaOperation o: return ToProto(o.UnderlyingSerialization).ToByteArray();
@@ -124,7 +124,18 @@ namespace Akka.DistributedData.Serialization
                 case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case DeletedDataManifest: return DeletedData.Instance;
                 case VersionVectorManifest: return _ser.VersionVectorFromBinary(bytes);
+
                 // key types
+                case ORSetKeyManifest: return ORSetKeyFromBinary(bytes);
+                case GSetKeyManifest: return GSetKeyFromBinary(bytes);
+                case GCounterKeyManifest: return GCounterKeyFromBinary(bytes);
+                case PNCounterKeyManifest: return PNCounterKeyFromBinary(bytes);
+                case FlagKeyManifest: return FlagKeyFromBinary(bytes);
+                case LWWRegisterKeyManifest: return LWWRegisterKeyFromBinary(bytes);
+                case ORMapKeyManifest: return ORDictionaryKeyFromBinary(bytes);
+                case LWWMapKeyManifest: return LWWDictionaryKeyFromBinary(bytes);
+                case PNCounterMapKeyManifest: return PNCounterDictionaryKeyFromBinary(bytes);
+                case ORMultiMapKeyManifest: return ORMultiValueDictionaryKeyFromBinary(bytes);
 
                 // less common delta types
                 case ORSetDeltaGroupManifest: return ORDeltaGroupOperationFromBinary(bytes);
@@ -1411,9 +1422,164 @@ namespace Akka.DistributedData.Serialization
 
         #endregion
 
-        #region DeletedData and VersionVector
+        #region Keys
 
+        private Proto.Msg.Key ToProto(IKey key)
+        {
+            var p = new Proto.Msg.Key();
+            p.KeyId = key.Id;
+            switch (key)
+            {
+                case IORSetKey orkey:
+                    {
+                        p.KeyType = KeyType.OrsetKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(orkey.SetType);
+                        return p;
+                    }
+                case IGSetKey gSetKey:
+                    {
+                        p.KeyType = KeyType.GsetKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(gSetKey.SetType);
+                        return p;
+                    }
+                case GCounterKey gKey:
+                    {
+                        p.KeyType = KeyType.GcounterKey;
+                        return p;
+                    }
+                case PNCounterKey pKey:
+                    {
+                        p.KeyType = KeyType.PncounterKey;
+                        return p;
+                    }
+                case FlagKey flagKey:
+                    {
+                        p.KeyType = KeyType.FlagKey;
+                        return p;
+                    }
+                case ILWWRegisterKey registerKey:
+                    {
+                        p.KeyType = KeyType.LwwregisterKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(registerKey.RegisterType);
+                        return p;
+                    }
+                case IORDictionaryKey dictionaryKey:
+                    {
+                        p.KeyType = KeyType.OrmapKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(dictionaryKey.KeyType);
+                        p.ValueTypeInfo = GetTypeDescriptor(dictionaryKey.ValueType);
+                        return p;
+                    }
+                case ILWWDictionaryKey lwwDictKey:
+                    {
+                        p.KeyType = KeyType.LwwmapKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(lwwDictKey.KeyType);
+                        p.ValueTypeInfo = GetTypeDescriptor(lwwDictKey.ValueType);
+                        return p;
+                    }
+                case IPNCounterDictionaryKey pnDictKey:
+                    {
+                        p.KeyType = KeyType.PncounterMapKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(pnDictKey.KeyType);
+                        return p;
+                    }
+                case IORMultiValueDictionaryKey orMultiKey:
+                    {
+                        p.KeyType = KeyType.OrmultiMapKey;
+                        p.KeyTypeInfo = GetTypeDescriptor(orMultiKey.KeyType);
+                        p.ValueTypeInfo = GetTypeDescriptor(orMultiKey.ValueType);
+                        return p;
+                    }
+                default:
+                    throw new SerializationException($"Unrecognized key type [{key}]");
+            }
+        }
 
+        private Proto.Msg.Key KeyFromBinary(byte[] bytes)
+        {
+            return Proto.Msg.Key.Parser.ParseFrom(bytes);
+        }
+
+        private IKey ORSetKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+            var genType = typeof(ORSetKey<>).MakeGenericType(keyType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
+
+        private IKey GSetKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+            var genType = typeof(GSetKey<>).MakeGenericType(keyType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
+
+        private IKey LWWRegisterKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+            var genType = typeof(LWWRegisterKey<>).MakeGenericType(keyType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
+
+        private IKey GCounterKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            return new GCounterKey(proto.KeyId);
+        }
+
+        private IKey PNCounterKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            return new PNCounterKey(proto.KeyId);
+        }
+
+        private IKey FlagKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            return new FlagKey(proto.KeyId);
+        }
+
+        private IKey ORDictionaryKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+            var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
+
+            var genType = typeof(ORDictionaryKey<,>).MakeGenericType(keyType, valueType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
+
+        private IKey LWWDictionaryKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+            var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
+
+            var genType = typeof(LWWDictionaryKey<,>).MakeGenericType(keyType, valueType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
+
+        private IKey PNCounterDictionaryKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+
+            var genType = typeof(PNCounterDictionaryKey<>).MakeGenericType(keyType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
+
+        private IKey ORMultiValueDictionaryKeyFromBinary(byte[] bytes)
+        {
+            var proto = KeyFromBinary(bytes);
+            var keyType = GetTypeFromDescriptor(proto.KeyTypeInfo);
+            var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
+
+            var genType = typeof(ORMultiValueDictionaryKey<,>).MakeGenericType(keyType, valueType);
+            return (IKey)Activator.CreateInstance(genType, proto.KeyId);
+        }
 
         #endregion
     }

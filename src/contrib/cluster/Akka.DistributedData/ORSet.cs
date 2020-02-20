@@ -19,12 +19,16 @@ namespace Akka.DistributedData
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal interface IORSetKey { }
+    internal interface IORSetKey
+    {
+        Type SetType { get; }
+    }
 
     [Serializable]
     public sealed class ORSetKey<T> : Key<ORSet<T>>, IORSetKey
     {
         public ORSetKey(string id) : base(id) { }
+        public Type SetType { get; } = typeof(T);
     }
 
     /// <summary>
