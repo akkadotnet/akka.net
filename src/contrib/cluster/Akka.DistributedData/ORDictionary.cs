@@ -90,7 +90,7 @@ namespace Akka.DistributedData
         /// </summary>
         internal interface IDeltaGroupOp
         {
-            IEnumerable<IDeltaOperation> OperationsSerialization { get; }
+            IReadOnlyList<IDeltaOperation> OperationsSerialization { get; }
         }
 
         public static ORDictionary<TKey, TValue> Create<TKey, TValue>(UniqueAddress node, TKey key, TValue value) where TValue : IReplicatedData<TValue> =>
@@ -749,7 +749,7 @@ namespace Akka.DistributedData
                 }
             }
 
-            public IEnumerable<ORDictionary.IDeltaOperation> OperationsSerialization => Operations.Cast<ORDictionary.IDeltaOperation>();
+            public IReadOnlyList<ORDictionary.IDeltaOperation> OperationsSerialization => Operations.Cast<ORDictionary.IDeltaOperation>().ToList();
         }
 
         [NonSerialized]

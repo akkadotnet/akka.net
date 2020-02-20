@@ -85,6 +85,12 @@ namespace Akka.DistributedData.Serialization
                 case Flag f: return ToProto(f).ToByteArray();
                 case ILWWRegister l: return ToProto(l).ToByteArray();
                 case IORDictionary o: return SerializationSupport.Compress(ToProto(o));
+                case ORDictionary.IPutDeltaOp p: return ORDictionaryPutToProto(p).ToByteArray();
+                case ORDictionary.IRemoveDeltaOp r: return ORDictionaryRemoveToProto(r).ToByteArray();
+                case ORDictionary.IRemoveKeyDeltaOp r: return ORDictionaryRemoveKeyToProto(r).ToByteArray();
+                case ORDictionary.IUpdateDeltaOp u: return ORDictionaryUpdateToProto(u).ToByteArray();
+                case ORDictionary.IDeltaGroupOp g:
+                    return ORDictionaryDeltasToProto(g.OperationsSerialization.ToList()).ToByteArray();
                 // key types
 
                 // less common delta types
@@ -108,6 +114,11 @@ namespace Akka.DistributedData.Serialization
                 case FlagManifest: return FlagFromBinary(bytes);
                 case LWWRegisterManifest: return LWWRegisterFromBinary(bytes);
                 case ORMapManifest: return ORDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case ORMapPutManifest: return ORDictionaryPutFromBinary(bytes);
+                case ORMapRemoveManifest: return ORDictionaryRemoveFromBinary(bytes);
+                case ORMapRemoveKeyManifest: return ORDictionaryRemoveKeyFromBinary(bytes);
+                case ORMapUpdateManifest: return ORDictionaryUpdateFromBinary(bytes);
+                case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
                 // key types
 
                 // less common delta types
@@ -805,7 +816,7 @@ namespace Akka.DistributedData.Serialization
             List<ORDictionary.IDeltaOperation> deltaGroupOps)
         {
             var keyType = deltaGroupOps[0].KeyType;
-            var valueType = deltaGroupOps[1].ValueType;
+            var valueType = deltaGroupOps[0].ValueType;
 
             var protoMaker = ORDeltaGroupProtoMaker.MakeGenericMethod(keyType, valueType);
             return (Proto.Msg.ORMapDeltaGroup)protoMaker.Invoke(this, new object[] { deltaGroupOps });
@@ -884,21 +895,41 @@ namespace Akka.DistributedData.Serialization
             return group;
         }
 
-        private List<ORDictionary.IDeltaOperation> ORDictionaryDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup deltaGroup)
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryPutToProto(ORDictionary.IPutDeltaOp op)
+        {
+            return ORDictionaryDeltasToProto(new List<ORDictionary.IDeltaOperation>() { op });
+        }
+
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryRemoveToProto(ORDictionary.IRemoveDeltaOp op)
+        {
+            return ORDictionaryDeltasToProto(new List<ORDictionary.IDeltaOperation>() { op });
+        }
+
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryRemoveKeyToProto(ORDictionary.IRemoveKeyDeltaOp op)
+        {
+            return ORDictionaryDeltasToProto(new List<ORDictionary.IDeltaOperation>() { op });
+        }
+
+        private Proto.Msg.ORMapDeltaGroup ORDictionaryUpdateToProto(ORDictionary.IUpdateDeltaOp op)
+        {
+            return ORDictionaryDeltasToProto(new List<ORDictionary.IDeltaOperation>() { op });
+        }
+
+        private ORDictionary.IDeltaGroupOp ORDictionaryDeltaGroupFromProto(Proto.Msg.ORMapDeltaGroup deltaGroup)
         {
             var keyType = GetTypeFromDescriptor(deltaGroup.KeyTypeInfo);
             var valueType = GetTypeFromDescriptor(deltaGroup.ValueTypeInfo);
 
             var groupMaker = ORDeltaGroupMaker.MakeGenericMethod(keyType, valueType);
-            return (List<ORDictionary.IDeltaOperation>)groupMaker.Invoke(this, new object[] { deltaGroup });
+            return (ORDictionary.IDeltaGroupOp)groupMaker.Invoke(this, new object[] { deltaGroup });
         }
 
         private static readonly MethodInfo ORDeltaGroupMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericORDictionaryDeltaGroupFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private List<ORDictionary.IDeltaOperation> GenericORDictionaryDeltaGroupFromProto<TKey, TValue>(Proto.Msg.ORMapDeltaGroup deltaGroup) where TValue : IReplicatedData<TValue>
+        private ORDictionary.IDeltaGroupOp GenericORDictionaryDeltaGroupFromProto<TKey, TValue>(Proto.Msg.ORMapDeltaGroup deltaGroup) where TValue : IReplicatedData<TValue>
         {
-            var deltaOps = new List<ORDictionary.IDeltaOperation>();
+            var deltaOps = new List<ORDictionary<TKey, TValue>.IDeltaOperation>();
 
             (object key, TValue value) MapEntryFromProto(ORMapDeltaGroup.Types.MapEntry entry)
             {
@@ -934,7 +965,7 @@ namespace Akka.DistributedData.Serialization
                 {
                     case ORMapDeltaOp.OrmapPut:
                         {
-                            if (entry.EntryData.Count > 0)
+                            if (entry.EntryData.Count > 1)
                                 throw new ArgumentOutOfRangeException(
                                     $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
@@ -949,7 +980,7 @@ namespace Akka.DistributedData.Serialization
                         break;
                     case ORMapDeltaOp.OrmapRemoveKey:
                         {
-                            if (entry.EntryData.Count > 0)
+                            if (entry.EntryData.Count > 1)
                                 throw new ArgumentOutOfRangeException(
                                     $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
@@ -968,7 +999,49 @@ namespace Akka.DistributedData.Serialization
                 }
             }
 
-            return deltaOps;
+            return new ORDictionary<TKey,TValue>.DeltaGroup(deltaOps);
+        }
+
+        private ORDictionary.IDeltaGroupOp ORDictionaryDeltaGroupFromBinary(byte[] bytes)
+        {
+            var group = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
+            return ORDictionaryDeltaGroupFromProto(group);
+        }
+
+        private ORDictionary.IPutDeltaOp ORDictionaryPutFromBinary(byte[] bytes)
+        {
+            var groupOp = ORDictionaryDeltaGroupFromBinary(bytes);
+            if (groupOp.OperationsSerialization.Count == 1 &&
+                groupOp.OperationsSerialization.First() is ORDictionary.IPutDeltaOp put)
+                return put;
+            throw new SerializationException($"Improper ORDictionary delta put operation size or kind");
+        }
+
+        private ORDictionary.IRemoveDeltaOp ORDictionaryRemoveFromBinary(byte[] bytes)
+        {
+            var groupOp = ORDictionaryDeltaGroupFromBinary(bytes);
+            if (groupOp.OperationsSerialization.Count == 1 &&
+                groupOp.OperationsSerialization.First() is ORDictionary.IRemoveDeltaOp remove)
+                return remove;
+            throw new SerializationException($"Improper ORDictionary delta remove operation size or kind");
+        }
+
+        private ORDictionary.IRemoveKeyDeltaOp ORDictionaryRemoveKeyFromBinary(byte[] bytes)
+        {
+            var groupOp = ORDictionaryDeltaGroupFromBinary(bytes);
+            if (groupOp.OperationsSerialization.Count == 1 &&
+                groupOp.OperationsSerialization.First() is ORDictionary.IRemoveKeyDeltaOp removeKey)
+                return removeKey;
+            throw new SerializationException($"Improper ORDictionary delta remove key operation size or kind");
+        }
+
+        private ORDictionary.IUpdateDeltaOp ORDictionaryUpdateFromBinary(byte[] bytes)
+        {
+            var groupOp = ORDictionaryDeltaGroupFromBinary(bytes);
+            if (groupOp.OperationsSerialization.Count == 1 &&
+                groupOp.OperationsSerialization.First() is ORDictionary.IUpdateDeltaOp update)
+                return update;
+            throw new SerializationException($"Improper ORDictionary delta update operation size or kind");
         }
 
         #endregion
