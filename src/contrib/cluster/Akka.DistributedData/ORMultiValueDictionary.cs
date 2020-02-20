@@ -36,7 +36,12 @@ namespace Akka.DistributedData
     /// 
     /// Marker interface for serialization
     /// </summary>
-    internal interface IORMultiValueDictionary { }
+    internal interface IORMultiValueDictionary
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
 
     /// <summary>
     /// An immutable multi-map implementation. This class wraps an
@@ -303,5 +308,8 @@ namespace Akka.DistributedData
             new ORMultiValueDictionary<TKey, TValue>(Underlying.ResetDelta(), _withValueDeltas);
 
         #endregion
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
     }
 }

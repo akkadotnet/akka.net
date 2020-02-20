@@ -14,9 +14,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
-using System.Threading;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -89,6 +87,7 @@ namespace Akka.DistributedData.Serialization
                 case ILWWDictionary l: return SerializationSupport.Compress(ToProto(l));
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
+                case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
                 // key types
 
                 // less common delta types
@@ -120,6 +119,7 @@ namespace Akka.DistributedData.Serialization
                 case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
+                case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 // key types
 
                 // less common delta types
@@ -1297,7 +1297,113 @@ namespace Akka.DistributedData.Serialization
 
         #region ORMultiDictionary
 
+        private Proto.Msg.ORMultiMap ToProto(IORMultiValueDictionary multi)
+        {
+            var protoMaker = MultiMapProtoMaker.MakeGenericMethod(multi.KeyType, multi.ValueType);
+            return (Proto.Msg.ORMultiMap)protoMaker.Invoke(this, new object[] { multi });
+        }
 
+        private static readonly MethodInfo MultiMapProtoMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(MultiMapToProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+
+        private Proto.Msg.ORMultiMap MultiMapToProto<TKey, TValue>(IORMultiValueDictionary multi)
+        {
+            var ormm = (ORMultiValueDictionary<TKey, TValue>)multi;
+            var proto = new Proto.Msg.ORMultiMap();
+            proto.ValueTypeInfo = GetTypeDescriptor(typeof(TValue));
+            if (ormm.DeltaValues)
+            {
+                proto.WithValueDeltas = true;
+            }
+
+            proto.Keys = ToProto(ormm.Underlying.KeySet);
+            ToORMultiMapEntries(ormm.Underlying.Entries, proto);
+            return proto;
+        }
+
+        private void ToORMultiMapEntries<TKey, TValue>(IImmutableDictionary<TKey, ORSet<TValue>> underlyingEntries, ORMultiMap proto)
+        {
+            var entries = new List<ORMultiMap.Types.Entry>();
+            foreach (var e in underlyingEntries)
+            {
+                var thisEntry = new ORMultiMap.Types.Entry();
+                switch (e.Key)
+                {
+                    case int i:
+                        thisEntry.IntKey = i;
+                        break;
+                    case long l:
+                        thisEntry.LongKey = l;
+                        break;
+                    case string str:
+                        thisEntry.StringKey = str;
+                        break;
+                    default:
+                        thisEntry.OtherKey = _ser.OtherMessageToProto(e.Key);
+                        break;
+                }
+
+                thisEntry.Value = ToProto(e.Value);
+                entries.Add(thisEntry);
+            }
+
+            proto.Entries.Add(entries);
+        }
+
+        private IORMultiValueDictionary ORMultiDictionaryFromBinary(byte[] bytes)
+        {
+            var ormm = Proto.Msg.ORMultiMap.Parser.ParseFrom(bytes);
+            return ORMultiDictionaryFromProto(ormm);
+        }
+
+        private IORMultiValueDictionary ORMultiDictionaryFromProto(ORMultiMap proto)
+        {
+            var keyType = GetTypeFromDescriptor(proto.Keys.TypeInfo);
+            var valueType = GetTypeFromDescriptor(proto.ValueTypeInfo);
+
+            var dictMaker = MultiDictMaker.MakeGenericMethod(keyType, valueType);
+            return (IORMultiValueDictionary)dictMaker.Invoke(this, new object[] { proto });
+        }
+
+        private static readonly MethodInfo MultiDictMaker =
+           typeof(ReplicatedDataSerializer).GetMethod(nameof(GenericORMultiDictionaryFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private IORMultiValueDictionary GenericORMultiDictionaryFromProto<TKey, TValue>(ORMultiMap proto)
+        {
+            var keys = FromProto(proto.Keys);
+            switch (proto.Keys.TypeInfo.Type)
+            {
+                case ValType.Int:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.IntKey,
+                            v => (ORSet<TValue>)FromProto(v.Value));
+                        var orDict = new ORDictionary<int, ORSet<TValue>>((ORSet<int>)keys, entries);
+                        return new ORMultiValueDictionary<int, TValue>(orDict, proto.WithValueDeltas);
+                    }
+                case ValType.Long:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.LongKey,
+                            v => (ORSet<TValue>)FromProto(v.Value));
+                        var orDict = new ORDictionary<long, ORSet<TValue>>((ORSet<long>)keys, entries);
+                        return new ORMultiValueDictionary<long, TValue>(orDict, proto.WithValueDeltas);
+                    }
+                case ValType.String:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => x.StringKey,
+                            v => (ORSet<TValue>)FromProto(v.Value));
+                        var orDict = new ORDictionary<string, ORSet<TValue>>((ORSet<string>)keys, entries);
+                        return new ORMultiValueDictionary<string, TValue>(orDict, proto.WithValueDeltas);
+                    }
+                default:
+                    {
+                        var entries = proto.Entries.ToImmutableDictionary(x => (TKey)_ser.OtherMessageFromProto(x.OtherKey),
+                            v => (ORSet<TValue>)FromProto(v.Value));
+                        var orDict = new ORDictionary<TKey, ORSet<TValue>>((ORSet<TKey>)keys, entries);
+                        return new ORMultiValueDictionary<TKey, TValue>(orDict, proto.WithValueDeltas);
+                    }
+            }
+        }
 
         #endregion
     }
