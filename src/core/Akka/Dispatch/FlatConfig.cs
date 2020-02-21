@@ -39,7 +39,7 @@ namespace Akka.Configuration
             if (_cache.TryGetValue(path, out var result))
                 return result;
 
-            result = Root.GetObject().GetValue(HoconPath.Parse(path));
+            result = base.GetNode(path);
             _cache[path] = result;
             return result;
         }
@@ -50,7 +50,7 @@ namespace Akka.Configuration
             if (_cache.TryGetValue(fullPath, out var result))
                 return result;
 
-            result = Root.GetObject().GetValue(path);
+            result = base.GetNode(path);
             _cache[fullPath] = result;
             return result;
         }
@@ -60,14 +60,11 @@ namespace Akka.Configuration
             if (_cache.TryGetValue(path, out result))
                 return true;
 
-            if(HoconPath.TryParse(path, out var hoconPath))
-                if (Root.TryGetObject(out var obj))
-                    if (obj.TryGetValue(hoconPath, out result))
-                    {
-                        _cache[path] = result;
-                        return true;
-                    }
-
+            if (base.TryGetNode(path, out result))
+            {
+                _cache[path] = result;
+                return true;
+            }
             return false;
         }
 
@@ -77,12 +74,11 @@ namespace Akka.Configuration
             if (_cache.TryGetValue(fullPath, out result))
                 return true;
 
-            if(Root.TryGetObject(out var obj))
-                if(obj.TryGetValue(path, out result))
-                {
-                    _cache[fullPath] = result;
-                    return true;
-                }
+            if(base.TryGetNode(path, out result))
+            {
+                _cache[fullPath] = result;
+                return true;
+            }
             return false;
         }
     }
