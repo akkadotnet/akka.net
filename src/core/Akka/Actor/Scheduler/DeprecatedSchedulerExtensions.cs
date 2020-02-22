@@ -14,7 +14,7 @@ namespace Akka.Actor
     /// TBD
     /// </summary>
     [Obsolete("Deprecated. Will be removed [1.0.0]")]    //When removing this class, also make this constructor private:  internal CancellationTokenSourceCancelable(CancellationTokenSource source)
-    public static class DeprecatedSchedulerExtensions
+    internal static class DeprecatedSchedulerExtensions
     {
         /// <summary>
         /// TBD
