@@ -36,21 +36,7 @@ namespace Akka.Actor
         /// <param name="exception">The exception that was thrown.</param>
         /// <returns>The directive used to handle the exception.</returns>
         protected abstract Directive Handle(IActorRef child, Exception exception);
-
-        /// <summary>
-        /// Obsolete. This method is deprecated.
-        /// </summary>
-        /// <param name="actorCell">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        /// <returns>N?A</returns>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            return HandleFailure(actorCell, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         ///     This is the main entry point: in case of a child’s failure, this method
         ///     must try to handle the failure by resuming, restarting or stopping the
