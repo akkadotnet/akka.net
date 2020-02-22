@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Hocon; using Akka.Configuration;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 
@@ -21,7 +20,7 @@ namespace Akka.Actor
     /// Obsolete. Use <see cref="HashedWheelTimerScheduler"/> instead.
     /// </summary>
     [Obsolete("Replaced with HashedWheelTimerScheduler [1.1.2]")]
-    public class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
+    internal class DedicatedThreadScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly ConcurrentQueue<ScheduledWork> _workQueue = new ConcurrentQueue<ScheduledWork>();
 
@@ -50,13 +49,6 @@ namespace Akka.Actor
         }
 
         private TimeSpan _shutdownTimeout;
-
-        /// <summary>
-        /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter)"/> instead.
-        /// </summary>
-        /// <param name="sys">N/A</param>
-        [Obsolete("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter log) instead. [1.1.2]")]
-        public DedicatedThreadScheduler(ActorSystem sys) : this(sys.Settings.Config, sys.Log) { }
 
         /// <summary>
         /// Obsolete. Use <see cref="HashedWheelTimerScheduler(Config, ILoggingAdapter)"/> instead.
