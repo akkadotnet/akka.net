@@ -8,6 +8,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams")]
@@ -448,14 +449,6 @@ namespace Akka.Actor
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public class AlreadyCanceledCancelable : Akka.Actor.ICancelable
-    {
-        public static Akka.Actor.ICancelable Instance { get; }
-        public bool IsCancellationRequested { get; }
-        public System.Threading.CancellationToken Token { get; }
-        public void Cancel() { }
-        public void Cancel(bool throwOnFirstException) { }
-    }
     public class AskTimeoutException : Akka.Actor.AkkaException
     {
         public AskTimeoutException(string message) { }
@@ -655,38 +648,6 @@ namespace Akka.Actor
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerator<string> path) { }
         public virtual Akka.Actor.Deploy ParseConfig(string key, Hocon.Config config) { }
         public void SetDeploy(Akka.Actor.Deploy deploy) { }
-    }
-    [System.ObsoleteAttribute("Deprecated. Will be removed [1.0.0]")]
-    public class static DeprecatedSchedulerExtensions
-    {
-        [System.ObsoleteAttribute("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() which will return an" +
-            " ICancelable. This method will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.IActorRef receiver, object message) { }
-        [System.ObsoleteAttribute("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() instead. This method" +
-            " will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.IActorRef receiver, object message, System.Threading.CancellationToken cancellationToken) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions insid" +
-            "e actors is discouraged, but if you really need to, use Advanced.ScheduleRepeate" +
-            "dly(). This method will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions insid" +
-            "e actors is discouraged, but if you really need to, use Advanced.ScheduleRepeate" +
-            "dly(). This method will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, System.Threading.CancellationToken cancellationToken) { }
-        [System.ObsoleteAttribute("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable" +
-            ". This method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, Akka.Actor.IActorRef receiver, object message) { }
-        [System.ObsoleteAttribute("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable" +
-            ". This method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, Akka.Actor.IActorRef receiver, object message, System.Threading.CancellationToken cancellationToken) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside acto" +
-            "rs is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This " +
-            "method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.Action action) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside acto" +
-            "rs is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This " +
-            "method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.Action action, System.Threading.CancellationToken cancellationToken) { }
     }
     public enum Directive
     {
@@ -4824,11 +4785,6 @@ namespace Akka.Util.Internal
     {
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values) { }
         public static System.Text.StringBuilder AppendJoin<T>(this System.Text.StringBuilder sb, string separator, System.Collections.Generic.IEnumerable<T> values, System.Action<System.Text.StringBuilder, T, int> valueAppender) { }
-    }
-    [Akka.Annotations.InternalApiAttribute()]
-    public class static TaskExtensions
-    {
-        public static System.Threading.Tasks.Task WithCancellation(this System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
     }
 }
 namespace Akka.Util.Internal.Collections
