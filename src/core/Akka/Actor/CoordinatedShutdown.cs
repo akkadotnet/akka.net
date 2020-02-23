@@ -370,22 +370,7 @@ namespace Akka.Actor
         /// has not been started.
         /// </summary>
         public Reason ShutdownReason => _runStarted.Value;
-
-        /// <summary>
-        /// Run tasks of all phases including and after the given phase.
-        /// </summary>
-        /// <param name="fromPhase">Optional. The phase to start the run from.</param>
-        /// <returns>A task that is completed when all such tasks have been completed, or
-        /// there is failure when <see cref="Phase.Recover"/> is disabled.</returns>
-        /// <remarks>
-        /// It is safe to call this method multiple times. It will only run the shutdown sequence once.
-        /// </remarks>
-        [Obsolete("Use the method with 'reason' parameter instead")]
-        public Task<Done> Run(string fromPhase = null)
-        {
-            return Run(UnknownReason.Instance, fromPhase);
-        }
-
+        
         /// <summary>
         /// Run tasks of all phases including and after the given phase.
         /// </summary>
