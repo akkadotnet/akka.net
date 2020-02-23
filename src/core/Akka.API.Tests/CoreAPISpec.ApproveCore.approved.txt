@@ -435,8 +435,6 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         public override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class AllForOneStrategySurrogate : Akka.Util.ISurrogate
@@ -504,8 +502,6 @@ namespace Akka.Actor
         public System.TimeSpan TotalTimeout { get; }
         public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
-        [System.ObsoleteAttribute("Use the method with \'reason\' parameter instead")]
-        public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
         public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase = null) { }
         public System.TimeSpan Timeout(string phase) { }
         public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
@@ -729,8 +725,6 @@ namespace Akka.Actor
         }
         public sealed class Normal : Akka.Actor.FSMBase.Reason
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use Normal.Instance [1.2.0]")]
-            public Normal() { }
             public static Akka.Actor.FSMBase.Normal Instance { get; }
         }
         public abstract class Reason
@@ -739,14 +733,10 @@ namespace Akka.Actor
         }
         public sealed class Shutdown : Akka.Actor.FSMBase.Reason
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
-            public Shutdown() { }
             public static Akka.Actor.FSMBase.Shutdown Instance { get; }
         }
         public sealed class StateTimeout
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use StateTimeout.Instance [1.2.0]")]
-            public StateTimeout() { }
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
         public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
@@ -1309,8 +1299,6 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         public override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries) { }
@@ -1650,8 +1638,6 @@ namespace Akka.Actor
         public abstract void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children);
         public bool HandleFailure(Akka.Actor.ActorCell actorCell, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         protected virtual void LogFailure(Akka.Actor.IActorContext context, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Directive directive) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        protected abstract void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren);
         public abstract void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children);
         protected void RestartChild(Akka.Actor.IActorRef child, System.Exception cause, bool suspendFirst) { }
         protected void ResumeChild(Akka.Actor.IActorRef child, System.Exception exception) { }
