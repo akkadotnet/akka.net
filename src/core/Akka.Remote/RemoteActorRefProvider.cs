@@ -20,7 +20,7 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote
 {

@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Util.Internal;
 

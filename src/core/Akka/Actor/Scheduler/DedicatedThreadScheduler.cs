@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;

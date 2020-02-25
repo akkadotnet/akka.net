@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;

@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Tools.MatchHandler;
 using System.Threading.Tasks;
 

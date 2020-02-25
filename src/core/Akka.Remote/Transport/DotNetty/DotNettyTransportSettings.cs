@@ -11,7 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 using DotNetty.Buffers;

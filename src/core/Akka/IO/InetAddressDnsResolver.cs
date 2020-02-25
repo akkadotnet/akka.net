@@ -9,7 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.IO
 {

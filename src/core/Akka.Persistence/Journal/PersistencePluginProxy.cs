@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Persistence.Journal

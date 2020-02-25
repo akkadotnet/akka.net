@@ -12,7 +12,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Util;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Serialization
 {
