@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
                 minInterval: TimeSpan.FromMilliseconds(1000));
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void IntervalBasedRateLimiter_should_limit_rate_of_messages_when_frequency_is_high_200_elements_per_100ms()
         {
             TestCase(source: _infiniteSource,

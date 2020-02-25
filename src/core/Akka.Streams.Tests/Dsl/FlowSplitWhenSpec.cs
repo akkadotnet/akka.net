@@ -329,7 +329,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void SplitWhen_must_fail_substream_if_materialized_twice()
         {
             this.AssertAllStagesStopped(() =>
