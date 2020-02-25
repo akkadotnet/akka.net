@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Xunit;
 using Xunit.Abstractions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;

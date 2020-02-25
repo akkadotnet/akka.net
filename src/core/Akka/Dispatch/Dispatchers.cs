@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Configuration;
 using Helios.Concurrency;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;

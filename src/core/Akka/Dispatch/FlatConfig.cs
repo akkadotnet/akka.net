@@ -7,7 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Configuration
 {

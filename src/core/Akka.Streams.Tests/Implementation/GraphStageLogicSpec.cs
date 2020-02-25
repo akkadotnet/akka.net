@@ -8,7 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
