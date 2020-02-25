@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;

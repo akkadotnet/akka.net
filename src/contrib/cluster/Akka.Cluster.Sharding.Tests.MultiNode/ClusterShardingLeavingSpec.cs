@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using System.Collections.Immutable;
 using System.IO;

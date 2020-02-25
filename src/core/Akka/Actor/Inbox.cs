@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Configuration;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Actor
 {
