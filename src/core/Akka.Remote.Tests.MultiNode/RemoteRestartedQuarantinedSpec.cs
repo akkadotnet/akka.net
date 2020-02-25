@@ -9,6 +9,7 @@ using System;
 using System.Text;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 

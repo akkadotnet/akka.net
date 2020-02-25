@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Hocon;
+using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;

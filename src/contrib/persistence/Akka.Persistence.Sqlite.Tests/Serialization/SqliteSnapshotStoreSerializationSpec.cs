@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Hocon;
+using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.Util.Internal;
 using Xunit;

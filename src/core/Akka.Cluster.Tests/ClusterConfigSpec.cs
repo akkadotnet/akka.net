@@ -12,6 +12,7 @@ using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
 using FluentAssertions;
+using Hocon;
 using Xunit;
 
 namespace Akka.Cluster.Tests

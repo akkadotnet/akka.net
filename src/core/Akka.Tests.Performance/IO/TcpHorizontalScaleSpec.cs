@@ -11,6 +11,7 @@ using System.Net;
 using System.Threading;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.IO;
 using Akka.Util;
 using NBench;

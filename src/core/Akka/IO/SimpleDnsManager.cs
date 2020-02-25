@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Hocon;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;

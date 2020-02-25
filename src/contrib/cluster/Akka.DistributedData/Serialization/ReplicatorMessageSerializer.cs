@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.DistributedData.Internal;
 using Akka.Util;
 using Akka.Util.Internal;
+using Hocon;
 using Hyperion;
 using Serializer = Akka.Serialization.Serializer;
 

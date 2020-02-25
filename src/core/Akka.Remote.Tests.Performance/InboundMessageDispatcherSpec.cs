@@ -8,6 +8,7 @@
 using System.Threading;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using Akka.Util.Internal;
 using Google.Protobuf;

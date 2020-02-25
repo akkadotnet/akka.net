@@ -7,6 +7,7 @@
 
 using Akka.Actor;
 using Akka.Persistence.Journal;
+using Hocon;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Hocon;
+using Akka.Configuration;
 using Akka.TestKit;
 
 namespace Akka.Cluster.Tests

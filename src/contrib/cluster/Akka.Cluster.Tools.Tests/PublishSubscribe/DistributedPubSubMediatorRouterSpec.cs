@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Routing;
 using Akka.TestKit;

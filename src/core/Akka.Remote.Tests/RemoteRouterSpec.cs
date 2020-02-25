@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote.Routing;
 using Akka.Routing;

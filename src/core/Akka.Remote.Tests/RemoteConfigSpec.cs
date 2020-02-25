@@ -11,6 +11,7 @@ using System.Linq;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Akka.Util.Internal;
+using Hocon;
 using Xunit;
 using System.Net;
 using Akka.Remote.Transport;

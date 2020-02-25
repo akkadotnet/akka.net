@@ -11,6 +11,7 @@ open Akka.FSharp
 open Akka.Actor
 open System
 open Xunit
+open Hocon
 
 
 [<Fact>]

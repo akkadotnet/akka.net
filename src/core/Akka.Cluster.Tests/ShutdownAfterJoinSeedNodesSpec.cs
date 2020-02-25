@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Cluster.Tools.Singleton

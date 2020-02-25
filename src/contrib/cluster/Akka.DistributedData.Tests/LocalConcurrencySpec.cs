@@ -8,6 +8,7 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Xunit;
 using Xunit.Abstractions;
 

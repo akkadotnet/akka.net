@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Hocon;
 using System.Linq;
 using Xunit;
 

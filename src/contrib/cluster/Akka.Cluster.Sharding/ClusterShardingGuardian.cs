@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.DistributedData;
 using Akka.Pattern;
+using Hocon;
 
 namespace Akka.Cluster.Sharding
 {

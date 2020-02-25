@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Hocon;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.Util;

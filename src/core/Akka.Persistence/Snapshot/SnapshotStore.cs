@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
+using Hocon;
 
 namespace Akka.Persistence.Snapshot
 {

@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;

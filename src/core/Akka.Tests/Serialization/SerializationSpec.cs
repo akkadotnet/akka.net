@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;

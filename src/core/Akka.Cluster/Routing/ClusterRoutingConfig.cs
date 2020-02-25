@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;

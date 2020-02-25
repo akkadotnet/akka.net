@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using ChatMessages;
 
 namespace ChatClient

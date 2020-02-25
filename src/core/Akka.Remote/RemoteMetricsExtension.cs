@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Routing;
+using Hocon;
 
 namespace Akka.Remote
 {

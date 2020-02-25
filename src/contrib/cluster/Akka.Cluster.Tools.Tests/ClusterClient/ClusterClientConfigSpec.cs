@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tools.Client;
 using Hocon;
+using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;

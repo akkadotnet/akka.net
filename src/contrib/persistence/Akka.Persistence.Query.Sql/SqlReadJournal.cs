@@ -9,6 +9,7 @@ using System;
 using Reactive.Streams;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
 using Akka.Util.Internal;

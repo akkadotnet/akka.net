@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Hocon;
+using Akka.Configuration;
 using Akka.TestKit.TestActors;
 using Akka.Util;
 using FluentAssertions;

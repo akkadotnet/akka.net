@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;

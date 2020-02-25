@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;

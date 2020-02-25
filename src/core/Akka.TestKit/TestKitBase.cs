@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.TestKit.Internal;

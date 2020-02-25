@@ -14,6 +14,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
 using System.Runtime.Serialization;
+using Hocon;
 
 namespace Akka.Remote.Transport
 {

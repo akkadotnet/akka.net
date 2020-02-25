@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.Client.Serialization;
 using Hocon;
+using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;

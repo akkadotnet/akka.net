@@ -10,6 +10,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Persistence.Sqlite;
+using Hocon;
 using Microsoft.Data.Sqlite;
 
 namespace ClusterSharding.Node.AutomaticJoin

@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;

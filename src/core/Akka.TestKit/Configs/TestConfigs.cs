@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Hocon;
+using Akka.Configuration;
 
 namespace Akka.TestKit.Configs
 {

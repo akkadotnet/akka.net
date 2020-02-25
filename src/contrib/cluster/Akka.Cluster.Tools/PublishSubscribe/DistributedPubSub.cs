@@ -8,6 +8,7 @@
 using System.Linq;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Dispatch;
 
 namespace Akka.Cluster.Tools.PublishSubscribe

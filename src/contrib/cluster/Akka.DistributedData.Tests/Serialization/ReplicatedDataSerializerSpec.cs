@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
 using Hocon;
+using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Xunit;
 using Xunit.Abstractions;

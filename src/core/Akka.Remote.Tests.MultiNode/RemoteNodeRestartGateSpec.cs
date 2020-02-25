@@ -10,6 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;

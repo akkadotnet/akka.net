@@ -8,6 +8,7 @@
 using System.Reflection;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.TestKit;

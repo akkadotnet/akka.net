@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using Hocon;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
