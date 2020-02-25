@@ -232,7 +232,7 @@ namespace Akka.Dispatch
         {
             _system = system;
             Prerequisites = prerequisites;
-            _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
+            _cachingConfig = new Config(prerequisites.Settings.Config);
             _defaultGlobalDispatcher = Lookup(DefaultDispatcherId);
         }
 
@@ -264,7 +264,7 @@ namespace Akka.Dispatch
         internal void ReloadPrerequisites(IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
+            _cachingConfig = new Config(prerequisites.Settings.Config);
         }
 
         /// <summary>
