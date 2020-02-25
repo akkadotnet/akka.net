@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -155,11 +155,11 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public TailChoppingPool(Config config)
             : this(
-                  config.GetInt("nr-of-instances"),
+                  config.GetInt("nr-of-instances", 0),
                   Resizer.FromConfig(config),
                   Pool.DefaultSupervisorStrategy,
                   Dispatchers.DefaultDispatcherId,
-                  config.GetTimeSpan("within"), config.GetTimeSpan("tail-chopping-router.interval"), config.HasPath("pool-dispatcher"))
+                  config.GetTimeSpan("within", null), config.GetTimeSpan("tail-chopping-router.interval", null), config.HasPath("pool-dispatcher"))
         {
         }
 
@@ -390,9 +390,9 @@ namespace Akka.Routing
         /// </param>
         public TailChoppingGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
-                  config.GetTimeSpan("within"),
-                  config.GetTimeSpan("tail-chopping-router.interval"),
+                  config.GetStringList("routees.paths", new string[] { }),
+                  config.GetTimeSpan("within", null),
+                  config.GetTimeSpan("tail-chopping-router.interval", null),
                   Dispatchers.DefaultDispatcherId)
         {
         }

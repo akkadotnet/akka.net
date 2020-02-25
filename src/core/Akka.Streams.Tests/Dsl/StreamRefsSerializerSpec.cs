@@ -9,13 +9,14 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Streams.Tests
 {
@@ -35,7 +36,8 @@ namespace Akka.Streams.Tests
                 port = {address.Port}
                 hostname = ""{address.Address}""
               }}
-            }}").WithFallback(ConfigurationFactory.Load());
+            }}")
+                .WithFallback(ConfigurationFactory.Default());
 
             var system = ActorSystem.Create("remote-system-2", config);
 
@@ -140,7 +142,8 @@ namespace Akka.Streams.Tests
                 port = {address.Port}
                 hostname = ""{address.Address}""
               }}
-            }}").WithFallback(ConfigurationFactory.Load());
+            }}")
+            .WithFallback(ConfigurationFactory.Default());
         }
 
         public StreamRefsSerializerSpec(ITestOutputHelper output) : this(Config(), output: output)

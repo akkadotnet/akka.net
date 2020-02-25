@@ -7,7 +7,7 @@
 
 using System;
 using System.Threading;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Helios.Concurrency;
 
 namespace Akka.Dispatch
@@ -50,7 +50,7 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         internal static ApartmentState GetApartmentState(Config cfg)
         {
-            var s = cfg.GetString("apartment");
+            var s = cfg.GetString("apartment", "");
             return string.Compare(s, "sta", StringComparison.OrdinalIgnoreCase) == 0
                 ? ApartmentState.STA
                 : string.Compare(s, "mta", StringComparison.OrdinalIgnoreCase) == 0
@@ -87,7 +87,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMin
         {
-            get { return _config.GetInt("pool-size-min"); }
+            get { return _config.GetInt("pool-size-min", 0); }
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Akka.Dispatch
         /// </summary>
         public double PoolSizeFactor
         {
-            get { return _config.GetDouble("pool-size-factor"); }
+            get { return _config.GetDouble("pool-size-factor", 0); }
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMax
         {
-            get { return _config.GetInt("pool-size-max"); }
+            get { return _config.GetInt("pool-size-max", 0); }
         }
 
         #region Static methods

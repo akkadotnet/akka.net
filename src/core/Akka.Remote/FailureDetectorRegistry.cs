@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Annotations;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Remote

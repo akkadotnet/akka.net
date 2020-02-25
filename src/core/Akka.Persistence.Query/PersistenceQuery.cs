@@ -9,7 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Reflection;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Persistence.Query
@@ -47,7 +47,7 @@ namespace Akka.Persistence.Query
                 throw new ArgumentException("HOCON config is missing persistence read journal plugin config path: " + configPath);
 
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
-            var pluginTypeName = pluginConfig.GetString("class");
+            var pluginTypeName = pluginConfig.GetString("class", null);
             var pluginType = Type.GetType(pluginTypeName, true);
 
             return CreateType(pluginType, new object[] { _system, pluginConfig });

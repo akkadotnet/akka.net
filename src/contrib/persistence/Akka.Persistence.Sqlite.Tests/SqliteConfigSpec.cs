@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Sql.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -29,16 +29,16 @@ namespace Akka.Persistence.Sqlite.Tests
 
             var config = Sys.Settings.Config.GetConfig("akka.persistence.journal.sqlite");
 
-            Assert.NotNull(config);
-            Assert.Equal("Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite", config.GetString("class"));
-            Assert.Equal("akka.actor.default-dispatcher", config.GetString("plugin-dispatcher"));
-            Assert.Equal(string.Empty, config.GetString("connection-string"));
-            Assert.Equal(string.Empty, config.GetString("connection-string-name"));
-            Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("connection-timeout"));
-            Assert.Equal("event_journal", config.GetString("table-name"));
-            Assert.Equal("journal_metadata", config.GetString("metadata-table-name"));
-            Assert.False(config.GetBoolean("auto-initialize"));
-            Assert.Equal("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common", config.GetString("timestamp-provider"));
+            Assert.False(config.IsNullOrEmpty());
+            Assert.Equal("Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite", config.GetString("class", null));
+            Assert.Equal("akka.actor.default-dispatcher", config.GetString("plugin-dispatcher", null));
+            Assert.Equal(string.Empty, config.GetString("connection-string", null));
+            Assert.Equal(string.Empty, config.GetString("connection-string-name", null));
+            Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("connection-timeout", null));
+            Assert.Equal("event_journal", config.GetString("table-name", null));
+            Assert.Equal("journal_metadata", config.GetString("metadata-table-name", null));
+            Assert.False(config.GetBoolean("auto-initialize", false));
+            Assert.Equal("Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common", config.GetString("timestamp-provider", null));
         }
 
         [Fact]
@@ -48,14 +48,14 @@ namespace Akka.Persistence.Sqlite.Tests
 
             var config = Sys.Settings.Config.GetConfig("akka.persistence.snapshot-store.sqlite");
 
-            Assert.NotNull(config);
-            Assert.Equal("Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite", config.GetString("class"));
-            Assert.Equal("akka.actor.default-dispatcher", config.GetString("plugin-dispatcher"));
-            Assert.Equal(string.Empty, config.GetString("connection-string"));
-            Assert.Equal(string.Empty, config.GetString("connection-string-name"));
-            Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("connection-timeout"));
-            Assert.Equal("snapshot_store", config.GetString("table-name"));
-            Assert.False(config.GetBoolean("auto-initialize"));
+            Assert.False(config.IsNullOrEmpty());
+            Assert.Equal("Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite", config.GetString("class", null));
+            Assert.Equal("akka.actor.default-dispatcher", config.GetString("plugin-dispatcher", null));
+            Assert.Equal(string.Empty, config.GetString("connection-string", null));
+            Assert.Equal(string.Empty, config.GetString("connection-string-name", null));
+            Assert.Equal(TimeSpan.FromSeconds(30), config.GetTimeSpan("connection-timeout", null));
+            Assert.Equal("snapshot_store", config.GetString("table-name", null));
+            Assert.False(config.GetBoolean("auto-initialize", false));
         }
     }
 }

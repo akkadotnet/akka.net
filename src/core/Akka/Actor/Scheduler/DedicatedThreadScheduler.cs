@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Hocon; using Akka.Configuration;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
@@ -64,8 +65,11 @@ namespace Akka.Actor
         /// <param name="log">N/A</param>
         public DedicatedThreadScheduler(Config config, ILoggingAdapter log) : base(config, log)
         {
-            var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
-            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
+            if (SchedulerConfig.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DedicatedThreadScheduler>();
+
+            var precision = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
             var thread = new Thread(_ =>
             {
                 var allWork = new List<ScheduledWork>();

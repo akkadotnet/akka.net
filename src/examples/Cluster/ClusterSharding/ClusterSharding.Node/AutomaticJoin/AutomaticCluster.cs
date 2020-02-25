@@ -31,7 +31,7 @@ namespace ClusterSharding.Node.AutomaticJoin
             _persistence = SqlitePersistence.Get(system);
             _dbHelper = new DbHelper(() =>
             {
-                var str = _system.Settings.Config.GetString("akka.persistence.journal.sqlite.connection-string");
+                var str = _system.Settings.Config.GetString("akka.persistence.journal.sqlite.connection-string", null);
                 var conn = new SqliteConnection(str);
                 conn.Open();
                 return conn;

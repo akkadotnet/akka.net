@@ -296,15 +296,15 @@ namespace Akka.TestKit.Internal
                     {
                         var expectedNumberOfEvents = expectedOccurrences.Value;
                         if(actualNumberOfEvents < expectedNumberOfEvents)
-                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, string.Join(",", _filters));
+                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, string.Join(",", _filters).Replace("{", "{{").Replace("}", "}}"));
                         else
                         {
                             var tooMany = actualNumberOfEvents - expectedNumberOfEvents;
-                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but received {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters));
+                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but received {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters).Replace("{", "{{").Replace("}", "}}"));
                         }
                     }
                     else
-                        msg = string.Format("Timeout ({0}) while waiting for messages that matched filter [{1}]", timeoutValue, _filters);
+                        msg = string.Format("Timeout ({0}) while waiting for messages that matched filter [{1}]", timeoutValue, string.Join(",", _filters).Replace("{", "{{").Replace("}", "}}"));
 
                     var assertionsProvider = system.HasExtension<TestKitAssertionsProvider>()
                         ? TestKitAssertionsExtension.For(system)

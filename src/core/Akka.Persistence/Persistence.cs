@@ -11,7 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Journal;
 using Akka.Util.Internal;
@@ -71,19 +71,21 @@ namespace Akka.Persistence
             _system = system;
             _system.Settings.InjectTopLevelFallback(Persistence.DefaultConfig());
             _config = system.Settings.Config.GetConfig("akka.persistence");
+            if (_config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<PersistenceExtension>("akka.persistence");
 
             _log = Logging.GetLogger(_system, this);
 
             _defaultJournalPluginId = new Lazy<string>(() =>
             {
-                var configPath = _config.GetString("journal.plugin");
+                var configPath = _config.GetString("journal.plugin", null);
                 if (string.IsNullOrEmpty(configPath)) throw new NullReferenceException("Default journal plugin is not configured");
                 return configPath;
             }, LazyThreadSafetyMode.ExecutionAndPublication);
 
             _defaultSnapshotPluginId = new Lazy<string>(() =>
             {
-                var configPath = _config.GetString("snapshot-store.plugin");
+                var configPath = _config.GetString("snapshot-store.plugin", null);
                 if (string.IsNullOrEmpty(configPath))
                 {
                     if (_log.IsWarningEnabled)
@@ -97,21 +99,21 @@ namespace Akka.Persistence
 
             _defaultInternalStashOverflowStrategy = new Lazy<IStashOverflowStrategy>(() =>
             {
-                var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy");
+                var configuratorTypeName = _config.GetString("internal-stash-overflow-strategy", null);
                 var configuratorType = Type.GetType(configuratorTypeName);
                 return ((IStashOverflowStrategyConfigurator)Activator.CreateInstance(configuratorType)).Create(_system.Settings.Config);
             });
 
             Settings = new PersistenceSettings(_system, _config);
 
-            _config.GetStringList("journal.auto-start-journals").ForEach(id =>
+            _config.GetStringList("journal.auto-start-journals", new string[] { }).ForEach(id =>
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Auto-starting journal plugin `{0}`", id);
                 JournalFor(id);
             });
 
-            _config.GetStringList("snapshot-store.auto-start-snapshot-stores").ForEach(id =>
+            _config.GetStringList("snapshot-store.auto-start-snapshot-stores", new string[] { }).ForEach(id =>
             {
                 if (_log.IsInfoEnabled)
                     _log.Info("Auto-starting snapshot store `{0}`", id);
@@ -120,7 +122,7 @@ namespace Akka.Persistence
 
             _recoveryPermitter = new Lazy<IActorRef>(() =>
             {
-                var maxPermits = _config.GetInt("max-concurrent-recoveries");
+                var maxPermits = _config.GetInt("max-concurrent-recoveries", 0);
                 return _system.SystemActorOf(Akka.Persistence.RecoveryPermitter.Props(maxPermits), "recoveryPermitter");
             });
         }
@@ -268,11 +270,11 @@ namespace Akka.Persistence
         private static IActorRef CreatePlugin(ExtendedActorSystem system, string configPath, Config pluginConfig)
         {
             var pluginActorName = configPath;
-            var pluginTypeName = pluginConfig.GetString("class");
+            var pluginTypeName = pluginConfig.GetString("class", null);
             if (string.IsNullOrEmpty(pluginTypeName))
                 throw new ArgumentException($"Plugin class name must be defined in config property [{configPath}.class]");
             var pluginType = Type.GetType(pluginTypeName, true);
-            var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher");
+            var pluginDispatcherId = pluginConfig.GetString("plugin-dispatcher", null);
             object[] pluginActorArgs = pluginType.GetConstructor(new[] { typeof(Config) }) != null ? new object[] { pluginConfig } : null;
             var pluginActorProps = new Props(pluginType, pluginActorArgs).WithDispatcher(pluginDispatcherId);
 
@@ -282,6 +284,9 @@ namespace Akka.Persistence
         private static EventAdapters CreateAdapters(ExtendedActorSystem system, string configPath)
         {
             var pluginConfig = system.Settings.Config.GetConfig(configPath);
+            if (pluginConfig.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<EventAdapters>(configPath);
+
             return EventAdapters.Create(system, pluginConfig);
         }
 
@@ -351,9 +356,9 @@ namespace Akka.Persistence
             /// <param name="config">TBD</param>
             public ViewSettings(Config config)
             {
-                AutoUpdate = config.GetBoolean("view.auto-update");
-                AutoUpdateInterval = config.GetTimeSpan("view.auto-update-interval");
-                var repMax = config.GetLong("view.auto-update-replay-max");
+                AutoUpdate = config.GetBoolean("view.auto-update", false);
+                AutoUpdateInterval = config.GetTimeSpan("view.auto-update-interval", null);
+                var repMax = config.GetLong("view.auto-update-replay-max", 0);
                 AutoUpdateReplayMax = repMax < 0 ? long.MaxValue : repMax;
             }
 
@@ -405,10 +410,10 @@ namespace Akka.Persistence
             /// <param name="config">TBD</param>
             public AtLeastOnceDeliverySettings(Config config)
             {
-                RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval");
-                MaxUnconfirmedMessages = config.GetInt("at-least-once-delivery.max-unconfirmed-messages");
-                WarnAfterNumberOfUnconfirmedAttempts = config.GetInt("at-least-once-delivery.warn-after-number-of-unconfirmed-attempts");
-                RedeliveryBurstLimit = config.GetInt("at-least-once-delivery.redelivery-burst-limit");
+                RedeliverInterval = config.GetTimeSpan("at-least-once-delivery.redeliver-interval", null);
+                MaxUnconfirmedMessages = config.GetInt("at-least-once-delivery.max-unconfirmed-messages", 0);
+                WarnAfterNumberOfUnconfirmedAttempts = config.GetInt("at-least-once-delivery.warn-after-number-of-unconfirmed-attempts", 0);
+                RedeliveryBurstLimit = config.GetInt("at-least-once-delivery.redelivery-burst-limit", 0);
             }
 
             /// <summary>
@@ -494,8 +499,8 @@ namespace Akka.Persistence
         {
             public InternalSettings(Config config)
             {
-                PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands");
-                PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations");
+                PublishPluginCommands = config.HasPath("publish-plugin-commands") && config.GetBoolean("publish-plugin-commands", false);
+                PublishConfirmations = config.HasPath("publish-confirmations") && config.GetBoolean("publish-confirmations", false);
             }
 
             public bool PublishPluginCommands { get; }

@@ -348,7 +348,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null);
         public abstract Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath actorPath);
         public abstract Akka.Actor.ActorSelection ActorSelection(string actorPath);
-        public static Akka.Actor.ActorSystem Create(string name, Akka.Configuration.Config config) { }
+        public static Akka.Actor.ActorSystem Create(string name, Hocon.Config config) { }
         public static Akka.Actor.ActorSystem Create(string name) { }
         public void Dispose() { }
         public abstract object GetExtension(Akka.Actor.IExtensionId extensionId);
@@ -580,7 +580,7 @@ namespace Akka.Actor
         [System.ObsoleteAttribute("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter lo" +
             "g) instead. [1.1.2]")]
         public DedicatedThreadScheduler(Akka.Actor.ActorSystem sys) { }
-        public DedicatedThreadScheduler(Akka.Configuration.Config config, Akka.Event.ILoggingAdapter log) { }
+        public DedicatedThreadScheduler(Hocon.Config config, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
         public override System.TimeSpan MonotonicClock { get; }
         protected override System.DateTimeOffset TimeNow { get; }
@@ -607,9 +607,9 @@ namespace Akka.Actor
         public Deploy(Akka.Actor.Scope scope) { }
         public Deploy(Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope) { }
         public Deploy(Akka.Routing.RouterConfig routerConfig) { }
-        public Deploy(string path, Akka.Configuration.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher) { }
-        public Deploy(string path, Akka.Configuration.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher, string mailbox) { }
-        public Akka.Configuration.Config Config { get; }
+        public Deploy(string path, Hocon.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher) { }
+        public Deploy(string path, Hocon.Config config, Akka.Routing.RouterConfig routerConfig, Akka.Actor.Scope scope, string dispatcher, string mailbox) { }
+        public Hocon.Config Config { get; }
         public string Dispatcher { get; }
         public string Mailbox { get; }
         public string Path { get; }
@@ -625,7 +625,7 @@ namespace Akka.Actor
         public class DeploySurrogate : Akka.Util.ISurrogate
         {
             public DeploySurrogate() { }
-            public Akka.Configuration.Config Config { get; set; }
+            public Hocon.Config Config { get; set; }
             public string Dispatcher { get; set; }
             public string Mailbox { get; set; }
             public string Path { get; set; }
@@ -648,12 +648,12 @@ namespace Akka.Actor
     }
     public class Deployer
     {
-        protected readonly Akka.Configuration.Config Default;
+        protected readonly Hocon.Config Default;
         public Deployer(Akka.Actor.Settings settings) { }
         public Akka.Actor.Deploy Lookup(Akka.Actor.ActorPath path) { }
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerable<string> path) { }
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerator<string> path) { }
-        public virtual Akka.Actor.Deploy ParseConfig(string key, Akka.Configuration.Config config) { }
+        public virtual Akka.Actor.Deploy ParseConfig(string key, Hocon.Config config) { }
         public void SetDeploy(Akka.Actor.Deploy deploy) { }
     }
     [System.ObsoleteAttribute("Deprecated. Will be removed [1.0.0]")]
@@ -929,7 +929,7 @@ namespace Akka.Actor
     }
     public class HashedWheelTimerScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
     {
-        public HashedWheelTimerScheduler(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
+        public HashedWheelTimerScheduler(Hocon.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public override System.TimeSpan HighResMonotonicClock { get; }
         public override System.TimeSpan MonotonicClock { get; }
         protected override System.DateTimeOffset TimeNow { get; }
@@ -1559,8 +1559,8 @@ namespace Akka.Actor
     public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
         protected readonly Akka.Event.ILoggingAdapter Log;
-        protected readonly Akka.Configuration.Config SchedulerConfig;
-        protected SchedulerBase(Akka.Configuration.Config scheduler, Akka.Event.ILoggingAdapter log) { }
+        protected readonly Hocon.Config SchedulerConfig;
+        protected SchedulerBase(Hocon.Config scheduler, Akka.Event.ILoggingAdapter log) { }
         public abstract System.TimeSpan HighResMonotonicClock { get; }
         public abstract System.TimeSpan MonotonicClock { get; }
         protected abstract System.DateTimeOffset TimeNow { get; }
@@ -1629,10 +1629,10 @@ namespace Akka.Actor
     }
     public class Settings
     {
-        public Settings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
+        public Settings(Akka.Actor.ActorSystem system, Hocon.Config config) { }
         public bool AddLoggingReceive { get; }
         public System.TimeSpan AskTimeout { get; }
-        public Akka.Configuration.Config Config { get; }
+        public Hocon.Config Config { get; }
         public string ConfigVersion { get; }
         public System.TimeSpan CreationTimeout { get; }
         public bool DebugAutoReceive { get; }
@@ -1659,7 +1659,7 @@ namespace Akka.Actor
         public string SupervisorStrategyClass { get; }
         public Akka.Actor.ActorSystem System { get; }
         public System.TimeSpan UnstartedPushTimeout { get; }
-        public void InjectTopLevelFallback(Akka.Configuration.Config config) { }
+        public void InjectTopLevelFallback(Hocon.Config config) { }
         public override string ToString() { }
     }
     public class static StashFactory
@@ -1863,7 +1863,7 @@ namespace Akka.Actor.Internal
     public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
     {
         public ActorSystemImpl(string name) { }
-        public ActorSystemImpl(string name, Akka.Configuration.Config config) { }
+        public ActorSystemImpl(string name, Hocon.Config config) { }
         public override Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public override Akka.Actor.IActorRef DeadLetters { get; }
         public override Akka.Dispatch.Dispatchers Dispatchers { get; }
@@ -2108,284 +2108,26 @@ namespace Akka
 }
 namespace Akka.Configuration
 {
-    public class Config
+    public class static ConfigurationFactory
     {
-        public static readonly Akka.Configuration.Config Empty;
-        public Config() { }
-        public Config(Akka.Configuration.Hocon.HoconRoot root) { }
-        public Config(Akka.Configuration.Config source, Akka.Configuration.Config fallback) { }
-        public Akka.Configuration.Config Fallback { get; }
-        public virtual bool IsEmpty { get; }
-        public Akka.Configuration.Hocon.HoconValue Root { get; }
-        public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; set; }
-        public virtual System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, Akka.Configuration.Hocon.HoconValue>> AsEnumerable() { }
-        protected Akka.Configuration.Config Copy(Akka.Configuration.Config fallback = null) { }
-        public virtual bool GetBoolean(string path, bool default = False) { }
-        public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
-        public virtual System.Collections.Generic.IList<byte> GetByteList(string path) { }
-        public virtual System.Nullable<long> GetByteSize(string path) { }
-        public virtual Akka.Configuration.Config GetConfig(string path) { }
-        public virtual decimal GetDecimal(string path, [System.Runtime.CompilerServices.DecimalConstantAttribute(0, 0, 0u, 0u, 0u)] decimal @default) { }
-        public virtual System.Collections.Generic.IList<decimal> GetDecimalList(string path) { }
-        public virtual double GetDouble(string path, double default = 0) { }
-        public virtual System.Collections.Generic.IList<double> GetDoubleList(string path) { }
-        public virtual float GetFloat(string path, float default = 0) { }
-        public virtual System.Collections.Generic.IList<float> GetFloatList(string path) { }
-        public virtual int GetInt(string path, int default = 0) { }
-        public virtual System.Collections.Generic.IList<int> GetIntList(string path) { }
-        public virtual long GetLong(string path, long default = 0) { }
-        public virtual System.Collections.Generic.IList<long> GetLongList(string path) { }
-        public virtual string GetString(string path, string default = null) { }
-        public virtual System.Collections.Generic.IList<string> GetStringList(string path) { }
-        public virtual System.TimeSpan GetTimeSpan(string path, System.Nullable<System.TimeSpan> default = null, bool allowInfinite = True) { }
-        public Akka.Configuration.Hocon.HoconValue GetValue(string path) { }
-        public virtual bool HasPath(string path) { }
-        public override string ToString() { }
-        public string ToString(bool includeFallback) { }
-        public virtual Akka.Configuration.Config WithFallback(Akka.Configuration.Config fallback) { }
-        public static Akka.Configuration.Config +(Akka.Configuration.Config config, string fallback) { }
-        public static Akka.Configuration.Config +(string configHocon, Akka.Configuration.Config fallbackConfig) { }
-        public static Akka.Configuration.Config op_Implicit(string str) { }
-    }
-    public class static ConfigExtensions
-    {
-        public static bool IsNullOrEmpty(this Akka.Configuration.Config config) { }
-        public static Akka.Configuration.Config SafeWithFallback(this Akka.Configuration.Config config, Akka.Configuration.Config fallback) { }
-    }
-    public class ConfigurationException : Akka.Actor.AkkaException
-    {
-        public ConfigurationException(string message) { }
-        public ConfigurationException(string message, System.Exception exception) { }
-    }
-    public class ConfigurationFactory
-    {
-        public ConfigurationFactory() { }
-        public static Akka.Configuration.Config Empty { get; }
-        public static Akka.Configuration.Config Default() { }
-        public static Akka.Configuration.Config FromObject(object source) { }
-        public static Akka.Configuration.Config FromResource(string resourceName, object instanceInAssembly) { }
-        public static Akka.Configuration.Config FromResource<TAssembly>(string resourceName) { }
-        public static Akka.Configuration.Config FromResource(string resourceName, System.Reflection.Assembly assembly) { }
-        public static Akka.Configuration.Config Load() { }
-        public static Akka.Configuration.Config ParseString(string hocon, System.Func<string, Akka.Configuration.Hocon.HoconRoot> includeCallback) { }
-        public static Akka.Configuration.Config ParseString(string hocon) { }
+        public static Hocon.Config Empty { get; }
+        public static Hocon.Config Default() { }
+        public static Hocon.Config FromFile(string filePath) { }
+        public static Hocon.Config FromResource(string resourceName, object instanceInAssembly) { }
+        public static Hocon.Config FromResource<TAssembly>(string resourceName) { }
+        public static Hocon.Config FromResource(string resourceName, System.Reflection.Assembly assembly) { }
+        public static Hocon.Config Load() { }
+        public static Hocon.Config Load(string sectionName) { }
+        public static Hocon.Config ParseString(string hocon, Hocon.HoconIncludeCallbackAsync includeCallback) { }
+        public static Hocon.Config ParseString(string hocon) { }
     }
 }
 namespace Akka.Configuration.Hocon
 {
-    public class AkkaConfigurationSection : System.Configuration.ConfigurationSection
+    public class AkkaConfigurationSection : Hocon.HoconConfigurationSection
     {
         public AkkaConfigurationSection() { }
-        public Akka.Configuration.Config AkkaConfig { get; }
-        [System.Configuration.ConfigurationPropertyAttribute("hocon", IsRequired=true)]
-        public Akka.Configuration.Hocon.HoconConfigurationElement Hocon { get; set; }
-    }
-    public abstract class CDataConfigurationElement : System.Configuration.ConfigurationElement
-    {
-        protected const string ContentPropertyName = "content";
-        protected CDataConfigurationElement() { }
-        protected override void DeserializeElement(System.Xml.XmlReader reader, bool serializeCollectionKey) { }
-    }
-    public class HoconArray : System.Collections.Generic.List<Akka.Configuration.Hocon.HoconValue>, Akka.Configuration.Hocon.IHoconElement
-    {
-        public HoconArray() { }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsString() { }
-        public override string ToString() { }
-    }
-    public class HoconConfigurationElement : Akka.Configuration.Hocon.CDataConfigurationElement
-    {
-        public HoconConfigurationElement() { }
-        [System.Configuration.ConfigurationPropertyAttribute("content", IsKey=true, IsRequired=true)]
-        public string Content { get; set; }
-    }
-    public class HoconLiteral : Akka.Configuration.Hocon.IHoconElement
-    {
-        public HoconLiteral() { }
-        public string Value { get; set; }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsString() { }
-        public override string ToString() { }
-    }
-    public class HoconObject : Akka.Configuration.Hocon.IHoconElement
-    {
-        public HoconObject() { }
-        public System.Collections.Generic.Dictionary<string, Akka.Configuration.Hocon.HoconValue> Items { get; }
-        [Newtonsoft.Json.JsonIgnoreAttribute()]
-        public System.Collections.Generic.IDictionary<string, object> Unwrapped { get; }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public Akka.Configuration.Hocon.HoconValue GetKey(string key) { }
-        public Akka.Configuration.Hocon.HoconValue GetOrCreateKey(string key) { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsString() { }
-        public void Merge(Akka.Configuration.Hocon.HoconObject other) { }
-        public override string ToString() { }
-        public string ToString(int indent) { }
-    }
-    public class HoconRoot
-    {
-        protected HoconRoot() { }
-        public HoconRoot(Akka.Configuration.Hocon.HoconValue value, System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> substitutions) { }
-        public HoconRoot(Akka.Configuration.Hocon.HoconValue value) { }
-        public System.Collections.Generic.IEnumerable<Akka.Configuration.Hocon.HoconSubstitution> Substitutions { get; }
-        public Akka.Configuration.Hocon.HoconValue Value { get; }
-    }
-    public class HoconSubstitution : Akka.Configuration.Hocon.IHoconElement, Akka.Configuration.Hocon.IMightBeAHoconObject
-    {
-        protected HoconSubstitution() { }
-        public HoconSubstitution(string path) { }
-        public string Path { get; set; }
-        public Akka.Configuration.Hocon.HoconValue ResolvedValue { get; set; }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public Akka.Configuration.Hocon.HoconObject GetObject() { }
-        public string GetString() { }
-        public bool IsArray() { }
-        public bool IsObject() { }
-        public bool IsString() { }
-    }
-    public class HoconTokenizer : Akka.Configuration.Hocon.Tokenizer
-    {
-        public HoconTokenizer(string text) { }
-        public bool IsArrayEnd() { }
-        public bool IsArrayStart() { }
-        public bool IsAssignment() { }
-        public bool IsComma() { }
-        public bool IsDot() { }
-        public bool IsEndOfObject() { }
-        public bool IsInclude() { }
-        public bool IsObjectStart() { }
-        public bool IsSpaceOrTab() { }
-        public bool IsStartOfComment() { }
-        public bool IsStartOfQuotedText() { }
-        public bool IsStartOfTripleQuotedText() { }
-        public bool IsStartSimpleValue() { }
-        public bool IsSubstitutionStart() { }
-        public bool IsUnquotedKey() { }
-        public bool IsUnquotedKeyStart() { }
-        public bool IsWhitespace() { }
-        public bool IsWhitespaceOrComment() { }
-        public Akka.Configuration.Hocon.Token PullArrayEnd() { }
-        public Akka.Configuration.Hocon.Token PullArrayStart() { }
-        public Akka.Configuration.Hocon.Token PullAssignment() { }
-        public Akka.Configuration.Hocon.Token PullComma() { }
-        public Akka.Configuration.Hocon.Token PullComment() { }
-        public Akka.Configuration.Hocon.Token PullDot() { }
-        public Akka.Configuration.Hocon.Token PullEndOfObject() { }
-        public Akka.Configuration.Hocon.Token PullInclude() { }
-        public Akka.Configuration.Hocon.Token PullNext() { }
-        public Akka.Configuration.Hocon.Token PullQuotedKey() { }
-        public Akka.Configuration.Hocon.Token PullQuotedText() { }
-        public string PullRestOfLine() { }
-        public Akka.Configuration.Hocon.Token PullSimpleValue() { }
-        public Akka.Configuration.Hocon.Token PullSpaceOrTab() { }
-        public Akka.Configuration.Hocon.Token PullStartOfObject() { }
-        public Akka.Configuration.Hocon.Token PullSubstitution() { }
-        public Akka.Configuration.Hocon.Token PullTripleQuotedText() { }
-        public Akka.Configuration.Hocon.Token PullUnquotedKey() { }
-        public Akka.Configuration.Hocon.Token PullValue() { }
-        public void PullWhitespaceAndComments() { }
-    }
-    public class HoconValue : Akka.Configuration.Hocon.IMightBeAHoconObject
-    {
-        public HoconValue() { }
-        public HoconValue(System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> values, bool adoptedFromFallback = True) { }
-        public bool IsEmpty { get; }
-        public System.Collections.Generic.List<Akka.Configuration.Hocon.IHoconElement> Values { get; }
-        public void AppendValue(Akka.Configuration.Hocon.IHoconElement value) { }
-        public Akka.Configuration.Config AtKey(string key) { }
-        public void Clear() { }
-        public System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray() { }
-        public bool GetBoolean() { }
-        public System.Collections.Generic.IList<bool> GetBooleanList() { }
-        public byte GetByte() { }
-        public System.Collections.Generic.IList<byte> GetByteList() { }
-        public System.Nullable<long> GetByteSize() { }
-        public Akka.Configuration.Hocon.HoconValue GetChildObject(string key) { }
-        public decimal GetDecimal() { }
-        public System.Collections.Generic.IList<decimal> GetDecimalList() { }
-        public double GetDouble() { }
-        public System.Collections.Generic.IList<double> GetDoubleList() { }
-        public float GetFloat() { }
-        public System.Collections.Generic.IList<float> GetFloatList() { }
-        public int GetInt() { }
-        public System.Collections.Generic.IList<int> GetIntList() { }
-        public long GetLong() { }
-        public System.Collections.Generic.IList<long> GetLongList() { }
-        public Akka.Configuration.Hocon.HoconObject GetObject() { }
-        public string GetString() { }
-        public System.Collections.Generic.IList<string> GetStringList() { }
-        public System.TimeSpan GetTimeSpan(bool allowInfinite = True) { }
-        public bool IsArray() { }
-        public bool IsObject() { }
-        public bool IsString() { }
-        public void NewValue(Akka.Configuration.Hocon.IHoconElement value) { }
-        public override string ToString() { }
-        public virtual string ToString(int indent) { }
-    }
-    public interface IHoconElement
-    {
-        System.Collections.Generic.IList<Akka.Configuration.Hocon.HoconValue> GetArray();
-        string GetString();
-        bool IsArray();
-        bool IsString();
-    }
-    public interface IMightBeAHoconObject
-    {
-        Akka.Configuration.Hocon.HoconObject GetObject();
-        bool IsObject();
-    }
-    public class Parser
-    {
-        public Parser() { }
-        public static Akka.Configuration.Hocon.HoconRoot Parse(string text, System.Func<string, Akka.Configuration.Hocon.HoconRoot> includeCallback) { }
-        public Akka.Configuration.Hocon.HoconArray ParseArray(string currentPath) { }
-        public void ParseValue(Akka.Configuration.Hocon.HoconValue owner, string currentPath) { }
-    }
-    public class Token
-    {
-        protected Token() { }
-        public Token(Akka.Configuration.Hocon.TokenType type) { }
-        public Token(string value) { }
-        public Akka.Configuration.Hocon.TokenType Type { get; set; }
-        public string Value { get; set; }
-        public static Akka.Configuration.Hocon.Token Key(string key) { }
-        public static Akka.Configuration.Hocon.Token LiteralValue(string value) { }
-        public static Akka.Configuration.Hocon.Token Substitution(string path) { }
-    }
-    public enum TokenType
-    {
-        Comment = 0,
-        Key = 1,
-        LiteralValue = 2,
-        Assign = 3,
-        ObjectStart = 4,
-        ObjectEnd = 5,
-        Dot = 6,
-        EoF = 7,
-        ArrayStart = 8,
-        ArrayEnd = 9,
-        Comma = 10,
-        Substitute = 11,
-        Include = 12,
-    }
-    public class Tokenizer
-    {
-        public Tokenizer(string text) { }
-        public bool EoF { get; }
-        public bool Matches(string pattern) { }
-        public bool Matches(params string[] patterns) { }
-        public char Peek() { }
-        protected string PickErrorLine(out int index) { }
-        public void Pop() { }
-        public void PullWhitespace() { }
-        public void Push() { }
-        public string Take(int length) { }
-        public char Take() { }
+        public Hocon.Config AkkaConfig { get; }
     }
 }
 namespace Akka.Dispatch
@@ -2412,14 +2154,14 @@ namespace Akka.Dispatch
     }
     public sealed class BoundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedDequeMessageQueue>
     {
-        public BoundedDequeBasedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public BoundedDequeBasedMailbox(Akka.Actor.Settings settings, Hocon.Config config) { }
         public int Capacity { get; }
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
     public sealed class BoundedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.BoundedMessageQueue>
     {
-        public BoundedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public BoundedMailbox(Akka.Actor.Settings settings, Hocon.Config config) { }
         public int Capacity { get; }
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
@@ -2445,7 +2187,7 @@ namespace Akka.Dispatch
     }
     public sealed class DispatcherConfigurator : Akka.Dispatch.MessageDispatcherConfigurator
     {
-        public DispatcherConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
+        public DispatcherConfigurator(Hocon.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
         public override Akka.Dispatch.MessageDispatcher Dispatcher() { }
     }
     public sealed class Dispatchers
@@ -2453,7 +2195,7 @@ namespace Akka.Dispatch
         public static readonly string DefaultDispatcherId;
         public static readonly string SynchronizedDispatcherId;
         public Dispatchers(Akka.Actor.ActorSystem system, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
-        public Akka.Configuration.Config DefaultDispatcherConfig { get; }
+        public Hocon.Config DefaultDispatcherConfig { get; }
         public Akka.Dispatch.MessageDispatcher DefaultGlobalDispatcher { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
         public bool HasDispatcher(string id) { }
@@ -2470,8 +2212,8 @@ namespace Akka.Dispatch
     [Akka.Annotations.InternalApiAttribute()]
     public abstract class ExecutorServiceConfigurator : Akka.Dispatch.ExecutorServiceFactory
     {
-        protected ExecutorServiceConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
-        public Akka.Configuration.Config Config { get; }
+        protected ExecutorServiceConfigurator(Hocon.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
+        public Hocon.Config Config { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
     }
     [Akka.Annotations.InternalApiAttribute()]
@@ -2531,9 +2273,9 @@ namespace Akka.Dispatch
     }
     public abstract class MailboxType
     {
-        protected readonly Akka.Configuration.Config Config;
+        protected readonly Hocon.Config Config;
         protected readonly Akka.Actor.Settings Settings;
-        protected MailboxType(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        protected MailboxType(Akka.Actor.Settings settings, Hocon.Config config) { }
         public abstract Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system);
     }
     public class Mailboxes
@@ -2543,7 +2285,7 @@ namespace Akka.Dispatch
         public Mailboxes(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.DeadLetterMailbox DeadLetterMailbox { get; }
         public System.Type FromConfig(string path) { }
-        public Akka.Dispatch.MailboxType GetMailboxType(Akka.Actor.Props props, Akka.Configuration.Config dispatcherConfig) { }
+        public Akka.Dispatch.MailboxType GetMailboxType(Akka.Actor.Props props, Hocon.Config dispatcherConfig) { }
         public System.Type GetRequiredType(System.Type actorType) { }
         public bool HasRequiredType(System.Type actorType) { }
         public Akka.Dispatch.MailboxType Lookup(string id) { }
@@ -2576,8 +2318,8 @@ namespace Akka.Dispatch
     }
     public abstract class MessageDispatcherConfigurator
     {
-        protected MessageDispatcherConfigurator(Akka.Configuration.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
-        public Akka.Configuration.Config Config { get; }
+        protected MessageDispatcherConfigurator(Hocon.Config config, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
+        public Hocon.Config Config { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
         protected Akka.Dispatch.ExecutorServiceConfigurator ConfigureExecutor() { }
         public abstract Akka.Dispatch.MessageDispatcher Dispatcher();
@@ -2592,7 +2334,7 @@ namespace Akka.Dispatch
     }
     public class ThreadPoolConfig
     {
-        public ThreadPoolConfig(Akka.Configuration.Config config) { }
+        public ThreadPoolConfig(Hocon.Config config) { }
         public double PoolSizeFactor { get; }
         public int PoolSizeMax { get; }
         public int PoolSizeMin { get; }
@@ -2600,19 +2342,19 @@ namespace Akka.Dispatch
     }
     public sealed class UnboundedDequeBasedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedDequeMessageQueue>
     {
-        public UnboundedDequeBasedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public UnboundedDequeBasedMailbox(Akka.Actor.Settings settings, Hocon.Config config) { }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
     public sealed class UnboundedMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedMessageQueue>
     {
         public UnboundedMailbox() { }
-        public UnboundedMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        public UnboundedMailbox(Akka.Actor.Settings settings, Hocon.Config config) { }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
     public abstract class UnboundedPriorityMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedPriorityMessageQueue>
     {
         public const int DefaultCapacity = 11;
-        protected UnboundedPriorityMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        protected UnboundedPriorityMailbox(Akka.Actor.Settings settings, Hocon.Config config) { }
         public int InitialCapacity { get; }
         public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
         protected abstract int PriorityGenerator(object message);
@@ -2620,7 +2362,7 @@ namespace Akka.Dispatch
     public abstract class UnboundedStablePriorityMailbox : Akka.Dispatch.MailboxType, Akka.Dispatch.IProducesMessageQueue<Akka.Dispatch.MessageQueues.UnboundedStablePriorityMessageQueue>
     {
         public const int DefaultCapacity = 11;
-        protected UnboundedStablePriorityMailbox(Akka.Actor.Settings settings, Akka.Configuration.Config config) { }
+        protected UnboundedStablePriorityMailbox(Akka.Actor.Settings settings, Hocon.Config config) { }
         public int InitialCapacity { get; }
         public virtual Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
         protected abstract int PriorityGenerator(object message);
@@ -2648,7 +2390,7 @@ namespace Akka.Dispatch.MessageQueues
     }
     public class BoundedMessageQueue : Akka.Dispatch.IBoundedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.MessageQueues.IMessageQueue
     {
-        public BoundedMessageQueue(Akka.Configuration.Config config) { }
+        public BoundedMessageQueue(Hocon.Config config) { }
         public BoundedMessageQueue(int boundedCapacity, System.TimeSpan pushTimeOut) { }
         public int Count { get; }
         public bool HasMessages { get; }
@@ -3247,11 +2989,11 @@ namespace Akka.IO
         public Akka.Actor.IActorRef GetResolver() { }
         public class DnsSettings
         {
-            public DnsSettings(Akka.Configuration.Config config) { }
+            public DnsSettings(Hocon.Config config) { }
             public string Dispatcher { get; }
             public string ProviderObjectName { get; }
             public string Resolver { get; }
-            public Akka.Configuration.Config ResolverConfig { get; }
+            public Hocon.Config ResolverConfig { get; }
         }
     }
     public interface IDnsProvider
@@ -3340,7 +3082,7 @@ namespace Akka.IO
     }
     public class InetAddressDnsResolver : Akka.Actor.ActorBase
     {
-        public InetAddressDnsResolver(Akka.IO.SimpleDnsCache cache, Akka.Configuration.Config config) { }
+        public InetAddressDnsResolver(Akka.IO.SimpleDnsCache cache, Hocon.Config config) { }
         protected override bool Receive(object message) { }
     }
     public class SimpleDnsCache : Akka.IO.DnsBase
@@ -3603,7 +3345,7 @@ namespace Akka.IO
         public int TransferToLimit { get; set; }
         public int WriteCommandsQueueMaxSize { get; }
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.IO.TcpSettings Create(Hocon.Config config) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
@@ -3812,7 +3554,7 @@ namespace Akka.IO
         public int MaxDirectBufferPoolSize { get; }
         public bool TraceLogging { get; }
         public static Akka.IO.UdpSettings Create(Akka.Actor.ActorSystem system) { }
-        public static Akka.IO.UdpSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.IO.UdpSettings Create(Hocon.Config config) { }
     }
 }
 namespace Akka.Pattern
@@ -3963,7 +3705,7 @@ namespace Akka.Routing
     }
     public sealed class BroadcastGroup : Akka.Routing.Group
     {
-        public BroadcastGroup(Akka.Configuration.Config config) { }
+        public BroadcastGroup(Hocon.Config config) { }
         public BroadcastGroup(params string[] paths) { }
         public BroadcastGroup(System.Collections.Generic.IEnumerable<string> paths) { }
         [System.ObsoleteAttribute("Use new BroadcastGroup(actorRefs.Select(c => c.Path.ToString())) instead [1.1.0]")]
@@ -3984,7 +3726,7 @@ namespace Akka.Routing
     public sealed class BroadcastPool : Akka.Routing.Pool
     {
         public BroadcastPool(int nrOfInstances) { }
-        public BroadcastPool(Akka.Configuration.Config config) { }
+        public BroadcastPool(Hocon.Config config) { }
         public BroadcastPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
@@ -4049,7 +3791,7 @@ namespace Akka.Routing
     }
     public sealed class ConsistentHashingGroup : Akka.Routing.Group
     {
-        public ConsistentHashingGroup(Akka.Configuration.Config config) { }
+        public ConsistentHashingGroup(Hocon.Config config) { }
         public ConsistentHashingGroup(params string[] paths) { }
         public ConsistentHashingGroup(System.Collections.Generic.IEnumerable<string> paths) { }
         [System.ObsoleteAttribute("Use new ConsistentHashingGroup(actorRefs.Select(c => c.Path.ToString())) instead " +
@@ -4076,7 +3818,7 @@ namespace Akka.Routing
     public sealed class ConsistentHashingPool : Akka.Routing.Pool
     {
         public ConsistentHashingPool(int nrOfInstances) { }
-        public ConsistentHashingPool(Akka.Configuration.Config config) { }
+        public ConsistentHashingPool(Hocon.Config config) { }
         public ConsistentHashingPool(int nrOfInstances, Akka.Routing.ConsistentHashMapping hashMapping) { }
         public ConsistentHashingPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False, int virtualNodesFactor = 0, Akka.Routing.ConsistentHashMapping hashMapping = null) { }
         public int VirtualNodesFactor { get; }
@@ -4132,7 +3874,7 @@ namespace Akka.Routing
         public bool Equals(Akka.Routing.DefaultResizer other) { }
         public override bool Equals(object obj) { }
         public int Filter(int pressure, int capacity) { }
-        public static Akka.Routing.DefaultResizer FromConfig(Akka.Configuration.Config resizerConfig) { }
+        public static Akka.Routing.DefaultResizer FromConfig(Hocon.Config resizerConfig) { }
         public override int GetHashCode() { }
         public override bool IsTimeForResize(long messageCounter) { }
         public int Pressure(System.Collections.Generic.IEnumerable<Akka.Routing.Routee> currentRoutees) { }
@@ -4234,7 +3976,7 @@ namespace Akka.Routing
     }
     public sealed class RandomGroup : Akka.Routing.Group
     {
-        public RandomGroup(Akka.Configuration.Config config) { }
+        public RandomGroup(Hocon.Config config) { }
         public RandomGroup(params string[] paths) { }
         public RandomGroup(System.Collections.Generic.IEnumerable<string> paths) { }
         public RandomGroup(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
@@ -4257,7 +3999,7 @@ namespace Akka.Routing
     }
     public sealed class RandomPool : Akka.Routing.Pool
     {
-        public RandomPool(Akka.Configuration.Config config) { }
+        public RandomPool(Hocon.Config config) { }
         public RandomPool(int nrOfInstances) { }
         public RandomPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
@@ -4290,13 +4032,13 @@ namespace Akka.Routing
     public abstract class Resizer
     {
         protected Resizer() { }
-        public static Akka.Routing.Resizer FromConfig(Akka.Configuration.Config parentConfig) { }
+        public static Akka.Routing.Resizer FromConfig(Hocon.Config parentConfig) { }
         public abstract bool IsTimeForResize(long messageCounter);
         public abstract int Resize(System.Collections.Generic.IEnumerable<Akka.Routing.Routee> currentRoutees);
     }
     public sealed class RoundRobinGroup : Akka.Routing.Group
     {
-        public RoundRobinGroup(Akka.Configuration.Config config) { }
+        public RoundRobinGroup(Hocon.Config config) { }
         public RoundRobinGroup(params string[] paths) { }
         public RoundRobinGroup(System.Collections.Generic.IEnumerable<string> paths) { }
         [System.ObsoleteAttribute("Use RoundRobinGroup constructor with IEnumerable<string> parameter [1.1.0]")]
@@ -4316,7 +4058,7 @@ namespace Akka.Routing
     }
     public sealed class RoundRobinPool : Akka.Routing.Pool
     {
-        public RoundRobinPool(Akka.Configuration.Config config) { }
+        public RoundRobinPool(Hocon.Config config) { }
         public RoundRobinPool(int nrOfInstances) { }
         public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer) { }
         public RoundRobinPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
@@ -4410,7 +4152,7 @@ namespace Akka.Routing
     }
     public sealed class ScatterGatherFirstCompletedGroup : Akka.Routing.Group
     {
-        public ScatterGatherFirstCompletedGroup(Akka.Configuration.Config config) { }
+        public ScatterGatherFirstCompletedGroup(Hocon.Config config) { }
         public ScatterGatherFirstCompletedGroup(System.TimeSpan within, params string[] paths) { }
         public ScatterGatherFirstCompletedGroup(System.Collections.Generic.IEnumerable<string> paths, System.TimeSpan within) { }
         [System.ObsoleteAttribute("Use new ScatterGatherFirstCompletedGroup(actorRefs.Select(c => c.Path.ToString())" +
@@ -4433,7 +4175,7 @@ namespace Akka.Routing
     }
     public sealed class ScatterGatherFirstCompletedPool : Akka.Routing.Pool
     {
-        public ScatterGatherFirstCompletedPool(Akka.Configuration.Config config) { }
+        public ScatterGatherFirstCompletedPool(Hocon.Config config) { }
         public ScatterGatherFirstCompletedPool(int nrOfInstances) { }
         public ScatterGatherFirstCompletedPool(int nrOfInstances, System.TimeSpan within) { }
         public ScatterGatherFirstCompletedPool(int nrOfInstances, Akka.Routing.Resizer resizer, System.TimeSpan within, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
@@ -4469,7 +4211,7 @@ namespace Akka.Routing
     }
     public sealed class SmallestMailboxPool : Akka.Routing.Pool
     {
-        public SmallestMailboxPool(Akka.Configuration.Config config) { }
+        public SmallestMailboxPool(Hocon.Config config) { }
         public SmallestMailboxPool(int nrOfInstances) { }
         public SmallestMailboxPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, bool usePoolDispatcher = False) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
@@ -4503,7 +4245,7 @@ namespace Akka.Routing
     }
     public sealed class TailChoppingGroup : Akka.Routing.Group
     {
-        public TailChoppingGroup(Akka.Configuration.Config config) { }
+        public TailChoppingGroup(Hocon.Config config) { }
         public TailChoppingGroup(System.Collections.Generic.IEnumerable<string> routeePaths, System.TimeSpan within, System.TimeSpan interval) { }
         public TailChoppingGroup(System.Collections.Generic.IEnumerable<string> routeePaths, System.TimeSpan within, System.TimeSpan interval, string routerDispatcher) { }
         public System.TimeSpan Interval { get; }
@@ -4524,7 +4266,7 @@ namespace Akka.Routing
     }
     public sealed class TailChoppingPool : Akka.Routing.Pool
     {
-        public TailChoppingPool(Akka.Configuration.Config config) { }
+        public TailChoppingPool(Hocon.Config config) { }
         public TailChoppingPool(int nrOfInstances, System.TimeSpan within, System.TimeSpan interval) { }
         public TailChoppingPool(int nrOfInstances, Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher, System.TimeSpan within, System.TimeSpan interval, bool usePoolDispatcher = False) { }
         public System.TimeSpan Interval { get; }
@@ -4579,7 +4321,7 @@ namespace Akka.Serialization
     public class NewtonSoftJsonSerializer : Akka.Serialization.Serializer
     {
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Hocon.Config config) { }
         public NewtonSoftJsonSerializer(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.NewtonSoftJsonSerializerSettings settings) { }
         public override bool IncludeManifest { get; }
         public object Serializer { get; }
@@ -4594,7 +4336,7 @@ namespace Akka.Serialization
         public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }
-        public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
+        public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Hocon.Config config) { }
     }
     public class NullSerializer : Akka.Serialization.Serializer
     {

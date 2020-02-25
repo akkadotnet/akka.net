@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote.Configuration;
 using Akka.Remote.Routing;
@@ -43,7 +43,7 @@ namespace Akka.Remote.Tests.Serialization
                 substitution-concat-config = Hello ${akka.string-config}
             }";
 
-        public MiscMessageSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public MiscMessageSerializerSpec() : base(RemoteConfigFactory.Default())
         {
         }
 

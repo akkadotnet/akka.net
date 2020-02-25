@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Actor

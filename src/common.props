@@ -11,16 +11,17 @@
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
     <TestSdkVersion>16.5.0</TestSdkVersion>
-    <HyperionVersion>0.9.13</HyperionVersion>
+    <HyperionVersion>0.9.14</HyperionVersion>
     <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
     <NBenchVersion>1.2.2</NBenchVersion>
-    <ProtobufVersion>3.11.2</ProtobufVersion>
-    <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
+    <ProtobufVersion>3.11.4</ProtobufVersion>
+    <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
     <FsCheckVersion>2.9.0</FsCheckVersion>
+    <HoconVersion>2.0.1</HoconVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>

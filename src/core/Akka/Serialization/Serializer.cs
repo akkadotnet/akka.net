@@ -12,6 +12,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Util;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Serialization
 {
@@ -186,8 +187,12 @@ namespace Akka.Serialization
         public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);
+            /*
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve serialization identifier informations: {SerializationIdentifiers} configuration node not found");
+            */
             var identifiers = config.AsEnumerable()
-                .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
+                .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.Value.GetInt());
 
             if (!identifiers.TryGetValue(type, out int value))
                 throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));

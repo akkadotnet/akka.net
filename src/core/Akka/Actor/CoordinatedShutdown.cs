@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -34,6 +34,9 @@ namespace Akka.Actor
         public override CoordinatedShutdown CreateExtension(ExtendedActorSystem system)
         {
             var conf = system.Settings.Config.GetConfig("akka.coordinated-shutdown");
+            if (conf.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<CoordinatedShutdown>("akka.coordinated-shutdown");
+
             var phases = CoordinatedShutdown.PhasesFromConfig(conf);
             var coord = new CoordinatedShutdown(system, phases);
             CoordinatedShutdown.InitPhaseActorSystemTerminate(system, conf, coord);
@@ -546,6 +549,7 @@ namespace Akka.Actor
             get { return _tasks.Keys.Aggregate(TimeSpan.Zero, (span, s) => span.Add(Timeout(s))); }
         }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// INTERNAL API
         /// </summary>
@@ -553,19 +557,22 @@ namespace Akka.Actor
         /// <returns>A map of all of the phases of the shutdown.</returns>
         internal static Dictionary<string, Phase> PhasesFromConfig(Config config)
         {
-            var defaultPhaseTimeout = config.GetString("default-phase-timeout");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException("Invalid phase configuration.");
+
+            var defaultPhaseTimeout = config.GetString("default-phase-timeout", null);
             var phasesConf = config.GetConfig("phases");
             var defaultPhaseConfig = ConfigurationFactory.ParseString($"timeout = {defaultPhaseTimeout}" + @"
                 recover = true
                 depends-on = []
             ");
 
-            return phasesConf.Root.GetObject().Unwrapped.ToDictionary(x => x.Key, v =>
+            return phasesConf.Root.GetObject().ToDictionary(x => x.Key, v =>
              {
                  var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
-                 var dependsOn = c.GetStringList("depends-on").ToImmutableHashSet();
-                 var timeout = c.GetTimeSpan("timeout", allowInfinite: false);
-                 var recover = c.GetBoolean("recover");
+                 var dependsOn = c.GetStringList("depends-on", new string[] { }).ToImmutableHashSet();
+                 var timeout = c.GetTimeSpan("timeout", null, allowInfinite: false);
+                 var recover = c.GetBoolean("recover", false);
                  return new Phase(dependsOn, timeout, recover);
              });
         }
@@ -610,6 +617,7 @@ namespace Akka.Actor
             return result;
         }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// INTERNAL API
         ///
@@ -621,8 +629,8 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var terminateActorSystem = conf.GetBoolean("terminate-actor-system");
-            var exitClr = conf.GetBoolean("exit-clr");
+            var terminateActorSystem = conf.GetBoolean("terminate-actor-system", false);
+            var exitClr = conf.GetBoolean("exit-clr", false);
             if (terminateActorSystem || exitClr)
             {
                 coord.AddTask(PhaseActorSystemTerminate, "terminate-system", () =>
@@ -668,6 +676,7 @@ namespace Akka.Actor
             }
         }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes the CLR hook
         /// </summary>
@@ -676,7 +685,7 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitClrHook(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook");
+            var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook", false);
             if (runByClrShutdownHook)
             {
                 // run all hooks during termination sequence

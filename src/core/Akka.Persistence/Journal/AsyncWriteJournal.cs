@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Persistence.Journal
 {
@@ -38,7 +39,7 @@ namespace Akka.Persistence.Journal
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the Persistence extension related to this journal has not been used in the current <see cref="ActorSystem"/> context.
         /// </exception>
-        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// <exception cref="ConfigurationException">
         /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the configuration.
         /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
         /// </exception>
@@ -53,11 +54,11 @@ namespace Akka.Persistence.Journal
             CanPublish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = new CircuitBreaker(
-                config.GetInt("circuit-breaker.max-failures"),
-                config.GetTimeSpan("circuit-breaker.call-timeout"),
-                config.GetTimeSpan("circuit-breaker.reset-timeout"));
+                config.GetInt("circuit-breaker.max-failures", 0),
+                config.GetTimeSpan("circuit-breaker.call-timeout", null),
+                config.GetTimeSpan("circuit-breaker.reset-timeout", null));
 
-            var replayFilterMode = config.GetString("replay-filter.mode").ToLower();
+            var replayFilterMode = config.GetString("replay-filter.mode", "").ToLowerInvariant();
             switch (replayFilterMode)
             {
                 case "off":
@@ -73,12 +74,12 @@ namespace Akka.Persistence.Journal
                     _replayFilterMode = ReplayFilterMode.Warn;
                     break;
                 default:
-                    throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
+                    throw new ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
-            _replayFilterWindowSize = config.GetInt("replay-filter.window-size");
-            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers");
-            _replayDebugEnabled = config.GetBoolean("replay-filter.debug");
+            _replayFilterWindowSize = config.GetInt("replay-filter.window-size", 0);
+            _replayFilterMaxOldWriters = config.GetInt("replay-filter.max-old-writers", 0);
+            _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
             _resequencer = Context.System.ActorOf(Props.Create(() => new Resequencer()));
         }

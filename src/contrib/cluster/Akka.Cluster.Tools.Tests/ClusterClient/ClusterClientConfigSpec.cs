@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tools.Client;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
@@ -85,6 +85,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             clusterReceptionistSettings.FailureDetectionInterval.Should().Be(2.Seconds());
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.client.receptionist");
+            Assert.False(config.IsNullOrEmpty());
             config.GetString("name").Should().Be("receptionist");
             config.GetString("use-dispatcher").Should().Be(string.Empty);
         }

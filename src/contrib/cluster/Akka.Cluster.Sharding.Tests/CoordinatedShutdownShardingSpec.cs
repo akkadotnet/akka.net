@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;

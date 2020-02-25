@@ -475,7 +475,7 @@ type Strategy =
         
 module System = 
     /// Creates an actor system with remote deployment serialization enabled.
-    let create (name : string) (config : Akka.Configuration.Config) : ActorSystem = 
+    let create (name : string) (config : Hocon.Config) : ActorSystem = 
         let system = ActorSystem.Create(name, config)
         Serialization.exprSerializationSupport system
         system

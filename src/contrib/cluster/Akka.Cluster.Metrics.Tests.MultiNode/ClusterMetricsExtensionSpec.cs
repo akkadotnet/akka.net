@@ -14,6 +14,8 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
+using Hocon; using Akka.Configuration;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics.Tests.MultiNode
 {
