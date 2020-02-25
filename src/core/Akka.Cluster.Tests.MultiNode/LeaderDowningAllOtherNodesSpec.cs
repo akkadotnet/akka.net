@@ -8,7 +8,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Cluster.TestKit;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;

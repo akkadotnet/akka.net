@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
 using Xunit;

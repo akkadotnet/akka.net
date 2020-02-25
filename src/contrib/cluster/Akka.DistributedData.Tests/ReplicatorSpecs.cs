@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Configuration;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;

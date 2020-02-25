@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;

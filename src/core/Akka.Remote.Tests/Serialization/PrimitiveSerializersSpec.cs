@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.TestKit;

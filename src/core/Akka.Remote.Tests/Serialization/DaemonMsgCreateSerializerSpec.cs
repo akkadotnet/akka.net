@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
 using Akka.TestKit;

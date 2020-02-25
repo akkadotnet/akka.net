@@ -7,7 +7,7 @@
 
 using System;
 using System.Collections.Generic;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;

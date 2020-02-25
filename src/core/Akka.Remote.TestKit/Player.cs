@@ -21,7 +21,7 @@ using Akka.Remote.Transport;
 using Akka.Util;
 using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote.TestKit
 {

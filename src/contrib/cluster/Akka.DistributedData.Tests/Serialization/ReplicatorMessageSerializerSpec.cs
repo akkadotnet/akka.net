@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Google.Protobuf;
 using Xunit;
