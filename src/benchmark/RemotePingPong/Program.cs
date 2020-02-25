@@ -58,7 +58,7 @@ namespace RemotePingPong
                     hostname = ""localhost""
                 }
               }
-            ");
+            }");
 
             var bindingConfig =
                 ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
