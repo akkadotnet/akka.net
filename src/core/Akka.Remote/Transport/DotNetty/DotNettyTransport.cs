@@ -15,7 +15,7 @@ using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;

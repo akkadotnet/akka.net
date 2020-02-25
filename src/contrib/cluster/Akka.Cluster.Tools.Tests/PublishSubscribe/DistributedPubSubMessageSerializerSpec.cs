@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;

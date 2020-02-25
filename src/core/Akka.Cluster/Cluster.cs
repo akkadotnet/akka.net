@@ -18,7 +18,7 @@ using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Cluster
 {

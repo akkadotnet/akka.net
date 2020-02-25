@@ -14,7 +14,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using FluentAssertions;
 using Xunit;
 

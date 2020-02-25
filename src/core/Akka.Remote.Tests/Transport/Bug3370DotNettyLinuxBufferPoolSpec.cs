@@ -8,7 +8,7 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using DotNetty.Buffers;

@@ -8,7 +8,7 @@
 using System;
 using System.Text.RegularExpressions;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Internal;

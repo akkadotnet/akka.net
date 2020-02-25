@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Persistence.Journal
 {

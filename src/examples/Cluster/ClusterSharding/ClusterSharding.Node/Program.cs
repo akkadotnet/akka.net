@@ -11,7 +11,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Tools.Singleton;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Util;
 using ClusterSharding.Node.AutomaticJoin;
 

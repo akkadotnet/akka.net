@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;

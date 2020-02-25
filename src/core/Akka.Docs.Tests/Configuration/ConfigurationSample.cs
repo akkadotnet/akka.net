@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
