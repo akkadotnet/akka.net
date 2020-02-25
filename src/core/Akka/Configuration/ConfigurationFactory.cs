@@ -60,22 +60,7 @@ namespace Akka.Configuration
         /// </returns>
         public static Config Load()
         {
-            // attempt to load .hocon files first
-            foreach (var path in DefaultHoconFilePaths.Where(x => File.Exists(x)))
-                return FromFile(path);
-
-#if CONFIGURATION
-            // if we made it this far: no default HOCON files found. Check app.config
-            var def = Load("hocon"); // new default
-            if (!def.IsNullOrEmpty())
-                return def;
-
-            def = Load("akka"); // old Akka.NET-specific default
-            if (!def.IsNullOrEmpty())
-                return def;
-#endif
-
-            return Config.Empty;
+            return HoconConfigurationFactory.Default();
         }
 
         /// <summary>
@@ -174,7 +159,7 @@ namespace Akka.Configuration
                 Debug.Assert(stream != null, "stream != null");
                 using (var reader = new StreamReader(stream))
                 {
-                    string result = reader.ReadToEnd();
+                    var result = reader.ReadToEnd();
                     return ParseString(result);
                 }
             }
