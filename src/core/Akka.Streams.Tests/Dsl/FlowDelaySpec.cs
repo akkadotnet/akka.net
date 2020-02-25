@@ -211,7 +211,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void A_Delay_must_properly_delay_according_to_buffer_size()
         {
             // With a buffer size of 1, delays add up 
