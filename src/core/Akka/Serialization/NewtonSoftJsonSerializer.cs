@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Text;
 using Akka.Actor;
 using Hocon;
+using Akka.Configuration;
 using Akka.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -269,6 +270,8 @@ namespace Akka.Serialization
                 return float.Parse(v, NumberFormatInfo.InvariantInfo);
             if (t == "M")
                 return decimal.Parse(v, NumberFormatInfo.InvariantInfo);
+            if (t == "H")
+                return ConfigurationFactory.ParseString(v);
 
             throw new NotSupportedException();
         }
