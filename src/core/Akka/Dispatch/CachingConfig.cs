@@ -9,7 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Akka.Annotations;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Dispatch
 {

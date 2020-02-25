@@ -7,7 +7,7 @@
 
 #if CONFIGURATION
 using System.Configuration;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Configuration.Hocon
 {

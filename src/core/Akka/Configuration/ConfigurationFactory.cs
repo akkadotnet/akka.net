@@ -11,7 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using ConfigurationException = Hocon.ConfigurationException;
 
 namespace Akka.Configuration

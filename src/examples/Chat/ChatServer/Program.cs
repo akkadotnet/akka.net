@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using ChatMessages;
 
 namespace ChatServer

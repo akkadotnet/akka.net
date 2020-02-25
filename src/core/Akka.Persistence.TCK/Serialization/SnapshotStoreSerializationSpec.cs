@@ -8,7 +8,7 @@
 using System;
 using System.Text;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Serialization;
 using Xunit;
