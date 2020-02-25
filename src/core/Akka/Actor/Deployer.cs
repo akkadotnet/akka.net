@@ -157,7 +157,7 @@ namespace Akka.Actor
             var routerTypeName = _settings.Config.GetString(path, null);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");
-            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
+            var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, new[] { deployment });
 
             return routerConfig;
         }

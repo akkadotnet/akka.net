@@ -635,7 +635,7 @@ namespace Akka.Remote.TestKit
                     if (pair.Value.Type == HoconType.Object)
                     {
                         var deploy =
-                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value.Value)));
+                            deployer.ParseConfig(pair.Key, new Config(pair.Value));
                         deployer.SetDeploy(deploy);
                     }
                     else

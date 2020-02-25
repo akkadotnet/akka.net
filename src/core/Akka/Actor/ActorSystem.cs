@@ -98,8 +98,9 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name and configuration.</returns>
         public static ActorSystem Create(string name, Config config)
         {
-            // var withFallback = config.WithFallback(ConfigurationFactory.Default());
-            return CreateAndStartSystem(name, config);
+            var withFallback = config.WithFallback(ConfigurationFactory.Default());
+            return CreateAndStartSystem(name, withFallback);
+            // return CreateAndStartSystem(name, config);
         }
 
         /// <summary>

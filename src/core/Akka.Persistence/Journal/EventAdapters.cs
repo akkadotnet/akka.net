@@ -427,6 +427,17 @@ namespace Akka.Persistence.Journal
                 var hoconObject = config.GetConfig(path).Root.GetObject();
                 return hoconObject.Unwrapped.ToDictionary(kv => kv.Key, kv =>
                 {
+                    var hoconElement = kv.Value as HoconElement;
+                    switch(hoconElement)
+                    {
+                        case HoconArray a:
+                            return a.GetStringList().ToArray();
+                        case HoconObject o:
+                            return o.GetStringList().ToArray();
+                        default:
+                            return new[] { hoconElement.GetString() };
+                    }
+                    /*
                     var hoconField = kv.Value as HoconField;
                     switch(hoconField.Type)
                     {
@@ -445,14 +456,6 @@ namespace Akka.Persistence.Journal
                         default:
                             return new[] { hoconField.GetString() };
                     }
-                    /*
-                    var hoconValue = kv.Value as HoconValue;
-                    if (hoconValue != null)
-                    {
-                        var str = hoconValue.GetString();
-                        return str != null ? new[] { str } : hoconValue.GetStringList().ToArray();
-                    }
-                    else return new[] { kv.Value.ToString().Trim('"') };
                     */
                 });
             }
