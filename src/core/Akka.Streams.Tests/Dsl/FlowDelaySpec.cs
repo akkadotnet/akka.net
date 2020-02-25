@@ -42,7 +42,7 @@ namespace Akka.Streams.Tests.Dsl
             task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void A_Delay_must_add_delay_to_initialDelay_if_exists_upstream()
         {
             var probe = Source.From(Enumerable.Range(1, 10))
