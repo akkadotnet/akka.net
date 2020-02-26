@@ -387,7 +387,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void IdleTimeoutBidi_must_be_able_to_signal_timeout_once_no_traffic_on_either_sides()
         {
             this.AssertAllStagesStopped(() =>
