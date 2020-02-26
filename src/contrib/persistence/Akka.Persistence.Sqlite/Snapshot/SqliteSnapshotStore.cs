@@ -9,7 +9,7 @@ using System;
 using System.Data;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Snapshot;
 
 namespace Akka.Persistence.Sqlite.Snapshot

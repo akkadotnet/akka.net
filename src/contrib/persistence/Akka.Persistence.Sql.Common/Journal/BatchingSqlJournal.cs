@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;

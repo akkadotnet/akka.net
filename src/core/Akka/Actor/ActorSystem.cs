@@ -9,7 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;

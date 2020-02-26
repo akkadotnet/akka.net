@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
             c.ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void A_Flow_with_SelectAsyncUnordered_must_signal_task_failure()
         {
             this.AssertAllStagesStopped(() =>

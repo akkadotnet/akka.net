@@ -5,15 +5,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections;
-using System.Linq;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster;
 using Hocon;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,12 +27,15 @@ namespace Akka.DistributedData.Tests.Serialization
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
 
-        private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
-        private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);
-        private readonly UniqueAddress _address3 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 3);
+        private readonly UniqueAddress _address1;
+        private readonly UniqueAddress _address2;
+        private readonly UniqueAddress _address3;
 
         public ReplicatedDataSerializerSpec(ITestOutputHelper output) : base(BaseConfig, "ReplicatedDataSerializerSpec", output: output)
         {
+            _address1 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 1);
+            _address2 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "other.host.org", 4711), 2);
+            _address3 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 3);
         }
 
         [Fact()]
@@ -73,6 +75,7 @@ namespace Akka.DistributedData.Tests.Serialization
             var s4 = ORSet.Create<object>(_address2, 17).Remove(_address3, 17).Add(_address1, "a");
 
             CheckSameContent(s3.Merge(s4), s4.Merge(s3));
+            CheckSerialization(ORSet<object>.Empty);
         }
 
         [Fact()]
@@ -139,6 +142,7 @@ namespace Akka.DistributedData.Tests.Serialization
         {
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty);
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")));
+            CheckSerialization(ORDictionary<IActorRef, GSet<string>>.Empty.SetItem(_address1, TestActor, GSet.Create("A")));
             CheckSerialization(ORDictionary<string, GSet<string>>.Empty.SetItem(_address1, "a", GSet.Create("A")).SetItem(_address2, "b", GSet.Create("B")));
         }
 
@@ -185,11 +189,29 @@ namespace Akka.DistributedData.Tests.Serialization
         public void ReplicatedDataSerializer_should_serialize_PNCounterDictionary()
         {
             CheckSerialization(PNCounterDictionary<string>.Empty);
+            CheckSerialization(PNCounterDictionary<int>.Empty);
+            CheckSerialization(PNCounterDictionary<long>.Empty);
+            CheckSerialization(PNCounterDictionary<IActorRef>.Empty.Increment(_address1, TestActor));
             CheckSerialization(PNCounterDictionary<string>.Empty.Increment(_address1, "a", 3));
             CheckSerialization(PNCounterDictionary<string>.Empty
                 .Increment(_address1, "a", 3)
                 .Decrement(_address2, "a", 2)
                 .Increment(_address2, "b", 5));
+        }
+
+        [Fact()]
+        public void ReplicatedDataSerializer_should_serialize_PNCounterDictionary_delta()
+        {
+            CheckSerialization(PNCounterDictionary<string>.Empty.Increment(_address1, "a", 3).Delta);
+            CheckSerialization(PNCounterDictionary<string>.Empty
+                .Increment(_address1, "a", 3)
+                .Decrement(_address2, "a", 2)
+                .Increment(_address2, "b", 5).Delta);
+            CheckSerialization(PNCounterDictionary<string>.Empty
+                .Increment(_address1, "a", 3)
+                .Decrement(_address2, "a", 2)
+                .Increment(_address2, "b", 5)
+                .Remove(_address1, "b").Delta);
         }
 
         [Fact()]
@@ -225,17 +247,31 @@ namespace Akka.DistributedData.Tests.Serialization
             CheckSameContent(v1.Merge(v2), v2.Merge(v1));
         }
 
+        [Fact]
+        public void ReplicatedDataSerializer_should_serialize_Keys()
+        {
+            CheckSerialization(new GSetKey<IActorRef>("foo"));
+            CheckSerialization(new ORSetKey<int>("foo"));
+            CheckSerialization(new FlagKey("foo"));
+            CheckSerialization(new PNCounterKey("id"));
+            CheckSerialization(new GCounterKey("id"));
+            CheckSerialization(new ORDictionaryKey<IActorRef, LWWRegister<string>>("bar"));
+            CheckSerialization(new LWWDictionaryKey<IActorRef, string>("bar"));
+            CheckSerialization(new ORMultiValueDictionaryKey<IActorRef, string>("bar"));
+        }
+
         private void CheckSerialization<T>(T expected)
         {
-            var g = expected as ORDictionary<string, GSet<string>>.DeltaGroup;
             var serializer = Sys.Serialization.FindSerializerFor(expected);
+            serializer.Should().BeOfType<ReplicatedDataSerializer>();
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, expected);
             var blob = serializer.ToBinary(expected);
-            var actual = serializer.FromBinary(blob, expected.GetType());
+            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, manifest);
 
             // we cannot use Assert.Equal here since ORMultiDictionary will be resolved as
             // IEnumerable<KeyValuePair<string, ImmutableHashSet<string>> and immutable sets
             // fails on structural equality
-            Assert.True(expected.Equals(actual), $"Expected: {expected}\nActual: {actual}");
+            expected.Equals(actual).Should().BeTrue($"Expected actual [{actual}] to be [{expected}]");
         }
 
         private void CheckSameContent(object a, object b)

@@ -15,12 +15,40 @@ using Akka.Cluster;
 
 namespace Akka.DistributedData
 {
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface IORMultiValueDictionaryKey
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
+
+
     [Serializable]
-    public sealed class ORMultiValueDictionaryKey<TKey, TValue> : Key<ORMultiValueDictionary<TKey, TValue>>
+    public sealed class ORMultiValueDictionaryKey<TKey, TValue> : Key<ORMultiValueDictionary<TKey, TValue>>, IORMultiValueDictionaryKey
     {
         public ORMultiValueDictionaryKey(string id) : base(id)
         {
         }
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface IORMultiValueDictionary
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
     }
 
     /// <summary>
@@ -30,11 +58,11 @@ namespace Akka.DistributedData
     /// This class is immutable, i.e. "modifying" methods return a new instance.
     /// </summary>
     [Serializable]
-    public sealed partial class ORMultiValueDictionary<TKey, TValue> :
+    public sealed class ORMultiValueDictionary<TKey, TValue> :
         IDeltaReplicatedData<ORMultiValueDictionary<TKey, TValue>, ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation>,
         IRemovedNodePruning<ORMultiValueDictionary<TKey, TValue>>,
         IReplicatedDataSerialization, IEquatable<ORMultiValueDictionary<TKey, TValue>>,
-        IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>
+        IEnumerable<KeyValuePair<TKey, IImmutableSet<TValue>>>, IORMultiValueDictionary
     {
         public static readonly ORMultiValueDictionary<TKey, TValue> Empty = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: false);
         public static readonly ORMultiValueDictionary<TKey, TValue> EmptyWithValueDeltas = new ORMultiValueDictionary<TKey, TValue>(ORDictionary<TKey, ORSet<TValue>>.Empty, withValueDeltas: true);
@@ -288,5 +316,8 @@ namespace Akka.DistributedData
             new ORMultiValueDictionary<TKey, TValue>(Underlying.ResetDelta(), _withValueDeltas);
 
         #endregion
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
     }
 }

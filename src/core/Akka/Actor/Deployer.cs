@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;

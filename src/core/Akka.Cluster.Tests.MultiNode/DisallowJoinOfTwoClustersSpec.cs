@@ -31,8 +31,7 @@ namespace Akka.Cluster.Tests.MultiNode
             b2 = Role("b2");
             c1 = Role("c1");
 
-            CommonConfig = ConfigurationFactory.ParseString("")
-                .WithFallback(MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet());
+            CommonConfig = MultiNodeClusterSpec.ClusterConfigWithFailureDetectorPuppet();
         }
     }
 

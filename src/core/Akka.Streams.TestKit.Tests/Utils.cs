@@ -34,8 +34,7 @@ namespace Akka.Streams.TestKit.Tests
 
         public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
         {
-            var impl = materializer as ActorMaterializerImpl;
-            if (impl == null)
+            if (!(materializer is ActorMaterializerImpl impl))
                 return block();
 
             var probe = spec.CreateTestProbe(impl.System);

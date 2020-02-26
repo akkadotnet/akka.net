@@ -14,7 +14,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util.Internal;
-using Hocon;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote
 {

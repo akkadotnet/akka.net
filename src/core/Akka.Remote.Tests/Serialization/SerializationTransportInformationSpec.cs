@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;

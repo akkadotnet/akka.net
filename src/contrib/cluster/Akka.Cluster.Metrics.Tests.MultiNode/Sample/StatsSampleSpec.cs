@@ -13,7 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics.Tests.MultiNode
