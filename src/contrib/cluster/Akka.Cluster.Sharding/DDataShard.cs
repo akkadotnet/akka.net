@@ -130,7 +130,7 @@ namespace Akka.Cluster.Sharding
 
         private void GetState()
         {
-            for (int i = 0; i < NrOfKeys; i++)
+            for (var i = 0; i < NrOfKeys; i++)
             {
                 Replicator.Tell(Dsl.Get(_stateKeys[i], _readConsistency, i));
             }
@@ -161,7 +161,10 @@ namespace Akka.Cluster.Sharding
                 case NotFound notFound:
                     ReceiveOne((int)notFound.Request);
                     break;
-                default: Stash.Stash(); break;
+                default:
+                    Log.Debug("Stashing while waiting for DDataShard initial state");
+                    Stash.Stash(); 
+                    break;
             }
 
             return true;
