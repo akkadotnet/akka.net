@@ -32,7 +32,7 @@ namespace Akka.Cluster.Sharding.Tests
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(false)
+            CommonConfig = DebugConfig(true)
                 .WithFallback(ConfigurationFactory.ParseString($@"
                     akka.actor {{
                         serializers {{
