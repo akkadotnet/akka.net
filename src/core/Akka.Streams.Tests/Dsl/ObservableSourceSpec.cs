@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Buggy")]
         public void An_ObservableSource_must_receive_errors_from_an_observable()
         {
             this.AssertAllStagesStopped(() =>

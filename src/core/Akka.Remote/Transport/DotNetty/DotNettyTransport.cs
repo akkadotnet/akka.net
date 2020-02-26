@@ -275,7 +275,7 @@ namespace Akka.Remote.Transport.DotNetty
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                 .Option(ChannelOption.AutoRead, false)
-                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
+                .Option(ChannelOption.Allocator, UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpSocketChannel(addressFamily)
                     : new TcpSocketChannel())
@@ -386,7 +386,7 @@ namespace Akka.Remote.Transport.DotNetty
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.AutoRead, false)
                 .Option(ChannelOption.SoBacklog, Settings.Backlog)
-                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
+                .Option(ChannelOption.Allocator, UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpServerSocketChannel(addressFamily)
                     : new TcpServerSocketChannel())
