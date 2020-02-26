@@ -183,8 +183,6 @@ namespace Akka.Remote.Transport.DotNetty
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static IByteBuffer ToByteBuffer(IChannel channel, ByteString payload)
         {
-            //TODO: optimize DotNetty byte buffer usage 
-            // (maybe custom IByteBuffer working directly on ByteString?)
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
