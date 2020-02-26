@@ -5,10 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.DistributedData.Serialization;
+
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// Marker interface used to indicate that this message will be serialized by <see cref="ReplicatedDataSerializer"/>
     /// </summary>
     public interface IReplicatedDataSerialization
     {
