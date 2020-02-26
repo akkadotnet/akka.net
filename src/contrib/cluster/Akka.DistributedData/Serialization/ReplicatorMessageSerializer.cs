@@ -8,6 +8,7 @@
 using Akka.DistributedData.Internal;
 using Akka.Serialization;
 using Akka.Util.Internal;
+using Hocon;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
