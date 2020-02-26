@@ -50,7 +50,7 @@ namespace Akka.Remote.Tests.Transport
         public AkkaProtocolSpec(ITestOutputHelper helper)
             : base(@"
                     akka.actor.provider = remote
-                    akka.test.default-timeout = 1.5 s", helper)
+                    akka.test.default-timeout = 4 s", helper)
         {
             codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(_localAkkaAddress, TestActor, testMsg);
