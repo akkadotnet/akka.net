@@ -48,9 +48,7 @@ namespace Akka.Remote.Tests.Transport
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
         public AkkaProtocolSpec(ITestOutputHelper helper)
-            : base(@"
-                    akka.actor.provider = remote
-                    akka.test.default-timeout = 4 s", helper)
+            : base(@"akka.actor.provider = remote", helper)
         {
             codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(_localAkkaAddress, TestActor, testMsg);
