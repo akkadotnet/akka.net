@@ -179,8 +179,17 @@ namespace Akka.Cluster.Sharding
             Context.Become(this.HandleCommand);
         }
 
+        private void HandleCommands(object message)
+        {
+            if (!this.HandleCommand(message))
+            {
+                Unhandled(message);
+            }
+        }
+
         public void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange
         {
+            Log.Debug("Processing change {0}", evt);
             Context.BecomeStacked(WaitingForUpdate<T>(evt, handler));
             SendUpdate(evt, retryCount: 1);
         }
@@ -230,7 +239,17 @@ namespace Akka.Cluster.Sharding
                     Log.Error("The DDataShard was unable to update state with error {0} and event {1}. Shard will be restarted", failure.Cause, e);
                     ExceptionDispatchInfo.Capture(failure.Cause).Throw();
                     break;
-                default: Stash.Stash(); break;
+                case Shard.IShardQuery sq:
+                    this.HandleShardRegionQuery(sq);
+                    break;
+                case var _ when ExtractEntityId(message).HasValue:
+                    this.DeliverMessage(message, Context.Sender);
+                    break;
+                default:
+                    Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
+                        message.GetType(), e);
+                    Stash.Stash(); 
+                    break;
             }
             return true;
         };

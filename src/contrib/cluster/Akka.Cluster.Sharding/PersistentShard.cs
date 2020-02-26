@@ -132,8 +132,8 @@ namespace Akka.Cluster.Sharding
                 case Shard.EntityStopped stopped:
                     State = new Shard.ShardState(State.Entries.Remove(stopped.EntityId));
                     return true;
-                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState:
-                    State = (Shard.ShardState)offer.Snapshot;
+                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState state:
+                    State = state;
                     return true;
                 case RecoveryCompleted _:
                     RestartRememberedEntities();
