@@ -240,7 +240,8 @@ namespace Akka.Serialization
             var j = deserializedValue as JObject;
             if (j != null)
             {
-                //The JObject represents a special akka.net wrapper for primitives (int,float,decimal) to preserve correct type when deserializing
+                // The JObject represents a special akka.net wrapper for primitives (int,float,decimal) 
+                // to preserve correct type when deserializing and represent HOCON configurations
                 if (j["$"] != null)
                 {
                     var value = j["$"].Value<string>();
@@ -262,16 +263,18 @@ namespace Akka.Serialization
 
         private static object GetValue(string V)
         {
-            var t = V.Substring(0, 1);
             var v = V.Substring(1);
-            if (t == "I")
-                return int.Parse(v, NumberFormatInfo.InvariantInfo);
-            if (t == "F")
-                return float.Parse(v, NumberFormatInfo.InvariantInfo);
-            if (t == "M")
-                return decimal.Parse(v, NumberFormatInfo.InvariantInfo);
-            if (t == "H")
-                return ConfigurationFactory.ParseString(v);
+            switch(V.Substring(0, 1))
+            {
+                case "I":
+                    return int.Parse(v, NumberFormatInfo.InvariantInfo);
+                case "F":
+                    return float.Parse(v, NumberFormatInfo.InvariantInfo);
+                case "M":
+                    return decimal.Parse(v, NumberFormatInfo.InvariantInfo);
+                case "H":
+                    return Config.Deserialize(v);
+            }
 
             throw new NotSupportedException();
         }
@@ -298,6 +301,9 @@ namespace Akka.Serialization
             public override bool CanConvert(Type objectType)
             {
                 if (objectType == typeof(int) || objectType == typeof(float) || objectType == typeof(decimal))
+                    return true;
+
+                if (objectType == typeof(Config))
                     return true;
 
                 if (typeof(ISurrogated).IsAssignableFrom(objectType))
@@ -337,38 +343,36 @@ namespace Akka.Serialization
             /// <param name="serializer">The calling serializer.</param>
             public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
             {
-                if (value is int || value is decimal || value is float)
+                switch(value)
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("$");
-                    writer.WriteValue(GetString(value));
-                    writer.WriteEndObject();
-                }
-                else
-                {
-                    var value1 = value as ISurrogated;
-                    if (value1 != null)
-                    {
-                        var surrogated = value1;
+                    case int i:
+                        WriteValue(writer, $"I{i.ToString(NumberFormatInfo.InvariantInfo)}");
+                        break;
+                    case float f:
+                        WriteValue(writer, $"F{f.ToString(NumberFormatInfo.InvariantInfo)}");
+                        break;
+                    case decimal m:
+                        WriteValue(writer, $"M{m.ToString(NumberFormatInfo.InvariantInfo)}");
+                        break;
+                    case Config c:
+                        WriteValue(writer, $"H{c.Serialize()}");
+                        break;
+                    case ISurrogated surrogated:
                         var surrogate = surrogated.ToSurrogate(_parent.system);
                         serializer.Serialize(writer, surrogate);
-                    }
-                    else
-                    {
+                        break;
+                    default:
                         serializer.Serialize(writer, value);
-                    }
+                        break;
                 }
             }
 
-            private object GetString(object value)
+            private void WriteValue(JsonWriter writer, string value)
             {
-                if (value is int)
-                    return "I" + ((int)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is float)
-                    return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is decimal)
-                    return "M" + ((decimal)value).ToString(NumberFormatInfo.InvariantInfo);
-                throw new NotSupportedException();
+                writer.WriteStartObject();
+                writer.WritePropertyName("$");
+                writer.WriteValue(value);
+                writer.WriteEndObject();
             }
         }
     }
