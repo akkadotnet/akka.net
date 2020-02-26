@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void IdleTimeout_must_fail_if_time_between_elements_is_too_large()
         {
             this.AssertAllStagesStopped(() =>
@@ -387,7 +387,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void IdleTimeoutBidi_must_be_able_to_signal_timeout_once_no_traffic_on_either_sides()
         {
             this.AssertAllStagesStopped(() =>
