@@ -388,13 +388,13 @@ module Linq =
 module Configuration = 
 
     /// Parses provided HOCON string into a valid Akka configuration object.
-    let parse = Hocon.ConfigurationFactory.ParseString
+    let parse = Akka.Configuration.ConfigurationFactory.ParseString
 
     /// Returns default Akka configuration.
-    let defaultConfig = Hocon.ConfigurationFactory.Default
+    let defaultConfig = Akka.Configuration.ConfigurationFactory.Default
 
     /// Loads Akka configuration from the project's .config file.
-    let load = Hocon.ConfigurationFactory.Load
+    let load = Akka.Configuration.ConfigurationFactory.Load
     
 module internal OptionHelper =
     

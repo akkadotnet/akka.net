@@ -8,7 +8,7 @@
 using System;
 using System.Threading;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.TestKit.Internal;
 using Xunit;

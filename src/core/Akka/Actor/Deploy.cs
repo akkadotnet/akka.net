@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
 

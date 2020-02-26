@@ -8,7 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;

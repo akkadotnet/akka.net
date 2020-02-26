@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Transport;
 
 namespace Akka.Remote.Tests.Performance.Transports

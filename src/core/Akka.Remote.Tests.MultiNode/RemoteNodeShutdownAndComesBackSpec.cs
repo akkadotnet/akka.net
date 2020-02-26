@@ -9,7 +9,7 @@ using System;
 using System.Text;
 using System.Threading;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;

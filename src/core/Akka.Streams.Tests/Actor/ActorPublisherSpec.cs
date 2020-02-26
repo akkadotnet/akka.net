@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
@@ -373,7 +373,7 @@ my-dispatcher1 {
             probe2Messages.Should().BeEquivalentTo(Enumerable.Range(0, noOfMessages * 2).Select(i => i.ToString()));
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void ActorPublisher_should_be_able_to_define_a_subscription_timeout_after_which_it_should_shut_down()
         {
             var materializer = Sys.Materializer();

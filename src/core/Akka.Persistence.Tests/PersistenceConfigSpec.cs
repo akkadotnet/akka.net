@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Hocon;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Snapshot;
 using Akka.TestKit;
@@ -96,7 +96,7 @@ namespace Akka.Persistence.Tests
                 }
             }";
 
-        public PersistenceConfigSpec(ITestOutputHelper output = null) : base(SpecConfig, output)
+        public PersistenceConfigSpec(ITestOutputHelper output) : base(SpecConfig, output)
         {
         }
 
