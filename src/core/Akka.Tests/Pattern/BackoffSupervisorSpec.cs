@@ -452,14 +452,15 @@ namespace Akka.Tests.Pattern
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
             var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var parentSupervisor = CreateTestProbe();
             Watch(c1);
-            Watch(supervisor);
+            parentSupervisor.Watch(supervisor);
 
             supervisor.Tell(stopMessage);
             ExpectMsg("stop");
             c1.Tell(PoisonPill.Instance);
             ExpectTerminated(c1);
-            ExpectTerminated(supervisor);
+            parentSupervisor.ExpectTerminated(supervisor);
         }
 
         [Fact]
@@ -471,7 +472,6 @@ namespace Akka.Tests.Pattern
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
             var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
             Watch(c1);
-            Watch(supervisor);
             supervisorWatcher.Watch(supervisor);
 
             c1.Tell(PoisonPill.Instance);
@@ -480,7 +480,7 @@ namespace Akka.Tests.Pattern
             supervisorWatcher.ExpectNoMsg(TimeSpan.FromMilliseconds(20)); // supervisor must not terminate
 
             supervisor.Tell(stopMessage);
-            ExpectTerminated(supervisor);
+            supervisorWatcher.ExpectTerminated(supervisor);
         }
     }
 }
