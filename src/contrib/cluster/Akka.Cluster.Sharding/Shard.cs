@@ -442,6 +442,7 @@ namespace Akka.Cluster.Sharding
             where TShard : IShard
             where T : Shard.StateChange
         {
+            shard.Log.Debug("Calling BaseProcessChange for {0} and event [{1}]", shard, evt);
             handler(evt);
         }
 
@@ -482,7 +483,7 @@ namespace Akka.Cluster.Sharding
             return false;
         }
 
-        private static void HandleShardRegionQuery<TShard>(this TShard shard, Shard.IShardQuery query) where TShard : IShard
+        internal static void HandleShardRegionQuery<TShard>(this TShard shard, Shard.IShardQuery query) where TShard : IShard
         {
             switch (query)
             {
@@ -523,6 +524,7 @@ namespace Akka.Cluster.Sharding
             {
                 shard.ProcessChange(new Shard.EntityStarted(start.EntityId), e =>
                 {
+                    shard.Log.Debug("Calling process change");
                     shard.GetOrCreateEntity(start.EntityId);
                     shard.SendMessageBuffer(e);
                     requester.Tell(new ShardRegion.StartEntityAck(start.EntityId, shard.ShardId));
@@ -692,7 +694,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private static void DeliverMessage<TShard>(this TShard shard, object message, IActorRef sender) where TShard : IShard
+        internal static void DeliverMessage<TShard>(this TShard shard, object message, IActorRef sender) where TShard : IShard
         {
             var t = shard.ExtractEntityId(message);
             var id = t.Value.Item1;
