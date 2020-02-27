@@ -12,9 +12,8 @@ using Akka.Cluster.Metrics.Configuration;
 using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
-using Akka.Configuration;
 using Akka.Util;
-using Hocon; using Akka.Configuration;
+using Hocon;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics
@@ -42,7 +41,7 @@ namespace Akka.Cluster.Metrics
         public ClusterMetricsSettings Settings { get; }
 
         /// <summary>
-        /// Default HOCON settings for cluster sharding.
+        /// Default HOCON settings for cluster metrics.
         /// </summary>
         /// <returns>TBD</returns>
         public static Config DefaultConfig()
@@ -112,7 +111,7 @@ namespace Akka.Cluster.Metrics
         }
 
         /// <summary>
-        /// Unubscribe user metrics listener actor from <see cref="IClusterMetricsEvent"/>
+        /// Unsubscribe user metrics listener actor from <see cref="IClusterMetricsEvent"/>
         /// events published by extension on the system event bus.
         /// </summary>
         /// <param name="metricsListener"></param>
