@@ -200,11 +200,11 @@ namespace Akka.Cluster.Sharding
         {
             var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
-            if (Equals(child, ActorRefs.Nobody))
+            if (child.IsNobody())
             {
                 if (State.Entries.Contains(id))
                 {
-                    if (MessageBuffers.ContainsKey(id))
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
