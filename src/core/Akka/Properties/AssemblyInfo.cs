@@ -39,5 +39,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
 [assembly: InternalsVisibleTo("Akka.Persistence")]
 [assembly: InternalsVisibleTo("Akka.Streams")]
+[assembly: InternalsVisibleTo("Akka.Streams.Tests")]
 [assembly: InternalsVisibleTo("Akka.Benchmarks")]
 [assembly: InternalsVisibleTo("Akka.Persistence.TCK")]
+[assembly: InternalsVisibleTo("Akka.DistributedData")]
