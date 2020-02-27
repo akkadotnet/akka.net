@@ -36,21 +36,7 @@ namespace Akka.Actor
         /// <param name="exception">The exception that was thrown.</param>
         /// <returns>The directive used to handle the exception.</returns>
         protected abstract Directive Handle(IActorRef child, Exception exception);
-
-        /// <summary>
-        /// Obsolete. This method is deprecated.
-        /// </summary>
-        /// <param name="actorCell">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        /// <returns>N?A</returns>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            return HandleFailure(actorCell, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         ///     This is the main entry point: in case of a child’s failure, this method
         ///     must try to handle the failure by resuming, restarting or stopping the
@@ -119,18 +105,6 @@ namespace Akka.Actor
                 c.Suspend();
             c.AsInstanceOf<IInternalActorRef>().Restart(cause);
         }
-
-        /// <summary>
-        /// Obsolete. This method is deprecated.
-        /// </summary>
-        /// <param name="context">N/A</param>
-        /// <param name="restart">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        protected abstract void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren);
 
         /// <summary>
         /// This method is called to act on the failure of a child: restart if the flag is true, stop otherwise.
@@ -387,23 +361,7 @@ namespace Akka.Actor
         {
             return Decider.Decide(exception);
         }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="ProcessFailure(IActorContext,bool,IActorRef,Exception,ChildRestartStats,IReadOnlyCollection{Akka.Actor.Internal.ChildRestartStats})"/> instead.
-        /// </summary>
-        /// <param name="context">N/A</param>
-        /// <param name="restart">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            // for compatibility, since 1.1.2
-
-            ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -658,23 +616,7 @@ namespace Akka.Actor
         {
             return Decider.Decide(exception);
         }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="ProcessFailure(IActorContext,bool,IActorRef,Exception,ChildRestartStats, IReadOnlyCollection{ChildRestartStats})"/> instead.
-        /// </summary>
-        /// <param name="context">N/A</param>
-        /// <param name="restart">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            // for compatibility, since 1.1.2
-
-            ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
