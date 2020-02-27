@@ -15,6 +15,7 @@ using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -88,6 +89,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         public void DistributedPubSub_can_run_serialize_messages()
         {
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            InitializeLogger(_sys2);
 
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -116,13 +118,18 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                     mediator1.Tell(new Subscribe("foo", probe1), probe1);
                     mediator2.Tell(new Subscribe("foo", probe2), probe2);
 
-                    probe1.ExpectMsg<SubscribeAck>(Remaining);
-                    probe2.ExpectMsg<SubscribeAck>(Remaining);
+                    probe1.ExpectMsg<SubscribeAck>();
+                    probe2.ExpectMsg<SubscribeAck>();
 
                     AwaitAssert(() =>
                     {
-                        mediator1.Tell(Count.Instance);
-                        ExpectMsg<int>(TimeSpan.FromMilliseconds(250)).ShouldBe(2);
+                        Within(250.Milliseconds(), () =>
+                        {
+                            mediator2.Tell(new Publish("foo", "bar"));
+                            probe2.ExpectMsg("bar");
+                            probe1.ExpectMsg("bar");
+                        });
+                       
                     }, interval: TimeSpan.FromMilliseconds(500));
                 });
             });
