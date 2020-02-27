@@ -93,11 +93,12 @@ namespace Akka.Cluster.Sharding.Tests
     }
 
     // DData has no support for remember-entities at this point
-    internal class DDataClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
+    public class DDataClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
     {
         public DDataClusterShardingRememberEntitiesSpec() : this(new DDataClusterShardingRememberEntitiesSpecConfig()) { }
         protected DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
     }
+
     public abstract class ClusterShardingRememberEntitiesSpec : MultiNodeClusterSpec
     {
         #region setup
@@ -205,7 +206,9 @@ namespace Akka.Cluster.Sharding.Tests
         {
             if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_setup_shared_journal();
             Cluster_sharding_with_remember_entities_should_start_remembered_entities_when_coordinator_fail_over();
-            Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
+
+            // https://github.com/akkadotnet/akka.net/issues/4262 - need to resolve this and then we can remove if statement
+            if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
         }
 
         public void Cluster_sharding_with_remember_entities_should_setup_shared_journal()
