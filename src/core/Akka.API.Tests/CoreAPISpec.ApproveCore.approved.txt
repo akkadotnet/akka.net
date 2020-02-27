@@ -9,6 +9,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams")]
@@ -436,8 +437,6 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         public override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public class AllForOneStrategySurrogate : Akka.Util.ISurrogate
@@ -449,14 +448,6 @@ namespace Akka.Actor
             public int WithinTimeRangeMilliseconds { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
-    }
-    public class AlreadyCanceledCancelable : Akka.Actor.ICancelable
-    {
-        public static Akka.Actor.ICancelable Instance { get; }
-        public bool IsCancellationRequested { get; }
-        public System.Threading.CancellationToken Token { get; }
-        public void Cancel() { }
-        public void Cancel(bool throwOnFirstException) { }
     }
     public class AskTimeoutException : Akka.Actor.AkkaException
     {
@@ -513,8 +504,6 @@ namespace Akka.Actor
         public System.TimeSpan TotalTimeout { get; }
         public void AddTask(string phase, string taskName, System.Func<System.Threading.Tasks.Task<Akka.Done>> task) { }
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
-        [System.ObsoleteAttribute("Use the method with \'reason\' parameter instead")]
-        public System.Threading.Tasks.Task<Akka.Done> Run(string fromPhase = null) { }
         public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase = null) { }
         public System.TimeSpan Timeout(string phase) { }
         public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
@@ -575,22 +564,6 @@ namespace Akka.Actor
         public static Akka.Actor.DeployableDecider From(Akka.Actor.Directive defaultDirective, params System.Collections.Generic.KeyValuePair<, >[] pairs) { }
         public static Akka.Actor.DeployableDecider From(Akka.Actor.Directive defaultDirective, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Actor.Directive>> pairs) { }
         public static Akka.Actor.LocalOnlyDecider From(System.Func<System.Exception, Akka.Actor.Directive> localOnlyDecider) { }
-    }
-    [System.ObsoleteAttribute("Replaced with HashedWheelTimerScheduler [1.1.2]")]
-    public class DedicatedThreadScheduler : Akka.Actor.SchedulerBase, Akka.Actor.IDateTimeOffsetNowTimeProvider, Akka.Actor.ITimeProvider, System.IDisposable
-    {
-        [System.ObsoleteAttribute("Dangerous and bad. Use DedicatedThreadScheduler(Config config, ILoggingAdapter lo" +
-            "g) instead. [1.1.2]")]
-        public DedicatedThreadScheduler(Akka.Actor.ActorSystem sys) { }
-        public DedicatedThreadScheduler(Hocon.Config config, Akka.Event.ILoggingAdapter log) { }
-        public override System.TimeSpan HighResMonotonicClock { get; }
-        public override System.TimeSpan MonotonicClock { get; }
-        protected override System.DateTimeOffset TimeNow { get; }
-        public void Dispose() { }
-        protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
-        protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
-        protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
-        protected override void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
     }
     public class DefaultSupervisorStrategy : Akka.Actor.SupervisorStrategyConfigurator
     {
@@ -657,38 +630,6 @@ namespace Akka.Actor
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerator<string> path) { }
         public virtual Akka.Actor.Deploy ParseConfig(string key, Hocon.Config config) { }
         public void SetDeploy(Akka.Actor.Deploy deploy) { }
-    }
-    [System.ObsoleteAttribute("Deprecated. Will be removed [1.0.0]")]
-    public class static DeprecatedSchedulerExtensions
-    {
-        [System.ObsoleteAttribute("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() which will return an" +
-            " ICancelable. This method will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.IActorRef receiver, object message) { }
-        [System.ObsoleteAttribute("Use ScheduleTellRepeatedly() or Context.SelfTellRepeatedly() instead. This method" +
-            " will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.IActorRef receiver, object message, System.Threading.CancellationToken cancellationToken) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions insid" +
-            "e actors is discouraged, but if you really need to, use Advanced.ScheduleRepeate" +
-            "dly(). This method will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellRepeatedly. Scheduling actions insid" +
-            "e actors is discouraged, but if you really need to, use Advanced.ScheduleRepeate" +
-            "dly(). This method will be removed in future versions. [1.0.0]")]
-        public static void Schedule(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, System.Threading.CancellationToken cancellationToken) { }
-        [System.ObsoleteAttribute("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable" +
-            ". This method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, Akka.Actor.IActorRef receiver, object message) { }
-        [System.ObsoleteAttribute("Use ScheduleTellOnce() or Context.SelfTellOnce() which will return an ICancelable" +
-            ". This method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, Akka.Actor.IActorRef receiver, object message, System.Threading.CancellationToken cancellationToken) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside acto" +
-            "rs is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This " +
-            "method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.Action action) { }
-        [System.ObsoleteAttribute("To schedule sending messages use ScheduleTellOnce. Scheduling actions inside acto" +
-            "rs is discouraged, but if you really need to, use Advanced.ScheduleOnce(). This " +
-            "method will be removed in future versions. [1.0.0]")]
-        public static void ScheduleOnce(this Akka.Actor.IScheduler scheduler, System.TimeSpan initialDelay, System.Action action, System.Threading.CancellationToken cancellationToken) { }
     }
     public enum Directive
     {
@@ -786,8 +727,6 @@ namespace Akka.Actor
         }
         public sealed class Normal : Akka.Actor.FSMBase.Reason
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use Normal.Instance [1.2.0]")]
-            public Normal() { }
             public static Akka.Actor.FSMBase.Normal Instance { get; }
         }
         public abstract class Reason
@@ -796,14 +735,10 @@ namespace Akka.Actor
         }
         public sealed class Shutdown : Akka.Actor.FSMBase.Reason
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
-            public Shutdown() { }
             public static Akka.Actor.FSMBase.Shutdown Instance { get; }
         }
         public sealed class StateTimeout
         {
-            [System.ObsoleteAttribute("This constructor is obsoleted. Use StateTimeout.Instance [1.2.0]")]
-            public StateTimeout() { }
             public static Akka.Actor.FSMBase.StateTimeout Instance { get; }
         }
         public class State<TS, TD> : System.IEquatable<Akka.Actor.FSMBase.State<TS, TD>>
@@ -1366,8 +1301,6 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         protected override Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception) { }
         public override void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         public override void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.OneForOneStrategy WithMaxNrOfRetries(int maxNrOfRetries) { }
@@ -1551,13 +1484,6 @@ namespace Akka.Actor
         public override void Stop() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
-    public class ScheduledWork
-    {
-        public ScheduledWork(long tickExpires, System.Action action, System.Threading.CancellationToken token) { }
-        public System.Action Action { get; set; }
-        public long TickExpires { get; set; }
-        public System.Threading.CancellationToken Token { get; set; }
-    }
     public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
         protected readonly Akka.Event.ILoggingAdapter Log;
@@ -1705,12 +1631,8 @@ namespace Akka.Actor
         protected bool LoggingEnabled { get; set; }
         protected abstract Akka.Actor.Directive Handle(Akka.Actor.IActorRef child, System.Exception exception);
         public abstract void HandleChildTerminated(Akka.Actor.IActorContext actorContext, Akka.Actor.IActorRef child, System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> children);
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        public bool HandleFailure(Akka.Actor.ActorCell actorCell, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren) { }
         public bool HandleFailure(Akka.Actor.ActorCell actorCell, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children) { }
         protected virtual void LogFailure(Akka.Actor.IActorContext context, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Directive directive) { }
-        [System.ObsoleteAttribute("This method is deprecated [1.1.2]")]
-        protected abstract void ProcessFailure(Akka.Actor.IActorContext context, bool restart, System.Exception cause, Akka.Actor.Internal.ChildRestartStats failedChildStats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> allChildren);
         public abstract void ProcessFailure(Akka.Actor.IActorContext context, bool restart, Akka.Actor.IActorRef child, System.Exception cause, Akka.Actor.Internal.ChildRestartStats stats, System.Collections.Generic.IReadOnlyCollection<Akka.Actor.Internal.ChildRestartStats> children);
         protected void RestartChild(Akka.Actor.IActorRef child, System.Exception cause, bool suspendFirst) { }
         protected void ResumeChild(Akka.Actor.IActorRef child, System.Exception exception) { }
@@ -2911,15 +2833,6 @@ namespace Akka.IO
         public static Akka.IO.ByteString CopyFrom(byte[] array, int offset, int count) { }
         public static Akka.IO.ByteString CopyFrom(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
         public int CopyTo(byte[] buffer, int index, int count) { }
-        [System.ObsoleteAttribute("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.From" +
-            "Bytes otherwise.")]
-        public static Akka.IO.ByteString Create(byte[] array) { }
-        [System.ObsoleteAttribute("Use ToString() method instead.")]
-        public string DecodeString() { }
-        [System.ObsoleteAttribute("Use ToString(Encoding) method instead.")]
-        public string DecodeString(System.Text.Encoding encoding) { }
-        [System.ObsoleteAttribute("Use Slice(n) method instead.")]
-        public Akka.IO.ByteString Drop(int n) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.IO.ByteString other) { }
         public static Akka.IO.ByteString FromBytes(byte[] array) { }
@@ -2935,8 +2848,6 @@ namespace Akka.IO
         public int IndexOf(byte b, int from) { }
         public Akka.IO.ByteString Slice(int index) { }
         public Akka.IO.ByteString Slice(int index, int count) { }
-        [System.ObsoleteAttribute("Use Slice(0, n) method instead.")]
-        public Akka.IO.ByteString Take(int n) { }
         public byte[] ToArray() { }
         public override string ToString() { }
         public string ToString(System.Text.Encoding encoding) { }
@@ -4532,16 +4443,12 @@ namespace Akka.Util
     }
     public sealed class ListPriorityQueue
     {
-        [System.ObsoleteAttribute("Use ListPriorityQueue(initialCapacity, priorityCalculator) instead [1.1.3]")]
-        public ListPriorityQueue(int initialCapacity) { }
         public ListPriorityQueue(int initialCapacity, System.Func<object, int> priorityCalculator) { }
         public int Count() { }
         public Akka.Actor.Envelope Dequeue() { }
         public void Enqueue(Akka.Actor.Envelope item) { }
         public bool IsConsistent() { }
         public Akka.Actor.Envelope Peek() { }
-        [System.ObsoleteAttribute("Use the constructor to set the priority calculator instead. [1.1.3]")]
-        public void SetPriorityCalculator(System.Func<object, int> priorityCalculator) { }
         public override string ToString() { }
     }
     public class static MurmurHash
@@ -4816,11 +4723,6 @@ namespace Akka.Util.Internal
             where T :  class { }
         public static T Swap<T>(ref T reference, System.Func<T, T> updater)
             where T :  class { }
-    }
-    [Akka.Annotations.InternalApiAttribute()]
-    public class static TaskExtensions
-    {
-        public static System.Threading.Tasks.Task WithCancellation(this System.Threading.Tasks.Task task, System.Threading.CancellationToken cancellationToken) { }
     }
 }
 namespace Akka.Util.Reflection

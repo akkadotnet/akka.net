@@ -40,7 +40,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleRepeatedly_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys.Settings.Config, Log);
+            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
             try
             {
@@ -61,7 +61,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleOnce_and_then_canceling_before_they_occur_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys.Settings.Config, Log);
+            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
             try
             {
@@ -82,7 +82,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_ScheduleRepeatedly_and_then_canceling_before_they_occur_Then_their_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys.Settings.Config, Log);
+            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
             try
             {
@@ -103,7 +103,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_canceling_existing_running_repeaters_Then_their_future_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys.Settings.Config, Log);
+            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
             try
             {
@@ -125,7 +125,7 @@ namespace Akka.Tests.Actor.Scheduler
         public void When_canceling_existing_running_repeaters_by_scheduling_the_cancellation_ahead_of_time_Then_their_future_actions_should_not_be_invoked()
         {
             // Prepare, set up actions to be fired
-            IActionScheduler scheduler = new DedicatedThreadScheduler(Sys.Settings.Config, Log);
+            IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
 
             try
             {

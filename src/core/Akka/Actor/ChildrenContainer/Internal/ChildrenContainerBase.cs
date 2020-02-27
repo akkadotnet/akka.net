@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor.Internal
 {
@@ -183,8 +182,7 @@ namespace Akka.Actor.Internal
         /// <returns>TBD</returns>
         public bool Contains(IActorRef actor)
         {
-            ChildRestartStats stats;
-            return TryGetByRef(actor, out stats);
+            return TryGetByRef(actor, out _);
         }
 
         /// <summary>
