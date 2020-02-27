@@ -31,30 +31,22 @@ namespace Akka.Tests.Actor
         [Fact]
         public void FSM_must_receive_StateTimeout()
         {
-            Within(1.Seconds(), () =>
-            {
-                Within(500.Milliseconds(), 1.Seconds(), () =>
-                {
-                    FSM.Tell(FsmState.TestStateTimeout);
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-                });
-                ExpectNoMsg(50.Milliseconds());
-            });
+            FSM.Tell(FsmState.TestStateTimeout);
+            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
+            ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
+            ExpectNoMsg(50.Milliseconds());
+
         }
 
         [Fact]
         public void FSM_must_cancel_a_StateTimeout()
         {
-            Within(1.Seconds(), () =>
-            {
-                FSM.Tell(FsmState.TestStateTimeout);
-                FSM.Tell(Cancel.Instance);
-                ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-                ExpectMsg<Cancel>();
-                ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-                ExpectNoMsg(50.Milliseconds());
-            });
+            FSM.Tell(FsmState.TestStateTimeout);
+            FSM.Tell(Cancel.Instance);
+            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
+            ExpectMsg<Cancel>();
+            ExpectMsg(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
+            ExpectNoMsg(50.Milliseconds());
         }
 
         [Fact]
@@ -64,10 +56,8 @@ namespace Akka.Tests.Actor
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             stoppingActor.Tell(FsmState.TestStoppingActorStateTimeout);
 
-            Within(400.Milliseconds(), () =>
-            {
-                ExpectNoMsg(300.Milliseconds());
-            });
+            ExpectNoMsg(300.Milliseconds());
+
         }
 
         [Fact]
@@ -191,21 +181,21 @@ namespace Akka.Tests.Actor
             //    .ExpectOne(
             //    () =>
             //    {
-                    FSM.Tell(FsmState.TestUnhandled);
-                    ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestUnhandled));
-                    Within(3.Seconds(), () =>
-                    {
-                        FSM.Tell(Tick.Instance);
-                        FSM.Tell(SetHandler.Instance);
-                        FSM.Tell(Tick.Instance);
-                        ExpectMsg<Unhandled>().Msg.Should().BeOfType<Tick>();
-                        FSM.Tell(new Unhandled("test"));
-                        FSM.Tell(Cancel.Instance);
-                        var transition = ExpectMsg<Transition<FsmState>>();
-                        transition.FsmRef.Should().Be(FSM);
-                        transition.From.Should().Be(FsmState.TestUnhandled);
-                        transition.To.Should().Be(FsmState.Initial);
-                    });
+            FSM.Tell(FsmState.TestUnhandled);
+            ExpectMsg(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestUnhandled));
+            Within(3.Seconds(), () =>
+            {
+                FSM.Tell(Tick.Instance);
+                FSM.Tell(SetHandler.Instance);
+                FSM.Tell(Tick.Instance);
+                ExpectMsg<Unhandled>().Msg.Should().BeOfType<Tick>();
+                FSM.Tell(new Unhandled("test"));
+                FSM.Tell(Cancel.Instance);
+                var transition = ExpectMsg<Transition<FsmState>>();
+                transition.FsmRef.Should().Be(FSM);
+                transition.From.Should().Be(FsmState.TestUnhandled);
+                transition.To.Should().Be(FsmState.Initial);
+            });
             //    });
         }
 
@@ -274,7 +264,7 @@ namespace Akka.Tests.Actor
 
         public static void StaticAwaitCond(Func<bool> evaluator, TimeSpan max, TimeSpan? interval)
         {
-            InternalAwaitCondition(evaluator, max, interval,(format,args)=> XAssert.Fail(string.Format(format,args)));
+            InternalAwaitCondition(evaluator, max, interval, (format, args) => XAssert.Fail(string.Format(format, args)));
         }
 
         public class StateMachine : FSM<FsmState, int>, ILoggingFSM
