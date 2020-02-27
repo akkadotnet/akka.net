@@ -64,7 +64,7 @@ namespace Akka.Cluster.Metrics.Tests
             MetricsHistorySize.Should().BeGreaterOrEqualTo(beforeStop);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public async Task Metrics_extension_Should_control_collector_on_off_state()
         {
             int size2 = 0, size3 = 0, size4 = 0;
