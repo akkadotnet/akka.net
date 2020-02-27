@@ -122,10 +122,14 @@ namespace Akka.Tests.Dispatch
         public void Dispatchers_must_be_used_when_configured_in_explicit_deployments()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithDispatcher("myapp.mydispatcher"));
-            actor.Tell("what's in a name?");
-            var expected = "myapp.mydispatcher";
-            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
-            actual.ShouldBe(expected);
+
+            AwaitAssert(() =>
+            {
+                actor.Tell("what's in a name?");
+                var expected = "myapp.mydispatcher";
+                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                actual.ShouldBe(expected);
+            });
         }
 
         [Fact]
