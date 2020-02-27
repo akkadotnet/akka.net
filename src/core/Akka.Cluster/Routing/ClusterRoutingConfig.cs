@@ -831,8 +831,8 @@ namespace Akka.Cluster.Routing
             var deploymentTarget = SelectDeploymentTarget();
             while (deploymentTarget != null)
             {
-                var address = deploymentTarget.Item1;
-                var path = deploymentTarget.Item2;
+                var address = deploymentTarget.Value.Item1;
+                var path = deploymentTarget.Value.Item2;
                 var routee = _group.RouteeFor(address + path, Context);
                 UsedRouteePaths = UsedRouteePaths.SetItem(
                     address,
