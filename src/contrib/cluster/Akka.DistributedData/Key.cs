@@ -10,12 +10,12 @@ using System;
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// Marker interface for all replicated key types in DData.
     /// </summary>
-    public interface IKey
+    public interface IKey : IReplicatedDataSerialization
     {
         /// <summary>
-        /// TBD
+        /// The identifier for the key.
         /// </summary>
         string Id { get; }
     }
@@ -25,17 +25,6 @@ namespace Akka.DistributedData
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     public interface IKey<out T> : IKey where T : IReplicatedData { }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    interface IKeyWithGenericType : IKey
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        Type Type { get; }
-    }
 
     /// <summary>
     /// Key for the key-value data in <see cref="Replicator"/>. The type of the data value
@@ -49,14 +38,14 @@ namespace Akka.DistributedData
     public abstract class Key<T> : IKey<T> where T : IReplicatedData
     {
         /// <summary>
-        /// TBD
+        /// The identifier for this key.
         /// </summary>
         public string Id { get; }
 
         /// <summary>
-        /// TBD
+        /// Creates a new key instance.
         /// </summary>
-        /// <param name="id">TBD</param>
+        /// <param name="id">The unique identifier for this key.</param>
         protected Key(string id)
         {
             Id = id;
@@ -72,7 +61,7 @@ namespace Akka.DistributedData
         }
 
         /// <inheritdoc/>
-        public sealed override bool Equals(object obj) => obj is IKey && Equals((IKey) obj);
+        public sealed override bool Equals(object obj) => obj is IKey key && Equals(key);
 
         /// <inheritdoc/>
         public override int GetHashCode() => Id.GetHashCode();

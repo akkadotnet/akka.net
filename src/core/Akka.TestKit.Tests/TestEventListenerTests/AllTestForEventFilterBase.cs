@@ -110,7 +110,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         [Fact]
         public void Can_intercept_messages_when_source_is_specified()
         {
-            _testingEventFilter.ForLogLevel(LogLevel, source: GetType().FullName).ExpectOne(() => LogMessage("whatever"));
+            _testingEventFilter.ForLogLevel(LogLevel, source: LogSource.FromType(GetType(), Sys)).ExpectOne(() => LogMessage("whatever"));
             TestSuccessful = true;
         }
 

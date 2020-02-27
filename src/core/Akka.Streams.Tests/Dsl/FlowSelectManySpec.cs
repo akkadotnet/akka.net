@@ -35,12 +35,12 @@ namespace Akka.Streams.Tests.Dsl
         public void SelectMany_should_map_and_concat()
         {
             var script = Script.Create(
-                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 0 }, new int[0]),
-                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 1 }, new[] { 1 }),
-                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 2 }, new[] { 2, 2 }),
-                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 3 }, new[] { 3, 3, 3 }),
-                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 2 }, new[] { 2, 2 }),
-                Tuple.Create<ICollection<int>, ICollection<int>>(new[] { 1 }, new[] { 1 }));
+                (new[] { 0 }, new int[0]),
+                (new[] { 1 }, new[] { 1 }),
+                (new[] { 2 }, new[] { 2, 2 }),
+                (new[] { 3 }, new[] { 3, 3, 3 }),
+                (new[] { 2 }, new[] { 2, 2 }),
+                (new[] { 1 }, new[] { 1 }));
 
             var random = ThreadLocalRandom.Current.Next(1, 10);
             for (int i = 0; i < random; i++)

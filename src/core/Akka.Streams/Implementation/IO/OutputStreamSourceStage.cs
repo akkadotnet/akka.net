@@ -119,7 +119,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly OutputStreamSourceStage _stage;
             private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
             private readonly string _dispatcherId;
-            private readonly Action<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>> _upstreamCallback;
+            private readonly Action<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
             private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
             private BlockingCollection<ByteString> _dataQueue;
@@ -141,7 +141,7 @@ namespace Akka.Streams.Implementation.IO
                     else
                         FailStage(result.Value as Exception);
                 });
-                _upstreamCallback = GetAsyncCallback<Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>>>(OnAsyncMessage);
+                _upstreamCallback = GetAsyncCallback<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)>(OnAsyncMessage);
                 _pullTask = new OnPullRunnable(downstreamCallback, dataQueue, _cancellation.Token);
                 SetHandler(_stage._out, this);
             }
@@ -208,11 +208,11 @@ namespace Akka.Streams.Implementation.IO
             public Task WakeUp(IAdapterToStageMessage msg)
             {
                 var p = new TaskCompletionSource<NotUsed>();
-                _upstreamCallback(Tuple.Create(msg, p));
+                _upstreamCallback((msg, p));
                 return p.Task;
             }
 
-            private void OnAsyncMessage(Tuple<IAdapterToStageMessage, TaskCompletionSource<NotUsed>> @event)
+            private void OnAsyncMessage((IAdapterToStageMessage, TaskCompletionSource<NotUsed>) @event)
             {
                 if (@event.Item1 is Flush)
                 {

@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 4)
-                    .Select(i => Tuple.Create(i, new TestLatch(1)))
+                    .Select(i => (i, new TestLatch(1)))
                     .ToDictionary(t => t.Item1, t => t.Item2);
                 var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 5)
-                    .Select(i => Tuple.Create(i, new TestLatch()))
+                    .Select(i => (i, new TestLatch()))
                     .ToDictionary(t => t.Item1, t => t.Item2);
                 var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {

@@ -33,8 +33,8 @@ namespace Akka.DistributedData.Tests
         public void ORDictionary_must_be_able_to_add_entries()
         {
             var m = ORDictionary.Create(
-                Tuple.Create(_node1, "a", GSet.Create("A")),
-                Tuple.Create(_node1, "b", GSet.Create("B")));
+                (_node1, "a", GSet.Create("A")),
+                (_node1, "b", GSet.Create("B")));
 
             m["a"].Elements.Should().BeEquivalentTo("A");
             m["b"].Elements.Should().BeEquivalentTo("B");
@@ -47,8 +47,8 @@ namespace Akka.DistributedData.Tests
         public void ORDictionary_must_be_able_to_add_entries_with_delta()
         {
             var m = ORDictionary.Create(
-                Tuple.Create(_node1, "a", GSet.Create("A")),
-                Tuple.Create(_node1, "b", GSet.Create("B")));
+                (_node1, "a", GSet.Create("A")),
+                (_node1, "b", GSet.Create("B")));
             var md = m.Delta;
 
             var m1 = ORDictionary<string, GSet<string>>.Empty.MergeDelta(md);

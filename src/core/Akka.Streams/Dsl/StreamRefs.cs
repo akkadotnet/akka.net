@@ -8,12 +8,8 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Annotations;
-using Akka.Configuration;
-using Akka.Event;
-using Akka.Streams.Dsl;
+using Hocon; using Akka.Configuration;
 using Akka.Streams.Implementation.StreamRef;
-using Akka.Streams.Stage;
-using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
 {
@@ -61,7 +57,9 @@ namespace Akka.Streams.Dsl
     {
         public static StreamRefSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "`akka.stream.materializer.stream-ref` was not present");
+            // No need to check for Config.IsEmpty because this function supposed to process empty Config
+            if (config == null)
+                throw ConfigurationException.NullOrEmptyConfig<StreamRefSettings>();
 
             return new StreamRefSettings(
                 bufferCapacity: config.GetInt("buffer-capacity", 32),

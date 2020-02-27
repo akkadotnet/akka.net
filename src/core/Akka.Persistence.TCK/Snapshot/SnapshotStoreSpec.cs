@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
@@ -42,7 +42,8 @@ namespace Akka.Persistence.TCK.Snapshot
                 }
             }";
 
-        protected static readonly Config Config = ConfigurationFactory.ParseString(_specConfigTemplate);
+        protected static readonly Config Config = 
+            ConfigurationFactory.ParseString(_specConfigTemplate);
 
         protected override bool SupportsSerialization => true;
 
@@ -257,6 +258,8 @@ namespace Akka.Persistence.TCK.Snapshot
         [Fact]
         public void ShouldSerializeSnapshots()
         {
+            if (!SupportsSerialization) return;
+
             var probe = CreateTestProbe();
             var metadata = new SnapshotMetadata(Pid, 100L);
             var snap = new TestPayload(probe.Ref);

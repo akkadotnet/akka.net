@@ -245,7 +245,7 @@ namespace Akka.Streams.Tests.Performance
                 b.From(bcast).To(zip.In0);
                 b.From(bcast).To(zip.In1);
                 var outlet =
-                    b.From(zip.Out).Via(Flow.Create<Tuple<MutableElement, MutableElement>>().Select(t => t.Item1));
+                    b.From(zip.Out).Via(Flow.Create<(MutableElement, MutableElement)>().Select(t => t.Item1));
                 return new FlowShape<MutableElement, MutableElement>(bcast.In, outlet.Out);
             }));
 

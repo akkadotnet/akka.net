@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -21,6 +20,7 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util.Internal;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote
 {

@@ -9,7 +9,7 @@ using System;
 using System.Data;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Snapshot;
 
 namespace Akka.Persistence.Sqlite.Snapshot
@@ -120,9 +120,9 @@ namespace Akka.Persistence.Sqlite.Snapshot
                 manifestColumnName: "manifest",
                 timestampColumnName: "created_at",
                 serializerIdColumnName: "serializer_id",
-                timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer"),
-                useSequentialAccess: config.GetBoolean("use-sequential-access")),
+                timeout: config.GetTimeSpan("connection-timeout", null),
+                defaultSerializer: config.GetString("serializer", null),
+                useSequentialAccess: config.GetBoolean("use-sequential-access", false)),
                 Context.System.Serialization);
         }
 

@@ -10,3 +10,5 @@
   href: akka.streams.md
 - name: Akka.TestKit
   href: akka.testkit.md
+  name: Hocon
+  href: hocon.md

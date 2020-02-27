@@ -10,7 +10,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using FsCheck;

@@ -84,6 +84,8 @@
     href: persistence/custom-serialization.md
   - name: Persistence Query
     href: persistence/persistence-query.md
+  - name: Persistence Testing
+    href: persistence/persistence-testing.md
 - name: Streams
   items: 
   - name: Introduction
@@ -112,6 +114,8 @@
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md
+  - name: StreamRefs - Reactive Streams over the network
+    href: streams/streamrefs.md
   - name: Pipelining and Parallelism
     href: streams/pipeliningandparallelism.md
   - name: Testing streams
@@ -144,6 +148,8 @@
     href: remoting/deathwatch.md
   - name: Network Security
     href: remoting/security.md
+  - name: Performance Optimization
+    href: remoting/performance.md
 - name: Clustering
   items:
   - name: Overview
@@ -162,6 +168,8 @@
     href: clustering/cluster-client.md
   - name: Cluster Sharding
     href: clustering/cluster-sharding.md
+  - name: Cluster Metrics
+    href: clustering/cluster-metrics.md
   - name: Distributed Data
     href: clustering/distributed-data.md
   - name: Split Brain Resolver

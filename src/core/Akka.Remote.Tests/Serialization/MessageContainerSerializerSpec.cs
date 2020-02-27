@@ -7,7 +7,7 @@
 
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.TestKit;
@@ -18,7 +18,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class MessageContainerSerializerSpec : AkkaSpec
     {
-        public MessageContainerSerializerSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public MessageContainerSerializerSpec() : base(RemoteConfigFactory.Default())
         {
         }
 

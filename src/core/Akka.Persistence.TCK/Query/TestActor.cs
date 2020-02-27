@@ -12,7 +12,7 @@ using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.TCK.Query
 {
-    internal class TestActor : UntypedPersistentActor
+    internal class TestActor : UntypedPersistentActor, IWithUnboundedStash
     {
         public static Props Props(string persistenceId) => Actor.Props.Create(() => new TestActor(persistenceId));
 
@@ -43,13 +43,38 @@ namespace Akka.Persistence.TCK.Query
             {
                 case DeleteCommand delete:
                     DeleteMessages(delete.ToSequenceNr);
-                    Sender.Tell($"{delete.ToSequenceNr}-deleted");
+                    Become(WhileDeleting(Sender)); // need to wait for delete ACK to return
                     break;
                 case string cmd:
                     var sender = Sender;
                     Persist(cmd, e => sender.Tell($"{e}-done"));
                     break;
             }
+        }
+
+        protected Receive WhileDeleting(IActorRef originalSender)
+        {
+            return message =>
+            {
+                switch (message)
+                {
+                    case DeleteMessagesSuccess success:
+                        originalSender.Tell($"{success.ToSequenceNr}-deleted");
+                        Become(OnCommand);
+                        Stash.UnstashAll();
+                        break;
+                    case DeleteMessagesFailure failure:
+                        originalSender.Tell($"{failure.ToSequenceNr}-deleted-failed");
+                        Become(OnCommand);
+                        Stash.UnstashAll();
+                        break;
+                    default:
+                        Stash.Stash();
+                        break;
+                }
+
+                return true;
+            };
         }
     }
 

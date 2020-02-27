@@ -38,7 +38,7 @@ namespace Akka.DistributedData
 
         protected abstract int DoneWhenRemainingSize { get; }
 
-        private readonly Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>> _primaryAndSecondaryNodes;
+        private readonly Lazy<(IImmutableSet<Address>, IImmutableSet<Address>)> _primaryAndSecondaryNodes;
 
         protected IImmutableSet<Address> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
         protected IImmutableSet<Address> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
@@ -54,19 +54,19 @@ namespace Akka.DistributedData
             Remaining = Nodes;
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
             _timeoutSchedule = Context.System.Scheduler.ScheduleTellOnceCancelable(Timeout, Self, ReceiveTimeout.Instance, Self);
-            _primaryAndSecondaryNodes = new Lazy<Tuple<IImmutableSet<Address>, IImmutableSet<Address>>>(() =>
+            _primaryAndSecondaryNodes = new Lazy<(IImmutableSet<Address>, IImmutableSet<Address>)>(() =>
             {
                 var primarySize = Nodes.Count - DoneWhenRemainingSize;
                 if(primarySize >= nodes.Count)
                 {
-                    return Tuple.Create(nodes, (IImmutableSet<Address>)ImmutableHashSet<Address>.Empty);
+                    return (nodes, (IImmutableSet<Address>)ImmutableHashSet<Address>.Empty);
                 }
                 else
                 {
                     var n = Nodes.OrderBy(x => ThreadLocalRandom.Current.Next()).ToArray();
                     var p = n.Take(primarySize).ToImmutableHashSet();
                     var s = n.Skip(primarySize).Take(MaxSecondaryNodes).ToImmutableHashSet();
-                    return Tuple.Create((IImmutableSet<Address>)p, (IImmutableSet<Address>)s);
+                    return ((IImmutableSet<Address>)p, (IImmutableSet<Address>)s);
                 }
             });
         }

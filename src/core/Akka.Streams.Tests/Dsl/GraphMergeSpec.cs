@@ -212,11 +212,11 @@ namespace Akka.Streams.Tests.Dsl
                 var src1 = Source.AsSubscriber<int>();
                 var src2 = Source.AsSubscriber<int>();
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, Tuple.Create, (b, s1, s2) =>
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, ValueTuple.Create, (b, s1, s2) =>
                 {
                     var merge = b.Add(new Merge<int>(2));
                     var sink = Sink.FromSubscriber(down)
-                        .MapMaterializedValue<Tuple<ISubscriber<int>, ISubscriber<int>>>(_ => null);
+                        .MapMaterializedValue<(ISubscriber<int>, ISubscriber<int>)?>(_ => null);
 
                     b.From(s1.Outlet).To(merge.In(0));
                     b.From(s2.Outlet).To(merge.In(1));

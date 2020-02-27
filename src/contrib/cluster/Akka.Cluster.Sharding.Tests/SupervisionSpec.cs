@@ -8,9 +8,10 @@
 using System;
 using System.Globalization;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,7 +90,7 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         private readonly ExtractEntityId _extractEntityId = message =>
-            message is Msg msg ? new Tuple<string, object>(msg.Id.ToString(), msg.Message) : null;
+            message is Msg msg ? (msg.Id.ToString(), msg.Message) : Option<(string, object)>.None;
 
         private readonly ExtractShardId _extractShard = message =>
             message is Msg msg ? (msg.Id % 2).ToString(CultureInfo.InvariantCulture) : null;
@@ -132,9 +133,18 @@ namespace Akka.Cluster.Sharding.Tests
             region.Tell(new Msg(10, "passivate"));
             ExpectTerminated(response.Self);
 
-            // This would fail before as sharded actor would be stuck passivating
-            region.Tell(new Msg(10, "hello"));
-            ExpectMsg<Response>(TimeSpan.FromSeconds(20));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                // This would fail before as sharded actor would be stuck passivating
+                // Need to use AwaitAssert here - message can be sent the the BackOffSupervisor, which is now
+                // terminating but still alive, but its child (the ultimate recipient of the message) is dead
+                // and this message will go to DeadLetters.
+                AwaitAssert(() =>
+                {
+                    region.Tell(new Msg(10, "hello"));
+                    ExpectMsg<Response>();
+                });
+            });
         }
     }
 }

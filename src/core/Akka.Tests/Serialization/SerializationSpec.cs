@@ -6,13 +6,20 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.Util;
+using Akka.Util.Reflection;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Serialization
@@ -97,7 +104,7 @@ namespace Akka.Tests.Serialization
                 }
             }
 
-            public ImmutableMessageWithPrivateCtor(Tuple<string, string> nonConventionalArg)
+            public ImmutableMessageWithPrivateCtor((string, string) nonConventionalArg)
             {
                 Foo = nonConventionalArg.Item1;
                 Bar = nonConventionalArg.Item2;
@@ -135,7 +142,7 @@ namespace Akka.Tests.Serialization
                 }
             }
 
-            public ImmutableMessage(Tuple<string,string> nonConventionalArg)
+            public ImmutableMessage((string,string) nonConventionalArg)
             {
                 Foo = nonConventionalArg.Item1;
                 Bar = nonConventionalArg.Item2;
@@ -241,14 +248,14 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_immutable_messages()
         {
-            var message = new ImmutableMessage(Tuple.Create("aaa", "bbb"));
+            var message = new ImmutableMessage(("aaa", "bbb"));
             AssertEqual(message);        
         }
 
         [Fact]
         public void Can_serialize_immutable_messages_with_private_ctor()
         {
-            var message = new ImmutableMessageWithPrivateCtor(Tuple.Create("aaa", "bbb"));
+            var message = new ImmutableMessageWithPrivateCtor(("aaa", "bbb"));
             AssertEqual(message);
         }
 
@@ -401,7 +408,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_Config()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.Empty;
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));
@@ -549,7 +556,30 @@ namespace Akka.Tests.Serialization
 
             var dummy2 = (DummyConfigurableSerializer) Sys.Serialization.GetSerializerById(-7);
             dummy2.Config.ShouldNotBe(null);
-            dummy2.Config.GetString("test-key").ShouldBe("test value");
+            dummy2.Config.GetString("test-key", null).ShouldBe("test value");
+        }
+
+
+        private static string LegacyTypeQualifiedName(Type type)
+        {
+            string coreAssemblyName = typeof(object).GetTypeInfo().Assembly.GetName().Name;
+            var assemblyName = type.GetTypeInfo().Assembly.GetName().Name;
+            var shortened = assemblyName.Equals(coreAssemblyName)
+                ? type.GetTypeInfo().FullName
+                : $"{type.GetTypeInfo().FullName}, {assemblyName}";
+            return shortened;
+        }
+
+        [Fact]
+        public void Legacy_and_shortened_types_names_are_equivalent()
+        {
+            var targetType = typeof(ParentClass<OtherClassA, OtherClassB, OtherClassC>.ChildClass);
+
+            var legacyTypeManifest = LegacyTypeQualifiedName(targetType);
+            var newTypeManifest = targetType.TypeQualifiedName();
+
+            TypeCache.GetType(legacyTypeManifest).ShouldBeSame(TypeCache.GetType(newTypeManifest));
+            Type.GetType(legacyTypeManifest).ShouldBeSame(Type.GetType(newTypeManifest));
         }
 
         public SerializationSpec():base(GetConfig())
@@ -636,6 +666,20 @@ namespace Akka.Tests.Serialization
             public override object FromBinary(byte[] bytes, Type type)
             {
                 throw new NotImplementedException();
+            }
+        }
+
+        public sealed class OtherClassA { }
+
+        public sealed class OtherClassB { }
+
+        public sealed class OtherClassC { }
+
+        public sealed class ParentClass<T1, T2, T3>
+        {
+            public sealed class ChildClass
+            {
+                public string Value { get; set; }
             }
         }
     }

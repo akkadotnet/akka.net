@@ -32,8 +32,8 @@ namespace Akka.DistributedData.Tests
         public void LWWDictionary_must_be_able_to_set_entries()
         {
             var m = LWWDictionary.Create(
-                Tuple.Create(_node1, "a", 1),
-                Tuple.Create(_node2, "b", 2));
+                (_node1, "a", 1),
+                (_node2, "b", 2));
 
             Assert.Equal(m.Entries, ImmutableDictionary.CreateRange(new[]
             {
@@ -46,8 +46,8 @@ namespace Akka.DistributedData.Tests
         public void LWWDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_LWWMap_with_other_entries()
         {
             var m1 = LWWDictionary.Create(
-                Tuple.Create(_node1, "a", 1),
-                Tuple.Create(_node1, "b", 2));
+                (_node1, "a", 1),
+                (_node1, "b", 2));
             var m2 = LWWDictionary.Create(_node2, "c", 3);
 
             var expected = ImmutableDictionary.CreateRange(new[]
@@ -66,8 +66,8 @@ namespace Akka.DistributedData.Tests
         public void LWWDictionary_must_be_able_to_remove_entry()
         {
             var m1 = LWWDictionary.Create(
-                Tuple.Create(_node1, "a", 1),
-                Tuple.Create(_node2, "b", 2));
+                (_node1, "a", 1),
+                (_node2, "b", 2));
             var m2 = LWWDictionary.Create(_node2, "c", 3);
 
             var merged1 = m1.Merge(m2);

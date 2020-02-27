@@ -71,7 +71,7 @@ namespace Akka.Streams.Implementation
                 FailStage(ex);
             }
 
-            private void Receive(Tuple<IActorRef, object> evt)
+            private void Receive((IActorRef, object) evt)
             {
                 var msg = evt.Item2;
 

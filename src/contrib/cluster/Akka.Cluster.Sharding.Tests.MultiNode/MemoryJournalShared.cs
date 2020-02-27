@@ -21,7 +21,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         public MemoryJournalShared()
         {
-            Timeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.journal.memory-journal-shared.timeout");
+            Timeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.journal.memory-journal-shared.timeout", null);
         }
 
         public static void SetStore(IActorRef store, ActorSystem system)

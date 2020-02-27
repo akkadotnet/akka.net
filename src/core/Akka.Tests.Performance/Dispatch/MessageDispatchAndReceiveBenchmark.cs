@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using NBench;
 
 namespace Akka.Tests.Performance.Dispatch

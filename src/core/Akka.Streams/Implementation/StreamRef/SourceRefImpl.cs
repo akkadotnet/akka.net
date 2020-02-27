@@ -12,7 +12,12 @@ using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
+using Akka.Streams.Serialization;
+using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Streams.Stage;
+using Akka.Util;
+using Google.Protobuf.WellKnownTypes;
+using Type = System.Type;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
@@ -20,7 +25,7 @@ namespace Akka.Streams.Implementation.StreamRef
     /// Abstract class defined serialization purposes of <see cref="SourceRefImpl{T}"/>.
     /// </summary>
     [InternalApi]
-    internal abstract class SourceRefImpl
+    internal abstract class SourceRefImpl : ISurrogated
     {
         public static SourceRefImpl Create(Type eventType, IActorRef initialPartnerRef)
         {
@@ -35,18 +40,21 @@ namespace Akka.Streams.Implementation.StreamRef
 
         public IActorRef InitialPartnerRef { get; }
         public abstract Type EventType { get; }
+        public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
     /// <summary>
     /// INTERNAL API:  Implementation class, not intended to be touched directly by end-users.
     /// </summary>
-    [InternalApi]
+    [InternalApi]   
     internal sealed class SourceRefImpl<T> : SourceRefImpl, ISourceRef<T>
     {
         public SourceRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
         public override Type EventType => typeof(T);
         public Source<T, NotUsed> Source =>
             Dsl.Source.FromGraph(new SourceRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
+
+        public override ISurrogate ToSurrogate(ActorSystem system) => SerializationTools.ToSurrogate(this);
     }
 
     /// <summary>
@@ -194,7 +202,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 }
             }
 
-            private void InitialReceive(Tuple<IActorRef, object> args)
+            private void InitialReceive((IActorRef, object) args)
             {
                 var sender = args.Item1;
                 var message = args.Item2;

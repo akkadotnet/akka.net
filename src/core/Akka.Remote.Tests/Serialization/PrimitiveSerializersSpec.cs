@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.TestKit;
@@ -16,7 +16,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class PrimitiveSerializersSpec : AkkaSpec
     {
-        public PrimitiveSerializersSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public PrimitiveSerializersSpec() : base(RemoteConfigFactory.Default())
         {
         }
 

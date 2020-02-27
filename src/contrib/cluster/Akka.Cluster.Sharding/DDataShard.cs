@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
         public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
+        public ImmutableDictionary<string, ImmutableList<(object, IActorRef)>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<(object, IActorRef)>>.Empty;
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Sharding
                 : EntityRecoveryStrategy.AllStrategy;
 
             var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
-            PassivateIdleTask = Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities
+            PassivateIdleTask = Settings.ShouldPassivateIdleEntities
                 ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
                 : null;
 
@@ -112,8 +112,35 @@ namespace Akka.Cluster.Sharding
         }
 
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
-        public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
-        
+
+        public void DeliverTo(string id, object message, object payload, IActorRef sender)
+        {
+            var name = Uri.EscapeDataString(id);
+            var child = Context.Child(name);
+            if (child.IsNobody())
+            {
+                if (State.Entries.Contains(id))
+                {
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
+                    {
+                        throw new InvalidOperationException($"Message buffers contains id [{id}].");
+                    }
+                    this.GetOrCreateEntity(id).Tell(payload, sender);
+                }
+                else
+                {
+                    // Note; we only do this if remembering, otherwise the buffer is an overhead
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender)));
+                    ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                }
+            }
+            else
+            {
+                this.TouchLastMessageTimestamp(id);
+                child.Tell(payload, sender);
+            }
+        }
+
         protected override void PostStop()
         {
             PassivateIdleTask?.Cancel();
@@ -130,7 +157,7 @@ namespace Akka.Cluster.Sharding
 
         private void GetState()
         {
-            for (int i = 0; i < NrOfKeys; i++)
+            for (var i = 0; i < NrOfKeys; i++)
             {
                 Replicator.Tell(Dsl.Get(_stateKeys[i], _readConsistency, i));
             }
@@ -161,7 +188,10 @@ namespace Akka.Cluster.Sharding
                 case NotFound notFound:
                     ReceiveOne((int)notFound.Request);
                     break;
-                default: Stash.Stash(); break;
+                default:
+                    Log.Debug("Stashing while waiting for DDataShard initial state");
+                    Stash.Stash();
+                    break;
             }
 
             return true;
@@ -173,7 +203,12 @@ namespace Akka.Cluster.Sharding
             this.Initialized();
             Log.Debug("DDataShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
             Stash.UnstashAll();
-            Context.Become(this.HandleCommand);
+            Context.Become(HandleCommands);
+        }
+
+        private bool HandleCommands(object message)
+        {
+            return this.HandleCommand(message);
         }
 
         public void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange
@@ -184,7 +219,7 @@ namespace Akka.Cluster.Sharding
 
         private void SendUpdate(Shard.StateChange e, int retryCount)
         {
-            Replicator.Tell(Dsl.Update(Key(e.EntityId), ORSet<EntryId>.Empty, _writeConsistency, Tuple.Create(e, retryCount),
+            Replicator.Tell(Dsl.Update(Key(e.EntityId), ORSet<EntryId>.Empty, _writeConsistency, (e, retryCount),
                 existing =>
                 {
                     switch (e)
@@ -200,14 +235,14 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
-                case UpdateSuccess success when Equals(((Tuple<Shard.StateChange, int>)success.Request).Item1, e):
+                case UpdateSuccess success when Equals((((Shard.StateChange, int))success.Request).Item1, e):
                     Log.Debug("The DDataShard state was successfully updated with {0}", e);
                     Context.UnbecomeStacked();
                     afterUpdateCallback(e);
                     Stash.UnstashAll();
                     break;
-                case UpdateTimeout timeout when Equals(((Tuple<Shard.StateChange, int>)timeout.Request).Item1, e):
-                    var t = (Tuple<Shard.StateChange, int>)timeout.Request;
+                case UpdateTimeout timeout when Equals((((Shard.StateChange, int))timeout.Request).Item1, e):
+                    var t = ((Shard.StateChange, int))timeout.Request;
                     var retryCount = t.Item2;
                     if (retryCount == MaxUpdateAttempts)
                     {
@@ -223,11 +258,21 @@ namespace Akka.Cluster.Sharding
                         SendUpdate(e, retryCount + 1);
                     }
                     break;
-                case ModifyFailure failure when Equals(((Tuple<Shard.StateChange, int>)failure.Request).Item1, e):
+                case ModifyFailure failure when Equals((((Shard.StateChange, int))failure.Request).Item1, e):
                     Log.Error("The DDataShard was unable to update state with error {0} and event {1}. Shard will be restarted", failure.Cause, e);
                     ExceptionDispatchInfo.Capture(failure.Cause).Throw();
                     break;
-                default: Stash.Stash(); break;
+                case Shard.IShardQuery sq:
+                    this.HandleShardRegionQuery(sq);
+                    break;
+                case var _ when ExtractEntityId(message).HasValue:
+                    this.DeliverMessage(message, Context.Sender);
+                    break;
+                default:
+                    Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
+                        message.GetType(), e);
+                    Stash.Stash();
+                    break;
             }
             return true;
         };

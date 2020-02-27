@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.Dsl
     {
         private ActorMaterializer Materializer { get; }
 
-        public RestartSpec(ITestOutputHelper output) : base("", output)
+        public RestartSpec(ITestOutputHelper output) : base("{}", output)
         {
             Materializer = Sys.Materializer();
         }
@@ -536,7 +536,7 @@ namespace Akka.Streams.Tests.Dsl
                 : RestartFlow.WithBackoff(flowFactory, minBackoff, maxBackoff, randomFactor, maxRestarts);
         }
 
-        private Tuple<AtomicCounter, TestPublisher.Probe<string>, TestSubscriber.Probe<string>, TestPublisher.Probe<string>, TestSubscriber.Probe<string>> SetupFlow(TimeSpan minBackoff, TimeSpan maxBackoff, int maxRestarts = -1, bool onlyOnFailures = false)
+        private (AtomicCounter, TestPublisher.Probe<string>, TestSubscriber.Probe<string>, TestPublisher.Probe<string>, TestSubscriber.Probe<string>) SetupFlow(TimeSpan minBackoff, TimeSpan maxBackoff, int maxRestarts = -1, bool onlyOnFailures = false)
         {
             var created = new AtomicCounter(0);
             var probe1 = this.SourceProbe<string>().ToMaterialized(this.SinkProbe<string>(), Keep.Both).Run(Materializer);
@@ -584,7 +584,7 @@ namespace Akka.Streams.Tests.Dsl
             var source = probe3.Item1;
             var sink = probe3.Item2;
 
-            return Tuple.Create(created, source, flowInProbe, flowOutProbe, sink);
+            return (created, source, flowInProbe, flowOutProbe, sink);
         }
 
         [Fact]

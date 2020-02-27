@@ -16,7 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using FluentAssertions.Execution;
@@ -74,7 +74,13 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            eventFilter.Info(contains:"akka : {\r\n    log-config-on-start : on\r\n  }").ExpectOne(() => system.Start());
+            var expected = string.Join(Environment.NewLine, new string[]
+            {
+                "akka : {",
+                "    log-config-on-start : on",
+                "  }"
+            });
+            eventFilter.Info(contains:expected).ExpectOne(() => system.Start());
 
             system.Terminate();
         }
@@ -103,6 +109,26 @@ namespace Akka.Tests.Actor
             ActorSystem
                 .Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-")
                 .Terminate();
+        }
+
+        [Fact]
+        public void Log_dead_letters()
+        {
+            var sys = ActorSystem.Create("LogDeadLetters", ConfigurationFactory.ParseString("akka.loglevel=INFO")
+                .WithFallback(DefaultConfig));
+
+            try
+            {
+                var a = sys.ActorOf(Props.Create<Terminater>());
+
+                var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
+                eventFilter.Info(contains: "not delivered").Expect(1, () =>
+                {
+                    a.Tell("run");
+                    a.Tell("boom");
+                });
+            }
+            finally { Shutdown(sys); }
         }
 
         [Fact]

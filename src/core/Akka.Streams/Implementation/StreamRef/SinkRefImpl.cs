@@ -135,7 +135,7 @@ namespace Akka.Streams.Implementation.StreamRef
                 _promise.SetResult(new SourceRefImpl<TIn>(Self));
             }
 
-            private void InitialReceive(Tuple<IActorRef, object> args)
+            private void InitialReceive((IActorRef, object) args)
             {
                 var sender = args.Item1;
                 var message = args.Item2;

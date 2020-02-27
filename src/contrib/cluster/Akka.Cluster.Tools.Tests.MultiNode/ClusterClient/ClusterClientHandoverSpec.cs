@@ -15,7 +15,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Client;
 using Akka.Cluster.Tools.PublishSubscribe;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -159,12 +159,18 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
             RunOn(() =>
             {
-                // bugfix verification for https://github.com/akkadotnet/akka.net/issues/3840
-                // need to make sure that no dead contacts are hanging around
-                _clusterClient.Tell(GetContactPoints.Instance);
-                var contacts = ExpectMsg<ContactPoints>().ContactPointsList;
-                contacts.Count.Should().Be(2);
-                contacts.Select(x => x.Address).Should().Contain(Node(_config.Second).Address);
+                Within(TimeSpan.FromSeconds(5), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        // bugfix verification for https://github.com/akkadotnet/akka.net/issues/3840
+                        // need to make sure that no dead contacts are hanging around
+                        _clusterClient.Tell(GetContactPoints.Instance);
+                        var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
+                        contacts.Select(x => x.Address).Should().Contain(Node(_config.Second).Address);
+                    });
+                });
+               
 
                 _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
                 ExpectMsg<string>().Should().Be("hello");

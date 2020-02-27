@@ -219,7 +219,7 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// Obsolete. Use <see cref="Warning" /> instead!
+        /// Obsolete. Use <see cref="Warning(string, object[])" /> instead!
         /// </summary>
         /// <param name="format">N/A</param>
         /// <param name="args">N/A</param>

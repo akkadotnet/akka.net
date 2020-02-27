@@ -11,7 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Util;
 using Hyperion;
 
@@ -173,9 +173,10 @@ namespace Akka.Serialization
         /// <returns></returns>
         public static HyperionSerializerSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "HyperionSerializerSettings require a config, default path: `akka.serializers.hyperion`");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.serializers.hyperion");
 
-            var typeName = config.GetString("known-types-provider");
+            var typeName = config.GetString("known-types-provider", null);
             var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
 
             return new HyperionSerializerSettings(

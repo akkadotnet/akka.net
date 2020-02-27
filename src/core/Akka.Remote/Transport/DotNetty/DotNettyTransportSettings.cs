@@ -6,11 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 using DotNetty.Buffers;
@@ -26,7 +27,10 @@ namespace Akka.Remote.Transport.DotNetty
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
-            return Create(system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.dot-netty.tcp");
+            return Create(config);
         }
 
         /// <summary>
@@ -52,10 +56,11 @@ namespace Akka.Remote.Transport.DotNetty
 
         public static DotNettyTransportSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>();
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
-            var host = config.GetString("hostname");
+            var host = config.GetString("hostname", null);
             if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
             var publicHost = config.GetString("public-hostname", null);
             var publicPort = config.GetInt("public-port", 0);
@@ -69,6 +74,8 @@ namespace Akka.Remote.Transport.DotNetty
                 default: throw new ArgumentException($"Unknown byte-order option [{byteOrderString}]. Supported options are: big-endian, little-endian.");
             }
 
+            var batchWriterSettings = new BatchWriterSettings(config.GetConfig("batching"));
+
             return new DotNettyTransportSettings(
                 transportMode: transportMode == "tcp" ? TransportMode.Tcp : TransportMode.Udp,
                 enableSsl: config.GetBoolean("enable-ssl", false),
@@ -79,7 +86,7 @@ namespace Akka.Remote.Transport.DotNetty
                 publicPort: publicPort > 0 ? publicPort : (int?)null,
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
-                maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size")) ?? 128000,
+                maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
                 ssl: config.HasPath("ssl") ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
                 tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
@@ -87,26 +94,28 @@ namespace Akka.Remote.Transport.DotNetty
                 tcpNoDelay: config.GetBoolean("tcp-nodelay", true),
                 backlog: config.GetInt("backlog", 4096),
                 enforceIpFamily: RuntimeDetector.IsMono || config.GetBoolean("enforce-ip-family", false),
-                receiveBufferSize: ToNullableInt(config.GetByteSize("receive-buffer-size") ?? 256000),
-                sendBufferSize: ToNullableInt(config.GetByteSize("send-buffer-size") ?? 256000),
-                writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark")),
-                writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark")),
+                receiveBufferSize: ToNullableInt(config.GetByteSize("receive-buffer-size", null) ?? 256000),
+                sendBufferSize: ToNullableInt(config.GetByteSize("send-buffer-size", null) ?? 256000),
+                writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark", null)),
+                writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark", null)),
                 backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
-                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
+                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport", false),
                 byteOrder: order,
-                enableBufferPooling: config.GetBoolean("enable-pooling", true));
+                enableBufferPooling: config.GetBoolean("enable-pooling", true),
+                batchWriterSettings: batchWriterSettings);
         }
 
         private static int? ToNullableInt(long? value) => value.HasValue && value.Value > 0 ? (int?)value.Value : null;
 
         private static int ComputeWorkerPoolSize(Config config)
         {
-            if (config == null) return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
+            if (config.IsNullOrEmpty())
+                return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
 
             return ThreadPoolConfig.ScaledPoolSize(
-                floor: config.GetInt("pool-size-min"),
-                scalar: config.GetDouble("pool-size-factor"),
-                ceiling: config.GetInt("pool-size-max"));
+                floor: config.GetInt("pool-size-min", 0),
+                scalar: config.GetDouble("pool-size-factor", 0),
+                ceiling: config.GetInt("pool-size-max", 0));
         }
 
         /// <summary>
@@ -230,10 +239,16 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool EnableBufferPooling;
 
+        /// <summary>
+        /// Used for performance-tuning the DotNetty channels to maximize I/O performance.
+        /// </summary>
+        public readonly BatchWriterSettings BatchWriterSettings;
+
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
             int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, bool enableBufferPooling)
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, 
+            bool enableBufferPooling, BatchWriterSettings batchWriterSettings)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
 
@@ -262,6 +277,7 @@ namespace Akka.Remote.Transport.DotNetty
             LogTransport = logTransport;
             ByteOrder = byteOrder;
             EnableBufferPooling = enableBufferPooling;
+            BatchWriterSettings = batchWriterSettings;
         }
     }
     internal enum TransportMode
@@ -275,26 +291,25 @@ namespace Akka.Remote.Transport.DotNetty
         public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
-
-            
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
 
             if (config.GetBoolean("certificate.use-thumprint-over-file", false))
             {
-                return new SslSettings(config.GetString("certificate.thumbprint"),
-                    config.GetString("certificate.store-name"),
-                    ParseStoreLocationName(config.GetString("certificate.store-location")),
+                return new SslSettings(config.GetString("certificate.thumbprint", null),
+                    config.GetString("certificate.store-name", null),
+                    ParseStoreLocationName(config.GetString("certificate.store-location", null)),
                         config.GetBoolean("suppress-validation", false));
 
             }
             else
             {
-                var flagsRaw = config.GetStringList("certificate.flags");
+                var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
                 var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
 
                 return new SslSettings(
-                    certificatePath: config.GetString("certificate.path"),
-                    certificatePassword: config.GetString("certificate.password"),
+                    certificatePath: config.GetString("certificate.path", null),
+                    certificatePassword: config.GetString("certificate.password", null),
                     flags: flags,
                     suppressValidation: config.GetBoolean("suppress-validation", false));
             }

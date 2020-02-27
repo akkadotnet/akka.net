@@ -15,9 +15,9 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-
+using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
@@ -34,7 +34,7 @@ namespace Akka.Remote.TestKit
         // allows us to avoid NullReferenceExceptions if we make this empty rather than null
         // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
         // it will remain safe by defaut
-        Config _commonConf = Akka.Configuration.Config.Empty;
+        Config _commonConf = ConfigurationFactory.Empty;
 
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
@@ -363,6 +363,11 @@ namespace Akka.Remote.TestKit
                       @"akka {
                         loglevel = ""WARNING""
                         stdout-loglevel = ""WARNING""
+                        coordinated-shutdown.terminate-actor-system = off
+                        coordinated-shutdown.run-by-actor-system-terminate = off
+                        coordinated-shutdown.run-by-clr-shutdown-hook = off
+                        log-dead-letters = off 
+                        log-dead-letters-during-shutdown = on
                         actor {
                           default-dispatcher {
                             executor = ""fork-join-executor""
@@ -506,6 +511,16 @@ namespace Akka.Remote.TestKit
             if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
         }
+        
+        /// <summary>
+        /// Execute the given block of code only on the given nodes (names according
+        /// to the `roleMap`).
+        /// </summary>
+        public async Task RunOnAsync(Func<Task> thunkAsync, params RoleName[] nodes)
+        {
+            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
+            if (IsNode(nodes)) await thunkAsync();
+        }
 
         /// <summary>
         /// Verify that the running node matches one of the given nodes
@@ -617,10 +632,10 @@ namespace Akka.Remote.TestKit
                 });
                 foreach (var pair in ConfigurationFactory.ParseString(deployString).AsEnumerable())
                 {
-                    if (pair.Value.IsObject())
+                    if (pair.Value.Type == HoconType.Object)
                     {
                         var deploy =
-                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value)));
+                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value.Value)));
                         deployer.SetDeploy(deploy);
                     }
                     else

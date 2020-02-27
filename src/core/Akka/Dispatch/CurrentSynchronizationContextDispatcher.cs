@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Dispatch
 {
@@ -74,11 +74,14 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public override MessageDispatcher Dispatcher()
         {
-            return new CurrentSynchronizationContextDispatcher(this, Config.GetString("id"),
-                Config.GetInt("throughput"),
-                Config.GetTimeSpan("throughput-deadline-time").Ticks,
+            if (Config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<MessageDispatcher>();
+
+            return new CurrentSynchronizationContextDispatcher(this, Config.GetString("id", null),
+                Config.GetInt("throughput", 0),
+                Config.GetTimeSpan("throughput-deadline-time", null).Ticks,
                 _executorServiceConfigurator,
-                Config.GetTimeSpan("shutdown-timeout"));
+                Config.GetTimeSpan("shutdown-timeout", null));
         }
     }
 

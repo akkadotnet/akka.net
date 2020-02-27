@@ -11,6 +11,7 @@ using Akka.Annotations;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation
 {

@@ -382,11 +382,11 @@ namespace Akka.Streams.Tests.IO
             return ByteString.FromBytes(a);
         }
 
-        private Tuple<int, ByteString> ReadN(Stream s, int n)
+        private (int, ByteString) ReadN(Stream s, int n)
         {
             var buf = new byte[n];
             var r = s.Read(buf, 0, n);
-            return new Tuple<int, ByteString>(r, ByteString.FromBytes(buf, 0, r));
+            return (r, ByteString.FromBytes(buf, 0, r));
         }
 
         private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)

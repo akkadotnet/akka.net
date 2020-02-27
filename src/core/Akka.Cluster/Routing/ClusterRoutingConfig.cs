@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -90,11 +90,14 @@ namespace Akka.Cluster.Routing
         /// <returns>New settings based on the specified <paramref name="config"/></returns>
         public static ClusterRouterGroupSettings FromConfig(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterRouterGroupSettings>();
+
             return new ClusterRouterGroupSettings(
                 GetMaxTotalNrOfInstances(config),
                 ImmutableHashSet.CreateRange(config.GetStringList("routees.paths")),
-                config.GetBoolean("cluster.allow-local-routees"),
-                UseRoleOption(config.GetString("cluster.use-role")));
+                config.GetBoolean("cluster.allow-local-routees", false),
+                UseRoleOption(config.GetString("cluster.use-role", null)));
         }
     }
 
@@ -161,11 +164,14 @@ namespace Akka.Cluster.Routing
         /// <returns>New settings based on the specified <paramref name="config"/></returns>
         public static ClusterRouterPoolSettings FromConfig(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterRouterPoolSettings>();
+
             return new ClusterRouterPoolSettings(
                 GetMaxTotalNrOfInstances(config),
-                config.GetInt("cluster.max-nr-of-instances-per-node"),
-                config.GetBoolean("cluster.allow-local-routees"),
-                UseRoleOption(config.GetString("cluster.use-role")));
+                config.GetInt("cluster.max-nr-of-instances-per-node", 0),
+                config.GetBoolean("cluster.allow-local-routees", false),
+                UseRoleOption(config.GetString("cluster.use-role", null)));
         }
 
         private bool Equals(ClusterRouterPoolSettings other)
@@ -245,13 +251,14 @@ namespace Akka.Cluster.Routing
         internal static string UseRoleOption(string role) => !string.IsNullOrEmpty(role) ? role : null;
 
         /// <summary>
-        /// TBD
+        /// For backwards compatibility reasons, nr-of-instances
+        /// has the same purpose as max-total-nr-of-instances for cluster
+        /// aware routers and nr-of-instances (if defined by user) takes
+        /// precedence over max-total-nr-of-instances.
         /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
         internal static int GetMaxTotalNrOfInstances(Config config)
         {
-            int number = config.GetInt("nr-of-instances");
+            int number = config.GetInt("nr-of-instances", 0);
             if (number == 0 || number == 1)
             {
                 return config.GetInt("cluster.max-nr-of-instances-per-node");
@@ -842,7 +849,7 @@ namespace Akka.Cluster.Routing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public Tuple<Address, string> SelectDeploymentTarget()
+        public (Address, string)? SelectDeploymentTarget()
         {
             var currentRoutees = Cell.Router.Routees.ToList();
             var currentNodes = AvailableNodes;
@@ -853,7 +860,7 @@ namespace Akka.Cluster.Routing
             var unusedNodes = currentNodes.Except(UsedRouteePaths.Keys);
             if (!unusedNodes.IsEmpty) //we found at least 1 totally unused node
             {
-                return new Tuple<Address, string>(unusedNodes.First(), Settings.RouteesPaths.First());
+                return (unusedNodes.First(), Settings.RouteesPaths.First());
             }
             else
             {
@@ -865,7 +872,7 @@ namespace Akka.Cluster.Routing
 
                 // pick next of unused paths
                 var minPath = Settings.RouteesPaths.FirstOrDefault(p => !minNode.Used.Contains(p));
-                return minPath != null ? new Tuple<Address, string>(minNode.Address, minPath) : null;
+                return minPath == null ? ((Address, string)?)null : (minNode.Address, minPath);
             }
         }
 

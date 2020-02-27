@@ -9,6 +9,7 @@ using System;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.Util;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -30,36 +31,36 @@ namespace Akka.Streams.Tests.Dsl
         public class WithSimpleFlow : Akka.TestKit.Xunit2.TestKit
         {
             private readonly Exception _done = new Exception("done");
-            private readonly Source<int, Tuple<TestSubscriber.Probe<int>, TestPublisher.Probe<Tuple<int, int>>>> _source;
+            private readonly Source<int, (TestSubscriber.Probe<int>, TestPublisher.Probe<(int, int)>)> _source;
 
             public WithSimpleFlow()
             {
-                var controlledFlow = Flow.FromSinkAndSource(this.SinkProbe<int>(), this.SourceProbe<Tuple<int, int>>(), Keep.Both);
+                var controlledFlow = Flow.FromSinkAndSource(this.SinkProbe<int>(), this.SourceProbe<(int, int)>(), Keep.Both);
                 _source = SourceGen.UnfoldFlow(1, controlledFlow, _timeout);
             }
 
             [Fact]
             public void UnfoldFlow_should_unfold_Collatz_conjecture_with_a_sequence_of_111_elements_with_flow()
             {
-                Tuple<int, int> Map(int x)
+                (int, int) Map(int x)
                 {
                     if (x == 1)
                         throw _done;
 
                     if (x % 2 == 0)
-                        return Tuple.Create(x / 2, x);
+                        return (x / 2, x);
 
-                    return Tuple.Create(x * 3 + 1, x);
+                    return (x * 3 + 1, x);
                 };
 
                 var source = SourceGen.UnfoldFlow(27, 
-                    Flow.FromFunction<int, Tuple<int, int>>(Map)
+                    Flow.FromFunction<int, (int, int)>(Map)
                     .Recover(ex =>
                     {
                         if (ex == _done)
-                            return new Option<Tuple<int, int>>(Tuple.Create(1, 1));
+                            return new Option<(int, int)>((1, 1));
 
-                        return Option<Tuple<int, int>>.None;
+                        return Option<(int, int)>.None;
                     }), 
                     _timeout);
 
@@ -79,28 +80,28 @@ namespace Akka.Streams.Tests.Dsl
             [Fact]
             public void UnfoldFlow_should_unfold_Collatz_conjecture_with_a_sequence_of_111_elements_with_buffered_flow()
             {
-                Tuple<int, int> Map(int x)
+                (int, int) Map(int x)
                 {
                     if (x == 1)
                         throw _done;
 
                     if (x % 2 == 0)
-                        return Tuple.Create(x / 2, x);
+                        return (x / 2, x);
 
-                    return Tuple.Create(x * 3 + 1, x);
+                    return (x * 3 + 1, x);
                 };
 
                 Source<int, NotUsed> BufferedSource(int buffSize)
                 {
                     return
                         SourceGen.UnfoldFlow(27,
-                            Flow.FromFunction<int, Tuple<int, int>>(Map)
+                            Flow.FromFunction<int, (int, int)>(Map)
                             .Recover(ex =>
                             {
                                 if (ex == _done)
-                                    return new Option<Tuple<int, int>>(Tuple.Create(1, 1));
+                                    return new Option<(int, int)>((1, 1));
 
-                                return Option<Tuple<int, int>>.None;
+                                return Option<(int, int)>.None;
                             }), _timeout)
                         .Buffer(buffSize, OverflowStrategy.Backpressure);
                 }
@@ -203,15 +204,15 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 snk.Request(1);
                 sub.RequestNext(1);
-                pub.SendNext(Tuple.Create(2, 1));
+                pub.SendNext((2, 1));
                 snk.ExpectNext(1);
                 snk.Request(1);
                 sub.RequestNext(2);
-                pub.SendNext(Tuple.Create(3, 2));
+                pub.SendNext((3, 2));
                 snk.ExpectNext(2);
                 snk.Request(1);
                 sub.RequestNext(3);
-                pub.SendNext(Tuple.Create(4, 3));
+                pub.SendNext((4, 3));
                 snk.ExpectNext(3);
                 pub.SendError(kill);
                 snk.ExpectError().Should().Be(kill);
@@ -265,15 +266,15 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 snk.Request(1);
                 sub.RequestNext(1);
-                pub.SendNext(Tuple.Create(2, 1));
+                pub.SendNext((2, 1));
                 snk.ExpectNext(1);
                 snk.Request(1);
                 sub.RequestNext(2);
-                pub.SendNext(Tuple.Create(3, 2));
+                pub.SendNext((3, 2));
                 snk.ExpectNext(2);
                 snk.Request(1);
                 sub.RequestNext(3);
-                pub.SendNext(Tuple.Create(4, 3));
+                pub.SendNext((4, 3));
                 snk.ExpectNext(3);
                 pub.SendComplete();
                 snk.ExpectComplete();
@@ -282,26 +283,26 @@ namespace Akka.Streams.Tests.Dsl
 
         public class WithFunction : Akka.TestKit.Xunit2.TestKit
         {
-            private readonly Source<int, Tuple<TestSubscriber.Probe<int>, TestPublisher.Probe<int>>> _source;
+            private readonly Source<int, (TestSubscriber.Probe<int>, TestPublisher.Probe<int>)> _source;
 
             public WithFunction()
             {
                 var controlledFlow = Flow.FromSinkAndSource(this.SinkProbe<int>(), this.SourceProbe<int>(), Keep.Both);
-                _source = SourceGen.UnfoldFlowWith(1, controlledFlow, n => new Option<Tuple<int, int>>(Tuple.Create(n + 1, n)), _timeout);
+                _source = SourceGen.UnfoldFlowWith(1, controlledFlow, n => new Option<(int, int)>((n + 1, n)), _timeout);
             }
 
             [Fact]
             public void UnfoldFlow_should_unfold_Collatz_conjecture_with_a_sequence_of_111_elements_with_function()
             {
-                Option<Tuple<int, int>> Map(int x)
+                Option<(int, int)> Map(int x)
                 {
                     if (x == 1)
-                        return Option<Tuple<int, int>>.None;
+                        return Option<(int, int)>.None;
 
                     if (x % 2 == 0)
-                        return new Option<Tuple<int, int>>(Tuple.Create(x / 2, x));
+                        return new Option<(int, int)>((x / 2, x));
 
-                    return new Option<Tuple<int, int>>(Tuple.Create(x * 3 + 1, x));
+                    return new Option<(int, int)>((x * 3 + 1, x));
                 }
 
                 var source = SourceGen.UnfoldFlowWith(27, Flow.FromFunction<int, int>(x => x), Map, _timeout);

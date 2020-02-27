@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Cluster.Sharding
 {
@@ -211,6 +211,9 @@ namespace Akka.Cluster.Sharding
         public static ClusterShardingSettings Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.cluster.sharding");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>("akka.cluster.sharding");
+
             var coordinatorSingletonPath = config.GetString("coordinator-singleton");
 
             return Create(config, system.Settings.Config.GetConfig(coordinatorSingletonPath));
@@ -224,6 +227,9 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public static ClusterShardingSettings Create(Config config, Config singletonConfig)
         {
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>();
+
             var tuningParameters = new TunningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),
@@ -244,12 +250,16 @@ namespace Akka.Cluster.Sharding
                 entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"));
 
             var coordinatorSingletonSettings = ClusterSingletonManagerSettings.Create(singletonConfig);
-            var role = config.GetString("role");
+            var role = config.GetString("role", null);
             if (role == string.Empty) role = null;
 
-            var passivateIdleAfter = config.GetString("passivate-idle-entity-after").ToLower() == "off" 
-                ? TimeSpan.Zero 
-                : config.GetTimeSpan("passivate-idle-entity-after");
+            var usePassivateIdle = config.GetString("passivate-idle-entity-after").ToLowerInvariant();
+            var passivateIdleAfter = 
+                usePassivateIdle.Equals("off") ||
+                usePassivateIdle.Equals("false") ||
+                usePassivateIdle.Equals("no")
+                    ? TimeSpan.Zero 
+                    : config.GetTimeSpan("passivate-idle-entity-after");
 
             return new ClusterShardingSettings(
                 role: role,
@@ -302,6 +312,11 @@ namespace Akka.Cluster.Sharding
         {
             return string.IsNullOrEmpty(Role) || cluster.SelfRoles.Contains(Role);
         }
+
+        /// <summary>
+        /// If true, idle entities should be passivated if they have not received any message by this interval, otherwise it is not enabled.
+        /// </summary>
+        internal bool ShouldPassivateIdleEntities => PassivateIdleEntityAfter > TimeSpan.Zero && !RememberEntities;
 
         /// <summary>
         /// TBD

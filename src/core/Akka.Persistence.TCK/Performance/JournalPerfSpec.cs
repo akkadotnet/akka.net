@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -32,7 +32,8 @@ namespace Akka.Persistence.TestKit.Performance
 
         private TimeSpan ExpectDuration = TimeSpan.FromSeconds(10);
 
-        protected JournalPerfSpec(Config config, string actorSystem, ITestOutputHelper output) : base(config, actorSystem, output)
+        protected JournalPerfSpec(Config config, string actorSystem, ITestOutputHelper output)
+            : base(config ?? Config.Empty, actorSystem, output)
         {
             testProbe = CreateTestProbe();
         }

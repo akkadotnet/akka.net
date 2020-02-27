@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -168,7 +168,7 @@ namespace Akka.Dispatch
         public ForkJoinExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
-            _threadPoolConfiguration = ConfigureSettings(config);
+            _threadPoolConfiguration = ConfigureSettings(Config);
         }
 
         /// <summary>
@@ -185,22 +185,27 @@ namespace Akka.Dispatch
         {
             var dtp = config.GetConfig("dedicated-thread-pool");
             var fje = config.GetConfig("fork-join-executor");
-            if ((dtp == null || dtp.IsEmpty) && (fje == null || fje.IsEmpty)) throw new ConfigurationException(
+            if (dtp.IsNullOrEmpty() && fje.IsNullOrEmpty()) throw new ConfigurationException(
                 $"must define section 'dedicated-thread-pool' OR 'fork-join-executor' for fork-join-executor {config.GetString("id", "unknown")}");
 
-            if (dtp != null && !dtp.IsEmpty)
+            if (!dtp.IsNullOrEmpty())
             {
-                var settings = new DedicatedThreadPoolSettings(dtp.GetInt("thread-count"),
-                    DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype",
-                        ThreadType.Background.ToString())),
+                var settings = new DedicatedThreadPoolSettings(
+                    dtp.GetInt("thread-count"),
+                    DedicatedThreadPoolConfigHelpers.ConfigureThreadType(
+                        dtp.GetString("threadtype", ThreadType.Background.ToString())),
                     config.GetString("id"),
                     DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
                 return settings;
             }
             else
             {
-                var settings = new DedicatedThreadPoolSettings(ThreadPoolConfig.ScaledPoolSize(fje.GetInt("parallelism-min"), 1.0, fje.GetInt("parallelism-max")),
-                     name:config.GetString("id"));
+                var settings = new DedicatedThreadPoolSettings(
+                    ThreadPoolConfig.ScaledPoolSize(
+                        fje.GetInt("parallelism-min"), 
+                        1.0, 
+                        fje.GetInt("parallelism-max")),
+                        name:config.GetString("id"));
                 return settings;
             }
             
@@ -254,7 +259,7 @@ namespace Akka.Dispatch
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            Config = new CachingConfig(config);
+            Config = new Config(config);
         }
 
         /// <summary>
@@ -286,7 +291,7 @@ namespace Akka.Dispatch
         /// <returns>The requested <see cref="ExecutorServiceConfigurator"/> instance.</returns>
         protected ExecutorServiceConfigurator ConfigureExecutor()
         {
-            var executor = Config.GetString("executor");
+            var executor = Config.GetString("executor", null);
             switch (executor)
             {
                 case null:
@@ -304,7 +309,8 @@ namespace Akka.Dispatch
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)
                     {
-                        throw new ConfigurationException($"Could not resolve executor service configurator type {executor} for path {Config.GetString("id")}");
+                        throw new ConfigurationException(
+                            $"Could not resolve executor service configurator type {executor} for path {Config.GetString("id", "unknown")}");
                     }
                     var args = new object[] { Config, Prerequisites };
                     return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
@@ -330,6 +336,7 @@ namespace Akka.Dispatch
         /// </summary>
         internal static readonly Lazy<Index<MessageDispatcher, IInternalActorRef>> Actors = new Lazy<Index<MessageDispatcher, IInternalActorRef>>(() => new Index<MessageDispatcher, IInternalActorRef>(), LazyThreadSafetyMode.PublicationOnly);
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// INTERNAL API - Debugging purposes only! Should be elided by compiler in release builds.
         /// </summary>
@@ -353,6 +360,7 @@ namespace Akka.Dispatch
                 }
             }
         }
+#pragma warning restore CS0162
 
         /// <summary>
         ///     The default throughput
@@ -645,6 +653,7 @@ namespace Akka.Dispatch
             RegisterForExecution(cell.Mailbox, false, true);
         }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// INTERNAL API 
         /// 
@@ -656,6 +665,7 @@ namespace Akka.Dispatch
             if (DebugDispatcher) Actors.Value.Put(this, (IInternalActorRef)actor.Self);
             AddInhabitants(1);
         }
+#pragma warning restore CS0162
 
         /// <summary>
         /// INTERNAL API
@@ -700,6 +710,7 @@ namespace Akka.Dispatch
             }
         }
 
+#pragma warning disable CS0162 // Disabled since the flag can be set while debugging
         /// <summary>
         /// INTERNAL API
         /// 
@@ -714,6 +725,7 @@ namespace Akka.Dispatch
             mailbox.BecomeClosed();
             mailbox.CleanUp();
         }
+#pragma warning restore CS0162
 
         /// <summary>
         /// After the call to this method, the dispatcher mustn't begin any new message processing for the specified reference 

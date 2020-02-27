@@ -426,7 +426,7 @@ namespace Akka.Cluster.Sharding
         {
             var sender = coordinator.Sender;
             Task.WhenAll(
-                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
+                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => (regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
                 ).ContinueWith(allRegionStats =>
                 {
                     if (allRegionStats.IsCanceled)
@@ -464,7 +464,7 @@ namespace Akka.Cluster.Sharding
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions)
+                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions, coordinator.GracefullShutdownInProgress)
                             .WithDispatcher(coordinator.Context.Props.Dispatcher));
                     }
                     else

@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var msg = new Message("a", 1);
 
-            var sink = this.CreateSubscriberProbe<Tuple<Message, long>>();
+            var sink = this.CreateSubscriberProbe<(Message, long)>();
 
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = sink.ExpectSubscription();
             sub.Request(1);
-            sink.ExpectNext(Tuple.Create(msg, 1L));
+            sink.ExpectNext((msg, 1L));
             sink.ExpectComplete();
         }
 
@@ -100,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void SourceWithContext_must_pass_through_context_using_Select_and_Where()
         {
-            var sink = this.CreateSubscriberProbe<Tuple<string, long>>();
+            var sink = this.CreateSubscriberProbe<(string, long)>();
 
             Source.From(new[]
                 {
@@ -118,8 +118,8 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = sink.ExpectSubscription();
             sub.Request(2);
-            sink.ExpectNext(Tuple.Create("a", 1L));
-            sink.ExpectNext(Tuple.Create("c", 4L));
+            sink.ExpectNext(("a", 1L));
+            sink.ExpectNext(("c", 4L));
             sink.ExpectComplete();
         }
 
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var msg = new Message("a", 1);
 
-            var sink = this.CreateSubscriberProbe<Tuple<string, long>>();
+            var sink = this.CreateSubscriberProbe<(string, long)>();
 
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)
@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = sink.ExpectSubscription();
             sub.Request(1);
-            sink.ExpectNext(Tuple.Create("ab", 1L));
+            sink.ExpectNext(("ab", 1L));
             sink.ExpectComplete();
         }
 
@@ -150,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var msg = new Message("a", 1);
 
-            var sink = this.CreateSubscriberProbe<Tuple<string, long>>();
+            var sink = this.CreateSubscriberProbe<(string, long)>();
 
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)
@@ -161,9 +161,9 @@ namespace Akka.Streams.Tests.Dsl
 
             var sub = sink.ExpectSubscription();
             sub.Request(3);
-            sink.ExpectNext(Tuple.Create("a-1", 1L));
-            sink.ExpectNext(Tuple.Create("a-2", 1L));
-            sink.ExpectNext(Tuple.Create("a-3", 1L));
+            sink.ExpectNext(("a-1", 1L));
+            sink.ExpectNext(("a-2", 1L));
+            sink.ExpectNext(("a-3", 1L));
             sink.ExpectComplete();
         }
 
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var msg = new Message("a", 1);
 
-            var sink = this.CreateSubscriberProbe<Tuple<IReadOnlyList<string>, IReadOnlyList<long>>>();
+            var sink = this.CreateSubscriberProbe<(IReadOnlyList<string>, IReadOnlyList<long>)>();
 
             Source.From(new[] { msg })
                 .AsSourceWithContext(x => x.Offset)

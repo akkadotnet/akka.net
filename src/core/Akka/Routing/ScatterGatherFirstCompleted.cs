@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -125,9 +125,9 @@ namespace Akka.Routing
         /// </param>
         public ScatterGatherFirstCompletedPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
-                  within: config.GetTimeSpan("within"),
+                  within: config.GetTimeSpan("within", null),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
                   usePoolDispatcher: config.HasPath("pool-dispatcher"))
@@ -366,8 +366,8 @@ namespace Akka.Routing
         /// </param>
         public ScatterGatherFirstCompletedGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
-                  config.GetTimeSpan("within"),
+                  config.GetStringList("routees.paths", new string[] { }),
+                  config.GetTimeSpan("within", null),
                   Dispatchers.DefaultDispatcherId)
         {
         }

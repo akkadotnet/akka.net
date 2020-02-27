@@ -255,7 +255,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var c1 = this.CreateManualSubscriberProbe<Tuple<int, string>>();
+                var c1 = this.CreateManualSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -279,9 +279,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 var sub1 = c1.ExpectSubscription();
                 sub1.Request(5);
-                c1.ExpectNext(Tuple.Create(1, "a"));
-                c1.ExpectNext(Tuple.Create(2, "b"));
-                c1.ExpectNext(Tuple.Create(3, "c"));
+                c1.ExpectNext((1, "a"));
+                c1.ExpectNext((2, "b"));
+                c1.ExpectNext((3, "c"));
                 c1.ExpectComplete();
             }, Materializer);
         }

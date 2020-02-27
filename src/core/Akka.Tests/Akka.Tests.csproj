@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
+  <Import Project="..\..\xunitSettings.props" />
   
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests</AssemblyTitle>
@@ -7,7 +8,9 @@
   </PropertyGroup>
  
   <ItemGroup>
-    <Content Include="App.config" />
+    <Content Include="App.config">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
@@ -26,7 +29,7 @@
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
-    <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
@@ -40,4 +43,5 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
+
 </Project>

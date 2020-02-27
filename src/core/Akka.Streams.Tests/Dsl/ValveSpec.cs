@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => Tuple.Create(l.Item1, l.Item2, r))
+                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
                 .Run(Sys.Materializer());
 
             var probe = t.Item1;
@@ -300,7 +300,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => Tuple.Create(l.Item1, l.Item2, r))
+                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
                 .Run(Sys.Materializer());
 
             var probe = t.Item1;

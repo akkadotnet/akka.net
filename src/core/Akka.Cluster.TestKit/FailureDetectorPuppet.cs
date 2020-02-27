@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Threading;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 

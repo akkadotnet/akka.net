@@ -122,7 +122,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var t =
                     Source.AsSubscriber<int>()
-                        .MergeMaterialized(Source.AsSubscriber<int>(), Tuple.Create)
+                        .MergeMaterialized(Source.AsSubscriber<int>(), ValueTuple.Create)
                         .ToMaterialized(Sink.FromSubscriber(down), Keep.Left)
                         .Run(Materializer);
                 var graphSubscriber1 = t.Item1;

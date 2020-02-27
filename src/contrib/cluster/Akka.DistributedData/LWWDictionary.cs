@@ -16,6 +16,19 @@ using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface ILWWDictionaryKey
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
+    }
+
     /// <summary>
     /// Typed key used to store <see cref="LWWDictionary{TKey,TValue}"/> replica 
     /// inside current <see cref="Replicator"/> key-value store.
@@ -23,13 +36,28 @@ namespace Akka.DistributedData
     /// <typeparam name="TKey">Type of a key used by corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</typeparam>
     /// <typeparam name="TValue">Type of a value used by corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</typeparam>
     [Serializable]
-    public sealed class LWWDictionaryKey<TKey, TValue> : Key<LWWDictionary<TKey, TValue>>
+    public sealed class LWWDictionaryKey<TKey, TValue> : Key<LWWDictionary<TKey, TValue>>, ILWWDictionaryKey
     {
         /// <summary>
         /// Creates a new instance of a <see cref="LWWDictionaryKey{TKey,TValue}"/> with provided key identifier.
         /// </summary>
         /// <param name="id">Identifier used to find corresponding <see cref="LWWDictionary{TKey,TValue}"/>.</param>
         public LWWDictionaryKey(string id) : base(id) { }
+
+        public Type KeyType { get; } = typeof(TKey);
+        public Type ValueType { get; } = typeof(TValue);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// 
+    /// Marker interface for serialization
+    /// </summary>
+    internal interface ILWWDictionary
+    {
+        Type KeyType { get; }
+
+        Type ValueType { get; }
     }
 
     /// <summary>
@@ -57,7 +85,7 @@ namespace Akka.DistributedData
         /// <typeparam name="TValue">TBD</typeparam>
         /// <param name="elements">TBD</param>
         /// <returns>TBD</returns>
-        public static LWWDictionary<TKey, TValue> Create<TKey, TValue>(params Tuple<UniqueAddress, TKey, TValue>[] elements) =>
+        public static LWWDictionary<TKey, TValue> Create<TKey, TValue>(params (UniqueAddress, TKey, TValue)[] elements) =>
             elements.Aggregate(LWWDictionary<TKey, TValue>.Empty, (dictionary, t) => dictionary.SetItem(t.Item1, t.Item2, t.Item3));
 
         /// <summary>
@@ -68,7 +96,7 @@ namespace Akka.DistributedData
         /// <param name="elements">TBD</param>
         /// <param name="clock">TBD</param>
         /// <returns>TBD</returns>
-        public static LWWDictionary<TKey, TValue> Create<TKey, TValue>(IEnumerable<Tuple<UniqueAddress, TKey, TValue>> elements, Clock<TValue> clock = null) =>
+        public static LWWDictionary<TKey, TValue> Create<TKey, TValue>(IEnumerable<(UniqueAddress, TKey, TValue)> elements, Clock<TValue> clock = null) =>
             elements.Aggregate(LWWDictionary<TKey, TValue>.Empty, (dictionary, t) => dictionary.SetItem(t.Item1, t.Item2, t.Item3, clock));
     }
 
@@ -90,19 +118,19 @@ namespace Akka.DistributedData
     /// <typeparam name="TKey">TBD</typeparam>
     /// <typeparam name="TValue">TBD</typeparam>
     [Serializable]
-    public sealed partial class LWWDictionary<TKey, TValue> :
+    public sealed class LWWDictionary<TKey, TValue> :
         IDeltaReplicatedData<LWWDictionary<TKey, TValue>, ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation>,
         IRemovedNodePruning<LWWDictionary<TKey, TValue>>,
         IReplicatedDataSerialization,
         IEquatable<LWWDictionary<TKey, TValue>>,
-        IEnumerable<KeyValuePair<TKey, TValue>>
+        IEnumerable<KeyValuePair<TKey, TValue>>, ILWWDictionary
     {
         /// <summary>
         /// An empty instance of the <see cref="LWWDictionary{TKey,TValue}"/>
         /// </summary>
         public static readonly LWWDictionary<TKey, TValue> Empty = new LWWDictionary<TKey, TValue>(ORDictionary<TKey, LWWRegister<TValue>>.Empty);
 
-        private readonly ORDictionary<TKey, LWWRegister<TValue>> _underlying;
+        internal readonly ORDictionary<TKey, LWWRegister<TValue>> Underlying;
 
         /// <summary>
         /// TBD
@@ -110,48 +138,48 @@ namespace Akka.DistributedData
         /// <param name="underlying">TBD</param>
         public LWWDictionary(ORDictionary<TKey, LWWRegister<TValue>> underlying)
         {
-            _underlying = underlying;
+            Underlying = underlying;
         }
 
         /// <summary>
         /// Returns all entries stored within current <see cref="LWWDictionary{TKey,TValue}"/>
         /// </summary>
-        public IImmutableDictionary<TKey, TValue> Entries => _underlying.Entries
+        public IImmutableDictionary<TKey, TValue> Entries => Underlying.Entries
             .Select(kv => new KeyValuePair<TKey, TValue>(kv.Key, kv.Value.Value))
             .ToImmutableDictionary();
 
         /// <summary>
         /// Returns collection of keys stored within current <see cref="LWWDictionary{TKey,TValue}"/>.
         /// </summary>
-        public IEnumerable<TKey> Keys => _underlying.Keys;
+        public IEnumerable<TKey> Keys => Underlying.Keys;
 
         /// <summary>
         /// Returns collection of values stored within current <see cref="LWWDictionary{TKey,TValue}"/>.
         /// </summary>
-        public IEnumerable<TValue> Values => _underlying.Values.Select(x => x.Value);
+        public IEnumerable<TValue> Values => Underlying.Values.Select(x => x.Value);
 
         /// <summary>
         /// Returns value stored under provided <paramref name="key"/>.
         /// </summary>
         /// <param name="key">TBD</param>
-        public TValue this[TKey key] => _underlying[key].Value;
+        public TValue this[TKey key] => Underlying[key].Value;
 
         /// <summary>
         /// Determines current <see cref="LWWDictionary{TKey,TValue}"/> contains entry with provided <paramref name="key"/>.
         /// </summary>
         /// <param name="key">TBD</param>
         /// <returns>TBD</returns>
-        public bool ContainsKey(TKey key) => _underlying.ContainsKey(key);
+        public bool ContainsKey(TKey key) => Underlying.ContainsKey(key);
 
         /// <summary>
         /// Determines if current <see cref="LWWDictionary{TKey,TValue}"/> is empty.
         /// </summary>
-        public bool IsEmpty => _underlying.IsEmpty;
+        public bool IsEmpty => Underlying.IsEmpty;
 
         /// <summary>
         /// Returns number of entries stored within current <see cref="LWWDictionary{TKey,TValue}"/>.
         /// </summary>
-        public int Count => _underlying.Count;
+        public int Count => Underlying.Count;
 
         /// <summary>
         /// Adds an entry to the map.
@@ -176,11 +204,11 @@ namespace Akka.DistributedData
             Clock<TValue> clock = null)
         {
             LWWRegister<TValue> register;
-            var newRegister = _underlying.TryGetValue(key, out register)
+            var newRegister = Underlying.TryGetValue(key, out register)
                 ? register.WithValue(node, value, clock ?? LWWRegister<TValue>.DefaultClock)
                 : new LWWRegister<TValue>(node, value, clock ?? LWWRegister<TValue>.DefaultClock);
 
-            return new LWWDictionary<TKey, TValue>(_underlying.SetItem(node, key, newRegister));
+            return new LWWDictionary<TKey, TValue>(Underlying.SetItem(node, key, newRegister));
         }
 
         /// <summary>
@@ -196,7 +224,7 @@ namespace Akka.DistributedData
         /// not be removed after merge.
         /// </summary>
         public LWWDictionary<TKey, TValue> Remove(UniqueAddress node, TKey key) =>
-            new LWWDictionary<TKey, TValue>(_underlying.Remove(node, key));
+            new LWWDictionary<TKey, TValue>(Underlying.Remove(node, key));
 
         /// <summary>
         /// Tries to return a value under provided <paramref name="key"/> is such value exists.
@@ -207,7 +235,7 @@ namespace Akka.DistributedData
         public bool TryGetValue(TKey key, out TValue value)
         {
             LWWRegister<TValue> register;
-            if (_underlying.TryGetValue(key, out register))
+            if (Underlying.TryGetValue(key, out register))
             {
                 value = register.Value;
                 return true;
@@ -223,7 +251,7 @@ namespace Akka.DistributedData
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> Merge(LWWDictionary<TKey, TValue> other) =>
-            new LWWDictionary<TKey, TValue>(_underlying.Merge(other._underlying));
+            new LWWDictionary<TKey, TValue>(Underlying.Merge(other.Underlying));
 
         /// <summary>
         /// TBD
@@ -233,7 +261,7 @@ namespace Akka.DistributedData
         public IReplicatedData Merge(IReplicatedData other) =>
             Merge((LWWDictionary<TKey, TValue>)other);
 
-        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => _underlying.ModifiedByNodes;
+        public ImmutableHashSet<UniqueAddress> ModifiedByNodes => Underlying.ModifiedByNodes;
 
         /// <summary>
         /// TBD
@@ -241,7 +269,7 @@ namespace Akka.DistributedData
         /// <param name="removedNode">TBD</param>
         /// <returns>TBD</returns>
         public bool NeedPruningFrom(UniqueAddress removedNode) =>
-            _underlying.NeedPruningFrom(removedNode);
+            Underlying.NeedPruningFrom(removedNode);
 
         IReplicatedData IRemovedNodePruning.PruningCleanup(UniqueAddress removedNode) => PruningCleanup(removedNode);
 
@@ -254,7 +282,7 @@ namespace Akka.DistributedData
         /// <param name="collapseInto">TBD</param>
         /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
-            new LWWDictionary<TKey, TValue>(_underlying.Prune(removedNode, collapseInto));
+            new LWWDictionary<TKey, TValue>(Underlying.Prune(removedNode, collapseInto));
 
         /// <summary>
         /// TBD
@@ -262,7 +290,7 @@ namespace Akka.DistributedData
         /// <param name="removedNode">TBD</param>
         /// <returns>TBD</returns>
         public LWWDictionary<TKey, TValue> PruningCleanup(UniqueAddress removedNode) =>
-            new LWWDictionary<TKey, TValue>(_underlying.PruningCleanup(removedNode));
+            new LWWDictionary<TKey, TValue>(Underlying.PruningCleanup(removedNode));
 
         /// <summary>
         /// TBD
@@ -274,7 +302,7 @@ namespace Akka.DistributedData
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return _underlying.Equals(other._underlying);
+            return Underlying.Equals(other.Underlying);
         }
 
         /// <summary>
@@ -282,14 +310,14 @@ namespace Akka.DistributedData
         /// </summary>
         /// <returns>TBD</returns>
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() =>
-            _underlying.Select(x => new KeyValuePair<TKey, TValue>(x.Key, x.Value.Value)).GetEnumerator();
+            Underlying.Select(x => new KeyValuePair<TKey, TValue>(x.Key, x.Value.Value)).GetEnumerator();
 
         /// <inheritdoc/>
         public override bool Equals(object obj) =>
             obj is LWWDictionary<TKey, TValue> && Equals((LWWDictionary<TKey, TValue>)obj);
 
         /// <inheritdoc/>
-        public override int GetHashCode() => _underlying.GetHashCode();
+        public override int GetHashCode() => Underlying.GetHashCode();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         /// <inheritdoc/>
@@ -301,7 +329,7 @@ namespace Akka.DistributedData
             return sb.ToString();
         }
 
-        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta => _underlying.Delta;
+        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta => Underlying.Delta;
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
@@ -311,9 +339,12 @@ namespace Akka.DistributedData
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
         public LWWDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation delta) =>
-            new LWWDictionary<TKey, TValue>(_underlying.MergeDelta(delta));
+            new LWWDictionary<TKey, TValue>(Underlying.MergeDelta(delta));
 
         public LWWDictionary<TKey, TValue> ResetDelta() =>
-            new LWWDictionary<TKey, TValue>(_underlying.ResetDelta());
+            new LWWDictionary<TKey, TValue>(Underlying.ResetDelta());
+
+        public Type KeyType => typeof(TKey);
+        public Type ValueType => typeof(TValue);
     }
 }

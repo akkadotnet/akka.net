@@ -218,7 +218,7 @@ namespace Akka.Streams.Tests.Dsl
                 var down = this.CreateManualSubscriberProbe<int>();
 
                 var t = Source.AsSubscriber<int>()
-                    .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, Tuple.Create)
+                    .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, ValueTuple.Create)
                     .ToMaterialized(Sink.FromSubscriber(down), Keep.Left)
                     .Run(Materializer);
                 var graphSubscriber1 = t.Item1;

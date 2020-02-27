@@ -193,7 +193,7 @@ namespace Akka.Event
         public void Info(Exception cause, string format, params object[] args){ }
 
         /// <summary>
-        /// Obsolete. Use <see cref="Warning" /> instead!
+        /// Obsolete. Use <see cref="Warning(string, object[])" /> instead!
         /// </summary>
         /// <param name="format">N/A</param>
         /// <param name="args">N/A</param>

@@ -11,8 +11,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
@@ -143,6 +144,19 @@ namespace Akka.TestKit
             try
             {
                 actionThatThrows();
+            }
+            catch(Exception)
+            {
+                return;
+            }
+            throw new ThrowsException(typeof(Exception));
+        }
+        
+        protected async Task InterceptAsync(Func<Task> asyncActionThatThrows)
+        {
+            try
+            {
+                await asyncActionThatThrows();
             }
             catch(Exception)
             {

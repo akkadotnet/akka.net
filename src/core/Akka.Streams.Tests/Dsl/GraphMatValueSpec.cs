@@ -313,7 +313,7 @@ namespace Akka.Streams.Tests.Dsl
                 b.From(bc.Out(0)).To(zip.In0);
                 b.From(bc.Out(1)).To(zip.In1);
 
-                return new FlowShape<string, Tuple<string, string>>(bc.In, zip.Out);
+                return new FlowShape<string, (string, string)>(bc.In, zip.Out);
             }).Named("NestedFlow");
 
             var nest1 = Flow.Create<string>().Via(subFlow);
@@ -322,7 +322,7 @@ namespace Akka.Streams.Tests.Dsl
             var nest4 = Flow.Create<string>().Via(nest3);
 
             //fails
-            var matValue = Source.Single("").Via(nest4).To(Sink.Ignore<Tuple<string, string>>()).Run(mat2);
+            var matValue = Source.Single("").Via(nest4).To(Sink.Ignore<(string, string)>()).Run(mat2);
             matValue.Should().Be(NotUsed.Instance);
         }
 

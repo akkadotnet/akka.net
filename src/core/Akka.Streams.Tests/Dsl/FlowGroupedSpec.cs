@@ -29,10 +29,10 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly Random Random = new Random();
         private static ICollection<int> RandomSeq(int n) => Enumerable.Range(1, n).Select(_ => Random.Next()).ToList();
 
-        private static Tuple<ICollection<int>, ICollection<IEnumerable<int>>> RandomTest(int n)
+        private static (ICollection<int>, ICollection<IEnumerable<int>>) RandomTest(int n)
         {
             var s = RandomSeq(n);
-            return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(s, new[] {s});
+            return (s, new[] {s});
         }
 
         [Fact]

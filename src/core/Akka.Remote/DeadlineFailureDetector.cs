@@ -7,7 +7,7 @@
 
 using System;
 using System.Threading;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Remote
@@ -80,8 +80,8 @@ namespace Akka.Remote
         /// <param name="eventStream">N/A. This parameter is not used.</param>
         public DeadlineFailureDetector(Config config, EventStream eventStream) 
             : this(
-                  config.GetTimeSpan("acceptable-heartbeat-pause"),
-                  config.GetTimeSpan("heartbeat-interval")) { }
+                  config.GetTimeSpan("acceptable-heartbeat-pause", null),
+                  config.GetTimeSpan("heartbeat-interval", null)) { }
 
         /// <summary>
         /// Determines whether the resource is considered to be up and healthy.

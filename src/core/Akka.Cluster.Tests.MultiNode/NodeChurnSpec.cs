@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.TestKit;
 using FluentAssertions;
@@ -32,6 +32,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.cluster.auto-down-unreachable-after = 1s
                   akka.remote.log-frame-size-exceeding = 2000b
+                  akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
                 "))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
@@ -58,7 +59,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         private readonly NodeChurnConfig _config;
-        private const int rounds = 3;
+        private const int Rounds = 5;
 
         private ImmutableList<Address> SeedNodes
         {
@@ -101,16 +102,11 @@ namespace Akka.Cluster.Tests.MultiNode
             // This test is configured with log-frame-size-exceeding and the LogListener
             // will send to the testActor if unexpected increase in message payload size.
             // It will fail after a while if vector clock entries of removed nodes are not pruned.
-            for (int n = 1; n <= rounds; n++)
+            for (var n = 1; n <= Rounds; n++)
             {
                 Log.Info("round-" + n);
-                var systems = ImmutableList.Create(
-                    ActorSystem.Create(Sys.Name, Sys.Settings.Config),
-                    ActorSystem.Create(Sys.Name, Sys.Settings.Config),
-                    ActorSystem.Create(Sys.Name, Sys.Settings.Config),
-                    ActorSystem.Create(Sys.Name, Sys.Settings.Config),
-                    ActorSystem.Create(Sys.Name, Sys.Settings.Config));
-
+                var systems = Enumerable.Repeat(0,2).Select(_ => Actor.ActorSystem.Create(Sys.Name, Sys.Settings.Config)).ToImmutableList();
+                
                 foreach (var s in systems)
                 {
                     MuteDeadLetters(s);
@@ -136,7 +132,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 EnterBarrier("members-removed-" + n);
                 foreach (var node in systems)
                 {
-                    node.Terminate().Wait();
+                   Shutdown(node, verifySystemShutdown:true);
                 }
                 Log.Info("end of round-" + n);
                 // log listener will send to testActor if payload size exceed configured log-frame-size-exceeding
@@ -157,7 +153,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         var cluster = Cluster.Get(s);
                         cluster.State.Members.Count.Should().Be(numberOfMembers);
-                        cluster.State.Members.All(c => c.Status == MemberStatus.Up).Should().BeTrue();
+                        cluster.State.Members.All(c => c.Status == MemberStatus.Up).Should().BeTrue("All members should be up.");
                     });
                 });
             });

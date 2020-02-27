@@ -65,7 +65,7 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to retrieve a data value for the
-    /// given `key`. The `Replicator` will reply with one of the <see cref="GetResponse"/> messages.
+    /// given `key`. The `Replicator` will reply with one of the <see cref="IGetResponse"/> messages.
     /// 
     /// The optional `request` context is included in the reply messages. This is a convenient
     /// way to pass contextual information (e.g. original sender) without having to use `ask`

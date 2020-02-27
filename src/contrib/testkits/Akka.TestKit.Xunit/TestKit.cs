@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit.Internals;
 using Xunit.Abstractions;
@@ -85,7 +85,7 @@ namespace Akka.TestKit.Xunit
         /// Commonly used assertions used throughout the testkit.
         /// </summary>
         protected static XunitAssertions Assertions { get; } = new XunitAssertions();
-
+        
         /// <summary>
         /// This method is called when a test ends.
         /// 

@@ -49,7 +49,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Reporting
                 Subscriber = subscriber;
             }
 
-
+                
             public IActorRef Subscriber { get; private set; }
         }
 

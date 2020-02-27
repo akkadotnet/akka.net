@@ -63,7 +63,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -77,7 +77,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -98,7 +98,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -125,7 +125,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -146,7 +146,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -167,7 +167,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -188,7 +188,7 @@ namespace Akka.Persistence.TestKit
         /// </summary>
         /// <remarks>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -212,7 +212,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -237,7 +237,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -268,7 +268,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -299,7 +299,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -331,7 +331,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -362,7 +362,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems
@@ -388,7 +388,7 @@ namespace Akka.Persistence.TestKit
         ///         Each message will be delayed individually.
         ///     </para>
         ///     <para>
-        ///         Journal will crash and <see cref="UntypedPersistentActor.OnPersistFailure"/> will be called on persistent actor.
+        ///         Journal will crash and <see cref="Eventsourced.OnPersistFailure">UntypedPersistentActor.OnPersistFailure</see> will be called on persistent actor.
         ///     </para>
         ///     <para>
         ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle network problems

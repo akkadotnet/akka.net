@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                                 var broadcast = b.Add(new Broadcast<int>(2));
                                 var source =
                                     Source.From(Enumerable.Range(0, 6))
-                                        .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
+                                        .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
                                 b.From(source).To(broadcast.In);
                                 b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);
                                 b.From(broadcast.Out(1)).To(p2.Inlet);

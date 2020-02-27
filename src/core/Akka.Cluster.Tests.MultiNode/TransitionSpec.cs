@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             // sorts the addresses and provides the address of the node with the lowest port number
             // as that node will be the leader
-            return roles.Select(x => Tuple.Create(x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
+            return roles.Select(x => (x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)

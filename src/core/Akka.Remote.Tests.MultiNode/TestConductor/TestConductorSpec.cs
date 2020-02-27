@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
@@ -137,8 +137,8 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
             }, _config.Slave);
 
             var minMax = IsNode(_config.Master)
-                ? new Tuple<TimeSpan, TimeSpan>(TimeSpan.Zero, TimeSpan.FromMilliseconds(500))
-                : new Tuple<TimeSpan, TimeSpan>(TimeSpan.FromSeconds(0.3), TimeSpan.FromSeconds(3));
+                ? (TimeSpan.Zero, TimeSpan.FromMilliseconds(500))
+                : (TimeSpan.FromSeconds(0.3), TimeSpan.FromSeconds(3));
 
             Within(minMax.Item1, minMax.Item2, () =>
             {

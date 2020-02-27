@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Google.Protobuf;
 using Xunit;
@@ -28,17 +28,20 @@ namespace Akka.DistributedData.Tests.Serialization
             }
             akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
 
-        private readonly UniqueAddress _address1 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 1);
-        private readonly UniqueAddress _address2 = new UniqueAddress(new Address("akka.tcp", "sys", "other.host.org", 4711), 2);
-        private readonly UniqueAddress _address3 = new UniqueAddress(new Address("akka.tcp", "sys", "some.host.org", 4711), 3);
+        private readonly UniqueAddress _address1;
+        private readonly UniqueAddress _address2;
+        private readonly UniqueAddress _address3;
 
         private readonly GSetKey<string> _keyA = new GSetKey<string>("A");
 
         public ReplicatorMessageSerializerSpec(ITestOutputHelper output) : base(BaseConfig, "ReplicatorMessageSerializerSpec", output)
         {
+            _address1 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 1);
+            _address2 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "other.host.org", 4711), 2);
+            _address3 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 3);
         }
 
-        [Fact(Skip = "Need https://github.com/akkadotnet/akka.net/pull/3668 merged")]
+        [Fact()]
         public void ReplicatorMessageSerializer_should_serialize_Replicator_message()
         {
             var ref1 = Sys.ActorOf(Props.Empty, "ref1");
@@ -79,8 +82,9 @@ namespace Akka.DistributedData.Tests.Serialization
         private void CheckSerialization(object expected)
         {
             var serializer = Sys.Serialization.FindSerializerFor(expected);
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, expected);
             var blob = serializer.ToBinary(expected);
-            var actual = serializer.FromBinary(blob, expected.GetType());
+            var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, manifest);
 
             Assert.True(expected.Equals(actual), $"Expected: {expected}\nActual: {actual}");
         }

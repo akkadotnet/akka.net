@@ -36,30 +36,29 @@ namespace Samples.Cluster.Transformation
 
         protected override void OnReceive(object message)
         {
-            if (message is TransformationMessages.TransformationJob)
+            switch (message)
             {
-                var job = (TransformationMessages.TransformationJob) message;
-                Sender.Tell(new TransformationMessages.TransformationResult($"[{Self.Path.ToStringWithAddress(Cluster.SelfAddress)}]{job.ToString().ToUpper()}"), Self);
-            }
-            else if (message is ClusterEvent.CurrentClusterState)
-            {
-                var state = (ClusterEvent.CurrentClusterState) message;
-                foreach (var member in state.Members)
+                case TransformationMessages.TransformationJob job:
+                    Sender.Tell(new TransformationMessages.TransformationResult($"[{Self.Path.ToStringWithAddress(Cluster.SelfAddress)}]{job.ToString().ToUpper()}"), Self);
+                    break;
+                case ClusterEvent.CurrentClusterState state:
                 {
-                    if (member.Status == MemberStatus.Up)
+                    foreach (var member in state.Members)
                     {
-                        Register(member);
+                        if (member.Status == MemberStatus.Up)
+                        {
+                            Register(member);
+                        }
                     }
+
+                    break;
                 }
-            }
-            else if (message is ClusterEvent.MemberUp)
-            {
-                var memUp = (ClusterEvent.MemberUp) message;
-                Register(memUp.Member);
-            }
-            else
-            {
-                Unhandled(message);
+                case ClusterEvent.MemberUp memUp:
+                    Register(memUp.Member);
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
             }
         }
 

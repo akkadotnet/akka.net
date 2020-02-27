@@ -29,7 +29,7 @@ Akka.NET comes with two built in loggers.
 These loggers are also available as separate nuget packages
 
 * __Akka.Logger.slf4net__ which logs using [slf4net](https://github.com/englishtown/slf4net)
-* __Akka.Logger.Serilog__ which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](serilog.md).
+* __Akka.Logger.Serilog__ which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
 * __Akka.Logger.NLog__  which logs using [NLog](http://nlog-project.org/)
 
 Note that you need to modify the config as explained below.

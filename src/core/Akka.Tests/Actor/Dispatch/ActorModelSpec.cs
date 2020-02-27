@@ -14,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
@@ -304,12 +304,15 @@ namespace Akka.Tests.Actor.Dispatch
 
             public MessageDispatcherInterceptorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
             {
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<MessageDispatcherInterceptorConfigurator>();
+
                 _instance = new MessageDispatcherInterceptor(this,
-                    config.GetString("id"),
-                    config.GetInt("throughput"),
-                    config.GetTimeSpan("throughput-deadline-time").Ticks,
+                    config.GetString("id", null),
+                    config.GetInt("throughput", 0),
+                    config.GetTimeSpan("throughput-deadline-time", null).Ticks,
                     ConfigureExecutor(),
-                    Config.GetTimeSpan("shutdown-timeout"));
+                    Config.GetTimeSpan("shutdown-timeout", null));
             }
 
             public override MessageDispatcher Dispatcher()

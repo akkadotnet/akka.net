@@ -8,7 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Event;
@@ -42,7 +42,7 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public abstract Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen();
+        public abstract Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen();
 
         /// <summary>
         /// TBD
@@ -382,7 +382,7 @@ namespace Akka.Remote.Transport
         /// transports may not support it. Remote endpoint of the channel or connection MAY be notified, but this is not
         /// guaranteed.
         /// 
-        /// The transport that provides the handle MUST guarantee that <see cref="Disassociate"/> could be called arbitrarily many times.
+        /// The transport that provides the handle MUST guarantee that <see cref="Disassociate()"/> could be called arbitrarily many times.
         /// </summary>
         [Obsolete("Use the method that states reasons to make sure disassociation reasons are logged.")]
         public abstract void Disassociate();

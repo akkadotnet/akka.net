@@ -20,23 +20,24 @@ using Assert = System.Diagnostics.Debug;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    ///
+    /// The hosting infrastructure for actors.
     /// </summary>
     public partial class ActorCell : IUntypedActorContext, ICell
     {
         /// <summary>NOTE! Only constructor and ClearActorFields is allowed to update this</summary>
         private IInternalActorRef _self;
+
         /// <summary>
-        /// TBD
+        /// Constant placeholder value for actors without a defined unique identifier.
         /// </summary>
         public const int UndefinedUid = 0;
-        private Props _props;
-        private static readonly Props terminatedProps = new TerminatedProps();
 
+        private Props _props;
         private const int DefaultState = 0;
         private const int SuspendedState = 1;
         private const int SuspendedWaitForChildrenState = 2;
-        // todo: might need a special state for AsyncAwait
 
         private ActorBase _actor;
         private bool _actorHasBeenCleared;
@@ -155,7 +156,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        internal static Props TerminatedProps { get { return terminatedProps; } }
+        internal static Props TerminatedProps { get; } = new TerminatedProps();
 
         /// <summary>
         /// TBD
@@ -234,14 +235,12 @@ namespace Akka.Actor
         [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         IActorRef IActorContext.Child(string name)
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         /// <summary>
@@ -424,7 +423,7 @@ namespace Akka.Actor
         protected void ClearActorCell()
         {
             UnstashAll();
-            _props = terminatedProps;
+            _props = TerminatedProps;
         }
 
         /// <summary>
@@ -435,8 +434,7 @@ namespace Akka.Actor
         {
             if (actor != null)
             {
-                var disposable = actor as IDisposable;
-                if (disposable != null)
+                if (actor is IDisposable disposable)
                 {
                     try
                     {
@@ -444,11 +442,8 @@ namespace Akka.Actor
                     }
                     catch (Exception e)
                     {
-                        if (_systemImpl.Log != null)
-                        {
-                            _systemImpl.Log.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
-                                actor.GetType(), e.Message);
-                        }
+                        _systemImpl.Log?.Error(e, "An error occurred while disposing {0} actor. Reason: {1}",
+                            actor.GetType(), e.Message);
                     }
                 }
 
@@ -481,10 +476,7 @@ namespace Akka.Actor
         /// <param name="actor">TBD</param>
         protected void SetActorFields(ActorBase actor)
         {
-            if (actor != null)
-            {
-                actor.Unclear();
-            }
+            actor?.Unclear();
         }
         /// <summary>
         /// TBD
@@ -546,14 +538,8 @@ namespace Akka.Actor
 
                 var bytes = serializer.ToBinary(obj);
 
-                if (serializer is SerializerWithStringManifest manifestSerializer)
-                {
-                    var manifest = manifestSerializer.Manifest(obj);
-                    return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
-                }
-
-                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier,
-                    obj.GetType().TypeQualifiedName());
+                var manifest = Serialization.Serialization.ManifestFor(serializer, obj);
+                return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
             }
             finally
             {

@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Tests.Performance.Transports;
 
 namespace Akka.Remote.Tests.Performance
@@ -27,6 +27,7 @@ namespace Akka.Remote.Tests.Performance
                 # Fixed number of threads to have in this threadpool
                 thread-count = 4
               }
+            }
         ");
 
         public override Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
