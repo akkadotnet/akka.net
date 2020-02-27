@@ -1321,7 +1321,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool ReceiveRecover(Object message)
+        protected override bool ReceiveRecover(object message)
         {
             switch (message)
             {
@@ -1354,8 +1354,7 @@ namespace Akka.Cluster.Sharding
                             return true;
                     }
                     return false;
-                case SnapshotOffer offer when offer.Snapshot is State:
-                    var state = offer.Snapshot as State;
+                case SnapshotOffer offer when offer.Snapshot is State state:
                     Log.Debug("ReceiveRecover SnapshotOffer {0}", state);
                     CurrentState = state.WithRememberEntities(Settings.RememberEntities);
                     // Old versions of the state object may not have unallocatedShard set,

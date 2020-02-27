@@ -91,6 +91,8 @@ namespace Akka.Remote.Tests
                 /looker/child.remote = ""akka.test://remote-sys@localhost:12346""
                 /looker/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
               }
+
+              test.timefactor = 2.5
             }";
         }
 
@@ -143,6 +145,8 @@ namespace Akka.Remote.Tests
         private ICanTell _remote;
         private readonly ICanTell _here;
 
+        private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
+
 
         protected override void AfterAll()
         {
@@ -159,7 +163,7 @@ namespace Akka.Remote.Tests
         public void Remoting_must_support_remote_lookups()
         {
             _here.Tell("ping", TestActor);
-            ExpectMsg(("pong", TestActor), TimeSpan.FromSeconds(1.5));
+            ExpectMsg(("pong", TestActor));
         }
 
         [Fact]
@@ -168,7 +172,7 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", TimeSpan.FromSeconds(1.5));
+            var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
             Assert.Equal("pong", msg);
             Assert.IsType<FutureActorRef>(actorRef);
         }
@@ -179,11 +183,11 @@ namespace Akka.Remote.Tests
             // see https://github.com/akkadotnet/akka.net/issues/2546
 
             // the configure await causes the continuation (== the second ask) to be scheduled on the HELIOS worker thread
-            var msg = await _here.Ask<(string, IActorRef)>("ping", TimeSpan.FromSeconds(1.5)).ConfigureAwait(false);
+            var msg = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout).ConfigureAwait(false);
             Assert.Equal("pong", msg.Item1);
 
             // the .Result here blocks the helios worker thread, deadlocking the whole system.
-            var msg2 = _here.Ask<(string, IActorRef)>("ping", TimeSpan.FromSeconds(1.5)).Result;
+            var msg2 = _here.Ask<(string, IActorRef)>("ping", DefaultTimeout).Result;
             Assert.Equal("pong", msg2.Item1);
         }
         
@@ -245,7 +249,7 @@ namespace Akka.Remote.Tests
                 dsl.Receive<string>((s, ctx) =>
                 {
                     var sender = ctx.Sender;
-                    ctx.ActorSelection(s).ResolveOne(TimeSpan.FromSeconds(3)).PipeTo(sender);
+                    ctx.ActorSelection(s).ResolveOne(DefaultTimeout).PipeTo(sender);
                 });
             };
 
@@ -434,7 +438,7 @@ namespace Akka.Remote.Tests
             }
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [Fact()]
         public async Task Bug_884_Remoting_must_support_reply_to_Routee()
         {
             var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
@@ -443,7 +447,7 @@ namespace Akka.Remote.Tests
             //have one of the routees send the message
             var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
             _here.Tell("ping", targetRoutee);
-            var msg = ExpectMsg<(string, IActorRef)>(TimeSpan.FromSeconds(1.5));
+            var msg = ExpectMsg<(string, IActorRef)>();
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(targetRoutee, msg.Item2);
         }
@@ -459,7 +463,7 @@ namespace Akka.Remote.Tests
             var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
             var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter());
             _here.Tell("ping", reporter);
-            var msg = ExpectMsg<(string, IActorRef)>(TimeSpan.FromSeconds(1.5));
+            var msg = ExpectMsg<(string, IActorRef)>();
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(reporter, msg.Item2);
         }

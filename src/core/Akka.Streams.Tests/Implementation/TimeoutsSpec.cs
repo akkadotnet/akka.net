@@ -336,7 +336,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
 
-        [Fact]
+        [Fact()]
         public void IdleTimeoutBidi_must_not_signal_error_in_simple_loopback_case_and_pass_through_elements_unmodified()
         {
             this.AssertAllStagesStopped(() =>
@@ -352,7 +352,7 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void IdleTimeoutBidi_must_not_signal_error_if_traffic_is_one_way()
         {
             this.AssertAllStagesStopped(() =>
