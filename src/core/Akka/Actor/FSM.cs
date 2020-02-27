@@ -206,18 +206,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Normal : Reason
         {
-            /// <summary>
-            /// Obsolete. Use <see cref="Normal.Instance"/> instead.
-            /// </summary>
-            [Obsolete("This constructor is obsoleted. Use Normal.Instance [1.2.0]")]
-            public Normal() { }
+            internal Normal() { }
 
             /// <summary>
             /// Singleton instance of Normal
             /// </summary>
-#pragma warning disable 618
             public static Normal Instance { get; } = new Normal();
-#pragma warning restore 618
         }
 
         /// <summary>
@@ -226,18 +220,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Shutdown : Reason
         {
-            /// <summary>
-            /// Obsolete. Use <see cref="Shutdown.Instance"/> instead.
-            /// </summary>
-            [Obsolete("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
-            public Shutdown() { }
+            internal Shutdown() { }
 
             /// <summary>
             /// Singleton instance of Shutdown
             /// </summary>
-#pragma warning disable 618
             public static Shutdown Instance { get; } = new Shutdown();
-#pragma warning restore 618
         }
 
         /// <summary>
@@ -270,18 +258,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class StateTimeout
         {
-            /// <summary>
-            /// Obsolete. Use <see cref="StateTimeout.Instance"/> instead.
-            /// </summary>
-            [Obsolete("This constructor is obsoleted. Use StateTimeout.Instance [1.2.0]")]
-            public StateTimeout() { }
+            internal StateTimeout() { }
 
             /// <summary>
             /// Singleton instance of StateTimeout
             /// </summary>
-#pragma warning disable 618
             public static StateTimeout Instance { get; } = new StateTimeout();
-#pragma warning restore 618
         }
 
         /// <summary>

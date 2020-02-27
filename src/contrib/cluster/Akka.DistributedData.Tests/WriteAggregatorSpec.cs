@@ -163,9 +163,14 @@ namespace Akka.DistributedData.Tests
             // no reply
             probe.ExpectMsg<Write>();
             // no reply
-            ExpectMsg(new UpdateTimeout(KeyA, null));
-            Watch(aggregator);
-            ExpectTerminated(aggregator);
+
+            Within(Dilated(TimeSpan.FromSeconds(10)), () => // have to pad the time here, since default timeout is ~3s which is also default wait time
+            {
+                ExpectMsg(new UpdateTimeout(KeyA, null));
+                Watch(aggregator);
+                ExpectTerminated(aggregator);
+            });
+            
         }
 
         [Fact]
@@ -257,8 +262,11 @@ namespace Akka.DistributedData.Tests
             probe.ExpectMsg<Write>();
 
             // still not enough acks
-            ExpectMsg(new UpdateTimeout(KeyB, null));
-            ExpectTerminated(aggregator);
+            Within(Dilated(TimeSpan.FromSeconds(10)), () => // have to pad the time here, since default timeout is ~3s which is also default wait time
+            {
+                ExpectMsg(new UpdateTimeout(KeyB, null));
+                ExpectTerminated(aggregator);
+            });
         }
 
         [Fact]
@@ -337,8 +345,12 @@ namespace Akka.DistributedData.Tests
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteNack.Instance);
 
-            ExpectMsg(new UpdateTimeout(KeyA, null));
-            ExpectTerminated(aggregator);
+
+            Within(Dilated(TimeSpan.FromSeconds(10)), () => // have to pad the time here, since default timeout is ~3s which is also default wait time
+            {
+                ExpectMsg(new UpdateTimeout(KeyA, null));
+                ExpectTerminated(aggregator);
+            });
         }
 
         private IImmutableDictionary<Address, IActorRef> Probes(IActorRef probe) =>

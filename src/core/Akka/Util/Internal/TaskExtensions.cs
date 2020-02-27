@@ -18,7 +18,7 @@ namespace Akka.Util.Internal
     /// Extensions for working with <see cref="Task"/> types
     /// </summary>
     [InternalApi]
-    public static class TaskExtensions
+    internal static class TaskExtensions
     {
         /// <summary>
         /// Returns the task which completes with result of original task if cancellation token not canceled it before completion.

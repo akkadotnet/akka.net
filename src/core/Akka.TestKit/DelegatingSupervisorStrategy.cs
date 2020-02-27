@@ -23,13 +23,7 @@ namespace Akka.TestKit
         {
             throw new NotImplementedException();
         }
-
-        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats,
-            IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            Delegates[failedChildStats.Child].ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats,
             IReadOnlyCollection<ChildRestartStats> children)
         {

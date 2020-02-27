@@ -689,7 +689,7 @@ namespace Akka.Streams.Tests.Dsl
                 _brokenMessage = brokenMessage;
             }
 
-            protected override bool AroundReceive(Receive receive, object message)
+            protected internal override bool AroundReceive(Receive receive, object message)
             {
                 var next = message as OnNext?;
                 if (next.HasValue && next.Value.Id == 0 && next.Value.Event == _brokenMessage)

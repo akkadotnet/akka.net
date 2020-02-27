@@ -18,8 +18,8 @@ namespace Akka.Actor
         /// <summary>
         /// Communicates a request for cancellation.
         /// </summary>
-        /// <remarks>The associated cancelable will be notified of the cancellation and will transition to a state where 
-        /// <see cref="IsCancellationRequested"/> returns <c>true</c>.
+        /// <remarks>The associated cancelable will be notified of the cancellation and will transition 
+        /// to a state where <see cref="IsCancellationRequested"/> returns <c>true</c>.
         /// Any callbacks or cancelable operations registered with the cancelable will be executed.
         /// Cancelable operations and callbacks registered with the token should not throw exceptions.
         /// However, this overload of Cancel will aggregate any exceptions thrown into an 
@@ -35,7 +35,7 @@ namespace Akka.Actor
         bool IsCancellationRequested { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the <see cref="CancellationToken"/> associated with this <see cref="ICancelable"/>.
         /// </summary>
         CancellationToken Token { get; }
 
@@ -52,19 +52,23 @@ namespace Akka.Actor
         void CancelAfter(int millisecondsDelay);
 
         /// <summary>
-        /// Communicates a request for cancellation, and specifies whether remaining callbacks and cancelable operations should be processed.
+        /// Communicates a request for cancellation, and specifies whether remaining callbacks and 
+        /// cancelable operations should be processed.
         /// </summary>
-        /// <param name="throwOnFirstException"><c>true</c> if exceptions should immediately propagate; otherwise, <c>false</c>.</param>
-        /// <remarks>The associated cancelable will be notified of the cancellation and will transition to a state where 
-        /// <see cref="IsCancellationRequested"/> returns <c>true</c>.
+        /// <param name="throwOnFirstException"><c>true</c> if exceptions should immediately propagate; 
+        /// otherwise, <c>false</c>.</param>
+        /// <remarks>The associated cancelable will be notified of the cancellation and will transition 
+        /// to a state where <see cref="IsCancellationRequested"/> returns <c>true</c>.
         /// Any callbacks or cancelable operations registered with the cancelable will be executed.
         /// Cancelable operations and callbacks registered with the token should not throw exceptions.
-        /// If <paramref name="throwOnFirstException"/> is <c>true</c>, an exception will immediately propagate out of 
-        /// the call to Cancel, preventing the remaining callbacks and cancelable operations from being processed.
+        /// If <paramref name="throwOnFirstException"/> is <c>true</c>, an exception will immediately 
+        /// propagate out of the call to Cancel, preventing the remaining callbacks and cancelable operations 
+        /// from being processed.
         /// If <paramref name="throwOnFirstException"/> is <c>false</c>, this overload will aggregate any exceptions 
         /// thrown into an <see cref="AggregateException"/>, such that one callback throwing an exception will not 
         /// prevent other registered callbacks from being executed.
-        /// The <see cref="ExecutionContext"/> that was captured when each callback was registered will be reestablished when the callback is invoked.</remarks>
+        /// The <see cref="ExecutionContext"/> that was captured when each callback was registered will be 
+        /// reestablished when the callback is invoked.</remarks>
         void Cancel(bool throwOnFirstException);
     }
 }
