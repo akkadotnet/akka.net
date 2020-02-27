@@ -34,6 +34,14 @@ namespace Akka.Cluster.Sharding.Tests
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.actor {{
+                        serializers {{
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }}
+                        serialization-bindings {{
+                            ""System.Object"" = hyperion
+                        }}
+                    }}
                     akka.loglevel = INFO
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off

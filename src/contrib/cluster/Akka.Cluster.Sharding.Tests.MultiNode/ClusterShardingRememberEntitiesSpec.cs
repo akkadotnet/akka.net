@@ -34,6 +34,14 @@ namespace Akka.Cluster.Sharding.Tests
 
             CommonConfig = DebugConfig(true)
                 .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.actor {{
+                        serializers {{
+                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        }}
+                        serialization-bindings {{
+                            ""System.Object"" = hyperion
+                        }}
+                    }}
                     akka.loglevel = INFO
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
@@ -197,7 +205,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_setup_shared_journal();
             Cluster_sharding_with_remember_entities_should_start_remembered_entities_when_coordinator_fail_over();
-            if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
+            Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
         }
 
         public void Cluster_sharding_with_remember_entities_should_setup_shared_journal()
