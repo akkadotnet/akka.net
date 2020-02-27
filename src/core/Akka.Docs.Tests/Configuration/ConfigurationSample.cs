@@ -60,7 +60,8 @@ b : ${a}
   }
 }";
             Config config = hoconString;
-            expectedHoconString.ShouldBeEquivalentTo(config.Value.ToString(1, 2));
+            Config expectedConfig = expectedHoconString;
+            expectedConfig.Should().Equals(config);
         }
 
         [Fact]

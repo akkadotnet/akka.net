@@ -144,10 +144,10 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = new Config(DebugConfig(false), ConfigurationFactory.ParseString(
-                @"akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = off"
-            ));
+            CommonConfig = new Config(DebugConfig(false))
+                .WithFallback(ConfigurationFactory.ParseString(
+                    @"akka.loglevel = INFO
+                        akka.remote.log-remote-lifecycle-events = off"));
 
             DeployOn(Second, @"/hello.remote = ""@third@""");
         }
