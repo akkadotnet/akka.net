@@ -7,10 +7,10 @@
 
 using System;
 using System.Threading.Tasks;
-using Akka.Configuration;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -29,7 +29,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             EnableBatching = hocon.GetBoolean("enabled", true);
             MaxPendingWrites = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
-            MaxPendingBytes = hocon.GetByteSize("max-pending-bytes") ?? DefaultMaxPendingBytes;
+            MaxPendingBytes = hocon.GetByteSize("max-pending-bytes", null) ?? DefaultMaxPendingBytes;
             FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
         }
 

@@ -7,7 +7,7 @@
 
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         private IActorRef CreateMediator()
         {
             var name = _system.Settings.Config.GetString("akka.cluster.pub-sub.name");
-            var dispatcher = _system.Settings.Config.GetString("akka.cluster.pub-sub.use-dispatcher");
+            var dispatcher = _system.Settings.Config.GetString("akka.cluster.pub-sub.use-dispatcher", null);
             if (string.IsNullOrEmpty(dispatcher))
                 dispatcher = Dispatchers.DefaultDispatcherId;
 

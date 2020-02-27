@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
@@ -34,7 +34,7 @@ namespace Akka.Remote.TestKit
         // allows us to avoid NullReferenceExceptions if we make this empty rather than null
         // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
         // it will remain safe by defaut
-        Config _commonConf = Akka.Configuration.Config.Empty;
+        Config _commonConf = ConfigurationFactory.Empty;
 
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
@@ -366,6 +366,8 @@ namespace Akka.Remote.TestKit
                         coordinated-shutdown.terminate-actor-system = off
                         coordinated-shutdown.run-by-actor-system-terminate = off
                         coordinated-shutdown.run-by-clr-shutdown-hook = off
+                        log-dead-letters = off 
+                        log-dead-letters-during-shutdown = on
                         actor {
                           default-dispatcher {
                             executor = ""fork-join-executor""
@@ -630,10 +632,10 @@ namespace Akka.Remote.TestKit
                 });
                 foreach (var pair in ConfigurationFactory.ParseString(deployString).AsEnumerable())
                 {
-                    if (pair.Value.IsObject())
+                    if (pair.Value.Type == HoconType.Object)
                     {
                         var deploy =
-                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value)));
+                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value.Value)));
                         deployer.SetDeploy(deploy);
                     }
                     else

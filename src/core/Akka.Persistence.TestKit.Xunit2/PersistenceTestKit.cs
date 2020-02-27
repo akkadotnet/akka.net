@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Hocon; using Akka.Configuration;
+
 namespace Akka.Persistence.TestKit
 {
     using System;

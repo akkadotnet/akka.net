@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.IO;
 using Akka.Util;
 using NBench;

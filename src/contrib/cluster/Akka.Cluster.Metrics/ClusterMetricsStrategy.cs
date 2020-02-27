@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
@@ -18,9 +19,9 @@ namespace Akka.Cluster.Metrics
     {
         public ClusterMetricsStrategy(Config config)
             : base(
-                maxNrOfRetries: config.GetInt("maxNrOfRetries"), 
-                withinTimeMilliseconds: (int)config.GetTimeSpan("withinTimeRange").TotalMilliseconds, 
-                loggingEnabled: config.GetBoolean("loggingEnabled"),
+                maxNrOfRetries: config.GetInt("maxNrOfRetries", 0), 
+                withinTimeMilliseconds: (int)config.GetTimeSpan("withinTimeRange", null).TotalMilliseconds, 
+                loggingEnabled: config.GetBoolean("loggingEnabled", false),
                 localOnlyDecider: MetricsDecider)
         {
         }

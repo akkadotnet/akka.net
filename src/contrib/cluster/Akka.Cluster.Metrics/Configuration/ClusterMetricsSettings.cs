@@ -6,7 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics.Configuration
 {
@@ -23,6 +23,26 @@ namespace Akka.Cluster.Metrics.Configuration
         public ClusterMetricsSettings(Config config)
         {
             _config = config.GetConfig("akka.cluster.metrics");
+            if (_config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterMetricsSettings>("akka.cluster.metrics");
+
+            MetricsDispatcher = _config.GetString("dispatcher");
+            PeriodicTasksInitialDelay = _config.GetTimeSpan("periodic-tasks-initial-delay");
+
+            SupervisorName = _config.GetString("supervisor.name");
+            SupervisorStrategyProvider = _config.GetString("supervisor.strategy.provider");
+            SupervisorStrategyConfiguration = _config.GetConfig("supervisor.strategy.configuration");
+
+            CollectorEnabled = _config.GetBoolean("collector.enabled");
+            CollectorProvider = _config.GetString("collector.provider");
+            CollectorFallback = _config.GetBoolean("collector.fallback");
+            CollectorSampleInterval = 
+                Requiring(_config.GetTimeSpan("collector.sample-interval", null), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
+
+            CollectorGossipInterval = 
+                Requiring(_config.GetTimeSpan("collector.gossip-interval", null), t => t > TimeSpan.Zero, "collector.gossip-interval must be > 0");
+            CollectorMovingAverageHalfLife = 
+                Requiring(_config.GetTimeSpan("collector.moving-average-half-life", null), t => t > TimeSpan.Zero, "collector.moving-average-half-life must be > 0");
         }
 
         /// <summary>
@@ -34,24 +54,24 @@ namespace Akka.Cluster.Metrics.Configuration
         }
         
         // Extension.
-        public string MetricsDispatcher => _config.GetString("dispatcher");
-        public TimeSpan PeriodicTasksInitialDelay => _config.GetTimeSpan("periodic-tasks-initial-delay");
+        public string MetricsDispatcher { get; }
+        public TimeSpan PeriodicTasksInitialDelay { get; }
 
         // Supervisor.
-        public string SupervisorName => _config.GetString("supervisor.name");
-        public string SupervisorStrategyProvider => _config.GetString("supervisor.strategy.provider");
-        public Config SupervisorStrategyConfiguration => _config.GetConfig("supervisor.strategy.configuration");
+        public string SupervisorName { get; }
+        public string SupervisorStrategyProvider { get; }
+        public Config SupervisorStrategyConfiguration { get; }
 
         // Collector.
-        public bool CollectorEnabled => _config.GetBoolean("collector.enabled");
-        public string CollectorProvider => _config.GetString("collector.provider");
-        public bool CollectorFallback => _config.GetBoolean("collector.fallback");
-        public TimeSpan CollectorSampleInterval => 
-            Requiring(_config.GetTimeSpan("collector.sample-interval"), t => t > TimeSpan.Zero, "collector.sample-interval must be > 0");
-        public TimeSpan CollectorGossipInterval =>
-            Requiring(_config.GetTimeSpan("collector.gossip-interval"), t => t > TimeSpan.Zero, "collector.gossip-interval must be > 0");
-        public TimeSpan CollectorMovingAverageHalfLife =>
-            Requiring(_config.GetTimeSpan("collector.moving-average-half-life"), t => t > TimeSpan.Zero, "collector.moving-average-half-life must be > 0");
+        public bool CollectorEnabled { get; }
+        public string CollectorProvider { get; }
+        public bool CollectorFallback { get; }
+        public TimeSpan CollectorSampleInterval { get; }
+            
+        public TimeSpan CollectorGossipInterval { get; }
+            
+        public TimeSpan CollectorMovingAverageHalfLife { get; }
+            
 
         private T Requiring<T>(T value, Predicate<T> condition, string reason)
         {

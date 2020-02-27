@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.TestKit;
@@ -48,9 +48,7 @@ namespace Akka.Remote.Tests.Transport
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
         public AkkaProtocolSpec(ITestOutputHelper helper)
-            : base(@"
-                    akka.actor.provider = remote
-                    akka.test.default-timeout = 1.5 s", helper)
+            : base(@"akka.actor.provider = remote", helper)
         {
             codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(_localAkkaAddress, TestActor, testMsg);

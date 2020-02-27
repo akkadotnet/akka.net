@@ -8,7 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Xunit;

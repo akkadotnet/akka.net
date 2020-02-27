@@ -112,8 +112,35 @@ namespace Akka.Cluster.Sharding
         }
 
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
-        public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
-        
+
+        public void DeliverTo(string id, object message, object payload, IActorRef sender)
+        {
+            var name = Uri.EscapeDataString(id);
+            var child = Context.Child(name);
+            if (child.IsNobody())
+            {
+                if (State.Entries.Contains(id))
+                {
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
+                    {
+                        throw new InvalidOperationException($"Message buffers contains id [{id}].");
+                    }
+                    this.GetOrCreateEntity(id).Tell(payload, sender);
+                }
+                else
+                {
+                    // Note; we only do this if remembering, otherwise the buffer is an overhead
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender)));
+                    ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                }
+            }
+            else
+            {
+                this.TouchLastMessageTimestamp(id);
+                child.Tell(payload, sender);
+            }
+        }
+
         protected override void PostStop()
         {
             PassivateIdleTask?.Cancel();
@@ -130,7 +157,7 @@ namespace Akka.Cluster.Sharding
 
         private void GetState()
         {
-            for (int i = 0; i < NrOfKeys; i++)
+            for (var i = 0; i < NrOfKeys; i++)
             {
                 Replicator.Tell(Dsl.Get(_stateKeys[i], _readConsistency, i));
             }
@@ -161,7 +188,10 @@ namespace Akka.Cluster.Sharding
                 case NotFound notFound:
                     ReceiveOne((int)notFound.Request);
                     break;
-                default: Stash.Stash(); break;
+                default:
+                    Log.Debug("Stashing while waiting for DDataShard initial state");
+                    Stash.Stash();
+                    break;
             }
 
             return true;
@@ -173,7 +203,12 @@ namespace Akka.Cluster.Sharding
             this.Initialized();
             Log.Debug("DDataShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
             Stash.UnstashAll();
-            Context.Become(this.HandleCommand);
+            Context.Become(HandleCommands);
+        }
+
+        private bool HandleCommands(object message)
+        {
+            return this.HandleCommand(message);
         }
 
         public void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange
@@ -227,7 +262,17 @@ namespace Akka.Cluster.Sharding
                     Log.Error("The DDataShard was unable to update state with error {0} and event {1}. Shard will be restarted", failure.Cause, e);
                     ExceptionDispatchInfo.Capture(failure.Cause).Throw();
                     break;
-                default: Stash.Stash(); break;
+                case Shard.IShardQuery sq:
+                    this.HandleShardRegionQuery(sq);
+                    break;
+                case var _ when ExtractEntityId(message).HasValue:
+                    this.DeliverMessage(message, Context.Sender);
+                    break;
+                default:
+                    Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
+                        message.GetType(), e);
+                    Stash.Stash();
+                    break;
             }
             return true;
         };

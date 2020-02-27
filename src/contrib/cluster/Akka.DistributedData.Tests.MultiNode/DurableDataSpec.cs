@@ -9,7 +9,7 @@ using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.Remote.TestKit;
 using Akka.TestKit;

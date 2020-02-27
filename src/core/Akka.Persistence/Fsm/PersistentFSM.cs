@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Serialization;
 using static Akka.Persistence.Fsm.PersistentFSM;
 
@@ -458,13 +458,16 @@ namespace Akka.Persistence.Fsm
 
         public SnapshotAfterExtension(Config config)
         {
-            if (config.GetString(Key).ToLowerInvariant().Equals("off"))
+            var useSnapshot = config.GetString(Key, "");
+            if (useSnapshot.ToLowerInvariant().Equals("off") ||
+                useSnapshot.ToLowerInvariant().Equals("false") ||
+                useSnapshot.ToLowerInvariant().Equals("no"))
             {
                 SnapshotAfterValue = null;
             }
             else
             {
-                SnapshotAfterValue = config.GetInt(Key);
+                SnapshotAfterValue = config.GetInt(Key, 0);
             }
         }
         

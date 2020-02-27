@@ -7,7 +7,7 @@
 
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 
@@ -115,7 +115,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public SmallestMailboxPool(Config config) 
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,

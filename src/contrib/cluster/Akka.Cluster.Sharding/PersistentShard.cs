@@ -132,8 +132,8 @@ namespace Akka.Cluster.Sharding
                 case Shard.EntityStopped stopped:
                     State = new Shard.ShardState(State.Entries.Remove(stopped.EntityId));
                     return true;
-                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState:
-                    State = (Shard.ShardState)offer.Snapshot;
+                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState state:
+                    State = state;
                     return true;
                 case RecoveryCompleted _:
                     RestartRememberedEntities();
@@ -200,11 +200,11 @@ namespace Akka.Cluster.Sharding
         {
             var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
-            if (Equals(child, ActorRefs.Nobody))
+            if (child.IsNobody())
             {
                 if (State.Entries.Contains(id))
                 {
-                    if (MessageBuffers.ContainsKey(id))
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }

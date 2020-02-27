@@ -14,7 +14,7 @@ using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Util.Internal;
 
 namespace RemotePingPong
@@ -37,6 +37,7 @@ namespace RemotePingPong
             return sp;
 #else
             return 0;
+            
 #endif
         }
 
@@ -57,7 +58,7 @@ namespace RemotePingPong
                     hostname = ""localhost""
                 }
               }
-            ");
+            }");
 
             var bindingConfig =
                 ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")

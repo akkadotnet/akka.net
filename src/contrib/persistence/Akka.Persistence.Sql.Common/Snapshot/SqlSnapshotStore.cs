@@ -10,7 +10,7 @@ using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
 using Akka.Util;

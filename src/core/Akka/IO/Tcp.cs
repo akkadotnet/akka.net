@@ -14,7 +14,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.IO.Buffers;
@@ -1025,7 +1025,7 @@ namespace Akka.IO
                     {
                         context.System.EventStream.Publish(new Debug(child.Path.ToString(), GetType(), "Closed after handler termination"));
                     }
-                    catch (Exception _) { }
+                    catch (Exception) { }
                 }
                 else base.LogFailure(context, child, cause, directive);
             }
@@ -1044,8 +1044,9 @@ namespace Akka.IO
         internal TcpExt(ExtendedActorSystem system, TcpSettings settings)
         {
             var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
-            if (bufferPoolConfig == null)
-                throw new ArgumentNullException(nameof(settings), $"Couldn't find a HOCON config for `{settings.BufferPoolConfigPath}`");
+
+            if (bufferPoolConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve TCP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
 
             Settings = settings;
             FileIoDispatcher = system.Dispatchers.Lookup(Settings.FileIODispatcher);
@@ -1077,7 +1078,10 @@ namespace Akka.IO
 
         private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
-            var type = Type.GetType(config.GetString("class"), true);
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
+
+            var type = Type.GetType(config.GetString("class", null), true);
 
             if (!typeof(IBufferPool).IsAssignableFrom(type))
                 throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");

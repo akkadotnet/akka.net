@@ -15,13 +15,13 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Transport;
 using Akka.Util;
 using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote.TestKit
 {

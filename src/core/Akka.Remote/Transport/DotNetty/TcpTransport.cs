@@ -11,7 +11,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using DotNetty.Buffers;
 using DotNetty.Common.Utilities;
@@ -183,8 +183,6 @@ namespace Akka.Remote.Transport.DotNetty
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static IByteBuffer ToByteBuffer(IChannel channel, ByteString payload)
         {
-            //TODO: optimize DotNetty byte buffer usage 
-            // (maybe custom IByteBuffer working directly on ByteString?)
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }

@@ -10,11 +10,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util.Internal;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Remote
 {

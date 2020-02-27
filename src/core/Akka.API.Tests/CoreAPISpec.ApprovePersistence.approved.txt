@@ -202,7 +202,7 @@ namespace Akka.Persistence
     public sealed class DiscardConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {
         public DiscardConfigurator() { }
-        public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
+        public Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config) { }
     }
     public class DiscardToDeadLetterStrategy : Akka.Persistence.IStashOverflowStrategy
     {
@@ -254,7 +254,7 @@ namespace Akka.Persistence
     public interface IJournalMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage { }
     public interface IJournalPlugin
     {
-        Akka.Configuration.Config DefaultConfig { get; }
+        Hocon.Config DefaultConfig { get; }
         string JournalPath { get; }
     }
     public interface IJournalRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
@@ -313,7 +313,7 @@ namespace Akka.Persistence
     public interface IStashOverflowStrategy { }
     public interface IStashOverflowStrategyConfigurator
     {
-        Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
+        Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config);
     }
     public sealed class LoadSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
@@ -365,7 +365,7 @@ namespace Akka.Persistence
         public Persistence() { }
         public static Akka.Persistence.Persistence Instance { get; }
         public override Akka.Persistence.PersistenceExtension CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
-        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Hocon.Config DefaultConfig() { }
     }
     public class PersistenceExtension : Akka.Actor.IExtension
     {
@@ -379,14 +379,14 @@ namespace Akka.Persistence
     }
     public sealed class PersistenceSettings : Akka.Actor.Settings
     {
-        public PersistenceSettings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
+        public PersistenceSettings(Akka.Actor.ActorSystem system, Hocon.Config config) { }
         public Akka.Persistence.PersistenceSettings.AtLeastOnceDeliverySettings AtLeastOnceDelivery { get; set; }
         public Akka.Persistence.PersistenceSettings.InternalSettings Internal { get; }
         public Akka.Persistence.PersistenceSettings.ViewSettings View { get; }
         public sealed class AtLeastOnceDeliverySettings
         {
             public AtLeastOnceDeliverySettings(System.TimeSpan redeliverInterval, int redeliveryBurstLimit, int warnAfterNumberOfUnconfirmedAttempts, int maxUnconfirmedMessages) { }
-            public AtLeastOnceDeliverySettings(Akka.Configuration.Config config) { }
+            public AtLeastOnceDeliverySettings(Hocon.Config config) { }
             public int MaxUnconfirmedMessages { get; }
             public System.TimeSpan RedeliverInterval { get; }
             public int RedeliveryBurstLimit { get; }
@@ -398,13 +398,13 @@ namespace Akka.Persistence
         }
         public sealed class InternalSettings
         {
-            public InternalSettings(Akka.Configuration.Config config) { }
+            public InternalSettings(Hocon.Config config) { }
             public bool PublishConfirmations { get; }
             public bool PublishPluginCommands { get; }
         }
         public sealed class ViewSettings
         {
-            public ViewSettings(Akka.Configuration.Config config) { }
+            public ViewSettings(Hocon.Config config) { }
             public bool AutoUpdate { get; }
             public System.TimeSpan AutoUpdateInterval { get; }
             public long AutoUpdateReplayMax { get; }
@@ -435,41 +435,6 @@ namespace Akka.Persistence
     {
         protected PersistentActor() { }
         protected override bool Receive(object message) { }
-    }
-    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
-        "0]")]
-    public abstract class PersistentView : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>, Akka.Persistence.IPersistenceRecovery, Akka.Persistence.IPersistentIdentity, Akka.Persistence.ISnapshotter
-    {
-        protected readonly Akka.Persistence.PersistenceExtension Extension;
-        protected PersistentView() { }
-        public virtual System.TimeSpan AutoUpdateInterval { get; }
-        public virtual long AutoUpdateReplayMax { get; }
-        public virtual bool IsAutoUpdate { get; }
-        public bool IsPersistent { get; }
-        public bool IsRecovering { get; }
-        public bool IsRecoveryFinished { get; }
-        public Akka.Actor.IActorRef Journal { get; }
-        public string JournalPluginId { get; set; }
-        public long LastSequenceNr { get; }
-        public abstract string PersistenceId { get; }
-        public virtual Akka.Persistence.Recovery Recovery { get; }
-        public string SnapshotPluginId { get; set; }
-        public long SnapshotSequenceNr { get; }
-        public Akka.Actor.IActorRef SnapshotStore { get; }
-        public string SnapshotterId { get; }
-        public Akka.Actor.IStash Stash { get; set; }
-        public abstract string ViewId { get; }
-        public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
-        public void DeleteSnapshot(long sequenceNr) { }
-        public void DeleteSnapshots(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
-        public void LoadSnapshot(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, long toSequenceNr) { }
-        protected virtual void OnReplayError(System.Exception cause) { }
-        protected override void PostStop() { }
-        protected override void PreRestart(System.Exception reason, object message) { }
-        protected override void PreStart() { }
-        public void SaveSnapshot(object snapshot) { }
-        protected override void Unhandled(object message) { }
     }
     public abstract class ReceivePersistentActor : Akka.Persistence.UntypedPersistentActor, Akka.Actor.Internal.IInitializableActor
     {
@@ -601,13 +566,6 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
-        "0]")]
-    public sealed class ScheduledUpdate
-    {
-        public ScheduledUpdate(long replayMax) { }
-        public long ReplayMax { get; }
-    }
     public sealed class SelectedSnapshot : System.IEquatable<Akka.Persistence.SelectedSnapshot>
     {
         public SelectedSnapshot(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
@@ -668,7 +626,7 @@ namespace Akka.Persistence
     public sealed class ThrowExceptionConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {
         public ThrowExceptionConfigurator() { }
-        public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
+        public Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config) { }
     }
     public class ThrowOverflowExceptionStrategy : Akka.Persistence.IStashOverflowStrategy
     {
@@ -705,17 +663,6 @@ namespace Akka.Persistence
         protected override bool Receive(object message) { }
         protected virtual bool ReceiveCommand(object message) { }
         protected virtual bool ReceiveRecover(object message) { }
-    }
-    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
-        "0]")]
-    public sealed class Update
-    {
-        public Update() { }
-        public Update(bool isAwait) { }
-        [Newtonsoft.Json.JsonConstructorAttribute()]
-        public Update(bool isAwait, long replayMax) { }
-        public bool IsAwait { get; }
-        public long ReplayMax { get; }
     }
     public sealed class WriteMessageFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageFailure>
     {
@@ -954,7 +901,7 @@ namespace Akka.Persistence.Journal
     public class EventAdapters
     {
         protected EventAdapters(System.Collections.Concurrent.ConcurrentDictionary<System.Type, Akka.Persistence.Journal.IEventAdapter> map, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Persistence.Journal.IEventAdapter>> bindings, Akka.Event.ILoggingAdapter log) { }
-        public static Akka.Persistence.Journal.EventAdapters Create(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public static Akka.Persistence.Journal.EventAdapters Create(Akka.Actor.ExtendedActorSystem system, Hocon.Config config) { }
         public Akka.Persistence.Journal.IEventAdapter Get<T>() { }
         public virtual Akka.Persistence.Journal.IEventAdapter Get(System.Type type) { }
     }
@@ -1023,7 +970,7 @@ namespace Akka.Persistence.Journal
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
-        public PersistencePluginProxy(Akka.Configuration.Config config) { }
+        public PersistencePluginProxy(Hocon.Config config) { }
         public Akka.Actor.IStash Stash { get; set; }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }

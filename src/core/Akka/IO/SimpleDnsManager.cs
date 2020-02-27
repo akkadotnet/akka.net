@@ -37,7 +37,7 @@ namespace Akka.IO
 
             if (_cacheCleanup != null)
             {
-                var interval = ext.Settings.ResolverConfig.GetTimeSpan("cache-cleanup-interval");
+                var interval = ext.Settings.ResolverConfig.GetTimeSpan("cache-cleanup-interval", null);
                 _cleanupTimer = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(interval, interval, Self, CacheCleanup.Instance, Self);
             }
         }

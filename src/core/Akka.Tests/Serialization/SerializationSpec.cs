@@ -11,7 +11,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;
@@ -408,7 +408,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_Config()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.Empty;
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));
@@ -556,7 +556,7 @@ namespace Akka.Tests.Serialization
 
             var dummy2 = (DummyConfigurableSerializer) Sys.Serialization.GetSerializerById(-7);
             dummy2.Config.ShouldNotBe(null);
-            dummy2.Config.GetString("test-key").ShouldBe("test value");
+            dummy2.Config.GetString("test-key", null).ShouldBe("test value");
         }
 
 

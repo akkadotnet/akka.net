@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
@@ -23,8 +23,8 @@ namespace Akka.Persistence.TCK.Query
 
         protected IReadJournal ReadJournal { get; set; }
 
-        protected PersistenceIdsSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
-            : base(config, actorSystemName, output)
+        protected PersistenceIdsSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }

@@ -8,7 +8,7 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
@@ -65,7 +65,7 @@ namespace Akka.Persistence.Tests
 
             # snapshot store plugin is NOT defined, things should still work
             akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store""
-            akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(ManyRecoveriesSpec).FullName + "/"))
+            akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(ManyRecoveriesSpec).FullName + @""""))
         {
         }
 

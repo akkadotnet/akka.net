@@ -11,7 +11,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch.MessageQueues;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -664,7 +664,10 @@ namespace Akka.Dispatch
         /// </exception>
         public BoundedMailbox(Settings settings, Config config) : base(settings, config)
         {
-            Capacity = config.GetInt("mailbox-capacity");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BoundedMailbox>();
+
+            Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
@@ -796,7 +799,10 @@ namespace Akka.Dispatch
         /// </exception>
         public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
-            Capacity = config.GetInt("mailbox-capacity");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BoundedDequeBasedMailbox>();
+
+            Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
