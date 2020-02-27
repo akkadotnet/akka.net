@@ -59,8 +59,7 @@ namespace Akka.Actor
             /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                ActorPath path;
-                if (TryParse(Path, out path))
+                if (TryParse(Path, out var path))
                 {
                     return path;
                 }
@@ -107,7 +106,7 @@ namespace Akka.Actor
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
+        internal static readonly char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
         /// <summary> 
         /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
