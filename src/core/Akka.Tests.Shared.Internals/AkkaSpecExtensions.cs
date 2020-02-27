@@ -51,7 +51,10 @@ namespace Akka.TestKit
         /// <param name="other">TBD</param>
         public static void ShouldBe<T>(this IEnumerable<T> self, IEnumerable<T> other)
         {
-            Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
+            var expected = string.Join(",", other.Select(i => string.Format("'{0}'", i)));
+            var actual = string.Join(",", self.Select(i => string.Format("'{0}'", i)));
+
+            Assert.True(self.SequenceEqual(other), "Expected " + expected + " got " + actual);
         }
 
         /// <summary>
