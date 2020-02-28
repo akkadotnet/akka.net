@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -134,8 +133,8 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Join : IClusterMessage
         {
-            readonly UniqueAddress _node;
-            readonly ImmutableHashSet<string> _roles;
+            private readonly UniqueAddress _node;
+            private readonly ImmutableHashSet<string> _roles;
 
             /// <summary>
             /// TBD
@@ -192,8 +191,8 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class Welcome : IClusterMessage
         {
-            readonly UniqueAddress _from;
-            readonly Gossip _gossip;
+            private readonly UniqueAddress _from;
+            private readonly Gossip _gossip;
 
             /// <summary>
             /// TBD
@@ -246,7 +245,7 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class JoinSeedNodes : IDeadLetterSuppression
         {
-            readonly ImmutableList<Address> _seedNodes;
+            private readonly ImmutableList<Address> _seedNodes;
 
             /// <summary>
             /// Creates a new instance of the command.
@@ -291,7 +290,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="JoinSeenNode"/>
         internal sealed class InitJoinAck : IClusterMessage, IDeadLetterSuppression
         {
-            readonly Address _address;
+            private readonly Address _address;
 
             /// <summary>
             /// TBD
@@ -334,7 +333,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="JoinSeenNode"/>
         internal sealed class InitJoinNack : IClusterMessage, IDeadLetterSuppression
         {
-            readonly Address _address;
+            private readonly Address _address;
 
             /// <summary>
             /// TBD
@@ -545,7 +544,7 @@ namespace Akka.Cluster
         /// </summary>
         internal sealed class SendGossipTo
         {
-            readonly Address _address;
+            private readonly Address _address;
 
             /// <summary>
             /// TBD
@@ -649,9 +648,9 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class Subscribe : ISubscriptionMessage
         {
-            readonly IActorRef _subscriber;
-            readonly ClusterEvent.SubscriptionInitialStateMode _initialStateMode;
-            readonly ImmutableHashSet<Type> _to;
+            private readonly IActorRef _subscriber;
+            private readonly ClusterEvent.SubscriptionInitialStateMode _initialStateMode;
+            private readonly ImmutableHashSet<Type> _to;
 
             /// <summary>
             /// Creates a new subscription
@@ -697,8 +696,8 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class Unsubscribe : ISubscriptionMessage, IDeadLetterSuppression
         {
-            readonly IActorRef _subscriber;
-            readonly Type _to;
+            private readonly IActorRef _subscriber;
+            private readonly Type _to;
 
             /// <summary>
             /// TBD
@@ -733,7 +732,7 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class SendCurrentClusterState : ISubscriptionMessage
         {
-            readonly IActorRef _receiver;
+            private readonly IActorRef _receiver;
 
             /// <summary>
             /// TBD
@@ -754,41 +753,46 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
+        ///
+        /// Marker interface for publication events from Akka.Cluster.
         /// </summary>
-        interface IPublishMessage { }
+        /// <remarks>
+        /// <see cref="INoSerializationVerificationNeeded"/> is not explicitly used on the JVM,
+        /// but without it we run into serialization issues via https://github.com/akkadotnet/akka.net/issues/3724
+        /// </remarks>
+        private interface IPublishMessage : INoSerializationVerificationNeeded { }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
+        /// 
+        /// Used to publish Gossip and Membership changes inside Akka.Cluster.
         /// </summary>
         internal sealed class PublishChanges : IPublishMessage
         {
-            readonly Gossip _newGossip;
-
             /// <summary>
-            /// TBD
+            /// Creates a new <see cref="PublishChanges"/> message with updated gossip.
             /// </summary>
-            /// <param name="newGossip">TBD</param>
+            /// <param name="newGossip">The gossip to publish internally.</param>
             internal PublishChanges(Gossip newGossip)
             {
-                _newGossip = newGossip;
+                NewGossip = newGossip;
             }
 
             /// <summary>
-            /// TBD
+            /// The gossip being published.
             /// </summary>
-            public Gossip NewGossip
-            {
-                get { return _newGossip; }
-            }
+            public Gossip NewGossip { get; }
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
+        ///
+        /// Used to publish events out to the cluster.
         /// </summary>
         internal sealed class PublishEvent : IPublishMessage
         {
-            readonly ClusterEvent.IClusterDomainEvent _event;
+            private readonly ClusterEvent.IClusterDomainEvent _event;
 
             /// <summary>
             /// TBD
@@ -991,15 +995,16 @@ namespace Akka.Cluster
 
         // note that self is not initially member,
         // and the SendGossip is not versioned for this 'Node' yet
-        Gossip _latestGossip = Gossip.Empty;
+        private Gossip _latestGossip = Gossip.Empty;
 
-        readonly bool _statsEnabled;
+        private readonly bool _statsEnabled;
         private GossipStats _gossipStats = new GossipStats();
         private ImmutableList<Address> _seedNodes;
         private IActorRef _seedNodeProcess;
         private int _seedNodeProcessCounter = 0; //for unique names
+        private Deadline _joinSeedNodesDeadline;
 
-        readonly IActorRef _publisher;
+        private readonly IActorRef _publisher;
         private int _leaderActionCounter = 0;
         private int _selfDownCounter = 0;
 
@@ -1093,15 +1098,15 @@ namespace Akka.Cluster
             });
         }
 
-        ActorSelection ClusterCore(Address address)
+        private ActorSelection ClusterCore(Address address)
         {
             return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "core" / "daemon");
         }
 
-        readonly ICancelable _gossipTaskCancellable;
-        readonly ICancelable _failureDetectorReaperTaskCancellable;
-        readonly ICancelable _leaderActionsTaskCancellable;
-        readonly ICancelable _publishStatsTaskTaskCancellable;
+        private readonly ICancelable _gossipTaskCancellable;
+        private readonly ICancelable _failureDetectorReaperTaskCancellable;
+        private readonly ICancelable _leaderActionsTaskCancellable;
+        private readonly ICancelable _publishStatsTaskTaskCancellable;
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         protected override void PreStart()
@@ -1209,70 +1214,101 @@ namespace Akka.Cluster
 
         private void Uninitialized(object message)
         {
-            if (message is InternalClusterAction.InitJoin)
+            switch (message)
             {
-                _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
-                Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
-            }
-            else if (message is ClusterUserAction.JoinTo jt)
-            {
-                Join(jt.Address);
-            }
-            else if (message is InternalClusterAction.JoinSeedNodes js)
-            {
-                JoinSeedNodes(js.SeedNodes);
-            }
-            else if (message is InternalClusterAction.ISubscriptionMessage isub)
-            {
-                _publisher.Forward(isub);
-            }
-            else if (ReceiveExitingCompleted(message)) { }
-            else
-            {
-                Unhandled(message);
+                case InternalClusterAction.InitJoin _:
+                    {
+                        _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
+                        Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+                        break;
+                    }
+                case ClusterUserAction.JoinTo jt:
+                    Join(jt.Address);
+                    break;
+                case InternalClusterAction.JoinSeedNodes js:
+                    {
+                        ResetJoinSeedNodesDeadline();
+                        JoinSeedNodes(js.SeedNodes);
+                        break;
+                    }
+                case InternalClusterAction.ISubscriptionMessage isub:
+                    _publisher.Forward(isub);
+                    break;
+                case InternalClusterAction.ITick _:
+                    if (_joinSeedNodesDeadline != null && _joinSeedNodesDeadline.IsOverdue) JoinSeedNodesWasUnsuccessful();
+                    break;
+                default:
+                    if (!ReceiveExitingCompleted(message)) Unhandled(message);
+                    break;
             }
         }
 
         private void TryingToJoin(object message, Address joinWith, Deadline deadline)
         {
-            if (message is InternalClusterAction.Welcome w)
+            switch (message)
             {
-                Welcome(joinWith, w.From, w.Gossip);
+                case InternalClusterAction.Welcome w:
+                    Welcome(joinWith, w.From, w.Gossip);
+                    break;
+                case InternalClusterAction.InitJoin _:
+                    {
+                        _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
+                        Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+                        break;
+                    }
+
+                case ClusterUserAction.JoinTo jt:
+                    {
+                        BecomeUninitialized();
+                        Join(jt.Address);
+                        break;
+                    }
+                case InternalClusterAction.JoinSeedNodes js:
+                    {
+                        ResetJoinSeedNodesDeadline();
+                        BecomeUninitialized();
+                        JoinSeedNodes(js.SeedNodes);
+                        break;
+                    }
+                case InternalClusterAction.ISubscriptionMessage isub:
+                    _publisher.Forward(isub);
+                    break;
+                case InternalClusterAction.ITick _:
+                    {
+                        if (_joinSeedNodesDeadline != null && _joinSeedNodesDeadline.IsOverdue)
+                        {
+                            JoinSeedNodesWasUnsuccessful();
+                        }
+                        else if (deadline != null && deadline.IsOverdue)
+                        {
+                            // join attempt failed, retry
+                            BecomeUninitialized();
+                            if (!_seedNodes.IsEmpty) JoinSeedNodes(_seedNodes);
+                            else Join(joinWith);
+                        }
+
+                        break;
+                    }
+                default:
+                    if (!ReceiveExitingCompleted(message)) Unhandled(message);
+                    break;
             }
-            else if (message is InternalClusterAction.InitJoin)
-            {
-                _cluster.LogInfo("Received InitJoin message from [{0}], but this node is not initialized yet", Sender);
-                Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
-            }
-            else if (message is ClusterUserAction.JoinTo jt)
-            {
-                BecomeUninitialized();
-                Join(jt.Address);
-            }
-            else if (message is InternalClusterAction.JoinSeedNodes js)
-            {
-                BecomeUninitialized();
-                JoinSeedNodes(js.SeedNodes);
-            }
-            else if (message is InternalClusterAction.ISubscriptionMessage isub)
-            {
-                _publisher.Forward(isub);
-            }
-            else if (message is InternalClusterAction.ITick)
-            {
-                if (deadline != null && deadline.IsOverdue)
-                {
-                    // join attempt failed, retry
-                    BecomeUninitialized();
-                    if (!_seedNodes.IsEmpty) JoinSeedNodes(_seedNodes);
-                    else Join(joinWith);
-                }
-            }
-            else if (ReceiveExitingCompleted(message)) { }
-            else
-            {
-                Unhandled(message);
-            }
+        }
+
+        private void ResetJoinSeedNodesDeadline()
+        {
+            _joinSeedNodesDeadline = _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes != null
+                ? Deadline.Now + _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes
+                : null;
+        }
+
+        private void JoinSeedNodesWasUnsuccessful()
+        {
+            _log.Warning("Joining of seed-nodes [{0}] was unsuccessful after configured shutdown-after-unsuccessful-join-seed-nodes [{1}]. Running CoordinatedShutdown.",
+                string.Join(", ", _seedNodes), _cluster.Settings.ShutdownAfterUnsuccessfulJoinSeedNodes);
+
+            _joinSeedNodesDeadline = null;
+            _coordShutdown.Run(CoordinatedShutdown.ClusterJoinUnsuccessfulReason.Instance);
         }
 
         private void BecomeUninitialized()
@@ -2583,7 +2619,7 @@ namespace Akka.Cluster
             _publisher.Tell(new ClusterEvent.CurrentInternalStats(_gossipStats, vclockStats));
         }
 
-        readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
     }
 
     /// <summary>
@@ -2706,13 +2742,13 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class FirstSeedNodeProcess : UntypedActor
     {
-        readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private ImmutableList<Address> _remainingSeeds;
-        readonly Address _selfAddress;
-        readonly Cluster _cluster;
-        readonly Deadline _timeout;
-        readonly ICancelable _retryTaskToken;
+        private readonly Address _selfAddress;
+        private readonly Cluster _cluster;
+        private readonly Deadline _timeout;
+        private readonly ICancelable _retryTaskToken;
 
         /// <summary>
         /// TBD

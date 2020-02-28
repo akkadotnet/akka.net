@@ -1,12 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceConfigAutoStartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Snapshot;
 using Akka.TestKit;
@@ -34,7 +34,7 @@ namespace Akka.Persistence.Tests
 
             public TestJournal(Config config)
             {
-                _testValue = config.GetString("test-value");
+                _testValue = config.GetString("test-value", null);
             }
 
             protected override bool AroundReceive(Receive receive, object message)
@@ -54,7 +54,7 @@ namespace Akka.Persistence.Tests
 
             public TestSnapshotStore(Config config)
             {
-                _testValue = config.GetString("test-value");
+                _testValue = config.GetString("test-value", null);
             }
 
             protected override bool AroundReceive(Receive receive, object message)

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqlJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
@@ -58,7 +58,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Initializes a new instance of the <see cref="ReplayFilterSettings" /> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the replay filter.</param>
-        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// <exception cref="ConfigurationException">
         /// This exception is thrown when an invalid <c>replay-filter.mode</c> is read from the specified <paramref name="config"/>.
         /// Acceptable <c>replay-filter.mode</c> values include: off | repair-by-discard-old | fail | warn
         /// </exception>
@@ -67,7 +67,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </exception>
         public ReplayFilterSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "No HOCON config was provided for replay filter settings");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ReplayFilterSettings>();
 
             ReplayFilterMode mode;
             var replayModeString = config.GetString("mode", "off");
@@ -77,7 +78,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case "repair-by-discard-old": mode = ReplayFilterMode.RepairByDiscardOld; break;
                 case "fail": mode = ReplayFilterMode.Fail; break;
                 case "warn": mode = ReplayFilterMode.Warn; break;
-                default: throw new Akka.Configuration.ConfigurationException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]");
+                default: throw new ConfigurationException($"Invalid replay-filter.mode [{replayModeString}], supported values [off, repair-by-discard-old, fail, warn]");
             }
 
             Mode = mode;
@@ -135,7 +136,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </exception>
         public CircuitBreakerSettings(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<CircuitBreakerSettings>();
 
             MaxFailures = config.GetInt("max-failures", 5);
             CallTimeout = config.GetTimeSpan("call-timeout", TimeSpan.FromSeconds(20));
@@ -234,7 +236,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="config">The configuration used to configure the journal.</param>
         /// <param name="namingConventions">The naming conventions used by the database to construct valid SQL statements.</param>
-        /// <exception cref="Akka.Configuration.ConfigurationException">
+        /// <exception cref="ConfigurationException">
         /// This exception is thrown for a couple of reasons.
         /// <ul>
         /// <li>A connection string for the SQL event journal was not specified.</li>
@@ -249,9 +251,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </exception>
         protected BatchingSqlJournalSetup(Config config, QueryConfiguration namingConventions)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "Sql journal settings cannot be initialized, because required HOCON section couldn't been found");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
-            var connectionString = config.GetString("connection-string");
+            var connectionString = config.GetString("connection-string", null);
 #if CONFIGURATION
             if (string.IsNullOrWhiteSpace(connectionString))
             {
@@ -262,7 +265,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 #endif
 
             if (string.IsNullOrWhiteSpace(connectionString))
-                throw new Akka.Configuration.ConfigurationException("No connection string for Sql Event Journal was specified");
+                throw new ConfigurationException("No connection string for Sql Event Journal was specified");
 
             IsolationLevel level;
             switch (config.GetString("isolation-level", "unspecified"))
@@ -274,7 +277,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case "serializable": level = IsolationLevel.Serializable; break;
                 case "snapshot": level = IsolationLevel.Snapshot; break;
                 case "unspecified": level = IsolationLevel.Unspecified; break;
-                default: throw new Akka.Configuration.ConfigurationException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
+                default: throw new ConfigurationException("Unknown isolation-level value. Should be one of: chaos | read-committed | read-uncommitted | repeatable-read | serializable | snapshot | unspecified");
             }
 
             ConnectionString = connectionString;
@@ -287,7 +290,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CircuitBreakerSettings = new CircuitBreakerSettings(config.GetConfig("circuit-breaker"));
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
-            DefaultSerializer = config.GetString("serializer");
+            DefaultSerializer = config.GetString("serializer", null);
         }
 
         /// <summary>
@@ -1086,7 +1089,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private async Task HandleWriteMessages(WriteMessages req, TCommand command)
         {
             IJournalResponse summary = null;
-            var responses = new List<Tuple<IJournalResponse, IActorRef>>();
+            var responses = new List<(IJournalResponse, IActorRef)>();
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
             var actorInstanceId = req.ActorInstanceId;
@@ -1128,7 +1131,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                                 await command.ExecuteNonQueryAsync();
 
-                                var response = Tuple.Create<IJournalResponse, IActorRef>(new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
+                                var response = (new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                                 persistenceIds.Add(persistent.PersistenceId);
 
@@ -1138,7 +1141,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                             {
                                 // database-related exceptions should result in failure
                                 summary = new WriteMessagesFailed(cause);
-                                var response = Tuple.Create<IJournalResponse, IActorRef>(new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
+                                var response = (new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                             }
                             catch (Exception cause)
@@ -1146,7 +1149,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
                                 // so we should revert transaction here. But we need to check how this affect performance.
 
-                                var response = Tuple.Create<IJournalResponse, IActorRef>(new WriteMessageRejected(unadapted, cause, actorInstanceId), unadapted.Sender);
+                                var response = (new WriteMessageRejected(unadapted, cause, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                             }
                         }
@@ -1154,7 +1157,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     else
                     {
                         //TODO: other cases?
-                        var response = Tuple.Create<IJournalResponse, IActorRef>(new LoopMessageSuccess(envelope.Payload, actorInstanceId), envelope.Sender);
+                        var response = (new LoopMessageSuccess(envelope.Payload, actorInstanceId), envelope.Sender);
                         responses.Add(response);
                     }
                 }

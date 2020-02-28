@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransportShutdownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
@@ -44,7 +44,10 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_unused_inbound_endpoint()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
             try
             {
                 // bind
@@ -70,8 +73,11 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_outbound_disassociate()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
-            var t2 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
+            var t2 = new TcpTransport(Sys, config);
             try
             {
                 var p1 = CreateTestProbe();
@@ -117,8 +123,11 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_outbound_shutdown()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
-            var t2 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
+            var t2 = new TcpTransport(Sys, config);
             try
             {
                 var p1 = CreateTestProbe();
@@ -164,8 +173,11 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_inbound_disassociate()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
-            var t2 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
+            var t2 = new TcpTransport(Sys, config);
             try
             {
                 var p1 = CreateTestProbe();
@@ -210,8 +222,11 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_inbound_shutdown()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
-            var t2 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
+            var t2 = new TcpTransport(Sys, config);
             try
             {
                 var p1 = CreateTestProbe();
@@ -256,7 +271,10 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_endpoints_upon_failed_outbound_connection()
         {
-            var t1 = new TcpTransport(Sys, Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            Assert.False(config.IsNullOrEmpty());
+
+            var t1 = new TcpTransport(Sys, config);
             try
             {
                 var p1 = CreateTestProbe();

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
 using Akka.TestKit;
@@ -23,7 +23,6 @@ using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Tests.Transport
 {
-
     public class AkkaProtocolSpec : AkkaSpec
     {
         #region Setup / Config
@@ -49,9 +48,7 @@ namespace Akka.Remote.Tests.Transport
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
         public AkkaProtocolSpec(ITestOutputHelper helper)
-            : base(@"
-                    akka.actor.provider = remote
-                    akka.test.default-timeout = 1.5 s", helper)
+            : base(@"akka.actor.provider = remote", helper)
         {
             codec = new AkkaPduProtobuffCodec(Sys);
             testEnvelope = codec.ConstructMessage(_localAkkaAddress, TestActor, testMsg);

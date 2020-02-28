@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Random.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 
@@ -46,7 +46,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public RandomPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
@@ -251,7 +251,7 @@ namespace Akka.Routing
         /// </note>
         /// </param>
         public RandomGroup(Config config)
-            : this(config.GetStringList("routees.paths"), Dispatchers.DefaultDispatcherId)
+            : this(config.GetStringList("routees.paths", new string[] { }), Dispatchers.DefaultDispatcherId)
         {
         }
 

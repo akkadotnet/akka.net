@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence;
 using Akka.Remote.TestKit;
 using Akka.Actor;
@@ -20,6 +20,7 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -197,11 +198,11 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case EntityEnvelope env:
-                    return Tuple.Create(env.Id.ToString(), env.Payload);
+                    return (env.Id.ToString(), env.Payload);
                 case Get msg:
-                    return Tuple.Create(msg.CounterId.ToString(), message);
+                    return (msg.CounterId.ToString(), message);
             }
-            return null;
+            return Option<(string, object)>.None;
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>
@@ -375,7 +376,7 @@ namespace Akka.Cluster.Sharding.Tests
         public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
         protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
     }
-    public abstract class ClusterShardingSpec : MultiNodeClusterSpec
+    public abstract class ClusterShardingSpec : MultiNodeClusterSpec 
     {
         // must use different unique name for some tests than the one used in API tests
         public static string TestCounterShardingTypeName => $"Test{Counter.ShardingTypeName}";
@@ -408,7 +409,7 @@ namespace Akka.Cluster.Sharding.Tests
             _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";

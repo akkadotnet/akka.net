@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ namespace Akka.Cluster.Sharding
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
         public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
+        public ImmutableDictionary<string, ImmutableList<(object, IActorRef)>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<(object, IActorRef)>>.Empty;
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
@@ -132,8 +132,8 @@ namespace Akka.Cluster.Sharding
                 case Shard.EntityStopped stopped:
                     State = new Shard.ShardState(State.Entries.Remove(stopped.EntityId));
                     return true;
-                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState:
-                    State = (Shard.ShardState)offer.Snapshot;
+                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState state:
+                    State = state;
                     return true;
                 case RecoveryCompleted _:
                     RestartRememberedEntities();
@@ -200,11 +200,11 @@ namespace Akka.Cluster.Sharding
         {
             var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
-            if (Equals(child, ActorRefs.Nobody))
+            if (child.IsNobody())
             {
                 if (State.Entries.Contains(id))
                 {
-                    if (MessageBuffers.ContainsKey(id))
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
@@ -213,7 +213,7 @@ namespace Akka.Cluster.Sharding
                 else
                 {
                     // Note; we only do this if remembering, otherwise the buffer is an overhead
-                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender)));
                     ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
                 }
             }

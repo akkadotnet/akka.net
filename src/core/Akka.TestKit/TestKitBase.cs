@@ -1,17 +1,20 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.TestKit.Internal;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.TestKit
@@ -134,6 +137,7 @@ namespace Akka.TestKit
 
             var testActor = CreateTestActor(system, testActorName);
             //Wait for the testactor to start
+            // Calling sync version here, since .Wait() causes deadlock
             AwaitCondition(() =>
             {
                 var repRef = testActor as IRepointableRef;
@@ -446,6 +450,54 @@ namespace Akka.TestKit
                 //TODO: replace "" with system.PrintTree()
                 system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }
+        }
+
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="name">Child actor name</param>
+        /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, string name, SupervisorStrategy supervisorStrategy)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, name, supervisorStrategy));
+            return ExpectMsg<IActorRef>();
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, SupervisorStrategy supervisorStrategy)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, supervisorStrategy));
+            return ExpectMsg<IActorRef>();
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="name">Child actor name</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, string name)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, name, Option<SupervisorStrategy>.None));
+            return ExpectMsg<IActorRef>();
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, Option<SupervisorStrategy>.None));
+            return ExpectMsg<IActorRef>();
         }
 
         /// <summary>

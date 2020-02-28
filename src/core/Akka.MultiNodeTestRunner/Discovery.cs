@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Discovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Akka.MultiNodeTestRunner.Shared;
 using Akka.Remote.TestKit;
+using Akka.Util;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -48,23 +49,8 @@ namespace Akka.MultiNodeTestRunner
                 case ITestCaseDiscoveryMessage testCaseDiscoveryMessage:
                     var testClass = testCaseDiscoveryMessage.TestClass.Class;
                     if (testClass.IsAbstract) return true;
-#if CORECLR
-                    var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
-#else
-                    var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
-                    var specType = testAssembly.GetType(testClass.Name);
-#endif
-                    var roles = RoleNames(specType);
-
-                    var details = roles.Select((r, i) => new NodeTest
-                    {
-                        Node = i + 1,
-                        Role = r.Name,
-                        TestName = testClass.Name,
-                        TypeName = testClass.Name,
-                        MethodName = testCaseDiscoveryMessage.TestCase.TestMethod.Method.Name,
-                        SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
-                    }).ToList();
+                    
+                    var details = LoadTestCaseDetails(testCaseDiscoveryMessage, testClass);
                     if (details.Any())
                     {
                         var dictKey = details.First().TestName;
@@ -83,6 +69,38 @@ namespace Akka.MultiNodeTestRunner
             }
 
             return true;
+        }
+
+        private List<NodeTest> LoadTestCaseDetails(ITestCaseDiscoveryMessage testCaseDiscoveryMessage, ITypeInfo testClass)
+        {
+            try
+            {
+#if CORECLR
+                var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
+#else
+                var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
+                var specType = testAssembly.GetType(testClass.Name);
+#endif
+                var roles = RoleNames(specType);
+
+                var details = roles.Select((r, i) => new NodeTest
+                {
+                    Node = i + 1,
+                    Role = r.Name,
+                    TestName = testClass.Name,
+                    TypeName = testClass.Name,
+                    MethodName = testCaseDiscoveryMessage.TestCase.TestMethod.Method.Name,
+                    SkipReason = testCaseDiscoveryMessage.TestCase.SkipReason,
+                }).ToList();
+
+                return details;
+            }
+            catch (Exception ex)
+            {
+                // If something goes wrong with loading test details - just keep going with other tests
+                Console.WriteLine($"Failed to load test details for [{testClass.Name}] test class: {ex}");
+                return new List<NodeTest>();
+            }
         }
 
         private IEnumerable<RoleName> RoleNames(Type specType)

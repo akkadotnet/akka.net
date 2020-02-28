@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 <Import Project="..\..\common.props" />
+  <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests</AssemblyName>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
@@ -21,7 +22,7 @@
     <PackageReference Include="NUnit" Version="3.6.1" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
     <DefineConstants>$(DefineConstants)</DefineConstants>
   </PropertyGroup>
 

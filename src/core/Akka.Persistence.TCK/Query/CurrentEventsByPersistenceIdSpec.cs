@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentEventsByPersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.Dsl;
@@ -25,7 +25,7 @@ namespace Akka.Persistence.TCK.Query
         protected IReadJournal ReadJournal { get; set; }
 
         protected CurrentEventsByPersistenceIdSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config, actorSystemName, output)
+            : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }

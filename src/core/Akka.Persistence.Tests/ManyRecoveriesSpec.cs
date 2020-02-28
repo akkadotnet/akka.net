@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ManyRecoveriesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
@@ -65,7 +65,7 @@ namespace Akka.Persistence.Tests
 
             # snapshot store plugin is NOT defined, things should still work
             akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store""
-            akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(ManyRecoveriesSpec).FullName + "/"))
+            akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(ManyRecoveriesSpec).FullName + @""""))
         {
         }
 

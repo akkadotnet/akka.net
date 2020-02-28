@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientReceptionist.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Cluster.Tools.PublishSubscribe;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 
 namespace Akka.Cluster.Tools.Client
@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tools.Client
             _system.Settings.InjectTopLevelFallback(DefaultConfig());
             _config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
 
-            _role = _config.GetString("role");
+            _role = _config.GetString("role", null);
             if (string.IsNullOrEmpty(_role)) _role = null;
 
             _receptionist = CreateReceptionist();
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Tools.Client
             else
             {
                 var name = _config.GetString("name");
-                var dispatcher = _config.GetString("use-dispatcher");
+                var dispatcher = _config.GetString("use-dispatcher", null);
                 if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
 
                 // important to use var mediator here to activate it outside of ClusterReceptionist constructor

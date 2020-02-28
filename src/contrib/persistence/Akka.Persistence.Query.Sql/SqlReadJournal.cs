@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlReadJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Reactive.Streams;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
 using Akka.Util.Internal;
@@ -40,9 +40,9 @@ namespace Akka.Persistence.Query.Sql
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refreshInterval = config.GetTimeSpan("refresh-interval");
-            _writeJournalPluginId = config.GetString("write-plugin");
-            _maxBufferSize = config.GetInt("max-buffer-size");
+            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
+            _writeJournalPluginId = config.GetString("write-plugin", null);
+            _maxBufferSize = config.GetInt("max-buffer-size", 0);
         }
 
         /// <summary>

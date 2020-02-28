@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ApiTests.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ open Xunit
 
 [<Fact>]
 let ``configuration loader should load data from app.config`` () =
-    let config = Configuration.load()
+    let config = Configuration.load("akka")
     config.HasPath "akka.test.value" 
     |> equals true
     config.GetInt "akka.test.value"
@@ -132,7 +132,7 @@ type TestActor() =
 [<Fact>]
 let ``can spawn actor from expression`` () =
     
-    let system = Configuration.load() |> System.create "test"
+    let system = Configuration.load("akka") |> System.create "test"
     let actor = spawnObj system "test-actor" <@ fun () -> TestActor() @>
 
     ()

@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using Akka.Event;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -43,14 +44,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             MethodName = null;
         }
 
-        public EndSpec(string className, string methodName)
+        public EndSpec(string className, string methodName, SpecLog log)
         {
             ClassName = className;
             MethodName = methodName;
+            Log = log;
         }
         
-        public string ClassName { get; private set; }
-        public string MethodName { get; private set; }
+        public string ClassName { get; }
+        public string MethodName { get; }
+        public SpecLog Log { get; }
     }
 
     /// <summary>

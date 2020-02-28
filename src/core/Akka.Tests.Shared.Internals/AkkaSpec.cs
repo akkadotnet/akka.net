@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,8 +11,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;
@@ -42,7 +43,9 @@ namespace Akka.TestKit
               #  }
               #}
             }
-          }");
+          }
+          # use random ports to avoid race conditions with binding contention
+          akka.remote.dot-netty.tcp.port = 0");
 
         private static int _systemNumber = 0;
 
@@ -131,9 +134,9 @@ namespace Akka.TestKit
         }
 
 
-        protected void Intercept<T>(Action actionThatThrows) where T : Exception
+        protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            Assert.Throws<T>(() => actionThatThrows());
+            return Assert.Throws<T>(() => actionThatThrows());
         }
 
         protected void Intercept(Action actionThatThrows)
@@ -141,6 +144,19 @@ namespace Akka.TestKit
             try
             {
                 actionThatThrows();
+            }
+            catch(Exception)
+            {
+                return;
+            }
+            throw new ThrowsException(typeof(Exception));
+        }
+        
+        protected async Task InterceptAsync(Func<Task> asyncActionThatThrows)
+        {
+            try
+            {
+                await asyncActionThatThrows();
             }
             catch(Exception)
             {

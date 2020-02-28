@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.TestKit.TestActors;
@@ -329,7 +329,12 @@ akka.actor {
         [Fact]
         public void CanSerializeConfig()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.ParseString(@"
+my-settings{
+    a: 1
+    b: 2
+    c: 3
+}");
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));

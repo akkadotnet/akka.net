@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Utils.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Streams.Implementation;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -33,8 +33,7 @@ namespace Akka.Streams.TestKit.Tests
 
         public static T AssertAllStagesStopped<T>(this AkkaSpec spec, Func<T> block, IMaterializer materializer)
         {
-            var impl = materializer as ActorMaterializerImpl;
-            if (impl == null)
+            if (!(materializer is ActorMaterializerImpl impl))
                 return block();
 
             var probe = spec.CreateTestProbe(impl.System);

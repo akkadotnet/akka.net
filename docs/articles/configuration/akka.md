@@ -1,3 +1,8 @@
+---
+uid: akka-configuration
+title: Akka Configuration
+---
+
 ## Akka Configuration
 Below is the default HOCON configuration for the base `Akka` package.
 

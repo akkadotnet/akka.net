@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Tools.MatchHandler;
 using System.Threading.Tasks;
 

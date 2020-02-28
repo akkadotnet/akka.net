@@ -43,14 +43,14 @@ namespace Akka.Streams.Dsl
 <# for (int t = 0; t < i; t++) {  #>
     /// <typeparam name="TOut<#= t #>">TBD</typeparam>
 <# } #>
-    public abstract class UnzipWithCreator<TIn, <#= typeParams #>> : IUnzipWithCreator<TIn, Tuple<<#= typeParams #>>, UnzipWith<TIn, <#= typeParams #>>>
+    public abstract class UnzipWithCreator<TIn, <#= typeParams #>> : IUnzipWithCreator<TIn, (<#= typeParams #>), UnzipWith<TIn, <#= typeParams #>>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, <#= typeParams #>> Create(Func<TIn, Tuple<<#= typeParams #>>> unzipper)
+        public virtual UnzipWith<TIn, <#= typeParams #>> Create(Func<TIn, (<#= typeParams #>)> unzipper)
         {
             return new UnzipWith<TIn, <#= typeParams #>>(unzipper);
         }
@@ -75,7 +75,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, <#=typeParams#>> Apply<TIn, <#=typeParams#>>(Func<TIn, Tuple<<#=typeParams#>>> unzipper, UnzipWithCreator<TIn, <#=typeParams#>> creator)
+        public static UnzipWith<TIn, <#=typeParams#>> Apply<TIn, <#=typeParams#>>(Func<TIn, (<#=typeParams#>)> unzipper, UnzipWithCreator<TIn, <#=typeParams#>> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -144,12 +144,12 @@ if (!IsClosed(_stage.Out<#=t#>))
             }
         }		
 
-        private readonly Func<TIn, Tuple<<#= typeParams #>>> _unzipper;
+        private readonly Func<TIn, (<#= typeParams #>)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<<#= typeParams #>>> unzipper)
+        public UnzipWith(Func<TIn, (<#= typeParams #>)> unzipper)
         {
             _unzipper = unzipper;
 

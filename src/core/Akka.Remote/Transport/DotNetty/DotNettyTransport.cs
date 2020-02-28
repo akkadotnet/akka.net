@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
@@ -169,7 +169,7 @@ namespace Akka.Remote.Transport.DotNetty
             return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
         }
 
-        public override async Task<Tuple<Address, TaskCompletionSource<IAssociationEventListener>>> Listen()
+        public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             EndPoint listenAddress;
             IPAddress ip;
@@ -206,7 +206,7 @@ namespace Akka.Remote.Transport.DotNetty
 #pragma warning restore 4014
 
 
-                return Tuple.Create(addr, AssociationListenerPromise);
+                return (addr, AssociationListenerPromise);
             }
             catch (Exception ex)
             {
@@ -275,7 +275,7 @@ namespace Akka.Remote.Transport.DotNetty
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.ConnectTimeout, Settings.ConnectTimeout)
                 .Option(ChannelOption.AutoRead, false)
-                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
+                .Option(ChannelOption.Allocator, UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpSocketChannel(addressFamily)
                     : new TcpSocketChannel())
@@ -327,6 +327,8 @@ namespace Akka.Remote.Transport.DotNetty
                     pipeline.AddLast("FrameEncoder", new LengthFieldPrepender(Settings.ByteOrder, 4, 0, false));
                 }
             }
+
+            pipeline.AddLast("BatchWriter", new BatchWriter(Settings.BatchWriterSettings));
         }
 
         private void SetClientPipeline(IChannel channel, Address remoteAddress)
@@ -384,7 +386,7 @@ namespace Akka.Remote.Transport.DotNetty
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
                 .Option(ChannelOption.AutoRead, false)
                 .Option(ChannelOption.SoBacklog, Settings.Backlog)
-                .Option(ChannelOption.Allocator, Settings.EnableBufferPooling ? (IByteBufferAllocator)PooledByteBufferAllocator.Default : UnpooledByteBufferAllocator.Default)
+                .Option(ChannelOption.Allocator, UnpooledByteBufferAllocator.Default)
                 .ChannelFactory(() => Settings.EnforceIpFamily
                     ? new TcpServerSocketChannel(addressFamily)
                     : new TcpServerSocketChannel())

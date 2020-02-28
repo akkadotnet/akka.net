@@ -1,24 +1,26 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorRecoveryTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Tests.Journal;
 using Akka.TestKit;
+using Akka.Util.Internal;
 using Xunit;
 
 namespace Akka.Persistence.Tests
 {
-
+    [Collection("PersistentActorRecoveryTimeout")] // force tests to run sequentially
     public class PersistentActorRecoveryTimeoutSpec : PersistenceSpec
     {
-        private const string JournalId = "persistent-actor-recovery-timeout-spec";
+        private static readonly AtomicCounter JournalIdNumber = new AtomicCounter(0);
+        private static readonly string JournalId = "persistent-actor-recovery-timeout-spec" + JournalIdNumber.GetAndIncrement();
         private readonly IActorRef _journal;
 
         #region internal test classes

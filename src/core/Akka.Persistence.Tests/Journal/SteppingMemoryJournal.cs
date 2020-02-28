@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SteppingMemoryJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.Tests.Journal
@@ -53,7 +53,7 @@ namespace Akka.Persistence.Tests.Journal
 
         public SteppingMemoryJournal()
         {
-            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id");
+            _instanceId = Context.System.Settings.Config.GetString("akka.persistence.journal.stepping-inmem.instance-id", null);
         }
 
         public static void Step(IActorRef journal)
@@ -66,6 +66,7 @@ namespace Akka.Persistence.Tests.Journal
             return ConfigurationFactory.ParseString(@"
 akka.persistence.journal.stepping-inmem.class="""+ typeof(SteppingMemoryJournal).FullName + @", Akka.Persistence.Tests""
 akka.persistence.journal.plugin = ""akka.persistence.journal.stepping-inmem""
+akka.persistence.journal.stepping-inmem.plugin-dispatcher = ""akka.actor.default-dispatcher""
 akka.persistence.journal.stepping-inmem.instance-id = """ + instanceId + @"""");
         }
 

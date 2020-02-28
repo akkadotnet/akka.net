@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFramework>$(NetFrameworkTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
   </PropertyGroup>
@@ -16,7 +17,7 @@
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net452' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
     <DefineConstants>$(DefineConstants);THREADS</DefineConstants>
   </PropertyGroup>
 

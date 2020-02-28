@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -810,7 +810,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Result of <see cref="PersistentShardCoordinator.AllocateShard"/> is piped to self with this message.
+        /// Result of <see cref="IShardAllocationStrategy.AllocateShard(IActorRef, ShardId, IImmutableDictionary{IActorRef, IImmutableList{ShardId}})"/> is piped to self with this message.
         /// </summary>
         [Serializable]
         public sealed class AllocateShardResult
@@ -846,7 +846,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Result of `rebalance` is piped to self with this message.
+        /// Result of <see cref="IShardAllocationStrategy.Rebalance(IImmutableDictionary{IActorRef, IImmutableList{ShardId}}, IImmutableSet{ShardId})"/> is piped to self with this message.
         /// </summary>
         [Serializable]
         public sealed class RebalanceResult
@@ -1321,7 +1321,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool ReceiveRecover(Object message)
+        protected override bool ReceiveRecover(object message)
         {
             switch (message)
             {
@@ -1354,8 +1354,7 @@ namespace Akka.Cluster.Sharding
                             return true;
                     }
                     return false;
-                case SnapshotOffer offer when offer.Snapshot is State:
-                    var state = offer.Snapshot as State;
+                case SnapshotOffer offer when offer.Snapshot is State state:
                     Log.Debug("ReceiveRecover SnapshotOffer {0}", state);
                     CurrentState = state.WithRememberEntities(Settings.RememberEntities);
                     // Old versions of the state object may not have unallocatedShard set,

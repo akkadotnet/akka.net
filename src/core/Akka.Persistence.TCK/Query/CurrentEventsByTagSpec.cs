@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentEventsByTagSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
@@ -24,7 +24,7 @@ namespace Akka.Persistence.TCK.Query
         protected IReadJournal ReadJournal { get; set; }
 
         protected CurrentEventsByTagSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config, actorSystemName, output)
+            : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -95,6 +95,7 @@ namespace Akka.Persistence.TCK.Query
             probe.Request(2).ExpectComplete();
         }
 
+        // Unit test failed because of time-out but passed when the delays were raised to 300
         [Fact]
         public virtual void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
         {

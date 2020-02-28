@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Serialization;
 using static Akka.Persistence.Fsm.PersistentFSM;
 
@@ -131,7 +131,7 @@ namespace Akka.Persistence.Fsm
                     handlersExecutedCounter++;
                     if (handlersExecutedCounter == eventsToPersist.Count)
                     {
-                        base.ApplyState(nextState.Using(nextData));
+                        base.ApplyState(nextState.Copy(stateData: nextData));
                         CurrentStateTimeout = nextState.Timeout;
                         nextState.AfterTransitionDo?.Invoke(StateData);
                         if (doSnapshot)
@@ -384,6 +384,9 @@ namespace Akka.Persistence.Fsm
             /// </summary>
             /// <param name="nextStateData">TBD</param>
             /// <returns>TBD</returns>
+            [Obsolete("Internal API easily to be confused with regular FSM's using. " +
+                "Use regular events (`Applying`). " +
+                "Internally, `copy` can be used instead.")]
             public State<TS, TD, TE> Using(TD nextStateData)
             {
                 return Copy(stateData: nextStateData);
@@ -455,13 +458,16 @@ namespace Akka.Persistence.Fsm
 
         public SnapshotAfterExtension(Config config)
         {
-            if (config.GetString(Key).ToLowerInvariant().Equals("off"))
+            var useSnapshot = config.GetString(Key, "");
+            if (useSnapshot.ToLowerInvariant().Equals("off") ||
+                useSnapshot.ToLowerInvariant().Equals("false") ||
+                useSnapshot.ToLowerInvariant().Equals("no"))
             {
                 SnapshotAfterValue = null;
             }
             else
             {
-                SnapshotAfterValue = config.GetInt(Key);
+                SnapshotAfterValue = config.GetInt(Key, 0);
             }
         }
         

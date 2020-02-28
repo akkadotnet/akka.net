@@ -1,17 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DispatchersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Dispatch
 {
@@ -62,7 +63,7 @@ namespace Akka.Tests.Dispatch
 
         #endregion
 
-        public DispatchersSpec() : base(DispatcherConfiguration) { }
+        public DispatchersSpec(ITestOutputHelper helper) : base(DispatcherConfiguration, helper) { }
 
         
 
@@ -120,42 +121,57 @@ namespace Akka.Tests.Dispatch
         public void Dispatchers_must_be_used_when_configured_in_explicit_deployments()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithDispatcher("myapp.mydispatcher"));
-            actor.Tell("what's in a name?");
-            var expected = "myapp.mydispatcher";
-            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
-            actual.ShouldBe(expected);
+
+            AwaitAssert(() =>
+            {
+                actor.Tell("what's in a name?");
+                var expected = "myapp.mydispatcher";
+                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                actual.ShouldBe(expected);
+            });
         }
 
         [Fact]
         public void Dispatchers_must_be_used_in_deployment_configuration()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>(), "echo1");
-            actor.Tell("what's in a name?");
-            var expected = "myapp.mydispatcher";
-            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
-            actual.ShouldBe(expected);
+
+            AwaitAssert(() =>
+            {
+                actor.Tell("what's in a name?");
+                var expected = "myapp.mydispatcher";
+                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                actual.ShouldBe(expected);
+            });
         }
 
         [Fact]
         public void Dispatchers_must_be_used_in_deployment_configuration_and_trumps_code()
         {
             var actor = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithDispatcher("my-pinned-dispatcher"), "echo2");
-            actor.Tell("what's in a name?");
-            var expected = "myapp.my-fork-join-dispatcher";
-            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
-            actual.ShouldBe(expected);
+
+            AwaitAssert(() =>
+            {
+                actor.Tell("what's in a name?");
+                var expected = "myapp.my-fork-join-dispatcher";
+                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(200));
+                actual.ShouldBe(expected);
+            });
         }
 
         [Fact]
         public void Dispatchers_must_use_pool_dispatcher_router_of_deployment_config()
         {
             var pool = Sys.ActorOf(Props.Create<DispatcherNameEcho>().WithRouter(FromConfig.Instance), "pool1");
-            pool.Tell(new Identify(null));
-            var routee = ExpectMsg<ActorIdentity>().Subject;
-            routee.Tell("what's the name?");
-            var expected = "akka.actor.deployment./pool1.pool-dispatcher";
-            var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
-            actual.ShouldBe(expected);
+
+            AwaitAssert(() => {
+                pool.Tell(new Identify(null));
+                var routee = ExpectMsg<ActorIdentity>().Subject;
+                routee.Tell("what's the name?");
+                var expected = "akka.actor.deployment./pool1.pool-dispatcher";
+                var actual = ExpectMsg<string>(TimeSpan.FromMilliseconds(50));
+                actual.ShouldBe(expected);
+            });
         }
 
         [Fact]

@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\common.props" />
+  <PropertyGroup>
+      <AssemblyTitle>Akka.Docs.Tutorials</AssemblyTitle>
+      <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+      <RootNamespace>Tutorials</RootNamespace>
+      <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+   <ItemGroup>
+    <ProjectReference Include="..\Akka\Akka.csproj" />
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
+    <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
+    <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+  </ItemGroup>
+
+   <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+  </ItemGroup>
+
+</Project>

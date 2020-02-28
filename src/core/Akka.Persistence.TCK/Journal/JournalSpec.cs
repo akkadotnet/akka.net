@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JournalSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
 using Xunit;
@@ -294,7 +294,7 @@ namespace Akka.Persistence.TCK.Journal
                 Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
                 Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
                 Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
-                Assertions.AssertEqual(ActorRefs.NoSender, o.Persistent.Sender);
+                Assertions.AssertTrue(o.Persistent.Sender == ActorRefs.NoSender || o.Persistent.Sender.Equals(Sys.DeadLetters), $"Expected WriteMessagesSuccess.Persistent.Sender to be null or {Sys.DeadLetters}, but found {o.Persistent.Sender}");
                 Assertions.AssertEqual(@event, o.Persistent.Payload);
             });
 
@@ -305,7 +305,7 @@ namespace Akka.Persistence.TCK.Journal
                 Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
                 Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
                 Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
-                Assertions.AssertEqual(ActorRefs.NoSender, o.Persistent.Sender);
+                Assertions.AssertTrue(o.Persistent.Sender == ActorRefs.NoSender || o.Persistent.Sender.Equals(Sys.DeadLetters), $"Expected WriteMessagesSuccess.Persistent.Sender to be null or {Sys.DeadLetters}, but found {o.Persistent.Sender}");
                 Assertions.AssertEqual(@event, o.Persistent.Payload);
             });
 

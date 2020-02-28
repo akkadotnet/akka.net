@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TypeExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Akka.Annotations;
 
 namespace Akka.Util
@@ -42,7 +43,10 @@ namespace Akka.Util
         }
 
         private static readonly ConcurrentDictionary<Type, string> ShortenedTypeNames = new ConcurrentDictionary<Type, string>();
-        private static readonly string CoreAssemblyName = typeof(object).GetTypeInfo().Assembly.GetName().Name;
+
+        private static readonly Regex cleanAssemblyVersionRegex = new Regex(
+            @"(, Version=([\d\.]+))?(, Culture=[^,\] \t]+)?(, PublicKeyToken=(null|[\da-f]+))?",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         /// <summary>
         /// INTERNAL API
@@ -59,15 +63,11 @@ namespace Akka.Util
             {
                 return shortened;
             }
-            else
-            {
-                var assemblyName = type.GetTypeInfo().Assembly.GetName().Name;
-                shortened = assemblyName.Equals(CoreAssemblyName)
-                    ? type.GetTypeInfo().FullName
-                    : $"{type.GetTypeInfo().FullName}, {assemblyName}";
-                ShortenedTypeNames.TryAdd(type, shortened);
-                return shortened;
-            }
+
+            shortened = cleanAssemblyVersionRegex.Replace(type.AssemblyQualifiedName, string.Empty);
+            ShortenedTypeNames.TryAdd(type, shortened);
+            
+            return shortened;
         }
     }
 }

@@ -9,7 +9,7 @@ Cluster sharding is useful in cases when you want to contact with cluster actors
 Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.state-store-mode` HOCON configuration:
 
 1. `persistence` (**default**) depends on Akka.Persistence module. In order to use it, you'll need to specify an event journal accessible by all of the participating nodes. An information about the particular shard placement is stored in a persistent cluster singleton actor known as *coordinator*. In order to guarantee consistent state between different incarnations, coordinator stores its own state using Akka.Persistence event journals.
-2. `ddata` (**experimental**, available in versions above 1.3.2) depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventually consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured. At this moment this mode doesn't support `akka.cluster.sharding.remember-entities` option.
+2. `ddata` depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventually consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured. 
 
 Cluster sharding may be active only on nodes in `Up` status - so the ones fully recognized and acknowledged by every other node in a cluster.
 
@@ -126,7 +126,13 @@ You can inspect current sharding stats by using following messages:
 
 One of the most common scenarios, where cluster sharding is used, is to combine them with eventsourced persistent actors from [Akka.Persistence](xref:persistence-architecture) module. However as the entities are incarnated automatically based on provided props, specifying a dedicated, static unique `PersistenceId` for each entity may seem troublesome.
 
-This can be resolved by getting information about shard/entity ids directly from actor's path and constructing unique id from it. For each entity actor path will follow */user/{typeName}/{shardId}/{entityId}* pattern, where *{typeName}* was the parameter provided to `ClusterSharding.Start` method, while *{shardId}* and *{entityId}* where strings returned by message extractor logic. Given these values we can build consistent, unique `PersistenceId`s on the fly like on the following example:
+This can be resolved by getting information about shard/entity ids directly from actor's path and constructing unique id from it. For each entity actor path will follow */system/{typeName}/{shardId}/{entityId}* pattern, where *{typeName}* was the parameter provided to `ClusterSharding.Start` method, while *{shardId}* and *{entityId}* where strings returned by message extractor logic. 
+
+> N.B. Sharded entity actors are automatically created by the Akka.Cluster.Sharding guardian actor hierarchy, hence why they live under the `/system` portion of the actor hierarchy. This is done intentionally - in the event of an `ActorSystem` termination the `/user` side of the actor hierachy is always terminated first before the `/system` actors are. 
+>
+> Therefore, this design gives the sharding system a chance to hand over all of the sharded entity actors running on the terminating node over to the other remaining nodes in the cluster.
+
+Given these values we can build consistent, unique `PersistenceId`s on the fly like on the following example:
 
 ```csharp
 public class Aggregate : PersistentActor

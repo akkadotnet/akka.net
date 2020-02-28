@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: nightly-builds
 title: Akka.NET Nightly Builds
 ---
 

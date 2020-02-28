@@ -1,18 +1,19 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryEventAdaptersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Persistence.Tests.Journal
 {
@@ -52,7 +53,7 @@ akka.persistence.journal {
       """ + typeof(ReadMeTwiceEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader]
     }
   }
-}").WithFallback(ConfigurationFactory.Load());
+}").WithFallback(ConfigurationFactory.Default());
 
             _extendedActorSystem = (ExtendedActorSystem) Sys;
             _memoryConfig = config.GetConfig("akka.persistence.journal.inmem");

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowWatchTerminationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,10 +103,10 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 //var first = this.SourceProbe<int>().WatchTermination(Keep.Both);
-                //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<NotUsed, Tuple<TestPublisher.Probe<int>, Task>>(_ => null));
+                //var second = Source.From(Enumerable.Range(2, 4)).MapMaterializedValue(new Func<NotUsed, (TestPublisher.Probe<int>, Task)>(_ => null));
                 
                 //var t = Source.FromGraph(
-                //    GraphDsl.Create<SourceShape<int>, Tuple<TestPublisher.Probe<int>, Task>>(b =>
+                //    GraphDsl.Create<SourceShape<int>, (TestPublisher.Probe<int>, Task)>(b =>
                 //    {
                 //        var c = b.Add(new Merge<int, int>(2));
                 //        b.From(first).To(c.In(0));

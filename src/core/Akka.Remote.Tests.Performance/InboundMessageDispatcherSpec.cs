@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboundMessageDispatcherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Threading;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using Akka.Util.Internal;
 using Google.Protobuf;
@@ -77,6 +77,7 @@ namespace Akka.Remote.Tests.Performance
                   local-address = ""test://MessageDispatcher@0.0.0.0:1111""
                 }
               }
+            }
         ");
 
         [PerfSetup]

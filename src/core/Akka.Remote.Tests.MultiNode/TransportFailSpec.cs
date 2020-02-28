@@ -1,7 +1,14 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TransportFailSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Util;

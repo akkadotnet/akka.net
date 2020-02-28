@@ -1,13 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadlineFailureDetector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Remote
@@ -80,8 +80,8 @@ namespace Akka.Remote
         /// <param name="eventStream">N/A. This parameter is not used.</param>
         public DeadlineFailureDetector(Config config, EventStream eventStream) 
             : this(
-                  config.GetTimeSpan("acceptable-heartbeat-pause"),
-                  config.GetTimeSpan("heartbeat-interval")) { }
+                  config.GetTimeSpan("acceptable-heartbeat-pause", null),
+                  config.GetTimeSpan("heartbeat-interval", null)) { }
 
         /// <summary>
         /// Determines whether the resource is considered to be up and healthy.

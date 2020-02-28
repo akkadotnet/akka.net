@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BoundedMessageQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Event;
 using Akka.Util.Internal;
 
@@ -19,12 +19,13 @@ namespace Akka.Dispatch.MessageQueues
     {
         private readonly BlockingCollection<Envelope> _queue;
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Creates a new bounded message queue.
         /// </summary>
         /// <param name="config">The configuration for this mailbox.</param>
         public BoundedMessageQueue(Config config)
-            : this(config.GetInt("mailbox-capacity"), config.GetTimeSpan("mailbox-push-timeout-time"))
+            : this(config.GetInt("mailbox-capacity", 0), config.GetTimeSpan("mailbox-push-timeout-time", null))
         {
         }
 

@@ -1,11 +1,18 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SerializationTransportInformationSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;

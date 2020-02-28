@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cluster.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,11 +14,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
+using Hocon; using Akka.Configuration;
 
 namespace Akka.Cluster
 {
@@ -601,7 +601,7 @@ namespace Akka.Cluster
             internal void LogInfo(string template, object arg1)
             {
                 if (_settings.LogInfo)
-                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1);
+                    _log.Info("Cluster Node [{1}] - " + template, arg1, _selfAddress);
             }
 
             /// <summary>
@@ -613,7 +613,7 @@ namespace Akka.Cluster
             internal void LogInfo(string template, object arg1, object arg2)
             {
                 if (_settings.LogInfo)
-                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1, arg2);
+                    _log.Info("Cluster Node [{2}] - " + template, arg1, arg2, _selfAddress);
             }
         }
 

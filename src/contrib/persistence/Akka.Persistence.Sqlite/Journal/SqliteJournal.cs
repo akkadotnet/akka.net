@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
-using Akka.Configuration;
+using Hocon; using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
@@ -31,8 +31,8 @@ namespace Akka.Persistence.Sqlite.Journal
             var config = journalConfig.WithFallback(Extension.DefaultJournalConfig);
             QueryExecutor = new SqliteQueryExecutor(new QueryConfiguration(
                 schemaName: null,
-                journalEventsTableName: config.GetString("table-name"),
-                metaTableName: config.GetString("metadata-table-name"),
+                journalEventsTableName: config.GetString("table-name", null),
+                metaTableName: config.GetString("metadata-table-name", null),
                 persistenceIdColumnName: "persistence_id",
                 sequenceNrColumnName: "sequence_nr",
                 payloadColumnName: "payload",
@@ -42,11 +42,11 @@ namespace Akka.Persistence.Sqlite.Journal
                 tagsColumnName: "tags",
                 orderingColumnName: "ordering",
                 serializerIdColumnName: "serializer_id",
-                timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer"),
-                useSequentialAccess: config.GetBoolean("use-sequential-access")), 
+                timeout: config.GetTimeSpan("connection-timeout", null),
+                defaultSerializer: config.GetString("serializer", null),
+                useSequentialAccess: config.GetBoolean("use-sequential-access", false)), 
                     Context.System.Serialization, 
-                    GetTimestampProvider(config.GetString("timestamp-provider")));
+                    GetTimestampProvider(config.GetString("timestamp-provider", null)));
         }
 
         /// <summary>
