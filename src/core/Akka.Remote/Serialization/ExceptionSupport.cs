@@ -102,7 +102,7 @@ namespace Akka.Remote.Serialization
             if (string.IsNullOrEmpty(proto.TypeName))
                 return null;
 
-            Type exceptionType = Type.GetType(proto.TypeName);
+            var exceptionType = Type.GetType(proto.TypeName);
 
             var serializationInfo = new SerializationInfo(exceptionType, DefaultFormatterConverter);
 
@@ -123,7 +123,7 @@ namespace Akka.Remote.Serialization
             }
 
             Exception obj = null;
-            ConstructorInfo constructorInfo = exceptionType.GetConstructor(
+            var constructorInfo = exceptionType.GetConstructor(
                 All,
                 null,
                 new[] { typeof(SerializationInfo), typeof(StreamingContext) },
@@ -137,6 +137,5 @@ namespace Akka.Remote.Serialization
 
             return obj;
         }
-            var obj = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(exceptionType);
     }
 }
