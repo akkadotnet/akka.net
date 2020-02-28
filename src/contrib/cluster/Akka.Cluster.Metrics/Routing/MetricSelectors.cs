@@ -48,7 +48,7 @@ namespace Akka.Cluster.Metrics
                 case "memory": return MemoryMetricsSelector.Instance;
                 case "cpu": return CpuMetricsSelector.Instance;
                 default:
-                    return DynamicAccess.CreateInstanceFor<IMetricsSelector>(selectorTypeName, config)
+                    return DynamicAccess.CreateInstanceFor<IMetricsSelector>(selectorTypeName, new[] { config })
                         .Recover(ex => throw new ArgumentException($"Cannot instantiate metrics-selector [{selectorTypeName}]," +
                                                                    $"make sure it extends [Akka.Cluster.Metrics.MetricsSelector] and " +
                                                                    $"has constructor with [Akka.Configuration.Config] parameter", ex))
