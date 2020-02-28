@@ -62,6 +62,10 @@
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
     href: actors/coordinated-shutdown.md
+- name: HOCON
+  items:
+  - name: HOCON Syntax and Practices in Akka.NET
+    href: hocon/index.md
 - name: Persistence
   items: 
   - name: Architecture

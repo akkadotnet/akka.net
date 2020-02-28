@@ -1,6 +1,6 @@
 ---
 uid: hocon
-title: Hocon module
+title: HOCON Syntax and Practices in Akka.NET
 ---
 
 # HOCON (Human-Optimized Config Object Notation)
