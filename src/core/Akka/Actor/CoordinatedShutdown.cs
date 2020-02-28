@@ -674,12 +674,10 @@ namespace Akka.Actor
             var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook", false);
             if (runByClrShutdownHook)
             {
+                var exitTask = TerminateOnClrExit(coord);
                 // run all hooks during termination sequence
-                AppDomain.CurrentDomain.ProcessExit += (sender, args) =>
-                {
-                    // have to block, because if this method exits the process exits.
-                    coord.RunClrHooks().Wait(coord.TotalTimeout);
-                };
+                AppDomain.CurrentDomain.ProcessExit += exitTask;
+                system.WhenTerminated.ContinueWith(tr => { AppDomain.CurrentDomain.ProcessExit -= exitTask; });
 
                 coord.AddClrShutdownHook(() =>
                 {
@@ -702,6 +700,15 @@ namespace Akka.Actor
                     });
                 });
             }
+        }
+
+        private static EventHandler TerminateOnClrExit(CoordinatedShutdown coord)
+        {
+            return (sender, args) =>
+            {
+                // have to block, because if this method exits the process exits.
+                coord.RunClrHooks().Wait(coord.TotalTimeout);
+            };
         }
     }
 }
