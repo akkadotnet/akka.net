@@ -121,8 +121,6 @@ Metrics collection is delegated to the implementation of `Akka.Cluster.Metrics.I
 
 You can plug-in your own metrics collector instead of built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector`.
 
-Look at this one implementations for inspiration.
-
 Custom metrics collector implementation class must be specified in the `akka.cluster.metrics.collector.provider` configuration property.
 
 ## Configuration
