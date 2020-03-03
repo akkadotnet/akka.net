@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 
+using System.Xml.Linq;
+
 namespace Akka.MultiNodeTestRunner.TrxReporter.Models
 {
     public interface ITestEntity

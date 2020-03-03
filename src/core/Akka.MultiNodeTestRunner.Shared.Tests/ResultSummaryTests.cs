@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Akka.MultiNodeTestRunner.TrxReporter.Models;
 using FluentAssertions;
 using Xunit;
