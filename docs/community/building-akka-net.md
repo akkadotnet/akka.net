@@ -3,6 +3,8 @@ uid: building-and-distributing
 title: Building and Distributing Akka.NET
 ---
 
+# Building and Distributing Akka.NET
+
 Akka.NET's build system is a modified version of [Petabridge's `dotnet new` template](https://github.com/petabridge/petabridge-dotnet-new), in particular [the Petabridge.Library template](https://github.com/petabridge/Petabridge.Library/) - we typically keep our build system in sync with the documentation you can find there.
 
 ## Supported Commands
