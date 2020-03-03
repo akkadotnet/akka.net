@@ -178,6 +178,30 @@ Akka.Remote's batching system _is enabled by default_ as of Akka.NET v1.4.0 and 
 
 [We have a detailed guide that explains how to performance tune Akka.Remote in Akka.NET here](../../articles/remoting/performance.md).
 
+### Akka.Cluster: `allow-weakly-up-members = on` by Default
+In Akka.NET 1.3.3 we introduce the notion of a `WeaklyUp` member status in Akka.Cluster - this allows nodes to join the cluster while other members of the cluster are currently marked as unreachable. By default, nodes can't join an Akka.NET cluster until all of the current member nodes are contacted by the joining node.
+
+Since its introduction, the `WeaklyUp` membership status has been an opt-in feature - disabled by default.
+
+Beginning in Akka.NET v1.4 `akka.cluster.allow-weakly-up-members` is now set to `on` by default. This will change some of the data you see coming from a tool like [Petabridge.Cmd's `cluster show` output](https://cmd.petabridge.com/articles/commands/cluster-commands.html#cluster-show). 
+
+If you want to disable this feature, you can override the value in your application's HOCON.
+
+### Akka.Cluster.Sharding: `akka.cluster.sharding.state-store-mode = ddata` Ready for Production
+At the moment, Akka.Cluster.Sharding still defaults to what it did in Akka.NET v1.3.17 and earlier: it uses Akka.Persistence under the covers to store all of its shard allocation data. This means that in order to distribute entities across your cluster you need to have some sort of Akka.Persistence plugin configured and enabled inside your cluster.
+
+Akka.NET v1.4 changes that - now that [Akka.DistributedData](../../articles/clustering/distributed-data.md) is out of beta we can change our Akka.Cluster.Sharding to use DistributedData to manage all of our shard allocation data instead.
+
+```
+akka.cluster{
+	sharding{
+		state-store-mode = ddata
+	}
+}
+```
+
+With DistributedData all of the shard allocation data is maintained in-memory using a CRDT (conflict free replicated data type) plus a replication system spread among the participating Akka.Cluster.Sharding nodes. Using this mode will make it easier to restart entire clusters that use Akka.Cluster.Sharding and will ultimately reduce the amount of I/O the sharding system needs to maintain its internal state. We highly encourage you to use it.
+
 ## Questions or Issues?
 If you have any questions, concerns, or comments about Akka.NET v1.4.0 you can reach the project here:
 
