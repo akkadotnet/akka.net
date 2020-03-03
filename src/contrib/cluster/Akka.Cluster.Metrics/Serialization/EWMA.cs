@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="EWMA.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="EWMA.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 
@@ -73,9 +73,9 @@ namespace Akka.Cluster.Metrics.Serialization
                 /// from specified half-life and interval between observations.
                 /// Half-life is the interval over which the weights decrease by a factor of two.
                 /// The relevance of each data sample is halved for every passing half-life duration,
-                /// i.e. after 4 times the half-life, a data sample’s relevance is reduced to 6% of
+                /// i.e. after 4 times the half-life, a data sampleâ€™s relevance is reduced to 6% of
                 /// its original relevance. The initial relevance of a data sample is given by
-                /// 1 – 0.5 ^ (collect-interval / half-life).
+                /// 1 â€“ 0.5 ^ (collect-interval / half-life).
                 /// </summary>
                 public static double GetAlpha(TimeSpan halfLife, TimeSpan collectInterval)
                 {
