@@ -55,7 +55,10 @@ Config c = HoconConfigurationFactory.FromFile("myHocon.conf");
 ## Migration
 Akka.NET v1.4.0 introduces some breaking changes, although they're minor. Here's how to mitigate those and work around them.
 
-### Updating HOCON API Calls
+### HOCON Migrations
+Most users will only need to worry about the `Hocon` namespace change described below - most of the other changes affect plugin authors or developers who were using `Config` objects outside of what's built-in to Akka.NET itself.
+
+#### Updating HOCON Namespaces from `Akka.Configuration` to `Hocon`
 The biggest source of changes are going to be changing your HOCON namespaces, but thankfully these are localized to only the areas of your code where you accessed `Akka.Configuration.Config` objects explicitly. It's straightforward to update these references:
 
 1. Change all `Akka.Configuration.Config` calls to `Hocon.Config` and
@@ -63,12 +66,141 @@ The biggest source of changes are going to be changing your HOCON namespaces, bu
 
 If you run into any other areas where HOCON isn't 100% compatiable with what you've done in the past, [please report an issue on the Akka.NET repository](https://github.com/akkadotnet/HOCON/issues).
 
+#### HOCON Validation Changes
+The new HOCON parser introduced in the stand-alone HOCON library is much more strict and provides clearer error messages when invalid HOCON is parsed from its textual form.
+
+For instance, in Akka.NET v1.3.17 the following HOCON parsed just fine:
+
+```
+akka{
+ actor{
+ 	provider = remote
+ }
+
+ remote{
+ 	dot-netty.tcp.port = 8110
+ 	dot-netty.tcp.hostname = "localhost"
+ }
+# missing }
+```
+
+The HOCON parser in HOCON 2.0.3 and later will throw a `Hocon.HoconParserException` when attempting to parse this. So please make sure all of your curly braces are closed.
+
+#### Parsing Empty HOCON Blocks
+In Akka.NET v1.3.17 and earlier the following block of code would work just fine:
+
+```csharp
+// get an empty block of HOCON
+// works in Akka.NET (-, 1.3.17] - fails starting in 1.4
+Config empty = ConfigurationFactory.ParseString("");
+```
+
+Running that same code in Akka.NET v1.4 will throw an error:
+
+```
+Hocon.HoconParserException : Parameter text is null or empty.
+
+If you want to create an empty Hocon HoconRoot, use "{}" instead.
+```
+
+To resolve this type of issue, you should do exactly what the error message suggests:
+
+```csharp
+// get an empty block of HOCON
+// works in all versions of Akka.NET
+Config empty = HoconConfigurationFactory.ParseString("{}");
+
+// this will also work
+Config empty = HoconConfigurationFactory.Empty;
+```
+#### HOCON Throws When Loading Missing Keys
+In previous versions of Akka.NET the following HOCON:
+
+```
+akka{
+	foo = "bar"
+	baz = 2	
+}
+```
+
+Would produce the following results when consumed via the `Config` class:
+
+```
+var akkaString = @"
+	akka{
+		foo = ""bar""
+		baz = 2	
+	}
+";
+var config = ConfigurationFactory.ParseString(akkaString);
+Console.WriteLine(config.GetString("akka.foo")); // will print "bar" (correct)
+Console.WriteLine(config.GetInt("akka.baz")); // will print "2" (correct)
+Console.WriteLine(config.GetString("akka.biz")); // will print null, since key does not exist
+Console.WriteLine(config.GetInt("akka.biz")); // will print default(int), since key does not exist
+```
+
+The previous HOCON parser erred on the side of no-throw, so it would simply provide a default value using `default(type)` when a user attempted to access a missing HOCON key. This resulted in, historically, a lot of very difficult to track down and find bugs.
+
+In stand-alone HOCON, we opted to take things in a different approach with the ultimate goal of being able to develop HOCON lint-ing, validation, and Intellisense functionality in the future.
+
+In Akka.NET v1.4 by default `HoconConfigurationFactory.ParseString` will throw an `Hocon.HoconValueException` if you attempt to read a HOCON key that is unpopulated:
+
+```csharp
+var akkaString = @"
+	akka{
+		foo = ""bar""
+		baz = 2	
+	}
+";
+var config = ConfigurationFactory.ParseString(akkaString);
+Console.WriteLine(config.GetString("akka.foo")); // will print "bar" (correct)
+Console.WriteLine(config.GetInt("akka.baz")); // will print "2" (correct)
+Console.WriteLine(config.GetString("akka.biz")); // throws Hocon.HoconValueException
+Console.WriteLine(config.GetInt("akka.biz")); // throws Hocon.HoconValueException
+```
+
+The interpretation is, that your HOCON doesn't have the content that you're looking for and therefore we should fail fast and alert the developer that the specified HOCON key couldn't be found in the current `Config` object _or any of its fallbacks_.
+
+If this isn't what you need in your use case and you prefer the old behavior, that's easy to restore - provide an explicit default value in the second parameter on `Config.Get_(string hoconKey)` methods:
+
+```csharp
+var config = HoconConfigurationFactory.Empty; // empty config
+Console.WriteLine(config.GetString("akka.foo", "empty")); // will print "empty" (default value)
+Console.WriteLine(config.GetInt("akka.baz", 0)); // will print "0" (default value)
+Console.WriteLine(config.GetString("akka.biz", string.Empty)); // will print string.Empty (default value)
+Console.WriteLine(config.GetInt("akka.biz", 0)); // will print "0" (default value)
+```
+
 ### Performance Tuning Akka.Remote
 Akka.Remote's performance has significantly increased as a function of our new batching mode ([see the numbers](../../articles/remoting/performance.md#no-io-batching)) - which is tunable via HOCON configuration to best support your needs. 
 
 Akka.Remote's batching system _is enabled by default_ as of Akka.NET v1.4.0 and its defaults work well for systems under moderate load (100+ remote messages per second.) If your message volume is lower than that, you will _definitely need to performance tune Akka.Remote before you go into production with Akka.NET v1.4.0_.
 
 [We have a detailed guide that explains how to performance tune Akka.Remote in Akka.NET here](../../articles/remoting/performance.md).
+
+### Akka.Cluster: `allow-weakly-up-members = on` by Default
+In Akka.NET 1.3.3 we introduce the notion of a `WeaklyUp` member status in Akka.Cluster - this allows nodes to join the cluster while other members of the cluster are currently marked as unreachable. By default, nodes can't join an Akka.NET cluster until all of the current member nodes are contacted by the joining node.
+
+Since its introduction, the `WeaklyUp` membership status has been an opt-in feature - disabled by default.
+
+Beginning in Akka.NET v1.4 `akka.cluster.allow-weakly-up-members` is now set to `on` by default. This will change some of the data you see coming from a tool like [Petabridge.Cmd's `cluster show` output](https://cmd.petabridge.com/articles/commands/cluster-commands.html#cluster-show). 
+
+If you want to disable this feature, you can override the value in your application's HOCON.
+
+### Akka.Cluster.Sharding: `akka.cluster.sharding.state-store-mode = ddata` Ready for Production
+At the moment, Akka.Cluster.Sharding still defaults to what it did in Akka.NET v1.3.17 and earlier: it uses Akka.Persistence under the covers to store all of its shard allocation data. This means that in order to distribute entities across your cluster you need to have some sort of Akka.Persistence plugin configured and enabled inside your cluster.
+
+Akka.NET v1.4 changes that - now that [Akka.DistributedData](../../articles/clustering/distributed-data.md) is out of beta we can change our Akka.Cluster.Sharding to use DistributedData to manage all of our shard allocation data instead.
+
+```
+akka.cluster{
+	sharding{
+		state-store-mode = ddata
+	}
+}
+```
+
+With DistributedData all of the shard allocation data is maintained in-memory using a CRDT (conflict free replicated data type) plus a replication system spread among the participating Akka.Cluster.Sharding nodes. Using this mode will make it easier to restart entire clusters that use Akka.Cluster.Sharding and will ultimately reduce the amount of I/O the sharding system needs to maintain its internal state. We highly encourage you to use it.
 
 ## Questions or Issues?
 If you have any questions, concerns, or comments about Akka.NET v1.4.0 you can reach the project here:
