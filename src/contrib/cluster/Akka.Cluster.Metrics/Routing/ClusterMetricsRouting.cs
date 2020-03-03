@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="ClusterMetricsRouting.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMetricsRouting.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Metrics
     ///
     /// The supervision strategy of the router actor can be configured with
     /// [[#withSupervisorStrategy]]. If no strategy is provided, routers default to
-    /// a strategy of “always escalate”. This means that errors are passed up to the
+    /// a strategy of â€œalways escalateâ€. This means that errors are passed up to the
     /// router's supervisor for handling.
     ///
     /// The router's supervisor will treat the error as an error with the router itself.
@@ -199,7 +199,7 @@ namespace Akka.Cluster.Metrics
         public override Resizer Resizer => null;
 
         /// <summary>
-        /// Setting the supervisor strategy to be used for the “head” Router actor.
+        /// Setting the supervisor strategy to be used for the â€œheadâ€ Router actor.
         /// </summary>
         public AdaptiveLoadBalancingPool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
@@ -224,7 +224,7 @@ namespace Akka.Cluster.Metrics
                 return this;
 
             if (routerConfig is FromConfig || routerConfig is NoRouter)
-                return this; // NoRouter is the default, hence “neutral”
+                return this; // NoRouter is the default, hence â€œneutralâ€
 
             if (routerConfig is AdaptiveLoadBalancingPool adaptiveLoadBalancingPool)
             {
