@@ -94,8 +94,8 @@ let getAffectedProjects =
 Target "ComputeIncrementalChanges" (fun _ ->
     if runIncrementally then
         let targetBranch = match getBuildParam "targetBranch" with
-                            | "" -> "dev"
-                            | null -> "dev"
+                            | "" -> "v1.3"
+                            | null -> "v1.3"
                             | b -> b
         let incrementalistPath =
                 let incrementalistDir = toolsDir @@ "incrementalist"
@@ -660,6 +660,7 @@ Target "All" DoNothing
 Target "Nuget" DoNothing
 Target "RunTestsFull" DoNothing
 Target "RunTestsNetCoreFull" DoNothing
+
 
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build"
