@@ -4,11 +4,14 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests.Performance</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="App.config" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
@@ -22,9 +25,5 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Xml" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 
 </Project>
