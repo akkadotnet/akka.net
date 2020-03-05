@@ -661,6 +661,7 @@ Target "Nuget" DoNothing
 Target "RunTestsFull" DoNothing
 Target "RunTestsNetCoreFull" DoNothing
 
+
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build"
 "Build" ==> "PublishMntr" ==> "BuildRelease"
