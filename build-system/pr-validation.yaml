@@ -29,7 +29,7 @@ jobs:
         displayName: Windows Build
         inputs:
           filename: build.cmd
-          arguments: 'buildRelease ' # Run an  build
+          arguments: 'buildRelease incremental' # Run an incremental build
         continueOnError: true
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
       - task: CopyFiles@2
@@ -42,7 +42,7 @@ jobs:
       - task: PublishBuildArtifacts@1
         inputs:
           pathtoPublish: $(Build.ArtifactStagingDirectory)
-          artifactName: istOutput
+          artifactName: 'incrementalistOutput-$(Build.BuildId)'
       - script: 'echo 1>&2'
         failOnStderr: true
         displayName: 'If above is partially succeeded, then fail'
@@ -54,8 +54,9 @@ jobs:
       displayName: '.NET Framework Unit Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: build.cmd
-      scriptArgs: runTests 
+      scriptArgs: runTests incremental
       outputDirectory: 'TestResults'
+      artifactName: 'netfx_tests_windows-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:
@@ -63,8 +64,9 @@ jobs:
       displayName: '.NET Core Unit Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: build.cmd
-      scriptArgs: runTestsNetCore 
+      scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
+      artifactName: 'net_core_tests_windows-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:
@@ -72,26 +74,33 @@ jobs:
       displayName: '.NET Core Unit Tests (Linux)'
       vmImage: 'ubuntu-16.04'
       scriptFileName: './build.sh'
-      scriptArgs: runTestsNetCore 
+      scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
+      artifactName: 'net_core_tests_linux-$(Build.BuildId)'
 
-  - template: azure-pipeline.template.yaml
+  - template: azure-pipeline.mntr-template.yaml
     parameters:
       name: 'net_core_mntr_windows'
       displayName: '.NET Core Multi-Node Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: 'build.cmd'
-      scriptArgs: MultiNodeTestsNetCore 
+      scriptArgs: MultiNodeTestsNetCore incremental
       outputDirectory: 'TestResults'
+      artifactName: 'net_core_mntr_windows-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_core_mntr_FAILED_windows-$(Build.BuildId)'
 
-  - template: azure-pipeline.template.yaml
+  - template: azure-pipeline.mntr-template.yaml
     parameters:
       name: 'net_fx_mntr_windows'
       displayName: '.NET Framework Multi-Node Tests (Windows)'
       vmImage: 'vs2017-win2016'
       scriptFileName: 'build.cmd'
-      scriptArgs: MultiNodeTests 
+      scriptArgs: MultiNodeTests incremental
       outputDirectory: 'TestResults'
+      artifactName: 'net_fx_mntr_windows-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_fx_mntr_FAILED_windows-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:
@@ -99,5 +108,6 @@ jobs:
       displayName: 'NuGet Pack'
       vmImage: 'vs2017-win2016'
       scriptFileName: build.cmd
-      scriptArgs: CreateNuget nugetprerelease=dev 
+      scriptArgs: CreateNuget nugetprerelease=dev incremental
       outputDirectory: 'bin/nuget'
+      artifactName: 'nuget_pack-$(Build.BuildId)'
