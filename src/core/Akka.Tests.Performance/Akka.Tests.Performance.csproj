@@ -1,28 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\common.props" />
   <PropertyGroup>
-    <AssemblyTitle>Akka.Tests.Performance</AssemblyTitle>
-    <TargetFrameworks>net452</TargetFrameworks>
+    <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="App.config" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NBench" Version="1.0.1" />
+    <PackageReference Include="NBench" Version="$(NBenchVersion)" />
   </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net452' ">
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-  </PropertyGroup>
 
 </Project>
