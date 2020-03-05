@@ -354,30 +354,37 @@ Target "MultiNodeTestsNetCore" (fun _ ->
         multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
 
-Target "NBench" <| fun _ ->
-    if not skipBuild.Value then
-        let projects = 
-            let rawProjects = match (isWindows) with 
-                                | true -> !! "./src/**/*.Tests.Performance.csproj"
-                                | _ -> !! "./src/**/*.Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+Target "NBench" (fun _ ->
+    ensureDirectory outputPerfTests
+    let projects = 
+        let rawProjects = match (isWindows) with 
+                            | true -> !! "./src/**/*Tests.Performance.csproj"
+                            | _ -> !! "./src/**/*Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+        rawProjects |> Seq.choose filterProjects
 
-            rawProjects |> Seq.iter log
-            rawProjects |> Seq.choose filterProjects
+    projects |> Seq.iter(fun project -> 
+        let args = new StringBuilder()
+                |> append "run"
+                |> append "--no-build"
+                |> append "-c"
+                |> append configuration
+                |> append " -- "
+                |> append "--output"
+                |> append outputPerfTests
+                |> append "--concurrent" 
+                |> append "true"
+                |> append "--trace"
+                |> append "true"
+                |> append "--diagnostic"               
+                |> toText
 
-        let runSingleProject project =
-            let arguments =
-                match (hasTeamCity) with
-                | true -> (sprintf "nbench --nobuild --concurrent true --trace true --output %s --framework %s" outputPerfTests testNetFrameworkVersion)
-                | false -> (sprintf "nbench --nobuild --concurrent true --trace true --output %s --framework %s" outputPerfTests testNetFrameworkVersion)
-
-            let result = ExecProcess(fun info ->
-                info.FileName <- "dotnet"
-                info.WorkingDirectory <- (Directory.GetParent project).FullName
-                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0) 
-        
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
-    
-        projects |> Seq.iter runSingleProject
+        let result = ExecProcess(fun info -> 
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 15.0) (* Reasonably long-running task. *)
+        if result <> 0 then failwithf "NBench.Runner failed. %s %s" "dotnet" args
+    )
+)
 
 //--------------------------------------------------------------------------------
 // Nuget targets 
@@ -649,7 +656,7 @@ Target "RunTestsNetCoreFull" DoNothing
 // tests dependencies
 "Build" ==> "RunTests"
 "Build" ==> "RunTestsNetCore"
-//"Build" ==> "NBench"
+"Build" ==> "NBench"
 
 "BuildRelease" ==> "MultiNodeTestsNetCore"
 "BuildRelease" ==> "MultiNodeTests"

@@ -13,7 +13,7 @@
     <TestSdkVersion>16.5.0</TestSdkVersion>
     <HyperionVersion>0.9.15</HyperionVersion>
     <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
-    <NBenchVersion>1.2.2</NBenchVersion>
+    <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.11.4</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
