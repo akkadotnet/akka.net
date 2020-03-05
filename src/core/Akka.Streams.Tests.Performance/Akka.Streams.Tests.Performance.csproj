@@ -1,9 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
-  <Import Project="..\..\xunitSettings.props" />
-  <PropertyGroup>
-    <AssemblyTitle>Akka.Streams.Tests.Performance</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
   <PropertyGroup>
     <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
@@ -20,12 +16,5 @@
 
   <ItemGroup>
     <PackageReference Include="NBench" Version="$(NBenchVersion)" />
-    <DotNetCliToolReference Include="dotnet-nbench" Version="$(NBenchVersion)" />
   </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-
 </Project>
