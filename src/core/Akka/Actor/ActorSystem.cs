@@ -14,6 +14,7 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using Akka.Configuration;
+using Hocon;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 using Config = Akka.Configuration.Config;
 
@@ -104,6 +105,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// Creates a new <see cref="ActorSystem"/> with the specified name and configuration.
+        /// </summary>
+        /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
+        /// <param name="config">The configuration used to create the actor system</param>
+        /// <returns>A newly created actor system with the given name and configuration.</returns>
+        public static ActorSystem Create(string name, IHoconConfig config)
+        {
+            // var withFallback = config.WithFallback(ConfigurationFactory.Default());
+            return CreateAndStartSystem(name, config);
+        }
+
+        /// <summary>
         /// Creates a new <see cref="ActorSystem"/> with the specified name.
         /// </summary>
         /// <param name="name">The name of the actor system to create. The name must be uri friendly.
@@ -116,6 +131,13 @@ namespace Akka.Actor
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
+        {
+            var system = new ActorSystemImpl(name, withFallback);
+            system.Start();
+            return system;
+        }
+
+        private static ActorSystem CreateAndStartSystem(string name, IHoconConfig withFallback)
         {
             var system = new ActorSystemImpl(name, withFallback);
             system.Start();
