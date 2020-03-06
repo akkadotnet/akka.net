@@ -626,7 +626,7 @@ namespace Akka.Persistence
     public sealed class ThrowExceptionConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {
         public ThrowExceptionConfigurator() { }
-        public Akka.Persistence.IStashOverflowStrategy Create(Hocon.Config config) { }
+        public Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config) { }
     }
     public class ThrowOverflowExceptionStrategy : Akka.Persistence.IStashOverflowStrategy
     {
@@ -901,7 +901,7 @@ namespace Akka.Persistence.Journal
     public class EventAdapters
     {
         protected EventAdapters(System.Collections.Concurrent.ConcurrentDictionary<System.Type, Akka.Persistence.Journal.IEventAdapter> map, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.Type, Akka.Persistence.Journal.IEventAdapter>> bindings, Akka.Event.ILoggingAdapter log) { }
-        public static Akka.Persistence.Journal.EventAdapters Create(Akka.Actor.ExtendedActorSystem system, Hocon.Config config) { }
+        public static Akka.Persistence.Journal.EventAdapters Create(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public Akka.Persistence.Journal.IEventAdapter Get<T>() { }
         public virtual Akka.Persistence.Journal.IEventAdapter Get(System.Type type) { }
     }
@@ -970,7 +970,7 @@ namespace Akka.Persistence.Journal
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>
     {
-        public PersistencePluginProxy(Hocon.Config config) { }
+        public PersistencePluginProxy(Akka.Configuration.Config config) { }
         public Akka.Actor.IStash Stash { get; set; }
         protected override void PreStart() { }
         protected override bool Receive(object message) { }
