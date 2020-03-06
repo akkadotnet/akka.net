@@ -8,7 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Annotations;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Streams.Implementation.StreamRef;
 
 namespace Akka.Streams.Dsl

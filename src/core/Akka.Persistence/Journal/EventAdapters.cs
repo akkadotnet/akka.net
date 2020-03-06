@@ -11,7 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.Pattern;
@@ -427,25 +427,6 @@ namespace Akka.Persistence.Journal
                 var hoconObject = config.GetConfig(path).Root.GetObject();
                 return hoconObject.Unwrapped.ToDictionary(kv => kv.Key, kv =>
                 {
-                    var hoconField = kv.Value as HoconField;
-                    switch(hoconField.Type)
-                    {
-                        case HoconType.Array:
-                            return hoconField.Value.GetStringList().ToArray();
-                        case HoconType.Object:
-                            var arr = hoconField.GetObject().GetArray();
-                            var list = new List<string>();
-                            foreach(var value in arr)
-                            {
-                                var str = value.GetString();
-                                if (!string.IsNullOrWhiteSpace(str))
-                                    list.Add(str);
-                            }
-                            return list.ToArray();
-                        default:
-                            return new[] { hoconField.GetString() };
-                    }
-                    /*
                     var hoconValue = kv.Value as HoconValue;
                     if (hoconValue != null)
                     {
@@ -453,7 +434,6 @@ namespace Akka.Persistence.Journal
                         return str != null ? new[] { str } : hoconValue.GetStringList().ToArray();
                     }
                     else return new[] { kv.Value.ToString().Trim('"') };
-                    */
                 });
             }
             else return new Dictionary<string, string[]> { };

@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -275,10 +275,10 @@ namespace Akka.Remote
 
         private static IDictionary<string, string> ConfigToMap(Config cfg)
         {
-            if(cfg.IsNullOrEmpty()) return new Dictionary<string, string>();
-
             // adjusted API to match stand-alone HOCON per https://github.com/akkadotnet/HOCON/pull/191#issuecomment-577455865
-            return cfg.Root.GetObject().ToDictionary(k => k.Key, v => v.Value?.GetString());
+            if (cfg.IsEmpty) return new Dictionary<string, string>();
+            var unwrapped = cfg.Root.GetObject().Unwrapped;
+            return unwrapped.ToDictionary(k => k.Key, v => v.Value != null ? v.Value.ToString() : null);
         }
     }
 }

@@ -19,7 +19,7 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.Util;
 using Tcp = Akka.Streams.Dsl.Tcp;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace DocsExamples.Streams
 {

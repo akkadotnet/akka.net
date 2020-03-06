@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Cluster.TestKit;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Xunit;
 

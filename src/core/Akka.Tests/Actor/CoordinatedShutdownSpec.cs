@@ -13,7 +13,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using FluentAssertions;
 using Xunit;
 using static Akka.Actor.CoordinatedShutdown;

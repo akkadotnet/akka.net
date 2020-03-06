@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Pattern;
 using Akka.Persistence.Sql.Common.Journal;
 

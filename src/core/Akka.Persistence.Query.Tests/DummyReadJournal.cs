@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Streams.Dsl;
 
 namespace Akka.Persistence.Query.Tests

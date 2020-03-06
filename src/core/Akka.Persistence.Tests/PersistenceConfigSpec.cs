@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Snapshot;
 using Akka.TestKit;
