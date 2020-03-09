@@ -314,7 +314,12 @@ namespace Akka.IO
                         AcknowledgeSent();
                         
                         // If there is something to send - send it
-                        DoWrite(info, GetAllowedPendingWrite());
+                        var pendingWrite = GetAllowedPendingWrite();
+                        if (pendingWrite.HasValue)
+                        {
+                            SetStatus(ConnectionStatus.Sending);
+                            DoWrite(info, pendingWrite);
+                        }
                         
                         // If message is fully sent, notify sender who sent ResumeWriting command
                         if (!IsWritePending && _interestedInResume != null)
