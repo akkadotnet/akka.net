@@ -57,6 +57,11 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         IActorState ClearWatching();
         /// <summary>
+        /// Clears the `WatchedBy` set
+        /// </summary>
+        /// <returns>TBD</returns>
+        IActorState ClearWatchedBy();
+        /// <summary>
         /// Clears the `Termination queue` set
         /// </summary>
         /// <returns>TBD</returns>
@@ -312,6 +317,16 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
+        public IActorState ClearWatchedBy()
+        {
+            _watchedBy = null;
+            return this;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IActorState ClearTerminated()
         {
             return this;
@@ -532,6 +547,17 @@ namespace Akka.Actor
         public IActorState ClearWatching()
         {
             _watching.Clear();
+            return this;
+        }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public IActorState ClearWatchedBy()
+        {
+            _watchedBy.Clear();
             return this;
         }
 
