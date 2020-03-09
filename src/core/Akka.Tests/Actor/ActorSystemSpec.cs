@@ -74,12 +74,7 @@ namespace Akka.Tests.Actor
             var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            var expected = string.Join(Environment.NewLine, new string[]
-            {
-                "akka : {",
-                "    log-config-on-start : on",
-                "  }"
-            });
+            var expected = "log-config-on-start : on";
             eventFilter.Info(contains:expected).ExpectOne(() => system.Start());
 
             system.Terminate();
