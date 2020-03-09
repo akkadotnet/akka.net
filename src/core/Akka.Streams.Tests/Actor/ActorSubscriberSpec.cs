@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Actor
                     .RunWith(Sink.ActorSubscriber<int>(ManualSubscriber.Props(TestActor)), Sys.Materializer());
             Watch(actorRef);
             actorRef.Tell("requestAndCancel");
-            ExpectTerminated(actorRef, TimeSpan.FromMilliseconds(200));
+            ExpectTerminated(actorRef);
         }
 
         [Fact]

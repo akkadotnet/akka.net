@@ -22,6 +22,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// TBD
         /// </summary>
         public static readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -57,7 +58,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        protected override string JournalConfigPath => SqliteJournalSettings.ConfigPath;
+        protected override string JournalConfigPath => SqlitePersistence.JournalConfigPath;
 
         /// <summary>
         /// TBD

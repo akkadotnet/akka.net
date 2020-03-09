@@ -46,7 +46,6 @@ namespace Akka.Persistence.Sqlite.Tests.AssemblyVersioning
                         sqlite {
                             class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
-                            table-name = snapshot_store
                             auto-initialize = on
                             connection-string = """ + connectionString + @"""
                         }
