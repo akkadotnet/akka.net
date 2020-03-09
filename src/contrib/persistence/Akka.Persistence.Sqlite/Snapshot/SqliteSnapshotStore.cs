@@ -102,13 +102,14 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+        protected static readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="snapshotConfig">TBD</param>
-        public SqliteSnapshotStore(Config snapshotConfig) : base(snapshotConfig)
+        public SqliteSnapshotStore(Config snapshotConfig) : 
+            base(snapshotConfig.WithFallback(Extension.DefaultSnapshotConfig))
         {
             var config = snapshotConfig.WithFallback(Extension.DefaultSnapshotConfig);
             QueryExecutor = new SqliteSnapshotQueryExecutor(new QueryConfiguration(
