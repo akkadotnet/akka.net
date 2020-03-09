@@ -68,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
             eventualActual.AwaitResult().ShouldBe(expectedSum);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void A_ScanAsync_must_work_with_slow_tasks()
         {
             var delay = TimeSpan.FromMilliseconds(500);
