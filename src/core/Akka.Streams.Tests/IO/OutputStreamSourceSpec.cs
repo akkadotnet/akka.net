@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.IO
 
         private void ExpectSuccess<T>(Task<T> f, T value)
         {
-            f.Wait(RemainingOrDefault).Should().BeTrue();
+            f.Wait(); // just let it run
             f.Result.Should().Be(value);
         }
 
