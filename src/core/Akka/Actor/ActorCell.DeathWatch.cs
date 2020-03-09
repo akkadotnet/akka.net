@@ -173,7 +173,10 @@ namespace Akka.Actor
             }
             finally
             {
-                _state = _state.ClearWatching();
+                MaintainAddressTerminatedSubscription(() =>
+                {
+                    _state = _state.ClearWatchedBy();
+                });
             }
         }
 
