@@ -32,12 +32,14 @@ namespace Akka.Streams
     /// </summary>
     public abstract class ActorMaterializer : IMaterializer, IMaterializerLoggingProvider, IDisposable
     {
+        private static readonly Config DefaultMaterializerConfig = ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
         public static Config DefaultConfig()
-            => ConfigurationFactory.FromResource<ActorMaterializer>("Akka.Streams.reference.conf");
+            => DefaultMaterializerConfig;
 
         #region static
 
@@ -301,6 +303,8 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
+            // need to make sure the default materializer settings are available
+            system.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
 
             // No need to check for Config.IsEmpty because this function expects empty Config.
