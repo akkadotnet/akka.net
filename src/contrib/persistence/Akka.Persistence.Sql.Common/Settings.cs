@@ -68,14 +68,14 @@ namespace Akka.Persistence.Sql.Common
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<JournalSettings>();
 
-            ConnectionString = config.GetString("connection-string", null);
-            ConnectionStringName = config.GetString("connection-string-name", null);
-            ConnectionTimeout = config.GetTimeSpan("connection-timeout", null);
+            ConnectionString = config.GetString("connection-string");
+            ConnectionStringName = config.GetString("connection-string-name");
+            ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name", null);
-            JournalTableName = config.GetString("table-name", null);
-            MetaTableName = config.GetString("metadata-table-name", null);
-            TimestampProvider = config.GetString("timestamp-provider", null);
-            AutoInitialize = config.GetBoolean("auto-initialize", false);
+            JournalTableName = config.GetString("table-name");
+            MetaTableName = config.GetString("metadata-table-name");
+            TimestampProvider = config.GetString("timestamp-provider");
+            AutoInitialize = config.GetBoolean("auto-initialize");
         }
     }
 
@@ -129,14 +129,14 @@ namespace Akka.Persistence.Sql.Common
         public SnapshotStoreSettings(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<SnapshotStoreSettings>(); //($"Failed to create {nameof(SnapshotStoreSettings)}: SqlServer snapshot store settings cannot be initialized, because required HOCON section couldn't been found");
+                throw ConfigurationException.NullOrEmptyConfig<SnapshotStoreSettings>();
 
-            ConnectionString = config.GetString("connection-string", null);
-            ConnectionStringName = config.GetString("connection-string-name", null);
-            ConnectionTimeout = config.GetTimeSpan("connection-timeout", null);
+            ConnectionString = config.GetString("connection-string");
+            ConnectionStringName = config.GetString("connection-string-name");
+            ConnectionTimeout = config.GetTimeSpan("connection-timeout");
             SchemaName = config.GetString("schema-name", null);
-            TableName = config.GetString("table-name", null);
-            AutoInitialize = config.GetBoolean("auto-initialize", false);
+            TableName = config.GetString("table-name");
+            AutoInitialize = config.GetBoolean("auto-initialize");
             DefaultSerializer = config.GetString("serializer", null);
         }
 
