@@ -129,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+            future.Wait();
             future.Result.Should().Be(500500);
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+            future.Wait();
             future.Result.Should().Be(500500);
         }
 
