@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
-using Hocon;
 
 namespace Akka.Configuration
 {
@@ -19,7 +18,7 @@ namespace Akka.Configuration
     /// the internal representation of a HOCON (Human-Optimized Config Object Notation)
     /// configuration string.
     /// </summary>
-    public class Config : IHoconConfig
+    public class Config
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Config"/> class.
@@ -362,11 +361,6 @@ namespace Akka.Configuration
             return value.GetStringList();
         }
 
-        IHoconConfig IHoconConfig.GetConfig(string path)
-        {
-            return GetConfig(path);
-        }
-
         /// <summary>
         /// Retrieves a new configuration from the current configuration
         /// with the root node being the supplied path.
@@ -376,10 +370,10 @@ namespace Akka.Configuration
         /// <returns>A new configuration with the root node being the supplied path.</returns>
         public virtual Config GetConfig(string path)
         {
-            var value = GetNode(path);
+            HoconValue value = GetNode(path);
             if (Fallback != null)
             {
-                var f = Fallback.GetConfig(path);
+                Config f = Fallback.GetConfig(path);
                 if (value == null && f == null)
                     return null;
                 if (value == null)
@@ -402,7 +396,7 @@ namespace Akka.Configuration
         /// <returns>The <see cref="HoconValue"/> found at the location if one exists, otherwise <c>null</c>.</returns>
         public HoconValue GetValue(string path)
         {
-            var value = GetNode(path);
+            HoconValue value = GetNode(path);
             return value;
         }
 
@@ -445,12 +439,12 @@ namespace Akka.Configuration
             if (includeFallback == false)
                 return ToString();
 
-            var current = this;
+            Config current = this;
 
             if (current.Fallback == null)
                 return current.ToString();
 
-            var clone = Copy();
+            Config clone = Copy();
 
             while (current.Fallback != null)
             {
@@ -459,11 +453,6 @@ namespace Akka.Configuration
             }
 
             return clone.ToString();
-        }
-
-        IHoconConfig IHoconConfig.WithFallback(IHoconConfig fallback)
-        {
-            return WithFallback((Config)fallback);
         }
 
         /// <summary>
@@ -507,7 +496,7 @@ namespace Akka.Configuration
         public static Config operator +(Config config, string fallback)
         {
             Config fallbackConfig = ConfigurationFactory.ParseString(fallback);
-            return (Config)config.WithFallback(fallbackConfig);
+            return config.WithFallback(fallbackConfig);
         }
 
         /// <summary>
@@ -519,7 +508,7 @@ namespace Akka.Configuration
         public static Config operator +(string configHocon, Config fallbackConfig)
         {
             Config config = ConfigurationFactory.ParseString(configHocon);
-            return (Config)config.WithFallback(fallbackConfig);
+            return config.WithFallback(fallbackConfig);
         }
 
         /// <summary>
@@ -574,22 +563,6 @@ namespace Akka.Configuration
         /// <param name="fallback">The configuration to use as a secondary source.</param>
         /// <returns>The current configuration or the fallback configuration if the current one is null.</returns>
         public static Config SafeWithFallback(this Config config, Config fallback)
-        {
-            return config == null
-                ? fallback
-                : ReferenceEquals(config, fallback)
-                    ? config
-                    : config.WithFallback(fallback);
-        }
-
-        /// <summary>
-        /// Retrieves the current configuration or the fallback
-        /// configuration if the current one is null.
-        /// </summary>
-        /// <param name="config">The configuration used as the source.</param>
-        /// <param name="fallback">The configuration to use as a secondary source.</param>
-        /// <returns>The current configuration or the fallback configuration if the current one is null.</returns>
-        public static IHoconConfig SafeWithFallback(this IHoconConfig config, IHoconConfig fallback)
         {
             return config == null
                 ? fallback

@@ -10,13 +10,13 @@ using System.Collections.Generic;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
-using Hocon;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
 {
     /// <summary>
     /// This class represents the overall <see cref="ActorSystem"/> settings which also provides a convenient
-    /// access to the <see cref="Configuration.Config"/> object. For more detailed information about the
+    /// access to the <see cref="Hocon.Config"/> object. For more detailed information about the
     /// different possible configuration options, look in the Akka.NET Documentation under Configuration
     /// (http://getakka.net/docs/concepts/configuration).
     /// </summary>
@@ -24,7 +24,7 @@ namespace Akka.Actor
     {
         private readonly Config _userConfig;
         //internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-        private Akka.Configuration.Config _fallbackConfig;
+        private Config _fallbackConfig;
 
         private void RebuildConfig()
         {
@@ -46,75 +46,6 @@ namespace Akka.Actor
             RebuildConfig();
         }
 
-        public Settings(ActorSystem system, IHoconConfig config)
-        {
-            if (config is Akka.Configuration.Config c)
-            {
-                _userConfig = c;
-                _fallbackConfig = ConfigurationFactory.Default();
-                RebuildConfig();
-
-                System = system;
-
-                ConfigVersion = Config.GetString("akka.version", null);
-                ProviderClass = GetProviderClass(Config.GetString("akka.actor.provider", null));
-                var providerType = Type.GetType(ProviderClass);
-                if (providerType == null)
-                    throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
-                if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
-                    throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
-
-                SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
-
-                AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", null, allowInfinite: true);
-                CreationTimeout = Config.GetTimeSpan("akka.actor.creation-timeout", null);
-                UnstartedPushTimeout = Config.GetTimeSpan("akka.actor.unstarted-push-timeout", null);
-
-                SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages", false);
-                SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators", false);
-
-                LogLevel = Config.GetString("akka.loglevel", null);
-                StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
-                Loggers = Config.GetStringList("akka.loggers", new string[] { });
-                LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
-                LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
-
-                //handled
-                LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
-                LogDeadLetters = 0;
-                switch (Config.GetString("akka.log-dead-letters", null))
-                {
-                    case "on":
-                    case "true":
-                    case "yes":
-                        LogDeadLetters = int.MaxValue;
-                        break;
-                    case "off":
-                    case "false":
-                    case "no":
-                        LogDeadLetters = 0;
-                        break;
-                    default:
-                        LogDeadLetters = Config.GetInt("akka.log-dead-letters", 0);
-                        break;
-                }
-                LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown", false);
-                AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive", false);
-                DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive", false);
-                DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle", false);
-                FsmDebugEvent = Config.GetBoolean("akka.actor.debug.fsm", false);
-                DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream", false);
-                DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled", false);
-                DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration", false);
-                Home = Config.GetString("akka.home", "");
-                DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor", 0);
-
-                SchedulerClass = Config.GetString("akka.scheduler.implementation", null);
-                SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
-            }
-        }
-
-
         /// <summary>
         /// Initializes a new instance of the <see cref="Settings" /> class.
         /// </summary>
@@ -130,7 +61,7 @@ namespace Akka.Actor
             RebuildConfig();
 
             System = system;
-
+            
             ConfigVersion = Config.GetString("akka.version", null);
             ProviderClass = GetProviderClass(Config.GetString("akka.actor.provider", null));
             var providerType = Type.GetType(ProviderClass);
@@ -138,7 +69,7 @@ namespace Akka.Actor
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
-
+            
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
 
             AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", null, allowInfinite: true);
@@ -186,6 +117,12 @@ namespace Akka.Actor
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation", null);
             SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
+            //TODO: dunno.. we don't have FiniteStateMachines, don't know what the rest is
+            /*              
+                final val SchedulerClass: String = getString("akka.scheduler.implementation")
+                final val Daemonicity: Boolean = getBoolean("akka.daemonic")                
+                final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
+             */
         }
 
         private static string GetProviderClass(string provider)

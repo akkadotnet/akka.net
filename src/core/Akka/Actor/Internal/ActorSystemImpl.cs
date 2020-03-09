@@ -18,7 +18,6 @@ using Akka.Event;
 using System.Reflection;
 using Akka.Serialization;
 using Akka.Util;
-using Hocon;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor.Internal
@@ -56,11 +55,6 @@ namespace Akka.Actor.Internal
         public ActorSystemImpl(string name)
             : this(name, ConfigurationFactory.Default())
         {
-        }
-
-        public ActorSystemImpl(string name, IHoconConfig config) : this(name, (Config)config)
-        {
-
         }
 
         /// <summary>
