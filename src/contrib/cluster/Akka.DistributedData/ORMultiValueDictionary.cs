@@ -378,6 +378,12 @@ namespace Akka.DistributedData
 
         public ORMultiValueDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation delta)
         {
+            if(delta is ORMultiValueDictionaryDelta ormmd)
+                if(ormmd.WithValueDeltas)
+                    return new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeDeltaRetainingDeletedValues(ormmd.Underlying), _withValueDeltas);
+                else
+                    return new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeDelta(ormmd.Underlying), _withValueDeltas);
+
             if (_withValueDeltas)
                 return new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeDeltaRetainingDeletedValues(delta), _withValueDeltas);
             else

@@ -124,6 +124,7 @@ namespace Akka.DistributedData.Serialization
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
                 case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case ORMultiMapDeltaOperationManifest: return ORMultiDictionaryDeltaFromBinary(bytes);
                 case DeletedDataManifest: return DeletedData.Instance;
                 case VersionVectorManifest: return _ser.VersionVectorFromBinary(bytes);
 
@@ -1421,6 +1422,25 @@ namespace Akka.DistributedData.Serialization
                         return new ORMultiValueDictionary<TKey, TValue>(orDict, proto.WithValueDeltas);
                     }
             }
+        }
+
+        private object ORMultiDictionaryDeltaFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+
+            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
+            // TODO: I'm pretty sure this is wrong, but I don't know how to generate a new protobuff to serialize the withValueDelta value
+            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp, true });
+        }
+
+        private static readonly MethodInfo ORMultiDictionaryDeltaMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ORMultiDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op, bool withValueDeltas)
+        {
+            var casted = (ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)op;
+            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted, withValueDeltas);
         }
 
         #endregion
