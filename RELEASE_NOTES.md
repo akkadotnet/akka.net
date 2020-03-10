@@ -1,4 +1,11 @@
-#### 1.4.1-rc2 March 10 2020 ####
+#### 1.4.1-rc3 March 10 2020 ####
+**Stable release candidate for Akka.NET 1.4**
+
+In Akka.NET v1.4.1-rc2 we rolled back all of the stand-alone HOCON additions and made Akka.NET v1.4 non-breaking. 
+
+* [Akka.Persistence.Sql.Common: Fix, unsealed `JournalSettings` and `SnapshotStoreSettings` classes](https://github.com/akkadotnet/akka.net/pull/4319)
+
+#### 1.4.1-rc3 March 10 2020 ####
 **Stable release candidate for Akka.NET 1.4**
 
 In Akka.NET v1.4.1-rc2 we rolled back all of the stand-alone HOCON additions and made Akka.NET v1.4 non-breaking. 
