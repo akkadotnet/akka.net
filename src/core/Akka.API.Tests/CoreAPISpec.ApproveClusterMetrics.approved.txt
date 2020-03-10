@@ -1,0 +1,558 @@
+﻿[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+namespace Akka.Cluster.Metrics
+{
+    public sealed class AdaptiveLoadBalancingGroup : Akka.Routing.Group
+    {
+        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, System.Collections.Generic.IEnumerable<string> paths = null, string routerDispatcher = null) { }
+        public AdaptiveLoadBalancingGroup(Akka.Configuration.Config config) { }
+        public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
+        public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public Akka.Cluster.Metrics.AdaptiveLoadBalancingGroup WithDispatcher(string dispatcherId) { }
+        public class AdaptiveLoadBalancingGroupSurrogate : Akka.Util.ISurrogate
+        {
+            public AdaptiveLoadBalancingGroupSurrogate() { }
+            public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; set; }
+            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
+            public string RouterDispatcher { get; set; }
+            public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
+        }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class AdaptiveLoadBalancingMetricsListener : Akka.Actor.ActorBase
+    {
+        public AdaptiveLoadBalancingMetricsListener(Akka.Cluster.Metrics.AdaptiveLoadBalancingRoutingLogic routingLogic) { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        protected override bool Receive(object message) { }
+    }
+    public sealed class AdaptiveLoadBalancingPool : Akka.Routing.Pool
+    {
+        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy supervisorStrategy = null, string routerDispatcher = null, bool usePoolDispatcher = False) { }
+        public AdaptiveLoadBalancingPool(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; }
+        public override Akka.Routing.Resizer Resizer { get; }
+        public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
+        public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public Akka.Cluster.Metrics.AdaptiveLoadBalancingPool WithDispatcher(string dispatcherId) { }
+        public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
+        public Akka.Cluster.Metrics.AdaptiveLoadBalancingPool WithSupervisorStrategy(Akka.Actor.SupervisorStrategy strategy) { }
+        public class AdaptiveLoadBalancingPoolSurrogate : Akka.Util.ISurrogate
+        {
+            public AdaptiveLoadBalancingPoolSurrogate() { }
+            public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; set; }
+            public int NrOfInstances { get; set; }
+            public string RouterDispatcher { get; set; }
+            public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; set; }
+            public bool UsePoolDispatcher { get; set; }
+            public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
+        }
+    }
+    public sealed class AdaptiveLoadBalancingRoutingLogic : Akka.Routing.RoutingLogic
+    {
+        public AdaptiveLoadBalancingRoutingLogic(Akka.Actor.ActorSystem system, Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null) { }
+        public void MetricsChanged(Akka.Cluster.Metrics.Events.ClusterMetricsChanged @event) { }
+        public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
+    }
+    public abstract class CapacityMetricsSelector : Akka.Cluster.Metrics.IMetricsSelector
+    {
+        protected CapacityMetricsSelector() { }
+        public abstract System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> Capacity(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics);
+        public System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, int> Weights(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> capacity) { }
+        public System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, int> Weights(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
+    }
+    public class ClusterMetrics : Akka.Actor.IExtension
+    {
+        public Akka.Cluster.Metrics.Configuration.ClusterMetricsSettings Settings { get; }
+        [Akka.Annotations.InternalApiAttribute()]
+        public Akka.Cluster.Metrics.ClusterMetricsStrategy Strategy { get; }
+        public Akka.Actor.IActorRef Supervisor { get; }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Akka.Cluster.Metrics.ClusterMetrics Get(Akka.Actor.ActorSystem system) { }
+        public void Subscribe(Akka.Actor.IActorRef metricsListener) { }
+        public void Unsubscribe(Akka.Actor.IActorRef metricsListener) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterMetricsCollector : Akka.Actor.ActorBase
+    {
+        public ClusterMetricsCollector() { }
+        protected override void PostStop() { }
+        protected override void PreStart() { }
+        protected override bool Receive(object message) { }
+    }
+    public class ClusterMetricsExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Metrics.ClusterMetrics>
+    {
+        public ClusterMetricsExtensionProvider() { }
+        public override Akka.Cluster.Metrics.ClusterMetrics CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class ClusterMetricsStrategy : Akka.Actor.OneForOneStrategy
+    {
+        public ClusterMetricsStrategy(Akka.Configuration.Config config) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterMetricsSupervisor : Akka.Actor.ActorBase
+    {
+        public ClusterMetricsSupervisor() { }
+        protected override void PreStart() { }
+        protected override bool Receive(object message) { }
+        protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class static ClusterMetricsSupervisorMetadata
+    {
+        public sealed class CollectionStartMessage : Akka.Cluster.Metrics.ClusterMetricsSupervisorMetadata.ICollectionControlMessage
+        {
+            public static readonly Akka.Cluster.Metrics.ClusterMetricsSupervisorMetadata.CollectionStartMessage Instance;
+        }
+        public sealed class CollectionStopMessage : Akka.Cluster.Metrics.ClusterMetricsSupervisorMetadata.ICollectionControlMessage
+        {
+            public static readonly Akka.Cluster.Metrics.ClusterMetricsSupervisorMetadata.CollectionStopMessage Instance;
+        }
+        public interface ICollectionControlMessage { }
+    }
+    public class CpuMetricsSelector : Akka.Cluster.Metrics.CapacityMetricsSelector
+    {
+        public static readonly Akka.Cluster.Metrics.CpuMetricsSelector Instance;
+        public CpuMetricsSelector() { }
+        public override System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> Capacity(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
+    }
+    public interface IMetricsCollector : System.IDisposable
+    {
+        Akka.Cluster.Metrics.Serialization.NodeMetrics Sample();
+    }
+    public interface IMetricsSelector
+    {
+        System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, int> Weights(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics);
+    }
+    public class MemoryMetricsSelector : Akka.Cluster.Metrics.CapacityMetricsSelector
+    {
+        public static readonly Akka.Cluster.Metrics.MemoryMetricsSelector Instance;
+        public MemoryMetricsSelector() { }
+        public override System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> Capacity(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
+    }
+    public class MetricsCollectorBuilder
+    {
+        public MetricsCollectorBuilder() { }
+        public Akka.Cluster.Metrics.IMetricsCollector Build(Akka.Actor.ActorSystem system) { }
+    }
+    public class static MetricsSelectorBuilder
+    {
+        public static Akka.Cluster.Metrics.IMetricsSelector BuildFromConfig(Akka.Configuration.Config config) { }
+    }
+    public class MixMetricsSelector : Akka.Cluster.Metrics.MixMetricsSelectorBase
+    {
+        public static readonly Akka.Cluster.Metrics.MixMetricsSelector Instance;
+        public MixMetricsSelector(System.Collections.Immutable.ImmutableArray<Akka.Cluster.Metrics.CapacityMetricsSelector> selectors) { }
+    }
+    public abstract class MixMetricsSelectorBase : Akka.Cluster.Metrics.CapacityMetricsSelector
+    {
+        protected MixMetricsSelectorBase(System.Collections.Immutable.ImmutableArray<Akka.Cluster.Metrics.CapacityMetricsSelector> selectors) { }
+        public System.Collections.Immutable.ImmutableArray<Akka.Cluster.Metrics.CapacityMetricsSelector> Selectors { get; }
+        public override System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> Capacity(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
+    }
+    public class static StandardMetrics
+    {
+        public const string CpuProcessUsage = "CpuProcessUsage";
+        public const string CpuTotalUsage = "CpuTotalUsage";
+        public const string MaxMemoryRecommended = "MaxMemoryRecommended";
+        public const string MemoryAvailable = "MemoryAvailable";
+        public const string MemoryUsed = "MemoryUsed";
+        public const string Processors = "Processors";
+        public static Akka.Util.Option<Akka.Cluster.Metrics.StandardMetrics.Cpu> ExtractCpu(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
+        public static Akka.Util.Option<Akka.Cluster.Metrics.StandardMetrics.Memory> ExtractMemory(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
+        public sealed class Cpu
+        {
+            public Cpu(Akka.Actor.Address address, long timestamp, double cpuProcessUsage, double cpuTotalUsage, int processorsNumber) { }
+            public Akka.Actor.Address Address { get; }
+            public double ProcessUsage { get; }
+            public int ProcessorsNumber { get; }
+            public long Timestamp { get; }
+            public double TotalUsage { get; }
+            [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+                    "Address",
+                    "Timestamp",
+                    "CpuProcessUsage",
+                    "CpuTotalUsage",
+                    "Processors"})]
+            public static Akka.Util.Option<System.ValueTuple<Akka.Actor.Address, long, double, double, int>> Decompose(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
+        }
+        public sealed class Memory
+        {
+            public Memory(Akka.Actor.Address address, long timestamp, double used, double available, Akka.Util.Option<double> max) { }
+            public Akka.Actor.Address Address { get; }
+            public double Available { get; }
+            public Akka.Util.Option<double> MaxRecommended { get; }
+            public long Timestamp { get; }
+            public double Used { get; }
+            [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+                    "Address",
+                    "Timestamp",
+                    "UsedSmoothValue",
+                    "AvailableSmoothValue",
+                    "MaxRecommendedSmoothValue"})]
+            public static Akka.Util.Option<System.ValueTuple<Akka.Actor.Address, long, double, double, Akka.Util.Option<double>>> Decompose(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
+        }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class WeightedRoutees
+    {
+        public WeightedRoutees(System.Collections.Immutable.ImmutableArray<Akka.Routing.Routee> routees, Akka.Actor.Address selfAddress, System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, int> weights) { }
+        public bool IsEmpty { get; }
+        public Akka.Routing.Routee this[int value] { get; }
+        public int Total { get; }
+    }
+}
+namespace Akka.Cluster.Metrics.Collectors
+{
+    public class DefaultCollector : Akka.Cluster.Metrics.IMetricsCollector, System.IDisposable
+    {
+        public DefaultCollector(Akka.Actor.Address address) { }
+        public DefaultCollector(Akka.Actor.ActorSystem system) { }
+        public void Dispose() { }
+        public Akka.Cluster.Metrics.Serialization.NodeMetrics Sample() { }
+    }
+}
+namespace Akka.Cluster.Metrics.Configuration
+{
+    public class ClusterMetricsSettings
+    {
+        public ClusterMetricsSettings(Akka.Configuration.Config config) { }
+        public bool CollectorEnabled { get; }
+        public bool CollectorFallback { get; }
+        public System.TimeSpan CollectorGossipInterval { get; }
+        public System.TimeSpan CollectorMovingAverageHalfLife { get; }
+        public string CollectorProvider { get; }
+        public System.TimeSpan CollectorSampleInterval { get; }
+        public string MetricsDispatcher { get; }
+        public System.TimeSpan PeriodicTasksInitialDelay { get; }
+        public string SupervisorName { get; }
+        public Akka.Configuration.Config SupervisorStrategyConfiguration { get; }
+        public string SupervisorStrategyProvider { get; }
+        public static Akka.Cluster.Metrics.Configuration.ClusterMetricsSettings Create(Akka.Configuration.Config config) { }
+    }
+}
+namespace Akka.Cluster.Metrics.Events
+{
+    public sealed class ClusterMetricsChanged : Akka.Cluster.Metrics.Events.IClusterMetricsEvent
+    {
+        public ClusterMetricsChanged(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
+        public System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> NodeMetrics { get; }
+    }
+    public interface IClusterMetricsEvent { }
+}
+namespace Akka.Cluster.Metrics.Helpers
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public struct AnyNumber
+    {
+        public AnyNumber(int n) { }
+        public AnyNumber(long n) { }
+        public AnyNumber(float n) { }
+        public AnyNumber(double n) { }
+        public double DoubleValue { get; }
+        public long LongValue { get; }
+        public Akka.Cluster.Metrics.Helpers.AnyNumber.NumberType Type { get; }
+        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(int n) { }
+        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(long n) { }
+        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(float n) { }
+        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(double n) { }
+        public enum NumberType
+        {
+            Int = 0,
+            Long = 1,
+            Float = 2,
+            Double = 3,
+        }
+    }
+}
+namespace Akka.Cluster.Metrics.Serialization
+{
+    public sealed class AdaptiveLoadBalancingPool : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool>, System.IEquatable<Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool>
+    {
+        public const int MetricsSelectorFieldNumber = 1;
+        public const int NrOfInstancesFieldNumber = 2;
+        public const int RouterDispatcherFieldNumber = 3;
+        public const int UsePoolDispatcherFieldNumber = 4;
+        public AdaptiveLoadBalancingPool() { }
+        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool other) { }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public Akka.Cluster.Metrics.Serialization.MetricsSelector MetricsSelector { get; set; }
+        public uint NrOfInstances { get; set; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool> Parser { get; }
+        public string RouterDispatcher { get; set; }
+        public bool UsePoolDispatcher { get; set; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    public sealed class AddressData : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.AddressData>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.AddressData>, System.IEquatable<Akka.Cluster.Metrics.Serialization.AddressData>
+    {
+        public const int HostnameFieldNumber = 2;
+        public const int PortFieldNumber = 3;
+        public const int ProtocolFieldNumber = 4;
+        public const int SystemFieldNumber = 1;
+        public AddressData() { }
+        public AddressData(Akka.Cluster.Metrics.Serialization.AddressData other) { }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public string Hostname { get; set; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.AddressData> Parser { get; }
+        public uint Port { get; set; }
+        public string Protocol { get; set; }
+        public string System { get; set; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.AddressData Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.AddressData other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.AddressData other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    public class ClusterMetricsMessageSerializer : Akka.Serialization.SerializerWithStringManifest
+    {
+        public ClusterMetricsMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public class static ClusterMetricsMessagesReflection
+    {
+        public static Google.Protobuf.Reflection.FileDescriptor Descriptor { get; }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public interface IClusterMetricMessage { }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class MetricsGossip : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.MetricsGossip>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.MetricsGossip>, System.IEquatable<Akka.Cluster.Metrics.Serialization.MetricsGossip>
+    {
+        public const int AllAddressesFieldNumber = 1;
+        public const int AllMetricNamesFieldNumber = 2;
+        public static readonly Akka.Cluster.Metrics.Serialization.MetricsGossip Empty;
+        public const int NodeMetricsFieldNumber = 3;
+        public MetricsGossip() { }
+        public MetricsGossip(Akka.Cluster.Metrics.Serialization.MetricsGossip other) { }
+        public MetricsGossip(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodes) { }
+        public Google.Protobuf.Collections.RepeatedField<Akka.Cluster.Metrics.Serialization.AddressData> AllAddresses { get; }
+        public Google.Protobuf.Collections.RepeatedField<string> AllMetricNames { get; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public Google.Protobuf.Collections.RepeatedField<Akka.Cluster.Metrics.Serialization.NodeMetrics> NodeMetrics { get; }
+        public System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> Nodes { get; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.MetricsGossip> Parser { get; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.MetricsGossip Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.MetricsGossip other) { }
+        public Akka.Cluster.Metrics.Serialization.MetricsGossip Filter(System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> includeNodes) { }
+        public override int GetHashCode() { }
+        public Akka.Cluster.Metrics.Serialization.MetricsGossip Merge(Akka.Cluster.Metrics.Serialization.MetricsGossip otherGossip) { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.MetricsGossip other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics> NodeMetricsFor(Akka.Actor.Address address) { }
+        public Akka.Cluster.Metrics.Serialization.MetricsGossip Remove(Akka.Actor.Address node) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+        public static Akka.Cluster.Metrics.Serialization.MetricsGossip +(Akka.Cluster.Metrics.Serialization.MetricsGossip gossip, Akka.Cluster.Metrics.Serialization.NodeMetrics newNodeMetrics) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class MetricsGossipEnvelope : Akka.Cluster.Metrics.Serialization.IClusterMetricMessage, Akka.Event.IDeadLetterSuppression, Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope>, System.IEquatable<Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope>
+    {
+        public const int FromFieldNumber = 1;
+        public const int GossipFieldNumber = 2;
+        public const int ReplyFieldNumber = 3;
+        public MetricsGossipEnvelope(Akka.Actor.Address fromAddress, Akka.Cluster.Metrics.Serialization.MetricsGossip gossip, bool reply) { }
+        public MetricsGossipEnvelope() { }
+        public MetricsGossipEnvelope(Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope other) { }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public Akka.Cluster.Metrics.Serialization.AddressData From { get; set; }
+        public Akka.Actor.Address FromAddress { get; }
+        public Akka.Cluster.Metrics.Serialization.MetricsGossip Gossip { get; set; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope> Parser { get; }
+        public bool Reply { get; set; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.MetricsGossipEnvelope other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    public sealed class MetricsSelector : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.MetricsSelector>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.MetricsSelector>, System.IEquatable<Akka.Cluster.Metrics.Serialization.MetricsSelector>
+    {
+        public const int DataFieldNumber = 3;
+        public const int ManifestFieldNumber = 2;
+        public const int SerializerIdFieldNumber = 1;
+        public MetricsSelector() { }
+        public MetricsSelector(Akka.Cluster.Metrics.Serialization.MetricsSelector other) { }
+        public Google.Protobuf.ByteString Data { get; set; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public string Manifest { get; set; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.MetricsSelector> Parser { get; }
+        public uint SerializerId { get; set; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.MetricsSelector Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.MetricsSelector other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.MetricsSelector other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    public sealed class MixMetricsSelector : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.MixMetricsSelector>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.MixMetricsSelector>, System.IEquatable<Akka.Cluster.Metrics.Serialization.MixMetricsSelector>
+    {
+        public const int SelectorsFieldNumber = 1;
+        public MixMetricsSelector() { }
+        public MixMetricsSelector(Akka.Cluster.Metrics.Serialization.MixMetricsSelector other) { }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.MixMetricsSelector> Parser { get; }
+        public Google.Protobuf.Collections.RepeatedField<Akka.Cluster.Metrics.Serialization.MetricsSelector> Selectors { get; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.MixMetricsSelector Clone() { }
+        public override bool Equals(object other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.MixMetricsSelector other) { }
+        public override int GetHashCode() { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.MixMetricsSelector other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public override string ToString() { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+    }
+    public sealed class NodeMetrics : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.NodeMetrics>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.NodeMetrics>, System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics>
+    {
+        public const int AddressIndexFieldNumber = 1;
+        public const int MetricsFieldNumber = 3;
+        public const int TimestampFieldNumber = 2;
+        public NodeMetrics() { }
+        public NodeMetrics(Akka.Cluster.Metrics.Serialization.NodeMetrics other) { }
+        public NodeMetrics(Akka.Actor.Address address, long timestamp, System.Collections.Generic.IEnumerable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> metrics) { }
+        public Akka.Actor.Address Address { get; }
+        public int AddressIndex { get; set; }
+        public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+        public Google.Protobuf.Collections.RepeatedField<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Metrics { get; }
+        public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.NodeMetrics> Parser { get; }
+        public long Timestamp { get; set; }
+        public int CalculateSize() { }
+        public Akka.Cluster.Metrics.Serialization.NodeMetrics Clone() { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics other) { }
+        public override int GetHashCode() { }
+        public Akka.Cluster.Metrics.Serialization.NodeMetrics Merge(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
+        public void MergeFrom(Akka.Cluster.Metrics.Serialization.NodeMetrics other) { }
+        public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+        public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Metric(string name) { }
+        public bool SameAs(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
+        public override string ToString() { }
+        public Akka.Cluster.Metrics.Serialization.NodeMetrics Update(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
+        public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+        public class static Types
+        {
+            public sealed class EWMA : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA>, System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA>
+            {
+                public const int AlphaFieldNumber = 2;
+                public const int ValueFieldNumber = 1;
+                public EWMA() { }
+                public EWMA(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
+                public EWMA(double value, double alpha) { }
+                public double Alpha { get; set; }
+                public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+                public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> Parser { get; }
+                public double Value { get; set; }
+                public int CalculateSize() { }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA Clone() { }
+                public override bool Equals(object other) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
+                public static double GetAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
+                public override int GetHashCode() { }
+                public void MergeFrom(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
+                public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+                public override string ToString() { }
+                public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+                public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA current, double xn) { }
+            }
+            public sealed class Metric : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric>, System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric>
+            {
+                public const int EwmaFieldNumber = 3;
+                public const int NameIndexFieldNumber = 1;
+                public const int NumberFieldNumber = 2;
+                public Metric() { }
+                public Metric(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
+                public Metric(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> average) { }
+                public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> Average { get; }
+                public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA Ewma { get; set; }
+                public bool IsSmooth { get; }
+                public string Name { get; }
+                public int NameIndex { get; set; }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number Number { get; set; }
+                public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Parser { get; }
+                public double SmoothValue { get; }
+                public Akka.Cluster.Metrics.Helpers.AnyNumber Value { get; }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric Add(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric latest) { }
+                public int CalculateSize() { }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric Clone() { }
+                [Akka.Annotations.InternalApiAttribute()]
+                public static Akka.Util.Either<long, double> ConvertNumber(Akka.Cluster.Metrics.Helpers.AnyNumber number) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Util.Try<Akka.Cluster.Metrics.Helpers.AnyNumber> value, Akka.Util.Option<double> decayFactor) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> CreateEWMA(Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
+                [Akka.Annotations.InternalApiAttribute()]
+                public static bool Defined(Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
+                public override int GetHashCode() { }
+                public void MergeFrom(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
+                public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+                public bool SameAs(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric that) { }
+                public override string ToString() { }
+                public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+                public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m1, Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m2) { }
+            }
+            public sealed class Number : Google.Protobuf.IDeepCloneable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number>, Google.Protobuf.IMessage, Google.Protobuf.IMessage<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number>, System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number>
+            {
+                public const int SerializedFieldNumber = 4;
+                public const int TypeFieldNumber = 1;
+                public const int Value32FieldNumber = 2;
+                public const int Value64FieldNumber = 3;
+                public Number() { }
+                public Number(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number other) { }
+                public static Google.Protobuf.Reflection.MessageDescriptor Descriptor { get; }
+                public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number> Parser { get; }
+                public Google.Protobuf.ByteString Serialized { get; set; }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.NumberType Type { get; set; }
+                public uint Value32 { get; set; }
+                public ulong Value64 { get; set; }
+                public int CalculateSize() { }
+                public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number Clone() { }
+                public override bool Equals(object other) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number other) { }
+                public override int GetHashCode() { }
+                public void MergeFrom(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Number other) { }
+                public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
+                public override string ToString() { }
+                public void WriteTo(Google.Protobuf.CodedOutputStream output) { }
+            }
+            public enum NumberType
+            {
+                [Google.Protobuf.Reflection.OriginalNameAttribute("Serialized")]
+                Serialized = 0,
+                [Google.Protobuf.Reflection.OriginalNameAttribute("Double")]
+                Double = 1,
+                [Google.Protobuf.Reflection.OriginalNameAttribute("Float")]
+                Float = 2,
+                [Google.Protobuf.Reflection.OriginalNameAttribute("Integer")]
+                Integer = 3,
+                [Google.Protobuf.Reflection.OriginalNameAttribute("Long")]
+                Long = 4,
+            }
+        }
+    }
+}
