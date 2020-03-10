@@ -29,37 +29,14 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageReleaseNotes>Stable release candidate for Akka.NET 1.4**
-Akka.NET v1.4.0-rc1 represents [the completion of the entire Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17).
-Provided that there are no major bugs, architectural issues, performance regressions, or stability issues reported as we begin the process of moving all of our plugins onto Akka.NET v1.4.0-RC1, Akka.NET v1.4.0 final will ship within two weeks.
-For information on the full set of changes, [please see "What's New in Akka.NET v1.4" on the official Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
+In Akka.NET v1.4.1-rc2 we rolled back all of the stand-alone HOCON additions and made Akka.NET v1.4 non-breaking.
+For information on the full set of changes between RC1 and RC2, [please see "What's New in Akka.NET v1.4" on the official Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.4.html)
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 206 | 33015 | 24489 | Aaron Stannard |
-| 47 | 63 | 63 | dependabot-preview[bot] |
-| 33 | 16794 | 6803 | Igor Fedchenko |
-| 15 | 1370 | 557 | Ismael Hamed |
-| 13 | 11671 | 1059 | Bartosz Sypytkowski |
-| 10 | 3451 | 706 | zbynek001 |
-| 8 | 224 | 25 | Andre Loker |
-| 6 | 897 | 579 | Sean Gilliam |
-| 6 | 101 | 987 | cptjazz |
-| 5 | 4837 | 51 | Valdis Zobēla |
-| 5 | 407 | 95 | Jonathan Nagy |
-| 3 | 8 | 8 | jdsartori |
-| 3 | 2 | 2 | Arjen Smits |
-| 3 | 16 | 2 | Kaiwei Li |
-| 2 | 6 | 6 | Abi |
-| 2 | 4 | 6 | Onur Gumus |
-| 2 | 36 | 32 | Peter Huang |
-| 2 | 2 | 4 | Maciej Wódke |
-| 2 | 2 | 2 | Wessel Kranenborg |
-| 2 | 130 | 94 | Ondrej Pialek |
-| 1 | 633 | 1 | Gregorius Soedharmo |
-| 1 | 62 | 15 | Mathias Feitzinger |
-| 1 | 3 | 1 | jg11jg |
-| 1 | 1 | 1 | Greatsamps |
-| 1 | 1 | 1 | Christoffer Jedbäck |
-| 1 | 1 | 1 | Andre |</PackageReleaseNotes>
+| 13 | 9431 | 5347 | Aaron Stannard |
+| 2 | 3 | 3 | dependabot-preview[bot] |
+| 1 | 97 | 73 | Gregorius Soedharmo |
+| 1 | 6 | 1 | Igor Fedchenko |</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
