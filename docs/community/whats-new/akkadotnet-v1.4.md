@@ -20,7 +20,7 @@ The high-level summary of changes:
 
 If you want a detailed summary of changes and numerous bug fixes, [please see the Akka.NET v1.4.0 milestone, which has over 140 resolved issues attached to it](https://github.com/akkadotnet/akka.net/milestone/17).
 
-### Changes Between Akka.NET v1.4.1-RC1 and Akka.NET v1.4.1-RC2
+### Changes Between Akka.NET v1.4.1-RC1 and Akka.NET v1.4.1-RC2/3/Stable
 In Akka.NET v1.4.1-RC1 we introduced an ambitious change to migrate all HOCON configuration from an internal namespace (`Akka.Configuration`, defined inside the core `Akka` NuGet package) to a stand-alone library:
 
 > All HOCON `Config` objects have been moved from the `Akka.Configuration` namespace within the core `Akka` library to the stand-alone [HOCON project](https://github.com/akkadotnet/HOCON) and its subsequent [HOCON.Configuration NuGet package](https://www.nuget.org/packages/Hocon.Configuration/). See ["HOCON Syntax and Practices in Akka.NET"](../../articles/hocon/index.md) for a full guide on all of the different APIs, standards, and syntax supported. **This is a breaking change**, so [follow the Akka.NET v1.4.0 migration guide](#migration) below.
