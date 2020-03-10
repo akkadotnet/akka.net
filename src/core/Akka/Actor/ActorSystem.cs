@@ -9,12 +9,13 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using Akka.Configuration;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
+using Config = Akka.Configuration.Config;
 
 namespace Akka.Actor
 {

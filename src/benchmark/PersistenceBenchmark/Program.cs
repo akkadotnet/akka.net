@@ -10,7 +10,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Pattern;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 

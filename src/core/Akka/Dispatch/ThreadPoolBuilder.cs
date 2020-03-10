@@ -7,7 +7,7 @@
 
 using System;
 using System.Threading;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Helios.Concurrency;
 
 namespace Akka.Dispatch

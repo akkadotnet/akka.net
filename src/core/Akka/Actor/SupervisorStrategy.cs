@@ -11,7 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Akka.Actor.Internal;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;

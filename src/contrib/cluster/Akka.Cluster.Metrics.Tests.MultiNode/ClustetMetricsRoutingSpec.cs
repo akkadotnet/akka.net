@@ -21,7 +21,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Address = Akka.Actor.Address;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 

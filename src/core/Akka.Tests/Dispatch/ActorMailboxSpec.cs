@@ -16,7 +16,7 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
 using Akka.Util.Internal;

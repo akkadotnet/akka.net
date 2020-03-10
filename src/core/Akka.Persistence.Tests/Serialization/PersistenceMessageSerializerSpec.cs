@@ -8,7 +8,7 @@
 using System;
 using System.Runtime.Serialization;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization;
 using Akka.TestKit;

@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util;

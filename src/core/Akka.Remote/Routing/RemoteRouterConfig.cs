@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Remote.Routing
 {

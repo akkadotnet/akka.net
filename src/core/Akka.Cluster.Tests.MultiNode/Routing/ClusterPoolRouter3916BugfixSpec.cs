@@ -13,7 +13,6 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Routing;
-using Hocon;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {

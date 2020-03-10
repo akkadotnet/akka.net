@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
@@ -632,10 +632,10 @@ namespace Akka.Remote.TestKit
                 });
                 foreach (var pair in ConfigurationFactory.ParseString(deployString).AsEnumerable())
                 {
-                    if (pair.Value.Type == HoconType.Object)
+                    if (pair.Value.IsObject())
                     {
                         var deploy =
-                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value.Value)));
+                            deployer.ParseConfig(pair.Key, new Config(new HoconRoot(pair.Value)));
                         deployer.SetDeploy(deploy);
                     }
                     else

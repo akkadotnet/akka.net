@@ -10,7 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;

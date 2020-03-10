@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Dispatch;
 
 namespace Akka.Cluster
@@ -75,8 +75,8 @@ namespace Akka.Cluster
             SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);
             SchedulerTicksPerWheel = clusterConfig.GetInt("scheduler.ticks-per-wheel", 0);
 
-            MinNrOfMembersOfRole = clusterConfig.GetObject("role", HoconObject.Empty)
-                .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetField("min-nr-of-members").Value.GetInt());
+            MinNrOfMembersOfRole = clusterConfig.GetConfig("role").Root.GetObject().Items
+                .ToImmutableDictionary(kv => kv.Key, kv => kv.Value.GetObject().GetKey("min-nr-of-members").GetInt());
 
             VerboseHeartbeatLogging = clusterConfig.GetBoolean("debug.verbose-heartbeat-logging", false);
             VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging", false);
