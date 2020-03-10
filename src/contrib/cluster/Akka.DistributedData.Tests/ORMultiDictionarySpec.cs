@@ -14,6 +14,8 @@ using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization;
+using Akka.DistributedData;
 
 namespace Akka.DistributedData.Tests
 {
@@ -272,11 +274,11 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void Bugfix_4302_ORMultiValueDictionary_Deltas_must_merge_other_ORMultiValueDictionary()
         {
-            var m1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+            var m1 = ORMultiValueDictionary<string, string>.Empty
                 .SetItems(_node1, "a", ImmutableHashSet.Create("A"))
                 .SetItems(_node1, "b", ImmutableHashSet.Create("B"));
 
-            var m2 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+            var m2 = ORMultiValueDictionary<string, string>.Empty
                 .SetItems(_node2, "c", ImmutableHashSet.Create("C"));
 
             // This is how deltas really get merged inside the replicator

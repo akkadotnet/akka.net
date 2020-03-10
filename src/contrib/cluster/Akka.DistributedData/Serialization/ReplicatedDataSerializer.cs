@@ -1430,17 +1430,16 @@ namespace Akka.DistributedData.Serialization
             var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
 
             var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
-            // TODO: I'm pretty sure this is wrong, but I don't know how to generate a new protobuff to serialize the withValueDelta value
-            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp, true });
+            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
         }
 
         private static readonly MethodInfo ORMultiDictionaryDeltaMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ORMultiDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op, bool withValueDeltas)
+        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
         {
             var casted = (ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)op;
-            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted, withValueDeltas);
+            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted);
         }
 
         #endregion
