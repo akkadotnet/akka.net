@@ -274,7 +274,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 }
 namespace Akka.Persistence.Sql.Common
 {
-    public sealed class JournalSettings
+    public class JournalSettings
     {
         public JournalSettings(Akka.Configuration.Config config) { }
         public bool AutoInitialize { get; }
@@ -286,7 +286,7 @@ namespace Akka.Persistence.Sql.Common
         public string SchemaName { get; }
         public string TimestampProvider { get; set; }
     }
-    public sealed class SnapshotStoreSettings
+    public class SnapshotStoreSettings
     {
         public SnapshotStoreSettings(Akka.Configuration.Config config) { }
         public bool AutoInitialize { get; }

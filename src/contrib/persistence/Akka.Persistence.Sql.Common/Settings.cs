@@ -14,7 +14,7 @@ namespace Akka.Persistence.Sql.Common
     /// <summary>
     /// Configuration settings representation targeting Sql Server journal actor.
     /// </summary>
-    public sealed class JournalSettings
+    public class JournalSettings
     {
         /// <summary>
         /// Connection string used to access a persistent SQL Server instance.
@@ -82,7 +82,7 @@ namespace Akka.Persistence.Sql.Common
     /// <summary>
     /// Configuration settings representation targeting Sql Server snapshot store actor.
     /// </summary>
-    public sealed class SnapshotStoreSettings
+    public class SnapshotStoreSettings
     {
         /// <summary>
         /// Connection string used to access a persistent SQL Server instance.
