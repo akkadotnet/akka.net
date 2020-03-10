@@ -57,6 +57,7 @@ namespace Akka.DistributedData.Serialization
         private const string PNCounterMapDeltaOperationManifest = "Jo";
         private const string PNCounterMapKeyManifest = "j";
         private const string ORMultiMapManifest = "K";
+        private const string ORMultiMapDeltaOperationManifest = "Ko";
         private const string ORMultiMapKeyManifest = "k";
         private const string VersionVectorManifest = "L";
 
@@ -88,6 +89,7 @@ namespace Akka.DistributedData.Serialization
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
+                case IORMultiValueDictionaryDeltaOperation md: return ToProto(md.Underlying).ToByteArray();
                 case DeletedData _: return _emptyArray;
                 case VersionVector v: return SerializationSupport.VersionVectorToProto(v).ToByteArray();
                 // key types
@@ -166,6 +168,7 @@ namespace Akka.DistributedData.Serialization
                 case IPNCounterDictionary _: return PNCounterMapManifest;
                 case IPNCounterDictionaryDeltaOperation _: return PNCounterMapDeltaOperationManifest;
                 case IORMultiValueDictionary _: return ORMultiMapManifest;
+                case IORMultiValueDictionaryDeltaOperation _: return ORMultiMapDeltaOperationManifest;
                 case DeletedData _: return DeletedDataManifest;
                 case VersionVector _: return VersionVectorManifest;
 
