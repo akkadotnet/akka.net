@@ -96,11 +96,26 @@ namespace Akka.Persistence
                             {
                                 var offer = new SnapshotOffer(res.Snapshot.Metadata, res.Snapshot.Snapshot);
                                 var seqNr = LastSequenceNr;
-                                LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
-                                if (!base.AroundReceive(RecoveryBehavior, offer))
+                                try
                                 {
-                                    LastSequenceNr = seqNr;
-                                    Unhandled(offer);
+                                    LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
+                                    if (!base.AroundReceive(RecoveryBehavior, offer))
+                                    {
+                                        LastSequenceNr = seqNr;
+                                        Unhandled(offer);
+                                    }
+                                }
+                                catch(Exception ex)
+                                {
+                                    try
+                                    {
+                                        OnRecoveryFailure(ex);
+                                    }
+                                    finally
+                                    {
+                                        Context.Stop(Self);
+                                    }
+                                    ReturnRecoveryPermit();
                                 }
                             }
 
