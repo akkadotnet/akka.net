@@ -290,7 +290,7 @@ namespace Akka.DistributedData.Tests
             var storedData = dataEnvelope.Data;
 
             // simulate merging an update
-            var merged1 = ((ORMultiValueDictionary<string, string>)storedData).Merge(m2);
+            var merged1 = (ORMultiValueDictionary<string, string>)m2.Merge(storedData);
 
             merged1.Entries["a"].Should().BeEquivalentTo("A");
             merged1.Entries["b"].Should().BeEquivalentTo("B");
