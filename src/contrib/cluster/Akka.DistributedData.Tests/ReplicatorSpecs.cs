@@ -56,6 +56,7 @@ namespace Akka.DistributedData.Tests
         private readonly PNCounterDictionaryKey<string> _keyC = new PNCounterDictionaryKey<string>("C");
         private readonly ORDictionaryKey<string, Flag> _keyH = new ORDictionaryKey<string, Flag>("H");
         private readonly GSetKey<string> _keyI = new GSetKey<string>("I");
+        private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new ORMultiValueDictionaryKey<string, string>("J");
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
@@ -253,6 +254,92 @@ namespace Akka.DistributedData.Tests
             });
 
             Sys.Log.Info("Done");
+        }
+
+        /// <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4198
+        /// </summary>
+        [Fact]
+        public async Task Bugfix_4302_ORMultiValueDictionary_Merge()
+        {
+            await InitCluster();
+            await ORMultiValueDictionary_Should_Merge();
+        }
+
+        private async Task ORMultiValueDictionary_Should_Merge()
+        {
+            var changedProbe = CreateTestProbe(_sys2);
+
+            // subscribe to updates for KeyH, then update it with a replication factor of two
+            _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe.Ref));
+            _replicator2.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
+                _writeTwo, x => x.AddItem(Cluster.Cluster.Get(_sys2), "a", "A")));
+
+            // receive local update
+            VerifyMultiValueDictionaryEntries(
+                ImmutableDictionary.CreateRange(
+                new[] {
+                    new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
+                }),
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+
+            // push update from node 1
+            // add item
+            _replicator1.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty, 
+                _writeTwo, x => x.AddItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
+
+            // expect replication of update on node 2
+            VerifyMultiValueDictionaryEntries(
+                ImmutableDictionary.CreateRange(
+                new[] {
+                    new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create(new []{"A1", "A" })),
+                }), 
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+
+            // remove item
+            _replicator1.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
+                _writeTwo, x => x.RemoveItem(Cluster.Cluster.Get(_sys1), "a", "A")));
+            VerifyMultiValueDictionaryEntries(ImmutableDictionary.CreateRange(
+                new[] {
+                    new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A1")),
+                }), 
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+
+            // replace item
+            _replicator1.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
+                _writeTwo, x => x.ReplaceItem(Cluster.Cluster.Get(_sys1), "a", "A1", "A")));
+            VerifyMultiValueDictionaryEntries(ImmutableDictionary.CreateRange(
+                new[] {
+                    new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
+                }),
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+
+            // add new value to dictionary from node 2
+            _replicator2.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
+                _writeTwo, x => x.SetItems(Cluster.Cluster.Get(_sys2), "b", ImmutableHashSet.Create("B"))));
+
+            VerifyMultiValueDictionaryEntries(ImmutableDictionary.CreateRange(
+                new[] {
+                    new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
+                    new KeyValuePair<string, IImmutableSet<string>>("b", ImmutableHashSet.Create("B")),
+                }),
+                changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+        }
+
+        private void VerifyMultiValueDictionaryEntries(
+            IImmutableDictionary<string, IImmutableSet<string>> expected,
+            IImmutableDictionary<string, IImmutableSet<string>> entries)
+        {
+            expected.Count.Should().Equals(entries.Count);
+            foreach (var kvp in entries)
+            {
+                expected.ContainsKey(kvp.Key).Should().BeTrue();
+                expected.Values.Count().Should().Equals(expected[kvp.Key].Count());
+                foreach (var value in kvp.Value)
+                {
+                    expected[kvp.Key].Contains(value).Should().BeTrue();
+                }
+            }
         }
 
         protected override void BeforeTermination()
