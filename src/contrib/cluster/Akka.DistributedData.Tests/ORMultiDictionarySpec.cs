@@ -13,6 +13,7 @@ using Akka.Cluster;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.DistributedData.Internal;
 
 namespace Akka.DistributedData.Tests
 {
@@ -263,6 +264,37 @@ namespace Akka.DistributedData.Tests
             merged6.Entries["a"].Should().BeEquivalentTo("A");
             merged6.Entries["b"].Should().BeEquivalentTo("B2");
             merged6.Entries["c"].Should().BeEquivalentTo("C");
+        }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4302
+        /// </summary>
+        [Fact]
+        public void Bugfix_4302_ORMultiValueDictionary_Deltas_must_merge_other_ORMultiValueDictionary()
+        {
+            var m1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                .SetItems(_node1, "a", ImmutableHashSet.Create("A"))
+                .SetItems(_node1, "b", ImmutableHashSet.Create("B"));
+
+            var m2 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                .SetItems(_node2, "c", ImmutableHashSet.Create("C"));
+
+            // This is how deltas really get merged inside the replicator
+            var dataEnvelope = new DataEnvelope(m1.Delta);
+            if (dataEnvelope.Data is IReplicatedDelta withDelta)
+            {
+                dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
+            }
+
+            // Bug: this is was an ORDictionary<string, ORSet<string>> under #4302
+            var storedData = dataEnvelope.Data;
+
+            // simulate merging an update
+            var merged1 = ((ORMultiValueDictionary<string, string>)storedData).Merge(m2);
+
+            merged1.Entries["a"].Should().BeEquivalentTo("A");
+            merged1.Entries["b"].Should().BeEquivalentTo("B");
+            merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
 
         [Fact]
