@@ -304,7 +304,7 @@ namespace Akka.DistributedData
 
         #region delta
 
-        public sealed class ORMultiValueDictionaryDelta : ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation, IReplicatedDeltaSize, IORMultiValueDictionaryDeltaOperation
+        internal sealed class ORMultiValueDictionaryDelta : ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation, IReplicatedDeltaSize, IORMultiValueDictionaryDeltaOperation
         {
             internal readonly ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation Underlying;
 
