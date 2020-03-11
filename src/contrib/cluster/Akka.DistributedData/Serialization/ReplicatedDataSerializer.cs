@@ -57,6 +57,7 @@ namespace Akka.DistributedData.Serialization
         private const string PNCounterMapDeltaOperationManifest = "Jo";
         private const string PNCounterMapKeyManifest = "j";
         private const string ORMultiMapManifest = "K";
+        private const string ORMultiMapDeltaOperationManifest = "Ko";
         private const string ORMultiMapKeyManifest = "k";
         private const string VersionVectorManifest = "L";
 
@@ -88,6 +89,7 @@ namespace Akka.DistributedData.Serialization
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
+                case IORMultiValueDictionaryDeltaOperation md: return ToProto(md.Underlying).ToByteArray();
                 case DeletedData _: return _emptyArray;
                 case VersionVector v: return SerializationSupport.VersionVectorToProto(v).ToByteArray();
                 // key types
@@ -122,6 +124,7 @@ namespace Akka.DistributedData.Serialization
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
                 case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case ORMultiMapDeltaOperationManifest: return ORMultiDictionaryDeltaFromBinary(bytes);
                 case DeletedDataManifest: return DeletedData.Instance;
                 case VersionVectorManifest: return _ser.VersionVectorFromBinary(bytes);
 
@@ -166,6 +169,7 @@ namespace Akka.DistributedData.Serialization
                 case IPNCounterDictionary _: return PNCounterMapManifest;
                 case IPNCounterDictionaryDeltaOperation _: return PNCounterMapDeltaOperationManifest;
                 case IORMultiValueDictionary _: return ORMultiMapManifest;
+                case IORMultiValueDictionaryDeltaOperation _: return ORMultiMapDeltaOperationManifest;
                 case DeletedData _: return DeletedDataManifest;
                 case VersionVector _: return VersionVectorManifest;
 
@@ -1418,6 +1422,24 @@ namespace Akka.DistributedData.Serialization
                         return new ORMultiValueDictionary<TKey, TValue>(orDict, proto.WithValueDeltas);
                     }
             }
+        }
+
+        private object ORMultiDictionaryDeltaFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+
+            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
+            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+        }
+
+        private static readonly MethodInfo ORMultiDictionaryDeltaMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(ORMultiDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
+        {
+            var casted = (ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)op;
+            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted);
         }
 
         #endregion
