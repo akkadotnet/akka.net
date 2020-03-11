@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,6 +59,11 @@ namespace Akka.Actor
         /// </summary>
         /// <returns>TBD</returns>
         IActorState ClearWatching();
+        /// <summary>
+        /// Clears the `WatchedBy` set
+        /// </summary>
+        /// <returns>TBD</returns>
+        IActorState ClearWatchedBy();
         /// <summary>
         /// Clears the `Termination queue` set
         /// </summary>
@@ -316,6 +321,16 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
+        public IActorState ClearWatchedBy()
+        {
+            _watchedBy = null;
+            return this;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
         public IActorState ClearTerminated()
         {
             return this;
@@ -543,6 +558,17 @@ namespace Akka.Actor
         public IActorState ClearWatching()
         {
             _watching.Clear();
+            return this;
+        }
+
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public IActorState ClearWatchedBy()
+        {
+            _watchedBy.Clear();
             return this;
         }
 

@@ -1,14 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Persistence.Sql.Common.Journal;
 
 namespace Akka.Persistence.Sqlite.Journal
@@ -22,6 +22,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// TBD
         /// </summary>
         public static readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -57,7 +58,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        protected override string JournalConfigPath => SqliteJournalSettings.ConfigPath;
+        protected override string JournalConfigPath => SqlitePersistence.JournalConfigPath;
 
         /// <summary>
         /// TBD

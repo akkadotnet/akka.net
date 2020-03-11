@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2019 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2020 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.4.1</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
@@ -13,14 +13,14 @@
     <TestSdkVersion>16.5.0</TestSdkVersion>
     <HyperionVersion>0.9.15</HyperionVersion>
     <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
-    <NBenchVersion>1.2.2</NBenchVersion>
+    <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.11.4</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
-    <FsCheckVersion>2.9.0</FsCheckVersion>
+    <FsCheckVersion>2.14.1</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
@@ -28,35 +28,43 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Stable release candidate for Akka.NET 1.4**
-Akka.NET v1.4.0-rc1 represents [the completion of the entire Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17).
-Provided that there are no major bugs, architectural issues, performance regressions, or stability issues reported as we begin the process of moving all of our plugins onto Akka.NET v1.4.0-RC1, Akka.NET v1.4.0 final will ship within two weeks.
-For information on the full set of changes, [please see "What's New in Akka.NET v1.4" on the official Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
+    <PackageReleaseNotes>Major release for Akka.NET 1.4**
+Akka.NET v1.4 is a non-breaking upgrade for all Akka.NET v1.3 and earlier users. It introduces many new features, all of which can be found in our ["What's new in Akka.NET v1.4" page](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
+Major changes include:
+Akka.Cluster.Sharding and Akka.DistributedData are now out of beta status and are treated as mature modules.
+Akka.Remote's performance has significantly increased as a function of our new batching mode (see the numbers) - which is tunable via HOCON configuration to best support your needs. [Learn how to performance optimize Akka.Remote here](https://getakka.net/articles/remoting/performance.html).
+Added new Akka.Cluster.Metrics module to measure and broadcast the performance of each node, also includes some routers that can use this information to direct traffic to the "least busy" nodes.
+Added [Stream References to Akka.Streams](https://getakka.net/articles/streams/streamrefs.html),  a feature which allows Akka.Streams graphs to span across the network.
+Moved from .NET Standard 1.6 to .NET Standard 2.0 and dropped support for all versions of .NET Framework that aren't supported by .NET Standard 2.0 - this means issues caused by our polyfills (i.e. SerializableAttribute) should be fully resolved now.
+Moved onto modern C# best practices, such as changing our APIs to support `System.ValueTuple` over regular tuples.
+And hundreds of other fixes and improvements. See the full set of changes for Akka.NET v1.4 here:
+[Akka.NET v1.4 Milestone](https://github.com/akkadotnet/akka.net/milestone/17)
+[Akka.NET v1.4.1 Milestone](https://github.com/akkadotnet/akka.net/milestone/33)
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 206 | 33015 | 24489 | Aaron Stannard |
-| 47 | 63 | 63 | dependabot-preview[bot] |
-| 33 | 16794 | 6803 | Igor Fedchenko |
-| 15 | 1370 | 557 | Ismael Hamed |
+| 199 | 41324 | 26885 | Aaron Stannard |
+| 46 | 63 | 63 | dependabot-preview[bot] |
+| 34 | 16800 | 6804 | Igor Fedchenko |
 | 13 | 11671 | 1059 | Bartosz Sypytkowski |
-| 10 | 3451 | 706 | zbynek001 |
-| 8 | 224 | 25 | Andre Loker |
+| 10 | 802 | 317 | Ismael Hamed |
+| 7 | 1876 | 362 | zbynek001 |
 | 6 | 897 | 579 | Sean Gilliam |
-| 6 | 101 | 987 | cptjazz |
+| 5 | 95 | 986 | cptjazz |
 | 5 | 4837 | 51 | Valdis Zobēla |
 | 5 | 407 | 95 | Jonathan Nagy |
-| 3 | 8 | 8 | jdsartori |
+| 5 | 116 | 14 | Andre Loker |
+| 3 | 992 | 77 | Gregorius Soedharmo |
 | 3 | 2 | 2 | Arjen Smits |
-| 3 | 16 | 2 | Kaiwei Li |
-| 2 | 6 | 6 | Abi |
+| 2 | 7 | 7 | jdsartori |
 | 2 | 4 | 6 | Onur Gumus |
-| 2 | 36 | 32 | Peter Huang |
-| 2 | 2 | 4 | Maciej Wódke |
-| 2 | 2 | 2 | Wessel Kranenborg |
-| 2 | 130 | 94 | Ondrej Pialek |
-| 1 | 633 | 1 | Gregorius Soedharmo |
+| 2 | 15 | 1 | Kaiwei Li |
+| 1 | 65 | 47 | Ondrej Pialek |
 | 1 | 62 | 15 | Mathias Feitzinger |
+| 1 | 3 | 3 | Abi |
 | 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
 | 1 | 1 | 1 | Greatsamps |
 | 1 | 1 | 1 | Christoffer Jedbäck |
 | 1 | 1 | 1 | Andre |</PackageReleaseNotes>

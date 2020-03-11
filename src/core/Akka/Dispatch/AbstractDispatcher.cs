@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
@@ -259,7 +259,7 @@ namespace Akka.Dispatch
         protected MessageDispatcherConfigurator(Config config, IDispatcherPrerequisites prerequisites)
         {
             Prerequisites = prerequisites;
-            Config = new Config(config);
+            Config = new CachingConfig(config);
         }
 
         /// <summary>

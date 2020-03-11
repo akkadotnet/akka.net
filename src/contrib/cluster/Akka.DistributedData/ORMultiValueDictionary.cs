@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ORMultiValueDictionary.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,6 +27,15 @@ namespace Akka.DistributedData
         Type ValueType { get; }
     }
 
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// For serialization purposes.
+    /// </summary>
+    internal interface IORMultiValueDictionaryDeltaOperation
+    {
+        ORDictionary.IDeltaOperation Underlying { get; }
+    }
 
     [Serializable]
     public sealed class ORMultiValueDictionaryKey<TKey, TValue> : Key<ORMultiValueDictionary<TKey, TValue>>, IORMultiValueDictionaryKey
@@ -295,10 +304,77 @@ namespace Akka.DistributedData
 
         #region delta
 
-        public ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation Delta => Underlying.Delta;
+        internal sealed class ORMultiValueDictionaryDelta : ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation, IReplicatedDeltaSize, IORMultiValueDictionaryDeltaOperation
+        {
+            internal readonly ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation Underlying;
+
+            public ORMultiValueDictionaryDelta(ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation underlying)
+            {
+                Underlying = underlying;
+                if (underlying is IReplicatedDeltaSize s)
+                {
+                    DeltaSize = s.DeltaSize;
+                }
+                else
+                {
+                    DeltaSize = 1;
+                }
+            }
+
+            public IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is ORMultiValueDictionaryDelta d)
+                {
+                    return new ORMultiValueDictionaryDelta((ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)Underlying.Merge(d.Underlying));
+                }
+
+                return new ORMultiValueDictionaryDelta((ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)Underlying.Merge(other));
+            }
+
+            public IDeltaReplicatedData Zero => ORMultiValueDictionary<TKey, TValue>.Empty;
+
+            public override bool Equals(object obj)
+            {
+                return obj is ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta operation && 
+                    Equals(operation.Underlying);
+            }
+
+            public bool Equals(ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation other)
+            {
+                if (other is ORDictionary<TKey, ORSet<TValue>>.DeltaGroup group)
+                {
+                    if (Underlying is ORDictionary<TKey, ORSet<TValue>>.DeltaGroup ourGroup)
+                    {
+                        return ourGroup.Operations.SequenceEqual(group.Operations);
+                    }
+
+                    if (group.Operations.Length == 1)
+                    {
+                        return Underlying.Equals(group.Operations.First());
+                    }
+
+                    return false;
+                }
+                return Underlying.Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return Underlying.GetHashCode();
+            }
+
+            public int DeltaSize { get; }
+            ORDictionary.IDeltaOperation IORMultiValueDictionaryDeltaOperation.Underlying => (ORDictionary.IDeltaOperation)Underlying;
+        }
+
+        // TODO: optimize this so it doesn't allocate each time it's called
+        public ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation Delta => new ORMultiValueDictionaryDelta(Underlying.Delta);
 
         public ORMultiValueDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation delta)
         {
+            if (delta is ORMultiValueDictionaryDelta ormmd)
+                delta = ormmd.Underlying;
+
             if (_withValueDeltas)
                 return new ORMultiValueDictionary<TKey, TValue>(Underlying.MergeDeltaRetainingDeletedValues(delta), _withValueDeltas);
             else
@@ -307,8 +383,16 @@ namespace Akka.DistributedData
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
-        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) =>
-            MergeDelta((ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)delta);
+        IReplicatedData IDeltaReplicatedData.MergeDelta(IReplicatedDelta delta) 
+        {
+            switch (delta)
+            {
+                case ORMultiValueDictionaryDelta d:
+                    return MergeDelta(d.Underlying);
+                default:
+                    return MergeDelta((ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)delta);
+            }
+        }
 
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 

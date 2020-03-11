@@ -5,6 +5,9 @@ title: HOCON Syntax and Practices in Akka.NET
 
 # HOCON (Human-Optimized Config Object Notation)
 
+> [!WARNING]
+> This documentation pertains to the HOCON 3.0 specification, which is currently not in-use inside Akka.NET. [Subscribe to updates here](https://github.com/akkadotnet/akka.net) by clicking "Watch" on the repository.
+
 This is an abridged version of HOCON for its use in Akka.NET. A full .NET implementation of HOCON spec can be read [here](https://github.com/akkadotnet/HOCON/blob/dev/README.md)
 
 You can play around with HOCON syntax in real-time by going to [hocon-playground](https://hocon-playground.herokuapp.com/)

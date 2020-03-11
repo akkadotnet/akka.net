@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FsApi.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -475,7 +475,7 @@ type Strategy =
         
 module System = 
     /// Creates an actor system with remote deployment serialization enabled.
-    let create (name : string) (config : Hocon.Config) : ActorSystem = 
+    let create (name : string) (config : Akka.Configuration.Config) : ActorSystem = 
         let system = ActorSystem.Create(name, config)
         Serialization.exprSerializationSupport system
         system
