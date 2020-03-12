@@ -354,15 +354,6 @@ namespace Akka.Tests.Actor
 
             Assert.True(system.WhenTerminated.Wait(1000));
         }
-
-        // unit test for bug #4330
-        [Fact]
-        public void Should_load_config_from_app_config_file()
-        {
-            var system = ActorSystem.Create(Guid.NewGuid().ToString());
-            system.Settings.Config.GetBoolean("nonsense.entry").ShouldBeTrue();
-            system.Terminate();
-        }
     }
 
     public class OtherTestExtension : ExtensionIdProvider<OtherTestExtensionImpl>
