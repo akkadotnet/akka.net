@@ -112,7 +112,7 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name, ConfigurationFactory.Default());
+            return CreateAndStartSystem(name, ConfigurationFactory.Load());
         }
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
