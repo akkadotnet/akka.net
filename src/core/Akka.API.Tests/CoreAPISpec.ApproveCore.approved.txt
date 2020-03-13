@@ -3813,12 +3813,17 @@ namespace Akka.Pattern
         public CircuitBreaker(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
         public System.TimeSpan CallTimeout { get; }
         public long CurrentFailureCount { get; }
+        public bool IsClosed { get; }
+        public bool IsHalfOpen { get; }
+        public bool IsOpen { get; }
         public int MaxFailures { get; }
         public System.TimeSpan ResetTimeout { get; }
         public static Akka.Pattern.CircuitBreaker Create(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public void Fail() { }
         public Akka.Pattern.CircuitBreaker OnClose(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnHalfOpen(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnOpen(System.Action callback) { }
+        public void Succeed() { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
         public void WithSyncCircuitBreaker(System.Action body) { }

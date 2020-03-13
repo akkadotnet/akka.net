@@ -63,6 +63,27 @@ namespace Akka.Tests.Pattern
             Assert.True( CheckLatch( breaker.OpenLatch ) );
             Assert.Equal( 1, breaker.Instance.CurrentFailureCount );
         }
+
+        [Fact(DisplayName = "A synchronous circuit breaker that is closed must increment failure count on fail method")]
+        public void Must_increment_failure_count_on_fail_method()
+        {
+            var breaker = LongCallTimeoutCb();
+            Assert.True(breaker.Instance.CurrentFailureCount == 0);
+            breaker.Instance.Fail();
+            Assert.True(CheckLatch(breaker.OpenLatch));
+            Assert.True(breaker.Instance.CurrentFailureCount == 1);
+        }
+
+        [Fact(DisplayName = "A synchronous circuit breaker that is closed must reset failure count after success method")]
+        public void Must_reset_failure_count_after_success_method()
+        {
+            var breaker = MultiFailureCb();
+            Assert.True(breaker.Instance.CurrentFailureCount == 0);
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException)));
+            Assert.True(breaker.Instance.CurrentFailureCount == 1);
+            breaker.Instance.Succeed();
+            Assert.True(breaker.Instance.CurrentFailureCount == 0);
+        }
     }
 
     public class ASynchronousCircuitBreakerThatIsHalfOpen : CircuitBreakerSpecBase
@@ -92,6 +113,28 @@ namespace Akka.Tests.Pattern
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithSyncCircuitBreaker( ThrowException ) ) );
             Assert.True( CheckLatch( breaker.OpenLatch ) );
         }
+
+        [Fact(DisplayName = "A synchronous circuit breaker that is half open must open on calling fail method")]
+        public void Must_open_on_calling_fail_method()
+        {
+            var breaker = ShortCallTimeoutCb();
+
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException)));
+            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            breaker.Instance.Fail();
+            Assert.True(CheckLatch(breaker.OpenLatch));
+        }
+
+        [Fact(DisplayName = "A synchronous circuit breaker that is half open must close on calling success method")]
+        public void Must_close_on_calling_success_method()
+        {
+            var breaker = ShortCallTimeoutCb();
+
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException)));
+            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            breaker.Instance.Succeed();
+            Assert.True(CheckLatch(breaker.ClosedLatch));
+        }
     }
 
     public class ASynchronousCircuitBreakerThatIsOpen : CircuitBreakerSpecBase
@@ -113,6 +156,28 @@ namespace Akka.Tests.Pattern
 
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithSyncCircuitBreaker( ThrowException ) ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
+        }
+
+        [Fact(DisplayName = "A synchronous circuit breaker that is open must still be in open state after calling success method")]
+        public void Must_still_be_in_open_state_after_calling_success_method()
+        {
+            var breaker = LongCallTimeoutCb();
+
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException)));
+            Assert.True(CheckLatch(breaker.OpenLatch));
+            breaker.Instance.Succeed();
+            Assert.True(CheckLatch(breaker.OpenLatch));
+        }
+
+        [Fact(DisplayName = "A synchronous circuit breaker that is open must still be in open state after calling fail method")]
+        public void Must_still_be_in_open_state_after_calling_fail_method()
+        {
+            var breaker = LongCallTimeoutCb();
+
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException)));
+            Assert.True(CheckLatch(breaker.OpenLatch));
+            breaker.Instance.Fail();
+            Assert.True(CheckLatch(breaker.OpenLatch));
         }
     }
 
