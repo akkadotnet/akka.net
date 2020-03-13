@@ -302,9 +302,10 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            var other = obj as IActorRef;
-            if (other == null) return false;
-            return Equals(other);
+            if (obj is IActorRef other)
+                return Equals(other);
+
+            return false;
         }
 
         /// <inheritdoc/>
@@ -325,14 +326,28 @@ namespace Akka.Actor
         /// </exception>
         public int CompareTo(object obj)
         {
-            if (obj != null && !(obj is IActorRef))
-                throw new ArgumentException("Object must be of type IActorRef.", nameof(obj));
-            return CompareTo((IActorRef)obj);
+            if (obj is null) return 1;
+            if(!(obj is IActorRef other))
+                throw new ArgumentException($"Object must be of type IActorRef, found {obj.GetType()} instead.", nameof(obj));
+
+            return CompareTo(other);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Checks equality between this instance and another object.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns>
+        /// <c>true</c> if this <see cref="IActorRef"/> instance have the same reference 
+        /// as the <paramref name="other"/> instance, if this <see cref="ActorPath"/> of 
+        /// this <see cref="IActorRef"/> instance is equal to the <paramref name="other"/> instance, 
+        /// and <paramref name="other"/> is not <c>null</c>; otherwise <c>false</c>.
+        /// </returns>
         public bool Equals(IActorRef other)
         {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
             return Path.Uid == other.Path.Uid
                 && Path.Equals(other.Path);
         }
@@ -340,6 +355,8 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public int CompareTo(IActorRef other)
         {
+            if (other is null) return 1;
+
             var pathComparisonResult = Path.CompareTo(other.Path);
             if (pathComparisonResult != 0) return pathComparisonResult;
             if (Path.Uid < other.Path.Uid) return -1;
