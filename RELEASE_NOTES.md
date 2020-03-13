@@ -6,7 +6,7 @@ Akka.NET v1.4.2 fixes two issues that affected users as part of the Akka.NET v1.
 * [Bugfix: Missing v1.4.1 NuGet packages](https://github.com/akkadotnet/akka.net/issues/4332)
 * [Bugfix: App.config loading broken in Akka.NET v1.4.1](https://github.com/akkadotnet/akka.net/issues/4330)
 
-To see the full set of changes for Akka.NET 1.4.2, please [see the 1.4.2 milestone(https://github.com/akkadotnet/akka.net/milestone/32).
+To see the full set of changes for Akka.NET 1.4.2, please [see the 1.4.2 milestone](https://github.com/akkadotnet/akka.net/milestone/32).
 
 #### 1.4.1 March 11 2020 ####
 **Major release for Akka.NET 1.4**
