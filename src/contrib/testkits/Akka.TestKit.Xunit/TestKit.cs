@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit.Internals;
 using Xunit.Abstractions;

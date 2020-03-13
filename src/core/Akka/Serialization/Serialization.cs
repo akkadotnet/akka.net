@@ -17,7 +17,7 @@ using Akka.Annotations;
 using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Serialization
 {

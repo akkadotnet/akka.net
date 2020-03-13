@@ -15,7 +15,7 @@ open Xunit
 
 [<Fact>]
 let ``configuration loader should load data from app.config`` () =
-    let config = Configuration.load("akka")
+    let config = Configuration.load()
     config.HasPath "akka.test.value" 
     |> equals true
     config.GetInt "akka.test.value"
@@ -132,7 +132,7 @@ type TestActor() =
 [<Fact>]
 let ``can spawn actor from expression`` () =
     
-    let system = Configuration.load("akka") |> System.create "test"
+    let system = Configuration.load() |> System.create "test"
     let actor = spawnObj system "test-actor" <@ fun () -> TestActor() @>
 
     ()

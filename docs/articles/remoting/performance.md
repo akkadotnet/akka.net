@@ -91,3 +91,8 @@ The key to performance tuning the DotNetty TCP transport is picking the best val
 
 > [!IMPORTANT]
 > Later on in the Akka.NET v1.4.0 release cycle we will be releasing some tools built into Akka.Remote that will make it easier to collect profiling data about your application's performance. This should make it much easier to determine what sort of configuration you may want to use with the DotNetty TCP batching system.
+
+## Further Reading
+See [Petabridge](https://petabridge.com/)'s video on the subject, "[Akka.Remote Performance Optimization in Akka.NET v1.4](https://www.youtube.com/watch?v=mP3amXEntmQ)"
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/mP3amXEntmQ" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

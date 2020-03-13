@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Cluster.Tests.MultiNode;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;

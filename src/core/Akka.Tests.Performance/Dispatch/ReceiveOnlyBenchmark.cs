@@ -9,7 +9,7 @@ using System;
 using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Util.Internal;
 using NBench;
 

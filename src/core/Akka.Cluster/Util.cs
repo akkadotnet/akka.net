@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Cluster
 {

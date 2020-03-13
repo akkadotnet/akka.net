@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Journal;
 using Akka.Serialization;

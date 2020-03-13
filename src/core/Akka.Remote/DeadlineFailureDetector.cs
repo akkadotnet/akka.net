@@ -7,7 +7,7 @@
 
 using System;
 using System.Threading;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Remote

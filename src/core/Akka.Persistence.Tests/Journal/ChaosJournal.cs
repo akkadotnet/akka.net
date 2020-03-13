@@ -13,7 +13,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence.Journal;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Persistence.Tests.Journal
 {

@@ -15,7 +15,7 @@ using Akka.Util;
 using Xunit;
 using FluentAssertions;
 using FsCheck;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics.Tests

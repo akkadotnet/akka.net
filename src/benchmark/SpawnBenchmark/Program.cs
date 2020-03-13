@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using System;
 using System.Runtime;
 

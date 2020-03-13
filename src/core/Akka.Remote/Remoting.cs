@@ -15,7 +15,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {

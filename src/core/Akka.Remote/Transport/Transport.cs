@@ -8,7 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Event;

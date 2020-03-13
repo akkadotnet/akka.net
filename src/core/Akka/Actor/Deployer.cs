@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
@@ -44,7 +44,7 @@ namespace Akka.Actor
 
             var rootObj = config.Root.GetObject();
             // if (rootObj == null) return;
-            var unwrapped = rootObj.Where(d => !d.Key.Equals("default")).ToArray();
+            var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
             foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
                 SetDeploy(d);
@@ -153,7 +153,7 @@ namespace Akka.Actor
             if (deployment.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<RouterConfig>();
 
-            var path = new HoconPath(new string[] { "akka", "actor", "router", "type-mapping", routerTypeAlias }); ;
+            var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
             var routerTypeName = _settings.Config.GetString(path, null);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");

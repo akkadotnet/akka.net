@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.TestKit;

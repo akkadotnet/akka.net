@@ -12,12 +12,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
 using static Akka.Pattern.FutureTimeoutSupport;
 using static Akka.Util.Internal.TaskEx;
+using Config = Akka.Configuration.Config;
 
 namespace Akka.Actor
 {
@@ -35,7 +36,7 @@ namespace Akka.Actor
         {
             var conf = system.Settings.Config.GetConfig("akka.coordinated-shutdown");
             if (conf.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<CoordinatedShutdown>("akka.coordinated-shutdown");
+                throw new ConfigurationException("akka.coordinated-shutdown config cannot be empty");
 
             var phases = CoordinatedShutdown.PhasesFromConfig(conf);
             var coord = new CoordinatedShutdown(system, phases);
@@ -552,10 +553,10 @@ namespace Akka.Actor
                 depends-on = []
             ");
 
-            return phasesConf.Root.GetObject().ToDictionary(x => x.Key, v =>
+            return phasesConf.Root.GetObject().Unwrapped.ToDictionary(x => x.Key, v =>
              {
                  var c = phasesConf.GetConfig(v.Key).WithFallback(defaultPhaseConfig);
-                 var dependsOn = c.GetStringList("depends-on", new string[] { }).ToImmutableHashSet();
+                 var dependsOn = c.GetStringList("depends-on").ToImmutableHashSet();
                  var timeout = c.GetTimeSpan("timeout", null, allowInfinite: false);
                  var recover = c.GetBoolean("recover", false);
                  return new Phase(dependsOn, timeout, recover);

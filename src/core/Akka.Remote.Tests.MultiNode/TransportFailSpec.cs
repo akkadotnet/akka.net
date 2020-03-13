@@ -8,7 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Util;

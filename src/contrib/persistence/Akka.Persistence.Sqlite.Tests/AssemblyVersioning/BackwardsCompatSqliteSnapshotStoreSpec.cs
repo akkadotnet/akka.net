@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Hocon; using Akka.Configuration;
+using Akka.Configuration;
 using Akka.Persistence.TCK.Snapshot;
 using Akka.Util.Internal;
 using Xunit;
