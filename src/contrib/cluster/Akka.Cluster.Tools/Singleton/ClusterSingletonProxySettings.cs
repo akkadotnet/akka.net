@@ -8,11 +8,14 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Cluster.Tools.Singleton
 {
     /// <summary>
-    /// TBD
+    /// Create settings from the default configuration
+    /// `akka.cluster.singleton-proxy`.
     /// </summary>
     public sealed class ClusterSingletonProxySettings : INoSerializationVerificationNeeded
     {
@@ -33,7 +36,8 @@ namespace Akka.Cluster.Tools.Singleton
         }
 
         /// <summary>
-        /// TBD
+        /// Create settings from a configuration with the same layout as
+        /// the default configuration `akka.cluster.singleton-proxy`.
         /// </summary>
         /// <param name="config">TBD</param>
         /// <returns>TBD</returns>
@@ -80,8 +84,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="singletonIdentificationInterval">Interval at which the proxy will try to resolve the singleton instance.</param>
         /// <param name="bufferSize">
         /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them
-        /// when the singleton is identified.When the buffer is full old messages will be dropped when new messages 
-        /// are sent via the proxy. Use 0 to disable buffering, i.e.messages will be dropped immediately if the location 
+        /// when the singleton is identified.When the buffer is full old messages will be dropped when new messages
+        /// are sent via the proxy. Use 0 to disable buffering, i.e.messages will be dropped immediately if the location
         /// of the singleton is unknown.
         /// </param>
         /// <exception cref="ArgumentException">
@@ -129,11 +133,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>A new setting with the provided <paramref name="role" />.</returns>
         public ClusterSingletonProxySettings WithRole(string role)
         {
-            return new ClusterSingletonProxySettings(
-                singletonName: SingletonName,
-                role: role,
-                singletonIdentificationInterval: SingletonIdentificationInterval,
-                bufferSize: BufferSize);
+            return Copy(role: role);
         }
 
         /// <summary>
@@ -144,9 +144,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonIdentificationInterval">The identification level of the singleton proxy.</param>
         /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
-        public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
+        public ClusterSingletonProxySettings WithSingletonIdentificationInterval(TimeSpan singletonIdentificationInterval)
         {
-            return Copy(singletonIdentificationInterval: SingletonIdentificationInterval);
+            return Copy(singletonIdentificationInterval: singletonIdentificationInterval);
         }
 
         /// <summary>
@@ -162,12 +162,12 @@ namespace Akka.Cluster.Tools.Singleton
             return Copy(bufferSize: bufferSize);
         }
 
-        private ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
+        private ClusterSingletonProxySettings Copy(string singletonName = null, Option<string> role = default,
             TimeSpan? singletonIdentificationInterval = null, int? bufferSize = null)
         {
             return new ClusterSingletonProxySettings(
                 singletonName: singletonName ?? SingletonName,
-                role: role ?? Role,
+                role: role.HasValue ? role.Value : Role,
                 singletonIdentificationInterval: singletonIdentificationInterval ?? SingletonIdentificationInterval,
                 bufferSize: bufferSize ?? BufferSize);
         }
