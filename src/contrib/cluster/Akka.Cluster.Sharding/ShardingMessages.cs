@@ -33,7 +33,7 @@ namespace Akka.Cluster.Sharding
     /// then supposed to stop itself. Incoming messages will be buffered by the `ShardRegion`
     /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
     /// are thereafter delivered to a new incarnation of the entity.
-    /// 
+    ///
     /// <see cref="PoisonPill"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
     [Serializable]
@@ -77,7 +77,7 @@ namespace Akka.Cluster.Sharding
     /// Shard could be terminated during initialization.
     /// </summary>
     [Serializable]
-    public sealed class ShardInitialized
+    public sealed class ShardInitialized: IEquatable<ShardInitialized>
     {
         /// <summary>
         /// TBD
@@ -92,6 +92,20 @@ namespace Akka.Cluster.Sharding
         {
             ShardId = shardId;
         }
+
+        public bool Equals(ShardInitialized other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ShardId, other.ShardId);
+        }
+
+        public override bool Equals(object obj) => obj is ShardInitialized si && Equals(si);
+
+        public override int GetHashCode() => ShardId.GetHashCode();
+
+        public override string ToString() => $"ShardInitialized({ShardId})";
     }
 
     /// <summary>
@@ -137,7 +151,7 @@ namespace Akka.Cluster.Sharding
     /// which contains statistics about the currently running sharded entities in the
     /// entire cluster. If the `timeout` is reached without answers from all shard regions
     /// the reply will contain an empty map of regions.
-    /// 
+    ///
     /// Intended for testing purpose to see when cluster sharding is "ready" or to monitor
     /// the state of the shard regions.
     /// </summary>
@@ -217,7 +231,7 @@ namespace Akka.Cluster.Sharding
     /// entire region.
     /// Intended for testing purpose to see when cluster sharding is "ready" or to monitor
     /// the state of the shard regions.
-    /// 
+    ///
     /// For the statistics for the entire cluster, see <see cref="GetClusterShardingStats"/>.
     /// </summary>
     [Serializable]

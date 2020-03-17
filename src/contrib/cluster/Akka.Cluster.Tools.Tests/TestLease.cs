@@ -14,7 +14,7 @@ using Akka.Util;
 
 namespace Akka.Cluster.Tools.Tests
 {
-    internal class TestLease : Lease
+    public class TestLease : Lease
     {
         internal sealed class AcquireReq : IEquatable<AcquireReq>
         {
@@ -146,7 +146,7 @@ namespace Akka.Cluster.Tools.Tests
             _system = system;
         }
 
-        internal TestLease GetTestLease(string name)
+        public TestLease GetTestLease(string name)
         {
             if (!testLeases.TryGetValue(name, out var lease))
             {
@@ -155,7 +155,7 @@ namespace Akka.Cluster.Tools.Tests
             return lease;
         }
 
-        internal void SetTestLease(string name, TestLease lease)
+        public void SetTestLease(string name, TestLease lease)
         {
             testLeases[name] = lease;
         }

@@ -12,6 +12,8 @@ using Akka.Persistence;
 using Akka.Util.Internal;
 using System.Threading.Tasks;
 using Akka.Event;
+using Akka.Coordination;
+using Akka.Actor.Scheduler;
 
 namespace Akka.Cluster.Sharding
 {
@@ -23,7 +25,7 @@ namespace Akka.Cluster.Sharding
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
     /// </summary>
-    internal sealed class PersistentShard : PersistentActor, IShard
+    internal sealed class PersistentShard : PersistentActor, IShard, IWithTimers
     {
         IActorContext IShard.Context => Context;
         IActorRef IShard.Self => Self;
@@ -48,6 +50,10 @@ namespace Akka.Cluster.Sharding
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
+
+        public ITimerScheduler Timers { get; set; }
+        public Lease Lease { get; }
+        public TimeSpan LeaseRetryInterval { get; } = TimeSpan.FromSeconds(5); // won't be used
 
         public PersistentShard(
             string typeName,
@@ -80,6 +86,16 @@ namespace Akka.Cluster.Sharding
             PassivateIdleTask = Settings.ShouldPassivateIdleEntities
                 ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
                 : null;
+
+            if (settings.LeaseSettings != null)
+            {
+                Lease = LeaseProvider.Get(Context.System).GetLease(
+                    $"{Context.System.Name}-shard-{typeName}-{shardId}",
+                    settings.LeaseSettings.LeaseImplementation,
+                    Cluster.Get(Context.System).SelfAddress.HostPort());
+
+                LeaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
+            }
         }
 
         public override string PersistenceId { get; }
@@ -136,12 +152,20 @@ namespace Akka.Cluster.Sharding
                     State = state;
                     return true;
                 case RecoveryCompleted _:
-                    RestartRememberedEntities();
-                    this.Initialized();
+                    this.AcquireLeaseIfNeeded(); // onLeaseAcquired called when completed
                     Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
                     return true;
             }
             return false;
+        }
+
+        public void OnLeaseAcquired()
+        {
+            Log.Debug("Shard initialized");
+            Context.Parent.Tell(new ShardInitialized(ShardId));
+            Context.Become(ReceiveCommand);
+            RestartRememberedEntities();
+            this.Stash.UnstashAll();
         }
 
         private void RestartRememberedEntities()

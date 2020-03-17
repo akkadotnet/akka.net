@@ -45,17 +45,19 @@ namespace Akka.Cluster.Sharding
     {
         public readonly Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings CoordinatorSingletonSettings;
         public readonly string JournalPluginId;
+        public readonly Akka.Coordination.LeaseUsageSettings LeaseSettings;
         public readonly System.TimeSpan PassivateIdleEntityAfter;
         public readonly bool RememberEntities;
         public readonly string Role;
         public readonly string SnapshotPluginId;
         public readonly Akka.Cluster.Sharding.StateStoreMode StateStoreMode;
         public readonly Akka.Cluster.Sharding.TunningParameters TunningParameters;
-        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TunningParameters tunningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
+        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TunningParameters tunningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Configuration.Config config, Akka.Configuration.Config singletonConfig) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithCoordinatorSingletonSettings(Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithJournalPluginId(string journalPluginId) { }
+        public Akka.Cluster.Sharding.ClusterShardingSettings WithLeaseSettings(Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithPassivateIdleAfter(System.TimeSpan duration) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithRememberEntities(bool rememberEntities) { }
         public Akka.Cluster.Sharding.ClusterShardingSettings WithRole(string role) { }
@@ -144,10 +146,14 @@ namespace Akka.Cluster.Sharding
         public Passivate(object stopMessage) { }
         public object StopMessage { get; }
     }
-    public sealed class ShardInitialized
+    public sealed class ShardInitialized : System.IEquatable<Akka.Cluster.Sharding.ShardInitialized>
     {
         public readonly string ShardId;
         public ShardInitialized(string shardId) { }
+        public bool Equals(Akka.Cluster.Sharding.ShardInitialized other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
     }
     public class ShardRegion : Akka.Actor.ActorBase
     {
