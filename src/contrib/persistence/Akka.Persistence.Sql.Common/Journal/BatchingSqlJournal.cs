@@ -259,7 +259,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager
-                    .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]
+                    .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]?
                     .ConnectionString;
             }
 #endif
