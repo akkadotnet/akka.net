@@ -356,15 +356,16 @@ namespace Akka.Tests.Actor
             }
         }
 
-        internal class Target : ActorBase
+        internal class Target : ActorBase, IWithTimers
         {
             private IActorRef monitor;
             private TimeSpan interval;
             int bumpCount;
 
+            public ITimerScheduler Timers { get ; set ; }
+
             public Target(IActorRef monitor, TimeSpan interval, bool repeat, Func<int> initial)
             {
-                WithTimers();
                 this.monitor = monitor;
                 this.interval = interval;
                 bumpCount = initial();
@@ -559,15 +560,15 @@ namespace Akka.Tests.Actor
             }
         }
 
-        internal class ActorWithTimerAndStash : ActorBase, IWithUnboundedStash
+        internal class ActorWithTimerAndStash : ActorBase, IWithUnboundedStash, IWithTimers
         {
             private IActorRef probe;
 
             public IStash Stash { get; set; }
+            public ITimerScheduler Timers { get; set; }
 
             public ActorWithTimerAndStash(IActorRef probe)
             {
-                WithTimers();
                 this.probe = probe;
 
                 Timers.StartSingleTimer("key", "scheduled", TimeSpan.FromMilliseconds(50));

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Akka.Actor.Scheduler;
+using Akka.Event;
 
-namespace Akka.Actor.Scheduler
+namespace Akka.Actor
 {
     /// <summary>
     /// Support for scheduled "Self" messages in an actor.

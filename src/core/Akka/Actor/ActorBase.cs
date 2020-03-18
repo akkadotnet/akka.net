@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using Akka.Actor.Internal;
 using Akka.Event;
 
@@ -92,7 +91,6 @@ namespace Akka.Actor
     public abstract partial class ActorBase : IInternalActor
     {
         private IActorRef _clearedSelf;
-        private Scheduler.TimerScheduler timers;
         private bool HasBeenCleared => _clearedSelf != null;
 
         /// <summary>
@@ -105,6 +103,10 @@ namespace Akka.Actor
         {
             if (ActorCell.Current == null)
                 throw new ActorInitializationException("Do not create actors using 'new', always create them using an ActorContext/System");
+
+            if (this is IWithTimers withTimers)
+                withTimers.Timers = new Scheduler.TimerScheduler(Context);
+
             Context.Become(Receive);
         }
 
@@ -149,21 +151,6 @@ namespace Akka.Actor
             }
         }
 
-        protected Scheduler.ITimerScheduler Timers
-        {
-            get
-            {
-                if (timers == null)
-                    throw new NotSupportedException("To use Timers, you have to enable them via WithTimers() in actor constructor");
-                return timers;
-            }
-        }
-
-        protected void WithTimers()
-        {
-            Interlocked.CompareExchange(ref timers, new Scheduler.TimerScheduler(Context), null);
-        }
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -174,25 +161,33 @@ namespace Akka.Actor
         {
             if (message is Scheduler.TimerScheduler.ITimerMsg tm)
             {
-                switch (timers?.InterceptTimerMsg(Context.System.Log, tm))
+                if (this is IWithTimers withTimers && withTimers.Timers is Scheduler.TimerScheduler timers)
                 {
-                    case IAutoReceivedMessage m:
-                        ((ActorCell)Context).AutoReceiveMessage(new Envelope(m, Self));
-                        return true;
+                    switch (timers.InterceptTimerMsg(Context.System.Log, tm))
+                    {
+                        case IAutoReceivedMessage m:
+                            ((ActorCell)Context).AutoReceiveMessage(new Envelope(m, Self));
+                            return true;
 
-                    case null:
-                        // discard
-                        return true;
+                        case null:
+                            // discard
+                            return true;
 
-                    case object m:
-                        if (this is IActorStash)
-                        {
-                            var actorCell = (ActorCell)Context;
-                            // this is important for stash interaction, as stash will look directly at currentMessage #24557
-                            actorCell.CurrentMessage = m;
-                        }
-                        message = m;
-                        break;
+                        case object m:
+                            if (this is IActorStash)
+                            {
+                                var actorCell = (ActorCell)Context;
+                                // this is important for stash interaction, as stash will look directly at currentMessage #24557
+                                actorCell.CurrentMessage = m;
+                            }
+                            message = m;
+                            break;
+                    }
+                }
+                else
+                {
+                    // discard
+                    return true;
                 }
             }
 
