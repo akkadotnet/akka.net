@@ -56,17 +56,15 @@ namespace Akka.Pattern
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected override void CallFails()
+        protected internal override void CallFails()
         {
-            //throw new NotImplementedException();
         }
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected override void CallSucceeds()
+        protected internal override void CallSucceeds()
         {
-            //throw new NotImplementedException();
         }
 
         /// <summary>
@@ -77,6 +75,11 @@ namespace Akka.Pattern
         {
             Task.Delay(_breaker.ResetTimeout).ContinueWith(task => _breaker.AttemptReset());
         }
+
+        /// <summary>
+        /// Override for more descriptive toString
+        /// </summary>
+        public override string ToString() => "Open";
     }
 
     /// <summary>
@@ -134,7 +137,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Reopen breaker on failed call.
         /// </summary>
-        protected override void CallFails()
+        protected internal override void CallFails()
         {
             _breaker.TripBreaker(this);
         }
@@ -142,7 +145,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Reset breaker on successful call.
         /// </summary>
-        protected override void CallSucceeds()
+        protected internal override void CallSucceeds()
         {
             _breaker.ResetBreaker();
         }
@@ -207,7 +210,7 @@ namespace Akka.Pattern
         /// On failed call, the failure count is incremented.  The count is checked against the configured maxFailures, and
         /// the breaker is tripped if we have reached maxFailures.
         /// </summary>
-        protected override void CallFails()
+        protected internal override void CallFails()
         {
             if (IncrementAndGet() == _breaker.MaxFailures)
             {
@@ -218,7 +221,7 @@ namespace Akka.Pattern
         /// <summary>
         /// On successful call, the failure count is reset to 0
         /// </summary>
-        protected override void CallSucceeds()
+        protected internal override void CallSucceeds()
         {
             Reset();
         }
