@@ -1,3 +1,18 @@
+#### 1.4.3 March 18 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.3 fixes one major issue that affected Akka.Persistence.Sql users as part of the v1.4 rollout:
+
+* [Bugfix: No connection string for Sql Event Journal was specified](https://github.com/akkadotnet/akka.net/issues/4343)
+
+To see the full set of changes for Akka.NET 1.4.3, please [see the 1.4.3 milestone](https://github.com/akkadotnet/akka.net/milestone/34).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 78 | 2 | Gregorius Soedharmo |
+| 1 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 172 | 11 | Ismael Hamed |
+
 #### 1.4.2 March 12 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 

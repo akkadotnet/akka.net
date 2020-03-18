@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2020 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.4.2</VersionPrefix>
+    <VersionPrefix>1.4.3</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -30,10 +30,14 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageReleaseNotes>Maintenance Release for Akka.NET 1.4**
-Akka.NET v1.4.2 fixes two issues that affected users as part of the Akka.NET v1.4.1 rollout:
-[Bugfix: Missing v1.4.1 NuGet packages](https://github.com/akkadotnet/akka.net/issues/4332)
-[Bugfix: App.config loading broken in Akka.NET v1.4.1](https://github.com/akkadotnet/akka.net/issues/4330)
-To see the full set of changes for Akka.NET 1.4.2, please [see the 1.4.2 milestone(https://github.com/akkadotnet/akka.net/milestone/32).</PackageReleaseNotes>
+Akka.NET v1.4.3 fixes one major issue that affected Akka.Persistence.Sql users as part of the v1.4 rollout:
+[Bugfix: No connection string for Sql Event Journal was specified](https://github.com/akkadotnet/akka.net/issues/4343)
+To see the full set of changes for Akka.NET 1.4.3, please [see the 1.4.3 milestone](https://github.com/akkadotnet/akka.net/milestone/34).
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 78 | 2 | Gregorius Soedharmo |
+| 1 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 172 | 11 | Ismael Hamed |</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
