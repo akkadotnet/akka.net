@@ -176,7 +176,7 @@ device IDs:
 We almost have everything to test the removal of devices. What is missing is:
 
  * Stopping a device actor from our test case, from the outside: any actor can be stopped by simply sending a special
-   the built-in message, `PoisonPill`, which instructs the actor to stop.
+   built-in message, `PoisonPill`, which instructs the actor to stop.
  * Be notified once the device actor is stopped: we can use the _Death Watch_ facility for this purpose, too. Thankfully
    the `TestProbe` has two messages that we can easily use, `Watch()` to watch a specific actor, and `ExpectTerminated`
    to assert that the watched actor has been terminated.
