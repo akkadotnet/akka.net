@@ -570,8 +570,14 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    Log.Warning("No coordinator found to register. Probably, no seed-nodes configured and manual cluster join not performed? Total [{0}] buffered messages.",
-                        TotalBufferSize);
+                    // Members start off as "Removed"
+                    var partOfCluster = Cluster.SelfMember.Status != MemberStatus.Removed;
+                    var possibleReason = partOfCluster ?
+                        "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?" :
+                        "Probably, no seed-nodes configured and manual cluster join not performed?";
+
+                    Log.Warning("No coordinator found to register. {0} Total [{1}] buffered messages.",
+                        possibleReason, TotalBufferSize);
                 }
             }
         }
