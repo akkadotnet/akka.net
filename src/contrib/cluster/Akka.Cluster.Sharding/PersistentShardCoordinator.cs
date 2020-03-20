@@ -1396,13 +1396,20 @@ namespace Akka.Cluster.Sharding
 
         private bool WaitingForStateInitialized(object message)
         {
-            if (message is StateInitialized)
+            switch (message)
             {
-                this.StateInitialized();
-                Context.Become(msg => this.Active(msg) || HandleSnapshotResult(msg));
-                return true;
+                case Terminate _:
+                    Log.Debug("Received termination message before state was initialized");
+                    Context.Stop(Self);
+                    return true;
+
+                case StateInitialized _:
+                    this.StateInitialized();
+                    Context.Become(msg => this.Active(msg) || HandleSnapshotResult(msg));
+                    return true;
             }
-            else if (this.ReceiveTerminated(message)) return true;
+
+            if (this.ReceiveTerminated(message)) return true;
             else return HandleSnapshotResult(message);
         }
 

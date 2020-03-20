@@ -376,7 +376,7 @@ namespace Akka.Cluster.Sharding.Tests
         public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
         protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
     }
-    public abstract class ClusterShardingSpec : MultiNodeClusterSpec 
+    public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         // must use different unique name for some tests than the one used in API tests
         public static string TestCounterShardingTypeName => $"Test{Counter.ShardingTypeName}";
@@ -474,7 +474,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,
-                    PoisonPill.Instance,
+                    Terminate.Instance,
                     ClusterSingletonManagerSettings.Create(Sys)),
                     typeName + "Coordinator");
             }

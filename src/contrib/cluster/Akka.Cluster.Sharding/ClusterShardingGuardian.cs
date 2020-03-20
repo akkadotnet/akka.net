@@ -184,9 +184,19 @@ namespace Akka.Cluster.Sharding
                                 ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)
                                 : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, settings.RememberEntities);
 
-                            var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2, -1).WithDeploy(Deploy.Local);
+                            var singletonProps = BackoffSupervisor.Props(
+                                Backoff.OnStop(
+                                    childProps: coordinatorProps,
+                                    childName: "coordinator",
+                                    minBackoff: minBackoff,
+                                    maxBackoff: maxBackoff,
+                                    randomFactor: 0.2,
+                                    maxNrOfRetries: -1)
+                                .WithFinalStopMessage(m => m is Terminate))
+                                .WithDeploy(Deploy.Local);
+
                             var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
-                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
+                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, Terminate.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
                         }
                         return Context.ActorOf(ShardRegion.Props(
                             typeName: start.TypeName,

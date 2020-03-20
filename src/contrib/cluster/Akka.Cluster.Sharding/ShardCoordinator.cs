@@ -110,6 +110,11 @@ namespace Akka.Cluster.Sharding
                 case ClusterEvent.CurrentClusterState _:
                     /* ignore */
                     return true;
+
+                case Terminate _:
+                    coordinator.Log.Debug("Received termination message");
+                    coordinator.Context.Stop(coordinator.Self);
+                    return true;
                 default: return ReceiveTerminated(coordinator, message);
             }
         }
