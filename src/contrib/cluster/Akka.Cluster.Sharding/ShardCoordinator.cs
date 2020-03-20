@@ -228,7 +228,10 @@ namespace Akka.Cluster.Sharding
 
         private static void HandleRebalanceDone<TCoordinator>(this TCoordinator coordinator, string shard, bool ok) where TCoordinator : IShardCoordinator
         {
-            coordinator.Log.Debug("Rebalance shard [{0}] done [{1}]", shard, ok);
+            if (ok)
+                coordinator.Log.Debug("Rebalance shard [{0}] completed successfully", shard);
+            else
+                coordinator.Log.Warning("Rebalance shard [{0}] didn't complete within [{1}]", shard, coordinator.Settings.TunningParameters.HandOffTimeout);
 
             // The shard could have been removed by ShardRegionTerminated
             if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
