@@ -1292,7 +1292,7 @@ namespace Akka.Cluster.Sharding
             if (string.IsNullOrEmpty(settings.Role))
                 MinMembers = Cluster.Settings.MinNrOfMembers;
             else
-                MinMembers = Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, Cluster.Settings.MinNrOfMembers);
+                MinMembers = Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
 
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;

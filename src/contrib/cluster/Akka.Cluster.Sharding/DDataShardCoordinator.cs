@@ -60,7 +60,7 @@ namespace Akka.Cluster.Sharding
             RemovalMargin = Cluster.DowningProvider.DownRemovalMargin;
             MinMembers = string.IsNullOrEmpty(settings.Role)
                 ? Cluster.Settings.MinNrOfMembers
-                : (Cluster.Settings.MinNrOfMembersOfRole.TryGetValue(settings.Role, out var min) ? min : Cluster.Settings.MinNrOfMembers);
+                : Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
             RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RebalanceInterval, Settings.TunningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
 
             _readConsistency = new ReadMajority(settings.TunningParameters.WaitingForStateTimeout, majorityMinCap);
