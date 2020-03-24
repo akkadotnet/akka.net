@@ -175,7 +175,6 @@ namespace Akka.Cluster.Sharding
         protected System.Collections.Immutable.IImmutableSet<string> StartingShards;
         public readonly string TypeName;
         public ShardRegion(string typeName, System.Func<string, Akka.Actor.Props> entityProps, Akka.Cluster.Sharding.ClusterShardingSettings settings, string coordinatorPath, Akka.Cluster.Sharding.ExtractEntityId extractEntityId, Akka.Cluster.Sharding.ExtractShardId extractShardId, object handOffStopMessage, Akka.Actor.IActorRef replicator, int majorityMinCap) { }
-        protected Akka.Actor.ActorSelection CoordinatorSelection { get; }
         public bool GracefulShutdownInProgress { get; }
         public Akka.Event.ILoggingAdapter Log { get; }
         protected object RegistrationMessage { get; }
