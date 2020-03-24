@@ -1094,6 +1094,15 @@ namespace Akka.Actor
         System.TimeSpan MonotonicClock { get; }
         System.DateTimeOffset Now { get; }
     }
+    public interface ITimerScheduler
+    {
+        void Cancel(object key);
+        void CancelAll();
+        bool IsTimerActive(object key);
+        void StartPeriodicTimer(object key, object msg, System.TimeSpan interval);
+        void StartPeriodicTimer(object key, object msg, System.TimeSpan initialDelay, System.TimeSpan interval);
+        void StartSingleTimer(object key, object msg, System.TimeSpan timeout);
+    }
     public interface IUntypedActorContext : Akka.Actor.IActorContext, Akka.Actor.IActorRefFactory, Akka.Actor.ICanWatch
     {
         void Become(Akka.Actor.UntypedReceive receive);
@@ -1102,6 +1111,10 @@ namespace Akka.Actor
     [System.ObsoleteAttribute("Bounded stashing is not yet implemented. Unbounded stashing will be used instead " +
         "[0.7.0]")]
     public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
+    public interface IWithTimers
+    {
+        Akka.Actor.ITimerScheduler Timers { get; set; }
+    }
     public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
     public sealed class Identify : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INotInfluenceReceiveTimeout
     {

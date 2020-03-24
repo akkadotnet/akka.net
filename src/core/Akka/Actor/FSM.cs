@@ -304,7 +304,7 @@ namespace Akka.Actor
             /// <param name="generation">TBD</param>
             /// <param name="owner">TBD</param>
             /// <param name="context">TBD</param>
-            public Timer(string name, object message, bool repeat, int generation, IActorRef owner, IActorContext context)
+            public Timer(string name, object message, bool repeat, int generation, ActorBase owner, IActorContext context)
             {
                 Context = context;
                 Generation = generation;
@@ -339,7 +339,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Owner { get; }
+            public ActorBase Owner { get; }
 
             /// <summary>
             /// TBD
@@ -353,9 +353,15 @@ namespace Akka.Actor
             /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
+                object timerMsg;
+                if (Message is IAutoReceivedMessage)
+                    timerMsg = Message;
+                else
+                    timerMsg = this;
+
                 _ref = Repeat
-                    ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, this, Context.Self)
-                    : _scheduler.ScheduleTellOnceCancelable(timeout, actor, this, Context.Self);
+                    ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, timerMsg, Context.Self)
+                    : _scheduler.ScheduleTellOnceCancelable(timeout, actor, timerMsg, Context.Self);
             }
 
             /// <summary>
@@ -484,7 +490,7 @@ namespace Akka.Actor
             }
 
             /// <summary>
-            /// Modify the state transition descriptor to include a state timeout for the 
+            /// Modify the state transition descriptor to include a state timeout for the
             /// next state. This timeout overrides any default timeout set for the next state.
             /// <remarks>Use <see cref="TimeSpan.MaxValue"/> to cancel a timeout.</remarks>
             /// </summary>
@@ -836,7 +842,7 @@ namespace Akka.Actor
             if (_timers.TryGetValue(name, out var timer))
                 timer.Cancel();
 
-            timer = new Timer(name, msg, repeat, _timerGen.Next(), Self, Context);
+            timer = new Timer(name, msg, repeat, _timerGen.Next(), this, Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
@@ -858,7 +864,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Determines whether the named timer is still active. Returns true 
+        /// Determines whether the named timer is still active. Returns true
         /// unless the timer does not exist, has previously been cancelled, or
         /// if it was a single-shot timer whose message was already received.
         /// </summary>
@@ -1069,7 +1075,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// C# port of Scala's orElse method for partial function chaining.
-        /// 
+        ///
         /// See http://scalachina.com/api/scala/PartialFunction.html
         /// </summary>
         /// <param name="original">The original <see cref="StateFunction"/> to be called</param>
@@ -1106,7 +1112,7 @@ namespace Akka.Actor
 
             if (message is Timer timer)
             {
-                if (ReferenceEquals(timer.Owner, Self) && _timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
+                if (ReferenceEquals(timer.Owner, this) && _timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
                 {
                     if (_timeoutFuture != null)
                     {
@@ -1300,7 +1306,7 @@ namespace Akka.Actor
         /// <summary>
         /// Call the <see cref="OnTermination"/> hook if you want to retain this behavior.
         /// When overriding make sure to call base.PostStop();
-        /// 
+        ///
         /// Please note that this method is called by default from <see cref="ActorBase.PreRestart"/> so
         /// override that one if <see cref="OnTermination"/> shall not be called during restart.
         /// </summary>
