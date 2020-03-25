@@ -196,6 +196,8 @@ namespace Akka.Configuration.Hocon
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
                         thisItem.GetObject().Merge(otherItem.Value.GetObject());
+                    else
+                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
                 else
                 {
@@ -228,6 +230,8 @@ namespace Akka.Configuration.Hocon
                         mergedValue.AppendValue(mergedObject);
                         thisItems[otherItem.Key] = mergedValue;
                     }
+                    else
+                        thisItems[otherItem.Key] = otherItem.Value;
                 }
                 else
                 {
