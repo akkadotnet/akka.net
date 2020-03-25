@@ -39,7 +39,7 @@ namespace Akka.Coordination
         public override string ToString() { }
         public Akka.Coordination.LeaseSettings WithTimeoutSettings(Akka.Coordination.TimeoutSettings timeoutSettings) { }
     }
-    public class LeaseTimeoutException : Akka.Coordination.LeaseException
+    public sealed class LeaseTimeoutException : Akka.Coordination.LeaseException
     {
         public LeaseTimeoutException(string message) { }
         public LeaseTimeoutException(string message, System.Exception innerEx) { }
@@ -57,7 +57,6 @@ namespace Akka.Coordination
         public System.TimeSpan HeartbeatInterval { get; }
         public System.TimeSpan HeartbeatTimeout { get; }
         public System.TimeSpan OperationTimeout { get; }
-        public Akka.Coordination.TimeoutSettings Copy(System.Nullable<System.TimeSpan> heartbeatInterval = null, System.Nullable<System.TimeSpan> heartbeatTimeout = null, System.Nullable<System.TimeSpan> operationTimeout = null) { }
         public static Akka.Coordination.TimeoutSettings Create(Akka.Configuration.Config config) { }
         public override string ToString() { }
         public Akka.Coordination.TimeoutSettings WithHeartbeatInterval(System.TimeSpan heartbeatInterval) { }
