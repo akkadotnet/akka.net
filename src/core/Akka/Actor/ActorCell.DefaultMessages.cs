@@ -55,7 +55,7 @@ namespace Akka.Actor
         /// </exception>>
         public void Invoke(Envelope envelope)
         {
-            
+
             var message = envelope.Message;
             var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
 
@@ -129,7 +129,7 @@ namespace Akka.Actor
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>
-        protected virtual void AutoReceiveMessage(Envelope envelope)
+        protected internal virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
 
@@ -199,7 +199,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>   
+        /// <summary>
         ///     Receives the selection.
         /// </summary>
         /// <param name="m">The m.</param>
@@ -246,7 +246,7 @@ namespace Akka.Actor
 
         private void SysMsgInvokeAll(EarliestFirstSystemMessageList messages, int currentState)
         {
-           
+
             var nextState = currentState;
             var todo = messages;
             while(true)

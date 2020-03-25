@@ -36,7 +36,7 @@ namespace Akka.Actor
                 Status = status;
             }
         }
-        
+
         /// <summary>
         /// Indicates the failure of some operation that was requested and includes an
         /// <see cref="Exception"/> describing the underlying cause of the problem.
@@ -103,6 +103,10 @@ namespace Akka.Actor
         {
             if (ActorCell.Current == null)
                 throw new ActorInitializationException("Do not create actors using 'new', always create them using an ActorContext/System");
+
+            if (this is IWithTimers withTimers)
+                withTimers.Timers = new Scheduler.TimerScheduler(Context);
+
             Context.Become(Receive);
         }
 
@@ -155,6 +159,38 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected internal virtual bool AroundReceive(Receive receive, object message)
         {
+            if (message is Scheduler.TimerScheduler.ITimerMsg tm)
+            {
+                if (this is IWithTimers withTimers && withTimers.Timers is Scheduler.TimerScheduler timers)
+                {
+                    switch (timers.InterceptTimerMsg(Context.System.Log, tm))
+                    {
+                        case IAutoReceivedMessage m:
+                            ((ActorCell)Context).AutoReceiveMessage(new Envelope(m, Self));
+                            return true;
+
+                        case null:
+                            // discard
+                            return true;
+
+                        case object m:
+                            if (this is IActorStash)
+                            {
+                                var actorCell = (ActorCell)Context;
+                                // this is important for stash interaction, as stash will look directly at currentMessage #24557
+                                actorCell.CurrentMessage = m;
+                            }
+                            message = m;
+                            break;
+                    }
+                }
+                else
+                {
+                    // discard
+                    return true;
+                }
+            }
+
             var wasHandled = receive(message);
             if (!wasHandled)
             {
@@ -246,13 +282,13 @@ namespace Akka.Actor
         /// Defines the inactivity timeout after which the sending of a <see cref="ReceiveTimeout"/> message is triggered.
         /// When specified, the receive function should be able to handle a <see cref="ReceiveTimeout"/> message.
         /// </para>
-        /// 
+        ///
         /// <para>
         /// Please note that the receive timeout might fire and enqueue the <see cref="ReceiveTimeout"/> message right after
         /// another message was enqueued; hence it is not guaranteed that upon reception of the receive
         /// timeout there must have been an idle period beforehand as configured via this method.
         /// </para>
-        /// 
+        ///
         /// <para>
         /// Once set, the receive timeout stays in effect (i.e. continues firing repeatedly after inactivity
         /// periods). Pass in <c>null</c> to switch off this feature.
