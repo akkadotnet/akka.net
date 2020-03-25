@@ -129,7 +129,7 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() =>
             {
                 lease = testLeaseExt.GetTestLease(LeaseNameFor(shardId));
-            });
+            }, TimeSpan.FromSeconds(6));
             return lease;
         }
 

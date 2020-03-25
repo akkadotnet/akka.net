@@ -144,6 +144,7 @@ namespace Akka.Cluster.Tools.Tests
         public TestLeaseExt(ExtendedActorSystem system)
         {
             _system = system;
+            _system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
         }
 
         public TestLease GetTestLease(string name)
