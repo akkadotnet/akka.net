@@ -22,6 +22,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="reference.conf" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
 

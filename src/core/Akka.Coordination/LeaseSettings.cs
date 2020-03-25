@@ -27,11 +27,11 @@ namespace Akka.Coordination
             TimeoutSettings = timeoutSettings;
             LeaseConfig = leaseConfig;
 
-            var downingProviderClassName = leaseConfig.GetString("lease-class", null);
-            if (string.IsNullOrEmpty(downingProviderClassName))
+            var leaseClassName = leaseConfig.GetString("lease-class", null);
+            if (string.IsNullOrEmpty(leaseClassName))
                 throw new ArgumentException("lease-class must not be empty");
 
-            LeaseType = Type.GetType(downingProviderClassName, true);
+            LeaseType = Type.GetType(leaseClassName, true);
         }
 
         public LeaseSettings WithTimeoutSettings(TimeoutSettings timeoutSettings)

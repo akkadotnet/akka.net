@@ -7,17 +7,13 @@
 
 using System;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Configuration;
-using Akka.Coordination;
-using Akka.Dispatch;
-using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Tests.Coordination
+namespace Akka.Coordination.Tests
 {
     public class LeaseProviderSpec : AkkaSpec
     {
@@ -117,7 +113,7 @@ namespace Akka.Tests.Coordination
             get { return ConfigurationFactory.ParseString(@"
 
 lease-a {
-    lease-class = ""Akka.Tests.Coordination.LeaseProviderSpec+LeaseA, Akka.Tests""
+    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseA, Akka.Coordination.Tests""
     key1 = value1
     heartbeat-timeout = 100s
     heartbeat-interval = 1s
@@ -125,7 +121,7 @@ lease-a {
   }
 
   lease-b {
-    lease-class = ""Akka.Tests.Coordination.LeaseProviderSpec+LeaseB, Akka.Tests""
+    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseB, Akka.Coordination.Tests""
     key2 = value2
     heartbeat-timeout = 120s
     heartbeat-interval = 1s
@@ -143,14 +139,14 @@ lease-a {
   }
 
   lease-missing-constructor {
-    lease-class = ""Akka.Tests.Coordination.LeaseProviderSpec+LeaseC, Akka.Tests""
+    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseC, Akka.Coordination.Tests""
     heartbeat-timeout = 120s
     heartbeat-interval = 1s
     lease-operation-timeout = 2s
   }
 
   lease-fallback-to-defaults {
-    lease-class = ""Akka.Tests.Coordination.LeaseProviderSpec+LeaseA, Akka.Tests""
+    lease-class = ""Akka.Coordination.Tests.LeaseProviderSpec+LeaseA, Akka.Coordination.Tests""
   }
             "); }
         }

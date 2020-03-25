@@ -6,18 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Configuration;
-using Akka.Coordination;
-using Akka.Dispatch;
-using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.Tests.Coordination
+namespace Akka.Coordination.Tests
 {
     public class TimeoutSettingsSpec : AkkaSpec
     {
@@ -25,7 +20,8 @@ namespace Akka.Tests.Coordination
 
         private TimeoutSettings Conf(string overrides)
         {
-            var c = ConfigurationFactory.ParseString(overrides);
+            var c = ConfigurationFactory.ParseString(overrides)
+                .WithFallback(LeaseProvider.DefaultConfig());
             return TimeoutSettings.Create(c);
         }
 

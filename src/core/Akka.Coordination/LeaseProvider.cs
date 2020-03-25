@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 
 namespace Akka.Coordination
@@ -69,6 +70,16 @@ namespace Akka.Coordination
         public LeaseProvider(ExtendedActorSystem system)
         {
             _system = system;
+            _system.Settings.InjectTopLevelFallback(DefaultConfig());
+        }
+
+        /// <summary>
+        /// Default HOCON settings for Akka.Coordination.
+        /// </summary>
+        /// <returns>TBD</returns>
+        public static Config DefaultConfig()
+        {
+            return ConfigurationFactory.FromResource<LeaseProvider>("Akka.Coordination.reference.conf");
         }
 
         /// <summary>
