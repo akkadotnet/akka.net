@@ -443,21 +443,7 @@ namespace Akka.Configuration
         {
             if (includeFallback == false)
                 return ToString();
-
-            Config current = this;
-
-            if (current.Fallback == null)
-                return current.ToString();
-
-            Config clone = Copy();
-
-            while (current.Fallback != null)
-            {
-                clone.Root.GetObject().Merge(current.Fallback.Root.GetObject());
-                current = current.Fallback;
-            }
-
-            return clone.ToString();
+            return Root.ToString();
         }
 
         /// <summary>
@@ -472,6 +458,9 @@ namespace Akka.Configuration
                 throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
             if (fallback == null)
                 return this;
+            if (IsEmpty)
+                return fallback;
+
             var mergedRoot = fallback.Root.GetObject().MergeImmutable(Root.GetObject());
             var newRoot = new HoconValue();
             newRoot.AppendValue(mergedRoot);
