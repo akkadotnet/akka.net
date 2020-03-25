@@ -185,6 +185,7 @@ namespace Akka.Configuration.Hocon
         {
             var thisItems = Items;
             var otherItems = other.Items;
+            var modified = new List<KeyValuePair<string, HoconValue>>();
 
             foreach (var otherItem in otherItems)
             {
@@ -194,16 +195,27 @@ namespace Akka.Configuration.Hocon
                 {
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
-                        thisItem.GetObject().Merge(otherItem.Value.GetObject());
+                    {
+                        var newObject = thisItem.GetObject().MergeImmutable(otherItem.Value.GetObject());
+                        var value = new HoconValue();
+                        value.Values.Add(newObject);
+                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, value));
+                    }
                     else
                         modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
                 else
                 {
                     //other key was not present in this object, just copy it over
-                    Items.Add(otherItem.Key, otherItem.Value);
+                    modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
             }
+
+            if (modified.Count == 0)
+                return;
+
+            foreach(var kvp in modified)
+                Items[kvp.Key] = kvp.Value;
         }
 
         /// <summary>
