@@ -483,6 +483,7 @@ namespace Akka.Actor
         public override Akka.Actor.ActorPath Parent { get; }
         public override Akka.Actor.ActorPath Root { get; }
         public override int CompareTo(Akka.Actor.ActorPath other) { }
+        public override int GetHashCode() { }
         public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
     public sealed class CoordinatedShutdown : Akka.Actor.IExtension
