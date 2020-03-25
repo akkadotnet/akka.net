@@ -159,7 +159,6 @@ namespace Akka.Configuration.Hocon
             var sb = new StringBuilder();
             foreach (var kvp in Items)
             {
-                if (kvp.Value.AdoptedFromFallback) continue;
                 string key = QuoteIfNeeded(kvp.Key);
                 sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
             }
