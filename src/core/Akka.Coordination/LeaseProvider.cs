@@ -6,8 +6,16 @@ using Akka.Event;
 
 namespace Akka.Coordination
 {
+    /// <summary>
+    /// Lease extension for distributed lock
+    /// </summary>
     public class LeaseProviderExtensionProvider : ExtensionIdProvider<LeaseProvider>
     {
+        /// <summary>
+        /// Creates the lease extension using a given actor system.
+        /// </summary>
+        /// <param name="system">The actor system to use when creating the extension.</param>
+        /// <returns>The extension created using the given actor system.</returns>
         public override LeaseProvider CreateExtension(ExtendedActorSystem system)
         {
             var extension = new LeaseProvider(system);
@@ -15,6 +23,9 @@ namespace Akka.Coordination
         }
     }
 
+    /// <summary>
+    /// This class represents an <see cref="ActorSystem"/> extension used for distributed lock within the actor system.
+    /// </summary>
     public class LeaseProvider : IExtension
     {
         private class LeaseKey : IEquatable<LeaseKey>
@@ -54,7 +65,11 @@ namespace Akka.Coordination
             public override string ToString() => $"LeaseKey({LeaseName}, {ConfigPath}, {ClientName})";
         }
 
-
+        /// <summary>
+        /// Retrieves the extension from the specified actor system.
+        /// </summary>
+        /// <param name="system">The actor system from which to retrieve the extension.</param>
+        /// <returns>The extension retrieved from the given actor system.</returns>
         public static LeaseProvider Get(ActorSystem system)
         {
             return system.WithExtension<LeaseProvider, LeaseProviderExtensionProvider>();
@@ -67,6 +82,10 @@ namespace Akka.Coordination
 
         private ILoggingAdapter Log { get { return _log ?? (_log = Logging.GetLogger(_system, "LeaseProvider")); } }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LeaseProvider"/> class.
+        /// </summary>
+        /// <param name="system">The actor system that hosts the lease.</param>
         public LeaseProvider(ExtendedActorSystem system)
         {
             _system = system;
@@ -74,9 +93,9 @@ namespace Akka.Coordination
         }
 
         /// <summary>
-        /// Default HOCON settings for Akka.Coordination.
+        /// Retrieves the default lease options that Akka.NET uses when no configuration has been defined.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The configuration that contains default values for all lease options.</returns>
         public static Config DefaultConfig()
         {
             return ConfigurationFactory.FromResource<LeaseProvider>("Akka.Coordination.reference.conf");

@@ -3,8 +3,16 @@ using Akka.Configuration;
 
 namespace Akka.Coordination
 {
+    /// <summary>
+    /// The timeout settings used for the <see cref="Lease"/>
+    /// </summary>
     public sealed class TimeoutSettings
     {
+        /// <summary>
+        /// Creates a new <see cref="TimeoutSettings"/> instance.
+        /// </summary>
+        /// <param name="config">Lease config</param>
+        /// <returns>The requested settings.</returns>
         public static TimeoutSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
@@ -25,10 +33,27 @@ namespace Akka.Coordination
             return new TimeoutSettings(heartBeatInterval, heartBeatTimeout, config.GetTimeSpan("lease-operation-timeout"));
         }
 
+        /// <summary>
+        /// Interval for communicating with the third party to confirm the lease is still held
+        /// </summary>
         public TimeSpan HeartbeatInterval { get; }
+
+        /// <summary>
+        /// If the node that acquired the leases crashes, how long should the lease be held before another owner can get it
+        /// </summary>
+
         public TimeSpan HeartbeatTimeout { get; }
+        /// <summary>
+        /// Lease implementations are expected to time out acquire and release calls or document that they do not implement an operation timeout
+        /// </summary>
         public TimeSpan OperationTimeout { get; }
 
+        /// <summary>
+        /// Creates a new <see cref="TimeoutSettings"/> instance.
+        /// </summary>
+        /// <param name="heartbeatInterval">Interval for communicating with the third party to confirm the lease is still held</param>
+        /// <param name="heartbeatTimeout">If the node that acquired the leases crashes, how long should the lease be held before another owner can get it</param>
+        /// <param name="operationTimeout">Lease implementations are expected to time out acquire and release calls or document that they do not implement an operation timeout</param>
         public TimeoutSettings(TimeSpan heartbeatInterval, TimeSpan heartbeatTimeout, TimeSpan operationTimeout)
         {
             HeartbeatInterval = heartbeatInterval;
@@ -36,26 +61,42 @@ namespace Akka.Coordination
             OperationTimeout = operationTimeout;
         }
 
+        /// <summary>
+        /// Create a <see cref="TimeoutSettings"/> with specified heartbeat interval.
+        /// </summary>
+        /// <param name="heartbeatInterval">Interval for communicating with the third party to confirm the lease is still held</param>
+        /// <returns></returns>
         public TimeoutSettings WithHeartbeatInterval(TimeSpan heartbeatInterval)
         {
             return Copy(heartbeatInterval: heartbeatInterval);
         }
 
+        /// <summary>
+        /// Create a <see cref="TimeoutSettings"/> with specified heartbeat timeout.
+        /// </summary>
+        /// <param name="heartbeatTimeout">If the node that acquired the leases crashes, how long should the lease be held before another owner can get it</param>
+        /// <returns></returns>
         public TimeoutSettings WithHeartbeatTimeout(TimeSpan heartbeatTimeout)
         {
             return Copy(heartbeatTimeout: heartbeatTimeout);
         }
 
+        /// <summary>
+        /// Create a <see cref="TimeoutSettings"/> with specified operation timeout.
+        /// </summary>
+        /// <param name="operationTimeout">Lease implementations are expected to time out acquire and release calls or document that they do not implement an operation timeout</param>
+        /// <returns></returns>
         public TimeoutSettings withOperationTimeout(TimeSpan operationTimeout)
         {
             return Copy(operationTimeout: operationTimeout);
         }
 
-        public TimeoutSettings Copy(TimeSpan? heartbeatInterval = null, TimeSpan? heartbeatTimeout = null, TimeSpan? operationTimeout = null)
+        private TimeoutSettings Copy(TimeSpan? heartbeatInterval = null, TimeSpan? heartbeatTimeout = null, TimeSpan? operationTimeout = null)
         {
             return new TimeoutSettings(heartbeatInterval ?? HeartbeatInterval, heartbeatTimeout ?? HeartbeatTimeout, operationTimeout ?? OperationTimeout);
         }
 
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"TimeoutSettings({ HeartbeatInterval }, { HeartbeatTimeout }, { OperationTimeout })";

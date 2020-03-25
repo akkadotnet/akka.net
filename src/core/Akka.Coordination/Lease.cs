@@ -3,10 +3,23 @@ using System.Threading.Tasks;
 
 namespace Akka.Coordination
 {
+    /// <summary>
+    /// API for a distributed lock.
+    /// Any lease implementation should provide the following guarantees:
+    /// <list type="bullet">A lease with the same name loaded multiple times, even on different nodes, is the same lease</list>
+    /// <list type="bullet">Only one owner can acquire the lease at a time</list>
+    /// </summary>
     public abstract class Lease
     {
+        /// <summary>
+        /// Lease settings
+        /// </summary>
         public LeaseSettings Settings { get; }
 
+        /// <summary>
+        /// Creates a new <see cref="Lease"/> instance.
+        /// </summary>
+        /// <param name="settings">Lease settings</param>
         public Lease(LeaseSettings settings)
         {
             Settings = settings;
