@@ -304,6 +304,31 @@ namespace Akka.Cluster.Sharding
             TimeSpan passivateIdleEntityAfter,
             StateStoreMode stateStoreMode,
             TunningParameters tunningParameters,
+            ClusterSingletonManagerSettings coordinatorSingletonSettings)
+            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, tunningParameters, coordinatorSingletonSettings, null)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="rememberEntities">TBD</param>
+        /// <param name="journalPluginId">TBD</param>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="passivateIdleEntityAfter">TBD</param>
+        /// <param name="stateStoreMode">TBD</param>
+        /// <param name="tunningParameters">TBD</param>
+        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <param name="leaseSettings">TBD</param>
+        public ClusterShardingSettings(
+            string role,
+            bool rememberEntities,
+            string journalPluginId,
+            string snapshotPluginId,
+            TimeSpan passivateIdleEntityAfter,
+            StateStoreMode stateStoreMode,
+            TunningParameters tunningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings,
             LeaseUsageSettings leaseSettings)
         {

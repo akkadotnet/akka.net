@@ -162,7 +162,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class LeaseRetry
+    internal sealed class LeaseRetry: INoSerializationVerificationNeeded
     {
         /// <summary>
         /// TBD
@@ -373,7 +373,7 @@ namespace Akka.Cluster.Tools.Singleton
 
 
     [Serializable]
-    internal sealed class AcquireLeaseResult : IDeadLetterSuppression
+    internal sealed class AcquireLeaseResult : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         public bool HoldingLease { get; }
 
@@ -384,7 +384,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     [Serializable]
-    internal sealed class ReleaseLeaseResult : IDeadLetterSuppression
+    internal sealed class ReleaseLeaseResult : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         public bool Released { get; }
 
@@ -395,7 +395,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     [Serializable]
-    internal sealed class AcquireLeaseFailure : IDeadLetterSuppression
+    internal sealed class AcquireLeaseFailure : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         public Exception Failure { get; }
 
@@ -406,7 +406,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     [Serializable]
-    internal sealed class ReleaseLeaseFailure : IDeadLetterSuppression
+    internal sealed class ReleaseLeaseFailure : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         public Exception Failure { get; }
 
@@ -417,7 +417,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
 
     [Serializable]
-    internal sealed class LeaseLost : IDeadLetterSuppression
+    internal sealed class LeaseLost : IDeadLetterSuppression, INoSerializationVerificationNeeded
     {
         public Exception Reason { get; }
 

@@ -370,7 +370,7 @@ namespace Akka.Cluster.Sharding
 
 
         [Serializable]
-        public sealed class LeaseAcquireResult : IDeadLetterSuppression
+        public sealed class LeaseAcquireResult : IDeadLetterSuppression, INoSerializationVerificationNeeded
         {
             public readonly bool Acquired;
 
@@ -384,7 +384,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [Serializable]
-        public sealed class LeaseLost : IDeadLetterSuppression
+        public sealed class LeaseLost : IDeadLetterSuppression, INoSerializationVerificationNeeded
         {
             public readonly Exception Reason;
 
@@ -395,7 +395,7 @@ namespace Akka.Cluster.Sharding
         }
 
         [Serializable]
-        public sealed class LeaseRetry : IDeadLetterSuppression
+        public sealed class LeaseRetry : IDeadLetterSuppression, INoSerializationVerificationNeeded
         {
             public static readonly LeaseRetry Instance = new LeaseRetry();
             private LeaseRetry() { }
@@ -666,15 +666,6 @@ namespace Akka.Cluster.Sharding
                     break;
             }
         }
-
-        //private static void HandleLeaseLost<TShard>(this TShard shard, Shard.LeaseLost message) where TShard : IShard
-        //{
-        //    // The shard region will re-create this when it receives a message for this shard
-        //    shard.Log.Error("Shard type [{0}] id [{1}] lease lost. Reason: {2}", shard.TypeName, shard.ShardId, message.Reason);
-        //    // Stop entities ASAP rather than send termination message
-        //    shard.Context.Stop(shard.Self);
-        //}
-
 
         private static void HandleStartEntity<TShard>(this TShard shard, ShardRegion.StartEntity start) where TShard : IShard
         {

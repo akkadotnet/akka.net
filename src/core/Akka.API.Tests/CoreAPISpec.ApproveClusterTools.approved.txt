@@ -342,6 +342,7 @@ namespace Akka.Cluster.Tools.Singleton
     }
     public sealed class ClusterSingletonManagerSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval) { }
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public System.TimeSpan HandOverRetryInterval { get; }
         public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
@@ -375,6 +376,8 @@ namespace Akka.Cluster.Tools.Singleton
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
+        [System.ObsoleteAttribute("For compatibility reasons only. Use method with TimeSpan parameter instead")]
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(System.TimeSpan singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }
     }
