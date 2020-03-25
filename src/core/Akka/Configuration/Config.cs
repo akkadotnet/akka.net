@@ -37,6 +37,7 @@ namespace Akka.Configuration
             if (root.Value == null)
                 throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
 
+            Value = root.Value;
             Root = root.Value;
             Substitutions = root.Substitutions;
         }
@@ -52,6 +53,7 @@ namespace Akka.Configuration
             if (source == null)
                 throw new ArgumentNullException(nameof(source), "The source configuration cannot be null.");
 
+            Value = source.Value;
             Root = source.Root;
             Fallback = fallback;
         }
@@ -68,6 +70,8 @@ namespace Akka.Configuration
         {
             get { return Root == null || Root.IsEmpty; }
         }
+
+        private HoconValue Value { get; set; }
 
         /// <summary>
         /// The root node of this configuration section
@@ -90,6 +94,7 @@ namespace Akka.Configuration
             {
                 Fallback = Fallback != null ? Fallback.Copy(fallback) : fallback,
                 Root = Root,
+                Value = Value,
                 Substitutions = Substitutions
             };
         }
@@ -423,10 +428,10 @@ namespace Akka.Configuration
         /// <returns>A string containing the current configuration.</returns>
         public override string ToString()
         {
-            if (Root == null)
+            if (Value == null)
                 return "";
 
-            return Root.ToString();
+            return Value.ToString();
         }
 
         /// <summary>
