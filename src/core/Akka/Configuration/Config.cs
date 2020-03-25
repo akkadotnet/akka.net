@@ -467,7 +467,7 @@ namespace Akka.Configuration
                 throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
             if (fallback == null)
                 return this;
-            var mergedRoot = Root.GetObject().MergeImmutable(fallback.Root.GetObject());
+            var mergedRoot = fallback.Root.GetObject().MergeImmutable(Root.GetObject());
             var newRoot = new HoconValue();
             newRoot.AppendValue(mergedRoot);
             var mergedConfig = Copy(fallback);
