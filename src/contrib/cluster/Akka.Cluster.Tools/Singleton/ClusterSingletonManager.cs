@@ -1115,7 +1115,7 @@ namespace Akka.Cluster.Tools.Singleton
 
                 else if (e.FsmEvent is AcquireLeaseFailure alf)
                 {
-                    Log.Error(alf.Failure, "failed to get lease (will be retried)");
+                    Log.Error(alf.Failure, "Failed to get lease (will be retried)");
                     SetTimer(LeaseRetryTimer, LeaseRetry.Instance, leaseRetryInterval, repeat: false);
                     return Stay().Using(new AcquiringLeaseData(false, null));
                 }

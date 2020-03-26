@@ -429,7 +429,7 @@ namespace Akka.Cluster.Sharding
 
         public Lease Lease { get; }
         public TimeSpan LeaseRetryInterval { get; } = TimeSpan.FromSeconds(5); // won't be used
-        public ITimerScheduler Timers { get ; set ; }
+        public ITimerScheduler Timers { get; set; }
         public Shard(
             string typeName,
             string shardId,
@@ -534,7 +534,7 @@ namespace Akka.Cluster.Sharding
         public static void HandleLeaseLost<TShard>(this TShard shard, Shard.LeaseLost message) where TShard : IShard
         {
             // The shard region will re-create this when it receives a message for this shard
-            shard.Log.Error("Shard type [{0}] id [{1}] lease lost. Reason: {2}", shard.TypeName, shard.ShardId, message.Reason);
+            shard.Log.Error(message.Reason, "Shard type [{0}] id [{1}] lease lost.", shard.TypeName, shard.ShardId);
             // Stop entities ASAP rather than send termination message
             shard.Context.Stop(shard.Self);
         }
