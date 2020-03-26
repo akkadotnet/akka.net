@@ -1,0 +1,66 @@
+﻿[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+namespace Akka.Coordination
+{
+    public abstract class Lease
+    {
+        public Lease(Akka.Coordination.LeaseSettings settings) { }
+        public Akka.Coordination.LeaseSettings Settings { get; }
+        public abstract System.Threading.Tasks.Task<bool> Acquire();
+        public abstract System.Threading.Tasks.Task<bool> Acquire(System.Action<System.Exception> leaseLostCallback);
+        public abstract bool CheckLease();
+        public abstract System.Threading.Tasks.Task<bool> Release();
+    }
+    public class LeaseException : System.Exception
+    {
+        public LeaseException(string message) { }
+        public LeaseException(string message, System.Exception innerEx) { }
+    }
+    public class LeaseProvider : Akka.Actor.IExtension
+    {
+        public LeaseProvider(Akka.Actor.ExtendedActorSystem system) { }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Akka.Coordination.LeaseProvider Get(Akka.Actor.ActorSystem system) { }
+        public Akka.Coordination.Lease GetLease(string leaseName, string configPath, string ownerName) { }
+    }
+    public class LeaseProviderExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Coordination.LeaseProvider>
+    {
+        public LeaseProviderExtensionProvider() { }
+        public override Akka.Coordination.LeaseProvider CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public sealed class LeaseSettings
+    {
+        public LeaseSettings(string leaseName, string ownerName, Akka.Coordination.TimeoutSettings timeoutSettings, Akka.Configuration.Config leaseConfig) { }
+        public Akka.Configuration.Config LeaseConfig { get; }
+        public string LeaseName { get; }
+        public System.Type LeaseType { get; }
+        public string OwnerName { get; }
+        public Akka.Coordination.TimeoutSettings TimeoutSettings { get; }
+        public static Akka.Coordination.LeaseSettings Create(Akka.Configuration.Config config, string leaseName, string ownerName) { }
+        public override string ToString() { }
+        public Akka.Coordination.LeaseSettings WithTimeoutSettings(Akka.Coordination.TimeoutSettings timeoutSettings) { }
+    }
+    public sealed class LeaseTimeoutException : Akka.Coordination.LeaseException
+    {
+        public LeaseTimeoutException(string message) { }
+        public LeaseTimeoutException(string message, System.Exception innerEx) { }
+    }
+    public sealed class LeaseUsageSettings
+    {
+        public LeaseUsageSettings(string leaseImplementation, System.TimeSpan leaseRetryInterval) { }
+        public string LeaseImplementation { get; }
+        public System.TimeSpan LeaseRetryInterval { get; }
+        public override string ToString() { }
+    }
+    public sealed class TimeoutSettings
+    {
+        public TimeoutSettings(System.TimeSpan heartbeatInterval, System.TimeSpan heartbeatTimeout, System.TimeSpan operationTimeout) { }
+        public System.TimeSpan HeartbeatInterval { get; }
+        public System.TimeSpan HeartbeatTimeout { get; }
+        public System.TimeSpan OperationTimeout { get; }
+        public static Akka.Coordination.TimeoutSettings Create(Akka.Configuration.Config config) { }
+        public override string ToString() { }
+        public Akka.Coordination.TimeoutSettings WithHeartbeatInterval(System.TimeSpan heartbeatInterval) { }
+        public Akka.Coordination.TimeoutSettings WithHeartbeatTimeout(System.TimeSpan heartbeatTimeout) { }
+        public Akka.Coordination.TimeoutSettings withOperationTimeout(System.TimeSpan operationTimeout) { }
+    }
+}

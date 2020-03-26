@@ -11,6 +11,8 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Scheduler;
+using Akka.Coordination;
 using Akka.DistributedData;
 using Akka.Event;
 using Akka.Util;
@@ -26,7 +28,7 @@ namespace Akka.Cluster.Sharding
     /// responsible for. It is used when `rememberEntities` is enabled and
     /// `state-store-mode=ddata`.
     /// </summary>
-    internal sealed class DDataShard : ActorBase, IShard, IWithUnboundedStash
+    internal sealed class DDataShard : ActorBase, IShard, IWithUnboundedStash, IWithTimers
     {
         IActorContext IShard.Context => Context;
         IActorRef IShard.Self => Self;
@@ -51,6 +53,12 @@ namespace Akka.Cluster.Sharding
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
+
+        public ITimerScheduler Timers { get; set; }
+        public Lease Lease { get; }
+        public TimeSpan LeaseRetryInterval { get; } = TimeSpan.FromSeconds(5); // won't be used
+
+
         public Cluster Cluster { get; } = Cluster.Get(Context.System);
         public ILoggingAdapter Log { get; } = Context.GetLogger();
         public IActorRef Replicator { get; }
@@ -108,7 +116,15 @@ namespace Akka.Cluster.Sharding
             _writeConsistency = new WriteMajority(settings.TunningParameters.UpdatingStateTimeout, majorityCap);
             _stateKeys = Enumerable.Range(0, NrOfKeys).Select(i => new ORSetKey<EntryId>($"shard-{typeName}-{shardId}-{i}")).ToImmutableArray();
 
-            GetState();
+            if (settings.LeaseSettings != null)
+            {
+                Lease = LeaseProvider.Get(Context.System).GetLease(
+                    $"{Context.System.Name}-shard-{typeName}-{shardId}",
+                    settings.LeaseSettings.LeaseImplementation,
+                    Cluster.Get(Context.System).SelfAddress.HostPort());
+
+                LeaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
+            }
         }
 
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
@@ -141,6 +157,11 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        protected override void PreStart()
+        {
+            this.AcquireLeaseIfNeeded();
+        }
+
         protected override void PostStop()
         {
             PassivateIdleTask?.Cancel();
@@ -153,6 +174,13 @@ namespace Akka.Cluster.Sharding
         {
             var i = Math.Abs(MurmurHash.StringHash(entityId)) % NrOfKeys;
             return _stateKeys[i];
+        }
+
+        public void OnLeaseAcquired()
+        {
+            Log.Info("Lease Acquired. Getting state from DData");
+            GetState();
+            Context.Become(Receive);
         }
 
         private void GetState()
@@ -199,11 +227,11 @@ namespace Akka.Cluster.Sharding
 
         private void RecoveryCompleted()
         {
-            RestartRememberedEntities();
-            this.Initialized();
             Log.Debug("DDataShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
-            Stash.UnstashAll();
+            Context.Parent.Tell(new ShardInitialized(ShardId));
             Context.Become(HandleCommands);
+            RestartRememberedEntities();
+            Stash.UnstashAll();
         }
 
         private bool HandleCommands(object message)
