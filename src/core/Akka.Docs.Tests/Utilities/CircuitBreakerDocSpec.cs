@@ -13,7 +13,7 @@ using Akka.Pattern;
 
 namespace DocsExamples.Utilities.CircuitBreakers
 {
-	#region circuit-breaker-usage
+    #region circuit-breaker-usage
     public class DangerousActor : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -66,4 +66,45 @@ namespace DocsExamples.Utilities.CircuitBreakers
         }
     }
     #endregion
+
+    public class TellPatternActor : UntypedActor
+    {
+        private readonly IActorRef _recipient;
+        private readonly CircuitBreaker _breaker;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        public TellPatternActor(IActorRef recipient )
+        {
+            _recipient = recipient;
+            _breaker = new CircuitBreaker(
+                maxFailures: 5, 
+                callTimeout: TimeSpan.FromSeconds(10),
+                resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
+        }
+
+        private void NotifyMeOnOpen() => _log.Warning("My CircuitBreaker is now open, and will not close for one minute");
+
+        #region circuit-breaker-tell-pattern
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
+            {
+                case "call" when _breaker.IsClosed:
+                    _recipient.Tell("message"); 
+                    break;
+                case "response": 
+                    _breaker.Succeed();
+                    break;
+                case Exception _:
+                    _breaker.Fail();
+                    break;
+                case ReceiveTimeout _:
+                    _breaker.Fail();
+                    break;
+            }
+        }
+
+        #endregion
+    }
 }

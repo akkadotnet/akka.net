@@ -37,6 +37,7 @@ namespace Akka.Configuration
             if (root.Value == null)
                 throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
 
+            Value = root.Value;
             Root = root.Value;
             Substitutions = root.Substitutions;
         }
@@ -52,6 +53,7 @@ namespace Akka.Configuration
             if (source == null)
                 throw new ArgumentNullException(nameof(source), "The source configuration cannot be null.");
 
+            Value = source.Value;
             Root = source.Root;
             Fallback = fallback;
         }
@@ -68,6 +70,8 @@ namespace Akka.Configuration
         {
             get { return Root == null || Root.IsEmpty; }
         }
+
+        private HoconValue Value { get; set; }
 
         /// <summary>
         /// The root node of this configuration section
@@ -90,6 +94,7 @@ namespace Akka.Configuration
             {
                 Fallback = Fallback != null ? Fallback.Copy(fallback) : fallback,
                 Root = Root,
+                Value = Value,
                 Substitutions = Substitutions
             };
         }
@@ -423,10 +428,10 @@ namespace Akka.Configuration
         /// <returns>A string containing the current configuration.</returns>
         public override string ToString()
         {
-            if (Root == null)
+            if (Value == null)
                 return "";
 
-            return Root.ToString();
+            return Value.ToString();
         }
 
         /// <summary>
@@ -438,21 +443,7 @@ namespace Akka.Configuration
         {
             if (includeFallback == false)
                 return ToString();
-
-            Config current = this;
-
-            if (current.Fallback == null)
-                return current.ToString();
-
-            Config clone = Copy();
-
-            while (current.Fallback != null)
-            {
-                clone.Root.GetObject().Merge(current.Fallback.Root.GetObject());
-                current = current.Fallback;
-            }
-
-            return clone.ToString();
+            return Root.ToString();
         }
 
         /// <summary>
@@ -467,7 +458,10 @@ namespace Akka.Configuration
                 throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
             if (fallback == null)
                 return this;
-            var mergedRoot = Root.GetObject().MergeImmutable(fallback.Root.GetObject());
+            if (IsEmpty)
+                return fallback;
+
+            var mergedRoot = fallback.Root.GetObject().MergeImmutable(Root.GetObject());
             var newRoot = new HoconValue();
             newRoot.AppendValue(mergedRoot);
             var mergedConfig = Copy(fallback);
