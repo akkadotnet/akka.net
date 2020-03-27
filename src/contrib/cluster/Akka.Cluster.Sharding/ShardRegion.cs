@@ -329,7 +329,7 @@ namespace Akka.Cluster.Sharding
         protected IImmutableSet<Member> MembersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(AgeOrdering);
 
         // membersByAge contains members with these status
-        private static readonly HashSet<MemberStatus> MemberStatusOfInterest = new HashSet<MemberStatus> { MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Exiting };
+        private static readonly ImmutableHashSet<MemberStatus> MemberStatusOfInterest = ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Exiting);
 
         /// <summary>
         /// TBD

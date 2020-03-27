@@ -24,7 +24,7 @@ namespace Akka.Cluster.Sharding
     public interface IShardRegionQuery { }
 
     /// <summary>
-    /// Used as a special termination message from <see cref="ClusterSharding"/>
+    /// Used as a special termination message for <see cref="ShardCoordinator"/> singleton actor
     /// </summary>
     internal sealed class Terminate : IDeadLetterSuppression
     {
@@ -90,7 +90,7 @@ namespace Akka.Cluster.Sharding
     /// Shard could be terminated during initialization.
     /// </summary>
     [Serializable]
-    public sealed class ShardInitialized: IEquatable<ShardInitialized>
+    public sealed class ShardInitialized : IEquatable<ShardInitialized>
     {
         /// <summary>
         /// TBD
