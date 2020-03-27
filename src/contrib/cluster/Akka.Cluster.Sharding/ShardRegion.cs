@@ -21,8 +21,9 @@ namespace Akka.Cluster.Sharding
     using Msg = Object;
 
     /// <summary>
-    /// This actor creates children entity actors on demand for the shards that it is told to be
-    /// responsible for. It delegates messages targeted to other shards to the responsible
+    /// This actor creates children shard actors on demand that it is told to be responsible for.
+    /// The shard actors in turn create entity actors on demand.
+    /// It delegates messages targeted to other shards to the responsible
     /// <see cref="ShardRegion"/> actor on other nodes.
     /// </summary>
     public class ShardRegion : ActorBase

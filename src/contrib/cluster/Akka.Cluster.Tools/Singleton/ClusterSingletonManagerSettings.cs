@@ -8,6 +8,8 @@
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Coordination;
+using Akka.Util;
 
 namespace Akka.Cluster.Tools.Singleton
 {
@@ -44,11 +46,18 @@ namespace Akka.Cluster.Tools.Singleton
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonManagerSettings>();
 
+
+            LeaseUsageSettings lease = null;
+            var leaseConfigPath = config.GetString("use-lease");
+            if (!string.IsNullOrEmpty(leaseConfigPath))
+                lease = new LeaseUsageSettings(leaseConfigPath, config.GetTimeSpan("lease-retry-interval"));
+
             return new ClusterSingletonManagerSettings(
                 singletonName: config.GetString("singleton-name"),
                 role: RoleOption(config.GetString("role")),
                 removalMargin: TimeSpan.Zero, // defaults to ClusterSettings.DownRemovalMargin
-                handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"));
+                handOverRetryInterval: config.GetTimeSpan("hand-over-retry-interval"),
+                leaseSettings: lease);
         }
 
         private static string RoleOption(string role)
@@ -79,18 +88,23 @@ namespace Akka.Cluster.Tools.Singleton
         public TimeSpan HandOverRetryInterval { get; }
 
         /// <summary>
+        /// LeaseSettings for acquiring before creating the singleton actor
+        /// </summary>
+        public LeaseUsageSettings LeaseSettings { get; }
+
+        /// <summary>
         /// Creates a new instance of the <see cref="ClusterSingletonManagerSettings"/>.
         /// </summary>
         /// <param name="singletonName">The actor name of the child singleton actor.</param>
         /// <param name="role">
-        /// Singleton among the nodes tagged with specified role. If the role is not specified 
+        /// Singleton among the nodes tagged with specified role. If the role is not specified
         /// it's a singleton among all nodes in the cluster.
         /// </param>
         /// <param name="removalMargin">
-        /// Margin until the singleton instance that belonged to a downed/removed partition is 
-        /// created in surviving partition. The purpose of  this margin is that in case of 
-        /// a network partition the singleton actors  in the non-surviving partitions must 
-        /// be stopped before corresponding actors are started somewhere else. 
+        /// Margin until the singleton instance that belonged to a downed/removed partition is
+        /// created in surviving partition. The purpose of  this margin is that in case of
+        /// a network partition the singleton actors  in the non-surviving partitions must
+        /// be stopped before corresponding actors are started somewhere else.
         /// This is especially important for persistent actors.
         /// </param>
         /// <param name="handOverRetryInterval">
@@ -102,6 +116,35 @@ namespace Akka.Cluster.Tools.Singleton
         /// </param>
         /// <exception cref="ArgumentException">TBD</exception>
         public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval)
+            : this(singletonName, role, removalMargin, handOverRetryInterval, null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="ClusterSingletonManagerSettings"/>.
+        /// </summary>
+        /// <param name="singletonName">The actor name of the child singleton actor.</param>
+        /// <param name="role">
+        /// Singleton among the nodes tagged with specified role. If the role is not specified
+        /// it's a singleton among all nodes in the cluster.
+        /// </param>
+        /// <param name="removalMargin">
+        /// Margin until the singleton instance that belonged to a downed/removed partition is
+        /// created in surviving partition. The purpose of  this margin is that in case of
+        /// a network partition the singleton actors  in the non-surviving partitions must
+        /// be stopped before corresponding actors are started somewhere else.
+        /// This is especially important for persistent actors.
+        /// </param>
+        /// <param name="handOverRetryInterval">
+        /// When a node is becoming oldest it sends hand-over
+        /// request to previous oldest, that might be leaving the cluster. This is
+        /// retried with this interval until the previous oldest confirms that the hand
+        /// over has started or the previous oldest member is removed from the cluster
+        /// (+ <paramref name="removalMargin"/>).
+        /// </param>
+        /// <param name="leaseSettings">LeaseSettings for acquiring before creating the singleton actor</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        public ClusterSingletonManagerSettings(string singletonName, string role, TimeSpan removalMargin, TimeSpan handOverRetryInterval, LeaseUsageSettings leaseSettings)
         {
             if (string.IsNullOrWhiteSpace(singletonName))
                 throw new ArgumentNullException(nameof(singletonName));
@@ -114,6 +157,7 @@ namespace Akka.Cluster.Tools.Singleton
             Role = role;
             RemovalMargin = removalMargin;
             HandOverRetryInterval = handOverRetryInterval;
+            LeaseSettings = leaseSettings;
         }
 
         /// <summary>
@@ -156,14 +200,26 @@ namespace Akka.Cluster.Tools.Singleton
             return Copy(handOverRetryInterval: handOverRetryInterval);
         }
 
-        private ClusterSingletonManagerSettings Copy(string singletonName = null, string role = null, TimeSpan? removalMargin = null,
-            TimeSpan? handOverRetryInterval = null)
+        /// <summary>
+        /// Create a singleton manager with specified singleton lease settings.
+        /// </summary>
+        /// <param name="leaseSettings">TBD</param>
+        /// <returns></returns>
+        public ClusterSingletonManagerSettings WithLeaseSettings(LeaseUsageSettings leaseSettings)
+        {
+            return Copy(leaseSettings: leaseSettings);
+        }
+
+        private ClusterSingletonManagerSettings Copy(string singletonName = null, Option<string> role = default, TimeSpan? removalMargin = null,
+            TimeSpan? handOverRetryInterval = null, Option<LeaseUsageSettings> leaseSettings = default)
         {
             return new ClusterSingletonManagerSettings(
                 singletonName: singletonName ?? SingletonName,
-                role: role ?? Role,
+                role: role.HasValue ? role.Value : Role,
                 removalMargin: removalMargin ?? RemovalMargin,
-                handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval);
+                handOverRetryInterval: handOverRetryInterval ?? HandOverRetryInterval,
+                leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings
+                );
         }
     }
 }
