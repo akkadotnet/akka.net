@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Akka.Actor;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Event;
 
 namespace Akka.Cluster.Sharding
 {
@@ -21,6 +22,18 @@ namespace Akka.Cluster.Sharding
     /// TBD
     /// </summary>
     public interface IShardRegionQuery { }
+
+    /// <summary>
+    /// Used as a special termination message for <see cref="ShardCoordinator"/> singleton actor
+    /// </summary>
+    internal sealed class Terminate : IDeadLetterSuppression
+    {
+        public static readonly Terminate Instance = new Terminate();
+
+        private Terminate()
+        {
+        }
+    }
 
     /// <summary>
     /// If the state of the entries are persistent you may stop entries that are not used to
@@ -77,7 +90,7 @@ namespace Akka.Cluster.Sharding
     /// Shard could be terminated during initialization.
     /// </summary>
     [Serializable]
-    public sealed class ShardInitialized: IEquatable<ShardInitialized>
+    public sealed class ShardInitialized : IEquatable<ShardInitialized>
     {
         /// <summary>
         /// TBD

@@ -328,6 +328,9 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         protected IImmutableSet<Member> MembersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(AgeOrdering);
 
+        // membersByAge contains members with these status
+        private static readonly ImmutableHashSet<MemberStatus> MemberStatusOfInterest = ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Exiting);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -426,14 +429,27 @@ namespace Akka.Cluster.Sharding
         public int TotalBufferSize { get { return ShardBuffers.Aggregate(0, (acc, entity) => acc + entity.Value.Count); } }
 
         /// <summary>
-        /// TBD
+        /// When leaving the coordinator singleton is started rather quickly on next
+        /// oldest node and therefore it is good to send the Register and GracefulShutdownReq to
+        /// the likely locations of the coordinator.
         /// </summary>
-        protected ActorSelection CoordinatorSelection
+        /// <returns></returns>
+        private List<ActorSelection> CoordinatorSelection
         {
             get
             {
-                var firstMember = MembersByAge.FirstOrDefault();
-                return firstMember == null ? null : Context.ActorSelection(firstMember.Address + CoordinatorPath);
+                IEnumerable<Member> SelectMembers()
+                {
+                    foreach (var m in MembersByAge)
+                    {
+                        yield return m;
+                        if (m.Status == MemberStatus.Up)
+                            break;
+                    }
+                }
+
+                return SelectMembers()
+                    .Select(m => Context.ActorSelection(new RootActorPath(m.Address) + CoordinatorPath)).ToList();
             }
         }
 
@@ -557,21 +573,29 @@ namespace Akka.Cluster.Sharding
 
         private void Register()
         {
-            var coordinator = CoordinatorSelection;
-            coordinator?.Tell(RegistrationMessage);
+            var actorSelections = CoordinatorSelection;
+            foreach (var coordinator in actorSelections)
+                coordinator.Tell(RegistrationMessage);
+
             if (ShardBuffers.Count != 0 && _retryCount >= RetryCountThreshold)
             {
-                if (coordinator != null)
+                if (actorSelections.Count > 0)
                 {
                     var coordinatorMessage = Cluster.State.Unreachable.Contains(MembersByAge.First()) ? $"Coordinator [{MembersByAge.First()}] is unreachable." : $"Coordinator [{MembersByAge.First()}] is reachable.";
 
                     Log.Warning("Trying to register to coordinator at [{0}], but no acknowledgement. Total [{1}] buffered messages. [{2}]",
-                        coordinator != null ? coordinator.PathString : string.Empty, TotalBufferSize, coordinatorMessage);
+                       string.Join(", ", actorSelections.Select(i => i.PathString)), TotalBufferSize, coordinatorMessage);
                 }
                 else
                 {
-                    Log.Warning("No coordinator found to register. Probably, no seed-nodes configured and manual cluster join not performed? Total [{0}] buffered messages.",
-                        TotalBufferSize);
+                    // Members start off as "Removed"
+                    var partOfCluster = Cluster.SelfMember.Status != MemberStatus.Removed;
+                    var possibleReason = partOfCluster ?
+                        "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?" :
+                        "Probably, no seed-nodes configured and manual cluster join not performed?";
+
+                    Log.Warning("No coordinator found to register. {0} Total [{1}] buffered messages.",
+                        possibleReason, TotalBufferSize);
                 }
             }
         }
@@ -791,17 +815,6 @@ namespace Akka.Cluster.Sharding
             return Task.WhenAll(tasks);
         }
 
-        private List<ActorSelection> GracefulShutdownCoordinatorSelections
-        {
-            get
-            {
-                return
-                    MembersByAge.Take(2)
-                        .Select(m => Context.ActorSelection(new RootActorPath(m.Address) + CoordinatorPath))
-                        .ToList();
-            }
-        }
-
         private void TryCompleteGracefulShutdown()
         {
             if (GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
@@ -811,7 +824,7 @@ namespace Akka.Cluster.Sharding
         private void SendGracefulShutdownToCoordinator()
         {
             if (GracefulShutdownInProgress)
-                GracefulShutdownCoordinatorSelections
+                CoordinatorSelection
                     .ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
         }
 
@@ -990,7 +1003,7 @@ namespace Akka.Cluster.Sharding
 
         private void HandleClusterState(ClusterEvent.CurrentClusterState state)
         {
-            var members = ImmutableSortedSet<Member>.Empty.WithComparer(AgeOrdering).Union(state.Members.Where(m => m.Status == MemberStatus.Up && MatchingRole(m)));
+            var members = ImmutableSortedSet<Member>.Empty.WithComparer(AgeOrdering).Union(state.Members.Where(m => MemberStatusOfInterest.Contains(m.Status) && MatchingRole(m)));
             ChangeMembers(members);
         }
 
@@ -998,14 +1011,16 @@ namespace Akka.Cluster.Sharding
         {
             switch (e)
             {
-
                 case ClusterEvent.MemberUp mu:
-                    {
-                        var m = mu.Member;
-                        if (MatchingRole(m))
-                            ChangeMembers(MembersByAge.Remove(m).Add(m)); // replace
-                    }
+                    AddMember(mu.Member);
                     break;
+                case ClusterEvent.MemberLeft ml:
+                    AddMember(ml.Member);
+                    break;
+                case ClusterEvent.MemberExited me:
+                    AddMember(me.Member);
+                    break;
+
                 case ClusterEvent.MemberRemoved mr:
                     {
                         var m = mr.Member;
@@ -1029,6 +1044,15 @@ namespace Akka.Cluster.Sharding
                 default:
                     Unhandled(e);
                     break;
+            }
+        }
+
+        private void AddMember(Member m)
+        {
+            if (MatchingRole(m) && MemberStatusOfInterest.Contains(m.Status))
+            {
+                // replace, it's possible that the status, or upNumber is changed
+                ChangeMembers(MembersByAge.Remove(m).Add(m));
             }
         }
 

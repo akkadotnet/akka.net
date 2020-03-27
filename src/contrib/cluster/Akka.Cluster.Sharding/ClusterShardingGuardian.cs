@@ -156,7 +156,6 @@ namespace Akka.Cluster.Sharding
         private readonly ClusterSharding _sharding = ClusterSharding.Get(Context.System);
 
         private readonly int _majorityMinCap = Context.System.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap", 0);
-        private readonly ReplicatorSettings _replicatorSettings = ReplicatorSettings.Create(Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data"));
         private ImmutableDictionary<string, IActorRef> _replicatorsByRole = ImmutableDictionary<string, IActorRef>.Empty;
 
         /// <summary>
@@ -184,9 +183,19 @@ namespace Akka.Cluster.Sharding
                                 ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)
                                 : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, settings.RememberEntities);
 
-                            var singletonProps = BackoffSupervisor.Props(coordinatorProps, "coordinator", minBackoff, maxBackoff, 0.2, -1).WithDeploy(Deploy.Local);
+                            var singletonProps = BackoffSupervisor.Props(
+                                Backoff.OnStop(
+                                    childProps: coordinatorProps,
+                                    childName: "coordinator",
+                                    minBackoff: minBackoff,
+                                    maxBackoff: maxBackoff,
+                                    randomFactor: 0.2,
+                                    maxNrOfRetries: -1)
+                                .WithFinalStopMessage(m => m is Terminate))
+                                .WithDeploy(Deploy.Local);
+
                             var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
-                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, PoisonPill.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
+                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, Terminate.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
                         }
                         return Context.ActorOf(ShardRegion.Props(
                             typeName: start.TypeName,
@@ -240,6 +249,16 @@ namespace Akka.Cluster.Sharding
             });
         }
 
+        private ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
+        {
+            var configuredSettings = ReplicatorSettings.Create(Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data"));
+            var settingsWithRoles = configuredSettings.WithRole(shardingSettings.Role);
+            if (shardingSettings.RememberEntities)
+                return settingsWithRoles;
+            else
+                return settingsWithRoles.WithDurableKeys(ImmutableHashSet<string>.Empty);
+        }
+
         private IActorRef Replicator(ClusterShardingSettings settings)
         {
             if (settings.StateStoreMode == StateStoreMode.DData)
@@ -250,7 +269,7 @@ namespace Akka.Cluster.Sharding
                 else
                 {
                     var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
-                    var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(_replicatorSettings.WithRole(settings.Role)), name);
+                    var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(GetReplicatorSettings(settings)), name);
 
                     _replicatorsByRole = _replicatorsByRole.SetItem(role, replicatorRef);
                     return replicatorRef;
