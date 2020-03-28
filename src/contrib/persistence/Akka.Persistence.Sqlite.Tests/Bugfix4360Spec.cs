@@ -111,7 +111,7 @@ auto-initialize = on
         public Bugfix4360Spec(ITestOutputHelper output) : base(TestConf, output: output) { }
 
         [Fact]
-        public void Bugfix4360_should_recover_persistentactor_sqlite()
+        public void Should_recover_persistentactor_sqlite()
         {
             var recoveryActor = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), ThreadLocalRandom.Current.Next(0, 100000).ToString());
 
@@ -133,6 +133,24 @@ auto-initialize = on
 
             var r2 = ExpectMsg<IEnumerable<string>>();
             r2.Should().Contain(new[] { "foo", "bar" });
+        }
+
+        [Fact]
+        public void Should_override_default_Sqlite_fallback_values()
+        {
+            SqlitePersistence.Get(Sys);
+
+            var journalConfig = Sys.Settings.Config.GetConfig("akka.persistence.journal.sqlite");
+            Assert.Equal(TimeSpan.FromSeconds(25), journalConfig.GetTimeSpan("connection-timeout"));
+            Assert.Equal("event_journal", journalConfig.GetString("table-name"));
+            Assert.Equal("journal_metadata", journalConfig.GetString("metadata-table-name"));
+
+            var snapshotConfig = Sys.Settings.Config.GetConfig("akka.persistence.snapshot-store.sqlite");
+
+            Assert.False(snapshotConfig.IsNullOrEmpty());
+            Assert.Equal("DataSource=AkkaSnapShotfxR16.db", snapshotConfig.GetString("connection-string"));
+            Assert.Equal(TimeSpan.FromSeconds(25), snapshotConfig.GetTimeSpan("connection-timeout"));
+            Assert.Equal("snapshot_store", snapshotConfig.GetString("table-name"));
         }
     }
 }
