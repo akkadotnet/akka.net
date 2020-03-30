@@ -309,7 +309,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            return Config.Root.ToString();
+            return Config.ToString();
         }
     }
 }
