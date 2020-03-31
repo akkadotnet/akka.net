@@ -82,7 +82,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class DDataClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
     {
         public DDataClusterShardingGracefulShutdownSpec() : this(new DDataClusterShardingGracefulShutdownSpecConfig()) { }
-        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
+        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(DDataClusterShardingGracefulShutdownSpec)) { }
     }
     public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("startup");
         }
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();

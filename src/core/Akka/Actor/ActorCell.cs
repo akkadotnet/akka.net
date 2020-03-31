@@ -86,7 +86,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public object CurrentMessage { get; private set; }
+        public object CurrentMessage { get; internal set; }
         /// <summary>
         /// TBD
         /// </summary>

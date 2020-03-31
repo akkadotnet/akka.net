@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
+    <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
     <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
