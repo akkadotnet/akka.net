@@ -102,6 +102,7 @@ namespace Akka.Cluster.Sharding
 
         protected override void PostStop()
         {
+            this.ReleaseLeaseIfNeeded();
             PassivateIdleTask?.Cancel();
             base.PostStop();
         }
