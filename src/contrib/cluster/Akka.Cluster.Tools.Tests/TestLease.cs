@@ -16,7 +16,7 @@ namespace Akka.Cluster.Tools.Tests
 {
     public class TestLease : Lease
     {
-        internal sealed class AcquireReq : IEquatable<AcquireReq>
+        public sealed class AcquireReq : IEquatable<AcquireReq>
         {
             public string Owner { get; }
 
@@ -40,7 +40,7 @@ namespace Akka.Cluster.Tools.Tests
             public override string ToString() => $"AcquireReq({Owner})";
         }
 
-        internal sealed class ReleaseReq : IEquatable<ReleaseReq>
+        public sealed class ReleaseReq : IEquatable<ReleaseReq>
         {
             public string Owner { get; }
 
