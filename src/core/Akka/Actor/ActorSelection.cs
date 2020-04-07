@@ -75,18 +75,34 @@ namespace Akka.Actor
         public ActorSelection(IActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
-            
-            Path = elements
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select<string, SelectionPathElement>(e =>
+
+            var list = new List<SelectionPathElement>();
+            var iter = elements.Iterator();
+            while(!iter.IsEmpty())
+            {
+                var s = iter.Next();
+                switch(s)
                 {
-                    if (e.Contains("?") || e.Contains("*"))
-                        return new SelectChildPattern(e);
-                    if (e == "..")
-                        return new SelectParent();
-                    return new SelectChildName(e);
-                })
-                .ToArray();
+                    case null:
+                    case "":
+                        break;
+                    case "**":
+                        if(!iter.IsEmpty())
+                            throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
+                        list.Add(new SelectChildRecursive());
+                        break;
+                    case string e when e.Contains("?") || e.Contains("*"):
+                        list.Add(new SelectChildPattern(e));
+                        break;
+                    case string e when e == "..":
+                        list.Add(new SelectParent());
+                        break;
+                    default:
+                        list.Add(new SelectChildName(s));
+                        break;
+                }
+            }
+            Path = list.ToArray();
         }
 
         /// <summary>
@@ -212,6 +228,36 @@ namespace Akka.Actor
                                     Rec(child);
                                 }
 
+                                break;
+                            case SelectChildRecursive _:
+                                var allChildren = refWithCell.RecursiveChildren.ToList();
+
+                                if (iter.IsEmpty())
+                                {
+                                    if (allChildren.Count == 0 && !sel.WildCardFanOut)
+                                        emptyRef.Tell(sel, sender);
+                                    else
+                                    {
+                                        for (var i = 0; i < allChildren.Count; i++)
+                                            allChildren[i].Tell(sel.Message, sender);
+                                    }
+                                }
+                                else
+                                {
+                                    // don't send to emptyRef after wildcard fan-out 
+                                    if (allChildren.Count == 0 && !sel.WildCardFanOut)
+                                        emptyRef.Tell(sel, sender);
+                                    else
+                                    {
+                                        var message = new ActorSelectionMessage(
+                                            message: sel.Message,
+                                            elements: iter.ToVector().ToArray(),
+                                            wildCardFanOut: sel.WildCardFanOut || allChildren.Count > 1);
+
+                                        for (var i = 0; i < allChildren.Count; i++)
+                                            DeliverSelection(allChildren[i] as IInternalActorRef, sender, message);
+                                    }
+                                }
                                 break;
                             case SelectChildPattern pattern:
                                 // fan-out when there is a wildcard
@@ -435,6 +481,24 @@ namespace Akka.Actor
         public override string ToString() => PatternStr;
     }
 
+    public class SelectChildRecursive : SelectionPathElement
+    {
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if(!(obj is SelectChildRecursive)) return false;
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => "**".GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => "**";
+
+    }
 
     /// <summary>
     /// Class SelectParent.

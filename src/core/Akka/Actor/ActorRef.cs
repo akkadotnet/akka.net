@@ -640,12 +640,51 @@ namespace Akka.Actor
         public abstract IEnumerable<IActorRef> Children { get; }
 
         /// <summary>
+        /// An iterable collection of the actor's children and their children. Empty if there are none.
+        /// </summary>
+        public IEnumerable<IActorRef> RecursiveChildren { 
+            get
+            {
+                foreach (var child in Children.SelectMany(x =>
+                {
+                    switch (x)
+                    {
+                        case ActorRefWithCell cell:
+                            return cell.SelfAndChildren();
+                        default:
+                            return new[] { x };
+                    }
+                }))
+                {
+                    yield return child;
+                }
+            }
+        }
+
+        /// <summary>
         /// Fetches a reference to a single child actor.
         /// </summary>
         /// <param name="name">The name of the child we're trying to fetch.</param>
         /// <returns>If the child exists, it returns the child actor. Otherwise, we return <see cref="ActorRefs.Nobody"/>.</returns>
         public abstract IInternalActorRef GetSingleChild(string name);
 
+        private IEnumerable<IActorRef> SelfAndChildren()
+        {
+            yield return this;
+            foreach(var child in Children.SelectMany(x =>
+            {
+                switch(x)
+                {
+                    case ActorRefWithCell cell:
+                        return cell.SelfAndChildren();
+                    default:
+                        return new[] { x };
+                }
+            }))
+            {
+                yield return child;
+            }
+        }
     }
 
     /// <summary>

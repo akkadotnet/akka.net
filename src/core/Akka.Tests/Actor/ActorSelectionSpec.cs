@@ -449,8 +449,37 @@ namespace Akka.Tests.Actor
             probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(7, null));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
+            // Double wildcard, recursively get all children below /user/a
+            var expecteds = new List<ActorIdentity>
+            {
+                new ActorIdentity(9, b1),
+                new ActorIdentity(9, b2),
+                new ActorIdentity(9, c),
+                new ActorIdentity(9, d)
+            };
+            Sys.ActorSelection("/user/a/**").Tell(new Identify(9), probe.Ref);
+            probe.ExpectMsg<ActorIdentity>().Should(i => EqualsOnce(i, expecteds), "");
+            probe.ExpectMsg<ActorIdentity>().Should(i => EqualsOnce(i, expecteds), "");
+            probe.ExpectMsg<ActorIdentity>().Should(i => EqualsOnce(i, expecteds), "");
+            probe.ExpectMsg<ActorIdentity>().Should(i => EqualsOnce(i, expecteds), "");
+            expecteds.Count.Should().Be(0);
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
+
             Sys.ActorSelection("/user/a/*/c/d/e").Tell(new Identify(8), probe.Ref);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+        }
+
+        private bool EqualsOnce(ActorIdentity source, List<ActorIdentity> expected)
+        {
+            foreach(var e in expected)
+            {
+                if(source.Equals(e))
+                {
+                    expected.Remove(e);
+                    return true;
+                }
+            }
+            return false;
         }
 
         [Fact]
