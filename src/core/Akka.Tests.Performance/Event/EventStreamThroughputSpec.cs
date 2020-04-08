@@ -58,7 +58,7 @@ namespace Akka.Tests.Performance.Event
 
         [PerfBenchmark(
             Description = "Measures the throughput of an ActorBase + Pattern match class",
-            RunMode = RunMode.Iterations, NumberOfIterations = 13, TestMode = TestMode.Measurement,
+            RunMode = RunMode.Iterations, NumberOfIterations = 5, TestMode = TestMode.Measurement,
             RunTimeMilliseconds = 1000)]
         [CounterMeasurement(MailboxCounterName)]
         [GcMeasurement(GcMetric.TotalCollections, GcGeneration.AllGc)]
