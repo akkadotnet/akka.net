@@ -4,6 +4,8 @@
 //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Util.Internal;
 using NBench;
@@ -29,14 +31,14 @@ namespace Akka.Tests.Performance.Event
                 _counter.Increment();
             }
 
-            public override ActorPath Path { get { return null; } }
+            public override ActorPath Path { get { return new RootActorPath(Address.AllSystems) / "user" / "foo"; } }
             public override IActorRefProvider Provider { get { return null; } }
         }
 
         private string stringExample = "just_string";
 
         private const string MailboxCounterName = "MessageReceived";
-        private const long MailboxMessageCount = 10000000;
+        private const long MailboxMessageCount = 100000000;
         private Counter _mailboxThroughput;
 
         private IActorRef _targetActor;
@@ -67,6 +69,13 @@ namespace Akka.Tests.Performance.Event
                System.EventStream.Publish(stringExample);
                ++i;
             }
+        }
+
+        [PerfCleanup]
+        public void Cleanup()
+        {
+            System.Terminate().Wait();
+            System = null;
         }
     }
 }
