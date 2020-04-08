@@ -4893,17 +4893,6 @@ namespace Akka.Util
     {
         public static System.Func<System.Func<T>, System.Collections.Generic.IList<T>> Fill<T>(int number) { }
     }
-    public sealed class WildcardIndex<T> : System.IEquatable<Akka.Util.WildcardIndex<T>>
-        where T :  class
-    {
-        public WildcardIndex() { }
-        public bool IsEmpty { get; }
-        public bool Equals(Akka.Util.WildcardIndex<T> other) { }
-        public override bool Equals(object obj) { }
-        public T Find(System.Collections.Generic.IEnumerable<string> elems) { }
-        public override int GetHashCode() { }
-        public Akka.Util.WildcardIndex<T> Insert(System.Collections.Generic.IEnumerable<string> elems, T data) { }
-    }
     public class static WildcardMatch
     {
         public static bool Like(this string text, string pattern, bool caseSensitive = False) { }

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Akka.Util
 {
-    public sealed class WildcardIndex<T> : IEquatable<WildcardIndex<T>> where T : class
+    internal sealed class WildcardIndex<T> : IEquatable<WildcardIndex<T>> where T : class
     {
         private readonly WildcardTree<T> _wildcardTree;
         private readonly WildcardTree<T> _doubleWildcardTree;
