@@ -476,6 +476,7 @@ namespace Akka.Cluster.Sharding
 
         protected override void PostStop()
         {
+            this.ReleaseLeaseIfNeeded();
             PassivateIdleTask?.Cancel();
             base.PostStop();
         }
@@ -513,6 +514,30 @@ namespace Akka.Cluster.Sharding
             }
             else
                 shard.OnLeaseAcquired();
+        }
+
+        public static void ReleaseLeaseIfNeeded<TShard>(this TShard shard) where TShard : IShard
+        {
+            if (shard.Lease != null)
+            {
+                shard.Lease.Release().ContinueWith(r =>
+                {
+                    if (r.IsFaulted || r.IsCanceled)
+                    {
+                        shard.Log.Error(r.Exception,
+                            "Failed to release lease of shard type [{0}] id [{1}]. Shard may not be able to run on another node until lease timeout occurs.", shard.TypeName, shard.ShardId);
+                    }
+                    else if (r.Result)
+                    {
+                        shard.Log.Info("Lease of shard type [{0}] id [{1}] released.", shard.TypeName, shard.ShardId);
+                    }
+                    else
+                    {
+                        shard.Log.Error(
+                            "Failed to release lease of shard type [{0}] id [{1}]. Shard may not be able to run on another node until lease timeout occurs.", shard.TypeName, shard.ShardId);
+                    }
+                });
+            }
         }
 
         public static void TryGetLease<TShard>(this TShard shard, Lease lease) where TShard : IShard
