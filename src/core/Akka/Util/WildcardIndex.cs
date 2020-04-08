@@ -68,10 +68,13 @@ namespace Akka.Util
 
         public override int GetHashCode()
         {
-            var hashCode = -872755323;
-            hashCode = hashCode * -1521134295 + _wildcardTree.GetHashCode();
-            hashCode = hashCode * -1521134295 + _doubleWildcardTree.GetHashCode();
-            return hashCode;
+            unchecked
+            {
+                var hashCode = -872755323;
+                hashCode = hashCode * -1521134295 + _wildcardTree.GetHashCode();
+                hashCode = hashCode * -1521134295 + _doubleWildcardTree.GetHashCode();
+                return hashCode;
+            }
         }
     }
 }
