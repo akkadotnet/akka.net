@@ -230,33 +230,15 @@ namespace Akka.Actor
 
                                 break;
                             case SelectChildRecursive _:
-                                var allChildren = refWithCell.RecursiveChildren.ToList();
+                                var allChildren = refWithCell.Children.ToList();
+                                if (allChildren.Count == 0)
+                                    return;
 
-                                if (iter.IsEmpty())
+                                var msg = new ActorSelectionMessage(sel.Message, new[] { new SelectChildRecursive() }, true);
+                                foreach (var c in allChildren)
                                 {
-                                    if (allChildren.Count == 0 && !sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
-                                    else
-                                    {
-                                        for (var i = 0; i < allChildren.Count; i++)
-                                            allChildren[i].Tell(sel.Message, sender);
-                                    }
-                                }
-                                else
-                                {
-                                    // don't send to emptyRef after wildcard fan-out 
-                                    if (allChildren.Count == 0 && !sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
-                                    else
-                                    {
-                                        var message = new ActorSelectionMessage(
-                                            message: sel.Message,
-                                            elements: iter.ToVector().ToArray(),
-                                            wildCardFanOut: sel.WildCardFanOut || allChildren.Count > 1);
-
-                                        for (var i = 0; i < allChildren.Count; i++)
-                                            DeliverSelection(allChildren[i] as IInternalActorRef, sender, message);
-                                    }
+                                    c.Tell(sel.Message, sender);
+                                    DeliverSelection(c as IInternalActorRef, sender, msg);
                                 }
                                 break;
                             case SelectChildPattern pattern:
