@@ -628,7 +628,6 @@ namespace Akka.Actor
         public Deployer(Akka.Actor.Settings settings) { }
         public Akka.Actor.Deploy Lookup(Akka.Actor.ActorPath path) { }
         public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerable<string> path) { }
-        public Akka.Actor.Deploy Lookup(System.Collections.Generic.IEnumerator<string> path) { }
         public virtual Akka.Actor.Deploy ParseConfig(string key, Akka.Configuration.Config config) { }
         public void SetDeploy(Akka.Actor.Deploy deploy) { }
     }
@@ -4897,19 +4896,6 @@ namespace Akka.Util
     public class static WildcardMatch
     {
         public static bool Like(this string text, string pattern, bool caseSensitive = False) { }
-    }
-    public sealed class WildcardTree<T>
-        where T :  class
-    {
-        public static readonly Akka.Util.WildcardTree<T> Empty;
-        public WildcardTree() { }
-        public WildcardTree(T data, System.Collections.Generic.IDictionary<string, Akka.Util.WildcardTree<T>> children) { }
-        public System.Collections.Generic.IDictionary<string, Akka.Util.WildcardTree<T>> Children { get; }
-        public T Data { get; }
-        public override bool Equals(object obj) { }
-        public Akka.Util.WildcardTree<T> Find(System.Collections.Generic.IEnumerator<string> elements) { }
-        public override int GetHashCode() { }
-        public Akka.Util.WildcardTree<T> Insert(System.Collections.Generic.IEnumerator<string> elements, T data) { }
     }
 }
 namespace Akka.Util.Extensions
