@@ -237,19 +237,6 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private class MemberAgeComparer : IComparer<Member>
-        {
-            public static readonly IComparer<Member> Instance = new MemberAgeComparer();
-
-            private MemberAgeComparer() { }
-
-            public int Compare(Member x, Member y)
-            {
-                if (x.IsOlderThan(y)) return -1;
-                return y.IsOlderThan(x) ? 1 : 0;
-            }
-        }
-
         /// <summary>
         /// Factory method for the <see cref="Actor.Props"/> of the <see cref="ShardRegion"/> actor.
         /// </summary>
@@ -321,12 +308,10 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly Cluster Cluster = Cluster.Get(Context.System);
 
-        // sort by age, oldest first
-        private static readonly IComparer<Member> AgeOrdering = MemberAgeComparer.Instance;
         /// <summary>
         /// TBD
         /// </summary>
-        protected IImmutableSet<Member> MembersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(AgeOrdering);
+        protected IImmutableSet<Member> MembersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering);
 
         // membersByAge contains members with these status
         private static readonly ImmutableHashSet<MemberStatus> MemberStatusOfInterest = ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Exiting);
@@ -1003,7 +988,7 @@ namespace Akka.Cluster.Sharding
 
         private void HandleClusterState(ClusterEvent.CurrentClusterState state)
         {
-            var members = ImmutableSortedSet<Member>.Empty.WithComparer(AgeOrdering).Union(state.Members.Where(m => MemberStatusOfInterest.Contains(m.Status) && MatchingRole(m)));
+            var members = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering).Union(state.Members.Where(m => MemberStatusOfInterest.Contains(m.Status) && MatchingRole(m)));
             ChangeMembers(members);
         }
 
