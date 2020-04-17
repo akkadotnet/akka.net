@@ -195,7 +195,7 @@ namespace Akka.Actor.Scheduler
                 task = ctx.System.Scheduler.ScheduleTellOnceCancelable(timeout, ctx.Self, timerMsg, ActorRefs.NoSender);
 
             var nextTimer = new Timer(key, msg, repeat, nextGen, task);
-            ctx.System.Log.Debug("Start timer [{0}] with generation [{1}]", key, timerGen);
+            ctx.System.Log.Debug("Start timer [{0}] with generation [{1}]", key, nextGen);
             timers[key] = nextTimer;
         }
 
