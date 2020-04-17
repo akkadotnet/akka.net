@@ -1429,7 +1429,8 @@ namespace Akka.DistributedData.Serialization
             var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
             var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
 
-            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
+            var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
+            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
             return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
         }
 
