@@ -300,6 +300,87 @@ namespace Akka.DistributedData.Tests
         }
 
         [Fact]
+        public void Bug4367_ORMultiDictionary_DeltaGroup_must_cast_to_ORSet()
+        {
+            var sys = ActorSystem.Create("test", DistributedData.DefaultConfig());
+            var replicatorSerializer = new ReplicatorMessageSerializer((ExtendedActorSystem)sys);
+            var replicatedSerializer = new ReplicatedDataSerializer((ExtendedActorSystem)sys);
+
+            var m1 = ORMultiValueDictionary<string, string>.Empty;
+            var m2 = ORMultiValueDictionary<string, string>.Empty;
+
+            var mergedDict = new Dictionary<string, HashSet<string>>();
+
+            for (var i = 0; i < 100; ++i)
+            {
+                var updateSet = CreateRandomSet(5);
+                foreach (var kvp in updateSet)
+                {
+                    var key = kvp.Key;
+                    var setValue = kvp.Value;
+
+                    if (!mergedDict.TryGetValue(key, out var list))
+                    {
+                        list = new HashSet<string>();
+                        mergedDict[key] = list;
+                    }
+                    foreach(var value in setValue)
+                    {
+                        list.Add(value);
+                        m1 = m1.AddItem(_node1, key, value);
+                    }
+                }
+
+                var deltaSerialized = replicatedSerializer.ToBinary(m1.Delta);
+                var deltaManifest = replicatedSerializer.Manifest(m1.Delta);
+                var deltaDeserialized = (ORMultiValueDictionary<string, string>.ORMultiValueDictionaryDelta) replicatedSerializer.FromBinary(deltaSerialized, deltaManifest);
+
+                var dataEnvelope = new DataEnvelope(deltaDeserialized);
+
+                var serialized = replicatorSerializer.ToBinary(dataEnvelope);
+                var manifest = replicatorSerializer.Manifest(dataEnvelope);
+                var deseralized = (DataEnvelope) replicatorSerializer.FromBinary(serialized, manifest);
+
+                if (deseralized.Data is IReplicatedDelta withDelta)
+                {
+                    deseralized = deseralized.WithData(withDelta.Zero.MergeDelta(withDelta));
+                }
+                var storedData = deseralized.Data;
+
+                // simulate merging an update
+                m2 = (ORMultiValueDictionary<string, string>)m2.Merge(storedData);
+
+                foreach (var kvp in updateSet)
+                {
+                    m2.Entries[kvp.Key].Should().BeEquivalentTo(mergedDict[kvp.Key]);
+                }
+            }
+        }
+
+        private readonly string[] _setChoice = new[] {
+            "A", "B", "C", "D", "E", "F",
+            "G", "H", "I", "J", "K", "L",
+            "M", "N", "O", "P", "Q", "R",
+            "S", "T", "U", "V", "W", "X",
+            "Y", "Z" };
+        private Dictionary<string, HashSet<string>> CreateRandomSet(int length)
+        {
+            var rnd = new Random();
+            var result = new Dictionary<string, HashSet<string>>();
+            for (var i = 0; i < length; ++i)
+            {
+                var key = _setChoice[rnd.Next(0, _setChoice.Length)].ToLower();
+                var set = new HashSet<string>();
+                result[key] = set;
+                for(var j = 0; j < rnd.Next(1, 3); ++j)
+                {
+                    set.Add(_setChoice[rnd.Next(0, _setChoice.Length)]);
+                }
+            }
+            return result;
+        }
+
+        [Fact]
         public void ORMultiDictionary_must_not_have_anomalies_for_Remove_then_AddItem_scenario_and_delta_deltas_2()
         {
             // the new delta-delta ORMultiMap is free from this anomaly
