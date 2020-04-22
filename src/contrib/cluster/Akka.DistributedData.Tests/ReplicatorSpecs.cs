@@ -392,6 +392,98 @@ namespace Akka.DistributedData.Tests
             }
         }
 
+        [Fact]
+        public async Task Bugfix_4367_ORMultiValueDictionary_WithValueDeltas_DeltaGroup_Should_Cast_To_ORSet()
+        {
+            await InitCluster();
+            await UpdateORMultiValueDictionaryNodes();
+        }
+
+        private async Task UpdateORMultiValueDictionaryNodes()
+        {
+            async Task SetEntryCoreAync(string key, IImmutableSet<string> vals)
+            {
+                // Bug only appears when we use WithValueDeltas
+                var m = vals.Count == 1
+                    ? (IUpdateResponse) await _replicator1.Ask(Dsl.Update(
+                        _keyJ,
+                        ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                        WriteLocal.Instance,
+                        s => s.SetItems(Cluster.Cluster.Get(_sys1), key, vals)))
+                    : (IUpdateResponse) await _replicator1.Ask(Dsl.Update(
+                        _keyJ,
+                        ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                        new WriteTo(vals.Count, _timeOut),
+                        s => s.SetItems(Cluster.Cluster.Get(_sys1), key, vals)));
+
+                m.IsSuccessful.ShouldBeTrue();
+            }
+
+            var changedProbe2 = CreateTestProbe(_sys2);
+            _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe2.Ref));
+
+            var changedProbe3 = CreateTestProbe(_sys3);
+            _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
+
+            for (var i = 0; i < 10; ++i)
+            {
+                try
+                {
+                    var updateSet = CreateRandomSet(5);
+                    foreach (var kvp in updateSet)
+                    {
+                        await SetEntryCoreAync(kvp.Key, kvp.Value);
+
+                        var entries = changedProbe2
+                            .ExpectMsg<Changed>(g => Equals(g.Key, _keyJ))
+                            .Get(_keyJ).Entries;
+                        entries.ContainsKey(kvp.Key).ShouldBeTrue();
+                        foreach (var value in kvp.Value)
+                        {
+                            entries[kvp.Key].Contains(value).Should().BeTrue();
+                        }
+
+                        entries = changedProbe3
+                            .ExpectMsg<Changed>(g => Equals(g.Key, _keyJ))
+                            .Get(_keyJ).Entries;
+                        entries.ContainsKey(kvp.Key).ShouldBeTrue();
+                        foreach (var value in kvp.Value)
+                        {
+                            entries[kvp.Key].Contains(value).Should().BeTrue();
+                        }
+                    } 
+                } catch(Exception)
+                {
+                    Output.WriteLine($"Failed on iteration {i}");
+                    throw;
+                }
+            }
+        }
+
+        private readonly string[] _setChoice = new[] {
+            "A", "B", "C", "D", "E", "F",
+            "G", "H", "I", "J", "K", "L",
+            "M", "N", "O", "P", "Q", "R",
+            "S", "T", "U", "V", "W", "X",
+            "Y", "Z" };
+        private ImmutableDictionary<string, IImmutableSet<string>> CreateRandomSet(int length)
+        {
+            var rnd = new Random();
+            var result = new Dictionary<string, IImmutableSet<string>>();
+            for (var i = 0; i < length; ++i)
+            {
+                var key = _setChoice[rnd.Next(0, _setChoice.Length)].ToLower();
+                var set = new HashSet<string>();
+                for (var j = 0; j < rnd.Next(1, 3); ++j)
+                {
+                    set.Add(_setChoice[rnd.Next(0, _setChoice.Length)]);
+                }
+                result[key] = set.ToImmutableHashSet();
+            }
+            return result.ToImmutableDictionary();
+        }
+
+
         protected override void BeforeTermination()
         {
             Shutdown(_sys1);
