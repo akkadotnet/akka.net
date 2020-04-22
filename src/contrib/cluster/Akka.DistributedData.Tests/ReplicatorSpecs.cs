@@ -392,6 +392,9 @@ namespace Akka.DistributedData.Tests
             }
         }
 
+        /// <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4367
+        /// </summary>
         [Fact]
         public async Task Bugfix_4367_ORMultiValueDictionary_WithValueDeltas_DeltaGroup_Should_Cast_To_ORSet()
         {
