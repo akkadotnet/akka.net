@@ -992,7 +992,10 @@ namespace Akka.DistributedData.Serialization
 
                 if (entry.Value != null)
                 {
-                    return (k, (TValue)_ser.OtherMessageFromProto(entry.Value));
+                    // Bug #4367 throws here, value is ORDictionary.DeltaValue,
+                    // which can't be cast to ORSet
+                    var value = _ser.OtherMessageFromProto(entry.Value);
+                    return (k, (TValue)value);
                 }
 
                 return (k, default(TValue));
