@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Configuration;
-using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -270,7 +269,7 @@ namespace Akka.DistributedData.Tests
         {
             var changedProbe = CreateTestProbe(_sys2);
 
-            // subscribe to updates for KeyH, then 
+            // subscribe to updates for KeyJ, then 
             _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe.Ref));
 
             Within(TimeSpan.FromSeconds(10), () =>
@@ -278,16 +277,21 @@ namespace Akka.DistributedData.Tests
                 AwaitAssert(() =>
                 {
                     // update it with a replication factor of two
-                    _replicator2.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
-                        _writeTwo, x => x.AddItem(Cluster.Cluster.Get(_sys2), "a", "A")));
+                    _replicator2.Tell(Dsl.Update(
+                        _keyJ, 
+                        ORMultiValueDictionary<string, string>.Empty,
+                        WriteLocal.Instance, 
+                        x => x.AddItem(Cluster.Cluster.Get(_sys2), "a", "A")));
 
                     // receive local update
+                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
                     VerifyMultiValueDictionaryEntries(
                         ImmutableDictionary.CreateRange(
                         new[] {
                     new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
-                        }),
-                        changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries);
+                        }), 
+                        entries
+                        );
                 });
             });
 
@@ -297,8 +301,11 @@ namespace Akka.DistributedData.Tests
                 {
                     // push update from node 1
                     // add item
-                    _replicator1.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
-                        _writeTwo, x => x.AddItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
+                    _replicator1.Tell(Dsl.Update(
+                        _keyJ, 
+                        ORMultiValueDictionary<string, string>.Empty,
+                        WriteLocal.Instance, 
+                        x => x.AddItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
 
                     // expect replication of update on node 2
                     VerifyMultiValueDictionaryEntries(
@@ -315,8 +322,12 @@ namespace Akka.DistributedData.Tests
                 AwaitAssert(() =>
                 {
                     // remove item
-                    _replicator1.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
-                        _writeTwo, x => x.RemoveItem(Cluster.Cluster.Get(_sys1), "a", "A")));
+                    _replicator1.Tell(Dsl.Update(
+                        _keyJ, 
+                        ORMultiValueDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x.RemoveItem(Cluster.Cluster.Get(_sys1), "a", "A")));
+
                     VerifyMultiValueDictionaryEntries(ImmutableDictionary.CreateRange(
                         new[] {
                     new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A1")),
@@ -330,8 +341,12 @@ namespace Akka.DistributedData.Tests
                 AwaitAssert(() =>
                 {
                     // replace item
-                    _replicator1.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
-                        _writeTwo, x => x.ReplaceItem(Cluster.Cluster.Get(_sys1), "a", "A1", "A")));
+                    _replicator1.Tell(Dsl.Update(
+                        _keyJ, 
+                        ORMultiValueDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x.ReplaceItem(Cluster.Cluster.Get(_sys1), "a", "A1", "A")));
+
                     VerifyMultiValueDictionaryEntries(ImmutableDictionary.CreateRange(
                         new[] {
                     new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
@@ -345,8 +360,11 @@ namespace Akka.DistributedData.Tests
                 AwaitAssert(() =>
                 {
                     // add new value to dictionary from node 2
-                    _replicator2.Tell(Dsl.Update(_keyJ, ORMultiValueDictionary<string, string>.Empty,
-                        _writeTwo, x => x.SetItems(Cluster.Cluster.Get(_sys2), "b", ImmutableHashSet.Create("B"))));
+                    _replicator2.Tell(Dsl.Update(
+                        _keyJ, 
+                        ORMultiValueDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x.SetItems(Cluster.Cluster.Get(_sys2), "b", ImmutableHashSet.Create("B"))));
 
                     VerifyMultiValueDictionaryEntries(ImmutableDictionary.CreateRange(
                         new[] {
