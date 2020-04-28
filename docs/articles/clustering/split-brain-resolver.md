@@ -20,7 +20,7 @@ Networks partitions also bring different problems - the natural result of such e
 
 To solve this kind of problems we need to determine a common strategy, in which every node will come to the same deterministic conclusion about which node should live and which one should die, even if it won't be able to communicate with others.
 
-Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrary define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state. 
+Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrarily define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state. 
 
 In the past the only available opt-in strategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowning about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
 

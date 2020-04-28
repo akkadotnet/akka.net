@@ -227,6 +227,7 @@ namespace Akka.Cluster
     public class Member : System.IComparable, System.IComparable<Akka.Cluster.Member>
     {
         public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> AddressOrdering;
+        public static readonly System.Collections.Generic.IComparer<Akka.Cluster.Member> AgeOrdering;
         public Akka.Actor.Address Address { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
         public Akka.Cluster.MemberStatus Status { get; }
