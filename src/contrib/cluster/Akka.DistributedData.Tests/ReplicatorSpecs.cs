@@ -186,14 +186,14 @@ namespace Akka.DistributedData.Tests
             // wait for write to replicate to all 3 nodes
             Within(TimeSpan.FromSeconds(5), () =>
             {
-                foreach(var p in probes)
+                foreach (var p in probes)
                     p.ExpectMsg<Changed>(c => c.Get(_keyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
             });
 
             // create duplicate write on node 1
             Sys.Log.Info("Pushing change from sys1 for I");
             _replicator1.Tell(Dsl.Update(_keyI, GSet<string>.Empty, _writeTwo, a => a.Add("a")));
-            
+
 
             // no probe should receive an update
             p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
@@ -215,9 +215,9 @@ namespace Akka.DistributedData.Tests
             var p2 = CreateTestProbe(_sys2);
             var p3 = CreateTestProbe(_sys3);
 
-            var probes = new[] { 
-                (p1, _replicator1, Cluster.Cluster.Get(_sys1)), 
-                (p2, _replicator2, Cluster.Cluster.Get(_sys2)), 
+            var probes = new[] {
+                (p1, _replicator1, Cluster.Cluster.Get(_sys1)),
+                (p2, _replicator2, Cluster.Cluster.Get(_sys2)),
                 (p3, _replicator3, Cluster.Cluster.Get(_sys3))
             };
 
@@ -243,7 +243,8 @@ namespace Akka.DistributedData.Tests
 
             Within(TimeSpan.FromSeconds(5), () =>
             {
-                AwaitAssert(() => {
+                AwaitAssert(() =>
+                {
                     foreach (var (probe, replicator, _) in probes)
                     {
                         replicator.Tell(Dsl.Get(_keyC, new ReadAll(_timeOut)), probe);
@@ -278,9 +279,9 @@ namespace Akka.DistributedData.Tests
                 {
                     // update it with a replication factor of two
                     _replicator2.Tell(Dsl.Update(
-                        _keyJ, 
+                        _keyJ,
                         ORMultiValueDictionary<string, string>.Empty,
-                        WriteLocal.Instance, 
+                        WriteLocal.Instance,
                         x => x.AddItem(Cluster.Cluster.Get(_sys2), "a", "A")));
 
                     // receive local update
@@ -289,7 +290,7 @@ namespace Akka.DistributedData.Tests
                         ImmutableDictionary.CreateRange(
                         new[] {
                     new KeyValuePair<string, IImmutableSet<string>>("a", ImmutableHashSet.Create("A")),
-                        }), 
+                        }),
                         entries
                         );
                 });
@@ -302,9 +303,9 @@ namespace Akka.DistributedData.Tests
                     // push update from node 1
                     // add item
                     _replicator1.Tell(Dsl.Update(
-                        _keyJ, 
+                        _keyJ,
                         ORMultiValueDictionary<string, string>.Empty,
-                        WriteLocal.Instance, 
+                        WriteLocal.Instance,
                         x => x.AddItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
 
                     // expect replication of update on node 2
@@ -323,7 +324,7 @@ namespace Akka.DistributedData.Tests
                 {
                     // remove item
                     _replicator1.Tell(Dsl.Update(
-                        _keyJ, 
+                        _keyJ,
                         ORMultiValueDictionary<string, string>.Empty,
                         WriteLocal.Instance,
                         x => x.RemoveItem(Cluster.Cluster.Get(_sys1), "a", "A")));
@@ -342,7 +343,7 @@ namespace Akka.DistributedData.Tests
                 {
                     // replace item
                     _replicator1.Tell(Dsl.Update(
-                        _keyJ, 
+                        _keyJ,
                         ORMultiValueDictionary<string, string>.Empty,
                         WriteLocal.Instance,
                         x => x.ReplaceItem(Cluster.Cluster.Get(_sys1), "a", "A1", "A")));
@@ -361,7 +362,7 @@ namespace Akka.DistributedData.Tests
                 {
                     // add new value to dictionary from node 2
                     _replicator2.Tell(Dsl.Update(
-                        _keyJ, 
+                        _keyJ,
                         ORMultiValueDictionary<string, string>.Empty,
                         WriteLocal.Instance,
                         x => x.SetItems(Cluster.Cluster.Get(_sys2), "b", ImmutableHashSet.Create("B"))));
@@ -404,86 +405,57 @@ namespace Akka.DistributedData.Tests
 
         private async Task UpdateORMultiValueDictionaryNodes()
         {
-            async Task SetEntryCoreAync(string key, IImmutableSet<string> vals)
-            {
-                // Bug only appears when we use WithValueDeltas
-                var m = vals.Count == 1
-                    ? (IUpdateResponse) await _replicator1.Ask(Dsl.Update(
-                        _keyJ,
-                        ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                        WriteLocal.Instance,
-                        s => s.SetItems(Cluster.Cluster.Get(_sys1), key, vals)))
-                    : (IUpdateResponse) await _replicator1.Ask(Dsl.Update(
-                        _keyJ,
-                        ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                        new WriteTo(vals.Count, _timeOut),
-                        s => s.SetItems(Cluster.Cluster.Get(_sys1), key, vals)));
-
-                m.IsSuccessful.ShouldBeTrue();
-            }
-
             var changedProbe2 = CreateTestProbe(_sys2);
             _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe2.Ref));
 
             var changedProbe3 = CreateTestProbe(_sys3);
             _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
 
-            for (var i = 0; i < 10; ++i)
-            {
-                try
-                {
-                    var updateSet = CreateRandomSet(5);
-                    foreach (var kvp in updateSet)
-                    {
-                        await SetEntryCoreAync(kvp.Key, kvp.Value);
+            // Bug only appears when we use WithValueDeltas
 
-                        var entries = changedProbe2
-                            .ExpectMsg<Changed>(g => Equals(g.Key, _keyJ))
-                            .Get(_keyJ).Entries;
-                        entries.ContainsKey(kvp.Key).ShouldBeTrue();
-                        foreach (var value in kvp.Value)
-                        {
-                            entries[kvp.Key].Contains(value).Should().BeTrue();
-                        }
+            // Scenario 1 - add 1 entry with multiple values to all nodes
 
-                        entries = changedProbe3
-                            .ExpectMsg<Changed>(g => Equals(g.Key, _keyJ))
-                            .Get(_keyJ).Entries;
-                        entries.ContainsKey(kvp.Key).ShouldBeTrue();
-                        foreach (var value in kvp.Value)
-                        {
-                            entries[kvp.Key].Contains(value).Should().BeTrue();
-                        }
-                    } 
-                } catch(Exception)
-                {
-                    Output.WriteLine($"Failed on iteration {i}");
-                    throw;
-                }
-            }
-        }
+            var keyA = "A";
+            var entryA = ImmutableHashSet<string>.Empty.Add("1").Add("2");
+            var m1 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                _keyJ,
+                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                new WriteMajority(_timeOut),
+                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
 
-        private readonly string[] _setChoice = new[] {
-            "A", "B", "C", "D", "E", "F",
-            "G", "H", "I", "J", "K", "L",
-            "M", "N", "O", "P", "Q", "R",
-            "S", "T", "U", "V", "W", "X",
-            "Y", "Z" };
-        private ImmutableDictionary<string, IImmutableSet<string>> CreateRandomSet(int length)
-        {
-            var rnd = new Random();
-            var result = new Dictionary<string, IImmutableSet<string>>();
-            for (var i = 0; i < length; ++i)
-            {
-                var key = _setChoice[rnd.Next(0, _setChoice.Length)].ToLower();
-                var set = new HashSet<string>();
-                for (var j = 0; j < rnd.Next(1, 3); ++j)
-                {
-                    set.Add(_setChoice[rnd.Next(0, _setChoice.Length)]);
-                }
-                result[key] = set.ToImmutableHashSet();
-            }
-            return result.ToImmutableDictionary();
+            var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
+
+            var node3EntriesA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node3EntriesA[keyA].Should().BeEquivalentTo(entryA);
+
+            // Scenario 2 - add 2 entries to all nodes
+            var valuesBC = ImmutableDictionary<string, IImmutableSet<string>>.Empty
+                .Add("B", ImmutableHashSet<string>.Empty.Add("1").Add("4"))
+                .Add("C", ImmutableHashSet<string>.Empty.Add("0"));
+
+            var m2 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                _keyJ,
+                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                new WriteMajority(_timeOut),
+                s => s.SetItems(Cluster.Cluster.Get(_sys1), valuesBC.Keys.First(), valuesBC.Values.First())
+                    .SetItems(Cluster.Cluster.Get(_sys1), valuesBC.Keys.Last(), valuesBC.Values.Last())));
+
+            var node2EntriesBC = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node2EntriesBC.Count.Should().Be(3);
+
+            var node3EntriesBC = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node3EntriesBC.Count.Should().Be(3);
+
+            // Scenario 3 - modify set with existing items in it
+            var entryA1 = entryA.Add("4");
+
+            // Fails due to "Trying to merge two ORMultiValueDictionaries of different map sub-types" error here
+            var m3 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                _keyJ,
+                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                new WriteMajority(_timeOut),
+                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
         }
 
 
