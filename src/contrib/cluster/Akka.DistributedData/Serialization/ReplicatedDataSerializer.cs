@@ -896,7 +896,7 @@ namespace Akka.DistributedData.Serialization
                         entry.Operation = ORMapDeltaOp.OrmapUpdate;
                         entry.Underlying = ToProto(upDelta.Underlying.AsInstanceOf<ORSet.IDeltaOperation>()
                             .UnderlyingSerialization);
-                        entry.EntryData.AddRange(upDelta.Values.Select(x => CreateMapEntry(x.Key, x.Value.AsInstanceOf<ORSet.IAddDeltaOperation>().UnderlyingSerialization)).ToList());
+                        entry.EntryData.AddRange(upDelta.Values.Select(x => CreateMapEntry(x.Key, x.Value)).ToList());
                         break;
                     case ORDictionary<TKey, TValue>.RemoveDeltaOperation removeDelta:
                         entry.Operation = ORMapDeltaOp.OrmapRemove;
