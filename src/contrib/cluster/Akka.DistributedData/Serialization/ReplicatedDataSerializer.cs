@@ -1441,7 +1441,7 @@ namespace Akka.DistributedData.Serialization
         private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
         {
             var casted = (ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)op;
-            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted, true);
+            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted);
         }
 
         #endregion
