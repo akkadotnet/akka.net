@@ -276,10 +276,11 @@ namespace Akka.DistributedData.Tests
         {
             var m1 = ORMultiValueDictionary<string, string>.Empty
                 .SetItems(_node1, "a", ImmutableHashSet.Create("A"))
-                .SetItems(_node1, "b", ImmutableHashSet.Create("B"));
+                .SetItems(_node1, "b", ImmutableHashSet.Create("B1"));
 
             var m2 = ORMultiValueDictionary<string, string>.Empty
-                .SetItems(_node2, "c", ImmutableHashSet.Create("C"));
+                .SetItems(_node2, "c", ImmutableHashSet.Create("C"))
+                .SetItems(_node2, "b", ImmutableHashSet.Create("B2"));
 
             // This is how deltas really get merged inside the replicator
             var dataEnvelope = new DataEnvelope(m1.Delta);
@@ -295,7 +296,39 @@ namespace Akka.DistributedData.Tests
             var merged1 = (ORMultiValueDictionary<string, string>)m2.Merge(storedData);
 
             merged1.Entries["a"].Should().BeEquivalentTo("A");
-            merged1.Entries["b"].Should().BeEquivalentTo("B");
+            merged1.Entries["b"].Should().BeEquivalentTo("B1", "B2");
+            merged1.Entries["c"].Should().BeEquivalentTo("C");
+        }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4367
+        /// </summary>
+        [Fact]
+        public void Bugfix_4367_ORMultiValueDictionary_Deltas_must_merge_other_ORMultiValueDictionary()
+        {
+            var m1 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                .SetItems(_node1, "a", ImmutableHashSet.Create("A"))
+                .SetItems(_node1, "b", ImmutableHashSet.Create("B1"));
+
+            var m2 = ORMultiValueDictionary<string, string>.EmptyWithValueDeltas
+                .SetItems(_node2, "c", ImmutableHashSet.Create("C"))
+                .SetItems(_node2, "b", ImmutableHashSet.Create("B2"));
+
+            // This is how deltas really get merged inside the replicator
+            var dataEnvelope = new DataEnvelope(m1.Delta);
+            if (dataEnvelope.Data is IReplicatedDelta withDelta)
+            {
+                dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
+            }
+
+            // Bug: this is was an ORDictionary<string, ORSet<string>> under #4302
+            var storedData = dataEnvelope.Data;
+
+            // simulate merging an update
+            var merged1 = (ORMultiValueDictionary<string, string>)m2.Merge(storedData);
+
+            merged1.Entries["a"].Should().BeEquivalentTo("A");
+            merged1.Entries["b"].Should().BeEquivalentTo("B1", "B2");
             merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
 

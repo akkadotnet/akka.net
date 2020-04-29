@@ -184,6 +184,20 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectMsg(4, TimeSpan.FromSeconds(1));
             }, TimeSpan.FromSeconds(5));
         }
+
+        [Fact]
+        public void Cluster_sharding_with_lease_should_release_lease_when_shard_stopped()
+        {
+            region.Tell(5);
+            ExpectNoMsg(shortDuration);
+            var testLease = LeaseForShard(5);
+            testLease.InitialPromise.SetResult(true);
+            testLease.Probe.ExpectMsg(new TestLease.AcquireReq(leaseOwner));
+            ExpectMsg(5);
+
+            region.Tell(new PersistentShardCoordinator.HandOff("5"));
+            testLease.Probe.ExpectMsg(new TestLease.ReleaseReq(leaseOwner));
+        }
     }
 
     public class PersistenceClusterShardingLeaseSpec : ClusterShardingLeaseSpec

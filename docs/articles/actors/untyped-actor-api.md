@@ -48,7 +48,7 @@ Props props4 = Props.Create(typeof(MyActorWithArgs), "arg");
 The second variant shows how to pass constructor arguments to the `Actor` being created, but it should only be used outside of actors as explained below.
 
 #### Recommended Practices
-It is a good idea to provide static factory methods on the `ReceiveActor` which help keeping the creation of suitable `Props` as close to the actor definition as possible.
+It is a good idea to provide static factory methods on the `UntypedActor` which help keeping the creation of suitable `Props` as close to the actor definition as possible.
 
 ```csharp
 public class DemoActor : UntypedActor

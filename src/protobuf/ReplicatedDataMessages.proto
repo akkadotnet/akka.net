@@ -119,6 +119,11 @@ message ORMapDeltaGroup {
   TypeDescriptor valueTypeInfo = 3;
 }
 
+message ORMultiMapDelta {
+  ORMapDeltaGroup delta = 1;
+  bool withValueDeltas = 2;
+}
+
 enum ORMapDeltaOp {
   ORMapPut = 0;
   ORMapRemove = 1;

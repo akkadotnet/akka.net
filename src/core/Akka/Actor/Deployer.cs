@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Akka.Configuration;
-using Akka.Configuration;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -27,7 +26,8 @@ namespace Akka.Actor
         /// </summary>
         protected readonly Config Default;
         private readonly Settings _settings;
-        private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
+        private readonly AtomicReference<WildcardIndex<Deploy>> _deployments = 
+            new AtomicReference<WildcardIndex<Deploy>>(new WildcardIndex<Deploy>());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Deployer"/> class.
@@ -75,17 +75,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public Deploy Lookup(IEnumerable<string> path)
         {
-            return Lookup(path.GetEnumerator());
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
-        public Deploy Lookup(IEnumerator<string> path)
-        {
-            return _deployments.Value.Find(path).Data;
+            return _deployments.Value.Find(path);
         }
 
         /// <summary>
@@ -99,26 +89,22 @@ namespace Akka.Actor
         /// </exception>
         public void SetDeploy(Deploy deploy)
         {
-            Action<IList<string>, Deploy> add = (path, d) =>
+            void add(IList<string> path, Deploy d)
             {
-                bool set;
-                do
+                var w = _deployments.Value;
+                foreach (var t in path)
                 {
-                    var w = _deployments.Value;
-                    foreach (var t in path)
+                    if (string.IsNullOrEmpty(t))
+                        throw new IllegalActorNameException($"Actor name in deployment [{d.Path}] must not be empty");
+                    if (!ActorPath.IsValidPathElement(t))
                     {
-                        var curPath = t;
-                        if (string.IsNullOrEmpty(curPath))
-                            throw new IllegalActorNameException($"Actor name in deployment [{d.Path}] must not be empty");
-                        if (!ActorPath.IsValidPathElement(t))
-                        {
-                            throw new IllegalActorNameException(
-                                $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
-                        }
+                        throw new IllegalActorNameException(
+                            $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
                     }
-                    set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
-                } while (!set);
-            };
+                }
+                if (!_deployments.CompareAndSet(w, w.Insert(path, d))) add(path, d);
+            }
+
             var elements = deploy.Path.Split('/').Drop(1).ToList();
             add(elements, deploy);
         }
@@ -131,11 +117,6 @@ namespace Akka.Actor
         /// <returns>A configured actor deployment to the given path.</returns>
         public virtual Deploy ParseConfig(string key, Config config)
         {
-            /*
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<Deploy>();
-            */
-
             var deployment = config.WithFallback(Default);
             var routerType = deployment.GetString("router", null);
             var router = CreateRouterConfig(routerType, deployment);
