@@ -465,7 +465,7 @@ namespace Akka.DistributedData.Tests
             var changedProbe1 = CreateTestProbe(_sys1);
             _replicator1.Tell(Dsl.Subscribe(_keyJ, changedProbe1.Ref));
 
-            var entryA2 = entryA1.Remove("4").Add("5");
+            var entryA2 = entryA1.Add("5");
             var m4 = await _replicator2.Ask<UpdateSuccess>(Dsl.Update(
                 _keyJ,
                 node2EntriesBCA, // use the last value we received
@@ -473,7 +473,7 @@ namespace Akka.DistributedData.Tests
                 s => s.SetItems(Cluster.Cluster.Get(_sys2), keyA, entryA2)));
 
             var node1EntriesBCA = changedProbe1.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "5");
+            node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4", "5");
         }
 
 
