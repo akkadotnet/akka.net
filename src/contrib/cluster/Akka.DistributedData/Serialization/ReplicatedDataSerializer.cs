@@ -971,7 +971,7 @@ namespace Akka.DistributedData.Serialization
         {
             var deltaOps = new List<ORDictionary<TKey, TValue>.IDeltaOperation>();
 
-            (object key, TValue value) MapEntryFromProto(ORMapDeltaGroup.Types.MapEntry entry)
+            (object key, object value) MapEntryFromProto(ORMapDeltaGroup.Types.MapEntry entry)
             {
                 object k = null;
                 switch (deltaGroup.KeyTypeInfo.Type)
@@ -995,7 +995,7 @@ namespace Akka.DistributedData.Serialization
                     // Bug #4367 throws here, value is ORDictionary.DeltaValue,
                     // which can't be cast to ORSet
                     var value = _ser.OtherMessageFromProto(entry.Value);
-                    return (k, (TValue)value);
+                    return (k, value);
                 }
 
                 return (k, default(TValue));
@@ -1013,7 +1013,7 @@ namespace Akka.DistributedData.Serialization
                                     $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
 
-                            deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, value));
+                            deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, (TValue)value));
                         }
                         break;
                     case ORMapDeltaOp.OrmapRemove:
