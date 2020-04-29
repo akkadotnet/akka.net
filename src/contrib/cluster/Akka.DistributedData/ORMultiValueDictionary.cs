@@ -34,6 +34,7 @@ namespace Akka.DistributedData
     /// </summary>
     internal interface IORMultiValueDictionaryDeltaOperation
     {
+        bool WithValueDeltas { get; }
         ORDictionary.IDeltaOperation Underlying { get; }
     }
 

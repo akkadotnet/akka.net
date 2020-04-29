@@ -411,8 +411,6 @@ namespace Akka.DistributedData.Tests
             var changedProbe3 = CreateTestProbe(_sys3);
             _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
 
-            // Bug only appears when we use WithValueDeltas
-
             // Scenario 1 - add 1 entry with multiple values to all nodes
 
             var keyA = "A";
@@ -450,12 +448,32 @@ namespace Akka.DistributedData.Tests
             // Scenario 3 - modify set with existing items in it
             var entryA1 = entryA.Add("4");
 
-            // Fails due to "Trying to merge two ORMultiValueDictionaries of different map sub-types" error here
+            // Used to fail on Node2 and Node3 due to "Trying to merge two ORMultiValueDictionaries of different map sub-types" error here
             var m3 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
                 _keyJ,
                 ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
                 new WriteMajority(_timeOut),
-                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
+                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
+
+            var node2EntriesBCA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ);
+            node2EntriesBCA.Entries["A"].Should().BeEquivalentTo("1", "2", "4");
+
+            var node3EntriesBCA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node3EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4");
+
+            // Trigger update from Node2 back to Node 1
+            var changedProbe1 = CreateTestProbe(_sys1);
+            _replicator1.Tell(Dsl.Subscribe(_keyJ, changedProbe1.Ref));
+
+            var entryA2 = entryA1.Remove("4").Add("5");
+            var m4 = await _replicator2.Ask<UpdateSuccess>(Dsl.Update(
+                _keyJ,
+                node2EntriesBCA, // use the last value we received
+                new WriteMajority(_timeOut),
+                s => s.SetItems(Cluster.Cluster.Get(_sys2), keyA, entryA2)));
+
+            var node1EntriesBCA = changedProbe1.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+            node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "5");
         }
 
 

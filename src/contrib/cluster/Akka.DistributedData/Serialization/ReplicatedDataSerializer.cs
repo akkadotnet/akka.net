@@ -89,7 +89,7 @@ namespace Akka.DistributedData.Serialization
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
-                case IORMultiValueDictionaryDeltaOperation md: return ToProto(md.Underlying).ToByteArray();
+                case IORMultiValueDictionaryDeltaOperation md: return ToProto(md).ToByteArray();
                 case DeletedData _: return _emptyArray;
                 case VersionVector v: return SerializationSupport.VersionVectorToProto(v).ToByteArray();
                 // key types
@@ -1326,6 +1326,12 @@ namespace Akka.DistributedData.Serialization
         private static readonly MethodInfo MultiMapProtoMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(MultiMapToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
+        private Proto.Msg.ORMultiMapDelta ToProto(IORMultiValueDictionaryDeltaOperation op)
+        {
+            var d = new ORMultiMapDelta() { WithValueDeltas = op.WithValueDeltas };
+            d.Delta = ToProto(op.Underlying);
+            return d;
+        }
 
         private Proto.Msg.ORMultiMap MultiMapToProto<TKey, TValue>(IORMultiValueDictionary multi)
         {
@@ -1427,21 +1433,21 @@ namespace Akka.DistributedData.Serialization
 
         private object ORMultiDictionaryDeltaFromBinary(byte[] bytes)
         {
-            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
-            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+            var proto = Proto.Msg.ORMultiMapDelta.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto.Delta);
 
             var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
             var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
-            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp, proto.WithValueDeltas });
         }
 
         private static readonly MethodInfo ORMultiDictionaryDeltaMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ORMultiDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
+        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op, bool withValueDeltas)
         {
             var casted = (ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)op;
-            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted, true);
+            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted, withValueDeltas);
         }
 
         #endregion
