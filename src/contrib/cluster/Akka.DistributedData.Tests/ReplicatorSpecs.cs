@@ -56,6 +56,7 @@ namespace Akka.DistributedData.Tests
         private readonly ORDictionaryKey<string, Flag> _keyH = new ORDictionaryKey<string, Flag>("H");
         private readonly GSetKey<string> _keyI = new GSetKey<string>("I");
         private readonly ORMultiValueDictionaryKey<string, string> _keyJ = new ORMultiValueDictionaryKey<string, string>("J");
+        private readonly LWWDictionaryKey<string, string> _keyK = new LWWDictionaryKey<string, string>("K");
 
         public ReplicatorSpecs(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
@@ -254,6 +255,102 @@ namespace Akka.DistributedData.Tests
             });
 
             Sys.Log.Info("Done");
+        }
+
+        /// <summary>
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4198
+        /// </summary>
+        [Fact]
+        public async Task Bugfix_4400_ORMultiValueDictionary_Merge()
+        {
+            await InitCluster();
+            await LWWDictionary_Should_Merge();
+        }
+
+        private async Task LWWDictionary_Should_Merge()
+        {
+            var changedProbe = CreateTestProbe(_sys2);
+
+            // subscribe to updates for KeyJ, then 
+            _replicator2.Tell(Dsl.Subscribe(_keyK, changedProbe.Ref));
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    // update it with a replication factor of two
+                    _replicator2.Tell(Dsl.Update(
+                        _keyK,
+                        LWWDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x.SetItem(Cluster.Cluster.Get(_sys2), "a", "A")));
+
+                    // receive local update
+                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> {
+                        {"a", "A" }
+                    });
+                });
+            });
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    // push update from node 1
+                    // add item
+                    _replicator1.Tell(Dsl.Update(
+                        _keyK,
+                        LWWDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x.SetItem(Cluster.Cluster.Get(_sys1), "a", "A1")));
+
+                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    // expect replication of update on node 2
+                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> {
+                        {"a", "A1" }
+                    });
+                });
+            });
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    // remove item
+                    _replicator1.Tell(Dsl.Update(
+                        _keyK,
+                        LWWDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x.Remove(Cluster.Cluster.Get(_sys1), "a")));
+
+                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    // expect replication of remove on node 2
+                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> ());
+                });
+            });
+
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    // send multiple updates
+                    _replicator1.Tell(Dsl.Update(
+                        _keyK,
+                        LWWDictionary<string, string>.Empty,
+                        WriteLocal.Instance,
+                        x => x
+                        .SetItem(Cluster.Cluster.Get(_sys1), "a", "A")
+                        .SetItem(Cluster.Cluster.Get(_sys1), "b", "B")));
+
+                    var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
+                    // expect replication of remove on node 2
+                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> {
+                        { "a", "A" },
+                        { "b", "B" },
+                    });
+                });
+            });
         }
 
         /// <summary>

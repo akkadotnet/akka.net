@@ -13,6 +13,7 @@ using Akka.Cluster;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.DistributedData.Internal;
 
 namespace Akka.DistributedData.Tests
 {
@@ -124,6 +125,38 @@ namespace Akka.DistributedData.Tests
                 {"b", 22},
                 {"c", 3}
             });
+        }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4400
+        /// </summary>
+        [Fact]
+        public void Bugfix_4400_LWWDictionary_Deltas_must_merge_other_LWWDictionary()
+        {
+            var m1 = LWWDictionary<string, string>.Empty
+                .SetItem(_node1, "a", "A")
+                .SetItem(_node1, "b", "B1");
+
+            var m2 = LWWDictionary<string, string>.Empty
+                .SetItem(_node2, "c", "C")
+                .SetItem(_node2, "b", "B2");
+
+            // This is how deltas really get merged inside the replicator
+            var dataEnvelope = new DataEnvelope(m1.Delta);
+            if (dataEnvelope.Data is IReplicatedDelta withDelta)
+            {
+                dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
+            }
+
+            // Bug: this is was an ORDictionary<string, ORSet<string>> under #4302
+            var storedData = dataEnvelope.Data;
+
+            // simulate merging an update
+            var merged1 = (ORMultiValueDictionary<string, string>)m2.Merge(storedData);
+
+            merged1.Entries["a"].Should().BeEquivalentTo("A");
+            merged1.Entries["b"].Should().BeEquivalentTo("B1", "B2");
+            merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
     }
 }
