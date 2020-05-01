@@ -148,14 +148,14 @@ namespace Akka.DistributedData.Tests
                 dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
             }
 
-            // Bug: this is was an ORDictionary<string, ORSet<string>> under #4302
+            // Bug: this is was an ORDictionary<string, LWWRegister<string>> under #4400
             var storedData = dataEnvelope.Data;
 
             // simulate merging an update
             var merged1 = (LWWDictionary<string, string>)m2.Merge(storedData);
 
             merged1.Entries["a"].Should().BeEquivalentTo("A");
-            merged1.Entries["b"].Should().BeEquivalentTo("B2");
+            merged1.Entries["b"].Should().BeEquivalentTo("B1");
             merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
     }
