@@ -30,6 +30,16 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
+    /// INTERNAL API.
+    ///
+    /// For serialization purposes.
+    /// </summary>
+    internal interface ILWWDictionaryDeltaOperation
+    {
+        ORDictionary.IDeltaOperation Underlying { get; }
+    }
+
+    /// <summary>
     /// Typed key used to store <see cref="LWWDictionary{TKey,TValue}"/> replica 
     /// inside current <see cref="Replicator"/> key-value store.
     /// </summary>
@@ -329,7 +339,74 @@ namespace Akka.DistributedData
             return sb.ToString();
         }
 
-        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta => Underlying.Delta;
+        #region delta
+
+        internal sealed class LWWDictionaryDelta : ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation, IReplicatedDeltaSize, ILWWDictionaryDeltaOperation
+        {
+            internal readonly ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Underlying;
+
+            public LWWDictionaryDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation underlying)
+            {
+                Underlying = underlying;
+                if (underlying is IReplicatedDeltaSize s)
+                {
+                    DeltaSize = s.DeltaSize;
+                }
+                else
+                {
+                    DeltaSize = 1;
+                }
+            }
+
+            public IReplicatedData Merge(IReplicatedData other)
+            {
+                if (other is LWWDictionaryDelta d)
+                {
+                    return new LWWDictionaryDelta((ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation)Underlying.Merge(d.Underlying));
+                }
+
+                return new LWWDictionaryDelta((ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation)Underlying.Merge(other));
+            }
+
+            public IDeltaReplicatedData Zero => LWWDictionary<TKey, TValue>.Empty;
+
+            public override bool Equals(object obj)
+            {
+                return obj is LWWDictionary<TKey, TValue>.LWWDictionaryDelta operation &&
+                    Equals(operation.Underlying);
+            }
+
+            public bool Equals(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation other)
+            {
+                if (other is ORDictionary<TKey, LWWRegister<TValue>>.DeltaGroup group)
+                {
+                    if (Underlying is ORDictionary<TKey, LWWRegister<TValue>>.DeltaGroup ourGroup)
+                    {
+                        return ourGroup.Operations.SequenceEqual(group.Operations);
+                    }
+
+                    if (group.Operations.Length == 1)
+                    {
+                        return Underlying.Equals(group.Operations.First());
+                    }
+
+                    return false;
+                }
+                return Underlying.Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return Underlying.GetHashCode();
+            }
+
+            public int DeltaSize { get; }
+            ORDictionary.IDeltaOperation ILWWDictionaryDeltaOperation.Underlying => (ORDictionary.IDeltaOperation)Underlying;
+        }
+
+        // TODO: optimize this so it doesn't allocate each time it's called
+        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta => 
+            new LWWDictionaryDelta(Underlying.Delta);
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 
@@ -338,11 +415,18 @@ namespace Akka.DistributedData
 
         IReplicatedData IDeltaReplicatedData.ResetDelta() => ResetDelta();
 
-        public LWWDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation delta) =>
-            new LWWDictionary<TKey, TValue>(Underlying.MergeDelta(delta));
+        public LWWDictionary<TKey, TValue> MergeDelta(ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation delta)
+        {
+            if (delta is LWWDictionaryDelta lwwd)
+                delta = lwwd.Underlying;
+
+            return new LWWDictionary<TKey, TValue>(Underlying.MergeDelta(delta));
+        }
 
         public LWWDictionary<TKey, TValue> ResetDelta() =>
             new LWWDictionary<TKey, TValue>(Underlying.ResetDelta());
+
+        #endregion
 
         public Type KeyType => typeof(TKey);
         public Type ValueType => typeof(TValue);

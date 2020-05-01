@@ -264,17 +264,13 @@ namespace Akka.DistributedData.Tests
         public async Task Bugfix_4400_LWWDictionary_Merge()
         {
             await InitCluster();
-            await LWWDictionary_Should_Merge();
-        }
 
-        private async Task LWWDictionary_Should_Merge()
-        {
             var changedProbe = CreateTestProbe(_sys2);
 
             // subscribe to updates for KeyJ, then 
             _replicator2.Tell(Dsl.Subscribe(_keyK, changedProbe.Ref));
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(TimeSpan.FromSeconds(2), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -293,7 +289,7 @@ namespace Akka.DistributedData.Tests
                 });
             });
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(TimeSpan.FromSeconds(2), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -313,7 +309,7 @@ namespace Akka.DistributedData.Tests
                 });
             });
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(TimeSpan.FromSeconds(2), () =>
             {
                 AwaitAssert(() =>
                 {
@@ -330,7 +326,7 @@ namespace Akka.DistributedData.Tests
                 });
             });
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            Within(TimeSpan.FromSeconds(2), () =>
             {
                 AwaitAssert(() =>
                 {

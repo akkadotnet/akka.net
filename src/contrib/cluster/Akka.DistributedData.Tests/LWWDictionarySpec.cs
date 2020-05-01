@@ -152,10 +152,10 @@ namespace Akka.DistributedData.Tests
             var storedData = dataEnvelope.Data;
 
             // simulate merging an update
-            var merged1 = (ORMultiValueDictionary<string, string>)m2.Merge(storedData);
+            var merged1 = (LWWDictionary<string, string>)m2.Merge(storedData);
 
             merged1.Entries["a"].Should().BeEquivalentTo("A");
-            merged1.Entries["b"].Should().BeEquivalentTo("B1", "B2");
+            merged1.Entries["b"].Should().BeEquivalentTo("B2");
             merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
     }

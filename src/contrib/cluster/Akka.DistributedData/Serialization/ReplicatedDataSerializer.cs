@@ -52,6 +52,7 @@ namespace Akka.DistributedData.Serialization
         private const string ORMapUpdateManifest = "Hu";
         private const string ORMapDeltaGroupManifest = "Hg";
         private const string LWWMapManifest = "I";
+        private const string LWWMapDeltaGroupManifest = "Ig";
         private const string LWWMapKeyManifest = "i";
         private const string PNCounterMapManifest = "J";
         private const string PNCounterMapDeltaOperationManifest = "Jo";
@@ -86,6 +87,7 @@ namespace Akka.DistributedData.Serialization
                 case IORDictionary o: return SerializationSupport.Compress(ToProto(o));
                 case ORDictionary.IDeltaOperation p: return ToProto(p).ToByteArray();
                 case ILWWDictionary l: return SerializationSupport.Compress(ToProto(l));
+                case ILWWDictionaryDeltaOperation ld: return ToProto(ld.Underlying).ToByteArray();
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
@@ -121,6 +123,8 @@ namespace Akka.DistributedData.Serialization
                 case ORMapUpdateManifest: return ORDictionaryUpdateFromBinary(bytes);
                 case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
                 case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case LWWMapDeltaGroupManifest:
+                    return LWWDictionaryDeltaGroupFromBinary(bytes);
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
                 case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
@@ -166,6 +170,7 @@ namespace Akka.DistributedData.Serialization
                 case ORDictionary.IRemoveKeyDeltaOp _: return ORMapRemoveKeyManifest;
                 case ORDictionary.IUpdateDeltaOp _: return ORMapUpdateManifest;
                 case ILWWDictionary _: return LWWMapManifest;
+                case ILWWDictionaryDeltaOperation _: return LWWMapDeltaGroupManifest;
                 case IPNCounterDictionary _: return PNCounterMapManifest;
                 case IPNCounterDictionaryDeltaOperation _: return PNCounterMapDeltaOperationManifest;
                 case IORMultiValueDictionary _: return ORMultiMapManifest;
@@ -1189,6 +1194,26 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = Proto.Msg.LWWMap.Parser.ParseFrom(bytes);
             return LWWDictFromProto(proto);
+        }
+
+
+        private object LWWDictionaryDeltaGroupFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+
+            var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
+            var maker = LWWDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
+            return (ILWWDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+        }
+
+        private static readonly MethodInfo LWWDictionaryDeltaMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(LWWDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private ILWWDictionaryDeltaOperation LWWDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
+        {
+            var casted = (ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation)op;
+            return new LWWDictionary<TKey, TValue>.LWWDictionaryDelta(casted);
         }
 
         #endregion
