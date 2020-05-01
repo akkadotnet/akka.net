@@ -258,10 +258,10 @@ namespace Akka.DistributedData.Tests
         }
 
         /// <summary>
-        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4198
+        /// Reproduction spec for https://github.com/akkadotnet/akka.net/issues/4400
         /// </summary>
         [Fact]
-        public async Task Bugfix_4400_ORMultiValueDictionary_Merge()
+        public async Task Bugfix_4400_LWWDictionary_Merge()
         {
             await InitCluster();
             await LWWDictionary_Should_Merge();
