@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
@@ -131,11 +132,13 @@ namespace Akka.DistributedData.Tests
         /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4400
         /// </summary>
         [Fact]
-        public void Bugfix_4400_LWWDictionary_Deltas_must_merge_other_LWWDictionary()
+        public async Task Bugfix_4400_LWWDictionary_Deltas_must_merge_other_LWWDictionary()
         {
             var m1 = LWWDictionary<string, string>.Empty
                 .SetItem(_node1, "a", "A")
                 .SetItem(_node1, "b", "B1");
+
+            await Task.Delay(200);
 
             var m2 = LWWDictionary<string, string>.Empty
                 .SetItem(_node2, "c", "C")
