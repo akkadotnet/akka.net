@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DurableDataSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,24 +21,25 @@ namespace Akka.DistributedData.Tests.MultiNode
         public RoleName First { get; }
         public RoleName Second { get; }
 
+        public DurableDataSpecConfig() : this(true) { }
+
         public DurableDataSpecConfig(bool writeBehind)
         {
             First = Role("first");
             Second = Role("second");
 
             var writeBehindInterval = writeBehind ? "200ms" : "off";
-            CommonConfig = ConfigurationFactory.ParseString($@"
+            CommonConfig = ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.log-dead-letters-during-shutdown = off
             akka.cluster.distributed-data.durable.keys = [""durable*""]
-            akka.cluster.distributed-data.durable.lmdb {{
-              dir = target/DurableDataSpec-${DateTime.UtcNow.Ticks}-ddata
+            akka.cluster.distributed-data.durable.lmdb {
+              dir = ""target/DurableDataSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
               map-size = 10 MiB
-              write-behind-interval = ${writeBehindInterval}
-            }}
-            akka.test.single-expect-default = 5s
-            ").WithFallback(DistributedData.DefaultConfig());
+              write-behind-interval = " + writeBehindInterval + @"
+            }
+            akka.test.single-expect-default = 5s").WithFallback(DistributedData.DefaultConfig());
         }
     }
 

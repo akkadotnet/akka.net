@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageContainerSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,8 +36,7 @@ namespace Akka.Remote.Serialization
         /// <inheritdoc />
         public override byte[] ToBinary(object obj)
         {
-            var sel = obj as ActorSelectionMessage;
-            if (sel != null)
+            if (obj is ActorSelectionMessage sel)
             {
                 var envelope = new Proto.Msg.SelectionEnvelope();
                 envelope.Payload = _payloadSupport.PayloadToProto(sel.Message);
@@ -45,14 +44,12 @@ namespace Akka.Remote.Serialization
                 foreach (var element in sel.Elements)
                 {
                     Proto.Msg.Selection selection = null;
-                    if (element is SelectChildName)
+                    if (element is SelectChildName m1)
                     {
-                        var m = (SelectChildName)element;
-                        selection = BuildPattern(m.Name, Proto.Msg.Selection.Types.PatternType.ChildName);
+                        selection = BuildPattern(m1.Name, Proto.Msg.Selection.Types.PatternType.ChildName);
                     }
-                    else if (element is SelectChildPattern)
+                    else if (element is SelectChildPattern m)
                     {
-                        var m = (SelectChildPattern)element;
                         selection = BuildPattern(m.PatternStr, Proto.Msg.Selection.Types.PatternType.ChildPattern);
                     }
                     else if (element is SelectParent)
@@ -62,6 +59,7 @@ namespace Akka.Remote.Serialization
 
                     envelope.Pattern.Add(selection);
                 }
+                
 
                 return envelope.ToByteArray();
             }

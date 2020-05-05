@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistencePluginProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ namespace Akka.Persistence.Journal
         {
             var persistence = Persistence.Instance.Apply(system);
             persistence.JournalFor(null).Tell(new TargetLocation(address));
-            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin")))
+            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin", null)))
                 persistence.SnapshotStoreFor(null).Tell(new TargetLocation(address));
         }
 
@@ -65,7 +65,7 @@ namespace Akka.Persistence.Journal
         {
             var persistence = Persistence.Instance.Apply(system);
             persistence.JournalFor(null);
-            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin")))
+            if (string.IsNullOrEmpty(system.Settings.Config.GetString("akka.persistence.snapshot-store.plugin", null)))
                 persistence.SnapshotStoreFor(null);
         }
 
@@ -110,12 +110,12 @@ namespace Akka.Persistence.Journal
                 _pluginType = new SnapshotStore();
             else
                 throw new ArgumentException($"Unknown plugin type: {pluginId}.");
-            _initTimeout = config.GetTimeSpan("init-timeout");
+            _initTimeout = config.GetTimeSpan("init-timeout", null);
             var key = "target-" + _pluginType.Qualifier + "-plugin";
-            _targetPluginId = config.GetString(key);
+            _targetPluginId = config.GetString(key, null);
             if (string.IsNullOrEmpty(_targetPluginId))
                 throw new ArgumentException($"{pluginId}.{key} must be defined.");
-            _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier);
+            _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier, false);
 
             _selfAddress = ((ExtendedActorSystem) Context.System).Provider.DefaultAddress;
         }
@@ -150,7 +150,7 @@ namespace Akka.Persistence.Journal
             else
             {
                 var targetAddressKey = "target-" + _pluginType.Qualifier + "-address";
-                var targetAddress = _config.GetString(targetAddressKey);
+                var targetAddress = _config.GetString(targetAddressKey, null);
                 if (!string.IsNullOrEmpty(targetAddress))
                 {
                     try

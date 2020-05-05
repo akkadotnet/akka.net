@@ -124,7 +124,7 @@ There are a few different ways to start the `CoordinatedShutdown` process.
 
 If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`. 
 
-[!code-csharp[CoordinatedShutdownSpecs.cs](../../examples/DocsExamples/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
+[!code-csharp[CoordinatedShutdownSpecs.cs](../../../src/core/Akka.Docs.Tests/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
 
 It's safe to call this method multiple times as the shutdown process will only be run once and will return the same completion task each time. The `Task<Done>` will complete once all phases have run successfully, or a phase with `recover = off` failed.
 

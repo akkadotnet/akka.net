@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreaker.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -189,6 +189,44 @@ namespace Akka.Pattern
             var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
             return cbTask.Wait(CallTimeout) ? cbTask.Result : default(T);
         }
+
+        /// <summary>
+        /// Mark a successful call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
+        /// caller Actor. In such a case, it is convenient to mark a successful call instead of using Future
+        /// via <see cref="WithCircuitBreaker"/>
+        /// </summary>
+        public void Succeed() => _currentState.CallSucceeds();
+
+        /// <summary>
+        /// Mark a failed call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
+        /// caller Actor. In such a case, it is convenient to mark a failed call instead of using Future
+        /// via <see cref="WithCircuitBreaker"/>
+        /// </summary>
+        public void Fail() => _currentState.CallFails();
+
+        /// <summary>
+        /// Return true if the internal state is Closed. WARNING: It is a "power API" call which you should use with care.
+        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in <see cref="WithCircuitBreaker"/>.
+        /// So, if you check the state by yourself, and make a remote call outside CircuitBreaker, you should
+        /// manage the state yourself.
+        /// </summary>
+        public bool IsClosed => _currentState is Closed;
+
+        /// <summary>
+        /// Return true if the internal state is Open. WARNING: It is a "power API" call which you should use with care.
+        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in <see cref="WithCircuitBreaker"/>.
+        /// So, if you check the state by yourself, and make a remote call outside CircuitBreaker, you should
+        /// manage the state yourself.
+        /// </summary>
+        public bool IsOpen => _currentState is Open;
+
+        /// <summary>
+        /// Return true if the internal state is HalfOpen. WARNING: It is a "power API" call which you should use with care.
+        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in withCircuitBreaker.
+        /// So, if you check the state by yourself, and make a remote call outside CircuitBreaker, you should
+        /// manage the state yourself.
+        /// </summary>
+        public bool IsHalfOpen => _currentState is HalfOpen;
 
         /// <summary>
         /// Adds a callback to execute when circuit breaker opens

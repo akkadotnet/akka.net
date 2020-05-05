@@ -1,3 +1,277 @@
+#### 1.4.5 April 29 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.5 consists mostly of bug fixes and quality-of-life improvements.
+
+* [Akka.Cluster.Sharding: release shard lease when shard stopped](https://github.com/akkadotnet/akka.net/pull/4369)
+* [Akka.Cluster.DistributedData: ORMultiValueDictionary - DistributedData Serialization InvalidCastException Unable to cast object of type 'DeltaGroup[System.String]' to type 'Akka.DistributedData.ORSet1[System.String]'](https://github.com/akkadotnet/akka.net/issues/4367)
+* [Akka.Actor: Support double wildcards in actor deployment config](https://github.com/akkadotnet/akka.net/issues/4136)
+
+To see the full set of changes for Akka.NET 1.4.5, please [see the 1.4.5 milestone](https://github.com/akkadotnet/akka.net/milestone/36).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 3 | 6 | 6 | Michael Handschuh |       
+| 3 | 486 | 91 | Aaron Stannard |       
+| 3 | 3 | 3 | dependabot-preview[bot] | 
+| 2 | 44 | 3 | zbynek001 |              
+| 1 | 7 | 0 | JoRo |                    
+| 1 | 6 | 21 | Ismael Hamed |           
+| 1 | 3 | 3 | Igor Fedchenko |          
+| 1 | 163 | 60 | Gregorius Soedharmo |  
+| 1 | 14 | 2 | Bogdan Rotund |          
+
+#### 1.4.4 March 31 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.4 includes one major fix for HOCON fallback configurations, a new module (Akka.Coordination), and some major improvements to Akka.Cluster.Tools / Akka.Cluster.Sharding:
+
+* [Akka.Coordination: Lease API & integration](https://github.com/akkadotnet/akka.net/pull/4344)
+* [Akka: Timers for self scheduled messages added, FSM timers fixes](https://github.com/akkadotnet/akka.net/pull/3778)
+* [Akka **Important** Bugfix: Config.WithFallback is acting inconsistently](https://github.com/akkadotnet/akka.net/pull/4358)
+* [Akka.Cluster.Sharding: Updates](https://github.com/akkadotnet/akka.net/pull/4354)
+
+To see the full set of changes for Akka.NET 1.4.4, please [see the 1.4.4 milestone](https://github.com/akkadotnet/akka.net/milestone/35).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 4845 | 225 | zbynek001 |
+| 2 | 3 | 3 | dependabot-preview[bot] |
+| 2 | 159 | 0 | Aaron Stannard |
+| 2 | 1099 | 23 | Gregorius Soedharmo |
+| 1 | 34 | 5 | Petri Kero |
+| 1 | 1 | 1 | Felix Reisinger |
+
+#### 1.4.3 March 18 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.3 fixes one major issue that affected Akka.Persistence.Sql users as part of the v1.4 rollout:
+
+* [Bugfix: No connection string for Sql Event Journal was specified](https://github.com/akkadotnet/akka.net/issues/4343)
+
+To see the full set of changes for Akka.NET 1.4.3, please [see the 1.4.3 milestone](https://github.com/akkadotnet/akka.net/milestone/34).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 78 | 2 | Gregorius Soedharmo |
+| 1 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 172 | 11 | Ismael Hamed |
+
+#### 1.4.2 March 12 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.2 fixes two issues that affected users as part of the Akka.NET v1.4.1 rollout:
+
+* [Bugfix: Missing v1.4.1 NuGet packages](https://github.com/akkadotnet/akka.net/issues/4332)
+* [Bugfix: App.config loading broken in Akka.NET v1.4.1](https://github.com/akkadotnet/akka.net/issues/4330)
+
+To see the full set of changes for Akka.NET 1.4.2, please [see the 1.4.2 milestone](https://github.com/akkadotnet/akka.net/milestone/32).
+
+#### 1.4.1 March 11 2020 ####
+**Major release for Akka.NET 1.4**
+
+Akka.NET v1.4 is a non-breaking upgrade for all Akka.NET v1.3 and earlier users. It introduces many new features, all of which can be found in our ["What's new in Akka.NET v1.4" page](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
+
+Major changes include:
+
+* Akka.Cluster.Sharding and Akka.DistributedData are now out of beta status and are treated as mature modules.
+* Akka.Remote's performance has significantly increased as a function of our new batching mode (see the numbers) - which is tunable via HOCON configuration to best support your needs. [Learn how to performance optimize Akka.Remote here](https://getakka.net/articles/remoting/performance.html).
+* Added new Akka.Cluster.Metrics module to measure and broadcast the performance of each node, also includes some routers that can use this information to direct traffic to the "least busy" nodes.
+* Added [Stream References to Akka.Streams](https://getakka.net/articles/streams/streamrefs.html),  a feature which allows Akka.Streams graphs to span across the network.
+* Moved from .NET Standard 1.6 to .NET Standard 2.0 and dropped support for all versions of .NET Framework that aren't supported by .NET Standard 2.0 - this means issues caused by our polyfills (i.e. SerializableAttribute) should be fully resolved now.
+* Moved onto modern C# best practices, such as changing our APIs to support `System.ValueTuple` over regular tuples.
+
+And hundreds of other fixes and improvements. See the full set of changes for Akka.NET v1.4 here:
+
+* [Akka.NET v1.4 Milestone](https://github.com/akkadotnet/akka.net/milestone/17)
+* [Akka.NET v1.4.1 Milestone](https://github.com/akkadotnet/akka.net/milestone/33)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 199 | 41324 | 26885 | Aaron Stannard |
+| 46 | 63 | 63 | dependabot-preview[bot] |
+| 34 | 16800 | 6804 | Igor Fedchenko |
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 10 | 802 | 317 | Ismael Hamed |
+| 7 | 1876 | 362 | zbynek001 |
+| 6 | 897 | 579 | Sean Gilliam |
+| 5 | 95 | 986 | cptjazz |
+| 5 | 4837 | 51 | Valdis Zobēla |
+| 5 | 407 | 95 | Jonathan Nagy |
+| 5 | 116 | 14 | Andre Loker |
+| 3 | 992 | 77 | Gregorius Soedharmo |
+| 3 | 2 | 2 | Arjen Smits |
+| 2 | 7 | 7 | jdsartori |
+| 2 | 4 | 6 | Onur Gumus |
+| 2 | 15 | 1 | Kaiwei Li |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 62 | 15 | Mathias Feitzinger |
+| 1 | 3 | 3 | Abi |
+| 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Greatsamps |
+| 1 | 1 | 1 | Christoffer Jedbäck |
+| 1 | 1 | 1 | Andre |
+
+#### 1.4.1-rc3 March 10 2020 ####
+**Stable release candidate for Akka.NET 1.4**
+
+In Akka.NET v1.4.1-rc2 we rolled back all of the stand-alone HOCON additions and made Akka.NET v1.4 non-breaking. 
+
+* [Akka.Persistence.Sql.Common: Fix, unsealed `JournalSettings` and `SnapshotStoreSettings` classes](https://github.com/akkadotnet/akka.net/pull/4319)
+
+#### 1.4.1-rc3 March 10 2020 ####
+**Stable release candidate for Akka.NET 1.4**
+
+In Akka.NET v1.4.1-rc2 we rolled back all of the stand-alone HOCON additions and made Akka.NET v1.4 non-breaking. 
+
+For information on the full set of changes between RC1 and RC2, [please see "What's New in Akka.NET v1.4" on the official Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.4.html) 
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 13 | 9431 | 5347 | Aaron Stannard |
+| 2 | 3 | 3 | dependabot-preview[bot] |
+| 1 | 97 | 73 | Gregorius Soedharmo |
+| 1 | 6 | 1 | Igor Fedchenko |
+
+#### 1.4.1-rc1 February 28 2020 ####
+**Stable release candidate for Akka.NET 1.4**
+
+Akka.NET v1.4.0-rc1 represents [the completion of the entire Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17).
+
+Provided that there are no major bugs, architectural issues, performance regressions, or stability issues reported as we begin the process of moving all of our plugins onto Akka.NET v1.4.0-RC1, Akka.NET v1.4.0 final will ship within two weeks.
+
+For information on the full set of changes, [please see "What's New in Akka.NET v1.4" on the official Akka.NET website](https://getakka.net/community/whats-new/akkadotnet-v1.4.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |         
+| --- | --- | --- | --- |                  
+| 206 | 33015 | 24489 | Aaron Stannard |   
+| 47 | 63 | 63 | dependabot-preview[bot] | 
+| 33 | 16794 | 6803 | Igor Fedchenko |     
+| 15 | 1370 | 557 | Ismael Hamed |         
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 10 | 3451 | 706 | zbynek001 |            
+| 8 | 224 | 25 | Andre Loker |             
+| 6 | 897 | 579 | Sean Gilliam |           
+| 6 | 101 | 987 | cptjazz |                
+| 5 | 4837 | 51 | Valdis Zobēla |          
+| 5 | 407 | 95 | Jonathan Nagy |           
+| 3 | 8 | 8 | jdsartori |                  
+| 3 | 2 | 2 | Arjen Smits |                
+| 3 | 16 | 2 | Kaiwei Li |                 
+| 2 | 6 | 6 | Abi |                        
+| 2 | 4 | 6 | Onur Gumus |                 
+| 2 | 36 | 32 | Peter Huang |              
+| 2 | 2 | 4 | Maciej Wódke |               
+| 2 | 2 | 2 | Wessel Kranenborg |          
+| 2 | 130 | 94 | Ondrej Pialek |           
+| 1 | 633 | 1 | Gregorius Soedharmo |      
+| 1 | 62 | 15 | Mathias Feitzinger |       
+| 1 | 3 | 1 | jg11jg |                     
+| 1 | 1 | 1 | Greatsamps |                 
+| 1 | 1 | 1 | Christoffer Jedbäck |        
+| 1 | 1 | 1 | Andre |                      
+
+#### 1.4.0-beta4 January 28 2020 ####
+**Fourth pre-release candidate for Akka.NET 1.4**
+
+Akka.NET v1.4.0-beta4 represents a significant advancement against the v1.4.0 milestone, with numerous changes and fixes. 
+
+**Akka.NET now targets .NET Standard 2.0 going forward** - this first big change in this release is that we've dropped support for .NET Framework 4.5. We will only target .NET Standard 2.0 going forward with the v1.4.0 milestone from this point onward. .NET Standard 2.0 can be consumed by .NET Framework 4.6.1+ and .NET Core 2.0 and higher.
+
+**Introduction to Akka.Cluster.Metrics** - in this release we introduce a brand new Akka.NET NuGet package, Akka.Cluster.Metrics, which is designed to allow users to share data about the relative busyness of each node in their cluster. Akka.Cluster.Metrics can be consumed inside routers, i.e. "route this message to the node with the most available memory," and Akka.Cluster.Metrics also supports the publication of custom metrics types.
+
+If you want to [learn more about how to use Akka.Cluster.Metrics, read the official documentation here](https://getakka.net/articles/clustering/cluster-metrics.html).
+
+**Significant Akka.Remote Performance Improvements** - as part of this release we've introduced some new changes that are enabled by default in the Akka.Remote DotNetty transport: "flush batching" or otherwise known as I/O batching. The idea behind this is to group multiple logical writes into a smaller number of system writes. 
+
+You will want to tune this setting to match the behavior of your specific application, and you can read our [brand new "Akka.Remote Performance Optimization" page](https://getakka.net/articles/remoting/performance.html).
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 27 | 15375 | 5575 | Igor Fedchenko |
+| 26 | 2131 | 2468 | Aaron Stannard |
+| 25 | 34 | 34 | dependabot-preview[bot] |
+| 8 | 765 | 203 | Ismael Hamed |
+| 4 | 75 | 70 | Jonathan Nagy |
+| 3 | 108 | 11 | Andre Loker |
+| 2 | 380 | 43 | Valdis Zobēla |
+| 1 | 62 | 15 | Mathias Feitzinger |
+| 1 | 6 | 1 | cptjazz |
+| 1 | 14 | 0 | Kaiwei Li |
+| 1 | 1 | 1 | zbynek001 |
+| 1 | 1 | 1 | Christoffer Jedbäck |
+
+#### 1.3.16 November 14 2019 ####
+**Maintenance Release for Akka.NET 1.3**
+
+1.3.16 consists of non-breaking bugfixes and additions that have been contributed against the [Akka.NET v1.4.0 milestone](https://github.com/akkadotnet/akka.net/milestone/17) thus far.
+
+This patch includes some small fixes, such as:
+
+* [fix: NuGet symbols not published](https://github.com/akkadotnet/akka.net/pull/3966)
+* [Akka.Cluster.Sharding: Consolidated passivation check on settings used in region and shard](https://github.com/akkadotnet/akka.net/pull/3961)
+* [Akka.Cluster.Tools: Singleton - missing state change fix](https://github.com/akkadotnet/akka.net/pull/4003)
+* [Akka.Cluster.Tools: Fixed singleton issue when leaving several nodes](https://github.com/akkadotnet/akka.net/pull/3962)
+
+However, the biggest fix is for .NET Core 3.0 users. When .NET Core 3.0 was introduced, it broke some of the APIs in prior versions of [Hyperion](https://github.com/akkadotnet/Hyperion) which subsequently caused Akka.Cluster.Sharding and Akka.DistributedData users to have problems when attempting to run on .NET Core 3.0. These have been fixed as Akka.NET v1.3.16 is now running using the latest versions of Hyperion, which resolve this issue.
+
+To [see the full set of changes in Akka.NET v1.3.16, click here](https://github.com/akkadotnet/akka.net/pull/4037).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 119 | 6 | Aaron Stannard |
+| 3 | 531 | 126 | Ismael Hamed |
+| 3 | 108 | 11 | Andre Loker |
+| 2 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 6 | 1 | cptjazz |
+| 1 | 1 | 1 | zbynek001 |
+
+#### 1.4.0-beta3 October 30 2019 ####
+**Third pre-release candidate for Akka.NET 1.4**
+This release contains some more significant changes for Akka.NET v1.4.0.
+
+* All APIs in Akka.Streams, Akka, and elsewhere which used to return `Tuple<T1, T2>` now support the equivalent `ValueTuple<T1,T2>` syntax - so new language features such as tuple deconstruction can be used by our users.
+* Upgraded to Hyperion 0.9.10, which properly supports .NET Core 3.0 and cross-platform communication between .NET Framework and .NET Core.
+* All `ILoggingAdapter` instances running inside Akka.NET actors will now include the full Akka.Remote `Address` during logging, which is very helpful for users who aggregate their logs inside consolidated systems.
+* Various Akka.Cluster.Sharding fixes.
+
+To [follow our progress on the Akka.NET v1.4 milestone, click here](https://github.com/akkadotnet/akka.net/milestone/17).
+
+We expect to release more beta versions in the future, and if you wish to [get access to nightly Akka.NET builds then click here](https://getakka.net/community/getting-access-to-nightly-builds.html).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+
+| 115 | 10739 | 8969 | Aaron Stannard |
+| 13 | 11671 | 1059 | Bartosz Sypytkowski |
+| 10 | 16 | 16 | dependabot-preview[bot] |
+| 6 | 897 | 579 | Sean Gilliam |
+| 6 | 1744 | 358 | zbynek001 |
+| 5 | 568 | 240 | Ismael Hamed |
+| 5 | 116 | 14 | Andre Loker |
+| 3 | 4457 | 8 | Valdis Zobēla |
+| 3 | 2 | 2 | Arjen Smits |
+| 3 | 14 | 9 | cptjazz |
+| 2 | 7 | 7 | jdsartori |
+| 2 | 4 | 6 | Onur Gumus |
+| 2 | 1341 | 1182 | Igor Fedchenko |
+| 1 | 65 | 47 | Ondrej Pialek |
+| 1 | 3 | 3 | Abi |
+| 1 | 3 | 1 | jg11jg |
+| 1 | 18 | 16 | Peter Huang |
+| 1 | 1 | 2 | Maciej Wódke |
+| 1 | 1 | 1 | Wessel Kranenborg |
+| 1 | 1 | 1 | Kaiwei Li |
+| 1 | 1 | 1 | Greatsamps |
+| 1 | 1 | 1 | Andre |
+
 #### 1.4.0-beta2 September 23 2019 ####
 **Second pre-release candidate for Akka.NET 1.4**
 Akka.NET v1.4.0 is still moving along and this release contains some new and important changes.

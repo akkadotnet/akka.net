@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -102,18 +102,19 @@ namespace Akka.Persistence.Sqlite.Snapshot
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+        protected static readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="snapshotConfig">TBD</param>
-        public SqliteSnapshotStore(Config snapshotConfig) : base(snapshotConfig)
+        public SqliteSnapshotStore(Config snapshotConfig) : 
+            base(snapshotConfig.WithFallback(Extension.DefaultSnapshotConfig))
         {
             var config = snapshotConfig.WithFallback(Extension.DefaultSnapshotConfig);
             QueryExecutor = new SqliteSnapshotQueryExecutor(new QueryConfiguration(
                 schemaName: null,
-                snapshotTableName: "snapshot",
+                snapshotTableName: config.GetString("table-name"),
                 persistenceIdColumnName: "persistence_id",
                 sequenceNrColumnName: "sequence_nr",
                 payloadColumnName: "payload",
@@ -121,8 +122,8 @@ namespace Akka.Persistence.Sqlite.Snapshot
                 timestampColumnName: "created_at",
                 serializerIdColumnName: "serializer_id",
                 timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer"),
-                useSequentialAccess: config.GetBoolean("use-sequential-access")),
+                defaultSerializer: config.GetString("serializer", null),
+                useSequentialAccess: config.GetBoolean("use-sequential-access", false)),
                 Context.System.Serialization);
         }
 

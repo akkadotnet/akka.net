@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ namespace Akka.Actor
         /// </exception>>
         public void Invoke(Envelope envelope)
         {
-            
+
             var message = envelope.Message;
             var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
 
@@ -129,7 +129,7 @@ namespace Akka.Actor
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>
-        protected virtual void AutoReceiveMessage(Envelope envelope)
+        protected internal virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
 
@@ -140,12 +140,27 @@ namespace Akka.Actor
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
             var m = envelope.Message;
-            if (m is Terminated) ReceivedTerminated(m as Terminated);
-            else if (m is AddressTerminated) AddressTerminated((m as AddressTerminated).Address);
-            else if (m is Kill) Kill();
-            else if (m is PoisonPill) HandlePoisonPill();
-            else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
-            else if (m is Identify) HandleIdentity(m as Identify);
+            switch (m)
+            {
+                case Terminated terminated:
+                    ReceivedTerminated(terminated);
+                    break;
+                case AddressTerminated terminated:
+                    AddressTerminated(terminated.Address);
+                    break;
+                case Kill _:
+                    Kill();
+                    break;
+                case PoisonPill _:
+                    HandlePoisonPill();
+                    break;
+                case ActorSelectionMessage selectionMessage:
+                    ReceiveSelection(selectionMessage);
+                    break;
+                case Identify identify:
+                    HandleIdentity(identify);
+                    break;
+            }
         }
 
         /// <summary>
@@ -184,7 +199,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>   
+        /// <summary>
         ///     Receives the selection.
         /// </summary>
         /// <param name="m">The m.</param>
@@ -231,7 +246,7 @@ namespace Akka.Actor
 
         private void SysMsgInvokeAll(EarliestFirstSystemMessageList messages, int currentState)
         {
-           
+
             var nextState = currentState;
             var todo = messages;
             while(true)
@@ -246,36 +261,56 @@ namespace Akka.Actor
                     {
                         Stash(m);
                     }
-                    if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage((ActorTaskSchedulerMessage)m);
-                    else if (m is Failed) HandleFailed(m as Failed);
-                    else if (m is DeathWatchNotification)
+
+                    switch (m)
                     {
-                        var msg = m as DeathWatchNotification;
-                        WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
-                    }
-                    else if (m is Create) Create((m as Create).Failure);
-                    else if (m is Watch)
-                    {
-                        var watch = m as Watch;
-                        AddWatcher(watch.Watchee, watch.Watcher);
-                    }
-                    else if (m is Unwatch)
-                    {
-                        var unwatch = m as Unwatch;
-                        RemWatcher(unwatch.Watchee, unwatch.Watcher);
-                    }
-                    else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
-                    else if (m is Suspend) FaultSuspend();
-                    else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
-                    else if (m is Terminate) Terminate();
-                    else if (m is Supervise)
-                    {
-                        var supervise = m as Supervise;
-                        Supervise(supervise.Child, supervise.Async);
-                    }
-                    else
-                    {
-                        throw new NotSupportedException($"Unknown message {m.GetType().Name}");
+                        case ActorTaskSchedulerMessage message:
+                            HandleActorTaskSchedulerMessage(message);
+                            break;
+                        case Failed failed:
+                            HandleFailed(failed);
+                            break;
+                        case DeathWatchNotification notification:
+                        {
+                            var msg = notification;
+                            WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
+                            break;
+                        }
+                        case Create create:
+                            Create(create.Failure);
+                            break;
+                        case Watch watch1:
+                        {
+                            var watch = watch1;
+                            AddWatcher(watch.Watchee, watch.Watcher);
+                            break;
+                        }
+                        case Unwatch unwatch1:
+                        {
+                            var unwatch = unwatch1;
+                            RemWatcher(unwatch.Watchee, unwatch.Watcher);
+                            break;
+                        }
+                        case Recreate recreate:
+                            FaultRecreate(recreate.Cause);
+                            break;
+                        case Suspend _:
+                            FaultSuspend();
+                            break;
+                        case Resume resume:
+                            FaultResume(resume.CausedByFailure);
+                            break;
+                        case Terminate _:
+                            Terminate();
+                            break;
+                        case Supervise supervise1:
+                        {
+                            var supervise = supervise1;
+                            Supervise(supervise.Child, supervise.Async);
+                            break;
+                        }
+                        default:
+                            throw new NotSupportedException($"Unknown message {m.GetType().Name}");
                     }
                 }
                 catch (Exception cause)
@@ -361,7 +396,6 @@ namespace Akka.Actor
 
         private void Supervise(IActorRef child, bool async)
         {
-            //TODO: complete this
             if (!IsTerminating)
             {
                 var childRestartStats = InitChild((IInternalActorRef)child);
@@ -382,9 +416,9 @@ namespace Akka.Actor
 
         private void HandleSupervise(IActorRef child, bool async)
         {
-            if (async && child is RepointableActorRef)
+            if (async && child is RepointableActorRef @ref)
             {
-                ((RepointableActorRef)child).Point();
+                @ref.Point();
             }
         }
 

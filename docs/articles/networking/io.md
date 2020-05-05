@@ -35,7 +35,7 @@ The following diagram illustrate the actors involved in establishing and handlin
 
 The following example shows a simple Telnet client. The client send lines entered in the console to the TCP connection, and write data received from the network to the console.
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/TelnetClient.cs?range=10-63)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/TelnetClient.cs?name=telnet-client)]
 
 ### Server Connection
 
@@ -50,6 +50,6 @@ The following diagram illustrate the actor and messages.
 
 The following code example shows a simple server that echo's data received from the network.
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoServer.cs?range=8-29)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echo-server)]
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoConnection.cs?range=7-28)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoConnection.cs?name=echo-connection)]

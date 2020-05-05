@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,21 +36,7 @@ namespace Akka.Actor
         /// <param name="exception">The exception that was thrown.</param>
         /// <returns>The directive used to handle the exception.</returns>
         protected abstract Directive Handle(IActorRef child, Exception exception);
-
-        /// <summary>
-        /// Obsolete. This method is deprecated.
-        /// </summary>
-        /// <param name="actorCell">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        /// <returns>N?A</returns>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        public bool HandleFailure(ActorCell actorCell, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            return HandleFailure(actorCell, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         ///     This is the main entry point: in case of a child’s failure, this method
         ///     must try to handle the failure by resuming, restarting or stopping the
@@ -121,18 +107,6 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Obsolete. This method is deprecated.
-        /// </summary>
-        /// <param name="context">N/A</param>
-        /// <param name="restart">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        /// <returns>N/A</returns>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        protected abstract void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren);
-
-        /// <summary>
         /// This method is called to act on the failure of a child: restart if the flag is true, stop otherwise.
         /// </summary>
         /// <param name="context">The actor context.</param>
@@ -141,7 +115,7 @@ namespace Akka.Actor
         /// <param name="cause">The exception that caused the child to fail.</param>
         /// <param name="stats">The stats for the child that failed. The ActorRef to the child can be obtained via the <see cref="ChildRestartStats.Child"/> property</param>
         /// <param name="children">The stats for all children</param>
-        protected abstract void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children);
+        public abstract void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children);
 
         /// <summary>
         /// Resumes the previously failed child. Suspend/resume needs to be done in
@@ -387,23 +361,7 @@ namespace Akka.Actor
         {
             return Decider.Decide(exception);
         }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="ProcessFailure(IActorContext,bool,IActorRef,Exception,ChildRestartStats,IReadOnlyCollection{Akka.Actor.Internal.ChildRestartStats})"/> instead.
-        /// </summary>
-        /// <param name="context">N/A</param>
-        /// <param name="restart">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            // for compatibility, since 1.1.2
-
-            ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -413,7 +371,7 @@ namespace Akka.Actor
         /// <param name="cause">TBD</param>
         /// <param name="stats">TBD</param>
         /// <param name="children">TBD</param>
-        protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
+        public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (restart && stats.RequestRestartPermission(MaxNumberOfRetries, WithinTimeRangeMilliseconds))
                 RestartChild(child, cause, suspendFirst: false);
@@ -658,23 +616,7 @@ namespace Akka.Actor
         {
             return Decider.Decide(exception);
         }
-
-        /// <summary>
-        /// Obsolete. Use <see cref="ProcessFailure(IActorContext,bool,IActorRef,Exception,ChildRestartStats, IReadOnlyCollection{ChildRestartStats})"/> instead.
-        /// </summary>
-        /// <param name="context">N/A</param>
-        /// <param name="restart">N/A</param>
-        /// <param name="cause">N/A</param>
-        /// <param name="failedChildStats">N/A</param>
-        /// <param name="allChildren">N/A</param>
-        [Obsolete("This method is deprecated [1.1.2]")]
-        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats, IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            // for compatibility, since 1.1.2
-
-            ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -684,7 +626,7 @@ namespace Akka.Actor
         /// <param name="cause">TBD</param>
         /// <param name="stats">TBD</param>
         /// <param name="children">TBD</param>
-        protected override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
+        public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats, IReadOnlyCollection<ChildRestartStats> children)
         {
             if (children.Count > 0)
             {

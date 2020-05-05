@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeployerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,12 +66,18 @@ namespace Akka.Tests.Actor
           router = round-robin-pool
         }
         ""/some/*"" {
-          router = round-robin-pool
+          router = random-pool
         }
         ""/*/some"" {
           router = round-robin-pool
         }
         ""/*/so.me"" {
+          router = round-robin-pool
+        }
+        ""/double/**"" {
+          router = random-pool
+        }
+        ""/double/more/**"" {
           router = round-robin-pool
         }
       }
@@ -166,7 +172,41 @@ namespace Akka.Tests.Actor
             Assert.NotEqual(worker1.Path, worker2.Path);
         }
 
+        [Fact]
+        public void Deployer_should_be_able_to_use_wildcards()
+        {
+            AssertRouting("/some/wildcardmatch", new RandomPool(1), "/some/*");
+            AssertRouting("/somewildcardmatch/some", new RoundRobinPool(1), "/*/some");
+        }
+
+        [Fact]
+        public void Deployer_should_be_able_to_use_double_wildcards()
+        {
+            AssertRouting("/double/wildcardmatch", new RandomPool(1), "/double/**");
+            AssertRouting("/double/wildcardmatch/anothermatch", new RandomPool(1), "/double/**");
+            AssertRouting("/double/more/anothermatch", new RoundRobinPool(1), "/double/more/**");
+            AssertNoRouting("/double");
+        }
+
         #endregion
+
+        private void AssertNoRouting(string service)
+        {
+            var deployment = ((ActorSystemImpl)Sys).Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            Assert.Null(deployment);
+        }
+
+        private void AssertRouting(string service, RouterConfig expected, string expectPath)
+        {
+            var deployment = ((ActorSystemImpl)Sys).Provider.Deployer.Lookup(service.Split('/').Drop(1));
+            Assert.Equal(expectPath, deployment.Path);
+            Assert.Equal(expected.GetType(), deployment.RouterConfig.GetType());
+            Assert.Equal(Deploy.NoScopeGiven, deployment.Scope);
+            if(expected is Pool pool)
+            {
+                Assert.Equal(pool.Resizer, ((Pool)deployment.RouterConfig).Resizer);
+            }
+        }
     }
 }
 

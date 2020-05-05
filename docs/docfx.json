@@ -9,6 +9,7 @@
                 "**/examples/**",
                 "**/benchmark/**",
                 "**/*TestRunner*.csproj",
+                "**/Akka.Docs.*.csproj",
                 "**/*Tests*.csproj",
                 "**/*Tests.*.csproj"
             ],

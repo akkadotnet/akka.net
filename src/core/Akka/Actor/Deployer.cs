@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Deployer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,8 @@ namespace Akka.Actor
         /// </summary>
         protected readonly Config Default;
         private readonly Settings _settings;
-        private readonly AtomicReference<WildcardTree<Deploy>> _deployments = new AtomicReference<WildcardTree<Deploy>>(new WildcardTree<Deploy>());
+        private readonly AtomicReference<WildcardIndex<Deploy>> _deployments = 
+            new AtomicReference<WildcardIndex<Deploy>>(new WildcardIndex<Deploy>());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Deployer"/> class.
@@ -38,8 +39,11 @@ namespace Akka.Actor
             var config = settings.Config.GetConfig("akka.actor.deployment");
             Default = config.GetConfig("default");
 
+            if (config.IsNullOrEmpty())
+                return;
+
             var rootObj = config.Root.GetObject();
-            if (rootObj == null) return;
+            // if (rootObj == null) return;
             var unwrapped = rootObj.Unwrapped.Where(d => !d.Key.Equals("default")).ToArray();
             foreach (var d in unwrapped.Select(x => ParseConfig(x.Key, config.GetConfig(x.Key.BetweenDoubleQuotes()))))
             {
@@ -71,17 +75,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public Deploy Lookup(IEnumerable<string> path)
         {
-            return Lookup(path.GetEnumerator());
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="path">TBD</param>
-        /// <returns>TBD</returns>
-        public Deploy Lookup(IEnumerator<string> path)
-        {
-            return _deployments.Value.Find(path).Data;
+            return _deployments.Value.Find(path);
         }
 
         /// <summary>
@@ -95,26 +89,22 @@ namespace Akka.Actor
         /// </exception>
         public void SetDeploy(Deploy deploy)
         {
-            Action<IList<string>, Deploy> add = (path, d) =>
+            void add(IList<string> path, Deploy d)
             {
-                bool set;
-                do
+                var w = _deployments.Value;
+                foreach (var t in path)
                 {
-                    var w = _deployments.Value;
-                    foreach (var t in path)
+                    if (string.IsNullOrEmpty(t))
+                        throw new IllegalActorNameException($"Actor name in deployment [{d.Path}] must not be empty");
+                    if (!ActorPath.IsValidPathElement(t))
                     {
-                        var curPath = t;
-                        if (string.IsNullOrEmpty(curPath))
-                            throw new IllegalActorNameException($"Actor name in deployment [{d.Path}] must not be empty");
-                        if (!ActorPath.IsValidPathElement(t))
-                        {
-                            throw new IllegalActorNameException(
-                                $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
-                        }
+                        throw new IllegalActorNameException(
+                            $"Illegal actor name [{t}] in deployment [${d.Path}]. Actor paths MUST: not start with `$`, include only ASCII letters and can only contain these special characters: ${new string(ActorPath.ValidSymbols)}.");
                     }
-                    set = _deployments.CompareAndSet(w, w.Insert(path.GetEnumerator(), d));
-                } while (!set);
-            };
+                }
+                if (!_deployments.CompareAndSet(w, w.Insert(path, d))) add(path, d);
+            }
+
             var elements = deploy.Path.Split('/').Drop(1).ToList();
             add(elements, deploy);
         }
@@ -128,10 +118,10 @@ namespace Akka.Actor
         public virtual Deploy ParseConfig(string key, Config config)
         {
             var deployment = config.WithFallback(Default);
-            var routerType = deployment.GetString("router");
+            var routerType = deployment.GetString("router", null);
             var router = CreateRouterConfig(routerType, deployment);
-            var dispatcher = deployment.GetString("dispatcher");
-            var mailbox = deployment.GetString("mailbox");
+            var dispatcher = deployment.GetString("dispatcher", null);
+            var mailbox = deployment.GetString("mailbox", null);
             var deploy = new Deploy(key, deployment, router, Deploy.NoScopeGiven, dispatcher, mailbox);
             return deploy;
         }
@@ -141,8 +131,11 @@ namespace Akka.Actor
             if (routerTypeAlias == "from-code")
                 return NoRouter.Instance;
 
+            if (deployment.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<RouterConfig>();
+
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
-            var routerTypeName = _settings.Config.GetString(path);
+            var routerTypeName = _settings.Config.GetString(path, null);
             var routerType = Type.GetType(routerTypeName);
             Debug.Assert(routerType != null, "routerType != null");
             var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);

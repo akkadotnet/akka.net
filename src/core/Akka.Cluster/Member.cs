@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -224,7 +224,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Compares members by their upNumber to determine which is oldest / youngest.
         /// </summary>
-        internal static readonly AgeComparer AgeOrdering = new AgeComparer();
+        public static readonly IComparer<Member> AgeOrdering = new AgeComparer();
 
         /// <summary>
         ///  INTERNAL API
@@ -334,7 +334,7 @@ namespace Akka.Cluster
 
             if (Member.AllowedTransitions[a.Status].Contains(b.Status))
                 return b;
-            if(Member.AllowedTransitions[b.Status].Contains(a.Status))
+            if (Member.AllowedTransitions[b.Status].Contains(a.Status))
                 return a;
 
             return null; // illegal transition
@@ -410,7 +410,6 @@ namespace Akka.Cluster
                 {MemberStatus.Removed, ImmutableHashSet.Create<MemberStatus>()}
             }.ToImmutableDictionary();
     }
-
 
     /// <summary>
     /// Defines the current status of a cluster member node
@@ -492,7 +491,7 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="object.Equals(object)"/>
-        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress) obj);
+        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress)obj);
 
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()

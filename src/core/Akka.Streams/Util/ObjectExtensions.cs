@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ObjectExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using Akka.Util;
 
 namespace Akka.Streams.Util
 {
@@ -21,10 +22,5 @@ namespace Akka.Streams.Util
         /// <param name="obj">TBD</param>
         /// <returns>TBD</returns>
         public static bool IsDefaultForType<T>(this T obj) => EqualityComparer<T>.Default.Equals(obj, default(T));
-        
-        /// <summary>
-        /// Wraps object to the <see cref="Option{T}"/> monade
-        /// </summary>
-        public static Option<T> AsOption<T>(this T obj) => new Option<T>(obj);
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.IO
 
         private void ExpectSuccess<T>(Task<T> f, T value)
         {
-            f.Wait(RemainingOrDefault).Should().BeTrue();
+            f.Wait(); // just let it run
             f.Result.Should().Be(value);
         }
 

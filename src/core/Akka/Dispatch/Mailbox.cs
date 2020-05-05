@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -664,7 +664,10 @@ namespace Akka.Dispatch
         /// </exception>
         public BoundedMailbox(Settings settings, Config config) : base(settings, config)
         {
-            Capacity = config.GetInt("mailbox-capacity");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BoundedMailbox>();
+
+            Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
@@ -796,7 +799,10 @@ namespace Akka.Dispatch
         /// </exception>
         public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
-            Capacity = config.GetInt("mailbox-capacity");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BoundedDequeBasedMailbox>();
+
+            Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));

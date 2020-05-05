@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpOutgoingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -31,7 +32,8 @@ namespace Akka.IO
                    tcp.Settings.OutgoingSocketForceIpv4
                        ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
                        : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
-                   connect.PullMode)
+                   connect.PullMode,
+                   tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
         {
             _commander = commander;
             _connect = connect;
@@ -54,7 +56,7 @@ namespace Akka.IO
         {
             if (_connectArgs != null)
             {
-                Tcp.SocketEventArgsPool.Release(_connectArgs);
+                ReleaseSocketEventArgs(_connectArgs);
                 _connectArgs = null;
             }
         }
@@ -149,7 +151,7 @@ namespace Akka.IO
             {
                 Log.Debug("Attempting connection to [{0}]", address);
 
-                _connectArgs = Tcp.SocketEventArgsPool.Acquire(Self);
+                _connectArgs = CreateSocketEventArgs(Self);
                 _connectArgs.RemoteEndPoint = address;
                 // we don't setup buffer here, it shouldn't be necessary just for connection
                 if (!Socket.ConnectAsync(_connectArgs))

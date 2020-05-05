@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -71,7 +72,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var se = exception as SocketException;
 
-            if (se?.SocketErrorCode == SocketError.OperationAborted)
+            if (se?.SocketErrorCode == SocketError.OperationAborted || se?.SocketErrorCode == SocketError.ConnectionAborted)
             {
                 Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
@@ -147,6 +148,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
             base.ChannelActive(context);
+
         }
 
         private void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
@@ -169,25 +171,25 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override bool Write(ByteString payload)
         {
-            if (_channel.Open && _channel.IsWritable)
+            if (_channel.Open)
             {
-                var data = ToByteBuffer(payload);
-                _channel.WriteAndFlushAsync(data);
+                var data = ToByteBuffer(_channel, payload);
+                _channel.WriteAsync(data);
                 return true;
             }
             return false;
         }
 
-        private IByteBuffer ToByteBuffer(ByteString payload)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IByteBuffer ToByteBuffer(IChannel channel, ByteString payload)
         {
-            //TODO: optimize DotNetty byte buffer usage 
-            // (maybe custom IByteBuffer working directly on ByteString?)
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
 
         public override void Disassociate()
         {
+            _channel.Flush(); // flush before we close
             _channel.CloseAsync();
         }
     }

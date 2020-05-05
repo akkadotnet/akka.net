@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,8 +26,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public static DistributedPubSubSettings Create(ActorSystem system)
         {
             system.Settings.InjectTopLevelFallback(DistributedPubSub.DefaultConfig());
+
             var config = system.Settings.Config.GetConfig("akka.cluster.pub-sub");
-            if (config == null) throw new ArgumentException("Actor system settings has no configuration for akka.cluster.pub-sub defined");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DistributedPubSubSettings>("akka.cluster.pub-sub");
 
             return Create(config);
         }
@@ -40,6 +42,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <returns>TBD</returns>
         public static DistributedPubSubSettings Create(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DistributedPubSubSettings>();
+
             RoutingLogic routingLogic = null;
             var routingLogicName = config.GetString("routing-logic");
             switch (routingLogicName)
@@ -60,8 +65,12 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                                                 routingLogicName);
             }
 
+            // TODO: This will fail if DistributedPubSub.DefaultConfig() is not inside the fallback chain.
+            // TODO: "gossip-interval" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
+            // TODO: "removed-time-to-live" key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
+            // TODO: "max-delta-elements" key depends on Config.GetInt() to return a 0 default.
             return new DistributedPubSubSettings(
-                config.GetString("role"),
+                config.GetString("role", null),
                 routingLogic,
                 config.GetTimeSpan("gossip-interval"),
                 config.GetTimeSpan("removed-time-to-live"),

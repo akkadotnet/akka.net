@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeastShardAllocationStrategySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ using System;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class LeastShardAllocationStrategySpec : TestKitBase
+    public class LeastShardAllocationStrategySpec : TestKit.Xunit2.TestKit
     {
         /// <summary>
         /// Test dictionary, will keep the order of items as they were added
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly IActorRef _regionB;
         private readonly IActorRef _regionC;
 
-        public LeastShardAllocationStrategySpec() : base(new XunitAssertions(), "LeastShardAllocationStrategySpec")
+        public LeastShardAllocationStrategySpec() 
         {
             _regionA = Sys.ActorOf(Props.Empty, "regionA");
             _regionB = Sys.ActorOf(Props.Empty, "regionB");

@@ -1,18 +1,21 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxySettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Util;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Cluster.Tools.Singleton
 {
     /// <summary>
-    /// TBD
+    /// Create settings from the default configuration
+    /// `akka.cluster.singleton-proxy`.
     /// </summary>
     public sealed class ClusterSingletonProxySettings : INoSerializationVerificationNeeded
     {
@@ -26,27 +29,31 @@ namespace Akka.Cluster.Tools.Singleton
         {
             system.Settings.InjectTopLevelFallback(ClusterSingletonManager.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.singleton-proxy");
-            if (config == null)
-                throw new ConfigurationException($"Cannot create {typeof(ClusterSingletonProxySettings)}: akka.cluster.singleton-proxy configuration node not found");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>("akka.cluster.singleton-proxy");
 
             return Create(config);
         }
 
         /// <summary>
-        /// TBD
+        /// Create settings from a configuration with the same layout as
+        /// the default configuration `akka.cluster.singleton-proxy`.
         /// </summary>
         /// <param name="config">TBD</param>
         /// <returns>TBD</returns>
         public static ClusterSingletonProxySettings Create(Config config)
         {
-            var role = config.GetString("role");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterSingletonProxySettings>();
+
+            var role = config.GetString("role", null);
             if (role == string.Empty) role = null;
 
             return new ClusterSingletonProxySettings(
                 singletonName: config.GetString("singleton-name"),
                 role: role,
                 singletonIdentificationInterval: config.GetTimeSpan("singleton-identification-interval"),
-                bufferSize: config.GetInt("buffer-size"));
+                bufferSize: config.GetInt("buffer-size", 0));
         }
 
         /// <summary>
@@ -77,8 +84,8 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="singletonIdentificationInterval">Interval at which the proxy will try to resolve the singleton instance.</param>
         /// <param name="bufferSize">
         /// If the location of the singleton is unknown the proxy will buffer this number of messages and deliver them
-        /// when the singleton is identified.When the buffer is full old messages will be dropped when new messages 
-        /// are sent via the proxy. Use 0 to disable buffering, i.e.messages will be dropped immediately if the location 
+        /// when the singleton is identified.When the buffer is full old messages will be dropped when new messages
+        /// are sent via the proxy. Use 0 to disable buffering, i.e.messages will be dropped immediately if the location
         /// of the singleton is unknown.
         /// </param>
         /// <exception cref="ArgumentException">
@@ -126,11 +133,7 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>A new setting with the provided <paramref name="role" />.</returns>
         public ClusterSingletonProxySettings WithRole(string role)
         {
-            return new ClusterSingletonProxySettings(
-                singletonName: SingletonName,
-                role: role,
-                singletonIdentificationInterval: SingletonIdentificationInterval,
-                bufferSize: BufferSize);
+            return Copy(role: role);
         }
 
         /// <summary>
@@ -141,9 +144,23 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="singletonIdentificationInterval">The identification level of the singleton proxy.</param>
         /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
+        [Obsolete("For compatibility reasons only. Use method with TimeSpan parameter instead")]
         public ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval)
         {
-            return Copy(singletonIdentificationInterval: SingletonIdentificationInterval);
+            return this;
+        }
+
+        /// <summary>
+        /// Creates a new <see cref="ClusterSingletonProxySettings" /> setting with the specified <paramref name="singletonIdentificationInterval"/>.
+        /// <note>
+        /// This method is immutable and returns a new instance of the setting.
+        /// </note>
+        /// </summary>
+        /// <param name="singletonIdentificationInterval">The identification level of the singleton proxy.</param>
+        /// <returns>A new setting with the provided <paramref name="singletonIdentificationInterval" />.</returns>
+        public ClusterSingletonProxySettings WithSingletonIdentificationInterval(TimeSpan singletonIdentificationInterval)
+        {
+            return Copy(singletonIdentificationInterval: singletonIdentificationInterval);
         }
 
         /// <summary>
@@ -159,12 +176,12 @@ namespace Akka.Cluster.Tools.Singleton
             return Copy(bufferSize: bufferSize);
         }
 
-        private ClusterSingletonProxySettings Copy(string singletonName = null, string role = null,
+        private ClusterSingletonProxySettings Copy(string singletonName = null, Option<string> role = default,
             TimeSpan? singletonIdentificationInterval = null, int? bufferSize = null)
         {
             return new ClusterSingletonProxySettings(
                 singletonName: singletonName ?? SingletonName,
-                role: role ?? Role,
+                role: role.HasValue ? role.Value : Role,
                 singletonIdentificationInterval: singletonIdentificationInterval ?? SingletonIdentificationInterval,
                 bufferSize: bufferSize ?? BufferSize);
         }

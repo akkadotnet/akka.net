@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpIncomingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using Akka.Actor;
 using System;
+using Akka.Util;
 
 namespace Akka.IO
 {
@@ -33,7 +34,7 @@ namespace Akka.IO
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options, 
                                      bool readThrottling)
-            : base(tcp, socket, readThrottling)
+            : base(tcp, socket, readThrottling, Option<int>.None)
         {
             _bindHandler = bindHandler;
             _options = options;

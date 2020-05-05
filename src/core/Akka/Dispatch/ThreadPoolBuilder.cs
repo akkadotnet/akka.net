@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThreadPoolBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         internal static ApartmentState GetApartmentState(Config cfg)
         {
-            var s = cfg.GetString("apartment");
+            var s = cfg.GetString("apartment", "");
             return string.Compare(s, "sta", StringComparison.OrdinalIgnoreCase) == 0
                 ? ApartmentState.STA
                 : string.Compare(s, "mta", StringComparison.OrdinalIgnoreCase) == 0
@@ -87,7 +87,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMin
         {
-            get { return _config.GetInt("pool-size-min"); }
+            get { return _config.GetInt("pool-size-min", 0); }
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Akka.Dispatch
         /// </summary>
         public double PoolSizeFactor
         {
-            get { return _config.GetDouble("pool-size-factor"); }
+            get { return _config.GetDouble("pool-size-factor", 0); }
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMax
         {
-            get { return _config.GetInt("pool-size-max"); }
+            get { return _config.GetInt("pool-size-max", 0); }
         }
 
         #region Static methods

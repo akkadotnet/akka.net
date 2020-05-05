@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding.Get(Sys);
             var config = Sys.Settings.Config.GetConfig("akka.cluster.sharding");
 
-            Assert.NotNull(config);
+            Assert.False(config.IsNullOrEmpty());
             Assert.Equal("sharding", config.GetString("guardian-name"));
             Assert.Equal(string.Empty, config.GetString("role"));
             Assert.False(config.GetBoolean("remember-entities"));

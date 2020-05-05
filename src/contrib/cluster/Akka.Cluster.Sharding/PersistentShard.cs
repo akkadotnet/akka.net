@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,8 @@ using Akka.Persistence;
 using Akka.Util.Internal;
 using System.Threading.Tasks;
 using Akka.Event;
+using Akka.Coordination;
+using Akka.Actor.Scheduler;
 
 namespace Akka.Cluster.Sharding
 {
@@ -23,7 +25,7 @@ namespace Akka.Cluster.Sharding
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
     /// </summary>
-    internal sealed class PersistentShard : PersistentActor, IShard
+    internal sealed class PersistentShard : PersistentActor, IShard, IWithTimers
     {
         IActorContext IShard.Context => Context;
         IActorRef IShard.Self => Self;
@@ -44,10 +46,14 @@ namespace Akka.Cluster.Sharding
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
         public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
+        public ImmutableDictionary<string, ImmutableList<(object, IActorRef)>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<(object, IActorRef)>>.Empty;
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
+
+        public ITimerScheduler Timers { get; set; }
+        public Lease Lease { get; }
+        public TimeSpan LeaseRetryInterval { get; } = TimeSpan.FromSeconds(5); // won't be used
 
         public PersistentShard(
             string typeName,
@@ -80,12 +86,23 @@ namespace Akka.Cluster.Sharding
             PassivateIdleTask = Settings.ShouldPassivateIdleEntities
                 ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
                 : null;
+
+            if (settings.LeaseSettings != null)
+            {
+                Lease = LeaseProvider.Get(Context.System).GetLease(
+                    $"{Context.System.Name}-shard-{typeName}-{shardId}",
+                    settings.LeaseSettings.LeaseImplementation,
+                    Cluster.Get(Context.System).SelfAddress.HostPort());
+
+                LeaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
+            }
         }
 
         public override string PersistenceId { get; }
 
         protected override void PostStop()
         {
+            this.ReleaseLeaseIfNeeded();
             PassivateIdleTask?.Cancel();
             base.PostStop();
         }
@@ -132,16 +149,24 @@ namespace Akka.Cluster.Sharding
                 case Shard.EntityStopped stopped:
                     State = new Shard.ShardState(State.Entries.Remove(stopped.EntityId));
                     return true;
-                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState:
-                    State = (Shard.ShardState)offer.Snapshot;
+                case SnapshotOffer offer when offer.Snapshot is Shard.ShardState state:
+                    State = state;
                     return true;
                 case RecoveryCompleted _:
-                    RestartRememberedEntities();
-                    this.Initialized();
+                    this.AcquireLeaseIfNeeded(); // onLeaseAcquired called when completed
                     Log.Debug("PersistentShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
                     return true;
             }
             return false;
+        }
+
+        public void OnLeaseAcquired()
+        {
+            Log.Debug("Shard initialized");
+            Context.Parent.Tell(new ShardInitialized(ShardId));
+            Context.Become(ReceiveCommand);
+            RestartRememberedEntities();
+            this.Stash.UnstashAll();
         }
 
         private void RestartRememberedEntities()
@@ -200,11 +225,11 @@ namespace Akka.Cluster.Sharding
         {
             var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
-            if (Equals(child, ActorRefs.Nobody))
+            if (child.IsNobody())
             {
                 if (State.Entries.Contains(id))
                 {
-                    if (MessageBuffers.ContainsKey(id))
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
@@ -213,7 +238,7 @@ namespace Akka.Cluster.Sharding
                 else
                 {
                     // Note; we only do this if remembering, otherwise the buffer is an overhead
-                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<Tuple<object, IActorRef>>.Empty.Add(Tuple.Create(message, sender)));
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender)));
                     ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
                 }
             }

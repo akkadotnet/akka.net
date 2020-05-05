@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPath.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,8 +59,7 @@ namespace Akka.Actor
             /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                ActorPath path;
-                if (TryParse(Path, out path))
+                if (TryParse(Path, out var path))
                 {
                     return path;
                 }
@@ -107,7 +106,7 @@ namespace Akka.Actor
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
+        internal static readonly char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
         /// <summary> 
         /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
@@ -122,7 +121,7 @@ namespace Akka.Actor
             {
                 return false;
             }
-            return !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
+            return !s.StartsWith("$") && Validate(s);
         }
 
         private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
@@ -131,8 +130,9 @@ namespace Akka.Actor
         private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') ||
                                                  (c >= '0' && c <= '9');
 
-        private static bool Validate(IReadOnlyList<char> chars, int len)
+        private static bool Validate(string chars)
         {
+            int len = chars.Length;
             var pos = 0;
             while (pos < len)
             {
@@ -183,8 +183,6 @@ namespace Akka.Actor
         public long Uid { get; }
 
         internal static readonly string[] EmptyElements = { };
-        internal static readonly string[] SystemElements = { "system" };
-        internal static readonly string[] UserElements = { "user" };
 
         /// <summary>
         /// Gets the elements.
@@ -240,7 +238,23 @@ namespace Akka.Actor
             if (other == null)
                 return false;
 
-            return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
+            if (!Address.Equals(other.Address))
+                return false;
+
+            ActorPath a = this;
+            ActorPath b = other;
+            for (;;)
+            {
+                if (ReferenceEquals(a, b))
+                    return true;
+                else if (a == null || b == null)
+                    return false;
+                else if (a.Name != b.Name)
+                    return false;
+
+                a = a.Parent;
+                b = b.Parent;
+            }
         }
 
         /// <inheritdoc/>
@@ -653,6 +667,19 @@ namespace Akka.Actor
             if (uid == Uid)
                 return this;
             return new ChildActorPath(_parent, _name, uid);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = (hash * 23) ^ Address.GetHashCode();
+                for (ActorPath p = this; p != null; p = p.Parent)
+                    hash = (hash * 23) ^ p.Name.GetHashCode();
+                return hash;
+            }
         }
 
         /// <inheritdoc/>

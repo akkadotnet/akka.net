@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,6 +109,11 @@ namespace Akka.Cluster.Sharding
                     return true;
                 case ClusterEvent.CurrentClusterState _:
                     /* ignore */
+                    return true;
+
+                case Terminate _:
+                    coordinator.Log.Debug("Received termination message");
+                    coordinator.Context.Stop(coordinator.Self);
                     return true;
                 default: return ReceiveTerminated(coordinator, message);
             }
@@ -223,7 +228,10 @@ namespace Akka.Cluster.Sharding
 
         private static void HandleRebalanceDone<TCoordinator>(this TCoordinator coordinator, string shard, bool ok) where TCoordinator : IShardCoordinator
         {
-            coordinator.Log.Debug("Rebalance shard [{0}] done [{1}]", shard, ok);
+            if (ok)
+                coordinator.Log.Debug("Rebalance shard [{0}] completed successfully", shard);
+            else
+                coordinator.Log.Warning("Rebalance shard [{0}] didn't complete within [{1}]", shard, coordinator.Settings.TunningParameters.HandOffTimeout);
 
             // The shard could have been removed by ShardRegionTerminated
             if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
@@ -426,7 +434,7 @@ namespace Akka.Cluster.Sharding
         {
             var sender = coordinator.Sender;
             Task.WhenAll(
-                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => Tuple.Create(regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
+                coordinator.AliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, message.Timeout).ContinueWith(r => (regionActor, r.Result), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion))
                 ).ContinueWith(allRegionStats =>
                 {
                     if (allRegionStats.IsCanceled)
@@ -464,7 +472,7 @@ namespace Akka.Cluster.Sharding
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions)
+                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions, coordinator.GracefullShutdownInProgress)
                             .WithDispatcher(coordinator.Context.Props.Dispatcher));
                     }
                     else

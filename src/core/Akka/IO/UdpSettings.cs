@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,8 +18,14 @@ namespace Akka.IO
         /// and fills it with values parsed from `akka.io.udp` HOCON
         /// path found in actor system.
         /// </summary>
-        public static UdpSettings Create(ActorSystem system) =>
-            Create(system.Settings.Config.GetConfig("akka.io.udp"));
+        public static UdpSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.io.udp");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<UdpSettings>("akka.io.udp");
+
+            return Create(config);
+        }
 
         /// <summary>
         /// Creates a new instance of <see cref="UdpSettings"/> class 
@@ -28,15 +34,16 @@ namespace Akka.IO
         /// <param name="config">TBD</param>
         public static UdpSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<UdpSettings>();
 
             return new UdpSettings(
-                bufferPoolConfigPath: config.GetString("buffer-pool"),
+                bufferPoolConfigPath: config.GetString("buffer-pool", null),
                 traceLogging: config.GetBoolean("trace-logging", false),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
-                directBufferSize: config.GetInt("direct-buffer-size"),
-                maxDirectBufferPoolSize: config.GetInt("direct-buffer-pool-limit"),
-                batchReceiveLimit: config.GetInt("receive-throughput"),
+                directBufferSize: config.GetInt("direct-buffer-size", 0),
+                maxDirectBufferPoolSize: config.GetInt("direct-buffer-pool-limit", 0),
+                batchReceiveLimit: config.GetInt("receive-throughput", 0),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"));
         }

@@ -1,9 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceTestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Akka.Configuration;
 
 namespace Akka.Persistence.TestKit
 {
@@ -24,10 +26,11 @@ namespace Akka.Persistence.TestKit
         /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
         /// A new system with the specified configuration will be created.
         /// </summary>
+        /// <param name="config">Test ActorSystem configuration</param>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
-        protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
-            : base(GetConfig(), actorSystemName, output)
+        protected PersistenceTestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(config, actorSystemName, output)
         {
             var persistenceExtension = Persistence.Instance.Apply(Sys);
 
@@ -36,6 +39,17 @@ namespace Akka.Persistence.TestKit
 
             SnapshotsActorRef = persistenceExtension.SnapshotStoreFor(null);
             Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
+        }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
+        /// A new system with the default configuration will be created.
+        /// </summary>
+        /// <param name="actorSystemName">Optional: The name of the actor system</param>
+        /// <param name="output">TBD</param>
+        protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
+            : this(GetConfig(), actorSystemName, output)
+        {
         }
 
         /// <summary>

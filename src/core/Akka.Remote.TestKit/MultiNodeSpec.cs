@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Configuration.Hocon;
@@ -34,7 +34,7 @@ namespace Akka.Remote.TestKit
         // allows us to avoid NullReferenceExceptions if we make this empty rather than null
         // so that way if a MultiNodeConfig doesn't explicitly set CommonConfig to some value
         // it will remain safe by defaut
-        Config _commonConf = Akka.Configuration.Config.Empty;
+        Config _commonConf = ConfigurationFactory.Empty;
 
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
@@ -363,6 +363,11 @@ namespace Akka.Remote.TestKit
                       @"akka {
                         loglevel = ""WARNING""
                         stdout-loglevel = ""WARNING""
+                        coordinated-shutdown.terminate-actor-system = off
+                        coordinated-shutdown.run-by-actor-system-terminate = off
+                        coordinated-shutdown.run-by-clr-shutdown-hook = off
+                        log-dead-letters = off 
+                        log-dead-letters-during-shutdown = on
                         actor {
                           default-dispatcher {
                             executor = ""fork-join-executor""
@@ -505,6 +510,16 @@ namespace Akka.Remote.TestKit
         {
             if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
+        }
+        
+        /// <summary>
+        /// Execute the given block of code only on the given nodes (names according
+        /// to the `roleMap`).
+        /// </summary>
+        public async Task RunOnAsync(Func<Task> thunkAsync, params RoleName[] nodes)
+        {
+            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
+            if (IsNode(nodes)) await thunkAsync();
         }
 
         /// <summary>

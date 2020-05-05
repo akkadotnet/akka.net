@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DDataShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,6 +47,7 @@ namespace Akka.Cluster.Sharding
         private bool _allRegionsRegistered = false;
         private ImmutableHashSet<IKey<IReplicatedData>> _allKeys;
         private IImmutableSet<string> _shards = ImmutableHashSet<string>.Empty;
+        private bool _terminating = false;
 
         public DDataShardCoordinator(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities)
         {
@@ -60,7 +61,7 @@ namespace Akka.Cluster.Sharding
             RemovalMargin = Cluster.DowningProvider.DownRemovalMargin;
             MinMembers = string.IsNullOrEmpty(settings.Role)
                 ? Cluster.Settings.MinNrOfMembers
-                : (Cluster.Settings.MinNrOfMembersOfRole.TryGetValue(settings.Role, out var min) ? min : Cluster.Settings.MinNrOfMembers);
+                : Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
             RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RebalanceInterval, Settings.TunningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
 
             _readConsistency = new ReadMajority(settings.TunningParameters.WaitingForStateTimeout, majorityMinCap);
@@ -102,7 +103,7 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
-                case GetSuccess success when Equals(_coordinatorStateKey, success.Key):
+                case GetSuccess success when _coordinatorStateKey.Equals(success.Key):
                     {
                         CurrentState = success.Get(_coordinatorStateKey).Value
                             .WithRememberEntities(Settings.RememberEntities);
@@ -113,13 +114,13 @@ namespace Akka.Cluster.Sharding
                             Context.Become(WaitingForState(newRemaining));
                         return true;
                     }
-                case GetFailure failure when Equals(_coordinatorStateKey, failure.Key):
+                case GetFailure failure when _coordinatorStateKey.Equals(failure.Key):
                     {
                         Log.Error("The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {0} (retrying)", _readConsistency.Timeout);
                         GetCoordinatorState(); // repeat until GetSuccess
                         return true;
                     }
-                case NotFound notFound when Equals(_coordinatorStateKey, notFound.Key):
+                case NotFound notFound when _coordinatorStateKey.Equals(notFound.Key):
                     {
                         var newRemaining = remainingKeys.Remove(_coordinatorStateKey);
                         if (newRemaining.IsEmpty)
@@ -128,7 +129,7 @@ namespace Akka.Cluster.Sharding
                             Context.Become(WaitingForState(newRemaining));
                         return true;
                     }
-                case GetSuccess success when Equals(_allShardsKey, success.Key):
+                case GetSuccess success when _allShardsKey.Equals(success.Key):
                     {
                         var shards = success.Get(_allShardsKey).Elements;
                         var newUnallocatedShards = CurrentState.UnallocatedShards.Union(shards.Except(CurrentState.Shards.Keys));
@@ -140,14 +141,14 @@ namespace Akka.Cluster.Sharding
                             Context.Become(WaitingForState(newRemainingKeys));
                         return true;
                     }
-                case GetFailure failure when Equals(_allShardsKey, failure.Key):
+                case GetFailure failure when _allShardsKey.Equals(failure.Key):
                     {
                         Log.Error("The ShardCoordinator was unable to get all shards state within 'waiting-for-state-timeout': {0} (retrying)", _readConsistency.Timeout);
                         // repeat until GetSuccess
                         GetAllShards();
                         return true;
                     }
-                case NotFound notFound when Equals(_allShardsKey, notFound.Key):
+                case NotFound notFound when _allShardsKey.Equals(notFound.Key):
                     {
                         var newRemainingKeys = remainingKeys.Remove(_allShardsKey);
                         if (newRemainingKeys.IsEmpty)
@@ -156,6 +157,11 @@ namespace Akka.Cluster.Sharding
                             Context.Become(WaitingForState(newRemainingKeys));
                         return true;
                     }
+                case Terminate _:
+                    Log.Debug("Received termination message while waiting for state");
+                    Context.Stop(Self);
+                    return true;
+
                 default: return this.ReceiveTerminated(message);
             }
         };
@@ -183,6 +189,10 @@ namespace Akka.Cluster.Sharding
                     this.StateInitialized();
                     Activate();
                     return true;
+                case Terminate _:
+                    Log.Debug("Received termination message while waiting for state initialized");
+                    Context.Stop(Self);
+                    return true;
                 default:
                     Stash.Stash();
                     return true;
@@ -193,7 +203,7 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
-                    case UpdateSuccess success when Equals(success.Key, _coordinatorStateKey) && Equals(success.Request, e):
+                    case UpdateSuccess success when success.Key.Equals(_coordinatorStateKey) && success.Request.Equals(e):
                         Log.Debug("The coordinator state was successfully updated with {0}", e);
                         var newRemainingKeys = remainingKeys.Remove(_coordinatorStateKey);
                         if (newRemainingKeys.IsEmpty)
@@ -202,12 +212,22 @@ namespace Akka.Cluster.Sharding
                             Context.Become(WaitingForUpdate(e, afterUpdateCallback, newRemainingKeys));
                         return true;
 
-                    case UpdateTimeout timeout when Equals(timeout.Key, _coordinatorStateKey) && Equals(timeout.Request, e):
-                        Log.Error("The ShardCoordinator was unable to update a distributed state within 'updating-state-timeout': {0} (retrying), event={1}", _writeConsistency.Timeout, e);
-                        SendCoordinatorStateUpdate(e);
+                    case UpdateTimeout timeout when timeout.Key.Equals(_coordinatorStateKey) && timeout.Request.Equals(e):
+                        Log.Error("The ShardCoordinator was unable to update a distributed state within 'updating-state-timeout': {0} ({1}), event={2}", _writeConsistency.Timeout, _terminating ? "terminating" : "retrying", e);
+
+                        if (_terminating)
+                        {
+                            Context.Stop(Self);
+                        }
+                        else
+                        {
+                            // repeat until UpdateSuccess
+                            SendCoordinatorStateUpdate(e);
+                        }
+
                         return true;
 
-                    case UpdateSuccess success when Equals(success.Key, _allShardsKey) && success.Request is string newShard:
+                    case UpdateSuccess success when success.Key.Equals(_allShardsKey) && success.Request is string newShard:
                         Log.Debug("The coordinator shards state was successfully updated with {0}", newShard);
                         var newRemaining = remainingKeys.Remove(_allShardsKey);
                         if (newRemaining.IsEmpty)
@@ -216,19 +236,44 @@ namespace Akka.Cluster.Sharding
                             Context.Become(WaitingForUpdate(e, afterUpdateCallback, newRemaining));
                         return true;
 
-                    case UpdateTimeout timeout when Equals(timeout.Key, _allShardsKey) && timeout.Request is string newShard:
-                        Log.Error("The ShardCoordinator was unable to update shards distributed state within 'updating-state-timeout': {0} (retrying), event={1}", _writeConsistency.Timeout, e);
-                        SendShardsUpdate(newShard);
+                    case UpdateTimeout timeout when timeout.Key.Equals(_allShardsKey) && timeout.Request is string newShard:
+                        Log.Error("The ShardCoordinator was unable to update shards distributed state within 'updating-state-timeout': {0} ({1}), event={2}", _writeConsistency.Timeout, _terminating ? "terminating" : "retrying", e);
+
+                        if (_terminating)
+                        {
+                            Context.Stop(Self);
+                        }
+                        else
+                        {
+                            // repeat until UpdateSuccess
+                            SendShardsUpdate(newShard);
+                        }
+
                         return true;
 
                     case ModifyFailure failure:
-                        Log.Error("The ShardCoordinator was unable to update a distributed state {0} with error {1} and event {2}.Coordinator will be restarted", failure.Key, failure.Cause, e);
-                        ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                        Log.Error("The ShardCoordinator was unable to update a distributed state {0} with error {1} and event {2}. {3}", failure.Key, failure.Cause, e, _terminating ? "Coordinator will be terminated due to Terminate message received" : "Coordinator will be restarted");
+
+                        if (_terminating)
+                        {
+                            Context.Stop(Self);
+                        }
+                        else
+                        {
+                            ExceptionDispatchInfo.Capture(failure.Cause).Throw();
+                        }
+
                         return true;
 
                     case PersistentShardCoordinator.GetShardHome getShardHome:
                         if (!this.HandleGetShardHome(getShardHome)) 
                             Stash.Stash();
+                        return true;
+
+                    case Terminate _:
+                        Log.Debug("Received termination message while waiting for update");
+                        _terminating = true;
+                        Stash.Stash();
                         return true;
 
                     default:
@@ -252,7 +297,7 @@ namespace Akka.Cluster.Sharding
 
         private bool Active(object message)
         {
-            if (_rememberEntities && message is Changed changed && Equals(changed.Key, _allShardsKey))
+            if (_rememberEntities && message is Changed changed && changed.Key.Equals(_allShardsKey))
             {
                 _shards = changed.Get(_allShardsKey).Elements;
                 return true;

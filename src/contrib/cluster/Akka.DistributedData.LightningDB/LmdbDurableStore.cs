@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LmdbDurableStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,12 +54,18 @@ namespace Akka.DistributedData.LightningDB
         public LmdbDurableStore(Config config)
         {
             config = config.GetConfig("lmdb");
-            if (config == null) throw new ArgumentException("Couldn't find config for LMDB durable store. Default path: `akka.cluster.distributed-data.durable.lmdb`");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<LmdbDurableStore>("akka.cluster.distributed-data.durable.lmdb");
 
             _log = Context.GetLogger();
 
-            _writeBehindInterval = config.GetString("write-behind-interval") == "off" 
-                ? TimeSpan.Zero : config.GetTimeSpan("write-behind-interval");
+            var useWriteBehind = config.GetString("write-behind-interval", "").ToLowerInvariant();
+            _writeBehindInterval = 
+                useWriteBehind == "off" ||
+                useWriteBehind == "false" ||
+                useWriteBehind == "no" ? 
+                    TimeSpan.Zero : 
+                    config.GetTimeSpan("write-behind-interval");
 
             var mapSize = config.GetByteSize("map-size");
             var dirPath = config.GetString("dir");

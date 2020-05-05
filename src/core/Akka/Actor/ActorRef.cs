@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -64,41 +64,29 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    /// 
+    /// ActorRef implementation used for one-off tasks.
     /// </summary>
     public class FutureActorRef : MinimalActorRef
     {
         private readonly TaskCompletionSource<object> _result;
-        private readonly bool _tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable;
         private readonly Action _unregister;
         private readonly ActorPath _path;
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <param name="result">TBD</param>
         /// <param name="unregister">TBD</param>
         /// <param name="path">TBD</param>
         public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path)
-            : this(result, unregister, path, false)
-        {
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="result">TBD</param>
-        /// <param name="unregister">TBD</param>
-        /// <param name="path">TBD</param>
-        /// <param name="tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable">TBD</param>
-        public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path, bool tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable)
         {
             if (ActorCell.Current != null)
             {
                 _actorAwaitingResultSender = ActorCell.Current.Sender;
             }
             _result = result;
-            _tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable = tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable;
             _unregister = unregister;
             _path = path;
             _result.Task.ContinueWith(_ => _unregister());
@@ -135,18 +123,15 @@ namespace Akka.Actor
         protected override void TellInternal(object message, IActorRef sender)
         {
 
-            if (message is ISystemMessage) //we have special handling for system messages
+            if (message is ISystemMessage sysM) //we have special handling for system messages
             {
-                SendSystemMessage(message.AsInstanceOf<ISystemMessage>());
+                SendSystemMessage(sysM);
             }
             else
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    if (_tcsWasCreatedWithRunContinuationsAsynchronouslyAvailable)
-                        _result.TrySetResult(message);
-                    else
-                        Task.Run(() => _result.TrySetResult(message));
+                    _result.TrySetResult(message);
                 }
             }
         }
@@ -310,16 +295,17 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            if(Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
+            if (Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
             return $"[{Path}#{Path.Uid}]";
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            var other = obj as IActorRef;
-            if (other == null) return false;
-            return Equals(other);
+            if (obj is IActorRef other)
+                return Equals(other);
+
+            return false;
         }
 
         /// <inheritdoc/>
@@ -340,21 +326,37 @@ namespace Akka.Actor
         /// </exception>
         public int CompareTo(object obj)
         {
-            if (obj != null && !(obj is IActorRef))
-                throw new ArgumentException("Object must be of type IActorRef.", nameof(obj));
-            return CompareTo((IActorRef) obj);
+            if (obj is null) return 1;
+            if(!(obj is IActorRef other))
+                throw new ArgumentException($"Object must be of type IActorRef, found {obj.GetType()} instead.", nameof(obj));
+
+            return CompareTo(other);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Checks equality between this instance and another object.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns>
+        /// <c>true</c> if this <see cref="IActorRef"/> instance have the same reference 
+        /// as the <paramref name="other"/> instance, if this <see cref="ActorPath"/> of 
+        /// this <see cref="IActorRef"/> instance is equal to the <paramref name="other"/> instance, 
+        /// and <paramref name="other"/> is not <c>null</c>; otherwise <c>false</c>.
+        /// </returns>
         public bool Equals(IActorRef other)
         {
-            return Path.Uid == other.Path.Uid 
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Path.Uid == other.Path.Uid
                 && Path.Equals(other.Path);
         }
 
         /// <inheritdoc/>
         public int CompareTo(IActorRef other)
         {
+            if (other is null) return 1;
+
             var pathComparisonResult = Path.CompareTo(other.Path);
             if (pathComparisonResult != 0) return pathComparisonResult;
             if (Path.Uid < other.Path.Uid) return -1;
@@ -553,7 +555,7 @@ namespace Akka.Actor
         /// <inheritdoc cref="InternalActorRefBase"/>
         public override void SendSystemMessage(ISystemMessage message)
         {
-           
+
         }
 
         /// <inheritdoc cref="InternalActorRefBase"/>
@@ -748,12 +750,12 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">TBD</param>
         /// <param name="child">TBD</param>
-        public void RemoveChild(string name,IActorRef child)
+        public void RemoveChild(string name, IActorRef child)
         {
             IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
-                Log.Warning("{0} trying to remove non-child {1}",Path,name);
+                Log.Warning("{0} trying to remove non-child {1}", Path, name);
             }
         }
 
@@ -863,7 +865,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
     {
         private readonly EventStream _eventStream;
         private readonly Action<IActorRef, object> _tell;
-        
+
         private ImmutableHashSet<IActorRef> _watching = ImmutableHashSet<IActorRef>.Empty;
         private ImmutableHashSet<IActorRef> _watchedBy = ImmutableHashSet<IActorRef>.Empty;
 
@@ -893,7 +895,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             var internalRef = (IInternalActorRef)actorRef;
             internalRef.SendSystemMessage(new Watch(internalRef, this));
         }
-        
+
         /// <summary>
         /// Have this FunctionRef unwatch the given Actor. This method must not be
         /// called concurrently from different threads, it should only be called by
@@ -904,7 +906,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             _watching = _watching.Remove(actorRef);
             var internalRef = (IInternalActorRef)actorRef;
             internalRef.SendSystemMessage(new Unwatch(internalRef, this));
-            
+
         }
 
         /// <summary>
@@ -947,7 +949,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
                 {
                     foreach (var watched in _watching)
                         UnwatchWatched(watched);
-                    
+
                     _watching = ImmutableHashSet<IActorRef>.Empty;
                 }
             }
@@ -1041,5 +1043,5 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             }
             catch (Exception) { }
         }
-    } 
+    }
 }

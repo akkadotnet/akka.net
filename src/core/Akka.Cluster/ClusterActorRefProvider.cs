@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -158,12 +158,12 @@ namespace Akka.Cluster
         {
             Config config2 = config;
             if (config.HasPath("cluster.enabled")
-                && config.GetBoolean("cluster.enabled")
+                && config.GetBoolean("cluster.enabled", false)
                 && !config.HasPath("nr-of-instances"))
             {
                 var maxTotalNrOfInstances = config
                     .WithFallback(Default)
-                    .GetInt("cluster.max-total-nr-of-instances");
+                    .GetInt("cluster.max-total-nr-of-instances", 0);
                 config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
                     .WithFallback(config);
             }
@@ -171,7 +171,7 @@ namespace Akka.Cluster
             var deploy = base.ParseConfig(key, config2);
             if (deploy != null)
             {
-                if (deploy.Config.GetBoolean("cluster.enabled"))
+                if (deploy.Config.GetBoolean("cluster.enabled", false))
                 {
                     if (deploy.Scope != Deploy.NoScopeGiven)
                         throw new ConfigurationException($"Cluster deployment can't be combined with scope [{deploy.Scope}]");

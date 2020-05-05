@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Deploy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -202,7 +202,7 @@ namespace Akka.Actor
                    string.Equals(_path, other._path) &&
                    _routerConfig.Equals(other._routerConfig) &&
                    ((_config.IsNullOrEmpty() && other._config.IsNullOrEmpty()) ||
-                    _config.ToString().Equals(other._config.ToString())) &&
+                    _config.Root.ToString().Equals(other._config.Root.ToString())) &&
                    (_scope == null && other._scope == null || (_scope != null && _scope.Equals(other._scope)));
         }
 

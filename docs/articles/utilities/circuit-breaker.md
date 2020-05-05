@@ -47,14 +47,14 @@ Here's how a `CircuitBreaker` would be configured for:
   * a call timeout of 10 seconds
   * a reset timeout of 1 minute
 
-[!code-csharp[Main](../../examples/DocsExamples/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
 
 ### Call Protection
 
 Here's how the `CircuitBreaker` would be used to protect an asynchronous
 call as well as a synchronous one:
 
-[!code-csharp[Main](../../examples/DocsExamples/Utilities/CircuitBreakerDocSpec.cs?name=call-protection)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=call-protection)]
 
 ```csharp
 dangerousActor.Tell("is my middle name");
@@ -74,3 +74,12 @@ dangerousActor.Tell("is my middle name");
 // My CircuitBreaker is now closed
 // This really isn't that dangerous of a call after all
 ```
+
+### Tell Pattern
+
+The above ``Call Protection`` pattern works well when the return from a remote call is wrapped in a ``Future``. However, when a remote call sends back a message or timeout to the caller ``Actor``, the ``Call Protection`` pattern is awkward. CircuitBreaker doesn't support it natively at the moment, so you need to use below low-level power-user APIs, ``succeed``  and  ``fail`` methods, as well as ``isClose``, ``isOpen``, ``isHalfOpen``.
+
+>[!NOTE]
+>The below examples doesn't make a remote call when the state is `HalfOpen`. Using the power-user APIs, it is your responsibility to judge when to make remote calls in `HalfOpen`.
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-tell-pattern)]
