@@ -186,6 +186,19 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// The shutdown was initiated by an ActorSystem termination hook
+        /// </summary>
+        public class ActorSystemTerminateReason : Reason
+        {
+            public static Reason Instance = new ActorSystemTerminateReason();
+
+            private ActorSystemTerminateReason()
+            {
+
+            }
+        }
+
+        /// <summary>
         /// The shutdown was initiated by a CLR shutdown hook
         /// </summary>
         public class ClrExitReason : Reason
@@ -615,7 +628,7 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var terminateActorSystem = conf.GetBoolean("terminate-actor-system", false);
+            var terminateActorSystem = system.Settings.CoordinatedShutdownTerminateActorSystem;
             var exitClr = conf.GetBoolean("exit-clr", false);
             if (terminateActorSystem || exitClr)
             {
@@ -640,6 +653,7 @@ namespace Akka.Actor
 
                     if (terminateActorSystem)
                     {
+                        system.FinalTerminate();
                         return system.Terminate().ContinueWith(tr =>
                         {
                             if (exitClr && !coord._runningClrHook)
