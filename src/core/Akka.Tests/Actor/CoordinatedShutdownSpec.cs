@@ -426,7 +426,9 @@ namespace Akka.Tests.Actor
             var sys = ActorSystem.Create(
                 "name", 
                 ConfigurationFactory
-                    .ParseString("akka.coordinated-shutdown.run-by-actor-system-terminate = off")
+                    .ParseString(@"
+                        akka.coordinated-shutdown.terminate-actor-system = on
+                        akka.coordinated-shutdown.run-by-actor-system-terminate = off")
                     .WithFallback(Sys.Settings.Config));
             var actor = CoordinatedShutdown.Get(sys);
 
@@ -452,8 +454,10 @@ namespace Akka.Tests.Actor
                     sys = ActorSystem.Create(
                         "name",
                             ConfigurationFactory
-                                .ParseString("akka.coordinated-shutdown.terminate-actor-system = off")
-                                .WithFallback(Sys.Settings.Config));
+                            .ParseString(@"
+                                akka.coordinated-shutdown.terminate-actor-system = off
+                                akka.coordinated-shutdown.run-by-actor-system-terminate = on")
+                            .WithFallback(Sys.Settings.Config));
                     var actor = CoordinatedShutdown.Get(sys);
                 }
                 finally
