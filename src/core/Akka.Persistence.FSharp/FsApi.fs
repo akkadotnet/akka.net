@@ -75,6 +75,11 @@ type Eventsourced<'Command, 'Event, 'State> =
     /// event will be confirmed.
     /// </summary>
     abstract DeferEvent: ('Event -> 'State) -> 'Event seq -> unit
+    
+    /// <summary>
+    /// Defers a callback function to be called after persisting events will be confirmed.
+    /// </summary>
+    abstract DeferAsync: (obj -> unit) -> obj -> unit
 
     /// <summary>
     /// Returns currently attached journal actor reference.
@@ -132,6 +137,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = events |> Seq.iter (fun e -> this.DeferAsync(e, Action<_>(updateState callback)))
+            member __.DeferAsync callback obj = this.DeferAsync(obj, Action<_>(callback))
             member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
             member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal
@@ -285,6 +291,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.Log = lazy (Akka.Event.Logging.GetLogger(context)) 
             member __.Defer fn = deferables <- fn::deferables
             member __.DeferEvent callback events = events |> Seq.iter (fun e -> this.DeferAsync(e, Action<_>(updateState callback)))
+            member __.DeferAsync callback obj = this.DeferAsync(obj, Action<_>(callback))
             member __.PersistEvent callback events = this.PersistAll(events, Action<_>(updateState callback))
             member __.AsyncPersistEvent callback events = this.PersistAllAsync(events, Action<_>(updateState callback)) 
             member __.Journal() = this.Journal

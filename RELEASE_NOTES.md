@@ -1,5 +1,25 @@
-#### 1.4.5 April 8 2020 ####
-**Placeholder for nightlies**
+#### 1.4.5 April 29 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.5 consists mostly of bug fixes and quality-of-life improvements.
+
+* [Akka.Cluster.Sharding: release shard lease when shard stopped](https://github.com/akkadotnet/akka.net/pull/4369)
+* [Akka.Cluster.DistributedData: ORMultiValueDictionary - DistributedData Serialization InvalidCastException Unable to cast object of type 'DeltaGroup[System.String]' to type 'Akka.DistributedData.ORSet1[System.String]'](https://github.com/akkadotnet/akka.net/issues/4367)
+* [Akka.Actor: Support double wildcards in actor deployment config](https://github.com/akkadotnet/akka.net/issues/4136)
+
+To see the full set of changes for Akka.NET 1.4.5, please [see the 1.4.5 milestone](https://github.com/akkadotnet/akka.net/milestone/36).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 3 | 6 | 6 | Michael Handschuh |       
+| 3 | 486 | 91 | Aaron Stannard |       
+| 3 | 3 | 3 | dependabot-preview[bot] | 
+| 2 | 44 | 3 | zbynek001 |              
+| 1 | 7 | 0 | JoRo |                    
+| 1 | 6 | 21 | Ismael Hamed |           
+| 1 | 3 | 3 | Igor Fedchenko |          
+| 1 | 163 | 60 | Gregorius Soedharmo |  
+| 1 | 14 | 2 | Bogdan Rotund |          
 
 #### 1.4.4 March 31 2020 ####
 **Maintenance Release for Akka.NET 1.4**
