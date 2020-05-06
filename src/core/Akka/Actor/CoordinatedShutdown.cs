@@ -177,7 +177,7 @@ namespace Akka.Actor
         /// </summary>
         public class UnknownReason : Reason
         {
-            public static Reason Instance = new UnknownReason();
+            public static readonly Reason Instance = new UnknownReason();
 
             private UnknownReason()
             {
@@ -190,7 +190,7 @@ namespace Akka.Actor
         /// </summary>
         public class ActorSystemTerminateReason : Reason
         {
-            public static Reason Instance = new ActorSystemTerminateReason();
+            public static readonly Reason Instance = new ActorSystemTerminateReason();
 
             private ActorSystemTerminateReason()
             {
@@ -203,7 +203,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClrExitReason : Reason
         {
-            public static Reason Instance = new ClrExitReason();
+            public static readonly Reason Instance = new ClrExitReason();
 
             private ClrExitReason()
             {
@@ -217,7 +217,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClusterDowningReason : Reason
         {
-            public static Reason Instance = new ClusterDowningReason();
+            public static readonly Reason Instance = new ClusterDowningReason();
 
             private ClusterDowningReason()
             {
@@ -231,7 +231,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClusterLeavingReason : Reason
         {
-            public static Reason Instance = new ClusterLeavingReason();
+            public static readonly Reason Instance = new ClusterLeavingReason();
 
             private ClusterLeavingReason()
             {
@@ -244,7 +244,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClusterJoinUnsuccessfulReason : Reason
         {
-            public static Reason Instance = new ClusterJoinUnsuccessfulReason();
+            public static readonly Reason Instance = new ClusterJoinUnsuccessfulReason();
             private ClusterJoinUnsuccessfulReason() { }
         }
 
