@@ -16,9 +16,9 @@ namespace Akka.Tests.Actor
     /// <summary>
     /// Spec for https://github.com/akkadotnet/akka.net/issues/4376
     /// </summary>
-    public class BugFix4376_PoolSpec : AkkaSpec
+    public class BugFix4376Spec : AkkaSpec
     {
-        public BugFix4376_PoolSpec(ITestOutputHelper output): base(output) { }
+        public BugFix4376Spec(ITestOutputHelper output): base(output) { }
 
         private readonly TimeSpan _delay = TimeSpan.FromSeconds(0.08);
 
@@ -166,29 +166,24 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Supervisor_with_Broadcast_Pool_router_should_handle_multiple_child_failure()
         {
-            var counter = new AtomicCounter(0);
-            var poolProps = Props
-                .Create<SimpleBroadcastActor>(counter)
-                .WithRouter(new BroadcastPool(10));
-            var poolActorRef = Sys.ActorOf(poolProps, "broadcast-pool-freeze-test");
+            var poolActorRef = Sys.ActorOf(
+                new BroadcastPool(5)
+                .Props(Props.Create<SimpleActor>()));
 
             // rapidly fail children. the router should handle children failing
             // while itself is still being recreated
-            for (var i = 0; i < 10; i++)
+            for (var i = 0; i < 20; i++)
             {
                 poolActorRef.Tell(1);
             }
 
-            for (var i = 0; i < 20; i++)
-            {
-                try
-                {
-                    await poolActorRef.Ask<int>(2, _delay);
-                }
-                catch
-                { }
-            }
-            counter.Current.Should().Be(100);
+            poolActorRef.Tell(2);
+            ExpectMsg<int>();
+            ExpectMsg<int>();
+            ExpectMsg<int>();
+            ExpectMsg<int>();
+            ExpectMsg<int>();
+            ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
         [Fact]

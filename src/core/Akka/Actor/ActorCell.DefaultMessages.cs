@@ -246,90 +246,66 @@ namespace Akka.Actor
 
         private void SysMsgInvokeAll(EarliestFirstSystemMessageList messages, int currentState)
         {
+            var rest = messages.Tail;
+            var message = messages.Head;
+            message.Unlink();
 
-            var nextState = currentState;
-            var todo = messages;
-            while(true)
+            try
             {
-                var m = todo.Head;
-                todo = messages.Tail;
-                m.Unlink();
-                try
+                switch (message)
                 {
-                    // TODO: replace with direct cast
-                    if (ShouldStash(m, nextState))
-                    {
-                        Stash(m);
-                    }
-
-                    switch (m)
-                    {
-                        case ActorTaskSchedulerMessage message:
-                            HandleActorTaskSchedulerMessage(message);
-                            break;
-                        case Failed failed:
-                            HandleFailed(failed);
-                            break;
-                        case DeathWatchNotification notification:
-                        {
-                            var msg = notification;
-                            WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
-                            break;
-                        }
-                        case Create create:
-                            Create(create.Failure);
-                            break;
-                        case Watch watch1:
-                        {
-                            var watch = watch1;
-                            AddWatcher(watch.Watchee, watch.Watcher);
-                            break;
-                        }
-                        case Unwatch unwatch1:
-                        {
-                            var unwatch = unwatch1;
-                            RemWatcher(unwatch.Watchee, unwatch.Watcher);
-                            break;
-                        }
-                        case Recreate recreate:
-                            FaultRecreate(recreate.Cause);
-                            break;
-                        case Suspend _:
-                            FaultSuspend();
-                            break;
-                        case Resume resume:
-                            FaultResume(resume.CausedByFailure);
-                            break;
-                        case Terminate _:
-                            Terminate();
-                            break;
-                        case Supervise supervise1:
-                        {
-                            var supervise = supervise1;
-                            Supervise(supervise.Child, supervise.Async);
-                            break;
-                        }
-                        default:
-                            throw new NotSupportedException($"Unknown message {m.GetType().Name}");
-                    }
+                    case SystemMessage sm when ShouldStash(sm, currentState):
+                        Stash(message);
+                        break;
+                    case ActorTaskSchedulerMessage atsm:
+                        HandleActorTaskSchedulerMessage(atsm);
+                        break;
+                    case Failed f:
+                        HandleFailed(f);
+                        break;
+                    case DeathWatchNotification n:
+                        WatchedActorTerminated(n.Actor, n.ExistenceConfirmed, n.AddressTerminated);
+                        break;
+                    case Create c:
+                        Create(c.Failure);
+                        break;
+                    case Watch w:
+                        AddWatcher(w.Watchee, w.Watcher);
+                        break;
+                    case Unwatch uw:
+                        RemWatcher(uw.Watchee, uw.Watcher);
+                        break;
+                    case Recreate r:
+                        FaultRecreate(r.Cause);
+                        break;
+                    case Suspend _:
+                        FaultSuspend();
+                        break;
+                    case Resume r:
+                        FaultResume(r.CausedByFailure);
+                        break;
+                    case Terminate _:
+                        Terminate();
+                        break;
+                    case Supervise s:
+                        Supervise(s.Child, s.Async);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unknown message {message.GetType().Name}");
                 }
-                catch (Exception cause)
-                {
-                    HandleInvokeFailure(cause);
-                }
-
-                nextState = CalculateState();
-                // As each state accepts a strict subset of another state, it is enough to unstash if we "walk up" the state
-                // chain
-                todo = nextState < currentState ? todo + UnstashAll() : todo;
-                if (IsTerminated)
-                {
-                    SendAllToDeadLetters(todo);
-                    return;
-                }
-                if (todo.IsEmpty) return; // keep running until the stash is empty
+            }
+            catch (Exception cause)
+            {
+                HandleInvokeFailure(cause);
             }
 
+            var newState = CalculateState();
+            // As each state accepts a strict subset of another state, it is enough to unstash if we "walk up" the state
+            // chain
+            var todo = newState < currentState ? rest + UnstashAll() : rest;
+
+            if (IsTerminated) SendAllToDeadLetters(todo);
+            else if (!todo.IsEmpty) SysMsgInvokeAll(todo, newState);
         }
 
         /// <summary>
@@ -344,7 +320,7 @@ namespace Akka.Actor
         /// </exception>
         internal void SystemInvoke(ISystemMessage envelope)
         {
-           SysMsgInvokeAll(new EarliestFirstSystemMessageList((SystemMessage)envelope), CalculateState());
+            SysMsgInvokeAll(new EarliestFirstSystemMessageList((SystemMessage)envelope), CalculateState());
         }
 
         private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
