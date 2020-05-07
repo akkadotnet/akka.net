@@ -52,6 +52,7 @@ namespace Akka.DistributedData.Serialization
         private const string ORMapUpdateManifest = "Hu";
         private const string ORMapDeltaGroupManifest = "Hg";
         private const string LWWMapManifest = "I";
+        private const string LWWMapDeltaGroupManifest = "Ig";
         private const string LWWMapKeyManifest = "i";
         private const string PNCounterMapManifest = "J";
         private const string PNCounterMapDeltaOperationManifest = "Jo";
@@ -86,10 +87,11 @@ namespace Akka.DistributedData.Serialization
                 case IORDictionary o: return SerializationSupport.Compress(ToProto(o));
                 case ORDictionary.IDeltaOperation p: return ToProto(p).ToByteArray();
                 case ILWWDictionary l: return SerializationSupport.Compress(ToProto(l));
+                case ILWWDictionaryDeltaOperation ld: return ToProto(ld.Underlying).ToByteArray();
                 case IPNCounterDictionary pn: return SerializationSupport.Compress(ToProto(pn));
                 case IPNCounterDictionaryDeltaOperation pnd: return ToProto(pnd.Underlying).ToByteArray();
                 case IORMultiValueDictionary m: return SerializationSupport.Compress(ToProto(m));
-                case IORMultiValueDictionaryDeltaOperation md: return ToProto(md.Underlying).ToByteArray();
+                case IORMultiValueDictionaryDeltaOperation md: return ToProto(md).ToByteArray();
                 case DeletedData _: return _emptyArray;
                 case VersionVector v: return SerializationSupport.VersionVectorToProto(v).ToByteArray();
                 // key types
@@ -121,6 +123,8 @@ namespace Akka.DistributedData.Serialization
                 case ORMapUpdateManifest: return ORDictionaryUpdateFromBinary(bytes);
                 case ORMapDeltaGroupManifest: return ORDictionaryDeltaGroupFromBinary(bytes);
                 case LWWMapManifest: return LWWDictionaryFromBinary(SerializationSupport.Decompress(bytes));
+                case LWWMapDeltaGroupManifest:
+                    return LWWDictionaryDeltaGroupFromBinary(bytes);
                 case PNCounterMapManifest: return PNCounterDictionaryFromBinary(SerializationSupport.Decompress(bytes));
                 case PNCounterMapDeltaOperationManifest: return PNCounterDeltaFromBinary(bytes);
                 case ORMultiMapManifest: return ORMultiDictionaryFromBinary(SerializationSupport.Decompress(bytes));
@@ -166,6 +170,7 @@ namespace Akka.DistributedData.Serialization
                 case ORDictionary.IRemoveKeyDeltaOp _: return ORMapRemoveKeyManifest;
                 case ORDictionary.IUpdateDeltaOp _: return ORMapUpdateManifest;
                 case ILWWDictionary _: return LWWMapManifest;
+                case ILWWDictionaryDeltaOperation _: return LWWMapDeltaGroupManifest;
                 case IPNCounterDictionary _: return PNCounterMapManifest;
                 case IPNCounterDictionaryDeltaOperation _: return PNCounterMapDeltaOperationManifest;
                 case IORMultiValueDictionary _: return ORMultiMapManifest;
@@ -971,7 +976,7 @@ namespace Akka.DistributedData.Serialization
         {
             var deltaOps = new List<ORDictionary<TKey, TValue>.IDeltaOperation>();
 
-            (object key, TValue value) MapEntryFromProto(ORMapDeltaGroup.Types.MapEntry entry)
+            (object key, object value) MapEntryFromProto(ORMapDeltaGroup.Types.MapEntry entry)
             {
                 object k = null;
                 switch (deltaGroup.KeyTypeInfo.Type)
@@ -992,7 +997,8 @@ namespace Akka.DistributedData.Serialization
 
                 if (entry.Value != null)
                 {
-                    return (k, (TValue)_ser.OtherMessageFromProto(entry.Value));
+                    var value = _ser.OtherMessageFromProto(entry.Value);
+                    return (k, value);
                 }
 
                 return (k, default(TValue));
@@ -1010,7 +1016,7 @@ namespace Akka.DistributedData.Serialization
                                     $"Can't deserialize key/value pair in ORDictionary delta - too many pairs on the wire");
                             var (key, value) = MapEntryFromProto(entry.EntryData[0]);
 
-                            deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, value));
+                            deltaOps.Add(new ORDictionary<TKey, TValue>.PutDeltaOperation(new ORSet<TKey>.AddDeltaOperation((ORSet<TKey>)underlying), (TKey)key, (TValue)value));
                         }
                         break;
                     case ORMapDeltaOp.OrmapRemove:
@@ -1190,6 +1196,26 @@ namespace Akka.DistributedData.Serialization
             return LWWDictFromProto(proto);
         }
 
+
+        private object LWWDictionaryDeltaGroupFromBinary(byte[] bytes)
+        {
+            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+
+            var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
+            var maker = LWWDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
+            return (ILWWDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+        }
+
+        private static readonly MethodInfo LWWDictionaryDeltaMaker =
+            typeof(ReplicatedDataSerializer).GetMethod(nameof(LWWDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
+
+        private ILWWDictionaryDeltaOperation LWWDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
+        {
+            var casted = (ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation)op;
+            return new LWWDictionary<TKey, TValue>.LWWDictionaryDelta(casted);
+        }
+
         #endregion
 
         #region PNCounterDictionary
@@ -1325,6 +1351,12 @@ namespace Akka.DistributedData.Serialization
         private static readonly MethodInfo MultiMapProtoMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(MultiMapToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
+        private Proto.Msg.ORMultiMapDelta ToProto(IORMultiValueDictionaryDeltaOperation op)
+        {
+            var d = new ORMultiMapDelta() { WithValueDeltas = op.WithValueDeltas };
+            d.Delta = ToProto(op.Underlying);
+            return d;
+        }
 
         private Proto.Msg.ORMultiMap MultiMapToProto<TKey, TValue>(IORMultiValueDictionary multi)
         {
@@ -1426,20 +1458,21 @@ namespace Akka.DistributedData.Serialization
 
         private object ORMultiDictionaryDeltaFromBinary(byte[] bytes)
         {
-            var proto = Proto.Msg.ORMapDeltaGroup.Parser.ParseFrom(bytes);
-            var orDictOp = ORDictionaryDeltaGroupFromProto(proto);
+            var proto = Proto.Msg.ORMultiMapDelta.Parser.ParseFrom(bytes);
+            var orDictOp = ORDictionaryDeltaGroupFromProto(proto.Delta);
 
-            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType);
-            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp });
+            var orSetType = orDictOp.ValueType.GenericTypeArguments[0];
+            var maker = ORMultiDictionaryDeltaMaker.MakeGenericMethod(orDictOp.KeyType, orSetType);
+            return (IORMultiValueDictionaryDeltaOperation)maker.Invoke(this, new object[] { orDictOp, proto.WithValueDeltas });
         }
 
         private static readonly MethodInfo ORMultiDictionaryDeltaMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ORMultiDictionaryDeltaFromProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op)
+        private IORMultiValueDictionaryDeltaOperation ORMultiDictionaryDeltaFromProto<TKey, TValue>(ORDictionary.IDeltaOperation op, bool withValueDeltas)
         {
             var casted = (ORDictionary<TKey, ORSet<TValue>>.IDeltaOperation)op;
-            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted);
+            return new ORMultiValueDictionary<TKey, TValue>.ORMultiValueDictionaryDelta(casted, withValueDeltas);
         }
 
         #endregion
