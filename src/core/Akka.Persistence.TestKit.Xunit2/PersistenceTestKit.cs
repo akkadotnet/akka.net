@@ -30,7 +30,7 @@ namespace Akka.Persistence.TestKit
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
         protected PersistenceTestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config, actorSystemName, output)
+            : base(GetConfig(config), actorSystemName, output)
         {
             var persistenceExtension = Persistence.Instance.Apply(Sys);
 
@@ -48,7 +48,7 @@ namespace Akka.Persistence.TestKit
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
         protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
-            : this(GetConfig(), actorSystemName, output)
+            : this(Config.Empty, actorSystemName, output)
         {
         }
 
@@ -286,14 +286,19 @@ namespace Akka.Persistence.TestKit
                 execution();
                 return Task.FromResult(true);
             });
-        
+
         /// <summary>
         ///     Loads from embedded resources actor system persistence configuration with <see cref="TestJournal"/> and
         ///     <see cref="TestSnapshotStore"/> configured as default persistence plugins.
         /// </summary>
+        /// <param name="customConfig">Custom configuration that was passed in the constructor.</param>
         /// <returns>Actor system configuration object.</returns>
         /// <seealso cref="Config"/>
-        static Config GetConfig()
-            => ConfigurationFactory.FromResource<TestJournal>("Akka.Persistence.TestKit.config.conf");
+        private static Config GetConfig(Config customConfig)
+        {
+            var defaultConfig = ConfigurationFactory.FromResource<TestJournal>("Akka.Persistence.TestKit.config.conf");
+            if (customConfig == Config.Empty) return defaultConfig;
+            else return defaultConfig.SafeWithFallback(customConfig);
+        }        
     }
 }
