@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.645
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Benchmark", "Benchmark", "{73108242-625A-4D7B-AA09-63375DBAE464}"
 EndProject
@@ -219,7 +219,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Coordination.Tests", "
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TcpEchoServer", "TcpEchoServer", "{52A36134-AC41-4F38-9D47-1124B0C9CDD2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpEchoService.Server", "examples\TcpEchoService.Server\TcpEchoService.Server.csproj", "{8AD2DF54-B79F-490B-B2C6-94EDA397055F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TcpEchoService.Server", "examples\TcpEchoService.Server\TcpEchoService.Server.csproj", "{8AD2DF54-B79F-490B-B2C6-94EDA397055F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
