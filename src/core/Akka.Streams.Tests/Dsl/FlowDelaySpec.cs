@@ -13,6 +13,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.Tests.Shared.Internals;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -42,7 +43,10 @@ namespace Akka.Streams.Tests.Dsl
             task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
-        [Fact(Skip = "Racy")]
+        // Was marked as racy.
+        // Raised probe.ExpectNext from 300 to 600. 300 is flaky when CPU resources are scarce.
+        // Passed 500 consecutive local test runs with no fail with very heavy load after modification
+        [Fact]
         public void A_Delay_must_add_delay_to_initialDelay_if_exists_upstream()
         {
             var probe = Source.From(Enumerable.Range(1, 10))
@@ -52,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
 
             probe.Request(10);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(1800));
-            probe.ExpectNext(1, TimeSpan.FromMilliseconds(300));
+            probe.ExpectNext(1, TimeSpan.FromMilliseconds(600));
             probe.ExpectNextN(Enumerable.Range(2, 9));
             probe.ExpectComplete();
         }
@@ -99,7 +103,10 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        // Was marked as racy.
+        // Raised task.Wait() from 1200 to 1800. 1200 is flaky when CPU resources are scarce.
+        // Passed 500 consecutive local test runs with no fail with very heavy load after modification
+        [Fact]
         public void A_Delay_must_drop_tail_for_internal_buffer_if_it_is_full_in_DropTail_mode()
         {
             this.AssertAllStagesStopped(() =>
@@ -110,14 +117,17 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
+                task.Wait(TimeSpan.FromMilliseconds(1800)).Should().BeTrue();
                 var expected = Enumerable.Range(1, 15).ToList();
                 expected.Add(20);
                 task.Result.Should().BeEquivalentTo(expected);
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        // Was marked as racy.
+        // Raised task.Wait() from 1200 to 1800. 1200 is flaky when CPU resources are scarce.
+        // Passed 500 consecutive local test runs with no fail with very heavy load after modification
+        [Fact]
         public void A_Delay_must_drop_head_for_internal_buffer_if_it_is_full_in_DropHead_mode()
         {
             this.AssertAllStagesStopped(() =>
@@ -128,12 +138,15 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
+                task.Wait(TimeSpan.FromMilliseconds(1800)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(5, 16));
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        // Was marked as racy. 
+        // Raised task.Wait() from 1200 to 1800. 1200 is flaky when CPU resources are scarce.
+        // Passed 500 consecutive local test runs with no fail with very heavy load after modification
+        [Fact]
         public void A_Delay_must_clear_all_for_internal_buffer_if_it_is_full_in_DropBuffer_mode()
         {
             this.AssertAllStagesStopped(() =>
@@ -144,12 +157,12 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
+                task.Wait(TimeSpan.FromMilliseconds(1800)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(17, 4));
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
+        [Fact(Skip = "Extremely flaky because of the interleaved ExpectNext and ExpectNoMsg with a very tight timing requirement. .Net timer implementation is not consistent enough to maintain accurate timing under heavy CPU load.")]
         public void A_Delay_must_pass_elements_with_delay_through_normally_in_backpressured_mode()
         {
             this.AssertAllStagesStopped(() =>
@@ -211,8 +224,11 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip = "Racy")]
-        public void A_Delay_must_properly_delay_according_to_buffer_size()
+        // Was marked as racy. 
+        // Passed 500 consecutive local test runs with no fail with very heavy load without modification
+        [Theory]
+        [Repeat(500)]
+        public void A_Delay_must_properly_delay_according_to_buffer_size(int _)
         {
             // With a buffer size of 1, delays add up 
             Source.From(Enumerable.Range(1, 5))
