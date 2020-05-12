@@ -1,3 +1,6 @@
+#### 1.4.7 May 12 2020 ####
+**Placeholder for nightlies**
+
 #### 1.4.6 May 12 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 
