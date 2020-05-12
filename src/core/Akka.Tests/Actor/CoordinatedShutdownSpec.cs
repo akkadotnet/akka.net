@@ -411,5 +411,64 @@ namespace Akka.Tests.Actor
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
             CoordinatedShutdown.Get(Sys).ShutdownReason.ShouldBeEquivalentTo(customReason);
         }
+
+        [Fact]
+        public async Task CoordinatedShutdown_must_be_run_by_ActorSystem_Terminate()
+        {
+            await Sys.Terminate();
+            Sys.WhenTerminated.IsCompleted.Should().BeTrue();
+            CoordinatedShutdown.Get(Sys).ShutdownReason.ShouldBeEquivalentTo(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+        }
+
+        [Fact]
+        public async Task CoordinatedShutdown_must_not_be_run_by_ActorSystem_Terminate_when_run_by_actor_system_terminate_is_off()
+        {
+            var sys = ActorSystem.Create(
+                "name", 
+                ConfigurationFactory
+                    .ParseString(@"
+                        akka.coordinated-shutdown.terminate-actor-system = on
+                        akka.coordinated-shutdown.run-by-actor-system-terminate = off")
+                    .WithFallback(Sys.Settings.Config));
+            var actor = CoordinatedShutdown.Get(sys);
+
+            try
+            {
+                await sys.Terminate();
+                sys.WhenTerminated.IsCompleted.Should().BeTrue();
+                actor.ShutdownReason.ShouldBeEquivalentTo(null);
+            }
+            finally
+            {
+                Shutdown(sys);
+            }
+        }
+
+        [Fact]
+        public void CoordinatedShutdown_must_not_allow_terminate_actor_system_set_to_off_and_run_by_actor_system_terminate_set_to_on()
+        {
+            Action act = () => {
+                ActorSystem sys = null;
+                try
+                {
+                    sys = ActorSystem.Create(
+                        "name",
+                            ConfigurationFactory
+                            .ParseString(@"
+                                akka.coordinated-shutdown.terminate-actor-system = off
+                                akka.coordinated-shutdown.run-by-actor-system-terminate = on")
+                            .WithFallback(Sys.Settings.Config));
+                    var actor = CoordinatedShutdown.Get(sys);
+                }
+                finally
+                {
+                    if (sys != null)
+                        Shutdown(sys);
+                }
+            };
+
+            act.Invoking(a => a()).ShouldThrow<ConfigurationException>();
+        }
+
     }
 }

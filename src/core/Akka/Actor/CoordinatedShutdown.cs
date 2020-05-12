@@ -177,9 +177,22 @@ namespace Akka.Actor
         /// </summary>
         public class UnknownReason : Reason
         {
-            public static Reason Instance = new UnknownReason();
+            public static readonly Reason Instance = new UnknownReason();
 
             private UnknownReason()
+            {
+
+            }
+        }
+
+        /// <summary>
+        /// The shutdown was initiated by an ActorSystem termination hook
+        /// </summary>
+        public class ActorSystemTerminateReason : Reason
+        {
+            public static readonly Reason Instance = new ActorSystemTerminateReason();
+
+            private ActorSystemTerminateReason()
             {
 
             }
@@ -190,7 +203,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClrExitReason : Reason
         {
-            public static Reason Instance = new ClrExitReason();
+            public static readonly Reason Instance = new ClrExitReason();
 
             private ClrExitReason()
             {
@@ -204,7 +217,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClusterDowningReason : Reason
         {
-            public static Reason Instance = new ClusterDowningReason();
+            public static readonly Reason Instance = new ClusterDowningReason();
 
             private ClusterDowningReason()
             {
@@ -218,7 +231,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClusterLeavingReason : Reason
         {
-            public static Reason Instance = new ClusterLeavingReason();
+            public static readonly Reason Instance = new ClusterLeavingReason();
 
             private ClusterLeavingReason()
             {
@@ -231,7 +244,7 @@ namespace Akka.Actor
         /// </summary>
         public class ClusterJoinUnsuccessfulReason : Reason
         {
-            public static Reason Instance = new ClusterJoinUnsuccessfulReason();
+            public static readonly Reason Instance = new ClusterJoinUnsuccessfulReason();
             private ClusterJoinUnsuccessfulReason() { }
         }
 
@@ -615,7 +628,7 @@ namespace Akka.Actor
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
         internal static void InitPhaseActorSystemTerminate(ActorSystem system, Config conf, CoordinatedShutdown coord)
         {
-            var terminateActorSystem = conf.GetBoolean("terminate-actor-system", false);
+            var terminateActorSystem = system.Settings.CoordinatedShutdownTerminateActorSystem;
             var exitClr = conf.GetBoolean("exit-clr", false);
             if (terminateActorSystem || exitClr)
             {
@@ -640,6 +653,7 @@ namespace Akka.Actor
 
                     if (terminateActorSystem)
                     {
+                        system.FinalTerminate();
                         return system.Terminate().ContinueWith(tr =>
                         {
                             if (exitClr && !coord._runningClrHook)
