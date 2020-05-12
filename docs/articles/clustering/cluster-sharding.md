@@ -132,7 +132,7 @@ This can be resolved by getting information about shard/entity ids directly from
 >
 > Therefore, this design gives the sharding system a chance to hand over all of the sharded entity actors running on the terminating node over to the other remaining nodes in the cluster.
 
-Given these values we can build consistent, unique `PersistenceId`s on the fly like on the following example:
+Given these values we can build consistent, unique `PersistenceId`s on the fly using the `entityId` (the expectation is that `entityId` are globally unique) as in the following example:
 
 ```csharp
 public class Aggregate : PersistentActor
@@ -141,7 +141,7 @@ public class Aggregate : PersistentActor
 
     public Aggregate()
     {
-        PersistenceId = Context.Parent.Path.Name + "-" + Self.Path.Name;
+        PersistenceId = Self.Path.Name;
     }
 
     ...
