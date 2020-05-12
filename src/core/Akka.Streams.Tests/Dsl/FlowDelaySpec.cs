@@ -226,9 +226,8 @@ namespace Akka.Streams.Tests.Dsl
 
         // Was marked as racy. 
         // Passed 500 consecutive local test runs with no fail with very heavy load without modification
-        [Theory]
-        [Repeat(500)]
-        public void A_Delay_must_properly_delay_according_to_buffer_size(int _)
+        [Fact]
+        public void A_Delay_must_properly_delay_according_to_buffer_size()
         {
             // With a buffer size of 1, delays add up 
             Source.From(Enumerable.Range(1, 5))
