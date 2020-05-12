@@ -7,13 +7,14 @@
 
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using Akka.Actor;
 
 namespace TcpEchoService.Server
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             using (var system = ActorSystem.Create("echo-server-system"))
             {
@@ -28,6 +29,9 @@ namespace TcpEchoService.Server
                 Console.WriteLine("TCP server is listening on *:{0}", port);
                 Console.WriteLine("ENTER to exit...");
                 Console.ReadLine();
+                
+                // Close connection to avoid error message in console
+                await actor.Ask(new EchoService.StopServer());
             }
         }
     }
