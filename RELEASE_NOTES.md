@@ -1,3 +1,20 @@
+#### 1.4.6 May 12 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.6 consists of mainly minor bug fixes and updates:
+
+* [Akka.Cluster.DistributedData: Akka.DistributedData.ORDictionary Unable to cast object of type](https://github.com/akkadotnet/akka.net/issues/4400)
+* [Akka: add CoordinatedShutdown.run-by-actor-system-terminated setting](https://github.com/akkadotnet/akka.net/issues/4203) - runs `CoordinatedShutdown` whenever `ActorSystem.Terminate()` is called.
+* [Akka.Actor: Inconsistent application of SupervisorStrategy on Pool routers](https://github.com/akkadotnet/akka.net/issues/3626)
+
+To see the full set of changes for Akka.NET 1.4.6, please [see the 1.4.6 milestone](https://github.com/akkadotnet/akka.net/milestone/37).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 746 | 96 | Gregorius Soedharmo |
+| 1 | 65 | 117 | Igor Fedchenko |
+| 1 | 10 | 5 | Bogdan-Rotund |
+
 #### 1.4.5 April 29 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 
