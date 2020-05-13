@@ -8,11 +8,13 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
+using FluentAssertions;
 
 namespace Akka.DistributedData.Tests.MultiNode
 {
@@ -28,18 +30,20 @@ namespace Akka.DistributedData.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            var writeBehindInterval = writeBehind ? "200ms" : "off";
-            CommonConfig = ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO
-            akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.log-dead-letters-during-shutdown = off
-            akka.cluster.distributed-data.durable.keys = [""durable*""]
-            akka.cluster.distributed-data.durable.lmdb {
-              dir = ""target/DurableDataSpec-" + DateTime.UtcNow.Ticks + @"-ddata""
-              map-size = 10 MiB
-              write-behind-interval = " + writeBehindInterval + @"
-            }
-            akka.test.single-expect-default = 5s").WithFallback(DistributedData.DefaultConfig());
+            CommonConfig = ConfigurationFactory.ParseString($@"
+                akka.loglevel = INFO
+                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
+                akka.log-dead-letters-during-shutdown = off
+                akka.cluster.distributed-data.durable.keys = [""durable*""]
+                akka.cluster.distributed-data.durable.lmdb {{
+                    dir = ""target/DurableDataSpec-{DateTime.UtcNow.Ticks}-ddata""
+                    map-size = 10 MiB
+                    write-behind-interval = {(writeBehind ? "200ms" : "off")}
+                }}
+                akka.cluster.distributed-data.durable.store-actor-class = ""Akka.DistributedData.LightningDB.LmdbDurableStore, Akka.DistributedData.LightningDB""
+                # initialization of lmdb can be very slow in CI environment
+                akka.test.single-expect-default = 15s")
+                .WithFallback(DistributedData.DefaultConfig());
         }
     }
 
@@ -70,7 +74,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly RoleName first;
         private readonly RoleName second;
         private readonly Cluster.Cluster cluster;
-        private readonly TimeSpan timeout = TimeSpan.FromSeconds(5);
+        private readonly TimeSpan timeout;
         private readonly IWriteConsistency writeTwo;
         private readonly IReadConsistency readTwo;
 
@@ -79,20 +83,21 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly ORSetKey<string> keyC = new ORSetKey<string>("durable-C");
 
         private int testStepCounter = 0;
+        private readonly SelfUniqueAddress selfUniqueAddress;
 
         protected DurableDataSpec(DurableDataSpecConfig config, Type type) : base(config, type)
         {
-            InitialParticipantsValueFactory = Roles.Count;
             cluster = Akka.Cluster.Cluster.Get(Sys);
+            selfUniqueAddress = DistributedData.Get(Sys).SelfUniqueAddress;
+            timeout = Dilated(14.Seconds()); // initialization of lmdb can be very slow in CI environment
             writeTwo = new WriteTo(2, timeout);
             readTwo = new ReadFrom(2, timeout);
+
             first = config.First;
             second = config.Second;
         }
 
-        protected override int InitialParticipantsValueFactory { get; }
-
-        [MultiNodeFact(Skip = "FIXME")]
+        [MultiNodeFact]
         public void DurableDataSpec_Tests()
         {
             Durable_CRDT_should_work_in_a_single_node_cluster();
