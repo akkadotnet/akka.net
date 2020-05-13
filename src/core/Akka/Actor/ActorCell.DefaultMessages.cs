@@ -64,6 +64,7 @@ namespace Akka.Actor
                 // Akka JVM doesn't have these lines
                 CurrentMessage = envelope.Message;
                 _currentEnvelopeId++;
+                if (_currentEnvelopeId == int.MaxValue) _currentEnvelopeId = 0;
 
                 Sender = MatchSender(envelope);
 
