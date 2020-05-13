@@ -117,6 +117,15 @@ namespace Akka.Actor
 
             SchedulerClass = Config.GetString("akka.scheduler.implementation", null);
             SchedulerShutdownTimeout = Config.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
+
+            CoordinatedShutdownTerminateActorSystem = Config.GetBoolean("akka.coordinated-shutdown.terminate-actor-system");
+            CoordinatedShutdownRunByActorSystemTerminate = Config.GetBoolean("akka.coordinated-shutdown.run-by-actor-system-terminate");
+
+            if (CoordinatedShutdownRunByActorSystemTerminate && !CoordinatedShutdownTerminateActorSystem)
+                throw new ConfigurationException(
+                  "akka.coordinated-shutdown.run-by-actor-system-terminate=on and " +
+                  "akka.coordinated-shutdown.terminate-actor-system=off is not a supported configuration combination.");
+
             //TODO: dunno.. we don't have FiniteStateMachines, don't know what the rest is
             /*              
                 final val SchedulerClass: String = getString("akka.scheduler.implementation")
@@ -305,6 +314,10 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         public TimeSpan SchedulerShutdownTimeout { get; private set; }
+
+        public bool CoordinatedShutdownTerminateActorSystem { get; private set; }
+
+        public bool CoordinatedShutdownRunByActorSystemTerminate { get; private set; }
 
         /// <inheritdoc/>
         public override string ToString()

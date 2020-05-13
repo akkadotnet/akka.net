@@ -507,21 +507,25 @@ namespace Akka.Actor
         public static Akka.Actor.CoordinatedShutdown Get(Akka.Actor.ActorSystem sys) { }
         public System.Threading.Tasks.Task<Akka.Done> Run(Akka.Actor.CoordinatedShutdown.Reason reason, string fromPhase = null) { }
         public System.TimeSpan Timeout(string phase) { }
+        public class ActorSystemTerminateReason : Akka.Actor.CoordinatedShutdown.Reason
+        {
+            public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
+        }
         public class ClrExitReason : Akka.Actor.CoordinatedShutdown.Reason
         {
-            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
         public class ClusterDowningReason : Akka.Actor.CoordinatedShutdown.Reason
         {
-            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
         public class ClusterJoinUnsuccessfulReason : Akka.Actor.CoordinatedShutdown.Reason
         {
-            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
         public class ClusterLeavingReason : Akka.Actor.CoordinatedShutdown.Reason
         {
-            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
         public class Reason
         {
@@ -529,7 +533,7 @@ namespace Akka.Actor
         }
         public class UnknownReason : Akka.Actor.CoordinatedShutdown.Reason
         {
-            public static Akka.Actor.CoordinatedShutdown.Reason Instance;
+            public static readonly Akka.Actor.CoordinatedShutdown.Reason Instance;
         }
     }
     public sealed class CoordinatedShutdownExtension : Akka.Actor.ExtensionIdProvider<Akka.Actor.CoordinatedShutdown>
@@ -1575,6 +1579,8 @@ namespace Akka.Actor
         public System.TimeSpan AskTimeout { get; }
         public Akka.Configuration.Config Config { get; }
         public string ConfigVersion { get; }
+        public bool CoordinatedShutdownRunByActorSystemTerminate { get; }
+        public bool CoordinatedShutdownTerminateActorSystem { get; }
         public System.TimeSpan CreationTimeout { get; }
         public bool DebugAutoReceive { get; }
         public bool DebugEventStream { get; }
