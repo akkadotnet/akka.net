@@ -102,15 +102,15 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             Durable_CRDT_should_work_in_a_single_node_cluster();
             Durable_CRDT_should_work_in_a_multi_node_cluster();
-            Durable_CRDT_should_be_durable_after_gossip_update();
-            Durable_CRDT_should_handle_Update_before_Load();
-            Durable_CRDT_should_stop_Replicator_if_Load_fails();
-            Durable_CRDT_should_reply_with_StoreFailure_if_store_fails();
+            //Durable_CRDT_should_be_durable_after_gossip_update();
+            //Durable_CRDT_should_handle_Update_before_Load();
+            //Durable_CRDT_should_stop_Replicator_if_Load_fails();
+            //Durable_CRDT_should_reply_with_StoreFailure_if_store_fails();
         }
 
         public void Durable_CRDT_should_work_in_a_single_node_cluster()
         {
-            Join(first, second);
+            Join(first, first);
 
             RunOn(() =>
             {
