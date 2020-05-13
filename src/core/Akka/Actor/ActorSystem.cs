@@ -184,6 +184,11 @@ namespace Akka.Actor
 
         /// <summary>
         /// <para>
+        /// If `akka.coordinated-shutdown.run-by-actor-system-terminate` is configured to `off`
+        /// it will not run `CoordinatedShutdown`, but the `ActorSystem` and its actors
+        /// will still be terminated.        
+        /// </para>
+        /// <para>
         /// Terminates this actor system. This will stop the guardian actor, which in turn will recursively stop
         /// all its child actors, then the system guardian (below which the logging actors reside) and the execute
         /// all registered termination handlers (<see cref="ActorSystem.RegisterOnTermination" />).
@@ -197,6 +202,8 @@ namespace Akka.Actor
         /// A <see cref="Task"/> that will complete once the actor system has finished terminating and all actors are stopped.
         /// </returns>
         public abstract Task Terminate();
+
+        internal abstract void FinalTerminate();
 
         /// <summary>
         /// Returns a task which will be completed after the <see cref="ActorSystem"/> has been
