@@ -37,6 +37,7 @@ namespace Akka.Cluster.Tests
             }
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.coordinated-shutdown.terminate-actor-system = off
+            akka.coordinated-shutdown.run-by-actor-system-terminate = off
             akka.remote.log-remote-lifecycle-events = off
             akka.remote.dot-netty.tcp.port = 0";
 
@@ -174,6 +175,7 @@ namespace Akka.Cluster.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
+                akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
@@ -431,6 +433,7 @@ namespace Akka.Cluster.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
+                akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
@@ -463,6 +466,7 @@ namespace Akka.Cluster.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
+                akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
                 akka.cluster.min-nr-of-members = 2
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
