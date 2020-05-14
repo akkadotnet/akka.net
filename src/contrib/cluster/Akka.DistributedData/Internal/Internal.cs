@@ -740,16 +740,28 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public bool SendBack { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? ToSystemUid { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? FromSystemUid { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="updatedData">TBD</param>
         /// <param name="sendBack">TBD</param>
-        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
+        /// <param name="toSystemUid">TBD</param>
+        /// <param name="fromSystemUid">TBD</param>
+        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? toSystemUid = null, long? fromSystemUid = null)
         {
             UpdatedData = updatedData;
             SendBack = sendBack;
+            ToSystemUid = toSystemUid;
+            FromSystemUid = fromSystemUid;
         }
 
         /// <inheritdoc/>
@@ -758,7 +770,10 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.SendBack.Equals(SendBack) && UpdatedData.SequenceEqual(other.UpdatedData);
+            return other.SendBack.Equals(SendBack) 
+                && UpdatedData.SequenceEqual(other.UpdatedData)
+                && ToSystemUid.Equals(other.ToSystemUid)
+                && FromSystemUid.Equals(other.FromSystemUid);
         }
 
         /// <inheritdoc/>
