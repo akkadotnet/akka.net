@@ -17,10 +17,10 @@ using scg = global::System.Collections.Generic;
 namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   /// <summary>Holder for reflection information generated from replicatormessages.proto</summary>
-  public static partial class ReplicatorMessagesReflection {
+  internal static partial class ReplicatorMessagesReflection {
 
     #region Descriptor
-    /// <summary>File descriptor for replicatormessages.proto</summary>
+    /// <summary>File descriptor for ReplicatorMessages.proto</summary>
     public static pbr::FileDescriptor Descriptor {
       get { return descriptor; }
     }
@@ -144,7 +144,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
   #region Messages
-  public sealed partial class Get : pb::IMessage<Get> {
+  internal sealed partial class Get : pb::IMessage<Get> {
     private static readonly pb::MessageParser<Get> _parser = new pb::MessageParser<Get>(() => new Get());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Get> Parser { get { return _parser; } }
@@ -441,7 +441,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class GetSuccess : pb::IMessage<GetSuccess> {
+  internal sealed partial class GetSuccess : pb::IMessage<GetSuccess> {
     private static readonly pb::MessageParser<GetSuccess> _parser = new pb::MessageParser<GetSuccess>(() => new GetSuccess());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GetSuccess> Parser { get { return _parser; } }
@@ -632,7 +632,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class NotFound : pb::IMessage<NotFound> {
+  internal sealed partial class NotFound : pb::IMessage<NotFound> {
     private static readonly pb::MessageParser<NotFound> _parser = new pb::MessageParser<NotFound>(() => new NotFound());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<NotFound> Parser { get { return _parser; } }
@@ -789,7 +789,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class GetFailure : pb::IMessage<GetFailure> {
+  internal sealed partial class GetFailure : pb::IMessage<GetFailure> {
     private static readonly pb::MessageParser<GetFailure> _parser = new pb::MessageParser<GetFailure>(() => new GetFailure());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GetFailure> Parser { get { return _parser; } }
@@ -946,7 +946,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Subscribe : pb::IMessage<Subscribe> {
+  internal sealed partial class Subscribe : pb::IMessage<Subscribe> {
     private static readonly pb::MessageParser<Subscribe> _parser = new pb::MessageParser<Subscribe>(() => new Subscribe());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Subscribe> Parser { get { return _parser; } }
@@ -1097,7 +1097,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Unsubscribe : pb::IMessage<Unsubscribe> {
+  internal sealed partial class Unsubscribe : pb::IMessage<Unsubscribe> {
     private static readonly pb::MessageParser<Unsubscribe> _parser = new pb::MessageParser<Unsubscribe>(() => new Unsubscribe());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Unsubscribe> Parser { get { return _parser; } }
@@ -1248,7 +1248,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Changed : pb::IMessage<Changed> {
+  internal sealed partial class Changed : pb::IMessage<Changed> {
     private static readonly pb::MessageParser<Changed> _parser = new pb::MessageParser<Changed>(() => new Changed());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Changed> Parser { get { return _parser; } }
@@ -1405,7 +1405,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Write : pb::IMessage<Write> {
+  internal sealed partial class Write : pb::IMessage<Write> {
     private static readonly pb::MessageParser<Write> _parser = new pb::MessageParser<Write>(() => new Write());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Write> Parser { get { return _parser; } }
@@ -1590,7 +1590,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Empty : pb::IMessage<Empty> {
+  internal sealed partial class Empty : pb::IMessage<Empty> {
     private static readonly pb::MessageParser<Empty> _parser = new pb::MessageParser<Empty>(() => new Empty());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Empty> Parser { get { return _parser; } }
@@ -1679,7 +1679,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Read : pb::IMessage<Read> {
+  internal sealed partial class Read : pb::IMessage<Read> {
     private static readonly pb::MessageParser<Read> _parser = new pb::MessageParser<Read>(() => new Read());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Read> Parser { get { return _parser; } }
@@ -1830,7 +1830,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class ReadResult : pb::IMessage<ReadResult> {
+  internal sealed partial class ReadResult : pb::IMessage<ReadResult> {
     private static readonly pb::MessageParser<ReadResult> _parser = new pb::MessageParser<ReadResult>(() => new ReadResult());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ReadResult> Parser { get { return _parser; } }
@@ -1953,7 +1953,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class DataEnvelope : pb::IMessage<DataEnvelope> {
+  internal sealed partial class DataEnvelope : pb::IMessage<DataEnvelope> {
     private static readonly pb::MessageParser<DataEnvelope> _parser = new pb::MessageParser<DataEnvelope>(() => new DataEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DataEnvelope> Parser { get { return _parser; } }
@@ -2132,7 +2132,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the DataEnvelope message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class PruningEntry : pb::IMessage<PruningEntry> {
+      internal sealed partial class PruningEntry : pb::IMessage<PruningEntry> {
         private static readonly pb::MessageParser<PruningEntry> _parser = new pb::MessageParser<PruningEntry>(() => new PruningEntry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<PruningEntry> Parser { get { return _parser; } }
@@ -2370,7 +2370,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Status : pb::IMessage<Status> {
+  internal sealed partial class Status : pb::IMessage<Status> {
     private static readonly pb::MessageParser<Status> _parser = new pb::MessageParser<Status>(() => new Status());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Status> Parser { get { return _parser; } }
@@ -2649,7 +2649,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Status message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class Entry : pb::IMessage<Entry> {
+      internal sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -2799,7 +2799,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Gossip : pb::IMessage<Gossip> {
+  internal sealed partial class Gossip : pb::IMessage<Gossip> {
     private static readonly pb::MessageParser<Gossip> _parser = new pb::MessageParser<Gossip>(() => new Gossip());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Gossip> Parser { get { return _parser; } }
@@ -3050,7 +3050,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Gossip message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class Entry : pb::IMessage<Entry> {
+      internal sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -3206,7 +3206,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class DeltaPropagation : pb::IMessage<DeltaPropagation> {
+  internal sealed partial class DeltaPropagation : pb::IMessage<DeltaPropagation> {
     private static readonly pb::MessageParser<DeltaPropagation> _parser = new pb::MessageParser<DeltaPropagation>(() => new DeltaPropagation());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DeltaPropagation> Parser { get { return _parser; } }
@@ -3382,7 +3382,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the DeltaPropagation message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class Entry : pb::IMessage<Entry> {
+      internal sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -3597,7 +3597,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class UniqueAddress : pb::IMessage<UniqueAddress> {
+  internal sealed partial class UniqueAddress : pb::IMessage<UniqueAddress> {
     private static readonly pb::MessageParser<UniqueAddress> _parser = new pb::MessageParser<UniqueAddress>(() => new UniqueAddress());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<UniqueAddress> Parser { get { return _parser; } }
@@ -3748,7 +3748,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class Address : pb::IMessage<Address> {
+  internal sealed partial class Address : pb::IMessage<Address> {
     private static readonly pb::MessageParser<Address> _parser = new pb::MessageParser<Address>(() => new Address());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Address> Parser { get { return _parser; } }
@@ -3893,7 +3893,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class VersionVector : pb::IMessage<VersionVector> {
+  internal sealed partial class VersionVector : pb::IMessage<VersionVector> {
     private static readonly pb::MessageParser<VersionVector> _parser = new pb::MessageParser<VersionVector>(() => new VersionVector());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<VersionVector> Parser { get { return _parser; } }
@@ -4004,7 +4004,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the VersionVector message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      public sealed partial class Entry : pb::IMessage<Entry> {
+      internal sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -4160,7 +4160,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class OtherMessage : pb::IMessage<OtherMessage> {
+  internal sealed partial class OtherMessage : pb::IMessage<OtherMessage> {
     private static readonly pb::MessageParser<OtherMessage> _parser = new pb::MessageParser<OtherMessage>(() => new OtherMessage());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<OtherMessage> Parser { get { return _parser; } }
@@ -4333,7 +4333,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class StringGSet : pb::IMessage<StringGSet> {
+  internal sealed partial class StringGSet : pb::IMessage<StringGSet> {
     private static readonly pb::MessageParser<StringGSet> _parser = new pb::MessageParser<StringGSet>(() => new StringGSet());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<StringGSet> Parser { get { return _parser; } }
@@ -4442,7 +4442,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  public sealed partial class DurableDataEnvelope : pb::IMessage<DurableDataEnvelope> {
+  internal sealed partial class DurableDataEnvelope : pb::IMessage<DurableDataEnvelope> {
     private static readonly pb::MessageParser<DurableDataEnvelope> _parser = new pb::MessageParser<DurableDataEnvelope>(() => new DurableDataEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DurableDataEnvelope> Parser { get { return _parser; } }
