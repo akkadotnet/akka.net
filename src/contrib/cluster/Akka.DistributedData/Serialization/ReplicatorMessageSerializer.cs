@@ -238,6 +238,18 @@ namespace Akka.DistributedData.Serialization
                 });
             }
 
+            if (gossip.ToSystemUid.HasValue)
+            {
+                proto.HasToSystemUid = true;
+                proto.ToSystemUid = gossip.ToSystemUid.Value;
+            }
+
+            if (gossip.FromSystemUid.HasValue)
+            {
+                proto.HasFromSystemUid = true;
+                proto.FromSystemUid = gossip.FromSystemUid.Value;
+            }
+
             return proto;
         }
 
