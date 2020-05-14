@@ -495,7 +495,7 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.Read ReadToProto(Read read)
         {
-            var proto = new Proto.Msg.Read
+            return new Proto.Msg.Read
             {
                 Key = read.Key
             };
