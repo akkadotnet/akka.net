@@ -723,7 +723,8 @@ namespace Akka.DistributedData.Serialization
         private Write WriteFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Write.Parser.ParseFrom(bytes);
-            return new Write(proto.Key, DataEnvelopeFromProto(proto.Envelope));
+            var fromNode = proto.FromNode != null ? _ser.UniqueAddressFromProto(proto.FromNode) : null;
+            return new Write(proto.Key, DataEnvelopeFromProto(proto.Envelope), fromNode);
         }
 
         private DataEnvelope DataEnvelopeFromBinary(byte[] bytes)
