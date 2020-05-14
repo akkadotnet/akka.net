@@ -657,6 +657,14 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public int TotalChunks { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? ToSystemUid { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? FromSystemUid { get; }
 
         /// <summary>
         /// TBD
@@ -664,11 +672,15 @@ namespace Akka.DistributedData.Internal
         /// <param name="digests">TBD</param>
         /// <param name="chunk">TBD</param>
         /// <param name="totalChunks">TBD</param>
-        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks)
+        /// <param name="toSystemUid">TBD</param>
+        /// <param name="fromSystemUid">TBD</param>
+        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks, long? toSystemUid = null, long? fromSystemUid = null)
         {
             Digests = digests;
             Chunk = chunk;
             TotalChunks = totalChunks;
+            ToSystemUid = toSystemUid;
+            FromSystemUid = fromSystemUid;
         }
 
         /// <inheritdoc/>
@@ -677,7 +689,11 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.Chunk.Equals(Chunk) && other.TotalChunks.Equals(TotalChunks) && Digests.SequenceEqual(other.Digests);
+            return other.Chunk.Equals(Chunk) 
+                && other.TotalChunks.Equals(TotalChunks) 
+                && Digests.SequenceEqual(other.Digests)
+                && ToSystemUid.Equals(other.ToSystemUid)
+                && FromSystemUid.Equals(other.FromSystemUid);
         }
 
         /// <inheritdoc/>
