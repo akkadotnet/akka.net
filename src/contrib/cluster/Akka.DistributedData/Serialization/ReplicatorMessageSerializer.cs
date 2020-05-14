@@ -482,11 +482,15 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.Write WriteToProto(Write write)
         {
-            return new Proto.Msg.Write
+            var proto = new Proto.Msg.Write
             {
                 Key = write.Key,
-                Envelope = DataEnvelopeToProto(write.Envelope)
+                Envelope = DataEnvelopeToProto(write.Envelope),
             };
+
+            if(!(write.FromNode is null))
+                proto.FromNode = SerializationSupport.UniqueAddressToProto(write.FromNode);
+            return proto;
         }
 
         private Proto.Msg.Read ReadToProto(Read read)
