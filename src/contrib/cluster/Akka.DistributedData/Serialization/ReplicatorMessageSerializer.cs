@@ -369,21 +369,26 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.Get GetToProto(Get msg)
         {
-            var consistencyValue = 1;
-            switch (msg.Consistency)
-            {
-                case ReadLocal _: consistencyValue = 1; break;
-                case ReadFrom r: consistencyValue = r.N; break;
-                case ReadMajority _: consistencyValue = 0; break;
-                case ReadAll _: consistencyValue = -1; break;
-            }
+            var timeoutInMilis = msg.Consistency.Timeout.TotalMilliseconds;
+            if (timeoutInMilis > 0XFFFFFFFFL)
+                throw new ArgumentOutOfRangeException("Timeouts must fit in a 32-bit unsigned int");
 
             var proto = new Proto.Msg.Get
             {
                 Key = this.OtherMessageToProto(msg.Key),
-                Consistency = consistencyValue,
-                Timeout = (uint)(msg.Consistency.Timeout.Ticks / TimeSpan.TicksPerMillisecond)
+                Timeout = (uint)timeoutInMilis
             };
+
+            switch (msg.Consistency)
+            {
+                case ReadLocal _: proto.Consistency = 1; break;
+                case ReadFrom r: proto.Consistency = r.N; break;
+                case ReadMajority rm:
+                    proto.Consistency = 0;
+                    proto.ConsistencyMinCap = rm.MinCapacity;
+                    break;
+                case ReadAll _: proto.Consistency = -1; break;
+            }
 
             if (!ReferenceEquals(null, msg.Request))
                 proto.Request = this.OtherMessageToProto(msg.Request);
