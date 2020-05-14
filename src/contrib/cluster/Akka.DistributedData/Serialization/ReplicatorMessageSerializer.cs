@@ -516,7 +516,11 @@ namespace Akka.DistributedData.Serialization
                 builder.Add(entry.Key, DataEnvelopeFromProto(entry.Envelope));
             }
 
-            return new Gossip(builder.ToImmutable(), proto.SendBack);
+            return new Gossip(
+                builder.ToImmutable(),
+                proto.SendBack,
+                proto.HasToSystemUid ? (long?)proto.ToSystemUid : null,
+                proto.HasFromSystemUid ? (long?)proto.FromSystemUid : null);
         }
 
         private DataEnvelope DataEnvelopeFromProto(Proto.Msg.DataEnvelope proto)
