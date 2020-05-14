@@ -680,7 +680,12 @@ namespace Akka.DistributedData.Serialization
                 builder.Add(entry.Key, entry.Digest);
             }
 
-            return new Status(builder.ToImmutable(), (int)proto.Chunk, (int)proto.TotChunks);
+            return new Status(
+                builder.ToImmutable(),
+                (int)proto.Chunk,
+                (int)proto.TotChunks,
+                proto.HasToSystemUid ? (long?)proto.ToSystemUid : null,
+                proto.HasFromSystemUid ? (long?)proto.FromSystemUid : null);
         }
 
         private DeltaPropagation DeltaPropagationFromBinary(byte[] bytes)
