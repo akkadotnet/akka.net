@@ -667,7 +667,7 @@ namespace Akka.DistributedData.Serialization
             IReadConsistency consistency;
             switch (proto.Consistency)
             {
-                case 0: consistency = new ReadMajority(timeout); break;
+                case 0: consistency = new ReadMajority(timeout, proto.ConsistencyMinCap); break;
                 case -1: consistency = new ReadAll(timeout); break;
                 case 1: consistency = ReadLocal.Instance; break;
                 default: consistency = new ReadFrom(proto.Consistency, timeout); break;
