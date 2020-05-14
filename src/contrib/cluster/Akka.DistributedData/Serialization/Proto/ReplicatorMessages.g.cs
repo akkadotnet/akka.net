@@ -16,11 +16,11 @@ using pbr = global::Google.Protobuf.Reflection;
 using scg = global::System.Collections.Generic;
 namespace Akka.DistributedData.Serialization.Proto.Msg {
 
-  /// <summary>Holder for reflection information generated from ReplicatorMessages.proto</summary>
-  internal static partial class ReplicatorMessagesReflection {
+  /// <summary>Holder for reflection information generated from replicatormessages.proto</summary>
+  public static partial class ReplicatorMessagesReflection {
 
     #region Descriptor
-    /// <summary>File descriptor for ReplicatorMessages.proto</summary>
+    /// <summary>File descriptor for replicatormessages.proto</summary>
     public static pbr::FileDescriptor Descriptor {
       get { return descriptor; }
     }
@@ -29,90 +29,95 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     static ReplicatorMessagesReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "ChhSZXBsaWNhdG9yTWVzc2FnZXMucHJvdG8SLEFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnIsEBCgNHZXQSRwoDa2V5GAEg",
+            "ChhyZXBsaWNhdG9ybWVzc2FnZXMucHJvdG8SLEFra2EuRGlzdHJpYnV0ZWRE",
+            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnIp0CCgNHZXQSRwoDa2V5GAEg",
             "ASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
             "by5Nc2cuT3RoZXJNZXNzYWdlEhMKC2NvbnNpc3RlbmN5GAIgASgREg8KB3Rp",
             "bWVvdXQYAyABKA0SSwoHcmVxdWVzdBgEIAEoCzI6LkFra2EuRGlzdHJpYnV0",
-            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSLs",
-            "AQoKR2V0U3VjY2VzcxJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
-            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USSAoE",
-            "ZGF0YRgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJLCgdyZXF1ZXN0GAQgASgLMjou",
-            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "T3RoZXJNZXNzYWdlIqABCghOb3RGb3VuZBJHCgNrZXkYASABKAsyOi5Ba2th",
-            "LkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhl",
-            "ck1lc3NhZ2USSwoHcmVxdWVzdBgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSKiAQoK",
-            "R2V0RmFpbHVyZRJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0",
-            "YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USSwoHcmVx",
-            "dWVzdBgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZSJhCglTdWJzY3JpYmUSRwoDa2V5",
-            "GAEgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuT3RoZXJNZXNzYWdlEgsKA3JlZhgCIAEoCSJjCgtVbnN1YnNj",
-            "cmliZRJHCgNrZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USCwoDcmVmGAIgASgJ",
-            "IpwBCgdDaGFuZ2VkEkcKA2tleRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
-            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJICgRk",
-            "YXRhGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlIrEBCgVXcml0ZRILCgNrZXkYASAB",
-            "KAkSTAoIZW52ZWxvcGUYAiABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5T",
-            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EYXRhRW52ZWxvcGUSTQoIZnJvbU5v",
-            "ZGUYAyABKAsyOy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9u",
-            "LlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzIgcKBUVtcHR5ImIKBFJlYWQSCwoD",
-            "a2V5GAEgASgJEk0KCGZyb21Ob2RlGAIgASgLMjsuQWtrYS5EaXN0cmlidXRl",
-            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcyJa",
-            "CgpSZWFkUmVzdWx0EkwKCGVudmVsb3BlGAEgASgLMjouQWtrYS5EaXN0cmli",
-            "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRGF0YUVudmVsb3Bl",
-            "Iq0ECgxEYXRhRW52ZWxvcGUSSAoEZGF0YRgBIAEoCzI6LkFra2EuRGlzdHJp",
-            "YnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2Fn",
-            "ZRJYCgdwcnVuaW5nGAIgAygLMkcuQWtrYS5EaXN0cmlidXRlZERhdGEuU2Vy",
-            "aWFsaXphdGlvbi5Qcm90by5Nc2cuRGF0YUVudmVsb3BlLlBydW5pbmdFbnRy",
-            "eRJSCg1kZWx0YVZlcnNpb25zGAMgASgLMjsuQWtrYS5EaXN0cmlidXRlZERh",
-            "dGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVmVyc2lvblZlY3RvchqkAgoM",
-            "UHJ1bmluZ0VudHJ5ElMKDnJlbW92ZWRBZGRyZXNzGAEgASgLMjsuQWtrYS5E",
-            "aXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVl",
-            "QWRkcmVzcxJRCgxvd25lckFkZHJlc3MYAiABKAsyOy5Ba2thLkRpc3RyaWJ1",
+            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRIZ",
+            "ChFjb25zaXN0ZW5jeU1pbkNhcBgFIAEoBRIgChhoYXNDb25zaXN0ZW5jeUFk",
+            "ZGl0aW9uYWwYBiABKAgSHQoVY29uc2lzdGVuY3lBZGRpdGlvbmFsGAcgASgF",
+            "IuwBCgpHZXRTdWNjZXNzEkcKA2tleRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0",
+            "ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJI",
+            "CgRkYXRhGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEksKB3JlcXVlc3QYBCABKAsy",
+            "Oi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1z",
+            "Zy5PdGhlck1lc3NhZ2UioAEKCE5vdEZvdW5kEkcKA2tleRgBIAEoCzI6LkFr",
+            "a2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90",
+            "aGVyTWVzc2FnZRJLCgdyZXF1ZXN0GAIgASgLMjouQWtrYS5EaXN0cmlidXRl",
+            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlIqIB",
+            "CgpHZXRGYWlsdXJlEkcKA2tleRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWRE",
+            "YXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRJLCgdy",
+            "ZXF1ZXN0GAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlImEKCVN1YnNjcmliZRJHCgNr",
+            "ZXkYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5PdGhlck1lc3NhZ2USCwoDcmVmGAIgASgJImMKC1Vuc3Vi",
+            "c2NyaWJlEkcKA2tleRgBIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNl",
+            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLk90aGVyTWVzc2FnZRILCgNyZWYYAiAB",
+            "KAkinAEKB0NoYW5nZWQSRwoDa2V5GAEgASgLMjouQWtrYS5EaXN0cmlidXRl",
+            "ZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNzYWdlEkgK",
+            "BGRhdGEYAiABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0",
+            "aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2UisQEKBVdyaXRlEgsKA2tleRgB",
+            "IAEoCRJMCghlbnZlbG9wZRgCIAEoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRh",
+            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkRhdGFFbnZlbG9wZRJNCghmcm9t",
+            "Tm9kZRgDIAEoCzI7LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRp",
+            "b24uUHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MiBwoFRW1wdHkiYgoEUmVhZBIL",
+            "CgNrZXkYASABKAkSTQoIZnJvbU5vZGUYAiABKAsyOy5Ba2thLkRpc3RyaWJ1",
             "dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNz",
-            "EhEKCXBlcmZvcm1lZBgDIAEoCBJDCgRzZWVuGAQgAygLMjUuQWtrYS5EaXN0",
-            "cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRkcmVzcxIU",
-            "CgxvYnNvbGV0ZVRpbWUYBSABKBIiyQEKBlN0YXR1cxINCgVjaHVuaxgBIAEo",
-            "DRIRCgl0b3RDaHVua3MYAiABKA0SSwoHZW50cmllcxgDIAMoCzI6LkFra2Eu",
-            "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlN0YXR1",
-            "cy5FbnRyeRITCgt0b1N5c3RlbVVpZBgEIAEoEBIVCg1mcm9tU3lzdGVtVWlk",
-            "GAUgASgQGiQKBUVudHJ5EgsKA2tleRgBIAEoCRIOCgZkaWdlc3QYAiABKAwi",
-            "9wEKBkdvc3NpcBIQCghzZW5kQmFjaxgBIAEoCBJLCgdlbnRyaWVzGAIgAygL",
-            "MjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5N",
-            "c2cuR29zc2lwLkVudHJ5EhMKC3RvU3lzdGVtVWlkGAMgASgQEhUKDWZyb21T",
-            "eXN0ZW1VaWQYBCABKBAaYgoFRW50cnkSCwoDa2V5GAEgASgJEkwKCGVudmVs",
+            "IloKClJlYWRSZXN1bHQSTAoIZW52ZWxvcGUYASABKAsyOi5Ba2thLkRpc3Ry",
+            "aWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EYXRhRW52ZWxv",
+            "cGUirQQKDERhdGFFbnZlbG9wZRJICgRkYXRhGAEgASgLMjouQWtrYS5EaXN0",
+            "cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT3RoZXJNZXNz",
+            "YWdlElgKB3BydW5pbmcYAiADKAsyRy5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5EYXRhRW52ZWxvcGUuUHJ1bmluZ0Vu",
+            "dHJ5ElIKDWRlbHRhVmVyc2lvbnMYAyABKAsyOy5Ba2thLkRpc3RyaWJ1dGVk",
+            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5WZXJzaW9uVmVjdG9yGqQC",
+            "CgxQcnVuaW5nRW50cnkSUwoOcmVtb3ZlZEFkZHJlc3MYASABKAsyOy5Ba2th",
+            "LkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Vbmlx",
+            "dWVBZGRyZXNzElEKDG93bmVyQWRkcmVzcxgCIAEoCzI7LkFra2EuRGlzdHJp",
+            "YnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlVuaXF1ZUFkZHJl",
+            "c3MSEQoJcGVyZm9ybWVkGAMgASgIEkMKBHNlZW4YBCADKAsyNS5Ba2thLkRp",
+            "c3RyaWJ1dGVkRGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5BZGRyZXNz",
+            "EhQKDG9ic29sZXRlVGltZRgFIAEoEiL7AQoGU3RhdHVzEg0KBWNodW5rGAEg",
+            "ASgNEhEKCXRvdENodW5rcxgCIAEoDRJLCgdlbnRyaWVzGAMgAygLMjouQWtr",
+            "YS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuU3Rh",
+            "dHVzLkVudHJ5EhMKC3RvU3lzdGVtVWlkGAQgASgQEhUKDWZyb21TeXN0ZW1V",
+            "aWQYBSABKBASFgoOaGFzVG9TeXN0ZW1VaWQYBiABKAgSGAoQaGFzRnJvbVN5",
+            "c3RlbVVpZBgHIAEoCBokCgVFbnRyeRILCgNrZXkYASABKAkSDgoGZGlnZXN0",
+            "GAIgASgMIqkCCgZHb3NzaXASEAoIc2VuZEJhY2sYASABKAgSSwoHZW50cmll",
+            "cxgCIAMoCzI6LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLkdvc3NpcC5FbnRyeRITCgt0b1N5c3RlbVVpZBgDIAEoEBIV",
+            "Cg1mcm9tU3lzdGVtVWlkGAQgASgQEhYKDmhhc1RvU3lzdGVtVWlkGAUgASgI",
+            "EhgKEGhhc0Zyb21TeXN0ZW1VaWQYBiABKAgaYgoFRW50cnkSCwoDa2V5GAEg",
+            "ASgJEkwKCGVudmVsb3BlGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuRGF0YUVudmVsb3BlItACChBEZWx0",
+            "YVByb3BhZ2F0aW9uEk0KCGZyb21Ob2RlGAEgASgLMjsuQWtrYS5EaXN0cmli",
+            "dXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVz",
+            "cxJVCgdlbnRyaWVzGAIgAygLMkQuQWtrYS5EaXN0cmlidXRlZERhdGEuU2Vy",
+            "aWFsaXphdGlvbi5Qcm90by5Nc2cuRGVsdGFQcm9wYWdhdGlvbi5FbnRyeRIN",
+            "CgVyZXBseRgDIAEoCBqGAQoFRW50cnkSCwoDa2V5GAEgASgJEkwKCGVudmVs",
             "b3BlGAIgASgLMjouQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuRGF0YUVudmVsb3BlItACChBEZWx0YVByb3BhZ2F0aW9u",
-            "Ek0KCGZyb21Ob2RlGAEgASgLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2Vy",
-            "aWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxJVCgdlbnRyaWVz",
-            "GAIgAygLMkQuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Q",
-            "cm90by5Nc2cuRGVsdGFQcm9wYWdhdGlvbi5FbnRyeRINCgVyZXBseRgDIAEo",
-            "CBqGAQoFRW50cnkSCwoDa2V5GAEgASgJEkwKCGVudmVsb3BlGAIgASgLMjou",
-            "QWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "RGF0YUVudmVsb3BlEhEKCWZyb21TZXFOchgDIAEoAxIPCgd0b1NlcU5yGAQg",
-            "ASgDImQKDVVuaXF1ZUFkZHJlc3MSRgoHYWRkcmVzcxgBIAEoCzI1LkFra2Eu",
-            "RGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFkZHJl",
-            "c3MSCwoDdWlkGAIgASgDIikKB0FkZHJlc3MSEAoIaG9zdG5hbWUYASABKAkS",
-            "DAoEcG9ydBgCIAEoBSLIAQoNVmVyc2lvblZlY3RvchJSCgdlbnRyaWVzGAEg",
-            "AygLMkEuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
-            "by5Nc2cuVmVyc2lvblZlY3Rvci5FbnRyeRpjCgVFbnRyeRJJCgRub2RlGAEg",
-            "ASgLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFsaXphdGlvbi5Qcm90",
-            "by5Nc2cuVW5pcXVlQWRkcmVzcxIPCgd2ZXJzaW9uGAIgASgDIlYKDE90aGVy",
-            "TWVzc2FnZRIXCg9lbmNsb3NlZE1lc3NhZ2UYASABKAwSFAoMc2VyaWFsaXpl",
-            "cklkGAIgASgFEhcKD21lc3NhZ2VNYW5pZmVzdBgEIAEoDCIeCgpTdHJpbmdH",
-            "U2V0EhAKCGVsZW1lbnRzGAEgAygJIrkBChNEdXJhYmxlRGF0YUVudmVsb3Bl",
-            "EkgKBGRhdGEYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVkRGF0YS5TZXJpYWxp",
-            "emF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USWAoHcHJ1bmluZxgCIAMo",
-            "CzJHLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLkRhdGFFbnZlbG9wZS5QcnVuaW5nRW50cnlCAkgBYgZwcm90bzM="));
+            "bi5Qcm90by5Nc2cuRGF0YUVudmVsb3BlEhEKCWZyb21TZXFOchgDIAEoAxIP",
+            "Cgd0b1NlcU5yGAQgASgDImQKDVVuaXF1ZUFkZHJlc3MSRgoHYWRkcmVzcxgB",
+            "IAEoCzI1LkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6YXRpb24uUHJv",
+            "dG8uTXNnLkFkZHJlc3MSCwoDdWlkGAIgASgDIikKB0FkZHJlc3MSEAoIaG9z",
+            "dG5hbWUYASABKAkSDAoEcG9ydBgCIAEoBSLIAQoNVmVyc2lvblZlY3RvchJS",
+            "CgdlbnRyaWVzGAEgAygLMkEuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuVmVyc2lvblZlY3Rvci5FbnRyeRpjCgVFbnRy",
+            "eRJJCgRub2RlGAEgASgLMjsuQWtrYS5EaXN0cmlidXRlZERhdGEuU2VyaWFs",
+            "aXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxIPCgd2ZXJzaW9uGAIg",
+            "ASgDIlYKDE90aGVyTWVzc2FnZRIXCg9lbmNsb3NlZE1lc3NhZ2UYASABKAwS",
+            "FAoMc2VyaWFsaXplcklkGAIgASgFEhcKD21lc3NhZ2VNYW5pZmVzdBgEIAEo",
+            "DCIeCgpTdHJpbmdHU2V0EhAKCGVsZW1lbnRzGAEgAygJIrkBChNEdXJhYmxl",
+            "RGF0YUVudmVsb3BlEkgKBGRhdGEYASABKAsyOi5Ba2thLkRpc3RyaWJ1dGVk",
+            "RGF0YS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PdGhlck1lc3NhZ2USWAoH",
+            "cHJ1bmluZxgCIAMoCzJHLkFra2EuRGlzdHJpYnV0ZWREYXRhLlNlcmlhbGl6",
+            "YXRpb24uUHJvdG8uTXNnLkRhdGFFbnZlbG9wZS5QcnVuaW5nRW50cnlCAkgB",
+            "YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Get), global::Akka.DistributedData.Serialization.Proto.Msg.Get.Parser, new[]{ "Key", "Consistency", "Timeout", "Request" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Get), global::Akka.DistributedData.Serialization.Proto.Msg.Get.Parser, new[]{ "Key", "Consistency", "Timeout", "Request", "ConsistencyMinCap", "HasConsistencyAdditional", "ConsistencyAdditional" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GetSuccess), global::Akka.DistributedData.Serialization.Proto.Msg.GetSuccess.Parser, new[]{ "Key", "Data", "Request" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.NotFound), global::Akka.DistributedData.Serialization.Proto.Msg.NotFound.Parser, new[]{ "Key", "Request" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.GetFailure), global::Akka.DistributedData.Serialization.Proto.Msg.GetFailure.Parser, new[]{ "Key", "Request" }, null, null, null),
@@ -124,8 +129,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Read), global::Akka.DistributedData.Serialization.Proto.Msg.Read.Parser, new[]{ "Key", "FromNode" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.ReadResult), global::Akka.DistributedData.Serialization.Proto.Msg.ReadResult.Parser, new[]{ "Envelope" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.DataEnvelope), global::Akka.DistributedData.Serialization.Proto.Msg.DataEnvelope.Parser, new[]{ "Data", "Pruning", "DeltaVersions" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.DataEnvelope.Types.PruningEntry), global::Akka.DistributedData.Serialization.Proto.Msg.DataEnvelope.Types.PruningEntry.Parser, new[]{ "RemovedAddress", "OwnerAddress", "Performed", "Seen", "ObsoleteTime" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Status), global::Akka.DistributedData.Serialization.Proto.Msg.Status.Parser, new[]{ "Chunk", "TotChunks", "Entries", "ToSystemUid", "FromSystemUid" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Status.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.Status.Types.Entry.Parser, new[]{ "Key", "Digest" }, null, null, null)}),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Gossip), global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Parser, new[]{ "SendBack", "Entries", "ToSystemUid", "FromSystemUid" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Types.Entry.Parser, new[]{ "Key", "Envelope" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Status), global::Akka.DistributedData.Serialization.Proto.Msg.Status.Parser, new[]{ "Chunk", "TotChunks", "Entries", "ToSystemUid", "FromSystemUid", "HasToSystemUid", "HasFromSystemUid" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Status.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.Status.Types.Entry.Parser, new[]{ "Key", "Digest" }, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Gossip), global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Parser, new[]{ "SendBack", "Entries", "ToSystemUid", "FromSystemUid", "HasToSystemUid", "HasFromSystemUid" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.Gossip.Types.Entry.Parser, new[]{ "Key", "Envelope" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation), global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation.Parser, new[]{ "FromNode", "Entries", "Reply" }, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation.Types.Entry), global::Akka.DistributedData.Serialization.Proto.Msg.DeltaPropagation.Types.Entry.Parser, new[]{ "Key", "Envelope", "FromSeqNr", "ToSeqNr" }, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.UniqueAddress), global::Akka.DistributedData.Serialization.Proto.Msg.UniqueAddress.Parser, new[]{ "Address", "Uid" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.DistributedData.Serialization.Proto.Msg.Address), global::Akka.DistributedData.Serialization.Proto.Msg.Address.Parser, new[]{ "Hostname", "Port" }, null, null, null),
@@ -139,7 +144,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
   #region Messages
-  internal sealed partial class Get : pb::IMessage<Get> {
+  public sealed partial class Get : pb::IMessage<Get> {
     private static readonly pb::MessageParser<Get> _parser = new pb::MessageParser<Get>(() => new Get());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Get> Parser { get { return _parser; } }
@@ -167,6 +172,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       consistency_ = other.consistency_;
       timeout_ = other.timeout_;
       Request = other.request_ != null ? other.Request.Clone() : null;
+      consistencyMinCap_ = other.consistencyMinCap_;
+      hasConsistencyAdditional_ = other.hasConsistencyAdditional_;
+      consistencyAdditional_ = other.consistencyAdditional_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -218,6 +226,39 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "consistencyMinCap" field.</summary>
+    public const int ConsistencyMinCapFieldNumber = 5;
+    private int consistencyMinCap_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int ConsistencyMinCap {
+      get { return consistencyMinCap_; }
+      set {
+        consistencyMinCap_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "hasConsistencyAdditional" field.</summary>
+    public const int HasConsistencyAdditionalFieldNumber = 6;
+    private bool hasConsistencyAdditional_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasConsistencyAdditional {
+      get { return hasConsistencyAdditional_; }
+      set {
+        hasConsistencyAdditional_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "consistencyAdditional" field.</summary>
+    public const int ConsistencyAdditionalFieldNumber = 7;
+    private int consistencyAdditional_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int ConsistencyAdditional {
+      get { return consistencyAdditional_; }
+      set {
+        consistencyAdditional_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Get);
@@ -235,6 +276,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Consistency != other.Consistency) return false;
       if (Timeout != other.Timeout) return false;
       if (!object.Equals(Request, other.Request)) return false;
+      if (ConsistencyMinCap != other.ConsistencyMinCap) return false;
+      if (HasConsistencyAdditional != other.HasConsistencyAdditional) return false;
+      if (ConsistencyAdditional != other.ConsistencyAdditional) return false;
       return true;
     }
 
@@ -245,6 +289,9 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if (Consistency != 0) hash ^= Consistency.GetHashCode();
       if (Timeout != 0) hash ^= Timeout.GetHashCode();
       if (request_ != null) hash ^= Request.GetHashCode();
+      if (ConsistencyMinCap != 0) hash ^= ConsistencyMinCap.GetHashCode();
+      if (HasConsistencyAdditional != false) hash ^= HasConsistencyAdditional.GetHashCode();
+      if (ConsistencyAdditional != 0) hash ^= ConsistencyAdditional.GetHashCode();
       return hash;
     }
 
@@ -271,6 +318,18 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(34);
         output.WriteMessage(Request);
       }
+      if (ConsistencyMinCap != 0) {
+        output.WriteRawTag(40);
+        output.WriteInt32(ConsistencyMinCap);
+      }
+      if (HasConsistencyAdditional != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(HasConsistencyAdditional);
+      }
+      if (ConsistencyAdditional != 0) {
+        output.WriteRawTag(56);
+        output.WriteInt32(ConsistencyAdditional);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -287,6 +346,15 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (request_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Request);
+      }
+      if (ConsistencyMinCap != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ConsistencyMinCap);
+      }
+      if (HasConsistencyAdditional != false) {
+        size += 1 + 1;
+      }
+      if (ConsistencyAdditional != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(ConsistencyAdditional);
       }
       return size;
     }
@@ -313,6 +381,15 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
           request_ = new global::Akka.DistributedData.Serialization.Proto.Msg.OtherMessage();
         }
         Request.MergeFrom(other.Request);
+      }
+      if (other.ConsistencyMinCap != 0) {
+        ConsistencyMinCap = other.ConsistencyMinCap;
+      }
+      if (other.HasConsistencyAdditional != false) {
+        HasConsistencyAdditional = other.HasConsistencyAdditional;
+      }
+      if (other.ConsistencyAdditional != 0) {
+        ConsistencyAdditional = other.ConsistencyAdditional;
       }
     }
 
@@ -346,13 +423,25 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             input.ReadMessage(request_);
             break;
           }
+          case 40: {
+            ConsistencyMinCap = input.ReadInt32();
+            break;
+          }
+          case 48: {
+            HasConsistencyAdditional = input.ReadBool();
+            break;
+          }
+          case 56: {
+            ConsistencyAdditional = input.ReadInt32();
+            break;
+          }
         }
       }
     }
 
   }
 
-  internal sealed partial class GetSuccess : pb::IMessage<GetSuccess> {
+  public sealed partial class GetSuccess : pb::IMessage<GetSuccess> {
     private static readonly pb::MessageParser<GetSuccess> _parser = new pb::MessageParser<GetSuccess>(() => new GetSuccess());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GetSuccess> Parser { get { return _parser; } }
@@ -543,7 +632,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class NotFound : pb::IMessage<NotFound> {
+  public sealed partial class NotFound : pb::IMessage<NotFound> {
     private static readonly pb::MessageParser<NotFound> _parser = new pb::MessageParser<NotFound>(() => new NotFound());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<NotFound> Parser { get { return _parser; } }
@@ -700,7 +789,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class GetFailure : pb::IMessage<GetFailure> {
+  public sealed partial class GetFailure : pb::IMessage<GetFailure> {
     private static readonly pb::MessageParser<GetFailure> _parser = new pb::MessageParser<GetFailure>(() => new GetFailure());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<GetFailure> Parser { get { return _parser; } }
@@ -857,7 +946,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Subscribe : pb::IMessage<Subscribe> {
+  public sealed partial class Subscribe : pb::IMessage<Subscribe> {
     private static readonly pb::MessageParser<Subscribe> _parser = new pb::MessageParser<Subscribe>(() => new Subscribe());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Subscribe> Parser { get { return _parser; } }
@@ -1008,7 +1097,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Unsubscribe : pb::IMessage<Unsubscribe> {
+  public sealed partial class Unsubscribe : pb::IMessage<Unsubscribe> {
     private static readonly pb::MessageParser<Unsubscribe> _parser = new pb::MessageParser<Unsubscribe>(() => new Unsubscribe());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Unsubscribe> Parser { get { return _parser; } }
@@ -1159,7 +1248,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Changed : pb::IMessage<Changed> {
+  public sealed partial class Changed : pb::IMessage<Changed> {
     private static readonly pb::MessageParser<Changed> _parser = new pb::MessageParser<Changed>(() => new Changed());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Changed> Parser { get { return _parser; } }
@@ -1316,7 +1405,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Write : pb::IMessage<Write> {
+  public sealed partial class Write : pb::IMessage<Write> {
     private static readonly pb::MessageParser<Write> _parser = new pb::MessageParser<Write>(() => new Write());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Write> Parser { get { return _parser; } }
@@ -1501,7 +1590,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Empty : pb::IMessage<Empty> {
+  public sealed partial class Empty : pb::IMessage<Empty> {
     private static readonly pb::MessageParser<Empty> _parser = new pb::MessageParser<Empty>(() => new Empty());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Empty> Parser { get { return _parser; } }
@@ -1590,7 +1679,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Read : pb::IMessage<Read> {
+  public sealed partial class Read : pb::IMessage<Read> {
     private static readonly pb::MessageParser<Read> _parser = new pb::MessageParser<Read>(() => new Read());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Read> Parser { get { return _parser; } }
@@ -1741,7 +1830,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class ReadResult : pb::IMessage<ReadResult> {
+  public sealed partial class ReadResult : pb::IMessage<ReadResult> {
     private static readonly pb::MessageParser<ReadResult> _parser = new pb::MessageParser<ReadResult>(() => new ReadResult());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<ReadResult> Parser { get { return _parser; } }
@@ -1864,7 +1953,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class DataEnvelope : pb::IMessage<DataEnvelope> {
+  public sealed partial class DataEnvelope : pb::IMessage<DataEnvelope> {
     private static readonly pb::MessageParser<DataEnvelope> _parser = new pb::MessageParser<DataEnvelope>(() => new DataEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DataEnvelope> Parser { get { return _parser; } }
@@ -2043,7 +2132,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the DataEnvelope message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      internal sealed partial class PruningEntry : pb::IMessage<PruningEntry> {
+      public sealed partial class PruningEntry : pb::IMessage<PruningEntry> {
         private static readonly pb::MessageParser<PruningEntry> _parser = new pb::MessageParser<PruningEntry>(() => new PruningEntry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<PruningEntry> Parser { get { return _parser; } }
@@ -2281,7 +2370,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Status : pb::IMessage<Status> {
+  public sealed partial class Status : pb::IMessage<Status> {
     private static readonly pb::MessageParser<Status> _parser = new pb::MessageParser<Status>(() => new Status());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Status> Parser { get { return _parser; } }
@@ -2310,6 +2399,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       entries_ = other.entries_.Clone();
       toSystemUid_ = other.toSystemUid_;
       fromSystemUid_ = other.fromSystemUid_;
+      hasToSystemUid_ = other.hasToSystemUid_;
+      hasFromSystemUid_ = other.hasFromSystemUid_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2371,6 +2462,28 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "hasToSystemUid" field.</summary>
+    public const int HasToSystemUidFieldNumber = 6;
+    private bool hasToSystemUid_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasToSystemUid {
+      get { return hasToSystemUid_; }
+      set {
+        hasToSystemUid_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "hasFromSystemUid" field.</summary>
+    public const int HasFromSystemUidFieldNumber = 7;
+    private bool hasFromSystemUid_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasFromSystemUid {
+      get { return hasFromSystemUid_; }
+      set {
+        hasFromSystemUid_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Status);
@@ -2389,6 +2502,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if(!entries_.Equals(other.entries_)) return false;
       if (ToSystemUid != other.ToSystemUid) return false;
       if (FromSystemUid != other.FromSystemUid) return false;
+      if (HasToSystemUid != other.HasToSystemUid) return false;
+      if (HasFromSystemUid != other.HasFromSystemUid) return false;
       return true;
     }
 
@@ -2400,6 +2515,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       hash ^= entries_.GetHashCode();
       if (ToSystemUid != 0L) hash ^= ToSystemUid.GetHashCode();
       if (FromSystemUid != 0L) hash ^= FromSystemUid.GetHashCode();
+      if (HasToSystemUid != false) hash ^= HasToSystemUid.GetHashCode();
+      if (HasFromSystemUid != false) hash ^= HasFromSystemUid.GetHashCode();
       return hash;
     }
 
@@ -2427,6 +2544,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(41);
         output.WriteSFixed64(FromSystemUid);
       }
+      if (HasToSystemUid != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(HasToSystemUid);
+      }
+      if (HasFromSystemUid != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(HasFromSystemUid);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2444,6 +2569,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (FromSystemUid != 0L) {
         size += 1 + 8;
+      }
+      if (HasToSystemUid != false) {
+        size += 1 + 1;
+      }
+      if (HasFromSystemUid != false) {
+        size += 1 + 1;
       }
       return size;
     }
@@ -2465,6 +2596,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (other.FromSystemUid != 0L) {
         FromSystemUid = other.FromSystemUid;
+      }
+      if (other.HasToSystemUid != false) {
+        HasToSystemUid = other.HasToSystemUid;
+      }
+      if (other.HasFromSystemUid != false) {
+        HasFromSystemUid = other.HasFromSystemUid;
       }
     }
 
@@ -2496,6 +2633,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             FromSystemUid = input.ReadSFixed64();
             break;
           }
+          case 48: {
+            HasToSystemUid = input.ReadBool();
+            break;
+          }
+          case 56: {
+            HasFromSystemUid = input.ReadBool();
+            break;
+          }
         }
       }
     }
@@ -2504,7 +2649,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Status message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      internal sealed partial class Entry : pb::IMessage<Entry> {
+      public sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -2654,7 +2799,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Gossip : pb::IMessage<Gossip> {
+  public sealed partial class Gossip : pb::IMessage<Gossip> {
     private static readonly pb::MessageParser<Gossip> _parser = new pb::MessageParser<Gossip>(() => new Gossip());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Gossip> Parser { get { return _parser; } }
@@ -2682,6 +2827,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       entries_ = other.entries_.Clone();
       toSystemUid_ = other.toSystemUid_;
       fromSystemUid_ = other.fromSystemUid_;
+      hasToSystemUid_ = other.hasToSystemUid_;
+      hasFromSystemUid_ = other.hasFromSystemUid_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2732,6 +2879,28 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "hasToSystemUid" field.</summary>
+    public const int HasToSystemUidFieldNumber = 5;
+    private bool hasToSystemUid_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasToSystemUid {
+      get { return hasToSystemUid_; }
+      set {
+        hasToSystemUid_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "hasFromSystemUid" field.</summary>
+    public const int HasFromSystemUidFieldNumber = 6;
+    private bool hasFromSystemUid_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasFromSystemUid {
+      get { return hasFromSystemUid_; }
+      set {
+        hasFromSystemUid_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Gossip);
@@ -2749,6 +2918,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       if(!entries_.Equals(other.entries_)) return false;
       if (ToSystemUid != other.ToSystemUid) return false;
       if (FromSystemUid != other.FromSystemUid) return false;
+      if (HasToSystemUid != other.HasToSystemUid) return false;
+      if (HasFromSystemUid != other.HasFromSystemUid) return false;
       return true;
     }
 
@@ -2759,6 +2930,8 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       hash ^= entries_.GetHashCode();
       if (ToSystemUid != 0L) hash ^= ToSystemUid.GetHashCode();
       if (FromSystemUid != 0L) hash ^= FromSystemUid.GetHashCode();
+      if (HasToSystemUid != false) hash ^= HasToSystemUid.GetHashCode();
+      if (HasFromSystemUid != false) hash ^= HasFromSystemUid.GetHashCode();
       return hash;
     }
 
@@ -2782,6 +2955,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
         output.WriteRawTag(33);
         output.WriteSFixed64(FromSystemUid);
       }
+      if (HasToSystemUid != false) {
+        output.WriteRawTag(40);
+        output.WriteBool(HasToSystemUid);
+      }
+      if (HasFromSystemUid != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(HasFromSystemUid);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2796,6 +2977,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (FromSystemUid != 0L) {
         size += 1 + 8;
+      }
+      if (HasToSystemUid != false) {
+        size += 1 + 1;
+      }
+      if (HasFromSystemUid != false) {
+        size += 1 + 1;
       }
       return size;
     }
@@ -2814,6 +3001,12 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
       }
       if (other.FromSystemUid != 0L) {
         FromSystemUid = other.FromSystemUid;
+      }
+      if (other.HasToSystemUid != false) {
+        HasToSystemUid = other.HasToSystemUid;
+      }
+      if (other.HasFromSystemUid != false) {
+        HasFromSystemUid = other.HasFromSystemUid;
       }
     }
 
@@ -2841,6 +3034,14 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
             FromSystemUid = input.ReadSFixed64();
             break;
           }
+          case 40: {
+            HasToSystemUid = input.ReadBool();
+            break;
+          }
+          case 48: {
+            HasFromSystemUid = input.ReadBool();
+            break;
+          }
         }
       }
     }
@@ -2849,7 +3050,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the Gossip message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      internal sealed partial class Entry : pb::IMessage<Entry> {
+      public sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -3005,7 +3206,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class DeltaPropagation : pb::IMessage<DeltaPropagation> {
+  public sealed partial class DeltaPropagation : pb::IMessage<DeltaPropagation> {
     private static readonly pb::MessageParser<DeltaPropagation> _parser = new pb::MessageParser<DeltaPropagation>(() => new DeltaPropagation());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DeltaPropagation> Parser { get { return _parser; } }
@@ -3181,7 +3382,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the DeltaPropagation message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      internal sealed partial class Entry : pb::IMessage<Entry> {
+      public sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -3396,7 +3597,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class UniqueAddress : pb::IMessage<UniqueAddress> {
+  public sealed partial class UniqueAddress : pb::IMessage<UniqueAddress> {
     private static readonly pb::MessageParser<UniqueAddress> _parser = new pb::MessageParser<UniqueAddress>(() => new UniqueAddress());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<UniqueAddress> Parser { get { return _parser; } }
@@ -3547,7 +3748,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class Address : pb::IMessage<Address> {
+  public sealed partial class Address : pb::IMessage<Address> {
     private static readonly pb::MessageParser<Address> _parser = new pb::MessageParser<Address>(() => new Address());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Address> Parser { get { return _parser; } }
@@ -3692,7 +3893,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class VersionVector : pb::IMessage<VersionVector> {
+  public sealed partial class VersionVector : pb::IMessage<VersionVector> {
     private static readonly pb::MessageParser<VersionVector> _parser = new pb::MessageParser<VersionVector>(() => new VersionVector());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<VersionVector> Parser { get { return _parser; } }
@@ -3803,7 +4004,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
     /// <summary>Container for nested types declared in the VersionVector message type.</summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static partial class Types {
-      internal sealed partial class Entry : pb::IMessage<Entry> {
+      public sealed partial class Entry : pb::IMessage<Entry> {
         private static readonly pb::MessageParser<Entry> _parser = new pb::MessageParser<Entry>(() => new Entry());
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
         public static pb::MessageParser<Entry> Parser { get { return _parser; } }
@@ -3959,7 +4160,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class OtherMessage : pb::IMessage<OtherMessage> {
+  public sealed partial class OtherMessage : pb::IMessage<OtherMessage> {
     private static readonly pb::MessageParser<OtherMessage> _parser = new pb::MessageParser<OtherMessage>(() => new OtherMessage());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<OtherMessage> Parser { get { return _parser; } }
@@ -4132,7 +4333,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class StringGSet : pb::IMessage<StringGSet> {
+  public sealed partial class StringGSet : pb::IMessage<StringGSet> {
     private static readonly pb::MessageParser<StringGSet> _parser = new pb::MessageParser<StringGSet>(() => new StringGSet());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<StringGSet> Parser { get { return _parser; } }
@@ -4241,7 +4442,7 @@ namespace Akka.DistributedData.Serialization.Proto.Msg {
 
   }
 
-  internal sealed partial class DurableDataEnvelope : pb::IMessage<DurableDataEnvelope> {
+  public sealed partial class DurableDataEnvelope : pb::IMessage<DurableDataEnvelope> {
     private static readonly pb::MessageParser<DurableDataEnvelope> _parser = new pb::MessageParser<DurableDataEnvelope>(() => new DurableDataEnvelope());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<DurableDataEnvelope> Parser { get { return _parser; } }
