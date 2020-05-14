@@ -495,10 +495,14 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.Read ReadToProto(Read read)
         {
-            return new Proto.Msg.Read
+            var proto = new Proto.Msg.Read
             {
                 Key = read.Key
             };
+
+            if(!(read.FromNode is null))
+                proto.FromNode = SerializationSupport.UniqueAddressToProto(read.FromNode);
+            return proto;
         }
 
         public override object FromBinary(byte[] bytes, string manifest)
