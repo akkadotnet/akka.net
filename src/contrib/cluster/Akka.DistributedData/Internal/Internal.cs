@@ -99,16 +99,22 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public DataEnvelope Envelope { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public UniqueAddress FromNode { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="key">TBD</param>
         /// <param name="envelope">TBD</param>
-        public Write(string key, DataEnvelope envelope)
+        /// <param name="fromNode">TBD</param>
+        public Write(string key, DataEnvelope envelope, UniqueAddress fromNode = null)
         {
             Key = key;
             Envelope = envelope;
+            FromNode = fromNode;
         }
 
         /// <inheritdoc/>
@@ -117,7 +123,7 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Key == other.Key && Equals(Envelope, other.Envelope);
+            return Key == other.Key && Equals(Envelope, other.Envelope) && Equals(FromNode, other.FromNode);
         }
 
         /// <inheritdoc/>
