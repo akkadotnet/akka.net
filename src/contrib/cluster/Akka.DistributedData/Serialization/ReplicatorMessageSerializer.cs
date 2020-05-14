@@ -307,10 +307,10 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.DurableDataEnvelope
             {
-                Data = this.OtherMessageToProto(msg.Data.Data)
+                Data = this.OtherMessageToProto(msg.Data)
             };
             // only keep the PruningPerformed entries
-            foreach (var p in msg.Data.Pruning)
+            foreach (var p in msg.DataEnvelope.Pruning)
             {
                 if (p.Value is PruningPerformed)
                     proto.Pruning.Add(PruningToProto(p.Key, p.Value));
