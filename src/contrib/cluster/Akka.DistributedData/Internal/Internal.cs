@@ -215,10 +215,17 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
+        public UniqueAddress FromNode { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="key">TBD</param>
-        public Read(string key)
+        /// <param name="fromNode">TBD</param>
+        public Read(string key, UniqueAddress fromNode = null)
         {
             Key = key;
+            FromNode = fromNode;
         }
 
         /// <inheritdoc/>
