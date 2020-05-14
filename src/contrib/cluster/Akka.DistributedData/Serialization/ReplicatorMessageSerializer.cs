@@ -721,7 +721,8 @@ namespace Akka.DistributedData.Serialization
         private Read ReadFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Read.Parser.ParseFrom(bytes);
-            return new Read(proto.Key);
+            var fromNode = proto.FromNode != null ? _ser.UniqueAddressFromProto(proto.FromNode) : null;
+            return new Read(proto.Key, fromNode);
         }
 
         private Write WriteFromBinary(byte[] bytes)
