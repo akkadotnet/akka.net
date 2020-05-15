@@ -699,6 +699,7 @@ namespace Akka.DistributedData
                 case DataEnvelope envelope when envelope.Equals(writeEnvelope):
                     return envelope;
                 case DataEnvelope envelope when envelope.Data is DeletedData:
+                    // already deleted
                     return DeletedEnvelope;
                 case DataEnvelope envelope:
                     try
