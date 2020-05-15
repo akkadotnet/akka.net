@@ -30,7 +30,8 @@ namespace Akka.DistributedData.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = ConfigurationFactory.ParseString($@"
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString($@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.log-dead-letters-during-shutdown = off
@@ -42,8 +43,10 @@ namespace Akka.DistributedData.Tests.MultiNode
                 }}
                 akka.cluster.distributed-data.durable.store-actor-class = ""Akka.DistributedData.LightningDB.LmdbDurableStore, Akka.DistributedData.LightningDB""
                 # initialization of lmdb can be very slow in CI environment
-                akka.test.single-expect-default = 15s")
+                akka.test.single-expect-default = 15s"))
                 .WithFallback(DistributedData.DefaultConfig());
+
+            TestTransport = true;
         }
     }
 
@@ -64,7 +67,7 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
     }
 
-    public abstract class DurableDataSpec : MultiNodeClusterSpec
+    public abstract class DurableDataSpecBase : MultiNodeClusterSpec
     {
         public static Props TestDurableStoreProps(bool failLoad = false, bool failStore = false)
         {
@@ -74,7 +77,6 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly RoleName first;
         private readonly RoleName second;
         private readonly Cluster.Cluster cluster;
-        private readonly TimeSpan timeout;
         private readonly IWriteConsistency writeTwo;
         private readonly IReadConsistency readTwo;
 
@@ -83,13 +85,11 @@ namespace Akka.DistributedData.Tests.MultiNode
         private readonly ORSetKey<string> keyC = new ORSetKey<string>("durable-C");
 
         private int testStepCounter = 0;
-        private readonly SelfUniqueAddress selfUniqueAddress;
 
-        protected DurableDataSpec(DurableDataSpecConfig config, Type type) : base(config, type)
+        protected DurableDataSpecBase(DurableDataSpecConfig config, Type type) : base(config, type)
         {
             cluster = Akka.Cluster.Cluster.Get(Sys);
-            selfUniqueAddress = DistributedData.Get(Sys).SelfUniqueAddress;
-            timeout = Dilated(14.Seconds()); // initialization of lmdb can be very slow in CI environment
+            var timeout = Dilated(14.Seconds()); // initialization of lmdb can be very slow in CI environment
             writeTwo = new WriteTo(2, timeout);
             readTwo = new ReadFrom(2, timeout);
 
@@ -102,10 +102,10 @@ namespace Akka.DistributedData.Tests.MultiNode
         {
             Durable_CRDT_should_work_in_a_single_node_cluster();
             Durable_CRDT_should_work_in_a_multi_node_cluster();
-            //Durable_CRDT_should_be_durable_after_gossip_update();
-            //Durable_CRDT_should_handle_Update_before_Load();
-            //Durable_CRDT_should_stop_Replicator_if_Load_fails();
-            //Durable_CRDT_should_reply_with_StoreFailure_if_store_fails();
+            Durable_CRDT_should_be_durable_after_gossip_update();
+            Durable_CRDT_should_handle_Update_before_Load();
+            Durable_CRDT_should_stop_Replicator_if_Load_fails();
+            Durable_CRDT_should_reply_with_StoreFailure_if_store_fails();
         }
 
         public void Durable_CRDT_should_work_in_a_single_node_cluster()
@@ -114,37 +114,55 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             RunOn(() =>
             {
-                var r = NewReplicator(Sys);
+                var r = NewReplicator();
                 Within(TimeSpan.FromSeconds(10), () =>
-               {
-                   AwaitAssert(() =>
-                   {
-                       r.Tell(Dsl.GetReplicaCount);
-                       ExpectMsg(new ReplicaCount(1));
-                   });
-               });
+                {
+                    AwaitAssert(() =>
+                    {
+                        r.Tell(Dsl.GetReplicaCount);
+                        ExpectMsg(new ReplicaCount(1));
+                    });
+                });
 
-                r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                ExpectMsg(new NotFound(keyA, null));
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
+                        ExpectMsg(new NotFound(keyA, null));
+                    });
+                });
 
-                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
 
-                ExpectMsg(new UpdateSuccess(keyA, null));
-                ExpectMsg(new UpdateSuccess(keyA, null));
-                ExpectMsg(new UpdateSuccess(keyA, null));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                    });
+                });
 
                 Watch(r);
                 Sys.Stop(r);
                 ExpectTerminated(r);
 
                 var r2 = default(IActorRef);
-                AwaitAssert(() => r2 = NewReplicator(Sys)); // try until name is free
+                AwaitAssert(() => r2 = NewReplicator()); // try until name is free
 
-                // note that it will stash the commands until loading completed
-                r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3UL);
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        // note that it will stash the commands until loading completed
+                        r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
+                        ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3UL);
+                    });
+                });
 
                 Watch(r2);
                 Sys.Stop(r2);
@@ -157,9 +175,10 @@ namespace Akka.DistributedData.Tests.MultiNode
 
         public void Durable_CRDT_should_work_in_a_multi_node_cluster()
         {
+            Join(first, first);
             Join(second, first);
 
-            var r = NewReplicator(Sys);
+            var r = NewReplicator();
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 AwaitAssert(() =>
@@ -171,19 +190,43 @@ namespace Akka.DistributedData.Tests.MultiNode
 
             EnterBarrier("both-initialized");
 
-            r.Tell(Dsl.Update(keyA, GCounter.Empty, writeTwo, c => c.Increment(cluster)));
-            ExpectMsg(new UpdateSuccess(keyA, null));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    r.Tell(Dsl.Update(keyA, GCounter.Empty, writeTwo, c => c.Increment(cluster)));
+                    ExpectMsg(new UpdateSuccess(keyA, null));
+                });
+            });
 
-            r.Tell(Dsl.Update(keyC, ORSet<string>.Empty, writeTwo, c => c.Add(cluster, Myself.Name)));
-            ExpectMsg(new UpdateSuccess(keyC, null));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    r.Tell(Dsl.Update(keyC, ORSet<string>.Empty, writeTwo, c => c.Add(cluster, Myself.Name)));
+                    ExpectMsg(new UpdateSuccess(keyC, null));
+                });
+            });
 
             EnterBarrier("update-done-" + testStepCounter);
 
-            r.Tell(Dsl.Get(keyA, readTwo));
-            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2UL);
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    r.Tell(Dsl.Get(keyA, readTwo));
+                    ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2UL);
+                });
+            });
 
-            r.Tell(Dsl.Get(keyC, readTwo));
-            ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    r.Tell(Dsl.Get(keyC, readTwo));
+                    ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
+                });
+            });
 
             EnterBarrier("values-verified-" + testStepCounter);
 
@@ -192,56 +235,92 @@ namespace Akka.DistributedData.Tests.MultiNode
             ExpectTerminated(r);
 
             var r2 = default(IActorRef);
-            AwaitAssert(() => r2 = NewReplicator(Sys)); // try until name is free
+            AwaitAssert(() => r2 = NewReplicator()); // try until name is free
             AwaitAssert(() =>
             {
                 r2.Tell(Dsl.GetKeyIds);
                 ExpectMsg<GetKeysIdsResult>().Keys.ShouldNotBe(ImmutableHashSet<string>.Empty);
             });
 
-            r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-            ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2UL);
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
+                    ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(2UL);
+                });
+            });
 
-            r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
-            ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
+                    ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.CreateRange(new[] { first.Name, second.Name }));
+                });
+            });
 
             EnterBarrierAfterTestStep();
         }
 
         public void Durable_CRDT_should_be_durable_after_gossip_update()
         {
-            var r = NewReplicator(Sys);
+            var r = NewReplicator();
 
             RunOn(() =>
             {
-                r.Tell(Dsl.Update(keyC, ORSet<string>.Empty, WriteLocal.Instance, c => c.Add(cluster, Myself.Name)));
-                ExpectMsg(new UpdateSuccess(keyC, null));
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        r.Tell(Dsl.Update(keyC, ORSet<string>.Empty, WriteLocal.Instance, c => c.Add(cluster, Myself.Name)));
+                        ExpectMsg(new UpdateSuccess(keyC, null));
+                    });
+                });
             }, first);
 
             RunOn(() =>
             {
-                r.Tell(Dsl.Subscribe(keyC, TestActor));
-                ExpectMsg<Changed>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        r.Tell(Dsl.Subscribe(keyC, TestActor));
+                        ExpectMsg<Changed>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
+                    });
+                });
 
-                // must do one more roundtrip to be sure that it keyB is stored, since Changed might have
-                // been sent out before storage
-                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
-                ExpectMsg(new UpdateSuccess(keyA, null));
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        // must do one more roundtrip to be sure that it keyB is stored, since Changed might have
+                        // been sent out before storage
+                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster)));
+                        ExpectMsg(new UpdateSuccess(keyA, null));
+                    });
+                });
 
                 Watch(r);
                 Sys.Stop(r);
                 ExpectTerminated(r);
 
                 var r2 = default(IActorRef);
-                AwaitAssert(() => r2 = NewReplicator(Sys));
+                AwaitAssert(() => r2 = NewReplicator());
                 AwaitAssert(() =>
                 {
                     r2.Tell(Dsl.GetKeyIds);
                     ExpectMsg<GetKeysIdsResult>().Keys.ShouldNotBe(ImmutableHashSet<string>.Empty);
                 });
 
-                r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
-                ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
+                Within(TimeSpan.FromSeconds(10), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        r2.Tell(Dsl.Get(keyC, ReadLocal.Instance));
+                        ExpectMsg<GetSuccess>().Get(keyC).Elements.ShouldBe(ImmutableHashSet.Create(first.Name));
+                    });
+                });
 
             }, second);
 
@@ -270,18 +349,30 @@ namespace Akka.DistributedData.Tests.MultiNode
                             });
                         });
 
-                        r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                        ExpectMsg(new NotFound(keyA, null));
+                        Within(TimeSpan.FromSeconds(10), () =>
+                        {
+                            AwaitAssert(() =>
+                            {
+                                r.Tell(Dsl.Get(keyA, ReadLocal.Instance));
+                                ExpectMsg(new NotFound(keyA, null));
+                            });
+                        });
 
-                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
-                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
-                        r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
-                        r.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                        Within(TimeSpan.FromSeconds(10), () =>
+                        {
+                            AwaitAssert(() =>
+                            {
+                                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                                r.Tell(Dsl.Update(keyA, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
+                                r.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster1)));
 
-                        ExpectMsg(new UpdateSuccess(keyA, null));
-                        ExpectMsg(new UpdateSuccess(keyA, null));
-                        ExpectMsg(new UpdateSuccess(keyA, null));
-                        ExpectMsg(new UpdateSuccess(keyB, null));
+                                ExpectMsg(new UpdateSuccess(keyA, null));
+                                ExpectMsg(new UpdateSuccess(keyA, null));
+                                ExpectMsg(new UpdateSuccess(keyA, null));
+                                ExpectMsg(new UpdateSuccess(keyB, null));
+                            });
+                        });
 
                         Watch(r);
                         sys1.Stop(r);
@@ -293,17 +384,28 @@ namespace Akka.DistributedData.Tests.MultiNode
                     sys1.Terminate().Wait(TimeSpan.FromSeconds(10));
                 }
 
-                var sys2 = ActorSystem.Create("AdditionalSys", Sys.Settings.Config);
+                
+                var sys2 = ActorSystem.Create(
+                    "AdditionalSys", 
+                    ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port = {addr.Port}")
+                    .WithFallback(Sys.Settings.Config));
                 try
                 {
-                    Akka.Cluster.Cluster.Get(sys2).Join(addr);
+                    var cluster2 = Akka.Cluster.Cluster.Get(sys2);
+                    cluster2.Join(addr);
                     /* new TestKit(sys1) with ImplicitSender */
                     {
                         var r2 = NewReplicator(sys2);
 
-                        // it should be possible to update while loading is in progress
-                        r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(Akka.Cluster.Cluster.Get(sys2))));
-                        ExpectMsg(new UpdateSuccess(keyB, null));
+                        Within(TimeSpan.FromSeconds(10), () =>
+                        {
+                            AwaitAssert(() =>
+                            {
+                                // it should be possible to update while loading is in progress
+                                r2.Tell(Dsl.Update(keyB, GCounter.Empty, WriteLocal.Instance, c => c.Increment(cluster2)));
+                                ExpectMsg(new UpdateSuccess(keyB, null));
+                            });
+                        });
 
                         // wait until all loaded
                         AwaitAssert(() =>
@@ -312,20 +414,34 @@ namespace Akka.DistributedData.Tests.MultiNode
                             ExpectMsg<GetKeysIdsResult>().Keys.ShouldBe(ImmutableHashSet.CreateRange(new [] { keyA.Id, keyB.Id }));   
                         });
 
-                        r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
-                        ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3UL);
+                        Within(TimeSpan.FromSeconds(10), () =>
+                        {
+                            AwaitAssert(() =>
+                            {
+                                r2.Tell(Dsl.Get(keyA, ReadLocal.Instance));
+                                ExpectMsg<GetSuccess>().Get(keyA).Value.ShouldBe(3UL);
+                            });
+                        });
 
-                        r2.Tell(Dsl.Get(keyB, ReadLocal.Instance));
-                        ExpectMsg<GetSuccess>().Get(keyB).Value.ShouldBe(2UL);
+                        Within(TimeSpan.FromSeconds(10), () =>
+                        {
+                            AwaitAssert(() =>
+                            {
+                                r2.Tell(Dsl.Get(keyB, ReadLocal.Instance));
+                                ExpectMsg<GetSuccess>().Get(keyB).Value.ShouldBe(2UL);
+                            });
+                        });
                     }
                 }
                 finally
                 {
-                    sys1.Terminate().Wait(TimeSpan.FromSeconds(10));
+                    sys2.Terminate().Wait(TimeSpan.FromSeconds(10));
                 }
 
             }, first);
+            Log.Info("Setup complete");
             EnterBarrierAfterTestStep();
+            Log.Info("All setup complete");
         }
 
         public void Durable_CRDT_should_stop_Replicator_if_Load_fails()
@@ -362,8 +478,10 @@ namespace Akka.DistributedData.Tests.MultiNode
             EnterBarrier("after-" + testStepCounter);
         }
 
-        private IActorRef NewReplicator(ActorSystem system)
+        private IActorRef NewReplicator(ActorSystem system = null)
         {
+            if (system == null) system = Sys;
+
             return system.ActorOf(Replicator.Props(
                     ReplicatorSettings.Create(system).WithGossipInterval(TimeSpan.FromSeconds(1))),
                 "replicator-" + testStepCounter);
@@ -379,13 +497,13 @@ namespace Akka.DistributedData.Tests.MultiNode
         }
     }
 
-    public class DurableDataSpecNode1 : DurableDataSpec
+    public class DurableDataSpec : DurableDataSpecBase
     {
-        public DurableDataSpecNode1() : base(new DurableDataSpecConfig(writeBehind: false), typeof(DurableDataSpecNode1)) { }
+        public DurableDataSpec() : base(new DurableDataSpecConfig(writeBehind: false), typeof(DurableDataSpec)) { }
     }
 
-    public class DurableDataWriteBehindSpecNode1 : DurableDataSpec
+    public class DurableDataWriteBehindSpec : DurableDataSpecBase
     {
-        public DurableDataWriteBehindSpecNode1() : base(new DurableDataSpecConfig(writeBehind: true), typeof(DurableDataWriteBehindSpecNode1)) { }
+        public DurableDataWriteBehindSpec() : base(new DurableDataSpecConfig(writeBehind: true), typeof(DurableDataWriteBehindSpec)) { }
     }
 }
