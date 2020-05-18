@@ -195,34 +195,6 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
-        private string Manifest(Type type)
-        {
-            switch(type)
-            {
-                case Type t when t == typeof(DataEnvelope): return DataEnvelopeManifest;
-                case Type t when t == typeof(Write): return WriteManifest;
-                case Type t when t == typeof(WriteAck): return WriteAckManifest;
-                case Type t when t == typeof(Read): return ReadManifest;
-                case Type t when t == typeof(ReadResult): return ReadResultManifest;
-                case Type t when t == typeof(DeltaPropagation): return DeltaPropagationManifest;
-                case Type t when t == typeof(Status): return StatusManifest;
-                case Type t when t == typeof(Get): return GetManifest;
-                case Type t when t == typeof(GetSuccess): return GetSuccessManifest;
-                case Type t when t == typeof(Durable.DurableDataEnvelope): return DurableDataEnvelopeManifest;
-                case Type t when t == typeof(Changed): return ChangedManifest;
-                case Type t when t == typeof(NotFound): return NotFoundManifest;
-                case Type t when t == typeof(GetFailure): return GetFailureManifest;
-                case Type t when t == typeof(Subscribe): return SubscribeManifest;
-                case Type t when t == typeof(Unsubscribe): return UnsubscribeManifest;
-                case Type t when t == typeof(Gossip): return GossipManifest;
-                case Type t when t == typeof(WriteNack): return WriteNackManifest;
-                case Type t when t == typeof(DeltaNack): return DeltaNackManifest;
-
-                default: throw new ArgumentException($"Can't serialize object of type [{type.FullName}] using [{GetType().FullName}]");
-            }
-        }
-
-
         public override byte[] ToBinary(object obj)
         {
             switch (obj)
@@ -535,7 +507,6 @@ namespace Akka.DistributedData.Serialization
 
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            manifest = Manifest(Type.GetType(manifest));
             switch (manifest)
             {
                 case DataEnvelopeManifest: return DataEnvelopeFromBinary(bytes);
