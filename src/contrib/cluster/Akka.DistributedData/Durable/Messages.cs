@@ -100,12 +100,16 @@ namespace Akka.DistributedData.Durable
 
     public sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>
     {
-        public readonly DataEnvelope Data;
+        internal DataEnvelope DataEnvelope { get; }
+        public IReplicatedData Data => DataEnvelope.Data;
 
-        public DurableDataEnvelope(DataEnvelope data)
+        public DurableDataEnvelope(DataEnvelope dataEnvelope)
         {
-            Data = data;
+            DataEnvelope = dataEnvelope;
         }
+
+        public DurableDataEnvelope(IReplicatedData data):this(new DataEnvelope(data))
+        { }
 
         public override int GetHashCode()
         {
@@ -116,7 +120,7 @@ namespace Akka.DistributedData.Durable
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(Data, other.Data);
+            return Data.Equals(other.Data);
         }
 
         public override bool Equals(object obj)

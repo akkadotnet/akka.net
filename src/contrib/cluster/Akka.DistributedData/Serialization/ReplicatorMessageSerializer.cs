@@ -238,6 +238,18 @@ namespace Akka.DistributedData.Serialization
                 });
             }
 
+            if (gossip.ToSystemUid.HasValue)
+            {
+                proto.HasToSystemUid = true;
+                proto.ToSystemUid = gossip.ToSystemUid.Value;
+            }
+
+            if (gossip.FromSystemUid.HasValue)
+            {
+                proto.HasFromSystemUid = true;
+                proto.FromSystemUid = gossip.FromSystemUid.Value;
+            }
+
             return proto;
         }
 
@@ -295,10 +307,10 @@ namespace Akka.DistributedData.Serialization
         {
             var proto = new Proto.Msg.DurableDataEnvelope
             {
-                Data = this.OtherMessageToProto(msg.Data.Data)
+                Data = this.OtherMessageToProto(msg.Data)
             };
             // only keep the PruningPerformed entries
-            foreach (var p in msg.Data.Pruning)
+            foreach (var p in msg.DataEnvelope.Pruning)
             {
                 if (p.Value is PruningPerformed)
                     proto.Pruning.Add(PruningToProto(p.Key, p.Value));
@@ -357,21 +369,26 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.Get GetToProto(Get msg)
         {
-            var consistencyValue = 1;
-            switch (msg.Consistency)
-            {
-                case ReadLocal _: consistencyValue = 1; break;
-                case ReadFrom r: consistencyValue = r.N; break;
-                case ReadMajority _: consistencyValue = 0; break;
-                case ReadAll _: consistencyValue = -1; break;
-            }
+            var timeoutInMilis = msg.Consistency.Timeout.TotalMilliseconds;
+            if (timeoutInMilis > 0XFFFFFFFFL)
+                throw new ArgumentOutOfRangeException("Timeouts must fit in a 32-bit unsigned int");
 
             var proto = new Proto.Msg.Get
             {
                 Key = this.OtherMessageToProto(msg.Key),
-                Consistency = consistencyValue,
-                Timeout = (uint)(msg.Consistency.Timeout.Ticks / TimeSpan.TicksPerMillisecond)
+                Timeout = (uint)timeoutInMilis
             };
+
+            switch (msg.Consistency)
+            {
+                case ReadLocal _: proto.Consistency = 1; break;
+                case ReadFrom r: proto.Consistency = r.N; break;
+                case ReadMajority rm:
+                    proto.Consistency = 0;
+                    proto.ConsistencyMinCap = rm.MinCapacity;
+                    break;
+                case ReadAll _: proto.Consistency = -1; break;
+            }
 
             if (!ReferenceEquals(null, msg.Request))
                 proto.Request = this.OtherMessageToProto(msg.Request);
@@ -394,6 +411,18 @@ namespace Akka.DistributedData.Serialization
                     Key = entry.Key,
                     Digest = ByteString.CopyFrom(entry.Value.ToByteArray())
                 });
+            }
+
+            if(status.ToSystemUid.HasValue)
+            {
+                proto.HasToSystemUid = true;
+                proto.ToSystemUid = status.ToSystemUid.Value;
+            }
+
+            if(status.FromSystemUid.HasValue)
+            {
+                proto.HasFromSystemUid = true;
+                proto.FromSystemUid = status.FromSystemUid.Value;
             }
 
             return proto;
@@ -453,19 +482,27 @@ namespace Akka.DistributedData.Serialization
 
         private Proto.Msg.Write WriteToProto(Write write)
         {
-            return new Proto.Msg.Write
+            var proto = new Proto.Msg.Write
             {
                 Key = write.Key,
-                Envelope = DataEnvelopeToProto(write.Envelope)
+                Envelope = DataEnvelopeToProto(write.Envelope),
             };
+
+            if(!(write.FromNode is null))
+                proto.FromNode = SerializationSupport.UniqueAddressToProto(write.FromNode);
+            return proto;
         }
 
         private Proto.Msg.Read ReadToProto(Read read)
         {
-            return new Proto.Msg.Read
+            var proto = new Proto.Msg.Read
             {
                 Key = read.Key
             };
+
+            if(!(read.FromNode is null))
+                proto.FromNode = SerializationSupport.UniqueAddressToProto(read.FromNode);
+            return proto;
         }
 
         public override object FromBinary(byte[] bytes, string manifest)
@@ -504,7 +541,11 @@ namespace Akka.DistributedData.Serialization
                 builder.Add(entry.Key, DataEnvelopeFromProto(entry.Envelope));
             }
 
-            return new Gossip(builder.ToImmutable(), proto.SendBack);
+            return new Gossip(
+                builder.ToImmutable(),
+                proto.SendBack,
+                proto.HasToSystemUid ? (long?)proto.ToSystemUid : null,
+                proto.HasFromSystemUid ? (long?)proto.FromSystemUid : null);
         }
 
         private DataEnvelope DataEnvelopeFromProto(Proto.Msg.DataEnvelope proto)
@@ -634,7 +675,7 @@ namespace Akka.DistributedData.Serialization
             IReadConsistency consistency;
             switch (proto.Consistency)
             {
-                case 0: consistency = new ReadMajority(timeout); break;
+                case 0: consistency = new ReadMajority(timeout, proto.ConsistencyMinCap); break;
                 case -1: consistency = new ReadAll(timeout); break;
                 case 1: consistency = ReadLocal.Instance; break;
                 default: consistency = new ReadFrom(proto.Consistency, timeout); break;
@@ -652,7 +693,12 @@ namespace Akka.DistributedData.Serialization
                 builder.Add(entry.Key, entry.Digest);
             }
 
-            return new Status(builder.ToImmutable(), (int)proto.Chunk, (int)proto.TotChunks);
+            return new Status(
+                builder.ToImmutable(),
+                (int)proto.Chunk,
+                (int)proto.TotChunks,
+                proto.HasToSystemUid ? (long?)proto.ToSystemUid : null,
+                proto.HasFromSystemUid ? (long?)proto.FromSystemUid : null);
         }
 
         private DeltaPropagation DeltaPropagationFromBinary(byte[] bytes)
@@ -675,13 +721,15 @@ namespace Akka.DistributedData.Serialization
         private Read ReadFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Read.Parser.ParseFrom(bytes);
-            return new Read(proto.Key);
+            var fromNode = proto.FromNode != null ? _ser.UniqueAddressFromProto(proto.FromNode) : null;
+            return new Read(proto.Key, fromNode);
         }
 
         private Write WriteFromBinary(byte[] bytes)
         {
             var proto = Proto.Msg.Write.Parser.ParseFrom(bytes);
-            return new Write(proto.Key, DataEnvelopeFromProto(proto.Envelope));
+            var fromNode = proto.FromNode != null ? _ser.UniqueAddressFromProto(proto.FromNode) : null;
+            return new Write(proto.Key, DataEnvelopeFromProto(proto.Envelope), fromNode);
         }
 
         private DataEnvelope DataEnvelopeFromBinary(byte[] bytes)
