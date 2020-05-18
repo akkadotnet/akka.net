@@ -14,6 +14,9 @@ message Get {
    sint32 consistency = 2;
    uint32 timeout = 3;
    OtherMessage request = 4;
+   int32 consistencyMinCap = 5;
+   bool hasConsistencyAdditional = 6;
+   int32 consistencyAdditional = 7;
 }
 
 message GetSuccess {
@@ -92,6 +95,8 @@ message Status {
   repeated Entry entries = 3;
    sfixed64 toSystemUid = 4;
    sfixed64 fromSystemUid = 5;
+   bool hasToSystemUid = 6;
+   bool hasFromSystemUid = 7;
 }
 
 message Gossip {
@@ -104,6 +109,8 @@ message Gossip {
   repeated Entry entries = 2;
    sfixed64 toSystemUid = 3;
    sfixed64 fromSystemUid = 4;
+   bool hasToSystemUid = 5;
+   bool hasFromSystemUid = 6;
 }
 
 message DeltaPropagation {
