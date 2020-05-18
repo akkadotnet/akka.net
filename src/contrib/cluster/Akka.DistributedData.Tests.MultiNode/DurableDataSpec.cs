@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Immutable;
+using System.IO;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.TestKit;
@@ -30,6 +31,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
+            var tempDir = Path.Combine(Path.GetTempPath(), "target", $"DurableDataSpec-{DateTime.UtcNow.Ticks}-ddata");
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString($@"
                 akka.loglevel = INFO
@@ -37,7 +39,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 akka.log-dead-letters-during-shutdown = off
                 akka.cluster.distributed-data.durable.keys = [""durable*""]
                 akka.cluster.distributed-data.durable.lmdb {{
-                    dir = ""target/DurableDataSpec-{DateTime.UtcNow.Ticks}-ddata""
+                    dir = """"""{tempDir}""""""
                     map-size = 10 MiB
                     write-behind-interval = {(writeBehind ? "200ms" : "off")}
                 }}
