@@ -27,8 +27,6 @@ namespace Akka.DistributedData
         private readonly ReplicatorSettings _settings;
         private readonly ActorSystem _system;
 
-        public SelfUniqueAddress SelfUniqueAddress => new SelfUniqueAddress(Cluster.Cluster.Get(_system).SelfUniqueAddress);
-
         /// <summary>
         /// Returns true if this member is not tagged with the role configured for the replicas.
         /// </summary>
@@ -210,18 +208,6 @@ namespace Akka.DistributedData
         }
 
         #endregion
-    }
-
-    /// <summary>
-    /// Cluster non-specific (typed vs classic) wrapper for <see cref="Akka.Cluster.UniqueAddress"/>.
-    /// </summary>
-    public sealed class SelfUniqueAddress : UniqueAddress
-    {
-        public SelfUniqueAddress(UniqueAddress address) : base(address.Address, address.Uid)
-        { }
-
-        public SelfUniqueAddress(Address address, int uid):base(address, uid)
-        { }
     }
 
     /// <summary>
