@@ -15,7 +15,9 @@ using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.Event;
 using Akka.Serialization;
+using Akka.DistributedData.Internal;
 using LightningDB;
+using System.Diagnostics;
 
 namespace Akka.DistributedData.LightningDB
 {
@@ -36,73 +38,96 @@ namespace Akka.DistributedData.LightningDB
     /// </summary>
     public sealed class LmdbDurableStore : ReceiveActor
     {
+        public static Actor.Props Props(Config config) => Actor.Props.Create(() => new LmdbDurableStore(config));
+
         public const string DatabaseName = "ddata";
+
         private sealed class WriteBehind
         {
             public static readonly WriteBehind Instance = new WriteBehind();
             private WriteBehind() { }
         }
 
-        public static Actor.Props Props(Config config) => Actor.Props.Create(() => new LmdbDurableStore(config));
+        private readonly Config _config;
+        private readonly Akka.Serialization.Serialization _serialization;
+        private readonly SerializerWithStringManifest _serializer;
+        private readonly string _manifest;
 
         private readonly TimeSpan _writeBehindInterval;
+        private readonly string _dir;
+
         private readonly Dictionary<string, DurableDataEnvelope> _pending = new Dictionary<string, DurableDataEnvelope>();
-        private readonly LightningEnvironment _environment;
         private readonly ILoggingAdapter _log;
-        private readonly Serializer _serializer;
+
+        private (LightningEnvironment env, LightningDatabase db, bool initialized) _lmdb;
+        // Lazy init
+        private (LightningEnvironment env, LightningDatabase db, bool initialized) Lmdb
+        {
+            get
+            {
+                if (_lmdb.initialized)
+                    return _lmdb;
+
+                var t0 = Stopwatch.StartNew();
+                _log.Info($"Using durable data in LMDB directory [{_dir}]");
+
+                if (!Directory.Exists(_dir))
+                    Directory.CreateDirectory(_dir);
+
+                var mapSize = _config.GetByteSize("map-size", 100 * 1024 * 1024);
+                var env = new LightningEnvironment(_dir)
+                {
+                    MapSize = mapSize.Value,
+                    MaxDatabases = 1
+                };
+                env.Open(EnvironmentOpenFlags.NoLock);
+
+                using (var tx = env.BeginTransaction())
+                {
+                    var db = tx.OpenDatabase(DatabaseName, new DatabaseConfiguration
+                    {
+                        Flags = DatabaseOpenFlags.Create
+                    });
+                    tx.Commit();
+
+                    t0.Stop();
+                    if (_log.IsDebugEnabled)
+                        _log.Debug($"Init of LMDB in directory [{_dir}] took [{t0.ElapsedMilliseconds} ms]");
+
+                    _lmdb = (env, db, true);
+                    return _lmdb;
+                }
+            }
+        }
+
+        public bool IsDbInitialized => _lmdb.initialized;
 
         public LmdbDurableStore(Config config)
         {
-            config = config.GetConfig("lmdb");
-            if (config.IsNullOrEmpty())
+            _config = config.GetConfig("lmdb");
+            if (_config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<LmdbDurableStore>("akka.cluster.distributed-data.durable.lmdb");
 
             _log = Context.GetLogger();
 
-            var useWriteBehind = config.GetString("write-behind-interval", "").ToLowerInvariant();
+            _serialization = Context.System.Serialization;
+            _serializer = (SerializerWithStringManifest) _serialization.FindSerializerForType(typeof(DurableDataEnvelope));
+            _manifest = _serializer.Manifest(new DurableDataEnvelope(GCounter.Empty));
+
+            var useWriteBehind = _config.GetString("write-behind-interval", "").ToLowerInvariant();
             _writeBehindInterval = 
                 useWriteBehind == "off" ||
                 useWriteBehind == "false" ||
                 useWriteBehind == "no" ? 
-                    TimeSpan.Zero : 
-                    config.GetTimeSpan("write-behind-interval");
+                    TimeSpan.Zero :
+                    _config.GetTimeSpan("write-behind-interval");
 
-            var mapSize = config.GetByteSize("map-size");
-            var dirPath = config.GetString("dir");
-            if (dirPath.EndsWith("ddata"))
-            {
-                dirPath = $"path-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}";
-            }
-
-            if (!Directory.Exists(dirPath))
-            {
-                Directory.CreateDirectory(dirPath);
-            }
-
-            _environment = new LightningEnvironment(dirPath, new EnvironmentConfiguration
-            {
-                MapSize = mapSize ?? (100 * 1024 * 1024),
-                MaxDatabases = 1
-            });
-            _environment.Open(EnvironmentOpenFlags.NoLock);
-
-            using (var tx = _environment.BeginTransaction())
-            using (var db = tx.OpenDatabase(configuration: new DatabaseConfiguration { Flags = DatabaseOpenFlags.Create }))
-            {
-                // just create
-            }
-            
-            _serializer = Context.System.Serialization.FindSerializerForType(typeof(DurableDataEnvelope));
+            var path = _config.GetString("dir");
+            _dir = path.EndsWith(DatabaseName)
+                ? Path.GetFullPath($"{path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
+                : Path.GetFullPath(path);
 
             Init();
-        }
-
-        protected override void PostStop()
-        {
-            base.PostStop();
-            DoWriteBehind();
-            //_db.Dispose();
-            _environment.Dispose();
         }
 
         protected override void PostRestart(Exception reason)
@@ -112,20 +137,31 @@ namespace Akka.DistributedData.LightningDB
             Become(Active);
         }
 
+        protected override void PostStop()
+        {
+            base.PostStop();
+            DoWriteBehind();
+
+            if(IsDbInitialized)
+            {
+                var (env, db, _) = Lmdb;
+                try { db.Dispose(); } catch { }
+                try { env.Dispose(); } catch { }
+            }
+        }
+
         private void Active()
         {
             Receive<Store>(store =>
             {
-                var reply = store.Reply;
-
                 try
                 {
+                    var l = Lmdb; // init
                     if (_writeBehindInterval == TimeSpan.Zero)
                     {
-                        using (var tx = _environment.BeginTransaction())
-                        using (var db = tx.OpenDatabase())
+                        using (var tx = l.env.BeginTransaction())
                         {
-                            DbPut(tx, db, store.Key, store.Data);
+                            DbPut(tx, store.Key, store.Data);
                             tx.Commit();
                         }
                     }
@@ -136,14 +172,15 @@ namespace Akka.DistributedData.LightningDB
                         _pending[store.Key] = store.Data;
                     }
 
-                    reply?.ReplyTo.Tell(reply.SuccessMessage);
+                    store.Reply?.ReplyTo.Tell(store.Reply.SuccessMessage);
                 }
                 catch (Exception cause)
                 {
-                    _log.Error(cause, "Failed to store [{0}]", store.Key);
-                    reply?.ReplyTo.Tell(reply.FailureMessage);
+                    _log.Error(cause, "Failed to store [{0}]:{1}", store.Key, cause);
+                    store.Reply?.ReplyTo.Tell(store.Reply.FailureMessage);
                 }
             });
+
             Receive<WriteBehind>(_ => DoWriteBehind());
         }
 
@@ -151,21 +188,29 @@ namespace Akka.DistributedData.LightningDB
         {
             Receive<LoadAll>(loadAll =>
             {
-                var t0 = System.DateTime.UtcNow;
-                using (var tx = _environment.BeginTransaction(TransactionBeginFlags.ReadOnly))
-                using (var db = tx.OpenDatabase())
-                using (var cursor = tx.CreateCursor(db))
+                if(_dir.Length == 0 || !Directory.Exists(_dir))
+                {
+                    // no files to load
+                    Sender.Tell(LoadAllCompleted.Instance);
+                    Become(Active);
+                    return;
+                }
+
+                var l = Lmdb;
+                var t0 = Stopwatch.StartNew();
+                using (var tx = l.env.BeginTransaction(TransactionBeginFlags.ReadOnly))
+                using (var cursor = tx.CreateCursor(l.db))
                 {
                     try
                     {
                         var n = 0;
-                        var builder = ImmutableDictionary<string, DurableDataEnvelope>.Empty.ToBuilder();
+                        var builder = ImmutableDictionary.CreateBuilder<string, DurableDataEnvelope>();
                         foreach (var entry in cursor)
                         {
                             n++;
                             var key = Encoding.UTF8.GetString(entry.Key);
-                            var envelope = (DurableDataEnvelope)_serializer.FromBinary(entry.Value, typeof(DurableDataEnvelope));
-                            builder.Add(new KeyValuePair<string, DurableDataEnvelope>(key, envelope));
+                            var envelope = (DurableDataEnvelope)_serializer.FromBinary(entry.Value, _manifest);
+                            builder.Add(key, envelope);
                         }
 
                         if (builder.Count > 0)
@@ -176,45 +221,50 @@ namespace Akka.DistributedData.LightningDB
 
                         Sender.Tell(LoadAllCompleted.Instance);
 
+                        t0.Stop();
                         if (_log.IsDebugEnabled)
-                            _log.Debug("Load all of [{0}] entries took [{1}]", n, DateTime.UtcNow - t0);
+                            _log.Debug($"Load all of [{n}] entries took [{t0.ElapsedMilliseconds}]");
 
                         Become(Active);
                     }
                     catch (Exception e)
                     {
+                        if (t0.IsRunning) t0.Stop();
                         throw new LoadFailedException("failed to load durable distributed-data", e);
                     }
                 }
             });
         }
 
-        private void DbPut(LightningTransaction tx, LightningDatabase db, string key, DurableDataEnvelope data)
+        private void DbPut(LightningTransaction tx, string key, DurableDataEnvelope data)
         {
             var byteKey = Encoding.UTF8.GetBytes(key);
             var byteValue = _serializer.ToBinary(data);
-            tx.Put(db, byteKey, byteValue);
+
+            var l = Lmdb;
+            tx.Put(l.db, byteKey, byteValue);
         }
 
         private void DoWriteBehind()
         {
             if (_pending.Count > 0)
             {
-                var t0 = DateTime.UtcNow;
-                using (var tx = _environment.BeginTransaction())
-                using (var db = tx.OpenDatabase())
+                var (env, _, _) = Lmdb;
+                var t0 = Stopwatch.StartNew();
+                using (var tx = env.BeginTransaction())
                 {
                     try
                     {
                         foreach (var entry in _pending)
                         {
-                            DbPut(tx, db, entry.Key, entry.Value);
+                            DbPut(tx, entry.Key, entry.Value);
                         }
                         tx.Commit();
 
+                        t0.Stop();
                         if (_log.IsDebugEnabled)
                         {
-                            _log.Debug("store and commit of [{0}] entries took {1} ms", _pending.Count, (DateTime.UtcNow - t0).TotalMilliseconds);
+                            _log.Debug($"store and commit of [{_pending.Count}] entries took {t0.ElapsedMilliseconds} ms");
                         }
                     }
                     catch (Exception cause)

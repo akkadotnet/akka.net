@@ -497,11 +497,22 @@ namespace Akka.Actor.Internal
         /// </returns>
         public override Task Terminate()
         {
+            if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
+            {
+                CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+            } else
+            {
+                FinalTerminate();
+            }
+            return WhenTerminated;
+        }
+
+        internal override void FinalTerminate()
+        {
             Log.Debug("System shutdown initiated");
             if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null) 
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
-            return WhenTerminated;
         }
 
         /// <summary>

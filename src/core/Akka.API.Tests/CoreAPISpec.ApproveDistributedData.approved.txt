@@ -952,8 +952,9 @@ namespace Akka.DistributedData.Durable
 {
     public sealed class DurableDataEnvelope : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Durable.DurableDataEnvelope>
     {
-        public readonly Akka.DistributedData.Internal.DataEnvelope Data;
-        public DurableDataEnvelope(Akka.DistributedData.Internal.DataEnvelope data) { }
+        public DurableDataEnvelope(Akka.DistributedData.Internal.DataEnvelope dataEnvelope) { }
+        public DurableDataEnvelope(Akka.DistributedData.IReplicatedData data) { }
+        public Akka.DistributedData.IReplicatedData Data { get; }
         public bool Equals(Akka.DistributedData.Durable.DurableDataEnvelope other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }

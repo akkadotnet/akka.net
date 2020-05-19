@@ -110,6 +110,8 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        // Unit test became flaky when it didn't get enough CPU resource,
+        // need to raise the throttle time to compensate.
         public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
             this.AssertAllStagesStopped(() =>
@@ -118,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
                 var downstream = this.CreateSubscriberProbe<int>();
 
                 Source.FromPublisher(upstream)
-                    .Throttle(1, TimeSpan.FromMilliseconds(300), 0, ThrottleMode.Shaping)
+                    .Throttle(1, TimeSpan.FromMilliseconds(500), 0, ThrottleMode.Shaping)
                     .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
                 downstream.Request(2);
