@@ -291,6 +291,8 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        // Flaky test, ExpectComplete times out with the default 3 seconds value under heavy load.
+        // Fail rate was 1:500
         [Fact]
         public void A_restart_with_backoff_source_should_not_restart_the_source_when_maxRestarts_is_reached()
         {
@@ -305,7 +307,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe.RequestNext("a");
                 probe.RequestNext("a");
-                probe.ExpectComplete();
+                probe.ExpectComplete(TimeSpan.FromSeconds(5));
 
                 created.Current.Should().Be(2);
 
