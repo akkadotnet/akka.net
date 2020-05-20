@@ -119,13 +119,11 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static async Task<T> Ask<T>(this ICanTell self, Func<IActorRef,object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            await SynchronizationContextManager.RemoveContext;
-
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return (T)await Ask(self, messageFactory, provider, timeout, cancellationToken);
+            return (T)await Ask(self, messageFactory, provider, timeout, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>

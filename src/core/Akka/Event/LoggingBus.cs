@@ -85,7 +85,7 @@ namespace Akka.Event
         /// <exception cref="LoggerInitializationException">
         /// This exception is thrown if the logger doesn't respond with a <see cref="LoggerInitialized"/> message when initialized.
         /// </exception>
-        internal void StartDefaultLoggers(ActorSystemImpl system)
+        internal async void StartDefaultLoggers(ActorSystemImpl system)
         {
             var logName = SimpleName(this) + "(" + system.Name + ")";
             var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
@@ -163,7 +163,7 @@ namespace Akka.Event
             Publish(new Debug(SimpleName(this), GetType(), "All default loggers stopped"));
         }
 
-        private void AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
+        private async Task AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
         {
             var loggerName = CreateLoggerName(loggerType);
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
@@ -172,7 +172,7 @@ namespace Akka.Event
             object response = null;
             try
             {
-                response = askTask.Result;
+                response = await askTask;
             }
             catch (Exception ex) when (ex is TaskCanceledException || ex is AskTimeoutException)
             {
