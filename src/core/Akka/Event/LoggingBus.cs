@@ -91,7 +91,7 @@ namespace Akka.Event
             var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
             var loggerTypes = system.Settings.Loggers;
             var timeout = system.Settings.LoggerStartTimeout;
-            var asyncStart = system.Settings.LoggersAsyncStart;
+            var asyncStart = system.Settings.LoggerAsyncStart;
             var shouldRemoveStandardOutLogger = true;
 
             foreach (var strLoggerType in loggerTypes)
