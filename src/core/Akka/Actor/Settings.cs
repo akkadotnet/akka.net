@@ -84,7 +84,7 @@ namespace Akka.Actor
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
-            LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", true);
+            LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
 
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
