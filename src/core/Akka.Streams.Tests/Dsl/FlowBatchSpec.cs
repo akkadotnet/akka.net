@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -76,16 +77,16 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void Batch_must_work_on_a_variable_rate_chain()
+        public async Task Batch_must_work_on_a_variable_rate_chain()
         {
-            var future = Source.From(Enumerable.Range(1, 1000)).Batch(100, i => i, (sum, i) => sum + i).Select(i =>
+            var result = await Source.From(Enumerable.Range(1, 1000)).Batch(100, i => i, (sum, i) => sum + i).Select(i =>
             {
                 if (ThreadLocalRandom.Current.Next(1, 3) == 1)
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (i, i1) => i + i1, Materializer);
-            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
-            future.Result.Should().Be(500500);
+            
+            result.Should().Be(500500);
         }
 
         [Fact]

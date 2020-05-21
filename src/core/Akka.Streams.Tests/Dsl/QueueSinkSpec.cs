@@ -167,14 +167,13 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg(new Option<int>(1));
 
                 sub.SendComplete();
-                var future = queue.PullAsync();
-                future.Wait(_pause).Should().BeTrue();
-                future.Result.Should().Be(Option<int>.None);
+                var result = queue.PullAsync().Result;
+                result.Should().Be(Option<int>.None);
 
                 ((Task)queue.PullAsync()).ContinueWith(t =>
                 {
                     t.Exception.InnerException.Should().BeOfType<IllegalStateException>();
-                }, TaskContinuationOptions.OnlyOnFaulted).Wait(TimeSpan.FromMilliseconds(300));
+                }, TaskContinuationOptions.OnlyOnFaulted).Wait();
             }, _materializer);
         }
 
