@@ -44,6 +44,7 @@ namespace Akka.Streams.Tests
             });
 
             var sinkRef = await StreamRefs.SinkRef<string>()
+                .Throttle(1, TimeSpan.FromMilliseconds(100), 1, ThrottleMode.Shaping)
                 .To(sink)
                 .Run(Sys.Materializer());
 
