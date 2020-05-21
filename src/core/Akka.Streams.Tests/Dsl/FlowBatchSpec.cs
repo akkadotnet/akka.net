@@ -75,7 +75,7 @@ namespace Akka.Streams.Tests.Dsl
             sub.Cancel();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void Batch_must_work_on_a_variable_rate_chain()
         {
             var future = Source.From(Enumerable.Range(1, 1000)).Batch(100, i => i, (sum, i) => sum + i).Select(i =>
