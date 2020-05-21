@@ -329,7 +329,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
         {
             this.AssertAllStagesStopped(() =>
