@@ -66,6 +66,16 @@ namespace Akka.Util
             return selector(Value);
         }
 
+        /// <summary>
+        /// Unwraps the option value and returns it without converting it into an option.
+        /// </summary>
+        /// <typeparam name="TNew">The output type.</typeparam>
+        /// <param name="mapper">The mapping method.</param>
+        public TNew UnwrapSelect<TNew>(Func<Option<T>, TNew> mapper)
+        {
+            return mapper(Value);
+        }
+
         /// <inheritdoc/>
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
