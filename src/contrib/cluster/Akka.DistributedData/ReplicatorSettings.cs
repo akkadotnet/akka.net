@@ -49,13 +49,19 @@ namespace Akka.DistributedData
             var durableKeys = durableConfig.GetStringList("keys");
             var durableStoreProps = Props.Empty;
             var durableStoreTypeName = durableConfig.GetString("store-actor-class", null);
-            var isDurableStoreConfigured = !string.IsNullOrEmpty(durableStoreTypeName);
+
             if (durableKeys.Count != 0)
             {
                 Type durableStoreType;
-                if (!isDurableStoreConfigured || (durableStoreType = Type.GetType(durableStoreTypeName)) == null)
+                if (string.IsNullOrEmpty(durableStoreTypeName))
                 {
                     throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
+                }
+
+                durableStoreType = Type.GetType(durableStoreTypeName);
+                if (durableStoreType is null)
+                {
+                    throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` is set to an invalid class {durableStoreType}.");
                 }
                 durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher"));
             }
