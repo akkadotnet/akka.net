@@ -19,7 +19,7 @@ namespace Akka.Util
     public struct Option<T>
     {
         /// <summary>
-        /// TBD
+        /// None.
         /// </summary>
         public static readonly Option<T> None = new Option<T>();
 
@@ -111,6 +111,16 @@ namespace Akka.Util
         {
             if (HasValue)
                 action(Value);
+        }
+
+        public static bool operator ==(Option<T> left, Option<T> right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Option<T> left, Option<T> right)
+        {
+            return !(left == right);
         }
     }
 }

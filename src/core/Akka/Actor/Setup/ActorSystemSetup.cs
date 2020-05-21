@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Annotations;
@@ -47,7 +48,9 @@ namespace Akka.Actor.Setup
 
         public static ActorSystemSetup Create(params Setup[] setup)
         {
-            return new ActorSystemSetup(setup.ToImmutableDictionary(x => x.GetType(), s => s));
+            return new ActorSystemSetup(setup
+                .Select(x => new KeyValuePair<Type, Setup>(x.GetType(), x))
+                .Aggregate(ImmutableDictionary<Type, Setup>.Empty, (setups, pair) => setups.SetItem(pair.Key, pair.Value)));
         }
 
         internal ActorSystemSetup(ImmutableDictionary<Type, Setup> setups)
@@ -71,6 +74,20 @@ namespace Akka.Actor.Setup
         public ActorSystemSetup WithSetup<T>(T setup) where T : Setup
         {
             return new ActorSystemSetup(_setups.SetItem(typeof(T), setup));
+        }
+
+        /// <summary>
+        /// Shortcut for <see cref="Setup.And"/> to make it easier to chain the fluent interface together.
+        /// </summary>
+        /// <typeparam name="T">The type of <see cref="Setup"/></typeparam>
+        /// <param name="setup">Setup input. If a setting of the same type is already present it will be replaced.</param>
+        /// <returns>A new, immutable <see cref="ActorSystemSetup"/> instance.</returns>
+        /// <remarks>
+        /// Calls <see cref="WithSetup{T}"/> internally.
+        /// </remarks>
+        public ActorSystemSetup And<T>(T setup) where T : Setup
+        {
+            return WithSetup(setup);
         }
 
         public override string ToString()
