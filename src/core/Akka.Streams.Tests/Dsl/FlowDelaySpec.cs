@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_deliver_element_after_time_passed_from_actual_receiving_element()
         {
             var probe = Source.From(Enumerable.Range(1, 3))
