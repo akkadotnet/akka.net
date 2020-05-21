@@ -234,7 +234,7 @@ namespace Akka.Streams.Tests.Dsl
                 snk.ExpectComplete();
             }
 
-            [Fact]
+            [Fact(Skip ="Racy")]
             public void UnfoldFlow_should_increment_integers_and_handle_KillSwitch_and_complete_gracefully_after_timeout_when_stopped()
             {
                 var t = _source.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Sys.Materializer());

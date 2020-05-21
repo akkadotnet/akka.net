@@ -109,9 +109,7 @@ namespace Akka.Streams.Tests.Dsl
             t.Result.Should().Be(2);
         }
 
-        [Fact]
-        // Unit test became flaky when it didn't get enough CPU resource,
-        // need to raise the throttle time to compensate.
+        [Fact(Skip ="Racy")]
         public void Throttle_for_single_cost_elements_must_emit_single_element_per_tick()
         {
             this.AssertAllStagesStopped(() =>
