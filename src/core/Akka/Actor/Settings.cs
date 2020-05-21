@@ -84,6 +84,7 @@ namespace Akka.Actor
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
+            LoggersAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
 
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
@@ -234,6 +235,12 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The logger start timeout.</value>
         public TimeSpan LoggerStartTimeout { get; private set; }
+        
+        /// <summary>
+        ///     Gets the logger start timeout.
+        /// </summary>
+        /// <value>The logger start timeout.</value>
+        public bool LoggersAsyncStart { get; private set; }
 
         /// <summary>
         ///     Gets a value indicating whether [log configuration on start].
