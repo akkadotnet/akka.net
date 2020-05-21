@@ -216,8 +216,36 @@ public abstract class ActorSystem : IActorRefFactory, IDisposable
     /// <returns>A newly created actor system with the given name and configuration.</returns>
     public static ActorSystem Create(string name, Config config)
     {
-        // var withFallback = config.WithFallback(ConfigurationFactory.Default());
-        return CreateAndStartSystem(name, config);
+        return CreateAndStartSystem(name, config, ActorSystemSetup.Empty);
+    }
+
+    /// <summary>
+    /// Shortcut for creating a new actor system with the specified name and settings.
+    /// </summary>
+    /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+    /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+    /// </param>
+    /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
+    /// <returns>A newly created actor system with the given name and configuration.</returns>
+    public static ActorSystem Create(string name, BootstrapSetup setup)
+    {
+        return Create(name, ActorSystemSetup.Create(setup));
+    }
+
+    /// <summary>
+    /// Shortcut for creating a new actor system with the specified name and settings.
+    /// </summary>
+    /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+    /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+    /// </param>
+    /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
+    /// <returns>A newly created actor system with the given name and configuration.</returns>
+    public static ActorSystem Create(string name, ActorSystemSetup setup)
+    {
+        var bootstrapSetup = setup.Get<BootstrapSetup>();
+        var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
+
+        return CreateAndStartSystem(name, appConfig, setup);
     }
 
     /// <summary>
@@ -229,12 +257,12 @@ public abstract class ActorSystem : IActorRefFactory, IDisposable
     /// <returns>A newly created actor system with the given name.</returns>
     public static ActorSystem Create(string name)
     {
-        return CreateAndStartSystem(name, ConfigurationFactory.Load());
+        return Create(name, ActorSystemSetup.Empty);
     }
 
-    private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
+    private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
     {
-        var system = new ActorSystemImpl(name, withFallback);
+        var system = new ActorSystemImpl(name, withFallback, setup);
         system.Start();
         return system;
     }
