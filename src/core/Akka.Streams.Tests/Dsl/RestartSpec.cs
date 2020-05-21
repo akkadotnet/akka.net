@@ -113,7 +113,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_source_should_backoff_before_restart()
         {
             this.AssertAllStagesStopped(() =>
@@ -705,7 +705,7 @@ namespace Akka.Streams.Tests.Dsl
             created.Current.Should().Be(2);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_flow_should_backoff_before_restart()
         {
             var tuple = SetupFlow(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(2));

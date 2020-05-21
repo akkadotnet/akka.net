@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_deliver_elements_with_some_time_shift()
         {
             var task =
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_deliver_elements_with_delay_for_slow_stream()
         {
             this.AssertAllStagesStopped(() =>

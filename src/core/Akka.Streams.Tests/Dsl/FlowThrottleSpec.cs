@@ -452,7 +452,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void Throttle_for_various_cost_elements_must_burst_some_elements_if_have_enough_time()
         {
             this.AssertAllStagesStopped(() =>
