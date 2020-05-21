@@ -194,7 +194,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void Throttle_for_single_cost_elements_must_burst_according_to_its_maximum_if_enough_time_passed()
         {
             this.AssertAllStagesStopped(() =>
