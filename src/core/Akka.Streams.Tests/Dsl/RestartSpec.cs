@@ -411,7 +411,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_sink_should_backoff_before_restart()
         {
             this.AssertAllStagesStopped(() =>
