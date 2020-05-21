@@ -124,7 +124,7 @@ namespace Akka.Event
                 {
                     try
                     {
-                        AddLogger(system, loggerType, logLevel, logName, timeout);
+                        AddLogger(system, loggerType, logLevel, logName, timeout).Wait();
                     }
                     catch (Exception ex)
                     {
@@ -179,7 +179,7 @@ namespace Akka.Event
             Publish(new Debug(SimpleName(this), GetType(), "All default loggers stopped"));
         }
 
-        private void AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
+        private async Task AddLogger(ActorSystemImpl system, Type loggerType, LogLevel logLevel, string loggingBusName, TimeSpan timeout)
         {
             var loggerName = CreateLoggerName(loggerType);
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
@@ -188,7 +188,7 @@ namespace Akka.Event
             object response = null;
             try
             {
-                response = askTask.Result;
+                response = await askTask;
             }
             catch (Exception ex) when (ex is TaskCanceledException || ex is AskTimeoutException)
             {
