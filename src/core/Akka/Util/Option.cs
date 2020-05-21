@@ -71,8 +71,11 @@ namespace Akka.Util
         /// </summary>
         /// <typeparam name="TNew">The output type.</typeparam>
         /// <param name="mapper">The mapping method.</param>
-        public TNew UnwrapSelect<TNew>(Func<Option<T>, TNew> mapper)
+        public Option<TNew> FlatSelect<TNew>(Func<T, Option<TNew>> mapper)
         {
+            if (!HasValue)
+                return Option<TNew>.None;
+
             return mapper(Value);
         }
 

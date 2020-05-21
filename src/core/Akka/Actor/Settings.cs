@@ -11,6 +11,7 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
+using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -78,8 +79,8 @@ namespace Akka.Actor
             System = system;
 
             var providerSelectionSetup = Setup.Get<BootstrapSetup>()
-                .UnwrapSelect(_ => _.Value.ActorRefProvider)
-                .Select(y => y.Identifier)
+                .FlatSelect(_ => _.ActorRefProvider)
+                .Select(_ => _.Identifier)
                 .GetOrElse(Config.GetString("akka.actor.provider", null));
 
             ProviderSelectionType = ProviderSelection.GetProvider(providerSelectionSetup);
