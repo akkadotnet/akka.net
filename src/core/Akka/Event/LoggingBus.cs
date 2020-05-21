@@ -93,7 +93,7 @@ namespace Akka.Event
             var timeout = system.Settings.LoggerStartTimeout;
             var shouldRemoveStandardOutLogger = true;
 
-            var startLoggerTasks = loggerTypes.Select(async strLoggerType =>
+            foreach (var strLoggerType in loggerTypes)
             {
                 var loggerType = Type.GetType(strLoggerType);
                 if (loggerType == null)
@@ -104,20 +104,19 @@ namespace Akka.Event
                 if (loggerType == typeof(StandardOutLogger))
                 {
                     shouldRemoveStandardOutLogger = false;
-                    return;
+                    continue;
                 }
                 
-                try
-                {
-                    await Task.Run(() => AddLogger(system, loggerType, logLevel, logName, timeout));
-                }
-                catch (Exception e)
-                {
-                    throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {e}", e);
-                }
-            });
-            // Wait until all loggers will be started
-            await Task.WhenAll(startLoggerTasks);
+                // Not awaiting for result, and not depending on current thread context
+                Task.Run(() => AddLogger(system, loggerType, logLevel, logName, timeout))
+                    .ContinueWith(t =>
+                    {
+                        if (t.Exception != null)
+                        {
+                            Console.WriteLine($"Logger [{strLoggerType}] specified in config cannot be loaded: {t.Exception}");
+                        }
+                    });
+            }
 
             LogLevel = logLevel;
 
