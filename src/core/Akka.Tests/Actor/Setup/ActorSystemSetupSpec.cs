@@ -5,7 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor.Setup;
+using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -74,6 +76,35 @@ namespace Akka.Tests.Actor.Setup
 
             setups.Get<DummySetup>().Should().Be(new Option<DummySetup>(setup2));
             setups.Get<DummySetup2>().Should().Be(new Option<DummySetup2>(setup3));
+        }
+
+        [Fact]
+        public void ActorSystemSettingsShouldBeCreatedWithSetOfSetups()
+        {
+            var setup1 = new DummySetup("Ardbeg");
+            var setup2 = new DummySetup("Ledaig");
+            var setups = ActorSystemSetup.Create(setup1, setup2);
+
+            setups.Get<DummySetup>().HasValue.Should().BeTrue();
+            setups.Get<DummySetup2>().HasValue.Should().BeTrue();
+            setups.Get<DummySetup3>().HasValue.Should().BeFalse();
+        }
+
+        [Fact]
+        public void ActorSystemSettingsShouldBeAvailableFromExtendedActorSystem()
+        {
+            ActorSystem system = null;
+            try
+            {
+                var setup = new DummySetup("Eagle Rare");
+                system = ActorSystem.Create("name", ActorSystemSetup.Create(setup));
+
+                system.Settings.Setup.Get<DummySetup>().Should().Be(new Option<DummySetup>(setup));
+            }
+            finally
+            {
+                system?.Terminate().Wait(TimeSpan.FromSeconds(5));
+            }
         }
     }
 }
