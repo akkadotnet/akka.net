@@ -185,6 +185,18 @@ namespace Akka.Serialization
                 AddSerializer(kvp.Key, serializer);
             }
 
+            // Add any serializers that are registered via the SerializationSetup
+            foreach (var details in _serializerDetails)
+            {
+                AddSerializer(details.Alias, details.Serializer);
+
+                // populate the serialization map
+                foreach (var t in details.UseFor)
+                {
+                    AddSerializationMap(t, details.Serializer);
+                }
+            }
+
             foreach (var kvp in serializerBindingConfig)
             {
                 var typename = kvp.Key;
@@ -208,17 +220,7 @@ namespace Akka.Serialization
                 AddSerializationMap(messageType, serializer);
             }
 
-            // Add any serializers that are registered via the SerializationSetup
-            foreach (var details in _serializerDetails)
-            {
-                AddSerializer(details.Alias, details.Serializer);
-
-                // populate the serialization map
-                foreach (var t in details.UseFor)
-                {
-                    AddSerializationMap(t, details.Serializer);
-                }
-            }
+            
         }
 
         private Information SerializationInfo => System.Provider.SerializationInformation;

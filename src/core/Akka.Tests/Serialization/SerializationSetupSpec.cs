@@ -2,9 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -18,6 +15,9 @@ using Xunit.Abstractions;
 
 namespace Akka.Tests.Serialization
 {
+    public class ProgammaticDummy { }
+    public class ConfigurationDummy { }
+
     public class SerializationSetupSpec : AkkaSpec
     {
         public class TestSerializer : Serializer
@@ -49,8 +49,7 @@ namespace Akka.Tests.Serialization
                 return Registry[id];
             }
         }
-        
-        public class ProgammaticDummy { }
+
 
         public static SerializationSetup SerializationSettings = new SerializationSetup(_ => 
             ImmutableHashSet<SerializerDetails>.Empty.Add(SerializerDetails.Create("test", new TestSerializer(_), 
@@ -61,7 +60,7 @@ namespace Akka.Tests.Serialization
             akka{
                 actor{
                     serialize-messages = off
-                      serialization-bindings {
+                    serialization-bindings {
                       ""Akka.Tests.Serialization.ConfigurationDummy, Akka.Tests"" = test
                     }
                 }
@@ -87,6 +86,13 @@ namespace Akka.Tests.Serialization
         public void SerializationSettingsShouldAllowForProgrammaticConfigurationOfSerializers()
         {
             var serializer = Sys.Serialization.FindSerializerFor(new ProgammaticDummy());
+            serializer.Should().BeOfType<TestSerializer>();
+        }
+
+        [Fact]
+        public void SerializationSettingsShouldAllowConfiguredBindingToHookupToProgrammaticSerializer()
+        {
+            var serializer = Sys.Serialization.FindSerializerFor(new ConfigurationDummy());
             serializer.Should().BeOfType<TestSerializer>();
         }
     }
