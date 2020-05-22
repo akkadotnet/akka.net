@@ -258,6 +258,15 @@ namespace Akka.Streams.TestKit
             }
 
             /// <summary>
+            /// Fluent DSL. Expect completion with a timeout.
+            /// </summary>
+            public ManualProbe<T> ExpectComplete(TimeSpan timeout)
+            {
+                _probe.ExpectMsg<OnComplete>(timeout);
+                return this;
+            }
+
+            /// <summary>
             /// Expect and return the signalled <see cref="Exception"/>.
             /// </summary>
             public Exception ExpectError() => _probe.ExpectMsg<OnError>().Cause;

@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy in Linux")]
         public void InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
             this.AssertAllStagesStopped(() =>
