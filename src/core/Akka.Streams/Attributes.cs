@@ -31,7 +31,9 @@ namespace Akka.Streams
         public interface IAttribute { }
 
         /// <summary>
-        /// TBD
+        /// Specifies the name of the operation.
+        /// 
+        /// Use factory method <see cref="CreateName(string)"/> to create instances.
         /// </summary>
         public sealed class Name : IAttribute, IEquatable<Name>
         {
@@ -67,7 +69,11 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// Each asynchronous piece of a materialized stream topology is executed by one Actor
+        /// that manages an input buffer for all inlets of its shape. This attribute configures
+        /// the initial and maximal input buffer in number of elements for each inlet.
+        /// 
+        /// Use factory method <see cref="CreateInputBuffer(int, int)"/> to create instances.
         /// </summary>
         public sealed class InputBuffer : IAttribute, IEquatable<InputBuffer>
         {
@@ -330,6 +336,10 @@ namespace Akka.Streams
         /// <summary>
         /// Specifies the name of the operation.
         /// If the name is null or empty the name is ignored, i.e. <see cref="None"/> is returned.
+        /// 
+        /// When using this method the name is encoded with `Uri.EscapeUriString` because
+        /// the name is sometimes used as part of actor name. If that is not desired
+        /// the name can be added in it's raw format using `.And(new Attributes(new Name(name)))`.
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
@@ -337,7 +347,9 @@ namespace Akka.Streams
             => string.IsNullOrEmpty(name) ? None : new Attributes(new Name(name));
 
         /// <summary>
-        /// Specifies the initial and maximum size of the input buffer.
+        /// Each asynchronous piece of a materialized stream topology is executed by one Actor
+        /// that manages an input buffer for all inlets of its shape. This attribute configures
+        /// the initial and maximal input buffer in number of elements for each inlet.
         /// </summary>
         /// <param name="initial">TBD</param>
         /// <param name="max">TBD</param>
@@ -386,12 +398,14 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// Attributes for the <see cref="ActorMaterializer"/>. Note that more attributes defined in <see cref="ActorAttributes"/>.
+    /// Attributes for the <see cref="ActorMaterializer"/>. Note that more attributes defined in <see cref="Attributes"/>.
     /// </summary>
     public static class ActorAttributes
     {
         /// <summary>
-        /// TBD
+        /// Configures the dispatcher to be used by streams.
+        /// 
+        /// Use factory method <see cref="CreateDispatcher(string)"/> to create instances.
         /// </summary>
         public sealed class Dispatcher : Attributes.IAttribute, IEquatable<Dispatcher>
         {
@@ -453,7 +467,6 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// Specifies the name of the dispatcher.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
         /// <returns>TBD</returns>
@@ -480,6 +493,8 @@ namespace Akka.Streams
     {
         /// <summary>
         /// Attributes specific to stream refs.
+        /// 
+        /// Not for user extension.
         /// </summary>
         public interface IStreamRefAttribute : Attributes.IAttribute { }
 
