@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy in Linux")]
         public void A_Flow_with_SelectAsyncUnordered_must_produce_task_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>

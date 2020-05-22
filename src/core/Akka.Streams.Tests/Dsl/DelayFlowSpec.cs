@@ -63,7 +63,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void DelayFlow_should_work_with_linear_increasing_delay()
         {
             var elems = Enumerable.Range(1, 10);
