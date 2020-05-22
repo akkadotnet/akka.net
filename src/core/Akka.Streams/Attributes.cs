@@ -31,6 +31,13 @@ namespace Akka.Streams
         public interface IAttribute { }
 
         /// <summary>
+        /// Attributes that are always present (is defined with default values by the materializer)
+        /// 
+        /// Not for user extension
+        /// </summary>
+        public interface IMandatoryAttribute : IAttribute { }
+
+        /// <summary>
         /// Specifies the name of the operation.
         /// 
         /// Use factory method <see cref="CreateName(string)"/> to create instances.
