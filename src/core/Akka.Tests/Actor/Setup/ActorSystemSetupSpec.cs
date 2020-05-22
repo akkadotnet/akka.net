@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.TestKit;
 using Akka.Util;
