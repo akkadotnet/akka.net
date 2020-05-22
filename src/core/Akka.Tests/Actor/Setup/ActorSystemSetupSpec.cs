@@ -82,7 +82,7 @@ namespace Akka.Tests.Actor.Setup
         public void ActorSystemSettingsShouldBeCreatedWithSetOfSetups()
         {
             var setup1 = new DummySetup("Ardbeg");
-            var setup2 = new DummySetup("Ledaig");
+            var setup2 = new DummySetup2("Ledaig");
             var setups = ActorSystemSetup.Create(setup1, setup2);
 
             setups.Get<DummySetup>().HasValue.Should().BeTrue();
