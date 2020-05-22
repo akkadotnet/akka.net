@@ -123,7 +123,7 @@ public sealed class BootstrapSetup : Setup
     /// <summary>
     /// Create a new <see cref="BootstrapSetup"/> instance.
     /// </summary>
-    public BootstrapSetup Create() { return new BootstrapSetup();}
+    public static BootstrapSetup Create() { return new BootstrapSetup();}
 
     public BootstrapSetup WithActorRefProvider(ProviderSelection name)
     {
