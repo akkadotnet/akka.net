@@ -82,7 +82,7 @@ namespace Akka.Streams
         /// 
         /// Use factory method <see cref="CreateInputBuffer(int, int)"/> to create instances.
         /// </summary>
-        public sealed class InputBuffer : IAttribute, IEquatable<InputBuffer>
+        public sealed class InputBuffer : IMandatoryAttribute, IEquatable<InputBuffer>
         {
             /// <summary>
             /// TBD
@@ -417,7 +417,7 @@ namespace Akka.Streams
         /// 
         /// Use factory method <see cref="CreateDispatcher(string)"/> to create instances.
         /// </summary>
-        public sealed class Dispatcher : Attributes.IAttribute, IEquatable<Dispatcher>
+        public sealed class Dispatcher : Attributes.IMandatoryAttribute, IEquatable<Dispatcher>
         {
             /// <summary>
             /// TBD
@@ -456,7 +456,7 @@ namespace Akka.Streams
         /// <summary>
         /// TBD
         /// </summary>
-        public sealed class SupervisionStrategy : Attributes.IAttribute
+        public sealed class SupervisionStrategy : Attributes.IMandatoryAttribute
         {
             /// <summary>
             /// TBD
