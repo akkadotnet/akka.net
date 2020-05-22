@@ -199,7 +199,7 @@ namespace Akka.Streams
             private AsyncBoundary() { }
 
             /// <inheritdoc/>
-            public bool Equals(AsyncBoundary other) => true;
+            public bool Equals(AsyncBoundary other) => other is AsyncBoundary;
 
             /// <inheritdoc/>
             public override bool Equals(object obj) => obj is AsyncBoundary;
@@ -344,7 +344,9 @@ namespace Akka.Streams
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
         public static Attributes CreateName(string name)
-            => string.IsNullOrEmpty(name) ? None : new Attributes(new Name(name));
+            => string.IsNullOrEmpty(name) ? 
+                None : 
+                new Attributes(new Name(Uri.EscapeUriString(name)));
 
         /// <summary>
         /// Each asynchronous piece of a materialized stream topology is executed by one Actor
@@ -377,6 +379,7 @@ namespace Akka.Streams
             LogLevel onFinish = LogLevel.DebugLevel, LogLevel onError = LogLevel.ErrorLevel)
             => new Attributes(new LogLevels(onElement, onFinish, onError));
 
+        // TODO: different than scala code, investigate later.
         /// <summary>
         /// Compute a name by concatenating all Name attributes that the given module
         /// has, returning the given default value if none are found.
