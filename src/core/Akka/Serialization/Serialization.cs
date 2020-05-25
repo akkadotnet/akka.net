@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Reflection;
@@ -145,6 +146,8 @@ namespace Akka.Serialization
         private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
         private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
 
+        private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
+
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
         /// locating a Serializer for a particular class as defined in the mapping in the configuration.
@@ -159,6 +162,9 @@ namespace Akka.Serialization
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
             var serializerSettingsConfig = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
+
+            _serializerDetails = system.Settings.Setup.Get<SerializationSetup>()
+                .Select(x => x.CreateSerializers(system)).GetOrElse(ImmutableHashSet<SerializerDetails>.Empty);
 
             foreach (var kvp in serializersConfig)
             {
@@ -177,6 +183,18 @@ namespace Akka.Serialization
                     : (Serializer)Activator.CreateInstance(serializerType, system);
 
                 AddSerializer(kvp.Key, serializer);
+            }
+
+            // Add any serializers that are registered via the SerializationSetup
+            foreach (var details in _serializerDetails)
+            {
+                AddSerializer(details.Alias, details.Serializer);
+
+                // populate the serialization map
+                foreach (var t in details.UseFor)
+                {
+                    AddSerializationMap(t, details.Serializer);
+                }
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -201,6 +219,8 @@ namespace Akka.Serialization
 
                 AddSerializationMap(messageType, serializer);
             }
+
+            
         }
 
         private Information SerializationInfo => System.Provider.SerializationInformation;
