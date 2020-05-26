@@ -777,6 +777,40 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Limit for number of messages that can be processed synchronously 
+        /// in stream to substream communication.
+        /// 
+        /// Use factory method `CreateSyncProcessingLimit` to create.
+        /// </summary>
+        public sealed class SyncProcessingLimit :
+            Attributes.IMandatoryAttribute,
+            IEquatable<SyncProcessingLimit>
+        {
+            public int Limit { get; }
+
+            public SyncProcessingLimit(int limit)
+            {
+                Limit = limit;
+            }
+
+            public bool Equals(SyncProcessingLimit other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Limit == other.Limit;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is SyncProcessingLimit attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Limit.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"SyncProcessingLimit(limit={Limit})";
+        }
+
+        /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
@@ -840,6 +874,14 @@ namespace Akka.Streams
         /// <returns></returns>
         public static Attributes CreateMaxFixedBufferSize(int size)
             => new Attributes(new MaxFixedBufferSize(size));
+
+        /// <summary>
+        /// Limit for number of messages that can be processed synchronously in stream to substream communication
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
+        public static Attributes CreateSyncProcessingLimit(int limit)
+            => new Attributes(new SyncProcessingLimit(limit));
     }
     
     /// <summary>
