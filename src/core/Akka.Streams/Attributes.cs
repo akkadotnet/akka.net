@@ -675,6 +675,39 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Maximum number of elements emitted in batch if downstream signals large demand.
+        /// 
+        /// Use factory method `CreateOutputBurstLimit` to create.
+        /// </summary>
+        public sealed class OutputBurstLimit :
+            Attributes.IMandatoryAttribute,
+            IEquatable<OutputBurstLimit>
+        {
+            public int Limit { get; }
+
+            public OutputBurstLimit(int limit)
+            {
+                Limit = limit;
+            }
+
+            public bool Equals(OutputBurstLimit other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Limit == other.Limit;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is OutputBurstLimit attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Limit.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"OutputBurstLimit(limit={Limit})";
+        }
+
+        /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
@@ -711,6 +744,14 @@ namespace Akka.Streams
             TimeSpan timeout, 
             StreamSubscriptionTimeoutTerminationMode mode)
             => new Attributes(new StreamSubscriptionTimeout(timeout, mode));
+
+        /// <summary>
+        /// Maximum number of elements emitted in batch if downstream signals large demand.
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
+        public static Attributes CreateOutputBurstLimit(int limit)
+            => new Attributes(new OutputBurstLimit(limit));
     }
     
     /// <summary>
