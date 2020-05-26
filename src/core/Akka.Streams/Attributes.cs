@@ -597,6 +597,40 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Enables additional low level troubleshooting logging at DEBUG log level
+        /// 
+        /// Use factory method `CreateDebugLogging` to create.
+        /// </summary>
+        public sealed class DebugLogging :
+            Attributes.IMandatoryAttribute,
+            IEquatable<DebugLogging>
+        {
+            public bool Enabled { get; }
+
+            public DebugLogging(bool enabled)
+            {
+                Enabled = enabled;
+            }
+
+            /// <inheritdoc/>
+            public bool Equals(DebugLogging other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Enabled == other.Enabled;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is DebugLogging attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Enabled.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"DebugLogging(enabled={Enabled})";
+        }
+
+        /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
@@ -614,6 +648,14 @@ namespace Akka.Streams
         /// <returns>TBD</returns>
         public static Attributes CreateSupervisionStrategy(Decider strategy)
             => new Attributes(new SupervisionStrategy(strategy));
+
+        /// <summary>
+        /// Enables additional low level troubleshooting logging at DEBUG log level
+        /// </summary>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
+        public static Attributes CreateDebugLogging(bool enabled)
+            => new Attributes(new DebugLogging(enabled));
     }
     
     /// <summary>
