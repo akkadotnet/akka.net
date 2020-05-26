@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
+using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -54,22 +56,45 @@ namespace Akka.Actor
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
         /// </exception>
-        public Settings(ActorSystem system, Config config)
+        public Settings(ActorSystem system, Config config) : this(system, config, ActorSystemSetup.Empty)
         {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Settings" /> class.
+        /// </summary>
+        /// <param name="system">The system.</param>
+        /// <param name="config">The configuration.</param>
+        /// <param name="setup">The setup class used to help bootstrap the <see cref="ActorSystem"/></param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
+        /// </exception>
+        public Settings(ActorSystem system, Config config, ActorSystemSetup setup)
+        {
+            Setup = setup;
             _userConfig = config;
             _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;
-            
+
+            var providerSelectionSetup = Setup.Get<BootstrapSetup>()
+                .FlatSelect(_ => _.ActorRefProvider)
+                .Select(_ => _.Identifier)
+                .GetOrElse(Config.GetString("akka.actor.provider", null));
+
+            ProviderSelectionType = ProviderSelection.GetProvider(providerSelectionSetup);
+
             ConfigVersion = Config.GetString("akka.version", null);
-            ProviderClass = GetProviderClass(Config.GetString("akka.actor.provider", null));
+            ProviderClass = ProviderSelectionType.Fqn;
+            HasCluster = ProviderSelectionType.HasCluster;
+
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
-            
+
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
 
             AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", null, allowInfinite: true);
@@ -126,24 +151,6 @@ namespace Akka.Actor
                 throw new ConfigurationException(
                   "akka.coordinated-shutdown.run-by-actor-system-terminate=on and " +
                   "akka.coordinated-shutdown.terminate-actor-system=off is not a supported configuration combination.");
-
-            //TODO: dunno.. we don't have FiniteStateMachines, don't know what the rest is
-            /*              
-                final val SchedulerClass: String = getString("akka.scheduler.implementation")
-                final val Daemonicity: Boolean = getBoolean("akka.daemonic")                
-                final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
-             */
-        }
-
-        private static string GetProviderClass(string provider)
-        {
-            switch (provider)
-            {
-                case "local": return typeof(LocalActorRefProvider).FullName;
-                case "remote": return "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
-                case "cluster": return "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
-                default: return provider;
-            }
         }
 
         /// <summary>
@@ -157,6 +164,21 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The configuration.</value>
         public Config Config { get; private set; }
+
+        /// <summary>
+        /// The setup used to help bootstrap this <see cref="ActorSystem"/>.
+        /// </summary>
+        public ActorSystemSetup Setup { get; }
+
+        /// <summary>
+        /// Used to indicate whether or not clustering is enabled for this <see cref="ActorSystem"/>.
+        /// </summary>
+        public bool HasCluster { get; }
+
+        /// <summary>
+        /// INTENRAL API
+        /// </summary>
+        public ProviderSelection ProviderSelectionType { get; }
 
         /// <summary>
         ///     Gets the configuration version.

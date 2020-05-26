@@ -19,7 +19,7 @@ namespace Akka.Util
     public struct Option<T>
     {
         /// <summary>
-        /// TBD
+        /// None.
         /// </summary>
         public static readonly Option<T> None = new Option<T>();
 
@@ -66,6 +66,19 @@ namespace Akka.Util
             return selector(Value);
         }
 
+        /// <summary>
+        /// Unwraps the option value and returns it without converting it into an option.
+        /// </summary>
+        /// <typeparam name="TNew">The output type.</typeparam>
+        /// <param name="mapper">The mapping method.</param>
+        public Option<TNew> FlatSelect<TNew>(Func<T, Option<TNew>> mapper)
+        {
+            if (!HasValue)
+                return Option<TNew>.None;
+
+            return mapper(Value);
+        }
+
         /// <inheritdoc/>
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
@@ -98,6 +111,16 @@ namespace Akka.Util
         {
             if (HasValue)
                 action(Value);
+        }
+
+        public static bool operator ==(Option<T> left, Option<T> right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Option<T> left, Option<T> right)
+        {
+            return !(left == right);
         }
     }
 }

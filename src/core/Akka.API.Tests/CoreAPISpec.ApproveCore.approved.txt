@@ -352,6 +352,8 @@ namespace Akka.Actor
         public abstract Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath actorPath);
         public abstract Akka.Actor.ActorSelection ActorSelection(string actorPath);
         public static Akka.Actor.ActorSystem Create(string name, Akka.Configuration.Config config) { }
+        public static Akka.Actor.ActorSystem Create(string name, Akka.Actor.BootstrapSetup setup) { }
+        public static Akka.Actor.ActorSystem Create(string name, Akka.Actor.Setup.ActorSystemSetup setup) { }
         public static Akka.Actor.ActorSystem Create(string name) { }
         public void Dispose() { }
         public abstract object GetExtension(Akka.Actor.IExtensionId extensionId);
@@ -452,6 +454,14 @@ namespace Akka.Actor
     public class AskTimeoutException : Akka.Actor.AkkaException
     {
         public AskTimeoutException(string message) { }
+    }
+    public sealed class BootstrapSetup : Akka.Actor.Setup.Setup
+    {
+        public Akka.Util.Option<Akka.Actor.ProviderSelection> ActorRefProvider { get; }
+        public Akka.Util.Option<Akka.Configuration.Config> Config { get; }
+        public static Akka.Actor.BootstrapSetup Create() { }
+        public Akka.Actor.BootstrapSetup WithActorRefProvider(Akka.Actor.ProviderSelection name) { }
+        public Akka.Actor.BootstrapSetup WithConfig(Akka.Configuration.Config config) { }
     }
     public class Cancelable : Akka.Actor.ICancelable, System.IDisposable
     {
@@ -1403,6 +1413,25 @@ namespace Akka.Actor
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
+    public abstract class ProviderSelection
+    {
+        public sealed class Cluster : Akka.Actor.ProviderSelection
+        {
+            public static readonly Akka.Actor.ProviderSelection.Cluster Instance;
+        }
+        public sealed class Custom : Akka.Actor.ProviderSelection
+        {
+            public Custom(string fqn, string identifier = null, bool hasCluster = False) { }
+        }
+        public sealed class Local : Akka.Actor.ProviderSelection
+        {
+            public static readonly Akka.Actor.ProviderSelection.Local Instance;
+        }
+        public sealed class Remote : Akka.Actor.ProviderSelection
+        {
+            public static readonly Akka.Actor.ProviderSelection.Remote Instance;
+        }
+    }
     public delegate bool Receive(object message);
     public abstract class ReceiveActor : Akka.Actor.UntypedActor, Akka.Actor.Internal.IInitializableActor
     {
@@ -1575,6 +1604,7 @@ namespace Akka.Actor
     public class Settings
     {
         public Settings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config) { }
+        public Settings(Akka.Actor.ActorSystem system, Akka.Configuration.Config config, Akka.Actor.Setup.ActorSystemSetup setup) { }
         public bool AddLoggingReceive { get; }
         public System.TimeSpan AskTimeout { get; }
         public Akka.Configuration.Config Config { get; }
@@ -1589,6 +1619,7 @@ namespace Akka.Actor
         public bool DebugUnhandledMessage { get; }
         public int DefaultVirtualNodesFactor { get; }
         public bool FsmDebugEvent { get; }
+        public bool HasCluster { get; }
         public string Home { get; }
         public bool LogConfigOnStart { get; }
         public int LogDeadLetters { get; }
@@ -1599,10 +1630,12 @@ namespace Akka.Actor
         public System.Collections.Generic.IList<string> Loggers { get; }
         public string LoggersDispatcher { get; }
         public string ProviderClass { get; }
+        public Akka.Actor.ProviderSelection ProviderSelectionType { get; }
         public string SchedulerClass { get; }
         public System.TimeSpan SchedulerShutdownTimeout { get; }
         public bool SerializeAllCreators { get; }
         public bool SerializeAllMessages { get; }
+        public Akka.Actor.Setup.ActorSystemSetup Setup { get; }
         public string StdoutLogLevel { get; }
         public string SupervisorStrategyClass { get; }
         public Akka.Actor.ActorSystem System { get; }
@@ -1807,7 +1840,7 @@ namespace Akka.Actor.Internal
     public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
     {
         public ActorSystemImpl(string name) { }
-        public ActorSystemImpl(string name, Akka.Configuration.Config config) { }
+        public ActorSystemImpl(string name, Akka.Configuration.Config config, Akka.Actor.Setup.ActorSystemSetup setup) { }
         public override Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public override Akka.Actor.IActorRef DeadLetters { get; }
         public override Akka.Dispatch.Dispatchers Dispatchers { get; }
@@ -1994,6 +2027,27 @@ namespace Akka.Actor.Internal
     public class UnboundedStashImpl : Akka.Actor.Internal.AbstractStash
     {
         public UnboundedStashImpl(Akka.Actor.IActorContext context) { }
+    }
+}
+namespace Akka.Actor.Setup
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class ActorSystemSetup
+    {
+        public static readonly Akka.Actor.Setup.ActorSystemSetup Empty;
+        public Akka.Actor.Setup.ActorSystemSetup And<T>(T setup)
+            where T : Akka.Actor.Setup.Setup { }
+        public static Akka.Actor.Setup.ActorSystemSetup Create(params Akka.Actor.Setup.Setup[] setup) { }
+        public Akka.Util.Option<T> Get<T>()
+            where T : Akka.Actor.Setup.Setup { }
+        public override string ToString() { }
+        public Akka.Actor.Setup.ActorSystemSetup WithSetup<T>(T setup)
+            where T : Akka.Actor.Setup.Setup { }
+    }
+    public abstract class Setup
+    {
+        protected Setup() { }
+        public Akka.Actor.Setup.ActorSystemSetup And(Akka.Actor.Setup.Setup other) { }
     }
 }
 namespace Akka.Annotations
@@ -4565,6 +4619,11 @@ namespace Akka.Serialization
         public static T WithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
         public static T WithTransport<T>(Akka.Actor.ExtendedActorSystem system, System.Func<T> action) { }
     }
+    public sealed class SerializationSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Serialization.SerializerDetails>> CreateSerializers { get; }
+        public static Akka.Serialization.SerializationSetup Create(System.Func<Akka.Actor.ExtendedActorSystem, System.Collections.Immutable.ImmutableHashSet<Akka.Serialization.SerializerDetails>> createSerializers) { }
+    }
     public abstract class Serializer
     {
         protected readonly Akka.Actor.ExtendedActorSystem system;
@@ -4575,6 +4634,13 @@ namespace Akka.Serialization
         public T FromBinary<T>(byte[] bytes) { }
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
+    }
+    public sealed class SerializerDetails
+    {
+        public string Alias { get; }
+        public Akka.Serialization.Serializer Serializer { get; }
+        public System.Collections.Immutable.ImmutableHashSet<System.Type> UseFor { get; }
+        public static Akka.Serialization.SerializerDetails Create(string alias, Akka.Serialization.Serializer serializer, System.Collections.Immutable.ImmutableHashSet<System.Type> useFor) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class static SerializerIdentifierHelper
@@ -4759,12 +4825,15 @@ namespace Akka.Util
         public T Value { get; }
         public bool Equals(Akka.Util.Option<T> other) { }
         public override bool Equals(object obj) { }
+        public Akka.Util.Option<TNew> FlatSelect<TNew>(System.Func<T, Akka.Util.Option<TNew>> mapper) { }
         public override int GetHashCode() { }
         public T GetOrElse(T fallbackValue) { }
         public void OnSuccess(System.Action<T> action) { }
         public Akka.Util.Option<TNew> Select<TNew>(System.Func<T, TNew> selector) { }
         public override string ToString() { }
+        public static bool ==(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
         public static Akka.Util.Option<T> op_Implicit(T value) { }
+        public static bool !=(Akka.Util.Option<T> left, Akka.Util.Option<T> right) { }
     }
     public abstract class Resolve : Akka.Actor.IIndirectActorProducer
     {
