@@ -742,6 +742,41 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Configure the maximum buffer size for which a FixedSizeBuffer will be preallocated.
+        /// This defaults to a large value because it is usually better to fail early when
+        /// system memory is not sufficient to hold the buffer.
+        /// 
+        /// Use factory method `CreateMaxFixedBufferSize` to create.
+        /// </summary>
+        public sealed class MaxFixedBufferSize :
+            Attributes.IMandatoryAttribute,
+            IEquatable<MaxFixedBufferSize>
+        {
+            public int Size { get; }
+
+            public MaxFixedBufferSize(int size)
+            {
+                Size = size;
+            }
+
+            public bool Equals(MaxFixedBufferSize other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Size == other.Size;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is MaxFixedBufferSize attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Size.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"MaxFixedBufferSize(size={Size})";
+        }
+
+        /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
@@ -795,6 +830,16 @@ namespace Akka.Streams
         /// <returns></returns>
         public static Attributes CreateFuzzingMode(bool enabled)
             => new Attributes(new FuzzingMode(enabled));
+
+        /// <summary>
+        /// Configure the maximum buffer size for which a FixedSizeBuffer will be preallocated.
+        /// This defaults to a large value because it is usually better to fail early when
+        /// system memory is not sufficient to hold the buffer.
+        /// </summary>
+        /// <param name="size"></param>
+        /// <returns></returns>
+        public static Attributes CreateMaxFixedBufferSize(int size)
+            => new Attributes(new MaxFixedBufferSize(size));
     }
     
     /// <summary>
