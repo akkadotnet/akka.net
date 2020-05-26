@@ -708,6 +708,40 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Test utility: fuzzing mode means that GraphStage events are not processed
+        /// in FIFO order within a fused subgraph, but randomized.
+        /// 
+        /// Use factory method `CreateFuzzingMode` to create.
+        /// </summary>
+        public sealed class FuzzingMode :
+            Attributes.IMandatoryAttribute,
+            IEquatable<FuzzingMode>
+        {
+            public bool Enabled { get; }
+
+            public FuzzingMode(bool enabled)
+            {
+                Enabled = enabled;
+            }
+
+            public bool Equals(FuzzingMode other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Enabled == other.Enabled;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is FuzzingMode attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Enabled.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"FuzzingMode(enabled={Enabled})";
+        }
+
+        /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
@@ -752,6 +786,15 @@ namespace Akka.Streams
         /// <returns></returns>
         public static Attributes CreateOutputBurstLimit(int limit)
             => new Attributes(new OutputBurstLimit(limit));
+
+        /// <summary>
+        /// Test utility: fuzzing mode means that GraphStage events are not processed
+        /// in FIFO order within a fused subgraph, but randomized.
+        /// </summary>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
+        public static Attributes CreateFuzzingMode(bool enabled)
+            => new Attributes(new FuzzingMode(enabled));
     }
     
     /// <summary>
