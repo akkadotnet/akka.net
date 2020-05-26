@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
@@ -238,6 +239,18 @@ namespace Akka.Streams
         /// <see cref="GetAttribute{TAttr}"/> to get the most specific attribute value.
         /// </summary>
         public IEnumerable<IAttribute> AttributeList => _attributes;
+
+        /// <summary>
+        /// Note that this must only be used during traversal building and not during materialization
+        /// as it will then always return true because of the defaults from the ActorMaterializerSettings
+        /// 
+        /// INTERNAL API
+        /// </summary>
+        internal bool IsAsync
+            => _attributes.Count() > 0 && 
+                _attributes.Any(
+                    attr => attr is AsyncBoundary || 
+                    attr is ActorAttributes.Dispatcher);
 
         /// <summary>
         /// Get all attributes of a given type (or subtypes thereof).
