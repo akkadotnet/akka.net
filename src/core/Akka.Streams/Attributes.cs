@@ -990,7 +990,39 @@ namespace Akka.Streams
             /// <inheritdoc/>
             public override string ToString() => $"DemandRedeliveryInterval(timeout={Timeout.TotalMilliseconds}ms)";
         }
-        
+
+        /// <summary>
+        /// The time between the Terminated signal being received and when the local SourceRef determines to fail itself
+        /// </summary>
+        public sealed class FinalTerminationSignalDeadline : IStreamRefAttribute, IEquatable<FinalTerminationSignalDeadline>
+        {
+            public TimeSpan Timeout { get; }
+
+            public FinalTerminationSignalDeadline(TimeSpan timeout)
+            {
+                if (timeout.Ticks < 0)
+                    throw new ArgumentException("Timeout must be finite.", nameof(timeout));
+
+                Timeout = timeout;
+            }
+
+            public bool Equals(FinalTerminationSignalDeadline other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Timeout.Equals(other.Timeout);
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is FinalTerminationSignalDeadline attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Timeout.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"FinalTerminationSignalDeadline(timeout={Timeout.TotalMilliseconds}ms)";
+        }
+
         /// <summary>
         /// Specifies the subscription timeout within which the remote side MUST subscribe to the handed out stream reference.
         /// </summary>
@@ -1008,5 +1040,11 @@ namespace Akka.Streams
         /// </summary>
         public static Attributes CreateDemandRedeliveryInterval(TimeSpan timeout) 
             => new Attributes(new DemandRedeliveryInterval(timeout));
+
+        /// <summary>
+        /// The time between the Terminated signal being received and when the local SourceRef determines to fail itself
+        /// </summary>
+        public static Attributes CreateFinalTerminationSignalDeadline(TimeSpan timeout) 
+            => new Attributes(new FinalTerminationSignalDeadline(timeout));
     }
 }
