@@ -42,6 +42,7 @@ namespace Akka.Dispatch
                 ThreadType.Foreground : ThreadType.Background;
         }
 
+#if UNSAFE_THREADING
         /// <summary>
         /// TBD
         /// </summary>
@@ -56,6 +57,7 @@ namespace Akka.Dispatch
                     ? ApartmentState.MTA
                     : ApartmentState.Unknown;
         }
+#endif
 
         /// <summary>
         /// Default settings for <see cref="SingleThreadDispatcher"/> instances.
