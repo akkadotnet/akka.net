@@ -232,12 +232,20 @@ namespace Akka.Streams
         }
 
         /// <summary>
-        /// TBD
+        /// The list is ordered with the most specific attribute first, least specific last.
+        /// 
+        /// Note that operators in general should not inspect the whole hierarchy but instead use
+        /// <see cref="GetAttribute{TAttr}"/> to get the most specific attribute value.
         /// </summary>
         public IEnumerable<IAttribute> AttributeList => _attributes;
 
         /// <summary>
-        /// Get all attributes of a given type or subtype thereof
+        /// Get all attributes of a given type (or subtypes thereof).
+        /// 
+        /// Note that operators in general should not inspect the whole hierarchy but instead use
+        /// <see cref="GetAttribute{TAttr}"/> to get the most specific attribute value.
+        /// 
+        /// The list is ordered with the most specific attribute first, least specific last.
         /// </summary>
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <returns>TBD</returns>
@@ -334,6 +342,9 @@ namespace Akka.Streams
 
         /// <summary>
         /// Test whether the given attribute is contained within this attributes list.
+        /// 
+        /// Note that operators in general should not inspect the whole hierarchy but instead use
+        /// `get` to get the most specific attribute value.
         /// </summary>
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <param name="attribute">TBD</param>
@@ -477,6 +488,7 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
         /// <returns>TBD</returns>
