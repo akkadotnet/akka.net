@@ -928,11 +928,47 @@ namespace Akka.Streams
             /// <inheritdoc/>
             public override string ToString() => $"SubscriptionTimeout(timeout={Timeout.TotalMilliseconds}ms)";
         }
+
+        /// <summary>
+        /// Specifies the size of the buffer on the receiving side that is eagerly filled even without demand.
+        /// </summary>
+        public sealed class BufferCapacity : IStreamRefAttribute, IEquatable<BufferCapacity>
+        {
+            public int Capacity { get; }
+            public BufferCapacity (int capacity)
+            {
+                if (capacity <= 0)
+                    throw new ArgumentException("Capacity must be greater than zero", nameof(capacity));
+                Capacity = capacity;
+            }
+
+            public bool Equals(BufferCapacity other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Capacity == other.Capacity;
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is BufferCapacity attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Capacity.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"BufferCapacity(capacity={Capacity})";
+        }
         }
         
         /// <summary>
         /// Specifies the subscription timeout within which the remote side MUST subscribe to the handed out stream reference.
         /// </summary>
         public static Attributes CreateSubscriptionTimeout(TimeSpan timeout) => new Attributes(new SubscriptionTimeout(timeout));
+
+        /// <summary>
+        /// Specifies the size of the buffer on the receiving side that is eagerly filled even without demand.
+        /// </summary>
+        public static Attributes CreateBufferCapacity(int capacity)
+            => new Attributes(new BufferCapacity(capacity));
     }
 }
