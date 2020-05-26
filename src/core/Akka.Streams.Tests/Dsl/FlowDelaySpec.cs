@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_deliver_elements_with_some_time_shift()
         {
             var task =
@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_deliver_element_after_time_passed_from_actual_receiving_element()
         {
             var probe = Source.From(Enumerable.Range(1, 3))
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectComplete();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_deliver_elements_with_delay_for_slow_stream()
         {
             this.AssertAllStagesStopped(() =>
@@ -143,10 +143,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy. 
-        // Raised task.Wait() from 1200 to 1800. 1200 is flaky when CPU resources are scarce.
-        // Passed 500 consecutive local test runs with no fail with very heavy load after modification
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_clear_all_for_internal_buffer_if_it_is_full_in_DropBuffer_mode()
         {
             this.AssertAllStagesStopped(() =>
@@ -157,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.Wait(TimeSpan.FromMilliseconds(1800)).Should().BeTrue();
+                task.Wait(TimeSpan.FromMilliseconds(1200)).Should().BeTrue();
                 task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(17, 4));
             }, Materializer);
         }
@@ -198,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_emit_early_when_buffer_is_full_and_in_EmitEarly_mode()
         {
             this.AssertAllStagesStopped(() =>
@@ -224,9 +221,8 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        // Was marked as racy. 
         // Passed 500 consecutive local test runs with no fail with very heavy load without modification
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_Delay_must_properly_delay_according_to_buffer_size()
         {
             // With a buffer size of 1, delays add up 

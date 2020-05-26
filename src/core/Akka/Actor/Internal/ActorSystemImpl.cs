@@ -16,6 +16,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
+using Akka.Actor.Setup;
 using Akka.Serialization;
 using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
@@ -53,7 +54,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, ConfigurationFactory.Default())
+            : this(name, ConfigurationFactory.Default(), ActorSystemSetup.Empty)
         {
         }
 
@@ -62,12 +63,13 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         /// <param name="config">The configuration used to configure the actor system.</param>
+        /// <param name="setup">The <see cref="ActorSystemSetup"/> used to help programmatically bootstrap the actor system.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid name for an actor system.
         ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').
         /// </exception>
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="config"/> is undefined.</exception>
-        public ActorSystemImpl(string name, Config config)
+        public ActorSystemImpl(string name, Config config, ActorSystemSetup setup)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
@@ -78,7 +80,7 @@ namespace Akka.Actor.Internal
                 throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
 
             _name = name;            
-            ConfigureSettings(config);
+            ConfigureSettings(config, setup);
             ConfigureEventStream();
             ConfigureLoggers();
             ConfigureScheduler();
@@ -327,8 +329,7 @@ namespace Akka.Actor.Internal
         /// <returns>The specified extension registered to this actor system</returns>
         public override object GetExtension(IExtensionId extensionId)
         {
-            object extension;
-            TryGetExtension(extensionId.ExtensionType, out extension);
+            TryGetExtension(extensionId.ExtensionType, out var extension);
             return extension;
         }
 
@@ -365,8 +366,7 @@ namespace Akka.Actor.Internal
         /// <returns>The specified extension registered to this actor system</returns>
         public override T GetExtension<T>()
         {
-            T extension;
-            TryGetExtension(out extension);
+            TryGetExtension(out T extension);
             return extension;
         }
 
@@ -394,9 +394,9 @@ namespace Akka.Actor.Internal
             return _extensions.ContainsKey(typeof(T));
         }
 
-        private void ConfigureSettings(Config config)
+        private void ConfigureSettings(Config config, ActorSystemSetup setup)
         {
-            _settings = new Settings(this, config);
+            _settings = new Settings(this, config, setup);
         }
 
         private void ConfigureEventStream()

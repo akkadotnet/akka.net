@@ -113,7 +113,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_source_should_backoff_before_restart()
         {
             this.AssertAllStagesStopped(() =>
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_source_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
             this.AssertAllStagesStopped(() =>
@@ -291,6 +291,8 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        // Flaky test, ExpectComplete times out with the default 3 seconds value under heavy load.
+        // Fail rate was 1:500
         [Fact]
         public void A_restart_with_backoff_source_should_not_restart_the_source_when_maxRestarts_is_reached()
         {
@@ -305,7 +307,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 probe.RequestNext("a");
                 probe.RequestNext("a");
-                probe.ExpectComplete();
+                probe.ExpectComplete(TimeSpan.FromSeconds(5));
 
                 created.Current.Should().Be(2);
 
@@ -409,7 +411,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_sink_should_backoff_before_restart()
         {
             this.AssertAllStagesStopped(() =>
@@ -442,7 +444,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_sink_should_reset_exponential_backoff_back_to_minimum_when_source_runs_for_at_least_minimum_backoff_without_completing()
         {
             this.AssertAllStagesStopped(() =>
@@ -703,7 +705,7 @@ namespace Akka.Streams.Tests.Dsl
             created.Current.Should().Be(2);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void A_restart_with_backoff_flow_should_backoff_before_restart()
         {
             var tuple = SetupFlow(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(2));

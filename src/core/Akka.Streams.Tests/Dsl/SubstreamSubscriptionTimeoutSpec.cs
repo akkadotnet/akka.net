@@ -112,7 +112,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void GroupBy_and_SplitWhen_must_not_timeout_and_cancel_substream_publisher_when_they_have_been_subscribed_to()
         {
             var subscriber = this.CreateManualSubscriberProbe<(int, Source<int, NotUsed>)>();
