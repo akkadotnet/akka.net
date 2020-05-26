@@ -7,13 +7,10 @@ title: Distributed Data
 Akka.DistributedData plugin can be used as in-memory, highly-available, distributed key-value store, where values conform to so called [Conflict-Free Replicated Data Types](http://hal.upmc.fr/inria-00555588/document) (CRDT). Those data types can have replicas across multiple nodes in the cluster, where DistributedData plugin has been initialized. We are free to perform concurrent updates on replicas with the same corresponding key without need of coordination (distributed locks or transactions) - all state changes will eventually converge with conflicts being automatically resolved, thanks to the nature of CRDTs. To use distributed data plugin, simply install it via NuGet:
 
 ```
-install-package Akka.DistributedData -pre
+install-package Akka.DistributedData
 ```
 
 Keep in mind, that CRDTs are intended for high-availability, non-blocking read/write scenarios. However they are not a good fit, when you need strong consistency or are operating on big data. If you want to have millions of data entries, this is NOT a way to go. Keep in mind, that all data is kept in memory and, as state-based CRDTs, whole object state is replicated remotely across the nodes, when an update happens. A more efficient implementations (delta-based CRDTs) are considered for the future implementations.
-
-> [!WARNING]
->  At the present moment, Akka.DistributedData plugin is in state of flux. This means, that its API is unstable and the performance is yet to improve.
 
 ## Basic operations
 
