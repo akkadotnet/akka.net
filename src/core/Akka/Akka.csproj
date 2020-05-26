@@ -19,7 +19,10 @@
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.Collections.Immutable" Version="1.7.1" />
   </ItemGroup>
-  
+    
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)'">
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
       <PackageReference Include="System.Configuration.ConfigurationManager">
@@ -38,6 +41,10 @@
       <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
     </Compile>
   </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
+    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;CLONEABLE;APPDOMAIN</DefineConstants>
+  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR;CONFIGURATION;</DefineConstants>
