@@ -269,6 +269,7 @@ namespace Akka.Streams
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <param name="defaultIfNotFound">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Attributes should always be most specific, use GetAttribute<TAttr>()")]
         public TAttr GetFirstAttribute<TAttr>(TAttr defaultIfNotFound) where TAttr : class, IAttribute
             => GetFirstAttribute<TAttr>() ?? defaultIfNotFound;
 
@@ -285,6 +286,7 @@ namespace Akka.Streams
         /// </summary>
         /// <typeparam name="TAttr">TBD</typeparam>
         /// <returns>TBD</returns>
+        [Obsolete("Attributes should always be most specific, use GetAttribute<TAttr>()")]
         public TAttr GetFirstAttribute<TAttr>() where TAttr : class, IAttribute
             => _attributes.FirstOrDefault(attr => attr is TAttr) as TAttr;
 
