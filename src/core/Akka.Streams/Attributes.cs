@@ -291,6 +291,19 @@ namespace Akka.Streams
             => _attributes.FirstOrDefault(attr => attr is TAttr) as TAttr;
 
         /// <summary>
+        /// Get the most specific of one of the mandatory attributes. Mandatory attributes are guaranteed
+        /// to always be among the attributes when the attributes are coming from a materialization.
+        /// </summary>
+        /// <typeparam name="TAttr"></typeparam>
+        /// <returns></returns>
+        public TAttr GetMandatoryAttribute<TAttr>() where TAttr : class, IMandatoryAttribute
+        {
+            if (!(_attributes.First(attr => attr is TAttr) is TAttr result))
+                throw new IllegalStateException($"Mandatory attribute [{typeof(TAttr)}] not found.");
+            return result;
+        }
+
+        /// <summary>
         /// Adds given attributes to the end of these attributes.
         /// </summary>
         /// <param name="other">TBD</param>
