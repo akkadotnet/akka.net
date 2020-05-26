@@ -631,6 +631,50 @@ namespace Akka.Streams
         }
 
         /// <summary>
+        /// Defines a timeout for stream subscription and what action to take when that hits.
+        /// 
+        /// Use factory method `CreateStreamSubscriptionTimeout` to create.
+        /// </summary>
+        public sealed class StreamSubscriptionTimeout :
+            Attributes.IMandatoryAttribute,
+            IEquatable<StreamSubscriptionTimeout>
+        {
+            public TimeSpan Timeout { get; }
+            public StreamSubscriptionTimeoutTerminationMode Mode { get; }
+
+            public StreamSubscriptionTimeout(TimeSpan timeout, StreamSubscriptionTimeoutTerminationMode mode)
+            {
+                if (timeout.Ticks < 0)
+                    throw new ArgumentException("Timeout must be finite.", nameof(timeout));
+                Timeout = timeout;
+                Mode = mode;
+            }
+
+            public bool Equals(StreamSubscriptionTimeout other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Timeout.Equals(other.Timeout) && Mode.Equals(other.Mode);
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is StreamSubscriptionTimeout attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var initial = Timeout.GetHashCode();
+                    return (initial * 397) ^ Mode.GetHashCode();
+                }
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"StreamSubscriptionTimeout(timeout={Timeout.TotalMilliseconds}ms, mode={Mode})";
+        }
+
+        /// <summary>
         /// Specifies the name of the dispatcher. This also adds an async boundary.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
@@ -656,6 +700,17 @@ namespace Akka.Streams
         /// <returns></returns>
         public static Attributes CreateDebugLogging(bool enabled)
             => new Attributes(new DebugLogging(enabled));
+
+        /// <summary>
+        /// Defines a timeout for stream subscription and what action to take when that hits.
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <param name="mode"></param>
+        /// <returns></returns>
+        public static Attributes CreateStreamSubscriptionTimeout(
+            TimeSpan timeout, 
+            StreamSubscriptionTimeoutTerminationMode mode)
+            => new Attributes(new StreamSubscriptionTimeout(timeout, mode));
     }
     
     /// <summary>
