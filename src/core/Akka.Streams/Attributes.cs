@@ -897,14 +897,37 @@ namespace Akka.Streams
         /// </summary>
         public interface IStreamRefAttribute : Attributes.IAttribute { }
 
-        public sealed class SubscriptionTimeout : IStreamRefAttribute
+        /// <summary>
+        /// Specifies the subscription timeout within which the remote side MUST subscribe to the handed out stream reference.
+        /// </summary>
+        public sealed class SubscriptionTimeout : IStreamRefAttribute, IEquatable<SubscriptionTimeout>
         {
             public TimeSpan Timeout { get; }
 
             public SubscriptionTimeout(TimeSpan timeout)
             {
+                if (timeout.Ticks < 0)
+                    throw new ArgumentException("Timeout must be finite.", nameof(timeout));
+
                 Timeout = timeout;
             }
+
+            public bool Equals(SubscriptionTimeout other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Timeout.Equals(other.Timeout);
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is SubscriptionTimeout attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Timeout.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"SubscriptionTimeout(timeout={Timeout.TotalMilliseconds}ms)";
+        }
         }
         
         /// <summary>
