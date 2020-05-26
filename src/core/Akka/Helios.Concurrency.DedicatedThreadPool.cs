@@ -39,7 +39,6 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
-#if UNSAFE_THREADING
         /// <summary>
         /// TBD
         /// </summary>
@@ -93,7 +92,7 @@ namespace Helios.Concurrency
             if (numThreads <= 0)
                 throw new ArgumentOutOfRangeException(nameof(numThreads), $"numThreads must be at least 1. Was {numThreads}");
         }
-#else
+
         public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null)
             : this(numThreads, DefaultThreadType, name, deadlockTimeout)
         { }
@@ -109,7 +108,6 @@ namespace Helios.Concurrency
             if (numThreads <= 0)
                 throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
         }
-#endif
 
         /// <summary>
         /// The total number of threads to run in this thread pool.
@@ -121,12 +119,10 @@ namespace Helios.Concurrency
         /// </summary>
         public ThreadType ThreadType { get; private set; }
 
-#if UNSAFE_THREADING
         /// <summary>
         /// Apartment state for threads to run in this thread pool
         /// </summary>
         public ApartmentState ApartmentState { get; private set; }
-#endif
 
         /// <summary>
         /// Interval to check for thread deadlocks.
@@ -409,21 +405,15 @@ namespace Helios.Concurrency
                 _pool = pool;
                 _threadExit = new TaskCompletionSource<object>();
 
-#if UNSAFE_THREADING
                 var thread = new Thread(RunThread, pool.Settings.ThreadMaxStackSize);
-#else
-                var thread = new Thread(RunThread);
-#endif
 
                 thread.IsBackground = pool.Settings.ThreadType == ThreadType.Background;
 
                 if (pool.Settings.Name != null)
                     thread.Name = string.Format("{0}_{1}", pool.Settings.Name, workerId);
 
-#if UNSAFE_THREADING
                 if (pool.Settings.ApartmentState != ApartmentState.Unknown)
                     thread.SetApartmentState(pool.Settings.ApartmentState);
-#endif
 
                 thread.Start();
             }

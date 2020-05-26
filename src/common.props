@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-2020 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.4.4</VersionPrefix>
+    <VersionPrefix>1.4.7</VersionPrefix>
     <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
@@ -29,21 +29,7 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Maintenance Release for Akka.NET 1.4**
-Akka.NET v1.4.4 includes one major fix for HOCON fallback configurations, a new module (Akka.Coordination), and some major improvements to Akka.Cluster.Tools / Akka.Cluster.Sharding:
-[Akka.Coordination: Lease API &amp; integration](https://github.com/akkadotnet/akka.net/pull/4344)
-[Akka: Timers for self scheduled messages added, FSM timers fixes](https://github.com/akkadotnet/akka.net/pull/3778)
-[Akka **Important** Bugfix: Config.WithFallback is acting inconsistently](https://github.com/akkadotnet/akka.net/pull/4358)
-[Akka.Cluster.Sharding: Updates](https://github.com/akkadotnet/akka.net/pull/4354)
-To see the full set of changes for Akka.NET 1.4.4, please [see the 1.4.4 milestone](https://github.com/akkadotnet/akka.net/milestone/35).
-| COMMITS | LOC+ | LOC- | AUTHOR |
-| --- | --- | --- | --- |
-| 3 | 4845 | 225 | zbynek001 |
-| 2 | 3 | 3 | dependabot-preview[bot] |
-| 2 | 159 | 0 | Aaron Stannard |
-| 2 | 1099 | 23 | Gregorius Soedharmo |
-| 1 | 34 | 5 | Petri Kero |
-| 1 | 1 | 1 | Felix Reisinger |</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
