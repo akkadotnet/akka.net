@@ -958,6 +958,37 @@ namespace Akka.Streams
             /// <inheritdoc/>
             public override string ToString() => $"BufferCapacity(capacity={Capacity})";
         }
+
+        /// <summary>
+        /// If no new elements arrive within this timeout, demand is redelivered.
+        /// </summary>
+        public sealed class DemandRedeliveryInterval : IStreamRefAttribute, IEquatable<DemandRedeliveryInterval>
+        {
+            public TimeSpan Timeout { get; }
+
+            public DemandRedeliveryInterval(TimeSpan timeout)
+            {
+                if (timeout.Ticks < 0)
+                    throw new ArgumentException("Timeout must be finite.", nameof(timeout));
+
+                Timeout = timeout;
+            }
+
+            public bool Equals(DemandRedeliveryInterval other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Timeout.Equals(other.Timeout);
+            }
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj) => obj is DemandRedeliveryInterval attr && Equals(attr);
+
+            /// <inheritdoc/>
+            public override int GetHashCode() => Timeout.GetHashCode();
+
+            /// <inheritdoc/>
+            public override string ToString() => $"DemandRedeliveryInterval(timeout={Timeout.TotalMilliseconds}ms)";
         }
         
         /// <summary>
@@ -970,5 +1001,12 @@ namespace Akka.Streams
         /// </summary>
         public static Attributes CreateBufferCapacity(int capacity)
             => new Attributes(new BufferCapacity(capacity));
+
+
+        /// <summary>
+        /// If no new elements arrive within this timeout, demand is redelivered.
+        /// </summary>
+        public static Attributes CreateDemandRedeliveryInterval(TimeSpan timeout) 
+            => new Attributes(new DemandRedeliveryInterval(timeout));
     }
 }
