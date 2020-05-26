@@ -1,0 +1,4 @@
+- name: HOCON in Practice
+  href: index.md
+- name: HOCON Syntax Reference
+  href: hocon-syntax.md
