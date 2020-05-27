@@ -1,3 +1,15 @@
+#### 1.4.7 May 26 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.7 is a fairly sizable path that introduces some significant new features and changes:
+
+* [Akka: added `akka.logger-async-start` HOCON setting to allow loggers to start without blocking `ActorSystem` creation](https://github.com/akkadotnet/akka.net/pull/4424) - useful for developers running Akka.NET on Xamarin or in other environments with low CPU counts;
+* [Akka: ported `ActorSystemSetup` to allow programmatic config of serializers and other `ActorSystem` properties](https://github.com/akkadotnet/akka.net/issues/4426)
+* [Akka.Streams: update and modernize Attributes](https://github.com/akkadotnet/akka.net/pull/4437)
+* [Akka.DistributedData.LightningDb: Wire format stabilized](https://github.com/akkadotnet/akka.net/issues/4261) - Akka.Distributed.Data.LightningDb is now ready for production use.
+
+To see the full set of changes for Akka.NET 1.4.7, please [see the 1.4.7 milestone](https://github.com/akkadotnet/akka.net/milestone/38).
+
 #### 1.4.6 May 12 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 

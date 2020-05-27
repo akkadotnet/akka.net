@@ -121,6 +121,8 @@ namespace Akka.Tests.Actor.Scheduler
             }
         }
 
+        // Might be racy, failed at least once in Azure Pipelines.
+        // Passed 500 consecutive local test runs with no fail with very heavy load without modification
         [Fact]
         public void When_canceling_existing_running_repeaters_by_scheduling_the_cancellation_ahead_of_time_Then_their_future_actions_should_not_be_invoked()
         {

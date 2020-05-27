@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
@@ -67,7 +68,7 @@ namespace Akka.Tests.Actor
             var config = ConfigurationFactory.ParseString("akka.log-config-on-start = on")
                 .WithFallback(DefaultConfig);
 
-            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config);
+            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config, ActorSystemSetup.Empty);
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
@@ -86,7 +87,7 @@ namespace Akka.Tests.Actor
             var config = ConfigurationFactory.ParseString("akka.log-config-on-start = off")
                 .WithFallback(DefaultConfig);
 
-            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config);
+            var system = new ActorSystemImpl(Guid.NewGuid().ToString(), config, ActorSystemSetup.Empty);
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 

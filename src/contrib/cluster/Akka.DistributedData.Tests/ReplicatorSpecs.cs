@@ -493,11 +493,7 @@ namespace Akka.DistributedData.Tests
         public async Task Bugfix_4367_ORMultiValueDictionary_WithValueDeltas_DeltaGroup_Should_Cast_To_ORSet()
         {
             await InitCluster();
-            await UpdateORMultiValueDictionaryNodes();
-        }
 
-        private async Task UpdateORMultiValueDictionaryNodes()
-        {
             var changedProbe2 = CreateTestProbe(_sys2);
             _replicator2.Tell(Dsl.Subscribe(_keyJ, changedProbe2.Ref));
 
@@ -505,75 +501,85 @@ namespace Akka.DistributedData.Tests
             _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
 
             // Scenario 1 - add 1 entry with multiple values to all nodes
-
             var keyA = "A";
             var entryA = ImmutableHashSet<string>.Empty.Add("1").Add("2");
-            var m1 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
-                _keyJ,
-                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                new WriteMajority(_timeOut),
-                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
+            await AwaitAssertAsync(async () => {
+                var m1 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                    _keyJ,
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                    new WriteMajority(_timeOut),
+                    s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
 
-            var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
+                var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
 
-            var node3EntriesA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node3EntriesA[keyA].Should().BeEquivalentTo(entryA);
+                var node3EntriesA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node3EntriesA[keyA].Should().BeEquivalentTo(entryA);
+            });
 
             // Scenario 2 - add 2 entries to all nodes
             var valuesBC = ImmutableDictionary<string, IImmutableSet<string>>.Empty
                 .Add("B", ImmutableHashSet<string>.Empty.Add("1").Add("4"))
                 .Add("C", ImmutableHashSet<string>.Empty.Add("0"));
+            await AwaitAssertAsync(async () =>
+            {
+                var m2 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                    _keyJ,
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                    new WriteMajority(_timeOut),
+                    s => s.SetItems(Cluster.Cluster.Get(_sys1), valuesBC.Keys.First(), valuesBC.Values.First())
+                        .SetItems(Cluster.Cluster.Get(_sys1), valuesBC.Keys.Last(), valuesBC.Values.Last())));
 
-            var m2 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
-                _keyJ,
-                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                new WriteMajority(_timeOut),
-                s => s.SetItems(Cluster.Cluster.Get(_sys1), valuesBC.Keys.First(), valuesBC.Values.First())
-                    .SetItems(Cluster.Cluster.Get(_sys1), valuesBC.Keys.Last(), valuesBC.Values.Last())));
+                var node2EntriesBC = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node2EntriesBC.Count.Should().Be(3);
 
-            var node2EntriesBC = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node2EntriesBC.Count.Should().Be(3);
-
-            var node3EntriesBC = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node3EntriesBC.Count.Should().Be(3);
+                var node3EntriesBC = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node3EntriesBC.Count.Should().Be(3);
+            });
 
             // Scenario 3 - modify set with existing items in it
             var entryA1 = entryA.Add("4");
+            ORMultiValueDictionary<string, string> node2EntriesBCA = null;
+            await AwaitAssertAsync(async () =>
+            {
+                // Used to fail on Node2 and Node3 due to "Trying to merge two ORMultiValueDictionaries of different map sub-types" error here
+                var m3 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
+                    _keyJ,
+                    ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
+                    new WriteMajority(_timeOut),
+                    s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
 
-            // Used to fail on Node2 and Node3 due to "Trying to merge two ORMultiValueDictionaries of different map sub-types" error here
-            var m3 = await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
-                _keyJ,
-                ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                new WriteMajority(_timeOut),
-                s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
+                node2EntriesBCA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ);
+                node2EntriesBCA.Entries["A"].Should().BeEquivalentTo("1", "2", "4");
 
-            var node2EntriesBCA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ);
-            node2EntriesBCA.Entries["A"].Should().BeEquivalentTo("1", "2", "4");
-
-            var node3EntriesBCA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node3EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4");
+                var node3EntriesBCA = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node3EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4");
+            });
 
             // Trigger update from Node2 back to Node 1
             var changedProbe1 = CreateTestProbe(_sys1);
             _replicator1.Tell(Dsl.Subscribe(_keyJ, changedProbe1.Ref));
-
             var entryA2 = entryA1.Add("5");
-            var m4 = await _replicator2.Ask<UpdateSuccess>(Dsl.Update(
-                _keyJ,
-                node2EntriesBCA, // use the last value we received
-                new WriteMajority(_timeOut),
-                s => s.SetItems(Cluster.Cluster.Get(_sys2), keyA, entryA2)));
+            await AwaitAssertAsync(async () =>
+            {
+                var m4 = await _replicator2.Ask<UpdateSuccess>(Dsl.Update(
+                    _keyJ,
+                    node2EntriesBCA, // use the last value we received
+                    new WriteMajority(_timeOut),
+                    s => s.SetItems(Cluster.Cluster.Get(_sys2), keyA, entryA2)));
 
-            var node1EntriesBCA = changedProbe1.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
-            node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4", "5");
+                var node1EntriesBCA = changedProbe1.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
+                node1EntriesBCA["A"].Should().BeEquivalentTo("1", "2", "4", "5");
+            });
         }
 
 
         protected override void BeforeTermination()
         {
             Shutdown(_sys1);
+            Shutdown(_sys2);
             Shutdown(_sys3);
+            GC.Collect();
         }
 
     }
