@@ -16,7 +16,7 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
     steps:
-      - task: UseDotNet@3
+      - task: UseDotNet@2
         displayName: 'Use .NET Core SDK 3.1.100'
         inputs:
           packageType: sdk
