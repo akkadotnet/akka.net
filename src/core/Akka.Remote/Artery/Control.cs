@@ -246,11 +246,16 @@ namespace Akka.Remote.Artery
         GraphStageWithMaterializedValue<FlowShape<IOutboundEnvelope, IOutboundEnvelope>, IOutboundControlIngress>
     {
         public IOutboundContext OutboundContext { get; }
-        public ObjectPool<ReusableOutboundEnvelope> OutboundEnvelopePool { get; }
+        // ARTERY: ObjectPool isn't implemented
+        // public ObjectPool<ReusableOutboundEnvelope> OutboundEnvelopePool { get; }
         public override FlowShape<IOutboundEnvelope, IOutboundEnvelope> Shape { get; }
         public Inlet<IOutboundEnvelope> Inlet { get; } = new Inlet<IOutboundEnvelope>("OutboundControlJunction.in");
         public Outlet<IOutboundEnvelope> Outlet { get; } = new Outlet<IOutboundEnvelope>("OutboundControlJunction.in");
 
-
+        public override ILogicAndMaterializedValue<IOutboundControlIngress> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            // ARTERY: Incomplete port
+            throw new NotImplementedException();
+        }
     }
 }
