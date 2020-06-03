@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Remote.Transport;
 using Akka.Streams;
 using Akka.Streams.Actors;
 using Akka.Streams.Util;
@@ -54,8 +55,7 @@ namespace Akka.Remote.Artery
 
         Task<Done> CompleteHandshake(UniqueAddress peer);
 
-        // ARTERY: ArterySettings is implemented in another PR
-        // ArterySettings Settings { get; }
+        ArterySettings Settings { get; }
 
         void PublishDropped(IInboundEnvelope inbound, string reason);
     }
@@ -245,11 +245,9 @@ namespace Akka.Remote.Artery
         /// <returns></returns>
         bool IsOrdinaryMessageStreamActive();
 
-        // ARTERY: IControlMessageSubject is not implemented yet
-        // IControlMessageSubject ControlSubject { get; }
+        IControlMessageSubject ControlSubject { get; }
 
-        // ARTERY: ArterySettings is implemented in another PR
-        // ArterySettings Settings { get; }
+        ArterySettings Settings { get; }
     }
 
     internal class FlushOnShutdown : ReceiveActor
@@ -351,8 +349,7 @@ namespace Akka.Remote.Artery
         // ARTERY: RemotingFlightRecorder isn't implemented yet
         // private readonly RemotingFlightRecorder _flightRecorder;
 
-        // ARTERY: ArterySettings is implemented in another PR
-        // private readonly ArterySettings _settings;
+        public ArterySettings Settings { get; }
 
         // ARTERY: InboundCompressionImpl isn't implemented
         // private readonly InboundCompressionImpl _inboundCompression;
@@ -390,6 +387,28 @@ namespace Akka.Remote.Artery
         // ARTERY: SharedTestState isn't implemented
         // internal readonly SharedTestState testState = new SharedTestState();
 
+        protected int InboundLanes { get; }
+        private bool LargeMessageChannelEnabled { get; }
+        private WildcardIndex<NotUsed> PriorityMessageDestinations { get; }
+
+        // ARTERY: RestartCounter isn't implemented
+        // private RestartCounter RestartCounter { get; }
+
+        // ARTERY: EnvelopeBufferPool isn't implemented
+        // protected EnvelopeBufferPool EnvelopeBufferPool { get; }
+
+        // ARTERY: EnvelopeBufferPool isn't implemented
+        // protected EnvelopeBufferPool LargeEnvelopeBufferPool { get; }
+
+        // ARTERY: BufferPool isn't implemented
+        // private BufferPool<ReusableInboundEnvelope> InboundEnvelopePool { get; }
+
+        // The outboundEnvelopePool is shared among all outbound associations
+        // ARTERY: BufferPool isn't implemented
+        // private BufferPool<ReusableOutboundEnvelope> OutboundEnvelopePool { get; }
+
+        private AssociationRegistry AssociationRegistry { get; }
+
         public ArteryTransport(ExtendedActorSystem system, RemoteActorRefProvider provider) : base(system, provider)
         { 
             Log = Logging.GetLogger(system, GetType());
@@ -398,8 +417,7 @@ namespace Akka.Remote.Artery
             // _flightRecorder = new RemotingFlightRecorder(system);
             // Log.Debug($"Using flight recorder {_flightRecorder}");
 
-            // ARTERY: ArterySettings is implemented in another PR
-            // _settings = Provider.RemoteSettings.Artery;
+            Settings = new ArterySettings(Provider.RemoteSettings.Config);
 
             /**
              * Compression tables must be created once, such that inbound lane restarts don't cause dropping of the tables.
@@ -407,14 +425,49 @@ namespace Akka.Remote.Artery
              * 
              * Use `inboundCompressionAccess` (provided by the materialized `Decoder`) to call into the compression infrastructure.
              */
-            // ARTERY: ArterySettings is implemented in another PR
             // ARTERY: InboundCompressionImpl isn't implemented
             // ARTERY: RemotingFlightRecorder isn't implemented yet
             /*
-            var _inboundCompressions = _settings.Advanced.Compression.Enabled ?
-                new InboundCompressionImpl(system, this, _settings.Advanced.Compression, _flightRecorder) :
+            var _inboundCompressions = Settings.Advanced.Compression.Enabled ?
+                new InboundCompressionImpl(system, this, Settings.Advanced.Compression, _flightRecorder) :
                 new NoInboundCompression;
             */
+
+            InboundLanes = Settings.Advanced.InboundLanes;
+
+            LargeMessageChannelEnabled =
+                !Settings.LargeMessageDestinations.WildcardTree.IsEmpty ||
+                !Settings.LargeMessageDestinations.DoubleWildcardTree.IsEmpty;
+
+            PriorityMessageDestinations = new WildcardIndex<NotUsed>()
+                // These destinations are not defined in configuration because it should not
+                // be possible to abuse the control channel
+                .Insert(new[] { "system", "remote-watcher" }, NotUsed.Instance)
+                // these belongs to cluster and should come from there
+                .Insert(new[] { "system", "cluster", "core", "daemon", "heartbeatSender" }, NotUsed.Instance)
+                .Insert(new[] { "system", "cluster", "core", "daemon", "crossDcHeartbeatSender" }, NotUsed.Instance)
+                .Insert(new[] { "system", "cluster", "heartbeatReceiver" }, NotUsed.Instance);
+
+            // ARTERY: RestartCounter isn't implemented
+            // RestartCounter = new RestartCounter(Settings.Advanced.InboundMaxRestarts, Settings.Advanced.InboundRestartTimeout);
+
+            // ARTERY: EnvelopeBufferPool isn't implemented
+            // EnvelopeBufferPool = new EnvelopeBufferPool(Settings.Advanced.MaximumFrameSize, Settings.Advanced.BufferPoolSize);
+
+            // ARTERY: EnvelopeBufferPool isn't implemented
+            // LargeEnvelopeBufferPool = LargeMessageChannelEnabled ?
+            //     new EnvelopeBufferPool(Settings.Advanced.MaximumLargeFrameSize, Settings.Advanced.LargeBufferPoolSize) :
+            //     new EnvelopeBufferPool(0, 2);
+
+            // ARTERY: BufferPool isn't implemented
+            // InboundEnvelopePool = ReusableInboundEnvelope.CreateObjectPool(capacity: 16);
+
+            // ARTERY: BufferPool isn't implemented
+            // OutboundEnvelopePool = ReusableOutboundEnvelope.CreateObjectPool(
+            //     capacity: Settings.Advanced.OutboundMessageQueueSize * Settings.Advanced.OutboundLanes * 3);
+
+            // ======================== last line
+            AssociationRegistry = new AssociationRegistry();
         }
 
         public IOutboundContext Association(Address remoteAddress)
