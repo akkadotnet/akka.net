@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Streams;
+using Akka.Streams.Actors;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -340,16 +343,79 @@ namespace Akka.Remote.Artery
         private volatile UniqueAddress _localAddress;
         private volatile UniqueAddress _bindAddress;
         private volatile ImmutableHashSet<Address> _addresses;
-        private volatile ControlMessageSubject _controlSubject;
+        private volatile IControlMessageSubject _controlSubject;
 
         protected volatile ActorMaterializer Materializer;
         protected volatile ActorMaterializer ControlMaterializer;
 
+        // ARTERY: RemotingFlightRecorder isn't implemented yet
+        // private readonly RemotingFlightRecorder _flightRecorder;
 
-        public UniqueAddress LocalAddress => throw new NotImplementedException();
+        // ARTERY: ArterySettings is implemented in another PR
+        // private readonly ArterySettings _settings;
+
+        // ARTERY: InboundCompressionImpl isn't implemented
+        // private readonly InboundCompressionImpl _inboundCompression;
+
+        // ARTERY: InboundCompressionAccess isn't implemented
+        // private volatile Option<InboundCompressionAccess> _inboundCompressionAccess = Option<InboundCompressionAccess>.None;
+
+        // Only access compression tables via the CompressionAccess
+        // ARTERY: InboundCompressionAccess isn't implemented
+        /*
+        public Option<InboundCompressionAccess> InboundCompressionAccess {
+            get => Volatile.Read(ref _inboundCompressionAccess);
+            set => Volatile.Write(ref _inboundCompressionAccess, value);
+        }
+        */
+
+        public UniqueAddress BindAddress => Volatile.Read(ref _bindAddress);
+        public UniqueAddress LocalAddress => Volatile.Read(ref _localAddress);
+        public override Address DefaultAddress => _localAddress?.Address;
+        public override ISet<Address> Addresses => Volatile.Read(ref _addresses);
+        public override Address LocalAddressForRemote(Address remote)
+            => DefaultAddress;
+
+        protected readonly SharedKillSwitch KillSwitch = KillSwitches.Shared("transportKillSwitch");
+
+        // keyed by the streamId
+        // ARTERY: InboundStreamMatValues isn't implemented
+        /*
+        protected readonly AtomicReference<ImmutableDictionary<int, InboundStreamMatValues<LifecycleState>>> =
+            new AtomicReference<ImmutableDictionary<int, InboundStreamMatValues<LifecycleState>>>();
+        */
+
+        internal readonly AtomicBoolean HasBeenShutdown = new AtomicBoolean(false);
+
+        // ARTERY: SharedTestState isn't implemented
+        // internal readonly SharedTestState testState = new SharedTestState();
 
         public ArteryTransport(ExtendedActorSystem system, RemoteActorRefProvider provider) : base(system, provider)
-        { }
+        { 
+            Log = Logging.GetLogger(system, GetType());
+
+            // ARTERY: RemotingFlightRecorder isn't implemented yet
+            // _flightRecorder = new RemotingFlightRecorder(system);
+            // Log.Debug($"Using flight recorder {_flightRecorder}");
+
+            // ARTERY: ArterySettings is implemented in another PR
+            // _settings = Provider.RemoteSettings.Artery;
+
+            /**
+             * Compression tables must be created once, such that inbound lane restarts don't cause dropping of the tables.
+             * However are the InboundCompressions are owned by the Decoder operator, and any call into them must be looped through the Decoder!
+             * 
+             * Use `inboundCompressionAccess` (provided by the materialized `Decoder`) to call into the compression infrastructure.
+             */
+            // ARTERY: ArterySettings is implemented in another PR
+            // ARTERY: InboundCompressionImpl isn't implemented
+            // ARTERY: RemotingFlightRecorder isn't implemented yet
+            /*
+            var _inboundCompressions = _settings.Advanced.Compression.Enabled ?
+                new InboundCompressionImpl(system, this, _settings.Advanced.Compression, _flightRecorder) :
+                new NoInboundCompression;
+            */
+        }
 
         public IOutboundContext Association(Address remoteAddress)
         {
