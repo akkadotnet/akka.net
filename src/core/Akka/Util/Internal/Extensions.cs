@@ -61,7 +61,7 @@ namespace Akka.Util.Internal
             var j = 0;
             while (true)
             {
-                if (j > path.Length) yield break;
+                if (j >= path.Length) yield break;
                 else if (path[j] == '\"')
                 {
                     i = path.IndexOf('\"', j + 1);
