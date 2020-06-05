@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Streams.Tests")]
 [assembly: InternalsVisibleTo("Akka.Streams.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Benchmarks")]
+[assembly: InternalsVisibleTo("Akka.Remote")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
