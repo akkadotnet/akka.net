@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Remote.conf" />
+    <EmbeddedResource Include="Artery\reference.conf" />
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
