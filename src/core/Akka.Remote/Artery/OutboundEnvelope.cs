@@ -9,7 +9,7 @@ namespace Akka.Remote.Artery
     internal static class OutboundEnvelope
     {
         public static IOutboundEnvelope Create(Option<RemoteActorRef> recipient, object message, Option<IActorRef> sender)
-            => new ReusableOutboundEnvelope().Init(recipient, message, sender);
+            => ReusableOutboundEnvelope.Create(recipient, message, sender);
     }
 
     /// <summary>
@@ -34,6 +34,16 @@ namespace Akka.Remote.Artery
         // public static ObjectPool<ReusableOutboundEnvelope> CreateObjectPool(int capacity)
         //     => new ObjectPool<ReusableOutboundEnvelope>(capacity, () => new ReusableOutboundEnvelope(), env => env.Clear());
 
+        private ReusableOutboundEnvelope(
+            Option<RemoteActorRef> recipient, 
+            object message, 
+            Option<IActorRef> sender)
+        {
+            Recipient = recipient;
+            Message = message;
+            Sender = sender;
+        }
+
         public Option<RemoteActorRef> Recipient { get; private set; } = Option<RemoteActorRef>.None;
         public object Message { get; private set; } = null;
         public Option<IActorRef> Sender { get; private set; } = Option<IActorRef>.None;
@@ -46,7 +56,7 @@ namespace Akka.Remote.Artery
 
         public IOutboundEnvelope Copy()
         {
-            return new ReusableOutboundEnvelope().Init(Recipient, Message, Sender);
+            return new ReusableOutboundEnvelope(Recipient, Message, Sender);
         }
 
         internal void Clear()
@@ -56,12 +66,9 @@ namespace Akka.Remote.Artery
             Sender = Option<IActorRef>.None;
         }
 
-        internal ReusableOutboundEnvelope Init(Option<RemoteActorRef> recipient, object message, Option<IActorRef> sender)
+        public static ReusableOutboundEnvelope Create(Option<RemoteActorRef> recipient, object message, Option<IActorRef> sender)
         {
-            Recipient = recipient;
-            Message = message;
-            Sender = sender;
-            return this;
+            return new ReusableOutboundEnvelope(recipient, message, sender);
         }
 
         public override string ToString()
