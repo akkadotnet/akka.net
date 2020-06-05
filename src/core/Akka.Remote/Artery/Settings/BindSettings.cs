@@ -4,7 +4,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class BindSettings
+    internal sealed class BindSettings
     {
         public int Port { get; }
         public string Hostname { get; }

@@ -2,7 +2,7 @@
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class CompressionSettings
+    internal sealed class CompressionSettings
     {
         public bool Debug => false;
         public bool Enabled => ActorRefs.Max > 0 || Manifests.Max > 0;

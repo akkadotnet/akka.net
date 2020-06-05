@@ -3,7 +3,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class CanonicalSettings
+    internal sealed class CanonicalSettings
     {
         public int Port { get; }
         public string Hostname { get; }
