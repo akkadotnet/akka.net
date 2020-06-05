@@ -2,11 +2,39 @@
 using Akka.Configuration;
 using Akka.Util;
 using Akka.Remote.Artery.Settings;
+using Akka.Actor;
 
 namespace Akka.Remote.Artery
 {
     internal sealed class ArterySettings
     {
+        private static readonly Config DefaultArteryConfig = 
+            ConfigurationFactory.FromResource<ArterySettings>("Akka.Remote.Artery.reference.conf");
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <returns>TBD</returns>
+        public static Config DefaultConfig()
+            => DefaultArteryConfig;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="system">TBD</param>
+        /// <returns>TBD</returns>
+        public static ArterySettings Create(ActorSystem system)
+        {
+            // need to make sure the default artery settings are available
+            system.Settings.InjectTopLevelFallback(DefaultConfig());
+            var config = system.Settings.Config.GetConfig("akka.remote.artery");
+
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ArterySettings>("akka.remote.artery");
+
+            return new ArterySettings(config);
+        }
+
         private Config Config { get; }
 
         public bool Enabled { get; }
@@ -30,12 +58,8 @@ namespace Akka.Remote.Artery
 
         public AdvancedSettings Advanced { get; }
 
-        public ArterySettings(Config config)
+        private ArterySettings(Config config)
         {
-            Config = config.GetConfig("artery");
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<ArterySettings>("akka.remote.artery");
-
             Enabled = Config.GetBoolean("enabled");
             Canonical = new CanonicalSettings(Config);
             Bind = new BindSettings(Config, Canonical);
