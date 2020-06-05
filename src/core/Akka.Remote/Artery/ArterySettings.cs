@@ -3,6 +3,7 @@ using Akka.Configuration;
 using Akka.Util;
 using Akka.Remote.Artery.Settings;
 using Akka.Actor;
+using Akka.Streams;
 
 namespace Akka.Remote.Artery
 {
@@ -25,8 +26,11 @@ namespace Akka.Remote.Artery
         /// <returns>TBD</returns>
         public static ArterySettings Create(ActorSystem system)
         {
+            // need to make sure the default actor materializer settings are available
+            system.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+
             // need to make sure the default artery settings are available
-            system.Settings.InjectTopLevelFallback(DefaultConfig());
+            system.Settings.InjectTopLevelFallback(ArterySettings.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.remote.artery");
 
             if (config.IsNullOrEmpty())
