@@ -5,7 +5,7 @@ using Akka.Remote.Artery.Settings;
 
 namespace Akka.Remote.Artery
 {
-    internal class ArterySettings
+    internal sealed class ArterySettings
     {
         private Config Config { get; }
 

@@ -3,7 +3,7 @@ using Akka.Configuration;
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class ManifestsSettings
+    internal sealed class ManifestsSettings
     {
         public TimeSpan AdvertisementInterval { get; }
         public int Max { get; }

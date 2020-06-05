@@ -5,7 +5,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class AdvancedSettings
+    internal sealed class AdvancedSettings
     {
         public bool TestMode { get; }
         public string Dispatcher { get; }

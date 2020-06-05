@@ -4,7 +4,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class TcpSettings
+    internal sealed class TcpSettings
     {
         public TimeSpan ConnectionTimeout { get; }
         public string OutboundClientHostname { get; }

@@ -4,7 +4,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Settings
 {
-    internal class AeronSettings
+    internal sealed class AeronSettings
     {
         public bool LogAeronCounters { get; }
         public bool EmbeddedMediaDriver { get; }
