@@ -80,13 +80,13 @@ namespace Akka.Cluster
             public Akka.Cluster.ClusterEvent.CurrentClusterState Copy(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members = null, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy = null, Akka.Actor.Address leader = null, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap = null) { }
             public Akka.Actor.Address RoleLeader(string role) { }
         }
-        public interface IClusterDomainEvent { }
-        public interface IMemberEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        public interface IClusterDomainEvent : Akka.Event.IDeadLetterSuppression { }
+        public interface IMemberEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             Akka.Cluster.Member Member { get; }
         }
-        public interface IReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent { }
-        public sealed class LeaderChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        public interface IReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression { }
+        public sealed class LeaderChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             public LeaderChanged(Akka.Actor.Address leader) { }
             public Akka.Actor.Address Leader { get; }
@@ -117,7 +117,7 @@ namespace Akka.Cluster
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
         }
-        public abstract class MemberStatusChange : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IMemberEvent
+        public abstract class MemberStatusChange : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IMemberEvent, Akka.Event.IDeadLetterSuppression
         {
             protected readonly Akka.Cluster.Member _member;
             protected MemberStatusChange(Akka.Cluster.Member member, Akka.Cluster.MemberStatus validStatus) { }
@@ -134,7 +134,7 @@ namespace Akka.Cluster
         {
             public MemberWeaklyUp(Akka.Cluster.Member member) { }
         }
-        public abstract class ReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IReachabilityEvent
+        public abstract class ReachabilityEvent : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Cluster.ClusterEvent.IReachabilityEvent, Akka.Event.IDeadLetterSuppression
         {
             protected ReachabilityEvent(Akka.Cluster.Member member) { }
             public Akka.Cluster.Member Member { get; }
@@ -146,7 +146,7 @@ namespace Akka.Cluster
         {
             public ReachableMember(Akka.Cluster.Member member) { }
         }
-        public sealed class RoleLeaderChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent
+        public sealed class RoleLeaderChanged : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             public RoleLeaderChanged(string role, Akka.Actor.Address leader) { }
             public Akka.Actor.Address Leader { get; }
