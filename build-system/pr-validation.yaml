@@ -21,6 +21,11 @@ jobs:
       vmImage: vs2017-win2016
       demands: Cmd
     steps:
+      - task: UseDotNet@2
+        displayName: 'Use .NET Core SDK 3.1.100'
+        inputs:
+          packageType: sdk
+          version: 3.1.100
       - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
         clean: false  # whether to fetch clean each time
         submodules: recursive  # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
