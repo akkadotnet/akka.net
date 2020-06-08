@@ -133,7 +133,7 @@ namespace Akka.TestKit
             {
                 var boostrap = config.Get<BootstrapSetup>();
                 var configWithDefaultFallback = boostrap.HasValue
-                    ? boostrap.Value.Config.Select(c => c.WithFallback(_defaultConfig))
+                    ? boostrap.Value.Config.Select(c => c == _defaultConfig ? c : c.WithFallback(_defaultConfig))
                     : _defaultConfig;
 
                 var newBootstrap = BootstrapSetup.Create().WithConfig(configWithDefaultFallback.Value);
