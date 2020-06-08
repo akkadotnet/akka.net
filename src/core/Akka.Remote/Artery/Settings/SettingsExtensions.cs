@@ -7,8 +7,10 @@ namespace Akka.Remote.Artery.Settings
     internal static class SettingsExtensions
     {
         public static string GetHostname(this Config config, string key)
+            => config.GetString(key).GetHostName();
+
+        public static string GetHostName(this string value)
         {
-            var value = config.GetString(key);
             switch (value)
             {
                 case "<getHostAddress>":
@@ -29,8 +31,10 @@ namespace Akka.Remote.Artery.Settings
         }
 
         public static Transport GetTransport(this Config config, string key)
+            => config.GetString(key).ToLowerInvariant().GetTransport();
+
+        public static Transport GetTransport(this string transport)
         {
-            var transport = config.GetString(key).ToLowerInvariant();
             switch (transport)
             {
                 case "aeron-udp":
