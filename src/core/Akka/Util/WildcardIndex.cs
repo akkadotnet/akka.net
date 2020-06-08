@@ -7,21 +7,21 @@ namespace Akka.Util
 {
     internal sealed class WildcardIndex<T> : IEquatable<WildcardIndex<T>> where T : class
     {
-        private readonly WildcardTree<T> _wildcardTree;
-        private readonly WildcardTree<T> _doubleWildcardTree;
+        public WildcardTree<T> WildcardTree { get; }
+        public WildcardTree<T> DoubleWildcardTree { get; }
 
-        public bool IsEmpty => _wildcardTree.IsEmpty && _doubleWildcardTree.IsEmpty;
+        public bool IsEmpty => WildcardTree.IsEmpty && DoubleWildcardTree.IsEmpty;
 
         public WildcardIndex()
         {
-            _wildcardTree = new WildcardTree<T>();
-            _doubleWildcardTree = new WildcardTree<T>();
+            WildcardTree = new WildcardTree<T>();
+            DoubleWildcardTree = new WildcardTree<T>();
         }
 
         private WildcardIndex(WildcardTree<T> singleWildcard, WildcardTree<T> doubleWildcard)
         {
-            _wildcardTree = singleWildcard;
-            _doubleWildcardTree = doubleWildcard;
+            WildcardTree = singleWildcard;
+            DoubleWildcardTree = doubleWildcard;
         }
 
         public WildcardIndex<T> Insert(IEnumerable<string> elems, T data)
@@ -31,31 +31,31 @@ namespace Akka.Util
             switch(elems.Last())
             {
                 case "**":
-                    return new WildcardIndex<T>(_wildcardTree, _doubleWildcardTree.Insert(elems.GetEnumerator(), data));
+                    return new WildcardIndex<T>(WildcardTree, DoubleWildcardTree.Insert(elems.GetEnumerator(), data));
                 default:
-                    return new WildcardIndex<T>(_wildcardTree.Insert(elems.GetEnumerator(), data), _doubleWildcardTree);
+                    return new WildcardIndex<T>(WildcardTree.Insert(elems.GetEnumerator(), data), DoubleWildcardTree);
             }
         }
 
         public T Find(IEnumerable<string> elems)
         {
-            if(_wildcardTree.IsEmpty)
+            if(WildcardTree.IsEmpty)
             {
-                if (_doubleWildcardTree.IsEmpty)
+                if (DoubleWildcardTree.IsEmpty)
                     return default;
-                return _doubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
+                return DoubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
             }
 
-            var withSingleWildcard = _wildcardTree.FindWithSingleWildcard(elems.GetEnumerator());
+            var withSingleWildcard = WildcardTree.FindWithSingleWildcard(elems.GetEnumerator());
             if (!withSingleWildcard.IsEmpty)
                 return withSingleWildcard.Data;
-            return _doubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
+            return DoubleWildcardTree.FindWithTerminalDoubleWildcard(elems.GetEnumerator(), null).Data;
         }
 
         public bool Equals(WildcardIndex<T> other)
         {
-            return _wildcardTree.Equals(other._wildcardTree) 
-                && _doubleWildcardTree.Equals(other._doubleWildcardTree);
+            return WildcardTree.Equals(other.WildcardTree) 
+                && DoubleWildcardTree.Equals(other.DoubleWildcardTree);
         }
 
         public override bool Equals(object obj)
@@ -71,8 +71,8 @@ namespace Akka.Util
             unchecked
             {
                 var hashCode = -872755323;
-                hashCode = hashCode * -1521134295 + _wildcardTree.GetHashCode();
-                hashCode = hashCode * -1521134295 + _doubleWildcardTree.GetHashCode();
+                hashCode = hashCode * -1521134295 + WildcardTree.GetHashCode();
+                hashCode = hashCode * -1521134295 + DoubleWildcardTree.GetHashCode();
                 return hashCode;
             }
         }
