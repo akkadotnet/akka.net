@@ -33,7 +33,9 @@ namespace Akka.Remote.Artery.Settings
             var transport = config.GetString(key).ToLowerInvariant();
             switch (transport)
             {
-                case "aeron-udp": return Transport.AeronUpd;
+                case "aeron-udp":
+                    throw new ConfigurationException("Aeron transport is not supported yet.");
+                    // return Transport.AeronUpd;
                 case "tcp": return Transport.Tcp;
                 case "tls-tcp": return Transport.TlsTcp;
                 default:
