@@ -222,52 +222,30 @@ namespace Akka.Remote
         public static readonly string AkkaScheme;
         public RemoteSettings(Akka.Configuration.Config config) { }
         public System.Collections.Immutable.ImmutableDictionary<string, string> Adapters { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan BackoffPeriod { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan CommandAckTimeout { get; }
         public Akka.Configuration.Config Config { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public string Dispatcher { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan FlushWait { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan InitialSysMsgDeliveryTimeout { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public int LogBufferSizeExceeding { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.Nullable<int> LogFrameSizeExceeding { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public bool LogReceive { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public bool LogSend { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.Nullable<System.TimeSpan> QuarantineDuration { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan QuarantineSilentSystemTimeout { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public string RemoteLifecycleEventsLogLevel { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan RetryGateClosedFor { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan ShutdownTimeout { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan StartupTimeout { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan SysMsgAckTimeout { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public int SysMsgBufferSize { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public int SysResendLimit { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.TimeSpan SysResendTimeout { get; }
         public System.Collections.Immutable.ImmutableList<string> TransportNames { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Remote.RemoteSettings.TransportSettings> Transports { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public System.Collections.Immutable.ImmutableHashSet<string> TrustedSelectionPaths { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public bool UntrustedMode { get; }
-        [System.ObsoleteAttribute("Classic remoting is deprecated, use Artery")]
         public bool UsePassiveConnections { get; }
         public bool UseUnsafeRemoteFeaturesWithoutCluster { get; }
         public bool WarnAboutDirectUse { get; }
@@ -277,7 +255,6 @@ namespace Akka.Remote
         public System.TimeSpan WatchHeartBeatInterval { get; }
         public System.TimeSpan WatchHeartbeatExpectedResponseAfter { get; }
         public System.TimeSpan WatchUnreachableReaperInterval { get; }
-        [System.ObsoleteAttribute("deprecated")]
         public Akka.Actor.Props ConfigureDispatcher(Akka.Actor.Props props) { }
         public class TransportSettings
         {
