@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using Akka.Configuration;
 using Akka.Util;
 using Akka.Remote.Artery.Settings;
@@ -9,42 +9,12 @@ namespace Akka.Remote.Artery
 {
     internal sealed class ArterySettings
     {
-        private static readonly Config DefaultArteryConfig = 
-            ConfigurationFactory.FromResource<ArterySettings>("Akka.Remote.Artery.reference.conf");
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public static Config DefaultConfig()
-            => DefaultArteryConfig;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
-        public static ArterySettings Create(ActorSystem system)
-        {
-            // need to make sure the default actor materializer settings are available
-            system.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
-
-            // need to make sure the default artery settings are available
-            system.Settings.InjectTopLevelFallback(ArterySettings.DefaultConfig());
-            var config = system.Settings.Config.GetConfig("akka.remote.artery");
-
-            if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<ArterySettings>("akka.remote.artery");
-
-            return new ArterySettings(config);
-        }
-
-        private Config Config { get; }
+        private readonly Config _config;
 
         public bool Enabled { get; }
         public CanonicalSettings Canonical { get; }
         public BindSettings Bind { get; }
-        public WildcardIndex<NotUsed> LargeMessageDestinations { get; }
+        internal WildcardIndex<NotUsed> LargeMessageDestinations { get; }
         public string SslEngineProviderClassName { get; }
         public bool UntrustedMode { get; }
         public ImmutableHashSet<string> TrustedSelectionPaths { get; }
@@ -62,27 +32,29 @@ namespace Akka.Remote.Artery
 
         public AdvancedSettings Advanced { get; }
 
-        private ArterySettings(Config config)
+        internal ArterySettings(Config config)
         {
-            Enabled = Config.GetBoolean("enabled");
+            _config = config;
 
+            Enabled = _config.GetBoolean("enabled");
             Canonical = new CanonicalSettings(_config.GetConfig("canonical"));
             Bind = new BindSettings(_config.GetConfig("bind"), Canonical);
+
             LargeMessageDestinations = new WildcardIndex<NotUsed>();
-            var destinations = Config.GetStringList("large-message-destinations");
+            var destinations = _config.GetStringList("large-message-destinations");
             foreach (var entry in destinations)
             {
                 var segments = entry.Split('/');
                 LargeMessageDestinations.Insert(segments, NotUsed.Instance);
             }
 
-            SslEngineProviderClassName = Config.GetString("ssl.ssl-engine-provider");
-            UntrustedMode = Config.GetBoolean("untrusted-mode");
-            TrustedSelectionPaths = Config.GetStringList("trusted-selection-paths").ToImmutableHashSet();
-            LogReceive = Config.GetBoolean("log-received-messages");
-            LogSend = Config.GetBoolean("log-sent-messages");
+            SslEngineProviderClassName = _config.GetString("ssl.ssl-engine-provider");
+            UntrustedMode = _config.GetBoolean("untrusted-mode");
+            TrustedSelectionPaths = _config.GetStringList("trusted-selection-paths").ToImmutableHashSet();
+            LogReceive = _config.GetBoolean("log-received-messages");
+            LogSend = _config.GetBoolean("log-sent-messages");
 
-            Transport = config.GetTransport("transport");
+            Transport = _config.GetTransport("transport");
 
             // ARTERY: ArteryTransport isn't ported yet.
             //Version = ArteryTransport.HighestVersion;
@@ -98,7 +70,7 @@ namespace Akka.Remote.Artery
                         actor-refs.max = 0
                         manifests.max = 0
                     }")
-                .WithFallback(Config));
+                .WithFallback(_config));
         }
     }
 }
