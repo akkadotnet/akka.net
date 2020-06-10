@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="RemoteSettings.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -7,9 +7,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Remote.Artery;
+using Akka.Util;
 
 namespace Akka.Remote
 {
@@ -90,137 +93,220 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public Config Config { get; private set; }
+        public Config Config { get; }
+
+        internal ArterySettings Artery { get; }
+
+        public bool WarnAboutDirectUse { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public HashSet<string> TrustedSelectionPaths { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public bool LogReceive { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public bool UntrustedMode { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public bool LogSend { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public bool LogSend { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public int? LogFrameSizeExceeding { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public bool LogReceive { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public bool UntrustedMode { get; }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        // ARTERY: NOTE: this is very dangerous, there are TWO ways to retrieve UntrustedMode, the one above is, I assume, a backward compatibility property.
+        [Obsolete]
+        internal bool GetUntrustedMode {
+            get => Artery.Enabled ? Artery.UntrustedMode : UntrustedMode;
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public int LogBufferSizeExceeding { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public ImmutableHashSet<string> TrustedSelectionPaths { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string RemoteLifecycleEventsLogLevel { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public string RemoteLifecycleEventsLogLevel { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public string Dispatcher { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public string Dispatcher { get; }
+
+        [Obsolete("deprecated")]
+        public Props ConfigureDispatcher(Props props)
+        {
+            if(Artery.Enabled)
+            {
+                return Artery.Advanced.Dispatcher.Count() == 0 ? 
+                    props : props.WithDispatcher(Artery.Advanced.Dispatcher);
+            }
+            else
+            {
+                return Dispatcher.Count() == 0 ? props : props.WithDispatcher(Dispatcher);
+            }
+        }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan ShutdownTimeout { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan ShutdownTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TimeSpan FlushWait { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan FlushWait { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IList<string> TransportNames { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan StartupTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public IDictionary<string, string> Adapters { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan RetryGateClosedFor { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public TransportSettings[] Transports { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan BackoffPeriod { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan RetryGateClosedFor { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool UsePassiveConnections { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int SysMsgBufferSize { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public int SysResendLimit { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan SysResendTimeout { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan QuarantineSilentSystemTimeout { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan SysMsgAckTimeout { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan? QuarantineDuration { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan StartupTimeout { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan CommandAckTimeout { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public bool UsePassiveConnections { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Config WatchFailureDetectorConfig { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public string WatchFailureDetectorImplementationClass { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan WatchHeartBeatInterval { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan WatchUnreachableReaperInterval { get; set; }
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan BackoffPeriod { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public int LogBufferSizeExceeding { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan SysMsgAckTimeout { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan SysResendTimeout { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public int SysResendLimit { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public int SysMsgBufferSize { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan InitialSysMsgDeliveryTimeout { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan QuarantineSilentSystemTimeout { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan? QuarantineDuration { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        [Obsolete("Classic remoting is deprecated, use Artery")]
+        public TimeSpan CommandAckTimeout { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public bool UseUnsafeRemoteFeaturesWithoutCluster { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public bool WarnUnsafeWatchWithoutCluster { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public Config WatchFailureDetectorConfig { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public string WatchFailureDetectorImplementationClass { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan WatchHeartBeatInterval { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan WatchUnreachableReaperInterval { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan WatchHeartbeatExpectedResponseAfter { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ImmutableList<TransportSettings> Transports { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ImmutableDictionary<string, string> Adapters { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public ImmutableList<string> TransportNames { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         private Config TransportConfigFor(string transportName)
         {
             return Config.GetConfig(transportName);
@@ -253,24 +339,24 @@ namespace Akka.Remote
                     throw ConfigurationException.NullOrEmptyConfig<TransportSettings>();
 
                 TransportClass = config.GetString("transport-class", null);
-                Adapters = config.GetStringList("applied-adapters", new string[] { }).Reverse().ToList();
+                Adapters = config.GetStringList("applied-adapters", new string[] { }).Reverse().ToImmutableList();
                 Config = config;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Config Config { get; set; }
+            public Config Config { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public IList<string> Adapters { get; set; }
+            public ImmutableList<string> Adapters { get; }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public string TransportClass { get; set; }
+            public string TransportClass { get; }
         }
 
         private static IDictionary<string, string> ConfigToMap(Config cfg)
