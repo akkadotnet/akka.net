@@ -39,7 +39,7 @@ akka {
   actor {
     provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
   }
-  remote {
+  remote.classic {
     dot-netty.tcp {
       applied-adapters = []
       transport-protocol = tcp

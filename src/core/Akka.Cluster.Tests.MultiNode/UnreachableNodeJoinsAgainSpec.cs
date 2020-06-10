@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
             Fourth = Role("fourth");
-            CommonConfig = ConfigurationFactory.ParseString("akka.remote.log-remote-lifecycle-events = off")
+            CommonConfig = ConfigurationFactory.ParseString("akka.remote.classic.log-remote-lifecycle-events = off")
                 .WithFallback(DebugConfig(false)).WithFallback(MultiNodeClusterSpec.ClusterConfig());
             TestTransport = true; // need to use the throttler and blackhole
         }
@@ -209,8 +209,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
 
                 // create new ActorSystem with same host:port
-                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp{
-                    hostname = "+ victimAddress.Host + @"
+                var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString(@"akka.remote.classic.dot-netty.tcp{
+                    hostname = " + victimAddress.Host + @"
                     port = "+ victimAddress.Port + @"
                 }").WithFallback(Sys.Settings.Config));
 

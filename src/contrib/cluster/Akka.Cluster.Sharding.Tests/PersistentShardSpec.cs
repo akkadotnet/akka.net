@@ -43,7 +43,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.remote.classic.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
         }

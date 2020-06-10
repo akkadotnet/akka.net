@@ -45,7 +45,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }}
                     akka.loglevel = INFO
                     akka.actor.provider = cluster
-                    akka.remote.log-remote-lifecycle-events = off
+                    akka.remote.classic.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.roles = [""backend""]
                     akka.cluster.sharding {{

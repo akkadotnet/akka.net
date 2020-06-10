@@ -13,11 +13,11 @@ namespace Akka.Remote.Tests.Performance
     public class ThreadPoolDispatcherRemoteMessagingThroughputSpec : TestTransportRemoteMessagingThroughputSpec
     {
         public static Config ThreadPoolDispatcherConfig => ConfigurationFactory.ParseString(@"
-            akka.remote.default-remote-dispatcher {
+            akka.remote.classic.default-remote-dispatcher {
               type = Dispatcher
             }
     
-            akka.remote.backoff-remote-dispatcher {
+            akka.remote.classic.backoff-remote-dispatcher {
               type = Dispatcher
             }
         ");

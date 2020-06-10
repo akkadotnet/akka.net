@@ -34,7 +34,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.remote.retry-gate-closed-for = 3s
+                    akka.remote.classic.retry-gate-closed-for = 3s
                     akka.cluster.auto-down-unreachable-after = 1s
                     akka.cluster.failure-detector.threshold = 4
                 "))

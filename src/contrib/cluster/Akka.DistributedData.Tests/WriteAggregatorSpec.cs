@@ -98,7 +98,7 @@ namespace Akka.DistributedData.Tests
 
         public WriteAggregatorSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString($@"
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            akka.remote.dot-netty.tcp.port = 0
+            akka.remote.classic.dot-netty.tcp.port = 0
             akka.cluster.distributed-data.durable.lmdb {{
                 dir = ""target/WriteAggregatorSpec-{DateTime.UtcNow.Ticks}-ddata""
                 map-size = 10MiB

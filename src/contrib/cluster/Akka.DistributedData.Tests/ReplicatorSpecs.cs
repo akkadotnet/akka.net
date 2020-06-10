@@ -32,7 +32,7 @@ namespace Akka.DistributedData.Tests
             SpecConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.remote.classic.dot-netty.tcp.port = 0")
                 .WithFallback(DistributedData.DefaultConfig());
         }
 

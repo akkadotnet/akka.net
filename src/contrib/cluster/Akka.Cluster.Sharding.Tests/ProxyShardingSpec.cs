@@ -66,7 +66,7 @@ namespace Akka.Cluster.Sharding.Tests
         public static Config GetConfig()
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                                                     akka.remote.dot-netty.tcp.port = 0")
+                                                     akka.remote.classic.dot-netty.tcp.port = 0")
 
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(DistributedData.DistributedData.DefaultConfig())

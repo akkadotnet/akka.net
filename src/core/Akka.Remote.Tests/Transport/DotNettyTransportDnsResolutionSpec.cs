@@ -76,11 +76,11 @@ namespace Akka.Remote.Tests.Transport
         public Config BuildConfig(string hostname, int? port = null, string publichostname = null, bool useIpv6 = false, bool enforceIpFamily = false)
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""")
-                .WithFallback("akka.remote.dot-netty.tcp.hostname =\"" + hostname + "\"")
-                .WithFallback("akka.remote.dot-netty.tcp.public-hostname =\"" + (publichostname ?? hostname) + "\"")
-                .WithFallback("akka.remote.dot-netty.tcp.port = " + (port ?? 0))
-                .WithFallback("akka.remote.dot-netty.tcp.enforce-ip-family = " + enforceIpFamily.ToString().ToLowerInvariant())
-                .WithFallback("akka.remote.dot-netty.tcp.dns-use-ipv6 = " + useIpv6.ToString().ToLowerInvariant())
+                .WithFallback("akka.remote.classic.dot-netty.tcp.hostname =\"" + hostname + "\"")
+                .WithFallback("akka.remote.classic.dot-netty.tcp.public-hostname =\"" + (publichostname ?? hostname) + "\"")
+                .WithFallback("akka.remote.classic.dot-netty.tcp.port = " + (port ?? 0))
+                .WithFallback("akka.remote.classic.dot-netty.tcp.enforce-ip-family = " + enforceIpFamily.ToString().ToLowerInvariant())
+                .WithFallback("akka.remote.classic.dot-netty.tcp.dns-use-ipv6 = " + useIpv6.ToString().ToLowerInvariant())
                 .WithFallback("akka.test.single-expect-default = 1s")
                 .WithFallback(Sys.Settings.Config);
         }

@@ -25,12 +25,12 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
                   akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = INFO
+                  akka.remote.classic.log-remote-lifecycle-events = INFO
                   ## Keep it tight, otherwise reestablishing a connection takes too much time
-                  akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-                  akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
+                  akka.remote.classic.transport-failure-detector.heartbeat-interval = 1 s
+                  akka.remote.classic.transport-failure-detector.acceptable-heartbeat-pause = 3 s
                   ## the acceptable pause is too long and therefore the test will fail, it pass when we use a lower value like the default one
-                  ## akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 60 s
+                  ## akka.remote.classic.watch-failure-detector.acceptable-heartbeat-pause = 60 s
             "));
 
             TestTransport = true;
@@ -148,7 +148,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
-                var freshConfig = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
+                var freshConfig = new StringBuilder().AppendLine("akka.remote.classic.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
                         .AppendLine("}").ToString();
 

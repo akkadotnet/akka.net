@@ -203,7 +203,7 @@ namespace Akka.Remote.Tests
     {
         public TransientSerializationErrorSpec()
             : base(ConfigurationFactory.ParseString(@"
-                akka.remote.dot-netty.tcp {
+                akka.remote.classic.dot-netty.tcp {
                     hostname = localhost
                     port = 0
                 }

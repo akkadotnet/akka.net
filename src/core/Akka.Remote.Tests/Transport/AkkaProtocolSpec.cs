@@ -59,7 +59,7 @@ namespace Akka.Remote.Tests.Transport
 
             config = ConfigurationFactory.ParseString(
                 @"akka{
-                    remote {
+                    remote.classic {
 
                     transport-failure-detector {
                       implementation-class = ""Akka.Remote.PhiAccrualFailureDetector, Akka.Remote""
@@ -413,7 +413,7 @@ namespace Akka.Remote.Tests.Transport
 
             var statusPromise = new TaskCompletionSource<AssociationHandle>();
 
-            var conf2 = ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.connection-timeout = 500 ms")
+            var conf2 = ConfigurationFactory.ParseString("akka.remote.classic.dot-netty.tcp.connection-timeout = 500 ms")
                 .WithFallback(config);
 
             var stateActor =
@@ -438,7 +438,7 @@ namespace Akka.Remote.Tests.Transport
             collaborators.Handle.Writeable = false;
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
 
-            var conf2 = ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.connection-timeout = 500 ms")
+            var conf2 = ConfigurationFactory.ParseString("akka.remote.classic.dot-netty.tcp.connection-timeout = 500 ms")
                 .WithFallback(config);
 
             var reader =

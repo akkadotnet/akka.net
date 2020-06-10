@@ -13,7 +13,7 @@ namespace Akka.Remote.Tests.Performance
     public class ForkJoinDispatcherRemoteMessagingThroughputSpec : TestTransportRemoteMessagingThroughputSpec
     {
         public static Config ForkJoinDispatcherConfig => ConfigurationFactory.ParseString(@"
-            akka.remote.default-remote-dispatcher {
+            akka.remote.classic.default-remote-dispatcher {
               type = ForkJoinDispatcher
               dedicated-thread-pool {
                 # Fixed number of threads to have in this threadpool
@@ -21,7 +21,7 @@ namespace Akka.Remote.Tests.Performance
               }
             }
     
-            akka.remote.backoff-remote-dispatcher {
+            akka.remote.classic.backoff-remote-dispatcher {
               type = ForkJoinDispatcher
               dedicated-thread-pool {
                 # Fixed number of threads to have in this threadpool

@@ -27,9 +27,9 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(true).WithFallback(ConfigurationFactory.ParseString(@"
               akka.loglevel = INFO
-              akka.remote{
+              akka.remote.classic {
                  transport-failure-detector {
-                  implementation-class = """+ typeof(TestFailureDetector).AssemblyQualifiedName + @"""
+                  implementation-class = """ + typeof(TestFailureDetector).AssemblyQualifiedName + @"""
                   heartbeat-interval = 1 s
                 }
                 retry-gate-closed-for = 3 s

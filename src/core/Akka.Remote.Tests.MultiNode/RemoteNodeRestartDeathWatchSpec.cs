@@ -87,7 +87,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("watch-established");
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
-                var sb = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
+                var sb = new StringBuilder().AppendLine("akka.remote.classic.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
                         .AppendLine("}");
                 var freshSystem = ActorSystem.Create(Sys.Name,
@@ -127,9 +127,9 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
                 @"akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = off                    
-                   akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-            akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s"
+                  akka.remote.classic.log-remote-lifecycle-events = off                    
+                  akka.remote.classic.transport-failure-detector.heartbeat-interval = 1 s
+            akka.remote.classic.transport-failure-detector.acceptable-heartbeat-pause = 3 s"
             ));
             TestTransport = true;
         }

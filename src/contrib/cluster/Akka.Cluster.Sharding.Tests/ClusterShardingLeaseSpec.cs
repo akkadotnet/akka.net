@@ -35,7 +35,7 @@ namespace Akka.Cluster.Sharding.Tests
                 #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
                 akka.loggers = [Akka.Event.DefaultLogger]
                 akka.actor.provider = ""cluster""
-                akka.remote.dot-netty.tcp.port = 0
+                akka.remote.classic.dot-netty.tcp.port = 0
                 akka.cluster.sharding {
                     use-lease = ""test-lease""
                     lease-retry-interval = 200ms

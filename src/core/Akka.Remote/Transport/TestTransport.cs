@@ -585,7 +585,7 @@ namespace Akka.Remote.Transport
         /// <returns>An existing or new <see cref="AssociationRegistry"/> instance.</returns>
         /// <code>
         ///     akka{
-        ///         remote{
+        ///         remote.classic{
         ///             enabled-transports = ["akka.remote.test"]
         ///             test{
         ///                 registry-key = "SOME KEY"

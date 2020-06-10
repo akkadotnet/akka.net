@@ -187,7 +187,7 @@ namespace Akka.Remote.Tests.Serialization
 
     public class SerializationTransportInformationSpec : AbstractSerializationTransportInformationSpec
     {
-        public static readonly Config DotNettyConfig = @"akka.remote.dot-netty.tcp{
+        public static readonly Config DotNettyConfig = @"akka.remote.classic.dot-netty.tcp{
                 hostname = localhost
                 port = 0
             }";

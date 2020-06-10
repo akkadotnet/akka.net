@@ -23,7 +23,7 @@ namespace Akka.Remote.Tests
     {
         public static readonly Config RemoteConfig = ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            akka.remote.dot-netty.tcp {
+            akka.remote.classic.dot-netty.tcp {
                 hostname = 127.0.0.1
                 port = 0
             }

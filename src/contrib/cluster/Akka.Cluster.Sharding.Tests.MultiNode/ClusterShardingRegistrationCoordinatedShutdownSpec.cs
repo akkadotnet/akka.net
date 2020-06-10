@@ -46,7 +46,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }}
                     akka.loglevel = DEBUG
                     akka.actor.provider = cluster
-                    akka.remote.log-remote-lifecycle-events = off
+                    akka.remote.classic.log-remote-lifecycle-events = off
                     akka.cluster.sharding.state-store-mode = ""ddata""
                     "))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())

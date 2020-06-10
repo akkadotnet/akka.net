@@ -23,7 +23,7 @@ akka {
         provider = remote
     }
     remote {
-        dot-netty.tcp {
+        classic.dot-netty.tcp {
             port = 8081
             hostname = 0.0.0.0
             public-hostname = localhost

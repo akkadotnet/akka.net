@@ -213,8 +213,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             return ConfigurationFactory.ParseString($@"
                 akka.loglevel = INFO
                 akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0
-                akka.remote.log-remote-lifecycle-events = off
+                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.classic.log-remote-lifecycle-events = off
                 akka.cluster.pub-sub.routing-logic = {routingLogic}
             ");
         }

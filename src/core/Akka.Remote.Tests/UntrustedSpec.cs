@@ -28,9 +28,9 @@ namespace Akka.Remote.Tests
         public UntrustedSpec(ITestOutputHelper output)
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            akka.remote.untrusted-mode = on
-            akka.remote.trusted-selection-paths = [""/user/receptionist"", ]    
-            akka.remote.dot-netty.tcp = {
+            akka.remote.classic.untrusted-mode = on
+            akka.remote.classic.trusted-selection-paths = [""/user/receptionist"", ]    
+            akka.remote.classic.dot-netty.tcp = {
                 port = 0
                 hostname = localhost
             }
@@ -39,7 +39,7 @@ namespace Akka.Remote.Tests
         {
             _client = ActorSystem.Create("UntrustedSpec-client", ConfigurationFactory.ParseString(@"
                 akka.actor.provider =  ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                 akka.remote.dot-netty.tcp = {
+                 akka.remote.classic.dot-netty.tcp = {
                     port = 0
                     hostname = localhost
                 }                

@@ -18,9 +18,9 @@ namespace Akka.Cluster.Tests.Performance.Startup
         public ActorSystem OtherSys { get; set; }
 
         public const string SystemConfig = @"akka.actor.provider = cluster
-                                             akka.remote.dot-netty.tcp.port = 8110
-                                             akka.remote.dot-netty.tcp.hostname = 0.0.0.0
-                                             akka.remote.dot-netty.tcp.public-hostname = localhost
+                                             akka.remote.classic.dot-netty.tcp.port = 8110
+                                             akka.remote.classic.dot-netty.tcp.hostname = 0.0.0.0
+                                             akka.remote.classic.dot-netty.tcp.public-hostname = localhost
                                              akka.cluster.seed-nodes = [""akka.tcp://ClusterSys@localhost:8110""]";
 
         public TaskCompletionSource<Done> _clusterMemberUp = new TaskCompletionSource<Done>();
@@ -42,7 +42,7 @@ namespace Akka.Cluster.Tests.Performance.Startup
             context.Trace.Info("Configuring ActorSystem2");
 
             // adding a fallback specifically here as a point of measurement
-            var config2 = ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 0")
+            var config2 = ConfigurationFactory.ParseString("akka.remote.classic.dot-netty.tcp.port = 0")
                 .WithFallback(OtherSys.Settings.Config);
             Sys = ActorSystem.Create("ClusterSys", config2);
             

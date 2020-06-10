@@ -30,8 +30,8 @@ namespace Akka.Remote.Tests.MultiNode
             CommonConfig = DebugConfig(true)
                 .WithFallback(ConfigurationFactory.ParseString(@"
     akka.loglevel = INFO
-    akka.remote.log-remote-lifecycle-events = INFO
-    akka.remote.retry-gate-closed-for = 10s
+    akka.remote.classic.log-remote-lifecycle-events = INFO
+    akka.remote.classic.retry-gate-closed-for = 10s
                 "));
         }
     }

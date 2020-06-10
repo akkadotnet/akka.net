@@ -23,7 +23,7 @@ akka {
         provider = remote
     }
     remote {
-        dot-netty.tcp {
+        classic.dot-netty.tcp {
 		    port = 0
 		    hostname = localhost
         }

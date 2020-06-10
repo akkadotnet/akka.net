@@ -27,8 +27,8 @@ namespace Akka.Remote.Tests
         public RemoteMetricsSpec(ITestOutputHelper output)
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            akka.remote.log-frame-size-exceeding = 200 b
-            akka.remote.dot-netty.tcp = {
+            akka.remote.classic.log-frame-size-exceeding = 200 b
+            akka.remote.classic.dot-netty.tcp = {
                 port = 0
                 hostname = localhost
             }
@@ -37,7 +37,7 @@ namespace Akka.Remote.Tests
         {
             _client = ActorSystem.Create("RemoteMetricsSpec-client", ConfigurationFactory.ParseString(@"
                 akka.actor.provider =  ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                 akka.remote.dot-netty.tcp = {
+                 akka.remote.classic.dot-netty.tcp = {
                     port = 0
                     hostname = localhost
                 }                

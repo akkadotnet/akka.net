@@ -33,9 +33,9 @@ namespace Akka.Remote.Tests
     {
         private static readonly Config RemoteConfiguration = ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.dot-netty.tcp.hostname = 127.0.0.1
-                akka.remote.dot-netty.tcp.port = 0
-            akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]
+                akka.remote.classic.dot-netty.tcp.hostname = 127.0.0.1
+                akka.remote.classic.dot-netty.tcp.port = 0
+            akka.remote.classic.dot-netty.tcp.applied-adapters = [trttl, gremlin]
         ");
 
         public RemoteMessageLocalDeliverySpec(ITestOutputHelper output) : base(RemoteConfiguration, output) { }

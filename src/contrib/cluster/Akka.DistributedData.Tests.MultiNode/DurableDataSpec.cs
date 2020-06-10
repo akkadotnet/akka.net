@@ -389,7 +389,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 
                 var sys2 = ActorSystem.Create(
                     "AdditionalSys", 
-                    ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port = {addr.Port}")
+                    ConfigurationFactory.ParseString($"akka.remote.classic.dot-netty.tcp.port = {addr.Port}")
                     .WithFallback(Sys.Settings.Config));
                 try
                 {

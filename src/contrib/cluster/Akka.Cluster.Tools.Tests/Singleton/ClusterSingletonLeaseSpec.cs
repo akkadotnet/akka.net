@@ -93,7 +93,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                  lease-retry-interval = 2000ms
               }
 
-              akka.remote {
+              akka.remote.classic {
                 dot-netty.tcp {
                   hostname = ""127.0.0.1""
                   port = 0

@@ -118,7 +118,7 @@ namespace Akka.Remote
                     {
                         _log.Debug(
                             "operating in UntrustedMode, dropping inbound actor selection to [{0}], allow it" +
-                            "by adding the path to 'akka.remote.trusted-selection-paths' in configuration",
+                            "by adding the path to 'akka.remote.classic.trusted-selection-paths' in configuration",
                             FormatActorPath(sel));
                     }
                     else

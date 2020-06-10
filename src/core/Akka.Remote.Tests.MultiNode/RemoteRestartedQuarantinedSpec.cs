@@ -23,18 +23,18 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
               akka.loglevel = WARNING
-              akka.remote.log-remote-lifecycle-events = WARNING
+              akka.remote.classic.log-remote-lifecycle-events = WARNING
 
               # Keep it long, we don't want reconnects
-              akka.remote.retry-gate-closed-for  = 1 s
+              akka.remote.classic.retry-gate-closed-for  = 1 s
 
               # Important, otherwise it is very racy to get a non-writing endpoint: the only way to do it if the two nodes
               # associate to each other at the same time. Setting this will ensure that the right scenario happens.
-              akka.remote.use-passive-connections = off
+              akka.remot.classice.use-passive-connections = off
 
               # TODO should not be needed, but see TODO at the end of the test
-              akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-              akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 10 s
+              akka.remote.classic.transport-failure-detector.heartbeat-interval = 1 s
+              akka.remote.classic.transport-failure-detector.acceptable-heartbeat-pause = 10 s
             "));
 
             TestTransport = true;
@@ -137,8 +137,8 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
 
                 var sb = new StringBuilder()
-                    .AppendLine("akka.remote.retry-gate-closed-for = 0.5 s")
-                    .AppendLine("akka.remote.dot-netty.tcp {")
+                    .AppendLine("akka.remote.classic.retry-gate-closed-for = 0.5 s")
+                    .AppendLine("akka.remote.classic.dot-netty.tcp {")
                     .AppendLine("hostname = " + addr.Host)
                     .AppendLine("port = " + addr.Port)
                     .AppendLine("}");

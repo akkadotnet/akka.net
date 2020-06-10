@@ -54,7 +54,7 @@ akka {
         }
     }
     remote {
-        dot-netty.tcp {
+        classic.dot-netty.tcp {
 		    port = 8090
 		    hostname = localhost
         }

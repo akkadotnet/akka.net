@@ -165,7 +165,7 @@ namespace Akka.Remote.Tests
                 loglevel = INFO 
                 log-dead-letters-during-shutdown = false
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                remote.dot-netty.tcp = {
+                remote.classic.dot-netty.tcp = {
                     hostname = localhost
                     port = 0
                 }

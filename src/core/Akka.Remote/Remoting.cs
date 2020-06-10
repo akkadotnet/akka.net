@@ -163,7 +163,7 @@ namespace Akka.Remote
         /// Start assumes that it cannot be followed by another Start() without having a Shutdown() first
         /// </summary>
         /// <exception cref="ConfigurationException">
-        /// This exception is thrown when no transports are enabled under the "akka.remote.enabled-transports" configuration setting.
+        /// This exception is thrown when no transports are enabled under the "akka.remote.classic.enabled-transports" configuration setting.
         /// </exception>
         /// <exception cref="TaskCanceledException">
         /// This exception is thrown when startup is canceled due to a timeout.
@@ -195,7 +195,7 @@ namespace Akka.Remote
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if(akkaProtocolTransports.Count==0)
-                        throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
+                        throw new ConfigurationException(@"No transports enabled under ""akka.remote.classic.enabled-transports""");
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
 
                     IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
@@ -271,7 +271,7 @@ namespace Akka.Remote
                         if (!result.Result)
                         {
                             _log.Warning("Shutdown finished, but flushing might not have been successful and some messages might have been dropped. " +
-                                "Increase akka.remote.flush-wait-on-shutdown to a larger value to avoid this.");
+                                "Increase akka.remote.classic.flush-wait-on-shutdown to a larger value to avoid this.");
                         }
                         Action();
                     }

@@ -102,7 +102,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                                                       akka.loglevel = INFO
-                                                      akka.remote.dot-netty.tcp.port = 0")
+                                                      akka.remote.classic.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSharding.DefaultConfig());
         }
 

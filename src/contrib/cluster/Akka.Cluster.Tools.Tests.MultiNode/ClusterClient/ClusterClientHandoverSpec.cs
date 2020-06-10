@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = cluster
-                akka.remote.log-remote-lifecycle-events = off
+                akka.remote.classic.log-remote-lifecycle-events = off
                 akka.cluster.client {
                   heartbeat-interval = 1d
                   acceptable-heartbeat-pause = 1d

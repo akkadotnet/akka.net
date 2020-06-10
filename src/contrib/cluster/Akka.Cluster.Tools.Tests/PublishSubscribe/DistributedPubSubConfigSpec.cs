@@ -25,7 +25,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
                                                     akka.extensions = [""Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools""]
-                                                    akka.remote.dot-netty.tcp.port = 0");
+                                                    akka.remote.classic.dot-netty.tcp.port = 0");
         }
 
         [Fact]

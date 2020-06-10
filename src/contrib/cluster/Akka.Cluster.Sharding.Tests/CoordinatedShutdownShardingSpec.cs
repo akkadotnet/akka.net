@@ -52,7 +52,7 @@ namespace Akka.Cluster.Sharding.Tests
             SpecConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
-                akka.remote.dot-netty.tcp.port = 0")
+                akka.remote.classic.dot-netty.tcp.port = 0")
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
         }

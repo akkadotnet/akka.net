@@ -22,17 +22,17 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
       akka.loglevel = INFO
-      akka.remote.log-remote-lifecycle-events = INFO
-      akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 5 
+      akka.remote.classic.log-remote-lifecycle-events = INFO
+      akka.remote.classic.transport-failure-detector.acceptable-heartbeat-pause = 5 
             "));
 
             NodeConfig(new[] { First }, new[]
             {
-                ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 d # Keep it long")
+                ConfigurationFactory.ParseString("akka.remote.classic.retry-gate-closed-for  = 1 d # Keep it long")
             });
             NodeConfig(new[] { Second }, new[]
             {
-                ConfigurationFactory.ParseString("akka.remote.retry-gate-closed-for  = 1 s # Keep it short")
+                ConfigurationFactory.ParseString("akka.remote.classic.retry-gate-closed-for  = 1 s # Keep it short")
             });
 
             TestTransport = true;

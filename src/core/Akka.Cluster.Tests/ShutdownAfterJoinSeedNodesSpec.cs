@@ -19,7 +19,7 @@ namespace Akka.Cluster.Tests
         public static readonly Config Config = ConfigurationFactory.ParseString(@"
             akka.actor.provider = ""cluster""
             akka.coordinated-shutdown.terminate-actor-system = on
-            akka.remote.dot-netty.tcp.port = 0
+            akka.remote.classic.dot-netty.tcp.port = 0
             akka.cluster {
                 seed-node-timeout = 2s
                 retry-unsuccessful-join-after = 2s

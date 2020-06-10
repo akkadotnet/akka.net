@@ -29,7 +29,7 @@ namespace Akka.Remote
         {
             // TODO: Need to assert that config key exists. 
             var useLogFrameSize = 
-                system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", string.Empty)
+                system.Settings.Config.GetString("akka.remote.classic.log-frame-size-exceeding", string.Empty)
                 .ToLowerInvariant();
             if (useLogFrameSize.Equals("off") ||
                 useLogFrameSize.Equals("false") ||
@@ -67,7 +67,7 @@ namespace Akka.Remote
         public RemoteMetricsOn(ExtendedActorSystem system)
         {
             // TODO: Need to assert that config key exists
-            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding", null);
+            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.classic.log-frame-size-exceeding", null);
             _log = Logging.GetLogger(system, this);
         }
 

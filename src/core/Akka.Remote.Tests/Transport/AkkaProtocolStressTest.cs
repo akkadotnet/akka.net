@@ -34,12 +34,12 @@ namespace Akka.Remote.Tests.Transport
                 akka {
                   actor.serialize-messages = off
                   actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                  remote.dot-netty.tcp.hostname = ""localhost""
-                  remote.log-remote-lifecycle-events = on
+                  remote.classic.dot-netty.tcp.hostname = ""localhost""
+                  remote.classic.log-remote-lifecycle-events = on
 
                 ## Keep gate duration in this test for a low value otherwise too much messages are dropped
-                  remote.retry-gate-closed-for = 100 ms
-                  remote.transport-failure-detector{
+                  remote.classic.retry-gate-closed-for = 100 ms
+                  remote.classic.transport-failure-detector{
                         threshold = 1.0
                         max-sample-size = 2
                         min-std-deviation = 1 ms
@@ -47,8 +47,8 @@ namespace Akka.Remote.Tests.Transport
                         heartbeat-interval = 1 s
                         acceptable-heartbeat-pause = 1 s
                   }
-                  remote.dot-netty.tcp.applied-adapters = [""gremlin""]
-                  remote.dot-netty.tcp.port = 0
+                  remote.classic.dot-netty.tcp.applied-adapters = [""gremlin""]
+                  remote.classic.dot-netty.tcp.port = 0
                 }");
             }
         }

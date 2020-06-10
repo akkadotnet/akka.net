@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests
                 provider = remote
                 serialize-messages = off
               }}
-              remote.dot-netty.tcp {{
+              remote.classic.dot-netty.tcp {{
                 port = {address.Port}
                 hostname = ""{address.Address}""
               }}

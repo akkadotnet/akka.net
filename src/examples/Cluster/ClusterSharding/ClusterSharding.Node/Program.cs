@@ -34,7 +34,7 @@ namespace ClusterSharding.Node
                   ""System.Object"" = hyperion
                 }
               }
-              remote {
+              remote.classic {
                 dot-netty.tcp {
                   public-hostname = ""localhost""
                   hostname = ""localhost""
