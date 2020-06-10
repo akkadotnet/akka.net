@@ -32,7 +32,7 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
                 akka.cluster.retry-unsuccessful-join-after = 3s
             ").WithFallback(MultiNodeClusterSpec.ClusterConfig());
@@ -65,7 +65,7 @@ namespace Akka.Cluster.Tests.MultiNode
             restartedSeed1System = new Lazy<ActorSystem>(() =>
             {
                 var localConfig = ConfigurationFactory
-                    .ParseString("akka.remote.classic.dot-netty.tcp.port=" + GetSeedNodes().First().Port)
+                    .ParseString("akka.remote.dot-netty.tcp.port=" + GetSeedNodes().First().Port)
                     .WithFallback(Sys.Settings.Config);
                 return ActorSystem.Create(Sys.Name, localConfig);
             });

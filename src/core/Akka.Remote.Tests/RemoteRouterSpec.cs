@@ -65,7 +65,7 @@ namespace Akka.Remote.Tests
         public RemoteRouterSpec(ITestOutputHelper output)
             : base(@"
             akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-            akka.remote.classic.dot-netty.tcp {
+            akka.remote.dot-netty.tcp {
                 hostname = 127.0.0.1
                 port = 0
             }

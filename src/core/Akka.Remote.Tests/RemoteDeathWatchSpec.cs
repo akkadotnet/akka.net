@@ -27,9 +27,9 @@ namespace Akka.Remote.Tests
                         /watchers.remote = ""akka.tcp://other@localhost:2666""
                     }
                 }
-                remote.classic.retry-gate-closed-for = 1 s
-                remote.classic.initial-system-message-delivery-timeout = 3 s
-                remote.classic.dot-netty.tcp {
+                remote.retry-gate-closed-for = 1 s
+                remote.initial-system-message-delivery-timeout = 3 s
+                remote.dot-netty.tcp {
                     hostname = ""localhost""
                         port = 0
                 }
@@ -41,7 +41,7 @@ namespace Akka.Remote.Tests
         public RemoteDeathWatchSpec() : base(_config)
         {
             _other = ActorSystem.Create("other",
-                ConfigurationFactory.ParseString(@"akka.remote.classic.dot-netty.tcp.port=2666").WithFallback(_config));
+                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=2666").WithFallback(_config));
         }
 
         protected override void BeforeTermination()

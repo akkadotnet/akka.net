@@ -40,8 +40,10 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private static readonly string[] Hocons =
         {
-@"akka.actor : {
-  provider : cluster 
+@"akka : {
+  actor : {
+    provider : cluster 
+  }
 }",
 
 @"akka : {
@@ -49,32 +51,42 @@ namespace Akka.Cluster.Tests.MultiNode
   loglevel : INFO 
   log-config-on-start : on 
   loggers : [""Akka.Event.DefaultLogger""],
-  actor.debug : {
-    receive : on
-    autoreceive : on
-    lifecycle : on
-    event-stream : on
-    unhandled : on 
+  actor : {
+    debug : {
+      receive : on
+      autoreceive : on
+      lifecycle : on
+      event-stream : on
+      unhandled : on 
+    } 
   } 
 }",
 
-@"akka.remote.classic.dot-netty.tcp : {
-  log-transport : true
-  transport-class : ""Akka.Remote.Transport.DotNetty.TcpTransport, Akka.Remote""
-  transport-protocol : tcp
-  hostname : 0.0.0.0
-  public-hostname : localhost
+@"akka : {
+  remote : {
+    dot-netty : {
+      tcp : {
+        log-transport : true
+        transport-class : ""Akka.Remote.Transport.DotNetty.TcpTransport, Akka.Remote""
+        transport-protocol : tcp
+        hostname : 0.0.0.0
+        public-hostname : localhost
+      } 
+    } 
+  } 
 }",
 
-@"akka.cluster : {
-  log-info : on
-  seed-nodes : [
-    ""akka.tcp://Bugfix4353Spec@localhost:5001"",
-    ""akka.tcp://Bugfix4353Spec@localhost:5002"",
-    ""akka.tcp://Bugfix4353Spec@localhost:5003""
-  ]
-  roles : [seed]
-  role : { } 
+@"akka : {
+  cluster : {
+    log-info : on
+    seed-nodes : [
+      ""akka.tcp://Bugfix4353Spec@localhost:5001"",
+      ""akka.tcp://Bugfix4353Spec@localhost:5002"",
+      ""akka.tcp://Bugfix4353Spec@localhost:5003""
+    ]
+    roles : [seed]
+    role : { } 
+  } 
 }"
         };
 
@@ -109,7 +121,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 new[] { First },
                 new[] {
                     ConfigurationFactory
-                    .ParseString("akka.remote.classic.dot-netty.tcp.port : 5001")
+                    .ParseString("akka.remote.dot-netty.tcp.port : 5001")
                     .WithFallback(Config)
                 });
 
@@ -117,7 +129,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 new[] { Second },
                 new[] {
                     ConfigurationFactory
-                    .ParseString("akka.remote.classic.dot-netty.tcp.port : 5002")
+                    .ParseString("akka.remote.dot-netty.tcp.port : 5002")
                     .WithFallback(Config)
                 });
 
@@ -125,7 +137,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 new[] { Third },
                 new[] {
                     ConfigurationFactory
-                    .ParseString("akka.remote.classic.dot-netty.tcp.port : 5003")
+                    .ParseString("akka.remote.dot-netty.tcp.port : 5003")
                     .WithFallback(Config)
                 });
 

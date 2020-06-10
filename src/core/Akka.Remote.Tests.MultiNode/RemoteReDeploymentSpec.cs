@@ -22,12 +22,12 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
-       akka.remote.classic.transport-failure-detector {
+    akka.remote.transport-failure-detector {
          threshold=0.1
          heartbeat-interval=0.1s
          acceptable-heartbeat-pause=1s
        }
-       akka.remote.classic.watch-failure-detector {
+       akka.remote.watch-failure-detector {
          threshold=0.1
          heartbeat-interval=0.1s
          acceptable-heartbeat-pause=2.5s

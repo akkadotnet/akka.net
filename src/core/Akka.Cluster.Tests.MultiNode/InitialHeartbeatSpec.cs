@@ -51,7 +51,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     akka.testconductor.barrier-timeout = 60 s
                     akka.stdout-loglevel = INFO
                     akka.cluster.failure-detector.threshold = 4
-                    akka.remote.classic.log-remote-lifecycle-events = on
+                    akka.remote.log-remote-lifecycle-events = on
                     ").WithFallback(MultiNodeClusterSpec.ClusterConfig()));
 
             TestTransport = true;

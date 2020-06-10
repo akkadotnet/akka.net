@@ -92,8 +92,8 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
 
                 var sb = new StringBuilder();
-                sb.AppendLine("akka.remote.classic.retry-gate-closed-for = 0.5s")
-                    .AppendLine(" akka.remote.classic.dot-netty.tcp {")
+                sb.AppendLine("akka.remote.retry-gate-closed-for = 0.5s")
+                    .AppendLine(" akka.remote.dot-netty.tcp {")
                     .AppendLine("hostname = " + addr.Host)
                     .AppendLine("port =" + addr.Port)
                     .AppendLine("}");
@@ -152,8 +152,8 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
                 @"akka.loglevel = INFO
-                   akka.remote.classic.log-remote-lifecycle-events = INFO
-                   akka.remote.classic.retry-gate-closed-for  = 1d"
+                   akka.remote.log-remote-lifecycle-events = INFO
+                   akka.remote.retry-gate-closed-for  = 1d"
             ));
             TestTransport = true;
         }

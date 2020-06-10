@@ -20,7 +20,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
     {
         public ClusterClientMessageSerializerSpec()
             : base(ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
-                                                      akka.remote.classic.dot-netty.tcp.port = 0")
+                                                      akka.remote.dot-netty.tcp.port = 0")
             .WithFallback(ClusterClientReceptionist.DefaultConfig()))
         {
         }

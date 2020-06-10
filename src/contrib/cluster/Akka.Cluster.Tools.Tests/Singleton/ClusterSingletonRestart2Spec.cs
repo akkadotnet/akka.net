@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
               akka.cluster.roles = [singleton]
               akka.cluster.auto-down-unreachable-after = 2s
               akka.cluster.singleton.min-number-of-hand-over-retries = 5
-              akka.remote.classic {
+              akka.remote {
                 dot-netty.tcp {
                   hostname = ""127.0.0.1""
                   port = 0
@@ -100,7 +100,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             // then restart it
             // ReSharper disable once PossibleInvalidOperationException
             var sys2Port = Cluster.Get(_sys2).SelfAddress.Port.Value;
-            var sys4Config = ConfigurationFactory.ParseString(@"akka.remote.classic.dot-netty.tcp.port=" + sys2Port)
+            var sys4Config = ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port=" + sys2Port)
                 .WithFallback(_sys1.Settings.Config);
             _sys4 = ActorSystem.Create(_sys1.Name, sys4Config);
 

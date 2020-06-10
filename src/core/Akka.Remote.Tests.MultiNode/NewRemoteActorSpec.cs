@@ -56,7 +56,7 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig =
                 DebugConfig(false)
-                    .WithFallback(ConfigurationFactory.ParseString("akka.remote.classic.log-remote-lifecycle-events = off"));
+                    .WithFallback(ConfigurationFactory.ParseString("akka.remote.log-remote-lifecycle-events = off"));
 
             DeployOn(Master, @"
                 /service-hello.remote = ""@slave@""

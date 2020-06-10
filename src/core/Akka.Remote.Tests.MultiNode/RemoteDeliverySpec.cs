@@ -24,7 +24,7 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(true)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                  akka.remote.classic.dot-netty.tcp.batching.enabled = false # disable batching
+                  akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
                 "));
         }
 

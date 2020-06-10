@@ -27,16 +27,16 @@ namespace Akka.Remote.Transport.DotNetty
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
-            var config = system.Settings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+            var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.classic.dot-netty.tcp");
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.dot-netty.tcp");
             return Create(config);
         }
 
         /// <summary>
         /// Adds support for the "off-for-windows" option per https://github.com/akkadotnet/akka.net/issues/3293
         /// </summary>
-        /// <param name="hoconTcpReuseAddr">The HOCON string for the akka.remote.classic.dot-netty.tcp.reuse-addr option</param>
+        /// <param name="hoconTcpReuseAddr">The HOCON string for the akka.remote.dot-netty.tcp.reuse-addr option</param>
         /// <returns><c>true</c> if we should enable REUSE_ADDR for tcp. <c>false</c> otherwise.</returns>
         internal static bool ResolveTcpReuseAddrOption(string hoconTcpReuseAddr)
         {
@@ -127,7 +127,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// <summary>
         /// If set to true, a Secure Socket Layer will be established
         /// between remote endpoints. They need to share a X509 certificate
-        /// which path is specified in `akka.remote.classic.dot-netty.tcp.ssl.certificate.path`
+        /// which path is specified in `akka.remote.dot-netty.tcp.ssl.certificate.path`
         /// </summary>
         public readonly bool EnableSsl;
 
@@ -292,7 +292,7 @@ namespace Akka.Remote.Transport.DotNetty
         public static SslSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.classic.dot-netty.Ssl`)");
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
 
             if (config.GetBoolean("certificate.use-thumprint-over-file", false))
             {
@@ -369,7 +369,7 @@ namespace Akka.Remote.Transport.DotNetty
                 if (find.Count == 0)
                 {
                     throw new ArgumentException(
-                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.classic.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.classic.dot-netty.tcp.ssl.certificate.store-name and akka.remote.classic.dot-netty.tcp.ssl.certificate.store-location)");
+                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.dot-netty.tcp.ssl.certificate.store-name and akka.remote.dot-netty.tcp.ssl.certificate.store-location)");
                 }
 
                 Certificate = find[0];
@@ -389,7 +389,7 @@ namespace Akka.Remote.Transport.DotNetty
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
         {
             if (string.IsNullOrEmpty(certificatePath))
-                throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.classic.dot-netty.tcp.ssl.certificate.path`)");
+                throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
             SuppressValidation = suppressValidation;

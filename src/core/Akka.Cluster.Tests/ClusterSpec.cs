@@ -38,8 +38,8 @@ namespace Akka.Cluster.Tests
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.coordinated-shutdown.terminate-actor-system = off
             akka.coordinated-shutdown.run-by-actor-system-terminate = off
-            akka.remote.classic.log-remote-lifecycle-events = off
-            akka.remote.classic.dot-netty.tcp.port = 0";
+            akka.remote.log-remote-lifecycle-events = off
+            akka.remote.dot-netty.tcp.port = 0";
 
         public IActorRef Self { get { return TestActor; } }
 
@@ -172,7 +172,7 @@ namespace Akka.Cluster.Tests
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off
@@ -274,7 +274,7 @@ namespace Akka.Cluster.Tests
         public void A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-        akka.remote.classic.dot-netty.tcp.port = 0"));
+        akka.remote.dot-netty.tcp.port = 0"));
 
             try
             {
@@ -430,7 +430,7 @@ namespace Akka.Cluster.Tests
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off
@@ -463,7 +463,7 @@ namespace Akka.Cluster.Tests
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off
@@ -497,7 +497,7 @@ namespace Akka.Cluster.Tests
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.terminate-actor-system = on
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
@@ -530,7 +530,7 @@ namespace Akka.Cluster.Tests
         {
             var sys3 = ActorSystem.Create("ClusterSpec3", ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""cluster""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.terminate-actor-system = on
                 akka.cluster.run-coordinated-shutdown-when-down = on
                 akka.loglevel=DEBUG

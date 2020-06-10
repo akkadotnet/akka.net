@@ -44,7 +44,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                 akka.loglevel = DEBUG
                 akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
                 akka.actor.provider = cluster
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.client.heartbeat-interval = 1s
                 akka.cluster.client.acceptable-heartbeat-pause = 3s
@@ -678,7 +678,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
                     var port = Cluster.Get(Sys).SelfAddress.Port;
                     var sys2 = ActorSystem.Create(
                         Sys.Name,
-                        ConfigurationFactory.ParseString($"akka.remote.classic.dot-netty.tcp.port={port}").WithFallback(Sys.Settings.Config));
+                        ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port={port}").WithFallback(Sys.Settings.Config));
                     Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
                     var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
                     ClusterClientReceptionist.Get(sys2).RegisterService(service2);

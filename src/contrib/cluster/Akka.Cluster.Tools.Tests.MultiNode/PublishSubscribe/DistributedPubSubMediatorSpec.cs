@@ -38,7 +38,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.actor.serialize-messages = off
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.pub-sub.max-delta-elements = 500
                 akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default

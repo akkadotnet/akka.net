@@ -50,7 +50,7 @@ namespace RemotePingPong
               suppress-json-serializer-warning = on
               log-dead-letters = off
 
-              remote.classic {
+              remote {
                 log-remote-lifecycle-events = off
 
                 dot-netty.tcp {
@@ -61,8 +61,8 @@ namespace RemotePingPong
             }");
 
             var bindingConfig =
-                ConfigurationFactory.ParseString(@"akka.remote.classic.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
-                    .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.classic.dot-netty.tcp.port = " + port));
+                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
+                    .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
 
             return bindingConfig.WithFallback(baseConfig);
         }

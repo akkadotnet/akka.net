@@ -43,7 +43,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 akka.actor.provider = cluster
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
-                akka.remote.classic.log-remote-lifecycle-events = ERROR
+                akka.remote.log-remote-lifecycle-events = ERROR
                 akka.testconductor.barrier-timeout = 60s")
                 .WithFallback(DistributedData.DefaultConfig());
 

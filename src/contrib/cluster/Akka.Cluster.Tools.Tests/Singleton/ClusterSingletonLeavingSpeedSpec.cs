@@ -59,7 +59,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
               # akka.cluster.singleton.min-number-of-hand-over-retries = 5
               # akka.cluster.gossip-interval = 2s
 
-              akka.remote.classic {
+              akka.remote {
                 dot-netty.tcp {
                   hostname = ""127.0.0.1""
                   port = 0

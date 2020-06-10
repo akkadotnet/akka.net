@@ -41,7 +41,7 @@ namespace Akka.Cluster.Tests
         private void ConfigureAndVerify(string alias, Type actorProviderType)
         {
             var config = ConfigurationFactory.ParseString(@"akka.actor.provider = " + alias)
-                .WithFallback(ConfigurationFactory.ParseString("akka.remote.classic.dot-netty.tcp.port = 0")); // use a random port to avoid issues with async and parallelization
+                .WithFallback(ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.port = 0")); // use a random port to avoid issues with async and parallelization
             using (var system = ActorSystem.Create(nameof(ActorRefProvidersConfigSpec), config))
             {
                 var ext = (ExtendedActorSystem) system;

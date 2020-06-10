@@ -35,13 +35,13 @@ namespace Akka.Remote.Tests.Transport
                   stdout-loglevel = ""DEBUG""
                   test.single-expect-default = 6s #to help overcome issues with gated connections
                   actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                  remote.classic.dot-netty.tcp.hostname = ""localhost""
-                  remote.classic.log-remote-lifecycle-events = off
-                  remote.classic.retry-gate-closed-for = 1 s
-                  remote.classic.transport-failure-detector.heartbeat-interval = 1 s
-                  remote.classic.transport-failure-detector.acceptable-heartbeat-pause = 3 s
-                  remote.classic.dot-netty.tcp.applied-adapters = [""trttl""]
-                  remote.classic.dot-netty.tcp.port = 0
+                  remote.dot-netty.tcp.hostname = ""localhost""
+                  remote.log-remote-lifecycle-events = off
+                  remote.retry-gate-closed-for = 1 s
+                  remote.transport-failure-detector.heartbeat-interval = 1 s
+                  remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
+                  remote.dot-netty.tcp.applied-adapters = [""trttl""]
+                  remote.dot-netty.tcp.port = 0
                 }");
             }
         }

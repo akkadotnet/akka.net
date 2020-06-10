@@ -49,7 +49,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 akka.loglevel = INFO
                 akka.actor.provider = ""cluster""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
                 test-lease {
                     lease-class = ""Akka.Cluster.Tools.Tests.TestLease, Akka.Cluster.Tools.Tests""
                     heartbeat-interval = 1s

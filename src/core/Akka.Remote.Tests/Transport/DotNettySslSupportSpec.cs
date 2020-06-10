@@ -32,7 +32,7 @@ namespace Akka.Remote.Tests.Transport
             akka {
                 loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
-                remote.classic {
+                remote {
                     dot-netty.tcp {
                         port = 0
                         hostname = ""127.0.0.1""
@@ -43,7 +43,7 @@ namespace Akka.Remote.Tests.Transport
             }");
             return !enableSsl
                 ? config
-                : config.WithFallback(@"akka.remote.classic.dot-netty.tcp.ssl {
+                : config.WithFallback(@"akka.remote.dot-netty.tcp.ssl {
                     suppress-validation = """ + enableSsl.ToString().ToLowerInvariant() + @"""
                     certificate {
                         path = """ + certPath + @"""
@@ -58,7 +58,7 @@ namespace Akka.Remote.Tests.Transport
             akka {
                 loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
-                remote.classic {
+                remote {
                     dot-netty.tcp {
                         port = 0
                         hostname = ""127.0.0.1""
@@ -69,7 +69,7 @@ namespace Akka.Remote.Tests.Transport
             }");
             return false
                 ? config
-                : config.WithFallback(@"akka.remote.classic.dot-netty.tcp.ssl {
+                : config.WithFallback(@"akka.remote.dot-netty.tcp.ssl {
                     suppress-validation = ""true""
                     certificate {
                         use-thumprint-over-file = true

@@ -41,7 +41,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                 akka.loglevel = INFO
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.failure-detector.monitored-by-nr-of-members = 3
             ");
         }

@@ -26,9 +26,11 @@ namespace Akka.Benchmarks.Hocon
                 }
               }              
             }
-            remote.classic.dot-netty.tcp {
-              port = 8090
-              hostname = localhost
+            remote {
+              dot-netty.tcp {
+                port = 8090
+                hostname = localhost
+              }
             }
             persistence {
                 journal {
@@ -56,7 +58,7 @@ namespace Akka.Benchmarks.Hocon
             }");
             fallback2 = ConfigurationFactory.ParseString(@"
             akka.actor.provider = cluster
-            akka.remote.classic.dot-netty.tcp {
+            akka.remote.dot-netty.tcp {
                 hostname = ""127.0.0.1""
                 port = 0
             }
@@ -78,7 +80,7 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public int Hocon_parse_resolve_int_value()
         {
-            return fallback2.GetInt("akka.remote.classic.dot-netty.tcp.port", 0);
+            return fallback2.GetInt("akka.remote.dot-netty.tcp.port", 0);
         }
 
         [Benchmark]

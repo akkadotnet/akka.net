@@ -86,7 +86,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                     min-nr-of-members = 2
                   }
                   actor.provider = ""cluster""
-                  remote.classic {
+                  remote {
                     log-remote-lifecycle-events = off
                     dot-netty.tcp
                         {

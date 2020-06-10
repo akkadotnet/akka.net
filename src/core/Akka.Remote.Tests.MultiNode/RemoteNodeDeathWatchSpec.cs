@@ -27,9 +27,9 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 ## Use a tighter setting than the default, otherwise it takes 20s for DeathWatch to trigger
-                akka.remote.classic.watch-failure-detector.acceptable-heartbeat-pause = 3 s
+                akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 3 s
             "));
 
             TestTransport = true;

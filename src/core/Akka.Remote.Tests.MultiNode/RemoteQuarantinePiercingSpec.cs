@@ -27,7 +27,7 @@ namespace Akka.Remote.Tests.MultiNode
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.loglevel = INFO
-                  akka.remote.classic.log-remote-lifecycle-events = INFO
+                  akka.remote.log-remote-lifecycle-events = INFO
                 "));
         }
 
@@ -121,8 +121,8 @@ namespace Akka.Remote.Tests.MultiNode
                 Sys.WhenTerminated.Wait(30.Seconds());
 
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
-                    akka.remote.classic.dot-netty.tcp.hostname = {addr.Host}
-                    akka.remote.classic.dot-netty.tcp.port = {addr.Port}
+                    akka.remote.dot-netty.tcp.hostname = {addr.Host}
+                    akka.remote.dot-netty.tcp.port = {addr.Port}
                 ").WithFallback(Sys.Settings.Config));
 
                 freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");

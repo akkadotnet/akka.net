@@ -44,18 +44,18 @@ namespace Akka.Remote
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<AkkaProtocolSettings>();
 
-            TransportFailureDetectorConfig = config.GetConfig("akka.remote.classic.transport-failure-detector");
+            TransportFailureDetectorConfig = config.GetConfig("akka.remote.transport-failure-detector");
             TransportFailureDetectorImplementationClass = TransportFailureDetectorConfig.GetString("implementation-class", null);
             TransportHeartBeatInterval = TransportFailureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
 
             // backwards compatibility with the existing dot-netty.tcp.connection-timeout
-            var enabledTransports = config.GetStringList("akka.remote.classic.enabled-transports", new string[] { });
-            if (enabledTransports.Contains("akka.remote.classic.dot-netty.tcp"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.classic.dot-netty.tcp.connection-timeout", null);
-            else if (enabledTransports.Contains("akka.remote.classic.dot-netty.ssl"))
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.classic.dot-netty.ssl.connection-timeout", null);
+            var enabledTransports = config.GetStringList("akka.remote.enabled-transports", new string[] { });
+            if (enabledTransports.Contains("akka.remote.dot-netty.tcp"))
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.tcp.connection-timeout", null);
+            else if (enabledTransports.Contains("akka.remote.dot-netty.ssl"))
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.dot-netty.ssl.connection-timeout", null);
             else
-                HandshakeTimeout = config.GetTimeSpan("akka.remote.classic.handshake-timeout", TimeSpan.FromSeconds(20), allowInfinite:false);
+                HandshakeTimeout = config.GetTimeSpan("akka.remote.handshake-timeout", TimeSpan.FromSeconds(20), allowInfinite:false);
         }
     }
 }

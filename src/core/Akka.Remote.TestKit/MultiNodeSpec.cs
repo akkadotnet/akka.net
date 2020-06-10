@@ -68,7 +68,7 @@ namespace Akka.Remote.TestKit
             if (on)
                 return ConfigurationFactory.ParseString(@"
                     akka.loglevel = DEBUG
-                    akka.remote.classic {
+                    akka.remote {
                         log-received-messages = on
                         log-sent-messages = on
                     }
@@ -76,7 +76,7 @@ namespace Akka.Remote.TestKit
                         receive = on
                         fsm = on
                     }
-                    akka.remote.classic.log-remote-lifecycle-events = on
+                    akka.remote.log-remote-lifecycle-events = on
                     akka.log-dead-letters = on
                 ");
             return ConfigurationFactory.Empty;
@@ -147,7 +147,7 @@ namespace Akka.Remote.TestKit
             get
             {
                 var transportConfig = _testTransport ?
-                    ConfigurationFactory.ParseString("akka.remote.classic.dot-netty.tcp.applied-adapters = [trttl, gremlin]")
+                    ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]")
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
@@ -348,8 +348,8 @@ namespace Akka.Remote.TestKit
             {
                 const string config = @"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.classic.dot-netty.tcp.hostname = ""{0}""
-                akka.remote.classic.dot-netty.tcp.port = {1}";
+                akka.remote.dot-netty.tcp.hostname = ""{0}""
+                akka.remote.dot-netty.tcp.port = {1}";
 
                 return ConfigurationFactory.ParseString(String.Format(config, SelfName, SelfPort));
             }
@@ -650,7 +650,7 @@ namespace Akka.Remote.TestKit
         protected ActorSystem StartNewSystem()
         {
             var sb =
-                new StringBuilder("akka.remote.classic.dot-netty.tcp{").AppendLine()
+                new StringBuilder("akka.remote.dot-netty.tcp{").AppendLine()
                     .AppendFormat("port={0}", _myAddress.Port)
                     .AppendLine()
                     .AppendFormat(@"hostname=""{0}""", _myAddress.Host)

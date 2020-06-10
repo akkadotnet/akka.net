@@ -63,7 +63,7 @@ namespace Akka.Cluster.Tests.Routing
             }
         }
         
-        remote.classic.dot-netty.tcp.port = 0
+        remote.dot-netty.tcp.port = 0
     }")
         {
         }

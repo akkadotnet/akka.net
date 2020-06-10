@@ -44,7 +44,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }}
                     akka.loglevel = INFO
                     akka.actor.provider = cluster
-                    akka.remote.classic.log-remote-lifecycle-events = off
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.min-nr-of-members = 3
                     akka.cluster.sharding {{
                         rebalance-interval = 120s #disable rebalance

@@ -47,7 +47,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }}
                     akka.loglevel = INFO
                     akka.actor.provider = cluster
-                    akka.remote.classic.log-remote-lifecycle-events = off
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""

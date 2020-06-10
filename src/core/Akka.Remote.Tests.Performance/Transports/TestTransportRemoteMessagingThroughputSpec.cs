@@ -24,11 +24,11 @@ namespace Akka.Remote.Tests.Performance.Transports
                     actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
 
                   remote {
-                    classic.log-received-messages = off
-                    classic.log-sent-messages = off
-                    classic.log-remote-lifecycle-events = off
+                    log-received-messages = off
+                    log-sent-messages = off
+                    log-remote-lifecycle-events = off
 
-                    classic.enabled-transports = [
+                    enabled-transports = [
                       ""akka.remote.test"",
                     ]
 

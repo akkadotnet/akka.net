@@ -63,19 +63,16 @@ namespace Akka.Remote.Tests
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
                 actor.serialize-messages = off
 
-                classic {
-                  retry-gate-closed-for = 1 s
-                  log-remote-lifecycle-events = on
+                retry-gate-closed-for = 1 s
+                log-remote-lifecycle-events = on
 
-                  enabled-transports = [
-                    ""akka.remote.test"",
-                    ""akka.remote.classic.dot-netty.tcp"",
-                   # ""akka.remote.classic.dot-netty.udp""
-                  ]
+                enabled-transports = [
+                  ""akka.remote.test"",
+                  ""akka.remote.dot-netty.tcp"",
+                 # ""akka.remote.dot-netty.udp""
+                ]
 
-                  dot-netty.tcp = ${common-helios-settings}
-                }
-
+                dot-netty.tcp = ${common-helios-settings}
                 helios.udp = ${common-helios-settings}
 
                 test {
@@ -114,19 +111,16 @@ namespace Akka.Remote.Tests
               remote {
                 transport = ""Akka.Remote.Remoting,Akka.Remote""
 
-                classic {
-                  retry-gate-closed-for = 1 s
-                  log-remote-lifecycle-events = on
+                retry-gate-closed-for = 1 s
+                log-remote-lifecycle-events = on
 
-                  enabled-transports = [
-                    ""akka.remote.test"",
-                    ""akka.remote.classic.dot-netty.tcp"",
-                    #""akka.remote.helios.udp""
-                  ]
+                enabled-transports = [
+                  ""akka.remote.test"",
+                  ""akka.remote.dot-netty.tcp"",
+#""akka.remote.helios.udp""
+                ]
 
-                  dot-netty.tcp = ${common-helios-settings}
-                }
-
+                dot-netty.tcp = ${common-helios-settings}
                 helios.udp = ${common-helios-settings}
 
                 test {
@@ -483,9 +477,9 @@ namespace Akka.Remote.Tests
             var rawRemoteAddress = new Address("test", "system2", "localhost", 2);
 
             var config = ConfigurationFactory.ParseString(@"
-                  akka.remote.classic.enabled-transports = [""akka.remote.test""]
-                  akka.remote.classic.retry-gate-closed-for = 5s     
-                  akka.remote.classic.log-remote-lifecycle-events = on
+                  akka.remote.enabled-transports = [""akka.remote.test""]
+                  akka.remote.retry-gate-closed-for = 5s     
+                  akka.remote.log-remote-lifecycle-events = on
                   akka.loglevel = DEBUG
      
             akka.remote.test {
@@ -566,9 +560,9 @@ namespace Akka.Remote.Tests
             var remoteUID = 16;
 
             var config = ConfigurationFactory.ParseString(@"
-                  akka.remote.classic.enabled-transports = [""akka.remote.test""]
-                  akka.remote.classic.retry-gate-closed-for = 5s     
-                  akka.remote.classic.log-remote-lifecycle-events = on  
+                  akka.remote.enabled-transports = [""akka.remote.test""]
+                  akka.remote.retry-gate-closed-for = 5s     
+                  akka.remote.log-remote-lifecycle-events = on  
      
             akka.remote.test {
                 registry-key = JMeMndLLsw

@@ -36,8 +36,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.cluster.auto-down-unreachable-after = 2s
                   akka.cluster.retry-unsuccessful-join-after = 3s
-                  akka.remote.classic.retry-gate-closed-for = 45s
-                  akka.remote.classic.log-remote-lifecycle-events = INFO
+                  akka.remote.retry-gate-closed-for = 45s
+                  akka.remote.log-remote-lifecycle-events = INFO
                 "))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
@@ -80,7 +80,7 @@ namespace Akka.Cluster.Tests.MultiNode
             seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, Sys.Settings.Config));
             restartedSeed1System = new Lazy<ActorSystem>(
                 () => ActorSystem.Create(Sys.Name, ConfigurationFactory
-                    .ParseString("akka.remote.classic.netty.tcp.port = " + SeedNodes.First().Port)
+                    .ParseString("akka.remote.netty.tcp.port = " + SeedNodes.First().Port)
                     .WithFallback(Sys.Settings.Config)));
         }
 

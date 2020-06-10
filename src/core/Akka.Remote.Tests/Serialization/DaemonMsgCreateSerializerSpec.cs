@@ -33,7 +33,7 @@ namespace Akka.Remote.Tests.Serialization
         public DaemonMsgCreateSerializerSpec()
             : base(@"
             akka.actor.provider = remote
-            akka.remote.classic.dot-netty.tcp {
+            akka.remote.dot-netty.tcp {
                 hostname = 127.0.0.1
                 port = 0
             }        

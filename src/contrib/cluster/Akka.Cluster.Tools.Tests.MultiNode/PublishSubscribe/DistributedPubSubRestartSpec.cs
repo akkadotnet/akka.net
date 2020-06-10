@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.cluster.pub-sub.gossip-interval = 500ms
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
             ").WithFallback(DistributedPubSub.DefaultConfig());
 
@@ -142,7 +142,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     var newSystem = ActorSystem.Create(
                         Sys.Name,
                         ConfigurationFactory
-                            .ParseString($"akka.remote.classic.dot-netty.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
+                            .ParseString($"akka.remote.dot-netty.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
 
                     try

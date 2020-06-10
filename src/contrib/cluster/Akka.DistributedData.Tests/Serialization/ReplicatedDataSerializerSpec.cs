@@ -24,7 +24,7 @@ namespace Akka.DistributedData.Tests.Serialization
             akka.actor {
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             }
-            akka.remote.classic.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
+            akka.remote.dot-netty.tcp.port = 0").WithFallback(DistributedData.DefaultConfig());
 
         private readonly UniqueAddress _address1;
         private readonly UniqueAddress _address2;
