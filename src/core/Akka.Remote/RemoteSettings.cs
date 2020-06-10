@@ -35,22 +35,22 @@ namespace Akka.Remote
             Artery = new ArterySettings(Config.GetConfig("akka.remote.artery"));
             WarnAboutDirectUse = Config.GetBoolean("akka.remote.warn-about-direct-use");
 
-            LogReceive = config.GetBoolean("akka.remote.classic.log-received-messages");
-            LogSend = config.GetBoolean("akka.remote.classic.log-sent-messages");
+            LogReceive = config.GetBoolean("akka.remote.log-received-messages");
+            LogSend = config.GetBoolean("akka.remote.log-sent-messages");
 
             LogFrameSizeExceeding =
-                config.GetString("akka.remote.classic.log-frame-size-exceeding").ToLowerInvariant() == "off" ?
+                config.GetString("akka.remote.log-frame-size-exceeding").ToLowerInvariant() == "off" ?
                 null :
-                (int?) config.GetByteSize("akka.remote.classic.log-frame-size-exceeding");
+                (int?) config.GetByteSize("akka.remote.log-frame-size-exceeding");
 
-            UntrustedMode = config.GetBoolean("akka.remote.classic.untrusted-mode");
+            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
 
             TrustedSelectionPaths = config
-                .GetStringList("akka.remote.classic.trusted-selection-paths")
+                .GetStringList("akka.remote.trusted-selection-paths")
                 .ToImmutableHashSet();
 
             var logRemoteLifecycleEvents = Config
-                .GetString("akka.remote.classic.log-remote-lifecycle-events")
+                .GetString("akka.remote.log-remote-lifecycle-events")
                 .ToLowerInvariant();
             switch (logRemoteLifecycleEvents)
             {
@@ -72,32 +72,32 @@ namespace Akka.Remote
                     throw new ConfigurationException("Logging level must be one of (on, off, debug, info, warning, error)");
             }
 
-            Dispatcher = Config.GetString("akka.remote.classic.use-dispatcher");
+            Dispatcher = Config.GetString("akka.remote.use-dispatcher");
 
             ShutdownTimeout = Config
-                .GetTimeSpan("akka.remote.classic.shutdown-timeout")
+                .GetTimeSpan("akka.remote.shutdown-timeout")
                 .Requiring(ts => ts > TimeSpan.Zero, "shutdown-timeout must be > 0");
 
             FlushWait = Config
-                .GetTimeSpan("akka.remote.classic.flush-wait-on-shutdown")
+                .GetTimeSpan("akka.remote.flush-wait-on-shutdown")
                 .Requiring(ts => ts > TimeSpan.Zero, "flush-wait-on-shutdown must be > 0");
 
             StartupTimeout = Config
-                .GetTimeSpan("akka.remote.classic.startup-timeout")
+                .GetTimeSpan("akka.remote.startup-timeout")
                 .Requiring(ts => ts > TimeSpan.Zero, "startup-timeout must be > 0");
 
             RetryGateClosedFor = Config
-                .GetTimeSpan("akka.remote.classic.retry-gate-closed-for")
+                .GetTimeSpan("akka.remote.retry-gate-closed-for")
                 .Requiring(ts => ts > TimeSpan.Zero, "retry-gate-closed-for must be > 0");
 
-            UsePassiveConnections = Config.GetBoolean("akka.remote.classic.use-passive-connections");
+            UsePassiveConnections = Config.GetBoolean("akka.remote.use-passive-connections");
 
             BackoffPeriod = Config
-                .GetTimeSpan("akka.remote.classic.backoff-interval")
+                .GetTimeSpan("akka.remote.backoff-interval")
                 .Requiring(ts => ts > TimeSpan.Zero, "backoff-interval must be > 0");
 
             var logBufferSizeExceeding = Config
-                .GetString("akka.remote.classic.log-buffer-size-exceeding")
+                .GetString("akka.remote.log-buffer-size-exceeding")
                 .ToLowerInvariant();
             switch(logBufferSizeExceeding)
             {
@@ -107,32 +107,32 @@ namespace Akka.Remote
                     LogBufferSizeExceeding = int.MaxValue;
                     break;
                 default:
-                    LogBufferSizeExceeding = Config.GetInt("akka.remote.classic.log-buffer-size-exceeding");
+                    LogBufferSizeExceeding = Config.GetInt("akka.remote.log-buffer-size-exceeding");
                     break;
             }
 
             SysMsgAckTimeout = Config
-                .GetTimeSpan("akka.remote.classic.system-message-ack-piggyback-timeout")
+                .GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout")
                 .Requiring(ts => ts > TimeSpan.Zero, "system-message-ack-piggyback-timeout must be > 0");
 
             SysResendTimeout = Config
-                .GetTimeSpan("akka.remote.classic.resend-interval")
+                .GetTimeSpan("akka.remote.resend-interval")
                 .Requiring(ts => ts > TimeSpan.Zero, "resend-interval must be > 0");
 
             SysResendLimit = Config
-                .GetInt("akka.remote.classic.resend-limit")
+                .GetInt("akka.remote.resend-limit")
                 .Requiring(i => i > 0, "resend-limit must be > 0");
 
             SysMsgBufferSize = Config
-                .GetInt("akka.remote.classic.system-message-buffer-size")
+                .GetInt("akka.remote.system-message-buffer-size")
                 .Requiring(i => i > 0, "system-message-buffer-size must be > 0");
 
             InitialSysMsgDeliveryTimeout = Config
-                .GetTimeSpan("akka.remote.classic.initial-system-message-delivery-timeout")
+                .GetTimeSpan("akka.remote.initial-system-message-delivery-timeout")
                 .Requiring(ts => ts > TimeSpan.Zero, "initial-system-message-delivery-timeout must be > 0");
 
             var quarantineSilentSystemTimeout = Config
-                .GetString("akka.remote.classic.quarantine-after-silence")
+                .GetString("akka.remote.quarantine-after-silence")
                 .ToLowerInvariant();
             switch(quarantineSilentSystemTimeout)
             {
@@ -143,17 +143,17 @@ namespace Akka.Remote
                     break;
                 default:
                     QuarantineSilentSystemTimeout = Config
-                        .GetTimeSpan("akka.remote.classic.quarantine-after-silence")
+                        .GetTimeSpan("akka.remote.quarantine-after-silence")
                         .Requiring(ts => ts > TimeSpan.Zero, "quarantine-after-silence must be > 0");
                     break;
             }
 
             QuarantineDuration = Config
-                .GetTimeSpan("akka.remote.classic.prune-quarantine-marker-after")
+                .GetTimeSpan("akka.remote.prune-quarantine-marker-after")
                 .Requiring(ts => ts > TimeSpan.Zero, "prune-quarantine-marker-after must be > 0");
 
             CommandAckTimeout = Config
-                .GetTimeSpan("akka.remote.classic.command-ack-timeout")
+                .GetTimeSpan("akka.remote.command-ack-timeout")
                 .Requiring(ts => ts > TimeSpan.Zero, "command-ack-timeout must be > 0");
 
             UseUnsafeRemoteFeaturesWithoutCluster = Config.GetBoolean("akka.remote.use-unsafe-remote-features-outside-cluster");
@@ -176,13 +176,13 @@ namespace Akka.Remote
                 .GetTimeSpan("expected-response-after")
                 .Requiring(ts => ts > TimeSpan.Zero, "watch-failure-detector.expected-response-after must be > 0");
 
-            TransportNames = Config.GetStringList("akka.remote.classic.enabled-transports").ToImmutableList();
+            TransportNames = Config.GetStringList("akka.remote.enabled-transports").ToImmutableList();
 
             Transports = (from name in TransportNames
                           let transportConfig = TransportConfigFor(name)
                           select new TransportSettings(transportConfig)).ToImmutableList();
 
-            Adapters = ConfigToMap(Config.GetConfig("akka.remote.classic.adapters")).ToImmutableDictionary();
+            Adapters = ConfigToMap(Config.GetConfig("akka.remote.adapters")).ToImmutableDictionary();
         }
 
         /// <summary>
@@ -202,32 +202,27 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public bool LogReceive { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public bool LogSend { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public int? LogFrameSizeExceeding { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public bool UntrustedMode { get; }
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
         // ARTERY: NOTE: this is very dangerous, there are TWO ways to retrieve UntrustedMode, the one above is, I assume, a backward compatibility property.
-        [Obsolete]
         internal bool GetUntrustedMode {
             get => Artery.Enabled ? Artery.UntrustedMode : UntrustedMode;
         }
@@ -235,22 +230,18 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public ImmutableHashSet<string> TrustedSelectionPaths { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public string RemoteLifecycleEventsLogLevel { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public string Dispatcher { get; }
 
-        [Obsolete("deprecated")]
         public Props ConfigureDispatcher(Props props)
         {
             if(Artery.Enabled)
@@ -267,91 +258,76 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan ShutdownTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan FlushWait { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan StartupTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan RetryGateClosedFor { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public bool UsePassiveConnections { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan BackoffPeriod { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public int LogBufferSizeExceeding { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan SysMsgAckTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan SysResendTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public int SysResendLimit { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public int SysMsgBufferSize { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan InitialSysMsgDeliveryTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan QuarantineSilentSystemTimeout { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan? QuarantineDuration { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("Classic remoting is deprecated, use Artery")]
         public TimeSpan CommandAckTimeout { get; }
 
         /// <summary>

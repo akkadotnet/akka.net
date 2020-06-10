@@ -29,7 +29,7 @@ namespace Akka.Remote.Tests
     {
         public RemoteConfigSpec():base(@"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
-                akka.remote.classic.dot-netty.tcp.port = 0
+                akka.remote.dot-netty.tcp.port = 0
             ") {}
         
 
@@ -46,7 +46,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(2), remoteSettings.FlushWait);
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.StartupTimeout);
             Assert.Equal(TimeSpan.FromSeconds(5), remoteSettings.RetryGateClosedFor);
-            Assert.Equal("akka.remote.classic.default-remote-dispatcher", remoteSettings.Dispatcher);
+            Assert.Equal("akka.remote.default-remote-dispatcher", remoteSettings.Dispatcher);
             Assert.True(remoteSettings.UsePassiveConnections);
             Assert.Equal(TimeSpan.FromMilliseconds(50), remoteSettings.BackoffPeriod);
             Assert.Equal(50000, remoteSettings.LogBufferSizeExceeding);
@@ -79,7 +79,7 @@ namespace Akka.Remote.Tests
             Assert.Equal(TimeSpan.FromSeconds(10), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause"));
             Assert.Equal(TimeSpan.FromMilliseconds(100), remoteSettings.WatchFailureDetectorConfig.GetTimeSpan("min-std-deviation"));
 
-            remoteSettings.Config.GetString("akka.remote.classic.log-frame-size-exceeding").ShouldBe("off");
+            remoteSettings.Config.GetString("akka.remote.log-frame-size-exceeding").ShouldBe("off");
         }
 
         [Fact]
@@ -95,7 +95,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_heliosTCP_values_in_ReferenceConf()
         {
-            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
 
             Assert.Equal(TimeSpan.FromSeconds(15), s.ConnectTimeout);
@@ -125,7 +125,7 @@ namespace Akka.Remote.Tests
         public void When_remoting_works_in_Mono_ip_enforcement_should_be_defaulted_to_true()
         {
             if (!IsMono) return; // skip IF NOT using Mono
-            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
             
             Assert.True(s.EnforceIpFamily);
@@ -135,7 +135,7 @@ namespace Akka.Remote.Tests
         public void When_remoting_works_not_in_Mono_ip_enforcement_should_be_defaulted_to_false()
         {
             if (IsMono) return; // skip IF using Mono
-            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
 
             Assert.False(s.EnforceIpFamily);
@@ -145,7 +145,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_socket_worker_pool_configuration_values_in_ReferenceConf()
         {
-            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
 
             // server-socket-worker-pool
             {
@@ -167,7 +167,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_hostname_values_in_ReferenceConf()
         {
-           var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+           var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
            var s = DotNettyTransportSettings.Create(c);
 
            //Non-specified hostnames should default to IPAddress.Any
@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_BatchWriter_settings_in_ReferenceConf()
         {
-            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.tcp");
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
 
             s.BatchWriterSettings.EnableBatching.Should().BeTrue();
@@ -190,7 +190,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_ssl_configuration_value_int_ReferenceConf()
         {
-            var r = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.classic.dot-netty.ssl");
+            var r = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.ssl");
             r.GetBoolean("suppress-validation").Should().BeFalse();
 
             var c = r.GetConfig("certificate");
