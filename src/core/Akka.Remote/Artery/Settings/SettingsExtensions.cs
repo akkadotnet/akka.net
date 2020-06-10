@@ -7,9 +7,9 @@ namespace Akka.Remote.Artery.Settings
     internal static class SettingsExtensions
     {
         public static string GetHostname(this Config config, string key)
-            => config.GetString(key).GetHostName();
+            => config.GetString(key).GetHostName() ?? throw new ConfigurationException("No network adapter with an IPv4 address found in host machine.");
 
-        public static string GetHostName(this string value)
+        public static string GetHostName(this string value, bool useIpv4 = true, bool useIpv6 = false)
         {
             switch (value)
             {
@@ -17,10 +17,13 @@ namespace Akka.Remote.Artery.Settings
                     var host = Dns.GetHostEntry(Dns.GetHostName());
                     foreach (var ip in host.AddressList)
                     {
-                        if (ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
+                        if (useIpv4 && ip.AddressFamily == AddressFamily.InterNetwork)
+                            return ip.ToString();
+
+                        if (useIpv6 && ip.AddressFamily == AddressFamily.InterNetworkV6)
                             return ip.ToString();
                     }
-                    throw new ConfigurationException("No network adapter with an IPv4 nor IPv6 address found in host machine.");
+                    return null;
 
                 case "<getHostName>":
                     return Dns.GetHostName();
