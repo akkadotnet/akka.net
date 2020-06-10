@@ -8,9 +8,8 @@ namespace Akka.Remote.Artery.Settings
         public int Port { get; }
         public string Hostname { get; }
 
-        public CanonicalSettings(Config config)
+        public CanonicalSettings(Config canonicalConfig)
         {
-            var canonicalConfig = config.GetConfig("canonical");
             if (canonicalConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<CanonicalSettings>("akka.remote.artery.canonical");
 

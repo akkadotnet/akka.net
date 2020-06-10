@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using Akka.Configuration;
 using Akka.Util;
 using Akka.Remote.Artery.Settings;
@@ -65,9 +65,9 @@ namespace Akka.Remote.Artery
         private ArterySettings(Config config)
         {
             Enabled = Config.GetBoolean("enabled");
-            Canonical = new CanonicalSettings(Config);
-            Bind = new BindSettings(Config, Canonical);
 
+            Canonical = new CanonicalSettings(_config.GetConfig("canonical"));
+            Bind = new BindSettings(_config.GetConfig("bind"), Canonical);
             LargeMessageDestinations = new WildcardIndex<NotUsed>();
             var destinations = Config.GetStringList("large-message-destinations");
             foreach (var entry in destinations)
@@ -87,7 +87,7 @@ namespace Akka.Remote.Artery
             // ARTERY: ArteryTransport isn't ported yet.
             //Version = ArteryTransport.HighestVersion;
 
-            Advanced = new AdvancedSettings(Config);
+            Advanced = new AdvancedSettings(_config.GetConfig("advanced"));
         }
 
         public ArterySettings WithDisabledCompression()

@@ -10,9 +10,8 @@ namespace Akka.Remote.Artery.Settings
         public string Hostname { get; }
         public TimeSpan BindTimeout { get; }
 
-        public BindSettings(Config config, CanonicalSettings canonical)
+        public BindSettings(Config bindConfig, CanonicalSettings canonical)
         {
-            var bindConfig = config.GetConfig("bind");
             if (bindConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<BindSettings>("akka.remote.artery.bind");
 

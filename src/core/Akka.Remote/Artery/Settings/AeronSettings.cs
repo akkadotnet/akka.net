@@ -17,9 +17,8 @@ namespace Akka.Remote.Artery.Settings
         public TimeSpan ImageLivenessTimeout { get; }
         public TimeSpan DriverTimeout { get; }
 
-        public AeronSettings(Config config)
+        public AeronSettings(Config aeronConfig)
         {
-            var aeronConfig = config.GetConfig("aeron");
             if (aeronConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<AeronSettings>("akka.remote.artery.advanced.aeron");
 

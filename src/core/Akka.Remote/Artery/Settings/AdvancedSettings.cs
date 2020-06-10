@@ -46,9 +46,8 @@ namespace Akka.Remote.Artery.Settings
         public AeronSettings Aeron { get; }
         public TcpSettings Tcp { get; }
 
-        public AdvancedSettings(Config config)
+        public AdvancedSettings(Config advancedConfig)
         {
-            var advancedConfig = config.GetConfig("advanced");
             if (advancedConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<AdvancedSettings>("akka.remote.artery.advanced");
 
@@ -104,7 +103,7 @@ namespace Akka.Remote.Artery.Settings
                 .Requiring(t => t > TimeSpan.Zero, "outbound-restart-timeout must be greater than zero.");
             OutboundMaxRestarts = advancedConfig.GetInt("outbound-max-restarts");
 
-            Compression = new CompressionSettings(advancedConfig);
+            Compression = new CompressionSettings(advancedConfig.GetConfig("compression"));
 
             MaximumFrameSize = Math.Min((int)advancedConfig.GetByteSize("maximum-frame-size").Value, int.MaxValue)
                 .Requiring(i => i >= 32 * 1024, "maximum-frame-size must be greater than or equal to 32 KiB");

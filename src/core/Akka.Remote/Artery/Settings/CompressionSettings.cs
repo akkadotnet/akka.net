@@ -9,14 +9,13 @@ namespace Akka.Remote.Artery.Settings
         public ActorRefsSettings ActorRefs { get; }
         public ManifestsSettings Manifests { get; }
 
-        public CompressionSettings(Config config)
+        public CompressionSettings(Config compressionConfig)
         {
-            var compressionConfig = config.GetConfig("compression");
             if (compressionConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<CompressionSettings>("akka.remote.artery.advanced.compression");
 
-            ActorRefs = new ActorRefsSettings(compressionConfig);
-            Manifests = new ManifestsSettings(compressionConfig);
+            ActorRefs = new ActorRefsSettings(compressionConfig.GetConfig("actor-refs"));
+            Manifests = new ManifestsSettings(compressionConfig.GetConfig("manifests"));
         }
     }
 }

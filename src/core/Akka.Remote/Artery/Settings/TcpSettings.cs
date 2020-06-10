@@ -9,9 +9,8 @@ namespace Akka.Remote.Artery.Settings
         public TimeSpan ConnectionTimeout { get; }
         public string OutboundClientHostname { get; }
 
-        public TcpSettings(Config config)
+        public TcpSettings(Config tcpConfig)
         {
-            var tcpConfig = config.GetConfig("tcp");
             if (tcpConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<TcpSettings>("akka.remote.artery.advanced.tcp");
 

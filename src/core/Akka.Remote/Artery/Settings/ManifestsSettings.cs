@@ -8,14 +8,13 @@ namespace Akka.Remote.Artery.Settings
         public TimeSpan AdvertisementInterval { get; }
         public int Max { get; }
 
-        public ManifestsSettings(Config config)
+        public ManifestsSettings(Config manifestConfig)
         {
-            var actorRefConfig = config.GetConfig("manifests");
-            if (actorRefConfig.IsNullOrEmpty())
+            if (manifestConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<CompressionSettings>("akka.remote.artery.advanced.compression.manifests");
 
-            AdvertisementInterval = actorRefConfig.GetTimeSpan("advertisement-interval");
-            Max = actorRefConfig.GetInt("max");
+            AdvertisementInterval = manifestConfig.GetTimeSpan("advertisement-interval");
+            Max = manifestConfig.GetInt("max");
         }
 
     }
