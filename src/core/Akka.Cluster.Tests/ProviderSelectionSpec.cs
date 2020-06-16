@@ -35,6 +35,7 @@ namespace Akka.Cluster.Tests
             ps.Fqn.Should()
                 .Be(ProviderSelection.RemoteActorRefProvider);
             ps.HasCluster.Should().BeFalse();
+            ProviderSelection.GetProvider("remote").Should().Be(ProviderSelection.Remote.Instance);
             SettingsWith("remote").ProviderClass.Should().Be(ps.Fqn);
         }
 
@@ -45,6 +46,7 @@ namespace Akka.Cluster.Tests
             ps.Fqn.Should()
                 .Be(ProviderSelection.ClusterActorRefProvider);
             ps.HasCluster.Should().BeTrue();
+            ProviderSelection.GetProvider("cluster").Should().Be(ProviderSelection.Cluster.Instance);
             SettingsWith("cluster").ProviderClass.Should().Be(ps.Fqn);
         }
 
@@ -57,6 +59,18 @@ namespace Akka.Cluster.Tests
                 .Be(other);
             ps.HasCluster.Should().BeFalse();
             SettingsWith(other).ProviderClass.Should().Be(ps.Fqn);
+        }
+
+        [Fact]
+        public void ProviderSelectionMustCreateActorSystemWithCustomProviderSelection()
+        {
+            var other = ProviderSelection.ClusterActorRefProvider;
+            var ps = new ProviderSelection.Custom(other, "test");
+            using (var actorSystem = ActorSystem.Create("Test1", BootstrapSetup.Create().WithActorRefProvider(ps)))
+            {
+                actorSystem.Settings.ProviderClass.Should().Be(ps.Fqn);
+            }
+
         }
     }
 }
