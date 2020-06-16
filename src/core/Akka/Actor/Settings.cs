@@ -80,7 +80,7 @@ namespace Akka.Actor
 
             var providerSelectionSetup = Setup.Get<BootstrapSetup>()
                 .FlatSelect(_ => _.ActorRefProvider)
-                .Select(_ => _.Identifier)
+                .Select(_ => _.Fqn)
                 .GetOrElse(Config.GetString("akka.actor.provider", null));
 
             ProviderSelectionType = ProviderSelection.GetProvider(providerSelectionSetup);
