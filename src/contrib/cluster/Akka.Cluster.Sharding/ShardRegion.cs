@@ -117,7 +117,7 @@ namespace Akka.Cluster.Sharding
         /// to start(it does not guarantee the entity successfully started)
         /// </summary>
         [Serializable]
-        public sealed class StartEntityAck : IClusterShardingSerializable
+        public sealed class StartEntityAck : IClusterShardingSerializable, IDeadLetterSuppression
         {
             /// <summary>
             /// An identifier of a newly started entity. Unique in scope of a given shard.
