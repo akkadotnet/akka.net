@@ -40,7 +40,7 @@ namespace Akka.Cluster.Metrics.Tests.MultiNode
                 akka.extensions=[""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
 
                 akka.actor.provider = cluster
-                akka.remote.classic.log-remote-lifecycle-events = off
+                akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.roles = [compute]
                 #//#router-lookup-config
                 akka.actor.deployment {

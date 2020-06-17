@@ -198,6 +198,10 @@ namespace Akka.Configuration.Hocon
                     return true;
                 case "false":
                     return false;
+                case "yes":
+                    return true;
+                case "no":
+                    return false;
                 default:
                     throw new NotSupportedException($"Unknown boolean format: {v}");
             }
