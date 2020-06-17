@@ -190,7 +190,7 @@ namespace Akka.Cluster.Sharding
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
         }
-        public sealed class StartEntityAck : Akka.Cluster.Sharding.IClusterShardingSerializable
+        public sealed class StartEntityAck : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Event.IDeadLetterSuppression
         {
             public readonly string EntityId;
             public readonly string ShardId;
@@ -212,6 +212,35 @@ namespace Akka.Cluster.Sharding
         public readonly System.Collections.Immutable.IImmutableSet<string> EntityIds;
         public readonly string ShardId;
         public ShardState(string shardId, System.Collections.Immutable.IImmutableSet<string> entityIds) { }
+    }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public class ShardedDaemonProcess : Akka.Actor.IExtension
+    {
+        public ShardedDaemonProcess(Akka.Actor.ExtendedActorSystem system) { }
+        public static Akka.Cluster.Sharding.ShardedDaemonProcess Get(Akka.Actor.ActorSystem system) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings) { }
+    }
+    public class ShardedDaemonProcessExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ShardedDaemonProcess>
+    {
+        public ShardedDaemonProcessExtensionProvider() { }
+        public override Akka.Cluster.Sharding.ShardedDaemonProcess CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    [Akka.Annotations.ApiMayChangeAttribute()]
+    public sealed class ShardedDaemonProcessSettings
+    {
+        public readonly System.TimeSpan KeepAliveInterval;
+        public readonly Akka.Cluster.Sharding.ClusterShardingSettings ShardingSettings;
+        public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings Create(Akka.Actor.ActorSystem system) { }
+        public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings FromConfig(Akka.Configuration.Config config) { }
+        public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithKeepAliveInterval(System.TimeSpan keepAliveInterval) { }
+        public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
+    }
+    public sealed class ShardingEnvelope
+    {
+        public ShardingEnvelope(string entityId, object message) { }
+        public string EntityId { get; }
+        public object Message { get; }
     }
     public enum StateStoreMode
     {
