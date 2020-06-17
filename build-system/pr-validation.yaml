@@ -6,11 +6,12 @@ trigger:
       - dev
       - v1.*
       - master
+      - feature/*
 
 pr:
   autoCancel: true # indicates whether additional pushes to a PR should cancel in-progress runs for the same PR. Defaults to true
   branches:
-    include: [ dev, v1.*, master ] # branch names which will trigger a build
+    include: [ dev, v1.*, master, feature/* ] # branch names which will trigger a build
 
 name: $(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
 

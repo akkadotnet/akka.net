@@ -25,7 +25,7 @@ namespace Akka.Remote.Configuration
         /// <returns>The configuration that contains default values for all remote options.</returns>
         public static Config Default()
         {
-            return FromResource("Akka.Remote.Configuration.Remote.conf");
+            return FromResource("Akka.Remote.Configuration.reference.conf");
         }
 
         /// <summary>

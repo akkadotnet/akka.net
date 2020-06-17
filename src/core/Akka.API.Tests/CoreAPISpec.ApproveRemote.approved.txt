@@ -221,43 +221,47 @@ namespace Akka.Remote
     {
         public static readonly string AkkaScheme;
         public RemoteSettings(Akka.Configuration.Config config) { }
-        public System.Collections.Generic.IDictionary<string, string> Adapters { get; set; }
-        public System.TimeSpan BackoffPeriod { get; set; }
-        public System.TimeSpan CommandAckTimeout { get; set; }
+        public System.Collections.Immutable.ImmutableDictionary<string, string> Adapters { get; }
+        public System.TimeSpan BackoffPeriod { get; }
+        public System.TimeSpan CommandAckTimeout { get; }
         public Akka.Configuration.Config Config { get; }
-        public string Dispatcher { get; set; }
-        public System.TimeSpan FlushWait { get; set; }
-        public System.TimeSpan InitialSysMsgDeliveryTimeout { get; set; }
-        public int LogBufferSizeExceeding { get; set; }
-        public bool LogReceive { get; set; }
-        public bool LogSend { get; set; }
-        public System.Nullable<System.TimeSpan> QuarantineDuration { get; set; }
-        public System.TimeSpan QuarantineSilentSystemTimeout { get; set; }
-        public string RemoteLifecycleEventsLogLevel { get; set; }
-        public System.TimeSpan RetryGateClosedFor { get; set; }
-        public System.TimeSpan ShutdownTimeout { get; set; }
-        public System.TimeSpan StartupTimeout { get; set; }
-        public System.TimeSpan SysMsgAckTimeout { get; set; }
-        public int SysMsgBufferSize { get; set; }
-        public int SysResendLimit { get; set; }
-        public System.TimeSpan SysResendTimeout { get; set; }
-        public System.Collections.Generic.IList<string> TransportNames { get; set; }
-        public TransportSettings[] Transports { get; set; }
-        public System.Collections.Generic.HashSet<string> TrustedSelectionPaths { get; set; }
-        public bool UntrustedMode { get; set; }
-        public bool UsePassiveConnections { get; set; }
-        public Akka.Configuration.Config WatchFailureDetectorConfig { get; set; }
-        public string WatchFailureDetectorImplementationClass { get; set; }
-        public System.TimeSpan WatchHeartBeatInterval { get; set; }
-        public System.TimeSpan WatchHeartbeatExpectedResponseAfter { get; set; }
-        public System.TimeSpan WatchUnreachableReaperInterval { get; set; }
+        public string Dispatcher { get; }
+        public System.TimeSpan FlushWait { get; }
+        public System.TimeSpan InitialSysMsgDeliveryTimeout { get; }
+        public int LogBufferSizeExceeding { get; }
+        public System.Nullable<int> LogFrameSizeExceeding { get; }
+        public bool LogReceive { get; }
+        public bool LogSend { get; }
+        public System.Nullable<System.TimeSpan> QuarantineDuration { get; }
+        public System.TimeSpan QuarantineSilentSystemTimeout { get; }
+        public string RemoteLifecycleEventsLogLevel { get; }
+        public System.TimeSpan RetryGateClosedFor { get; }
+        public System.TimeSpan ShutdownTimeout { get; }
+        public System.TimeSpan StartupTimeout { get; }
+        public System.TimeSpan SysMsgAckTimeout { get; }
+        public int SysMsgBufferSize { get; }
+        public int SysResendLimit { get; }
+        public System.TimeSpan SysResendTimeout { get; }
+        public System.Collections.Immutable.ImmutableList<string> TransportNames { get; }
+        public System.Collections.Immutable.ImmutableList<Akka.Remote.RemoteSettings.TransportSettings> Transports { get; }
+        public System.Collections.Immutable.ImmutableHashSet<string> TrustedSelectionPaths { get; }
+        public bool UntrustedMode { get; }
+        public bool UsePassiveConnections { get; }
+        public bool UseUnsafeRemoteFeaturesWithoutCluster { get; }
+        public bool WarnAboutDirectUse { get; }
+        public bool WarnUnsafeWatchWithoutCluster { get; }
+        public Akka.Configuration.Config WatchFailureDetectorConfig { get; }
+        public string WatchFailureDetectorImplementationClass { get; }
+        public System.TimeSpan WatchHeartBeatInterval { get; }
+        public System.TimeSpan WatchHeartbeatExpectedResponseAfter { get; }
+        public System.TimeSpan WatchUnreachableReaperInterval { get; }
         public Akka.Actor.Props ConfigureDispatcher(Akka.Actor.Props props) { }
         public class TransportSettings
         {
             public TransportSettings(Akka.Configuration.Config config) { }
-            public System.Collections.Generic.IList<string> Adapters { get; set; }
-            public Akka.Configuration.Config Config { get; set; }
-            public string TransportClass { get; set; }
+            public System.Collections.Immutable.ImmutableList<string> Adapters { get; }
+            public Akka.Configuration.Config Config { get; }
+            public string TransportClass { get; }
         }
     }
     [Akka.Annotations.InternalApiAttribute()]
