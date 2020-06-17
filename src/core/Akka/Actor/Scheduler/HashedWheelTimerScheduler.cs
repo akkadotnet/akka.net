@@ -14,7 +14,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
-using System.Diagnostics;
 
 // ReSharper disable NotResolvedInText
 
@@ -67,9 +66,6 @@ namespace Akka.Actor
                     $"akka.scheduler.tick-duration: {_tickDuration} (expected: 0 < tick-duration in ticks < {long.MaxValue / _wheel.Length}");
 
             _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
-
-            // trigger performance counters
-            ActorPerformanceCounters.Start(this);
         }
 
         private long _startTime = 0;
@@ -222,7 +218,6 @@ namespace Akka.Actor
             {
                 for (;;)
                 {
-                    ActorPerformanceCounters.SchedulerWaiting();
                     long currentTime = HighResMonotonicClock.Ticks - _startTime;
                     var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
 
@@ -234,7 +229,6 @@ namespace Akka.Actor
 
                     }
 
-                    ActorPerformanceCounters.SchedulerSleep();
 #if UNSAFE_THREADING
                     try
                     {
@@ -318,7 +312,6 @@ namespace Akka.Actor
 
         private void InternalSchedule(TimeSpan delay, TimeSpan interval, IRunnable action, ICancelable cancelable)
         {
-            ActorPerformanceCounters.SchedulerSchedule();
             Start();
             var deadline = HighResMonotonicClock.Ticks + delay.Ticks - _startTime;
             var offset = interval.Ticks;
@@ -564,8 +557,6 @@ namespace Akka.Actor
             /// <param name="reg">The registration scheduled for repeating</param>
             public void Reschedule(SchedulerRegistration reg)
             {
-                ActorPerformanceCounters.SchedulerUnschedule();
-                ActorPerformanceCounters.SchedulerSchedule();
                 if (_rescheduleHead == null)
                 {
                     _rescheduleHead = _rescheduleTail = reg;
@@ -636,7 +627,6 @@ namespace Akka.Actor
                         {
                             try
                             {
-                                ActorPerformanceCounters.SchedulerRun();
                                 // Execute the scheduled work
                                 current.Action.Run();
                             }
@@ -683,7 +673,6 @@ namespace Akka.Actor
 
             public void Remove(SchedulerRegistration reg)
             {
-                ActorPerformanceCounters.SchedulerUnschedule();
                 var next = reg.Next;
 
                 // Remove work that's already been completed or cancelled
