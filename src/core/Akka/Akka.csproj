@@ -18,6 +18,7 @@
   <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.Collections.Immutable" Version="1.7.1" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="4.7.0" />
   </ItemGroup>
     
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)'">
