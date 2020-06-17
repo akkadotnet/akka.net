@@ -1,3 +1,23 @@
+#### 1.4.8 June 17 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.8 features some important bug fixes for Akka.NET v1.4:
+
+* [Akka: fix issue with setting IActorRefProvider via BootstrapSetup](https://github.com/akkadotnet/akka.net/pull/4473)
+* [Akka.Cluster: Akka v1.4 Idle CPU usage increased comparing v1.3](https://github.com/akkadotnet/akka.net/issues/4434)
+* [Akka.Cluster.Sharding: Backport of the feature called ClusterDistribution in Lagom](https://github.com/akkadotnet/akka.net/pull/4455)
+* [Akka.TestKit: added ActorSystemSetup overload for TestKits](https://github.com/akkadotnet/akka.net/pull/4464)
+
+To see the [full set of fixes in Akka.NET v1.4.8, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/39).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 7 | 310 | 24 | Aaron Stannard |
+| 6 | 8 | 8 | dependabot-preview[bot] |
+| 2 | 669 | 10 | Ismael Hamed |
+| 2 | 38 | 27 | Gregorius Soedharmo |
+| 1 | 1 | 1 | Bartosz Sypytkowski |
+
 #### 1.4.7 May 26 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 

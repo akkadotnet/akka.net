@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
@@ -56,6 +57,12 @@ namespace Akka.TestKit
 
         public AkkaSpec(Config config = null, ITestOutputHelper output = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
+        {
+            BeforeAll();
+        }
+
+        public AkkaSpec(ActorSystemSetup setup, ITestOutputHelper output = null)
+            : base(setup, GetCallerName(), output)
         {
             BeforeAll();
         }
