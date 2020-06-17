@@ -174,7 +174,7 @@ namespace Akka.Remote.Transport.DotNetty
             if (_channel.Open)
             {
                 var data = ToByteBuffer(_channel, payload);
-                _channel.WriteAsync(data);
+                _channel.WriteAndFlushAsync(data);
                 return true;
             }
             return false;
