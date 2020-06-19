@@ -378,7 +378,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             else
             {
-                _persistenceIdSubscribers = _persistenceIdSubscribers.Add(persistenceId, subscriptions.Add(subscriber));
+                _persistenceIdSubscribers = _persistenceIdSubscribers.SetItem(persistenceId, subscriptions.Add(subscriber));
             }
         }
 
