@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
+using Newtonsoft.Json;
 
 namespace Akka.Cluster
 {
@@ -69,11 +70,16 @@ namespace Akka.Cluster
         /// </summary>
         public sealed class CurrentClusterState
         {
+            [JsonProperty]
             private readonly ImmutableSortedSet<Member> _members;
+            [JsonProperty]
             private readonly ImmutableHashSet<Member> _unreachable;
+            [JsonProperty]
             private readonly ImmutableHashSet<Address> _seenBy;
+            [JsonProperty]
             private readonly Address _leader;
-            private readonly ImmutableDictionary<string, Address> _roleLeaderMap;
+            [JsonProperty]
+            private readonly Dictionary<string, Address> _roleLeaderMap;
 
             /// <summary>
             /// Creates a new instance of the current cluster state.
@@ -105,9 +111,26 @@ namespace Akka.Cluster
                 _unreachable = unreachable;
                 _seenBy = seenBy;
                 _leader = leader;
-                _roleLeaderMap = roleLeaderMap;
+                _roleLeaderMap = roleLeaderMap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
             }
 
+            /// <summary>
+            /// Used when `akka.actor.serialize-messages = on`.
+            /// </summary>
+            [JsonConstructor]
+            internal CurrentClusterState(
+                IEnumerable<Member> members,
+                IEnumerable<Member> unreachable,
+                IEnumerable<Address> seenBy,
+                Address leader,
+                Dictionary<string, Address> roleLeaderMap)
+            {
+                _members = members.ToImmutableSortedSet();
+                _unreachable = unreachable.ToImmutableHashSet();
+                _seenBy = seenBy.ToImmutableHashSet();
+                _leader = leader;
+                _roleLeaderMap = roleLeaderMap;
+            }
             /// <summary>
             /// Get current member list
             /// </summary>
@@ -153,7 +176,7 @@ namespace Akka.Cluster
             /// </summary>
             internal ImmutableDictionary<string, Address> RoleLeaderMap
             {
-                get { return _roleLeaderMap; }
+                get { return _roleLeaderMap.ToImmutableDictionary(); }
             }
 
             /// <summary>
@@ -188,7 +211,7 @@ namespace Akka.Cluster
                     unreachable ?? _unreachable,
                     seenBy ?? _seenBy,
                     leader ?? (_leader != null ? (Address)_leader.Clone() : null),
-                    roleLeaderMap ?? _roleLeaderMap);
+                    roleLeaderMap ?? RoleLeaderMap);
             }
         }
 
