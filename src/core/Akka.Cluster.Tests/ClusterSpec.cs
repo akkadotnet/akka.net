@@ -35,6 +35,7 @@ namespace Akka.Cluster.Tests
               publish-stats-interval = 0 s # always, when it happens
               run-coordinated-shutdown-when-down = off
             }
+            akka.actor.serialize-messages = on
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.coordinated-shutdown.terminate-actor-system = off
             akka.coordinated-shutdown.run-by-actor-system-terminate = off
