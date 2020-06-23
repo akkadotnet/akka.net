@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Configuration;
 using Helios.Concurrency;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
@@ -45,7 +44,6 @@ namespace Akka.Dispatch
         }
     }
 
-#if UNSAFE_THREADING
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -68,7 +66,6 @@ namespace Akka.Dispatch
         {
         }
     }
-#endif
 
     /// <summary>
     /// INTERNAL API
