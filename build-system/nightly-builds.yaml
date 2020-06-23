@@ -20,10 +20,10 @@ variables:
 
 steps:
 - task: UseDotNet@2
-  displayName: 'Use .NET Core SDK 3.1.105'
+  displayName: 'Use .NET Core SDK 2.1.202'
   inputs:
     packageType: sdk
-    version: 3.1.105
+    version: 2.1.202
 - task: BatchScript@1
   displayName: 'FAKE Build'
   inputs:
