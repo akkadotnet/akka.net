@@ -33,12 +33,13 @@ namespace Akka.Actor
         internal string Fqn { get; }
         internal bool HasCluster { get; }
 
+        internal const string LocalActorRefProvider = "Akka.Actor.LocalActorRefProvider, Akka";
         internal const string RemoteActorRefProvider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
         internal const string ClusterActorRefProvider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
 
         public sealed class Local : ProviderSelection
         {
-            private Local() : base("local", typeof(LocalActorRefProvider).FullName, false)
+            private Local() : base("local", LocalActorRefProvider, false)
             {
             }
 

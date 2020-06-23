@@ -734,9 +734,18 @@ namespace Akka.Cluster.Tools.Singleton
             base.PostStop();
         }
 
+        // HACK: this is to patch issue #4474 (https://github.com/akkadotnet/akka.net/issues/4474), but it doesn't guarantee that it fixes the underlying bug.
+        // There is no spec for this fix, no reproduction spec was possible.
         private void AddRemoved(UniqueAddress node)
         {
-            _removed = _removed.Add(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
+            if(_removed.TryGetValue(node, out _))
+            {
+                _removed = _removed.SetItem(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
+            } 
+            else
+            {
+                _removed = _removed.Add(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
+            }
         }
 
         private void CleanupOverdueNotMemberAnyMore()

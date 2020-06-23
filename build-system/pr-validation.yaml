@@ -6,11 +6,12 @@ trigger:
       - dev
       - v1.*
       - master
+      - feature/*
 
 pr:
   autoCancel: true # indicates whether additional pushes to a PR should cancel in-progress runs for the same PR. Defaults to true
   branches:
-    include: [ dev, v1.*, master ] # branch names which will trigger a build
+    include: [ dev, v1.*, master, feature/* ] # branch names which will trigger a build
 
 name: $(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
 
@@ -26,10 +27,10 @@ jobs:
         submodules: recursive  # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
         persistCredentials: true
       - task: UseDotNet@2
-        displayName: 'Use .NET Core SDK 3.1.100'
+        displayName: 'Use .NET Core SDK 3.1.105'
         inputs:
           packageType: sdk
-          version: 3.1.100
+          version: 3.1.105
       - task: BatchScript@1
         displayName: Windows Build
         inputs:
