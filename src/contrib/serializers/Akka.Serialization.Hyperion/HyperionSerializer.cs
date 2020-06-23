@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Util;
@@ -106,10 +107,25 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            using (var ms = new MemoryStream(bytes))
+            try
             {
-                var res = _serializer.Deserialize<object>(ms);
-                return res;
+                using (var ms = new MemoryStream(bytes))
+                {
+                    var res = _serializer.Deserialize<object>(ms);
+                    return res;
+                }
+            }
+            catch (TypeLoadException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch(NotSupportedException e)
+            {
+                throw new SerializationException(e.Message, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw new SerializationException(e.Message, e);
             }
         }
 
@@ -157,7 +173,8 @@ namespace Akka.Serialization
         /// <returns></returns>
         public static HyperionSerializerSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "HyperionSerializerSettings require a config, default path: `akka.serializers.hyperion`");
+            if (config.IsNullOrEmpty())
+                throw new ArgumentNullException("HyperionSerializerSettings require a config, default path: `akka.serializers.hyperion`");
 
             var typeName = config.GetString("known-types-provider");
             var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
