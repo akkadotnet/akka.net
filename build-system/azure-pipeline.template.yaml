@@ -1,0 +1,59 @@
+parameters:
+  name: ''
+  displayName: ''
+  vmImage: ''
+  dependsOn: 'WindowsBuild'
+  artifactName: 'akkaBuild'
+  scriptFileName: ''
+  scriptArgs: 'all'
+  outputDirectory: ''
+  timeoutInMinutes: 120
+
+jobs:
+  - job: ${{ parameters.name }}
+    displayName: ${{ parameters.displayName }}
+    timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+    steps:
+      - task: UseDotNet@2
+        displayName: 'Use .NET Core SDK 3.1.105'
+        inputs:
+          packageType: sdk
+          version: 3.1.105
+      - task: Bash@3 
+        displayName: Linux / OSX Build
+        inputs:
+          filePath: ${{ parameters.scriptFileName }}
+          arguments: ${{ parameters.scriptArgs }}
+        continueOnError: true
+        condition: in( variables['Agent.OS'], 'Linux', 'Darwin' )
+      # Windows
+      - task: BatchScript@1
+        displayName: Windows Build
+        inputs:
+          filename: ${{ parameters.scriptFileName }}
+          arguments: ${{ parameters.scriptArgs }}
+        continueOnError: true
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      - task: PublishTestResults@2
+        inputs:
+          testRunner: VSTest
+          testResultsFiles: '**/*.trx' #TestResults folder usually
+          testRunTitle: ${{ parameters.name }}
+          mergeTestResults: true
+      - task: CopyFiles@2
+        displayName: 'Copy Build Output'
+        inputs:
+          sourceFolder: ${{ parameters.outputDirectory }}
+          contents: '**\*'
+          targetFolder: $(Build.ArtifactStagingDirectory)
+          continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
+      - task: PublishBuildArtifacts@1
+        inputs:
+          pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          artifactName: ${{ parameters.artifactName }}
+      - script: 'echo 1>&2'
+        failOnStderr: true
+        displayName: 'If above is partially succeeded, then fail'
+        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')

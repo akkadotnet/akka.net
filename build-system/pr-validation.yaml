@@ -1,0 +1,119 @@
+# Pull request validation for Windows against the `dev` and `master` branches
+# See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
+trigger:
+  branches:
+    include:
+      - dev
+      - v1.*
+      - master
+      - feature/*
+
+pr:
+  autoCancel: true # indicates whether additional pushes to a PR should cancel in-progress runs for the same PR. Defaults to true
+  branches:
+    include: [ dev, v1.*, master, feature/* ] # branch names which will trigger a build
+
+name: $(Year:yyyy).$(Month).$(DayOfMonth)$(Rev:.r)
+
+jobs:
+  - job: WindowsBuild
+    displayName: Windows Build
+    pool:
+      vmImage: vs2017-win2016
+      demands: Cmd
+    steps:
+      - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
+        clean: false  # whether to fetch clean each time
+        submodules: recursive  # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
+        persistCredentials: true
+      - task: UseDotNet@2
+        displayName: 'Use .NET Core SDK 3.1.105'
+        inputs:
+          packageType: sdk
+          version: 3.1.105
+      - task: BatchScript@1
+        displayName: Windows Build
+        inputs:
+          filename: build.cmd
+          arguments: 'buildRelease incremental' # Run an incremental build
+        continueOnError: true
+        condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      - task: CopyFiles@2
+        displayName: 'Copy Build Output'
+        inputs:
+          sourceFolder: bin
+          contents: '*'
+          targetFolder: $(Build.ArtifactStagingDirectory)
+          continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
+      - task: PublishBuildArtifacts@1
+        inputs:
+          pathtoPublish: $(Build.ArtifactStagingDirectory)
+          artifactName: 'incrementalistOutput-$(Build.BuildId)'
+      - script: 'echo 1>&2'
+        failOnStderr: true
+        displayName: 'If above is partially succeeded, then fail'
+        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
+
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: 'netfx_tests_windows'
+      displayName: '.NET Framework Unit Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: build.cmd
+      scriptArgs: runTests incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'netfx_tests_windows-$(Build.BuildId)'
+
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: 'net_core_tests_windows'
+      displayName: '.NET Core Unit Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: build.cmd
+      scriptArgs: runTestsNetCore incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_core_tests_windows-$(Build.BuildId)'
+
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: 'net_core_tests_linux'
+      displayName: '.NET Core Unit Tests (Linux)'
+      vmImage: 'ubuntu-16.04'
+      scriptFileName: './build.sh'
+      scriptArgs: runTestsNetCore incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_core_tests_linux-$(Build.BuildId)'
+
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: 'net_core_mntr_windows'
+      displayName: '.NET Core Multi-Node Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: 'build.cmd'
+      scriptArgs: MultiNodeTestsNetCore incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_core_mntr_windows-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_core_mntr_FAILED_windows-$(Build.BuildId)'
+
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: 'net_fx_mntr_windows'
+      displayName: '.NET Framework Multi-Node Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: 'build.cmd'
+      scriptArgs: MultiNodeTests incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_fx_mntr_windows-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_fx_mntr_FAILED_windows-$(Build.BuildId)'
+
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: 'nuget_pack'
+      displayName: 'NuGet Pack'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: build.cmd
+      scriptArgs: CreateNuget nugetprerelease=dev incremental
+      outputDirectory: 'bin/nuget'
+      artifactName: 'nuget_pack-$(Build.BuildId)'
