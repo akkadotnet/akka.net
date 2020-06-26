@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
-using Adaptive.Agrona;
-using Adaptive.Agrona.Concurrent;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.Remote.Serialization;
@@ -27,7 +26,37 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal class EnvelopeBufferPool
     {
-        // ARTERY: Incomplete implementation
+        private readonly ConcurrentQueue<EnvelopeBuffer> _availableBuffers;
+
+        public int MaximumPayload { get; }
+        public int MaximumBuffers { get; }
+
+        public EnvelopeBufferPool(int maximumPayload, int maximumBuffers)
+        {
+            MaximumPayload = maximumPayload;
+            MaximumBuffers = maximumBuffers;
+            _availableBuffers = new ConcurrentQueue<EnvelopeBuffer>();
+        }
+
+        public EnvelopeBuffer Acquire()
+        {
+            if (_availableBuffers.TryDequeue(out var buffer))
+            {
+                var underlying = buffer.ByteBuffer.GetBuffer();
+                Array.Clear(underlying, 0, underlying.Length);
+                return buffer;
+            }
+            
+            return new EnvelopeBuffer(new MemoryStream(new byte[MaximumPayload]));
+        }
+
+        public void Release(EnvelopeBuffer buffer)
+        {
+            if (_availableBuffers.Count >= MaximumBuffers)
+                return;
+
+            _availableBuffers.Enqueue(buffer);
+        }
     }
 
     /// <summary>
