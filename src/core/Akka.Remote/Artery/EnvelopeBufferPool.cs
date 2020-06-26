@@ -83,21 +83,22 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class HeaderBuilder
+    internal static class HeaderBuilder
     {
         // We really only use the Header builder on one "side" or the other, 
         // thus in order to avoid having to split its impl
         // we inject no-op compression's of the "other side".
 
-        public static HeaderBuilder In(InboundCompression compression)
-        {
-            // ARTERY: Incomplete implementation
-        }
+        public static HeaderBuilderImpl In(IInboundCompressions compression)
+            => new HeaderBuilderImpl(compression,
+                CompressionTable<IActorRef>.Empty,
+                CompressionTable<string>.Empty);
 
-        public static HeaderBuilder Out()
-        {
-            // ARTERY: Incomplete implementation
-        }
+        public static HeaderBuilderImpl Out()
+            => new HeaderBuilderImpl(
+                new NoInboundCompressions(),
+                CompressionTable<IActorRef>.Empty,
+                CompressionTable<string>.Empty);
 
         public const int DeadLettersCode = -1;
     }
