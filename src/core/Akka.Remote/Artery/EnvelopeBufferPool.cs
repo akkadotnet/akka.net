@@ -237,7 +237,7 @@ namespace Akka.Remote.Artery
             RemoteInstruments = null;
         }
 
-        public InboundCompressions InboundCompression { get; }
+        public IInboundCompressions InboundCompression { get; }
 
         public byte Version { get; set; }
         public byte Flags { get; set; }
@@ -280,7 +280,7 @@ namespace Akka.Remote.Artery
         {
             // we treat deadLetters as always present, but not included in table
             if (SenderActorRef is null && !IsNoSender)
-                return InboundCompression.decompressActorRef(
+                return InboundCompression.DecompressActorRef(
                     originUid,
                     InboundActorRefCompressionTableVersion,
                     SenderActorRefIdx);
@@ -353,8 +353,8 @@ namespace Akka.Remote.Artery
 
         public Option<RemoteInstruments> RemoteInstruments { get; set; } = Option<RemoteInstruments>.None;
 
-        public HeaderBuilderImpl( 
-            InboundCompressions inboundCompressions,
+        public HeaderBuilderImpl(
+            IInboundCompressions inboundCompressions,
             CompressionTable<IActorRef> outboundActorRefCompression,
             CompressionTable<string> outboundClassManifestCompression)
         {
@@ -448,7 +448,7 @@ namespace Akka.Remote.Artery
             WriteHeader(h, null);
         }
 
-        public void WriteHeader(IHeaderBuilder h, OutboundEnvelope oe)
+        public void WriteHeader(IHeaderBuilder h, IOutboundEnvelope oe)
         {
             var header = (HeaderBuilderImpl)h;
             using (var buffer = new MemoryStream())
@@ -479,7 +479,7 @@ namespace Akka.Remote.Artery
                 buffer.Position = MetadataContainerAndLiteralSectionOffset;
                 if (header.RemoteInstruments.HasValue)
                 {
-                    header.RemoteInstruments.Value.Serialize(new Option<OutboundEnvelope>(oe), buffer);
+                    header.RemoteInstruments.Value.Serialize(new Option<IOutboundEnvelope>(oe), buffer);
                     if(buffer.Position != MetadataContainerAndLiteralSectionOffset)
                     {
                         // we actually wrote some metadata so update the flag field to reflect that
