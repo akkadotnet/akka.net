@@ -421,11 +421,7 @@ namespace Akka.Remote.Artery
         // Mode depends on the `MetadataPresentFlag`.
         public const int MetadataContainerAndLiteralSectionOffset = 28; // int
 
-        private MemoryStream _byteBuffer;
-        private UnsafeBuffer _aeronBuffer;
-
-        private char[] literalChars = new char[64];
-        private byte[] literalBytes = new byte[64];
+        public MemoryStream ByteBuffer { get; }
 
         // The streamId is only used for TCP transport. 
         // It is not part of the ordinary envelope header, 
@@ -439,8 +435,7 @@ namespace Akka.Remote.Artery
 
         public EnvelopeBuffer(MemoryStream byteBuffer)
         {
-            _byteBuffer = byteBuffer;
-            _aeronBuffer = new UnsafeBuffer(byteBuffer.GetBuffer());
+            ByteBuffer = byteBuffer;
         }
 
         public void WriteHeader(IHeaderBuilder h)
@@ -451,7 +446,7 @@ namespace Akka.Remote.Artery
         public void WriteHeader(IHeaderBuilder h, IOutboundEnvelope oe)
         {
             var header = (HeaderBuilderImpl)h;
-            using (var buffer = new MemoryStream())
+            var buffer = ByteBuffer;
             using(var writer = new BinaryWriter(buffer))
             {
                 // Write fixed length parts
@@ -521,54 +516,77 @@ namespace Akka.Remote.Artery
                 {
                     WriteLiteral(ClassManifestTagOffset, header.Manifest, buffer, writer);
                 }
-
-                Array.Copy(buffer.GetBuffer(), _byteBuffer.GetBuffer(), buffer.Length);
             }
         }
 
         public void ParseHeader(IHeaderBuilder h)
         {
             var header = (HeaderBuilderImpl)h;
-
-            using(var reader = new BinaryReader(_byteBuffer))
+            var buffer = ByteBuffer;
+            using(var reader = new BinaryReader(buffer))
             {
                 // Read fixed length parts
-                _byteBuffer.Position = VersionOffset;
+                buffer.Position = VersionOffset;
                 header.Version = reader.ReadByte();
 
                 if (header.Version > ArteryTransport.HighestVersion)
                     throw new ArgumentException($"Incompatible protocol version [{header.Version}], " +
                         $"highest known version for this node is [{ArteryTransport.HighestVersion}]");
 
-                _byteBuffer.Position = FlagsOffset;
+                buffer.Position = FlagsOffset;
                 header.Flags = reader.ReadByte();
                 // compression table versions (stored in the Tag)
-                _byteBuffer.Position = ActorRefCompressionTableVersionOffset;
+                buffer.Position = ActorRefCompressionTableVersionOffset;
                 header.InboundActorRefCompressionTableVersion = reader.ReadByte();
 
-                _byteBuffer.Position = ClassManifestCompressionTableVersionOffset;
+                buffer.Position = ClassManifestCompressionTableVersionOffset;
                 header.InboundClassManifestCompressionTableVersion = reader.ReadByte();
 
-                _byteBuffer.Position = UidOffset;
+                buffer.Position = UidOffset;
                 header.Uid = reader.ReadInt64();
 
-                _byteBuffer.Position = SerializerOffset;
+                buffer.Position = SerializerOffset;
                 header.Serializer = reader.ReadInt32();
 
-                _byteBuffer.Position = MetadataContainerAndLiteralSectionOffset;
+                buffer.Position = MetadataContainerAndLiteralSectionOffset;
                 if (header.Flag(_metadataPresentFlag))
                 {
                     // metadata present, so we need to fast forward to the literals that start right after
                     var totalMetadataLength = reader.ReadInt32();
-                    _byteBuffer.Position += totalMetadataLength;
+                    buffer.Position += totalMetadataLength;
                 }
 
-                // ============================ last line
-            }
+                // deserialize sender
+                buffer.Position = SenderActorRefTagOffset;
+                var senderTag = reader.ReadInt32();
+                if ((senderTag & TagTypeMask) != 0)
+                {
+                    var idx = senderTag & TagValueMask;
+                    header.SenderActorRef = null;
+                    header.SenderActorRefIdx = (int) idx;
+                }
+                else
+                {
+                    header.SenderActorRef = ReadLiteral(reader);
+                }
 
+                // deserialize class maifest
+                buffer.Position = ClassManifestTagOffset;
+                var manifestTag = reader.ReadInt32();
+                if ((manifestTag & TagTypeMask) != 0)
+                {
+                    var idx = manifestTag & TagValueMask;
+                    header.Manifest = null;
+                    header.ManifestIdx = (int) idx;
+                }
+                else
+                {
+                    header.Manifest = ReadLiteral(reader);
+                }
+            }
         }
 
-        private void WriteLiteral(int tagOffset, string literal, MemoryStream buffer, BinaryWriter writer)
+        private static void WriteLiteral(int tagOffset, string literal, Stream buffer, BinaryWriter writer)
         {
             var length = literal is null ? 0 : literal.Length;
             if (length > 65535)
