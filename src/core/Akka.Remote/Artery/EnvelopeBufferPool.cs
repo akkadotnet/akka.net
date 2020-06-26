@@ -209,14 +209,14 @@ namespace Akka.Remote.Artery
 
         private bool _useOutboundCompression = true;
 
-        public string SenderActorRef { get; private set; } = null;
-        public int SenderActorRefIdx { get; private set; } = -1;
+        public string SenderActorRef { get; internal set; } = null;
+        public int SenderActorRefIdx { get; internal set; } = -1;
         public string RecipientActorRef { get; private set; } = null;
         public int RecipientActorRefIdx { get; private set; } = -1;
 
         private int _serializer = 0;
-        public string Manifest { get; private set; } = null;
-        public int ManifestIdx { get; private set; } = -1;
+        public string Manifest { get; internal set; } = null;
+        public int ManifestIdx { get; internal set; } = -1;
 
         public void ResetMessageFields()
         {
