@@ -9,7 +9,7 @@ namespace Akka.Util
         public static T Requiring<T>(this T obj, Func<T, bool> cond, string msg)
         {
             if (!cond(obj))
-                throw new ArgumentException(msg);
+                throw new ArgumentException($"Requirement failed: {msg}");
             return obj;
         }
     }
