@@ -118,11 +118,11 @@ namespace Akka.Remote.Artery
         byte InboundActorRefCompressionTableVersion { get; set; }
         byte InboundClassManifestCompressionTableVersion { get; set; }
 
-        void UseOutboundCompression(bool on);
+        bool UseOutboundCompression { get; set; }
 
         CompressionTable<IActorRef> OutboundActorRefCompression { get; set; }
 
-        CompressionTable<IActorRef> OutboundClassManifestCompression { get; set; }
+        CompressionTable<string> OutboundClassManifestCompression { get; set; }
 
         long Uid { get; set; }
 
@@ -206,14 +206,11 @@ namespace Akka.Remote.Artery
         internal SerializationFormatCache ToSerializationFormat()
             => new SerializationFormatCache();
 
-        private bool _useOutboundCompression = true;
-
         public string SenderActorRef { get; internal set; } = null;
         public int SenderActorRefIdx { get; internal set; } = -1;
-        public string RecipientActorRef { get; private set; } = null;
-        public int RecipientActorRefIdx { get; private set; } = -1;
+        public string RecipientActorRef { get; internal set; } = null;
+        public int RecipientActorRefIdx { get; internal set; } = -1;
 
-        private int _serializer = 0;
         public string Manifest { get; internal set; } = null;
         public int ManifestIdx { get; internal set; } = -1;
 
@@ -229,7 +226,7 @@ namespace Akka.Remote.Artery
             RecipientActorRef = null;
             RecipientActorRefIdx = - 1;
 
-            _serializer = 0;
+            Serializer = 0;
             Manifest = null;
             ManifestIdx = -1;
 
@@ -250,14 +247,14 @@ namespace Akka.Remote.Artery
         public byte InboundActorRefCompressionTableVersion { get; set; }
         public byte InboundClassManifestCompressionTableVersion { get; set; }
 
-        public void UseOutboundCompression(bool on) => _useOutboundCompression = on;
+        public bool UseOutboundCompression { get; set; } = true;
 
         public CompressionTable<IActorRef> OutboundActorRefCompression { get; set; }
-        public CompressionTable<IActorRef> OutboundClassManifestCompression { get; set; }
+        public CompressionTable<string> OutboundClassManifestCompression { get; set; }
 
         public void SetSenderActorRef(IActorRef @ref)
         {
-            if(_useOutboundCompression)
+            if(UseOutboundCompression)
             {
                 SenderActorRefIdx = OutboundActorRefCompression.Compress(@ref);
                 if (SenderActorRefIdx == -1)
@@ -302,7 +299,7 @@ namespace Akka.Remote.Artery
         // because it's using `Serialization.serializedActorPath`
         public void SetRecipientActorRef(IActorRef @ref)
         {
-            if (_useOutboundCompression)
+            if (UseOutboundCompression)
             {
                 RecipientActorRefIdx = OutboundActorRefCompression.Compress(@ref);
                 if (RecipientActorRefIdx == -1) 
@@ -330,7 +327,7 @@ namespace Akka.Remote.Artery
 
         public void SetManifest(string manifest)
         {
-            if (_useOutboundCompression)
+            if (UseOutboundCompression)
             {
                 ManifestIdx = OutboundClassManifestCompression.Compress(manifest);
                 if (ManifestIdx == -1) Manifest = manifest;
@@ -399,10 +396,10 @@ namespace Akka.Remote.Artery
     internal sealed class EnvelopeBuffer
     {
         public const uint TagTypeMask = 0xFF000000;
-        public const uint TagValueMask = 0x0000FFFF;
+        public const int TagValueMask = 0x0000FFFF;
 
         // Flags (1 byte allocated for them)
-        private readonly ByteFlag _metadataPresentFlag = new ByteFlag(0x1);
+        private static readonly ByteFlag MetadataPresentFlag = new ByteFlag(0x1);
 
         public const int VersionOffset = 0; // byte
         public const int FlagsOffset = 1; // byte
