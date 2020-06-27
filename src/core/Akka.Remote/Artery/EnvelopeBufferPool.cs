@@ -361,16 +361,16 @@ namespace Akka.Remote.Artery
 
         public override string ToString()
             => "HeaderBuilderImpl(" +
-            $"version:{Version}, " +
-            $"flags:{ByteFlag.BinaryLeftPad(Flags)}, " +
+            $"Version:{Version}, " +
+            $"Flags:{ByteFlag.BinaryLeftPad(Flags)}, " +
             $"UID:{Uid}, " +
-            $"_senderActorRef:{SenderActorRef}, " +
-            $"_senderActorRefIdx:{SenderActorRefIdx}, " +
-            $"_recipientActorRef:{RecipientActorRef}, " +
-            $"_recipientActorRefIdx:{RecipientActorRefIdx}, " +
-            $"_serializer:{Serializer}, " +
-            $"_manifest:{Manifest}, " +
-            $"_manifestIdx:{ManifestIdx})";
+            $"SenderActorRef:{SenderActorRef}, " +
+            $"SenderActorRefIdx:{SenderActorRefIdx}, " +
+            $"RecipientActorRef:{RecipientActorRef}, " +
+            $"RecipientActorRefIdx:{RecipientActorRefIdx}, " +
+            $"Serializer:{Serializer}, " +
+            $"Manifest:{Manifest}, " +
+            $"ManifestIdx:{ManifestIdx})";
     }
 
     /// <summary>
