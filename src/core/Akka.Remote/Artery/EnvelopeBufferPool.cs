@@ -14,7 +14,7 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class OutOfBufferException : Exception
+    internal class OutOfBufferException : AkkaException
     {
         public OutOfBufferException():base("Out of usable ByteBuffers")
         {
