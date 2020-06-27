@@ -5,6 +5,8 @@ using System.IO;
 using System.Text;
 using Akka.Actor;
 using Akka.Pattern;
+using Akka.Remote.Artery.Compress;
+using Akka.Remote.Artery.Internal;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util;
