@@ -56,8 +56,7 @@ namespace Akka.Remote.Artery
 
             Transport = _config.GetTransport("transport");
 
-            // ARTERY: ArteryTransport isn't ported yet.
-            //Version = ArteryTransport.HighestVersion;
+            Version = ArteryTransport.HighestVersion;
 
             Advanced = new AdvancedSettings(_config.GetConfig("advanced"));
         }

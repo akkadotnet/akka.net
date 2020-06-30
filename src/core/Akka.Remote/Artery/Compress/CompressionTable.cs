@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Akka.Remote.Artery.Utils;
 using Akka.Util;
 
 namespace Akka.Remote.Artery.Compress
@@ -14,11 +15,11 @@ namespace Akka.Remote.Artery.Compress
         public static CompressionTable<T> Empty { get; } = new CompressionTable<T>(0, 0, ImmutableDictionary<T, int>.Empty);
 
         public long OriginUid { get; }
-        public sbyte Version { get; }
+        public byte Version { get; }
 
         public ImmutableDictionary<T, int> Dictionary { get; }
 
-        public CompressionTable(long originUid, sbyte version, ImmutableDictionary<T, int> dictionary)
+        public CompressionTable(long originUid, byte version, ImmutableDictionary<T, int> dictionary)
         {
             OriginUid = originUid;
             Version = version;
