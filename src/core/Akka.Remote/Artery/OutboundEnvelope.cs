@@ -30,19 +30,10 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal class ReusableOutboundEnvelope : IOutboundEnvelope
     {
-        // ARTERY: ObjectPool isn't implemented yet
-        // public static ObjectPool<ReusableOutboundEnvelope> CreateObjectPool(int capacity)
-        //     => new ObjectPool<ReusableOutboundEnvelope>(capacity, () => new ReusableOutboundEnvelope(), env => env.Clear());
+        public static ObjectPool<ReusableOutboundEnvelope> CreateObjectPool(int capacity)
+            => new ObjectPool<ReusableOutboundEnvelope>(capacity, () => new ReusableOutboundEnvelope(), env => env.Clear());
 
-        private ReusableOutboundEnvelope(
-            Option<RemoteActorRef> recipient, 
-            object message, 
-            Option<IActorRef> sender)
-        {
-            Recipient = recipient;
-            Message = message;
-            Sender = sender;
-        }
+        internal ReusableOutboundEnvelope() {}
 
         public Option<RemoteActorRef> Recipient { get; private set; } = Option<RemoteActorRef>.None;
         public object Message { get; private set; } = null;
@@ -55,9 +46,7 @@ namespace Akka.Remote.Artery
         }
 
         public IOutboundEnvelope Copy()
-        {
-            return new ReusableOutboundEnvelope(Recipient, Message, Sender);
-        }
+            => new ReusableOutboundEnvelope().Init(Recipient, Message, Sender);
 
         internal void Clear()
         {
@@ -66,9 +55,16 @@ namespace Akka.Remote.Artery
             Sender = Option<IActorRef>.None;
         }
 
-        public static ReusableOutboundEnvelope Create(Option<RemoteActorRef> recipient, object message, Option<IActorRef> sender)
+        public IOutboundEnvelope Init(
+            Option<RemoteActorRef> recipient,
+            object message,
+            Option<IActorRef> sender)
         {
-            return new ReusableOutboundEnvelope(recipient, message, sender);
+            Recipient = recipient;
+            Message = message;
+            Sender = sender;
+
+            return this;
         }
 
         public override string ToString()
