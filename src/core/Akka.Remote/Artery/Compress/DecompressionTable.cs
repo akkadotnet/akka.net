@@ -14,7 +14,7 @@ namespace Akka.Remote.Artery.Compress
     /// <typeparam name="T"></typeparam>
     internal sealed class DecompressionTable<T>
     {
-        public const sbyte DisabledVersion = -1;
+        public const byte DisabledVersion = unchecked((byte)-1);
         public static DecompressionTable<T> Empty = new DecompressionTable<T>(0, 0, ImmutableArray<T>.Empty);
         public static DecompressionTable<T> Disabled = new DecompressionTable<T>(0, DisabledVersion, ImmutableArray<T>.Empty);
 
@@ -23,18 +23,18 @@ namespace Akka.Remote.Artery.Compress
         /// <summary>
         /// Either -1 for disabled or a version between 0 and 127
         /// </summary>
-        public sbyte Version { get; }
+        public byte Version { get; }
         public ImmutableArray<T> Table { get; }
         public int Length => Table.Length;
 
-        public DecompressionTable(long originUid, sbyte version, ImmutableArray<T> table)
+        public DecompressionTable(long originUid, byte version, ImmutableArray<T> table)
         {
             OriginUid = originUid;
             Version = version;
             Table = table;
         }
 
-        public DecompressionTable<T> Copy(long? originUid = null, sbyte? version = null, ImmutableArray<T>? table = null)
+        public DecompressionTable<T> Copy(long? originUid = null, byte? version = null, ImmutableArray<T>? table = null)
             => new DecompressionTable<T>(
                 originUid ?? OriginUid,
                 version ?? Version,
