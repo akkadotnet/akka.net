@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -14,6 +15,13 @@ using Akka.Util.Internal;
 
 namespace Akka.Remote.Artery
 {
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Decompress and cause compression advertisements.
+    ///
+    /// One per inbound message stream thus must demux by originUid to use the right tables.
+    /// </summary>
     internal interface IInboundCompressions
     {
         void HitActorRef(long originUid, Address remote, IActorRef @ref, int n);
@@ -36,6 +44,12 @@ namespace Akka.Remote.Artery
         void Close(long originUid);
     }
 
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// One per incoming Aeron stream, actual compression tables are kept per-originUid and created on demand.
+    /// All access is via the Decoder stage.
+    /// </summary>
     internal sealed class InboundCompressionsImpl : IInboundCompressions
     {
         private readonly Dictionary<long, InboundActorRefCompression> _actorRefsIns = new Dictionary<long, InboundActorRefCompression>();
@@ -47,15 +61,15 @@ namespace Akka.Remote.Artery
         private readonly ILoggingAdapter _log;
 
         public ActorSystem System { get; }
-        public InboundContext InboundContext { get; }
+        public IInboundContext InboundContext { get; }
         public CompressionSettings Settings { get; }
-        public RemotingFlightRecorder FlightRecorder { get; }
+        public IRemotingFlightRecorder FlightRecorder { get; }
 
         public InboundCompressionsImpl(
-            ActorSystem system, 
-            InboundContext inboundContext, 
-            CompressionSettings settings, 
-            RemotingFlightRecorder flightRecorder)
+            ActorSystem system,
+            IInboundContext inboundContext, 
+            CompressionSettings settings,
+            IRemotingFlightRecorder flightRecorder)
         {
             System = system;
             InboundContext = inboundContext;
@@ -112,7 +126,7 @@ namespace Akka.Remote.Artery
                 if (association.HasValue)
                 {
                     if (association.Value.AssociationState.IsQuarantined(inbound.OriginUid))
-                        FlightRecorder.CompressionActorRefAdveertisement(inbound.OriginUid);
+                        FlightRecorder.CompressionActorRefAdvertisement(inbound.OriginUid);
                     inbound.RunNextTableAdvertisement();
                 }
                 else
@@ -151,7 +165,7 @@ namespace Akka.Remote.Artery
                 var association = InboundContext.Association(inbound.OriginUid);
                 if (association.HasValue)
                 {
-                    if (!association.AssociationState.IsQuarantined(inbound.OriginUid))
+                    if (!association.Value.AssociationState.IsQuarantined(inbound.OriginUid))
                     {
                         FlightRecorder.CompressionClassManifestAdvertisement(inbound.OriginUid);
                         inbound.RunNextTableAdvertisement();
@@ -201,7 +215,7 @@ namespace Akka.Remote.Artery
             ILoggingAdapter log,
             CompressionSettings settings,
             long originUid,
-            InboundContext inboundContext,
+            IInboundContext inboundContext,
             TopHeavyHitters<IActorRef> heavyHitters) :
             base(log, settings, originUid, inboundContext, heavyHitters)
         { }
@@ -210,16 +224,16 @@ namespace Akka.Remote.Artery
             => base.DecompressInternal(tableVersion, idx, 0);
 
         protected override void AdvertiseCompressionTable(
-            OutboundContext outboundContext,
+            IOutboundContext outboundContext,
             CompressionTable<IActorRef> table)
         {
             Log.Debug(
                 $"Advertise {Logging.SimpleName(this.GetType())} compression [{table}] to {outboundContext.RemoteAddress}#{OriginUid}");
-            OutboundContext.SendControl(
+            outboundContext.SendControl(
                 CompressionProtocol.ActorRefCompressionAdvertisement(InboundContext.LocalAddress, table));
         }
 
-        protected override Dictionary<IActorRef, int> BuildTableForAdvertisement(IEnumerable<IActorRef> elements)
+        protected override ImmutableDictionary<IActorRef, int> BuildTableForAdvertisement(IEnumerable<IActorRef> elements)
         {
             var mb = new Dictionary<IActorRef, int>();
             var idx = 0;
@@ -238,7 +252,7 @@ namespace Akka.Remote.Artery
                 }
             }
 
-            return mb;
+            return mb.ToImmutableDictionary();
         }
     }
 
@@ -251,15 +265,15 @@ namespace Akka.Remote.Artery
             ILoggingAdapter log,
             CompressionSettings settings,
             long originUid,
-            InboundContext inboundContext,
+            IInboundContext inboundContext,
             TopHeavyHitters<string> heavyHitters)
         : base(log, settings, originUid, inboundContext, heavyHitters)
         { }
 
-        protected override void AdvertiseCompressionTable(OutboundContext association, CompressionTable<string> table)
+        protected override void AdvertiseCompressionTable(IOutboundContext outboundContext, CompressionTable<string> table)
         {
-            Log.Debug($"Advertise {Logging.SimpleName(GetType())} compression [{table}] to [{OutboundContext.RemoteAddress}#{OriginUid}]");
-            OutboundContext.SendControl(
+            Log.Debug($"Advertise {Logging.SimpleName(GetType())} compression [{table}] to [{outboundContext.RemoteAddress}#{OriginUid}]");
+            outboundContext.SendControl(
                 CompressionProtocol.ClassManifestCompressionAdvertisement(InboundContext.LocalAddress, table));
 
         }
@@ -282,7 +296,7 @@ namespace Akka.Remote.Artery
     /// Access to this class must be externally synchronized (e.g. by accessing it from only Actors or a GraphStage etc).
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal abstract class InboundCompression<T>
+    internal abstract class InboundCompression<T> where T: class
     {
         public static int KeepOldTablesNumber => 3; // TODO: could be configurable
 
@@ -346,13 +360,13 @@ namespace Akka.Remote.Artery
 
             public Option<DecompressionTable<T>> SelectTable(int version)
             {
-                if (ActiveTable.version == version)
+                if (ActiveTable.Version == version)
                 {
                     DebugUtil.PrintLn($"Found table [version: {version}], was [ACTIVE]{ActiveTable}");
                     return new Option<DecompressionTable<T>>(ActiveTable);
                 }
 
-                Option<DecompressionTable<T>> found = Option<DecompressionTable<T>>.None;
+                var found = Option<DecompressionTable<T>>.None;
                 // ARTERY: OldTable needs to be reversed?
                 foreach (var table in OldTables)
                 {
@@ -388,7 +402,7 @@ namespace Akka.Remote.Artery
                     oldTables: newOldTables,
                     activeTable: NextTable,
                     nextTable: DecompressionTable<T>.Empty.Copy(version: IncrementTableVersion(NextTable.Version)),
-                    advertisementInProgress = Option<CompressionTable<T>>.None,
+                    advertisementInProgress: Option<CompressionTable<T>>.None,
                     keepOldTables: KeepOldTable);
             }
         }
@@ -396,13 +410,13 @@ namespace Akka.Remote.Artery
         public ILoggingAdapter Log { get; }
         public CompressionSettings Settings { get; }
         public long OriginUid { get; }
-        public InboundContext InboundContext { get; }
+        public IInboundContext InboundContext { get; }
         public TopHeavyHitters<T> HeavyHitters { get; }
 
         public Tables<T> CompressionTables { get; protected set; } = Tables<T>.Empty;
 
         // We should not continue sending advertisements to an association that might be dead (not quarantined yet)
-        public volatile bool _alive = true;
+        private volatile bool _alive = true;
         public bool Alive => Volatile.Read(ref _alive);
 
         public int ResendCount { get; set; } = 0;
@@ -414,7 +428,7 @@ namespace Akka.Remote.Artery
             ILoggingAdapter log,
             CompressionSettings settings,
             long originUid,
-            InboundContext inboundContext,
+            IInboundContext inboundContext,
             TopHeavyHitters<T> heavyHitters)
         {
             Log = log;
@@ -462,7 +476,7 @@ namespace Akka.Remote.Artery
                    incomingTableVersion == current.AdvertisementInProgress.Value.Version;
 
             // no compression, bail out early
-            if (incomingTableVersion == DecompressionTable.DisabledVersion)
+            if (incomingTableVersion == DecompressionTable<T>.DisabledVersion)
                 return Option<T>.None;
 
             var currentTable = current.SelectTable(version: incomingTableVersion);
@@ -504,7 +518,7 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Add `n` occurrence for the given key and call `heavyHittedDetected` if element has become a heavy hitter.
+        /// Add `n` occurrence for the given key and call `heavyHitterDetected` if element has become a heavy hitter.
         /// Empty keys are omitted.
         /// </summary>
         /// <param name="remoteAddress"></param>
@@ -586,7 +600,7 @@ namespace Akka.Remote.Artery
                     if (association.HasValue)
                     {
                         Log.Debug($"Advertisement in progress for OriginUid [{OriginUid}] version [{inProgress.Version}], resending [{ResendCount}:{MaxResendCount}]");
-                        AdvertiseCompressionTable(association, inProgress);
+                        AdvertiseCompressionTable(association.Value, inProgress);
                     }
                     // ARTERY: Original code does not have code for this condition
                 }
@@ -605,18 +619,18 @@ namespace Akka.Remote.Artery
         /// </summary>
         /// <param name="association"></param>
         /// <param name="table"></param>
-        protected abstract void AdvertiseCompressionTable(OutboundContext association, CompressionTable<T> table);
+        protected abstract void AdvertiseCompressionTable(IOutboundContext association, CompressionTable<T> table);
 
         private CompressionTable<T> PrepareCompressionAdvertisement(byte nextTableVersion)
         {
-            var mappings = BuildTableForAdvertisement(HeavyHitters);
+            var mappings = BuildTableForAdvertisement(HeavyHitters.GetEnumerator());
             return new CompressionTable<T>(OriginUid, nextTableVersion, mappings);
         }
 
-        protected virtual Dictionary<T, int> BuildTableForAdvertisement(IEnumerable<T> elements)
+        protected virtual ImmutableDictionary<T, int> BuildTableForAdvertisement(IEnumerable<T> elements)
         {
             // TODO optimized somewhat, check if still to heavy; could be encoded into simple array
-            return elements.ZipWithIndex();
+            return elements.ZipWithIndex().ToImmutableDictionary();
         }
 
         public override string ToString()
@@ -627,9 +641,9 @@ namespace Akka.Remote.Artery
     {
         public UnknownCompressedIdException(long id) : base(
             $"Attempted de-compress unknown id [{id}]! " +
-            $"This could happen if this node has started a new ActorSystem bound to the same address as previously, " +
-            $"and previous messages from a remote system were still in flight (using an old compression table). ," +
-            $"The remote system is expected to drop the compression table and this system will advertise a new one.")
+            "This could happen if this node has started a new ActorSystem bound to the same address as previously, " +
+            "and previous messages from a remote system were still in flight (using an old compression table). ," +
+            "The remote system is expected to drop the compression table and this system will advertise a new one.")
         { }
     }
 
