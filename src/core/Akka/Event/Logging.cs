@@ -140,6 +140,18 @@ namespace Akka.Event
             return n;
         }
 
+        public static string MessageClassName(object message)
+        {
+            switch (message)
+            {
+                case null: return "null";
+                case ActorSelectionMessage msg:
+                    return $"ActorSelectionMessage({msg.Message.GetType().Name})";
+                default:
+                    return message.GetType().Name;
+            }
+        }
+
         private const string Debug = "DEBUG";
         private const string Info = "INFO";
         private const string Warning = "WARNING";
