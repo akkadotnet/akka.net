@@ -12,7 +12,7 @@ namespace Akka.Remote.Artery
         void TransportStarted();
         void TransportAeronErrorLogStarted();
         void TransportTaskRunnerStarted();
-        void TransportUniqueAddressSet();
+        void TransportUniqueAddressSet(UniqueAddress uniqueAddress);
         void TransportMaterializerStarted();
         void TransportStartupFinished();
         void TransportKillSwitchPulled();
