@@ -11,7 +11,7 @@ namespace Akka.Remote.Artery
         Option<IInternalActorRef> Recipient { get; }
         Option<IActorRef> Sender { get; }
         long OriginUid { get; }
-        Option<OutboundContext> Association { get; }
+        Option<IOutboundContext> Association { get; }
 
         int Serializer { get; }
         string ClassManifest { get; }
@@ -34,12 +34,21 @@ namespace Akka.Remote.Artery
 
     internal static class InboundEnvelope
     {
+        /// <summary>
+        /// Only used in tests
+        /// </summary>
+        /// <param name="recipient"></param>
+        /// <param name="message"></param>
+        /// <param name="sender"></param>
+        /// <param name="originUid"></param>
+        /// <param name="association"></param>
+        /// <returns></returns>
         public static IInboundEnvelope Create(
             Option<IInternalActorRef> recipient,
             object message,
             Option<IActorRef> sender,
             long originUid,
-            Option<OutboundContext> association)
+            Option<IOutboundContext> association)
             => new ReusableInboundEnvelope()
                 .Init(recipient, sender, originUid, -1, "", 0, null, association, 0)
                 .WithMessage(message);
@@ -53,7 +62,7 @@ namespace Akka.Remote.Artery
         public Option<IInternalActorRef> Recipient { get; private set; }
         public Option<IActorRef> Sender { get; private set; }
         public long OriginUid { get; private set; }
-        public Option<OutboundContext> Association { get; private set; }
+        public Option<IOutboundContext> Association { get; private set; }
         public int Serializer { get; private set; }
         public string ClassManifest { get; private set; }
         public object Message { get; private set; }
@@ -87,7 +96,7 @@ namespace Akka.Remote.Artery
             Message = null;
             Sender = Option<IActorRef>.None;
             OriginUid = 0;
-            Association = Option<OutboundContext>.None;
+            Association = Option<IOutboundContext>.None;
             Lane = 0;
         }
 
@@ -99,7 +108,7 @@ namespace Akka.Remote.Artery
             string classManifest,
             byte flags,
             EnvelopeBuffer envelopeBuffer,
-            Option<OutboundContext> association,
+            Option<IOutboundContext> association,
             int lane)
         {
             Recipient = recipient;

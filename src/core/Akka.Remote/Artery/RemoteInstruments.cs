@@ -223,24 +223,21 @@ namespace Akka.Remote.Artery
             }
         }
 
-        // ARTERY: IInboundEnvelope not yet implemented
-        /*
         public void Deserialize(IInboundEnvelope inboundEnvelope)
         {
-            // NOT IMPLEMENTED
+            // ARTERY: NOT IMPLEMENTED
         }
 
         public void DeserializeRaw(IInboundEnvelope inboundEnvelope)
         {
-            // NOT IMPLEMENTED
+            // ARTERY: NOT IMPLEMENTED
         }
 
         private void DeserializeInstrument(RemoteInstrument instrument, IInboundEnvelope inboundEnvelope,
             ByteBuffer buffer)
         {
-            // NOT IMPLEMENTED
+            // ARTERY: NOT IMPLEMENTED
         }
-        */
 
         public void MessageSent(IOutboundEnvelope outboundEnvelope, int size, long time)
         {
@@ -268,19 +265,16 @@ namespace Akka.Remote.Artery
                 time);
         }
 
-        // ARTERY: IInboundEnvelope not yet implemented
-        /*
         public void MessageReceived(IInboundEnvelope inboundEnvelope, int size, long time)
         {
-            // NOT IMPLEMENTED
+            // ARTERY: NOT IMPLEMENTED
         }
 
         public void MessageReceivedInstrument(RemoteInstrument instrument, IInboundEnvelope inboundEnvelope, int size,
             long time)
         {
-            // NOT IMPLEMENTED
+            // ARTERY: NOT IMPLEMENTED
         }
-        */
 
         private class RemoteInstrumentIdEnumerator : IEnumerator<int>
         {
