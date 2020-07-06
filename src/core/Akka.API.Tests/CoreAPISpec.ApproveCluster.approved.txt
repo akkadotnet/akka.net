@@ -197,6 +197,7 @@ namespace Akka.Cluster
         public System.TimeSpan HeartbeatInterval { get; }
         public System.TimeSpan LeaderActionsInterval { get; }
         public bool LogInfo { get; }
+        public bool LogInfoVerbose { get; }
         public int MinNrOfMembers { get; }
         public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
         public int MonitoredByNrOfMembers { get; }
