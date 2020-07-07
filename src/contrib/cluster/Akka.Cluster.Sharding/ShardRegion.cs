@@ -696,8 +696,8 @@ namespace Akka.Cluster.Sharding
                 var bufferSize = Settings.TunningParameters.BufferSize;
                 if (total % (bufferSize / 10) == 0)
                 {
-                    var logMsg = "ShardRegion for [{0}] is using [{1}] of it's buffer capacity";
-                    if ((total > bufferSize / 2))
+                    const string logMsg = "ShardRegion for [{0}] is using [{1} %] of its buffer capacity.";
+                    if (total > bufferSize / 2)
                         Log.Warning(logMsg + " The coordinator might not be available. You might want to check cluster membership status.", TypeName, 100 * total / bufferSize);
                     else
                         Log.Info(logMsg, TypeName, 100 * total / bufferSize);
