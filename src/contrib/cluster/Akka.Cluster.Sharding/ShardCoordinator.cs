@@ -462,6 +462,13 @@ namespace Akka.Cluster.Sharding
 
         private static void ContinueRebalance<TCoordinator>(this TCoordinator coordinator, IImmutableSet<ShardId> shards) where TCoordinator : IShardCoordinator
         {
+            if (coordinator.Log.IsInfoEnabled && (shards.Count > 0 || !coordinator.RebalanceInProgress.IsEmpty))
+            {
+                coordinator.Log.Info("Starting rebalance for shards [{0}]. Current shards rebalancing: [{1}]",
+                    string.Join(",", shards),
+                    string.Join(",", coordinator.RebalanceInProgress.Keys));
+            }
+
             foreach (var shard in shards)
             {
                 if (!coordinator.RebalanceInProgress.ContainsKey(shard))
