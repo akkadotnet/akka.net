@@ -208,8 +208,8 @@ namespace Akka.DistributedData.LightningDB
                         foreach (var entry in cursor)
                         {
                             n++;
-                            var key = Encoding.UTF8.GetString(entry.Key);
-                            var envelope = (DurableDataEnvelope)_serializer.FromBinary(entry.Value, _manifest);
+                            var key = Encoding.UTF8.GetString(entry.Key.CopyToNewArray());
+                            var envelope = (DurableDataEnvelope)_serializer.FromBinary(entry.Value.CopyToNewArray(), _manifest);
                             builder.Add(key, envelope);
                         }
 
