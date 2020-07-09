@@ -12,6 +12,7 @@ namespace DocsExamples.Persistence.PersistentActor
 {
     public static class DeferWithPersist
     {
+        #region DeferWithPersist
         public class MyPersistentActor : UntypedPersistentActor
         {
             public override string PersistenceId => "my-stable-persistence-id";
@@ -32,5 +33,6 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
     }
 }

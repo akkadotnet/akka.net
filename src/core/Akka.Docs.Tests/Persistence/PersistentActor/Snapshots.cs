@@ -9,6 +9,7 @@ using Akka.Persistence;
 
 namespace DocsExamples.Persistence.PersistentActor
 {
+    #region Snapshots
     public static class Snapshots
     {
         public class MyPersistentActor : UntypedPersistentActor
@@ -51,4 +52,5 @@ namespace DocsExamples.Persistence.PersistentActor
             }
         }
     }
+    #endregion
 }
