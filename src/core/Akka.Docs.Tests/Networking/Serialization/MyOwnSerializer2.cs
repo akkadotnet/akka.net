@@ -13,6 +13,7 @@ using Akka.Serialization;
 
 namespace DocsExamples.Networking.Serialization
 {
+    #region CustomSerialization
     public class MyOwnSerializer2 : SerializerWithStringManifest
     {
         private const string CustomerManifest = "customer";
@@ -71,6 +72,7 @@ namespace DocsExamples.Networking.Serialization
             }
         }
     }
+    #endregion
 
     public class Customer
     {
