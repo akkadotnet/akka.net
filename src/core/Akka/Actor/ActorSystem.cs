@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
@@ -96,14 +97,22 @@ namespace Akka.Actor
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup
     {
-        internal BootstrapSetup() : this(Option<Config>.None, Option<ProviderSelection>.None)
+        internal BootstrapSetup() 
+            : this(
+                Option<Config>.None, 
+                Option<ProviderSelection>.None, 
+                Option<SynchronizationContext>.None)
         {
         }
 
-        internal BootstrapSetup(Option<Config> config, Option<ProviderSelection> actorRefProvider)
+        internal BootstrapSetup(
+            Option<Config> config, 
+            Option<ProviderSelection> actorRefProvider,
+            Option<SynchronizationContext> defaultSynchronizationContext)
         {
             Config = config;
             ActorRefProvider = actorRefProvider;
+            DefaultSynchronizationContext = defaultSynchronizationContext;
         }
 
         /// <summary>
@@ -119,6 +128,8 @@ namespace Akka.Actor
         /// </summary>
         public Option<ProviderSelection> ActorRefProvider { get; }
 
+        public Option<SynchronizationContext> DefaultSynchronizationContext { get; }
+
         /// <summary>
         /// Create a new <see cref="BootstrapSetup"/> instance.
         /// </summary>
@@ -129,13 +140,16 @@ namespace Akka.Actor
 
         public BootstrapSetup WithActorRefProvider(ProviderSelection name)
         {
-            return new BootstrapSetup(Config, name);
+            return new BootstrapSetup(Config, name, DefaultSynchronizationContext);
         }
 
         public BootstrapSetup WithConfig(Config config)
         {
-            return new BootstrapSetup(config, ActorRefProvider);
+            return new BootstrapSetup(config, ActorRefProvider, DefaultSynchronizationContext);
         }
+
+        public BootstrapSetup WithdefaultSynchronizationContext(SynchronizationContext SynchronizationContext)
+            => new BootstrapSetup(Config, ActorRefProvider, SynchronizationContext);
     }
 
     /// <summary>
@@ -196,6 +210,8 @@ namespace Akka.Actor
         /// <summary>Gets the log</summary>
         public abstract ILoggingAdapter Log { get; }
 
+        internal abstract Option<SynchronizationContext> DefaultSynchronizationContext { get; }
+
         /// <summary>
         /// Start-up time since the epoch.
         /// </summary>
@@ -216,9 +232,9 @@ namespace Akka.Actor
         /// </param>
         /// <param name="config">The configuration used to create the actor system</param>
         /// <returns>A newly created actor system with the given name and configuration.</returns>
-        public static ActorSystem Create(string name, Config config)
+        public static ActorSystem Create(string name, Config config, SynchronizationContext defaultSynchronizationContext = null)
         {
-            return CreateAndStartSystem(name, config, ActorSystemSetup.Empty);
+            return CreateAndStartSystem(name, config, ActorSystemSetup.Empty, defaultSynchronizationContext);
         }
 
         /// <summary>
@@ -229,9 +245,9 @@ namespace Akka.Actor
         /// </param>
         /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
         /// <returns>A newly created actor system with the given name and configuration.</returns>
-        public static ActorSystem Create(string name, BootstrapSetup setup)
+        public static ActorSystem Create(string name, BootstrapSetup setup, SynchronizationContext defaultSynchronizationContext = null)
         {
-            return Create(name, ActorSystemSetup.Create(setup));
+            return Create(name, ActorSystemSetup.Create(setup), defaultSynchronizationContext);
         }
 
         /// <summary>
@@ -242,12 +258,12 @@ namespace Akka.Actor
         /// </param>
         /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
         /// <returns>A newly created actor system with the given name and configuration.</returns>
-        public static ActorSystem Create(string name, ActorSystemSetup setup)
+        public static ActorSystem Create(string name, ActorSystemSetup setup, SynchronizationContext defaultSynchronizationContext = null)
         {
             var bootstrapSetup = setup.Get<BootstrapSetup>();
             var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
 
-            return CreateAndStartSystem(name, appConfig, setup);
+            return CreateAndStartSystem(name, appConfig, setup, defaultSynchronizationContext);
         }
 
         /// <summary>
@@ -257,14 +273,14 @@ namespace Akka.Actor
         /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
         /// </param>
         /// <returns>A newly created actor system with the given name.</returns>
-        public static ActorSystem Create(string name)
+        public static ActorSystem Create(string name, SynchronizationContext defaultSynchronizationContext = null)
         {
-            return Create(name, ActorSystemSetup.Empty);
+            return Create(name, ActorSystemSetup.Empty, defaultSynchronizationContext);
         }
 
-        private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
+        private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup, SynchronizationContext defaultSynchronizationContext)
         {
-            var system = new ActorSystemImpl(name, withFallback, setup);
+            var system = new ActorSystemImpl(name, withFallback, setup, defaultSynchronizationContext, Option<Props>.None);
             system.Start();
             return system;
         }

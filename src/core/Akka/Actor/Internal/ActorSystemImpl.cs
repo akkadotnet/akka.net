@@ -54,7 +54,12 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, ConfigurationFactory.Default(), ActorSystemSetup.Empty)
+            : this(
+                name, 
+                ConfigurationFactory.Default(), 
+                ActorSystemSetup.Empty, 
+                Option<SynchronizationContext>.None, 
+                Option<Props>.None)
         {
         }
 
@@ -69,7 +74,12 @@ namespace Akka.Actor.Internal
         ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').
         /// </exception>
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="config"/> is undefined.</exception>
-        public ActorSystemImpl(string name, Config config, ActorSystemSetup setup)
+        public ActorSystemImpl(
+            string name, 
+            Config config, 
+            ActorSystemSetup setup, 
+            Option<SynchronizationContext>? defaultSynchronizationContext = null,
+            Option<Props>? guardianProps = null)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
@@ -79,7 +89,10 @@ namespace Akka.Actor.Internal
             if(config is null)
                 throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
 
-            _name = name;            
+            _name = name;
+
+            GuardianProps = guardianProps ?? Option<Props>.None;
+
             ConfigureSettings(config, setup);
             ConfigureEventStream();
             ConfigureLoggers();
@@ -88,7 +101,9 @@ namespace Akka.Actor.Internal
             ConfigureTerminationCallbacks();
             ConfigureSerialization();
             ConfigureMailboxes();
-            ConfigureDispatchers();
+            ConfigureDispatchers(
+                defaultSynchronizationContext ?? Option<SynchronizationContext>.None, 
+                setup.Get<BootstrapSetup>().Value);
             ConfigureActorProducerPipeline();
         }
 
@@ -133,6 +148,11 @@ namespace Akka.Actor.Internal
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+
+        public Option<Props> GuardianProps { get; }
+
+        private Option<SynchronizationContext> _defaultSynchronizationContext;
+        internal override Option<SynchronizationContext> DefaultSynchronizationContext => _defaultSynchronizationContext;
 
         /// <summary>
         /// Creates a new system actor that lives under the "/system" guardian.
@@ -246,7 +266,9 @@ namespace Akka.Actor.Internal
         /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
-            return _provider.Guardian.Cell.AttachChild(props, false, name);
+            if(GuardianProps.IsEmpty)
+                return _provider.Guardian.Cell.AttachChild(props, false, name);
+            throw new InvalidOperationException($"cannot create top-level actor { (string.IsNullOrEmpty(name) ? "" : $"[{name} ]")}from the outside on ActorSystem with custom user guardian");
         }
 
         /// <inheritdoc/>
@@ -396,6 +418,7 @@ namespace Akka.Actor.Internal
 
         private void ConfigureSettings(Config config, ActorSystemSetup setup)
         {
+            // TODO: on this line, in scala, the config is validated with `Dispatchers.InternalDispatcherId` path removed.
             _settings = new Settings(this, config, setup);
         }
 
@@ -446,9 +469,25 @@ namespace Akka.Actor.Internal
             _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
         }
 
-        private void ConfigureDispatchers()
+        private void ConfigureDispatchers(Option<SynchronizationContext> defaultSynchronizationContext, BootstrapSetup setup)
         {
-            _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
+            Option<SynchronizationContext> synchronizationContext;
+            if (setup != null && setup.DefaultSynchronizationContext.HasValue)
+                synchronizationContext = setup.DefaultSynchronizationContext.Value;
+            else 
+                synchronizationContext = defaultSynchronizationContext;
+
+            _defaultSynchronizationContext = synchronizationContext;
+
+            _dispatchers = new Dispatchers(
+                this, 
+                new DefaultDispatcherPrerequisites(
+                    EventStream, 
+                    Scheduler, 
+                    Settings, 
+                    Mailboxes, 
+                    synchronizationContext),
+                _log);
         }
 
         private void ConfigureActorProducerPipeline()

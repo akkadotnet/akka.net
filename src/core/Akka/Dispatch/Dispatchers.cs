@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Helios.Concurrency;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
@@ -198,6 +199,18 @@ namespace Akka.Dispatch
 
     /// <summary>
     /// The registry of all <see cref="MessageDispatcher"/> instances available to this <see cref="ActorSystem"/>.
+    ///
+    /// Dispatchers are to be defined in configuration to allow for tuning
+    /// for different environments. Use the <see cref="Dispatchers.Lookup"/> method to create
+    /// a dispatcher as specified in configuration.
+    ///
+    /// A dispatcher config can also be an alias, in that case it is a config string value pointing
+    /// to the actual dispatcher config.
+    ///
+    /// Look in `akka.actor.default-dispatcher` section of the reference.conf
+    /// for documentation of dispatcher options.
+    ///
+    /// Not for user instantiation or extension
     /// </summary>
     public sealed class Dispatchers
     {
@@ -205,6 +218,8 @@ namespace Akka.Dispatch
         ///     The default dispatcher identifier, also the full key of the configuration of the default dispatcher.
         /// </summary>
         public static readonly string DefaultDispatcherId = "akka.actor.default-dispatcher";
+
+        public const string InternalDispatcherId = "akka.actor.internal-dispatcher";
 
         /// <summary>
         ///     The identifier for synchronized dispatchers.
@@ -214,6 +229,7 @@ namespace Akka.Dispatch
         private readonly ActorSystem _system;
         private Config _cachingConfig;
         private readonly MessageDispatcher _defaultGlobalDispatcher;
+        private readonly ILoggingAdapter _logger;
 
         /// <summary>
         /// The list of all configurators used to create <see cref="MessageDispatcher"/> instances.
@@ -225,12 +241,15 @@ namespace Akka.Dispatch
         /// <summary>Initializes a new instance of the <see cref="Dispatchers" /> class.</summary>
         /// <param name="system">The system.</param>
         /// <param name="prerequisites">The prerequisites required for some <see cref="MessageDispatcherConfigurator"/> instances.</param>
-        public Dispatchers(ActorSystem system, IDispatcherPrerequisites prerequisites)
+        public Dispatchers(ActorSystem system, IDispatcherPrerequisites prerequisites, ILoggingAdapter logger)
         {
             _system = system;
             Prerequisites = prerequisites;
             _cachingConfig = new CachingConfig(prerequisites.Settings.Config);
             _defaultGlobalDispatcher = Lookup(DefaultDispatcherId);
+            _logger = logger;
+
+            InternalDispatcher = Lookup(InternalDispatcherId);
         }
 
         /// <summary>Gets the one and only default dispatcher.</summary>
@@ -238,6 +257,8 @@ namespace Akka.Dispatch
         {
             get { return _defaultGlobalDispatcher; }
         }
+
+        internal MessageDispatcher InternalDispatcher { get; }
 
         /// <summary>
         /// The <see cref="Hocon.Config"/> for the default dispatcher.
@@ -270,8 +291,13 @@ namespace Akka.Dispatch
         public IDispatcherPrerequisites Prerequisites { get; private set; }
 
         /// <summary>
-        /// Returns a dispatcher as specified in configuration. Please note that this method _MAY_
-        /// create and return a new dispatcher on _EVERY_ call.
+        /// Returns a dispatcher as specified in configuration. Please note that this
+        /// method _may_ create and return a NEW dispatcher, _every_ call (depending on the `MessageDispatcherConfigurator`
+        /// dispatcher config the id points to).
+        ///
+        /// A dispatcher id can also be an alias. In the case it is a string value in the config it is treated as the id
+        /// of the actual dispatcher config to use. If several ids leading to the same actual dispatcher config is used only one
+        /// instance is created. This means that for dispatchers you expect to be shared they will be.
         /// </summary>
         /// <param name="dispatcherName">TBD</param>
         /// <exception cref="ConfigurationException">
@@ -280,7 +306,7 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public MessageDispatcher Lookup(string dispatcherName)
         {
-            return LookupConfigurator(dispatcherName).Dispatcher();
+            return LookupConfigurator(dispatcherName, 0).Dispatcher();
         }
 
         /// <summary>
@@ -295,7 +321,7 @@ namespace Akka.Dispatch
             return _dispatcherConfigurators.ContainsKey(id) || _cachingConfig.HasPath(id);
         }
 
-        private MessageDispatcherConfigurator LookupConfigurator(string id)
+        private MessageDispatcherConfigurator LookupConfigurator(string id, int depth)
         {
             if (!_dispatcherConfigurators.TryGetValue(id, out var configurator))
             {
@@ -304,7 +330,21 @@ namespace Akka.Dispatch
                 // created until used, i.e. cheap.
                 MessageDispatcherConfigurator newConfigurator;
                 if (_cachingConfig.HasPath(id))
-                    newConfigurator = ConfiguratorFrom(Config(id));
+                {
+                    var valueAtPath = _cachingConfig.GetValue(id);
+                    if (valueAtPath.IsString())
+                    {
+                        // a dispatcher key can be an alias of another dispatcher, if it is a string
+                        // we treat that string value as the id of a dispatcher to lookup, it will be stored
+                        // both under the actual id and the alias id in the 'dispatcherConfigurators' cache
+                        var actualId = valueAtPath.GetString();
+                        _logger.Debug($"Dispatcher id [{id}] is an alias, actual dispatcher will be [{actualId}]");
+                        newConfigurator = LookupConfigurator(actualId, depth + 1);
+                    } else if (valueAtPath.IsObject())
+                        newConfigurator = ConfiguratorFrom(Config(id));
+                    else
+                        throw new ConfigurationException($"Expected either a dispatcher config or an alias at [{id}] but found [{valueAtPath}]");
+                }
                 else
                     throw new ConfigurationException($"Dispatcher {id} not configured.");
 

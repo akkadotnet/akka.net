@@ -38,6 +38,8 @@ namespace Akka.Util
         /// </summary>
         public bool HasValue { get; }
 
+        public bool IsEmpty => !HasValue;
+
         /// <summary>
         /// TBD
         /// </summary>
