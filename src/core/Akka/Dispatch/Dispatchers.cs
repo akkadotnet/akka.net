@@ -219,7 +219,7 @@ namespace Akka.Dispatch
         /// </summary>
         public static readonly string DefaultDispatcherId = "akka.actor.default-dispatcher";
 
-        public const string InternalDispatcherId = "akka.actor.internal-dispatcher";
+        internal const string InternalDispatcherId = "akka.actor.internal-dispatcher";
 
         /// <summary>
         ///     The identifier for synchronized dispatchers.
