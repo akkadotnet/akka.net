@@ -58,7 +58,6 @@ namespace Akka.Actor.Internal
                 name, 
                 ConfigurationFactory.Default(), 
                 ActorSystemSetup.Empty, 
-                Option<SynchronizationContext>.None, 
                 Option<Props>.None)
         {
         }
@@ -78,7 +77,6 @@ namespace Akka.Actor.Internal
             string name, 
             Config config, 
             ActorSystemSetup setup, 
-            Option<SynchronizationContext>? defaultSynchronizationContext = null,
             Option<Props>? guardianProps = null)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
@@ -101,9 +99,7 @@ namespace Akka.Actor.Internal
             ConfigureTerminationCallbacks();
             ConfigureSerialization();
             ConfigureMailboxes();
-            ConfigureDispatchers(
-                defaultSynchronizationContext ?? Option<SynchronizationContext>.None, 
-                setup.Get<BootstrapSetup>().Value);
+            ConfigureDispatchers();
             ConfigureActorProducerPipeline();
         }
 
@@ -150,9 +146,6 @@ namespace Akka.Actor.Internal
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
         public Option<Props> GuardianProps { get; }
-
-        private Option<SynchronizationContext> _defaultSynchronizationContext;
-        internal override Option<SynchronizationContext> DefaultSynchronizationContext => _defaultSynchronizationContext;
 
         /// <summary>
         /// Creates a new system actor that lives under the "/system" guardian.
@@ -469,24 +462,15 @@ namespace Akka.Actor.Internal
             _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
         }
 
-        private void ConfigureDispatchers(Option<SynchronizationContext> defaultSynchronizationContext, BootstrapSetup setup)
+        private void ConfigureDispatchers()
         {
-            Option<SynchronizationContext> synchronizationContext;
-            if (setup != null && setup.DefaultSynchronizationContext.HasValue)
-                synchronizationContext = setup.DefaultSynchronizationContext.Value;
-            else 
-                synchronizationContext = defaultSynchronizationContext;
-
-            _defaultSynchronizationContext = synchronizationContext;
-
             _dispatchers = new Dispatchers(
                 this, 
                 new DefaultDispatcherPrerequisites(
                     EventStream, 
                     Scheduler, 
                     Settings, 
-                    Mailboxes, 
-                    synchronizationContext),
+                    Mailboxes),
                 _log);
         }
 

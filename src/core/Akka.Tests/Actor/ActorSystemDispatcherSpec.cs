@@ -34,38 +34,12 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void The_ActorSystem_must_work_with_a_passed_in_SynchronizationContext()
-        {
-            var ecProbe = CreateTestProbe();
-            var ec = new SnitchingSynchonizationContext(ecProbe);
-            var system2 = ActorSystem.Create("ActorSystemDispatchersSpec-passed-in-ec", defaultSynchronizationContext: ec);
-
-            try
-            {
-                var actor = system2.ActorOf<PingPongActor>();
-                var probe = CreateTestProbe(system2);
-
-                actor.Tell("ping", probe);
-
-                ecProbe.ExpectMsg("called", TimeSpan.FromSeconds(1));
-                probe.ExpectMsg("pong", TimeSpan.FromSeconds(1));
-            }
-            finally
-            {
-                Shutdown(system2);
-            }
-        }
-
-        [Fact]
         public void The_ActorSystem_must_not_use_passed_in_SynchronizationContext_if_executor_is_configured_in()
         {
-            var ecProbe = CreateTestProbe();
-            var ec = new SnitchingSynchonizationContext(ecProbe);
-
             var config =
                 ConfigurationFactory.ParseString("akka.actor.default-dispatcher.executor = fork-join-executor")
                     .WithFallback(Sys.Settings.Config);
-            var system2 = ActorSystem.Create("ActorSystemDispatchersSpec-ec-configured", config, ec);
+            var system2 = ActorSystem.Create("ActorSystemDispatchersSpec-ec-configured", config);
 
             try
             {
@@ -74,7 +48,6 @@ namespace Akka.Tests.Actor
 
                 actor.Tell("ping", probe);
 
-                ecProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
                 probe.ExpectMsg("ping", TimeSpan.FromSeconds(1));
             }
             finally
@@ -95,56 +68,6 @@ namespace Akka.Tests.Actor
                 // that the user guardian runs on the overriden dispatcher instead of internal
                 // isn't really a guarantee any internal actor has been made running on the right one
                 // but it's better than no test coverage at all
-                UserGuardianDispatcher(sys).Should().Be("akka.actor.default-dispatcher");
-            }
-            finally
-            {
-                Shutdown(sys);
-            }
-        }
-
-        [Fact]
-        public void The_ActorSystem_must_provide_internal_execution_context_instance_through_BootstrapSetup()
-        {
-            var ecProbe = CreateTestProbe();
-            var ec = new SnitchingSynchonizationContext(ecProbe);
-
-            // using the default for internal dispatcher and passing a pre-existing execution context
-            var config =
-                ConfigurationFactory.ParseString("akka.actor.internal-dispatcher = akka.actor.default-dispatcher")
-                    .WithFallback(Sys.Settings.Config);
-            var system2 = ActorSystem.Create("ActorSystemDispatchersSpec-passed-in-ec-for-internal", config, ec);
-
-            try
-            {
-                var actor = system2.ActorOf(Props.Create<PingPongActor>()
-                    .WithDispatcher(Dispatchers.InternalDispatcherId));
-
-                var probe = CreateTestProbe(system2);
-
-                actor.Tell("ping", probe);
-
-                ecProbe.ExpectMsg("called", TimeSpan.FromSeconds(1));
-                probe.ExpectMsg("pong", TimeSpan.FromSeconds(1));
-            }
-            finally
-            {
-                Shutdown(system2);
-            }
-        }
-
-        [Fact]
-        public void The_ActorSystem_must_use_the_default_dispatcher_by_a_user_provided_user_guardian()
-        {
-            var sys = new ActorSystemImpl(
-                "ActorSystemDispatchersSpec-custom-user-guardian",
-                ConfigurationFactory.Default(),
-                ActorSystemSetup.Empty,
-                Option<SynchronizationContext>.None, 
-                Option<Props>.None);
-            sys.Start();
-            try
-            {
                 UserGuardianDispatcher(sys).Should().Be("akka.actor.default-dispatcher");
             }
             finally

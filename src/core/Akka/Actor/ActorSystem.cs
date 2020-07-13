@@ -100,19 +100,16 @@ namespace Akka.Actor
         internal BootstrapSetup() 
             : this(
                 Option<Config>.None, 
-                Option<ProviderSelection>.None, 
-                Option<SynchronizationContext>.None)
+                Option<ProviderSelection>.None)
         {
         }
 
         internal BootstrapSetup(
             Option<Config> config, 
-            Option<ProviderSelection> actorRefProvider,
-            Option<SynchronizationContext> defaultSynchronizationContext)
+            Option<ProviderSelection> actorRefProvider)
         {
             Config = config;
             ActorRefProvider = actorRefProvider;
-            DefaultSynchronizationContext = defaultSynchronizationContext;
         }
 
         /// <summary>
@@ -128,8 +125,6 @@ namespace Akka.Actor
         /// </summary>
         public Option<ProviderSelection> ActorRefProvider { get; }
 
-        public Option<SynchronizationContext> DefaultSynchronizationContext { get; }
-
         /// <summary>
         /// Create a new <see cref="BootstrapSetup"/> instance.
         /// </summary>
@@ -140,16 +135,13 @@ namespace Akka.Actor
 
         public BootstrapSetup WithActorRefProvider(ProviderSelection name)
         {
-            return new BootstrapSetup(Config, name, DefaultSynchronizationContext);
+            return new BootstrapSetup(Config, name);
         }
 
         public BootstrapSetup WithConfig(Config config)
         {
-            return new BootstrapSetup(config, ActorRefProvider, DefaultSynchronizationContext);
+            return new BootstrapSetup(config, ActorRefProvider);
         }
-
-        public BootstrapSetup WithdefaultSynchronizationContext(SynchronizationContext SynchronizationContext)
-            => new BootstrapSetup(Config, ActorRefProvider, SynchronizationContext);
     }
 
     /// <summary>
@@ -210,8 +202,6 @@ namespace Akka.Actor
         /// <summary>Gets the log</summary>
         public abstract ILoggingAdapter Log { get; }
 
-        internal abstract Option<SynchronizationContext> DefaultSynchronizationContext { get; }
-
         /// <summary>
         /// Start-up time since the epoch.
         /// </summary>
@@ -232,9 +222,9 @@ namespace Akka.Actor
         /// </param>
         /// <param name="config">The configuration used to create the actor system</param>
         /// <returns>A newly created actor system with the given name and configuration.</returns>
-        public static ActorSystem Create(string name, Config config, SynchronizationContext defaultSynchronizationContext = null)
+        public static ActorSystem Create(string name, Config config)
         {
-            return CreateAndStartSystem(name, config, ActorSystemSetup.Empty, defaultSynchronizationContext);
+            return CreateAndStartSystem(name, config, ActorSystemSetup.Empty);
         }
 
         /// <summary>
@@ -245,9 +235,9 @@ namespace Akka.Actor
         /// </param>
         /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
         /// <returns>A newly created actor system with the given name and configuration.</returns>
-        public static ActorSystem Create(string name, BootstrapSetup setup, SynchronizationContext defaultSynchronizationContext = null)
+        public static ActorSystem Create(string name, BootstrapSetup setup)
         {
-            return Create(name, ActorSystemSetup.Create(setup), defaultSynchronizationContext);
+            return Create(name, ActorSystemSetup.Create(setup));
         }
 
         /// <summary>
@@ -258,12 +248,12 @@ namespace Akka.Actor
         /// </param>
         /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
         /// <returns>A newly created actor system with the given name and configuration.</returns>
-        public static ActorSystem Create(string name, ActorSystemSetup setup, SynchronizationContext defaultSynchronizationContext = null)
+        public static ActorSystem Create(string name, ActorSystemSetup setup)
         {
             var bootstrapSetup = setup.Get<BootstrapSetup>();
             var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
 
-            return CreateAndStartSystem(name, appConfig, setup, defaultSynchronizationContext);
+            return CreateAndStartSystem(name, appConfig, setup);
         }
 
         /// <summary>
@@ -273,14 +263,14 @@ namespace Akka.Actor
         /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
         /// </param>
         /// <returns>A newly created actor system with the given name.</returns>
-        public static ActorSystem Create(string name, SynchronizationContext defaultSynchronizationContext = null)
+        public static ActorSystem Create(string name)
         {
-            return Create(name, ActorSystemSetup.Empty, defaultSynchronizationContext);
+            return Create(name, ActorSystemSetup.Empty);
         }
 
-        private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup, SynchronizationContext defaultSynchronizationContext)
+        private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
         {
-            var system = new ActorSystemImpl(name, withFallback, setup, defaultSynchronizationContext, Option<Props>.None);
+            var system = new ActorSystemImpl(name, withFallback, setup, Option<Props>.None);
             system.Start();
             return system;
         }

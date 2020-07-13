@@ -44,8 +44,6 @@ namespace Akka.Dispatch
         /// The list of registered <see cref="Mailboxes"/> for the current <see cref="ActorSystem"/>.
         /// </summary>
         Mailboxes Mailboxes { get; }
-
-        Option<SynchronizationContext> DefaultSynchronizationContext { get; }
     }
 
     /// <summary>
@@ -60,19 +58,16 @@ namespace Akka.Dispatch
         /// <param name="scheduler">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
-        /// <param name="defaultSynchronizationContext">TBD</param>
         public DefaultDispatcherPrerequisites(
             EventStream eventStream, 
             IScheduler scheduler, 
             Settings settings, 
-            Mailboxes mailboxes,
-            Option<SynchronizationContext> defaultSynchronizationContext)
+            Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
             Settings = settings;
             Scheduler = scheduler;
             EventStream = eventStream;
-            DefaultSynchronizationContext = defaultSynchronizationContext;
         }
 
         /// <summary>
@@ -91,8 +86,6 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         public Mailboxes Mailboxes { get; private set; }
-
-        public Option<SynchronizationContext> DefaultSynchronizationContext { get; }
     }
 
     /// <summary>
