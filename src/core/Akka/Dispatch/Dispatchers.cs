@@ -219,7 +219,17 @@ namespace Akka.Dispatch
         /// </summary>
         public static readonly string DefaultDispatcherId = "akka.actor.default-dispatcher";
 
-        internal const string InternalDispatcherId = "akka.actor.internal-dispatcher";
+        ///<summary>
+        /// The id of a default dispatcher to use for operations known to be blocking. Note that
+        /// for optimal performance you will want to isolate different blocking resources
+        /// on different thread pools.
+        /// </summary>
+        public static readonly string DefaultBlockingDispatcherId = "akka.actor.default-blocking-io-dispatcher";
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal static readonly string InternalDispatcherId = "akka.actor.internal-dispatcher";
 
         /// <summary>
         ///     The identifier for synchronized dispatchers.
