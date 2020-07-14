@@ -13,25 +13,19 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
     public class ActorSystemDispatcherSpec : AkkaSpec
     {
-        private class SnitchingSynchonizationContext : SynchronizationContext
-        {
-            private readonly IActorRef _testActor;
+        private static Config Config => ConfigurationFactory.ParseString(@"
+    dispatcher-loop-1 = dispatcher-loop-2
+    dispatcher-loop-2 = dispatcher-loop-1
+");
 
-            public SnitchingSynchonizationContext(IActorRef testActor)
-            {
-                _testActor = testActor;
-            }
-
-            public override void OperationStarted()
-            {
-                _testActor.Tell("called");
-            }
-        }
+        public ActorSystemDispatcherSpec(ITestOutputHelper output):base(output, Config)
+        { }
 
         [Fact]
         public void The_ActorSystem_must_not_use_passed_in_SynchronizationContext_if_executor_is_configured_in()
@@ -74,6 +68,15 @@ namespace Akka.Tests.Actor
             {
                 Shutdown(sys);
             }
+        }
+
+        [Fact]
+        public void The_ActorSystem_must_provide_a_good_error_on_a_dispatcher_alias_loop_in_config()
+        {
+            Sys.Dispatchers.Invoking(d => d.Lookup("dispatcher-loop-1"))
+                .ShouldThrow<ConfigurationException>()
+                .And.Message
+                .StartsWith("Could not find a concrete dispatcher config after following").ShouldBeTrue();
         }
 
         private string UserGuardianDispatcher(ActorSystem system)

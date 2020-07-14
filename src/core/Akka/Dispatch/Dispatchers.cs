@@ -231,6 +231,8 @@ namespace Akka.Dispatch
         /// </summary>
         internal static readonly string InternalDispatcherId = "akka.actor.internal-dispatcher";
 
+        private const int MaxDispatcherAliasDepth = 20;
+
         /// <summary>
         ///     The identifier for synchronized dispatchers.
         /// </summary>
@@ -316,7 +318,7 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public MessageDispatcher Lookup(string dispatcherName)
         {
-            return LookupConfigurator(dispatcherName, 0).Dispatcher();
+            return LookupConfigurator(dispatcherName).Dispatcher();
         }
 
         /// <summary>
@@ -331,14 +333,17 @@ namespace Akka.Dispatch
             return _dispatcherConfigurators.ContainsKey(id) || _cachingConfig.HasPath(id);
         }
 
-        private MessageDispatcherConfigurator LookupConfigurator(string id, int depth)
+        private MessageDispatcherConfigurator LookupConfigurator(string id)
         {
-            if (!_dispatcherConfigurators.TryGetValue(id, out var configurator))
+            var depth = 0;
+            while(depth < MaxDispatcherAliasDepth)
             {
+                if (_dispatcherConfigurators.TryGetValue(id, out var configurator))
+                    return configurator;
+
                 // It doesn't matter if we create a dispatcher configurator that isn't used due to concurrent lookup.
                 // That shouldn't happen often and in case it does the actual ExecutorService isn't
                 // created until used, i.e. cheap.
-                MessageDispatcherConfigurator newConfigurator;
                 if (_cachingConfig.HasPath(id))
                 {
                     var valueAtPath = _cachingConfig.GetValue(id);
@@ -349,19 +354,21 @@ namespace Akka.Dispatch
                         // both under the actual id and the alias id in the 'dispatcherConfigurators' cache
                         var actualId = valueAtPath.GetString();
                         _logger.Debug($"Dispatcher id [{id}] is an alias, actual dispatcher will be [{actualId}]");
-                        newConfigurator = LookupConfigurator(actualId, depth + 1);
-                    } else if (valueAtPath.IsObject())
-                        newConfigurator = ConfiguratorFrom(Config(id));
-                    else
-                        throw new ConfigurationException($"Expected either a dispatcher config or an alias at [{id}] but found [{valueAtPath}]");
+                        id = actualId;
+                        depth++;
+                        continue;
+                    }
+
+                    if (valueAtPath.IsObject())
+                    {
+                        var newConfigurator = ConfiguratorFrom(Config(id));
+                        return _dispatcherConfigurators.TryAdd(id, newConfigurator) ? newConfigurator : _dispatcherConfigurators[id];
+                    }
+                    throw new ConfigurationException($"Expected either a dispatcher config or an alias at [{id}] but found [{valueAtPath}]");
                 }
-                else
-                    throw new ConfigurationException($"Dispatcher {id} not configured.");
-
-                return _dispatcherConfigurators.TryAdd(id, newConfigurator) ? newConfigurator : _dispatcherConfigurators[id];
+                throw new ConfigurationException($"Dispatcher {id} not configured.");
             }
-
-            return configurator;
+            throw new ConfigurationException($"Could not find a concrete dispatcher config after following {MaxDispatcherAliasDepth} deep. Is there a circular reference in your config? Last followed Id was [{id}]");
         }
 
         /// <summary>
