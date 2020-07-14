@@ -17,6 +17,7 @@ namespace Akka.Streams
     }
     public class static ActorAttributes
     {
+        public static Akka.Streams.ActorAttributes.Dispatcher IODispatcher { get; }
         public static Akka.Streams.Attributes CreateDebugLogging(bool enabled) { }
         public static Akka.Streams.Attributes CreateDispatcher(string dispatcherName) { }
         public static Akka.Streams.Attributes CreateFuzzingMode(bool enabled) { }
@@ -138,12 +139,14 @@ namespace Akka.Streams
         public readonly int SyncProcessingLimit;
         public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Dsl.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
+        public override bool Equals(object obj) { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
         public Akka.Streams.ActorMaterializerSettings WithDispatcher(string dispatcher) { }
         public Akka.Streams.ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode) { }
         public Akka.Streams.ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize) { }
         public Akka.Streams.ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize) { }
+        public Akka.Streams.ActorMaterializerSettings WithOutputBurstLimit(int limit) { }
         public Akka.Streams.ActorMaterializerSettings WithStreamRefSettings(Akka.Streams.Dsl.StreamRefSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSubscriptionTimeoutSettings(Akka.Streams.StreamSubscriptionTimeoutSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSupervisionStrategy(Akka.Streams.Supervision.Decider decider) { }
