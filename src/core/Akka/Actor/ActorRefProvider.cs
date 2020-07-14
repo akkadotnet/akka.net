@@ -256,8 +256,7 @@ namespace Akka.Actor
         /// </summary>
         public EventStream EventStream { get { return _eventStream; } }
 
-        //private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
-        private MessageDispatcher InternalDispatcher => _system.Dispatchers.Lookup(Dispatchers.InternalDispatcherId);
+        private MessageDispatcher InternalDispatcher => _system.Dispatchers.InternalDispatcher;
 
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
