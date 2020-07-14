@@ -425,7 +425,7 @@ namespace Akka.DistributedData.Internal
         /// <param name="owner">TBD</param>
         /// <returns>TBD</returns>
         internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
-            new DataEnvelope(Data, Pruning.Add(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
+            new DataEnvelope(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
 
         /// <summary>
         /// TBD
