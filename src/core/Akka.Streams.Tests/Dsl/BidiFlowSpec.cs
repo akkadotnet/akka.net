@@ -179,7 +179,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var right = Flow.FromGraph(GraphDsl.Create(Sink.First<List<long>>(), (b, sink) =>
                 {
-                    var flow = b.Add(Flow.Create<long>().Grouped(10));
+                    var flow = b.Add(Flow.Create<long>().Grouped(10).Select(collection => collection.ToList()));
                     var source = b.Add(Source.Single(ByteString.FromString("10")));
                     b.From(flow).To(sink);
 

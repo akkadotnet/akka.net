@@ -5,6 +5,7 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Xunit;
@@ -32,6 +33,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 return ClosedShape.Instance;
             });
+            Source.From(new List<Child>()).Interleave(Source.From(new List<Base>()), 2); // 1, 2, 4, 5, 3, 6, 7
         }
 
         public class Base { }

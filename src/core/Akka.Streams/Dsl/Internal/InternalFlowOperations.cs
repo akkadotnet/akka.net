@@ -1999,7 +1999,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="segmentSize">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<T2, TMat> Interleave<T1, T2, TMat>(this IFlow<T1, TMat> flow,
-            IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T2
+            IGraph<SourceShape<T2>, TMat> graph, int segmentSize) where T1 : T1
         {
             return flow.Via(InterleaveGraph<T1, T2, TMat>(graph, segmentSize));
         }
