@@ -39,7 +39,7 @@ namespace Akka.Streams.Dsl
             /// <typeparam name="T2">TBD</typeparam>
             /// <param name="from">TBD</param>
             /// <param name="to">TBD</param>
-            internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T2 : T1
+            internal void AddEdge<T1, T2>(Outlet<T1> from, Inlet<T2> to) where T1 : T2
             {
                 _moduleInProgress = _moduleInProgress.Wire(from, to);
             }
@@ -425,7 +425,7 @@ namespace Akka.Streams.Dsl
         /// <param name="inlet">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, Inlet<TIn> inlet)
-            where TIn : TOut
+            where TOut : TIn
         {
             ops.Builder.AddEdge(ops.Out, inlet);
             return ops.Builder;
@@ -441,7 +441,7 @@ namespace Akka.Streams.Dsl
         /// <param name="sink">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, SinkShape<TIn> sink)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, sink.Inlet);
@@ -458,7 +458,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat>(this GraphDsl.ForwardOps<TOut, TMat> ops, FlowShape<TIn, TOut> flow)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, flow.Inlet);
@@ -476,7 +476,7 @@ namespace Akka.Streams.Dsl
         /// <param name="sink">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut, TMat, TMat2>(this GraphDsl.ForwardOps<TOut, TMat> ops, IGraph<SinkShape<TIn>, TMat2> sink)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, b.Add(sink).Inlet);
@@ -494,7 +494,7 @@ namespace Akka.Streams.Dsl
         /// <param name="junction">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
-            where TIn : TOut1
+            where TOut1 : TIn
         {
             var b = ops.Builder;
             var inlet = GraphDsl.FindIn(b, junction, 0);
@@ -514,7 +514,7 @@ namespace Akka.Streams.Dsl
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> To<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
-            where TIn : TOut1
+            where TOut1 : TIn
         {
             var b = ops.Builder;
 
@@ -527,7 +527,7 @@ namespace Akka.Streams.Dsl
             throw new ArgumentException("No more inlets free on junction", nameof(junction));
         }
 
-        private static Outlet<TOut2> Bind<TIn, TOut1, TOut2, TMat>(GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction) where TIn : TOut1
+        private static Outlet<TOut2> Bind<TIn, TOut1, TOut2, TMat>(GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction) where TOut1 : TIn
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, junction.In);
@@ -545,7 +545,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, FlowShape<TIn, TOut2> flow)
-            where TIn : TOut1
+            where TOut1 : TIn
         {
             var b = ops.Builder;
             b.AddEdge(ops.Out, flow.Inlet);
@@ -563,7 +563,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, IGraph<FlowShape<TIn, TOut2>, NotUsed> flow)
-            where TIn : TOut1
+            where TOut1 : TIn
         {
             var b = ops.Builder;
             var s = b.Add(flow);
@@ -582,7 +582,7 @@ namespace Akka.Streams.Dsl
         /// <param name="junction">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanInShape<TIn, TOut2> junction)
-            where TIn : TOut1
+            where TOut1 : TIn
         {
             var b = To(ops, junction);
             return b.From(junction.Out);
@@ -599,7 +599,7 @@ namespace Akka.Streams.Dsl
         /// <param name="junction">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ForwardOps<TOut2, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ForwardOps<TOut1, TMat> ops, UniformFanOutShape<TIn, TOut2> junction)
-            where TIn : TOut1
+            where TOut1 : TIn
         {
             var outlet = Bind(ops, junction);
             return ops.Builder.From(outlet);
@@ -621,7 +621,7 @@ namespace Akka.Streams.Dsl
         /// <param name="outlet">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, Outlet<TOut> outlet)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(outlet, ops.In);
@@ -638,7 +638,7 @@ namespace Akka.Streams.Dsl
         /// <param name="source">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, SourceShape<TOut> source)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(source.Outlet, ops.In);
@@ -655,7 +655,7 @@ namespace Akka.Streams.Dsl
         /// <param name="source">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<SourceShape<TOut>, TMat> source)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             var s = b.Add(source);
@@ -673,7 +673,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TIn, TOut> flow)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(flow.Outlet, ops.In);
@@ -690,14 +690,14 @@ namespace Akka.Streams.Dsl
         /// <param name="junction">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
-            where TIn : TOut
+            where TOut : TIn
         {
             Bind(ops, junction);
             return ops.Builder;
         }
 
         private static Inlet<TIn> Bind<TIn, TOut, TMat>(GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = ops.Builder;
             b.AddEdge(junction.Out, ops.In);
@@ -716,7 +716,7 @@ namespace Akka.Streams.Dsl
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         public static GraphDsl.Builder<TMat> From<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanOutShape<TOut1, TOut2> junction)
-            where TIn : TOut2
+            where TOut2 : TIn
         {
             var b = ops.Builder;
             var count = junction.Outlets.Count();
@@ -744,7 +744,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TOut1, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, FlowShape<TOut1, TOut2> flow)
-            where TIn : TOut2
+            where TOut2 : TIn
         {
             var b = ops.Builder;
             b.AddEdge(flow.Outlet, ops.In);
@@ -762,7 +762,7 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TOut1, TMat> Via<TIn, TOut1, TOut2, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, IGraph<FlowShape<TOut1, TOut2>, TMat> flow)
-            where TIn : TOut2
+            where TOut2 : TIn
         {
             var b = ops.Builder;
             var f = b.Add(flow);
@@ -780,7 +780,7 @@ namespace Akka.Streams.Dsl
         /// <param name="junction">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanInShape<TIn, TOut> junction)
-            where TIn : TOut
+            where TOut : TIn
         {
             var inlet = Bind(ops, junction);
             return ops.Builder.To(inlet);
@@ -796,7 +796,7 @@ namespace Akka.Streams.Dsl
         /// <param name="junction">TBD</param>
         /// <returns>TBD</returns>
         public static GraphDsl.ReverseOps<TIn, TMat> Via<TIn, TOut, TMat>(this GraphDsl.ReverseOps<TIn, TMat> ops, UniformFanOutShape<TIn, TOut> junction)
-            where TIn : TOut
+            where TOut : TIn
         {
             var b = From(ops, junction);
             return b.To(junction.In);
