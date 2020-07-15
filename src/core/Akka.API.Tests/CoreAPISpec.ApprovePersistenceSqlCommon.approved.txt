@@ -82,6 +82,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int SequenceNrIndex = 1;
         protected const int SerializerIdIndex = 6;
         protected BatchingSqlJournal(Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup setup) { }
+        protected virtual string AllEventsSql { get; set; }
         protected virtual string AllPersistenceIdsSql { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
@@ -89,6 +90,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected bool HasAllIdsSubscribers { get; }
         protected bool HasPersistenceIdSubscribers { get; }
         protected bool HasTagSubscribers { get; }
+        protected virtual string HighestOrderingSql { get; set; }
         protected virtual string HighestSequenceNrSql { get; }
         protected abstract System.Collections.Immutable.ImmutableDictionary<string, string> Initializers { get; }
         protected virtual string InsertEventSql { get; }
@@ -98,6 +100,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
         protected abstract TConnection CreateConnection(string connectionString);
         protected virtual System.Threading.Tasks.Task HandleDeleteMessagesTo(Akka.Persistence.DeleteMessagesTo req, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayAllMessages(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents req, TCommand command) { }
         protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context) { }
         protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command) { }
         protected void NotifyNewPersistenceIdAdded(string persistenceId) { }
