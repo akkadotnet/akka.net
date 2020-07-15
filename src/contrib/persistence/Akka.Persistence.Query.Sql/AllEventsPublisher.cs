@@ -43,38 +43,53 @@ namespace Akka.Persistence.Query.Sql
 
         private bool IsTimeForReplay => (_buffer.IsEmpty || _buffer.Length <= _maxBufferSize / 2) && !_completed;
 
-        protected override bool Receive(object message) => message.Match()
-            .With<Request>(_ => Replay())
-            .With<Continue>(() => { })
-            .With<Cancel>(_ => Context.Stop(Self))
-            .WasHandled;
-
-        private bool Idle(object message) => message.Match()
-            .With<Continue>(() =>
+        protected override bool Receive(object message)
+        {
+            switch (message)
             {
-                if (IsTimeForReplay) Replay();
-            })
-            .With<TaggedEventAppended>(() =>
+                case Request _:
+                    Replay();
+                    return true;
+                case Continue _:
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        private bool Idle(object message)
+        {
+            switch (message)
             {
-                if (IsTimeForReplay) Replay();
-            })
-            .With<Request>(ReceiveIdleRequest)
-            .With<Cancel>(() => Context.Stop(Self))
-            .WasHandled;
+                case Continue _:
+                    if (IsTimeForReplay) Replay();
+                    return true;
+                case Request _:
+                    ReceiveIdleRequest();
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         private void Replay()
         {
             var limit = _maxBufferSize - _buffer.Length;
             _log.Debug("replay all events request from [{0}], limit [{1}]", _currentOffset, limit);
             _journalRef.Tell(new ReplayAllEvents(_currentOffset, limit, Self));
-            Context.Become(Replaying());
+            Context.Become(Replaying);
         }
 
-        private Receive Replaying()
+        private bool Replaying( object message )
         {
-            return message => message.Match()
-                .With<ReplayedEvent>(replayed =>
-                {
+            switch (message)
+            {
+                case ReplayedEvent replayed:
                     _buffer.Add(new EventEnvelope(
                         offset: new Sequence(replayed.Offset),
                         persistenceId: replayed.Persistent.PersistenceId,
@@ -83,30 +98,34 @@ namespace Akka.Persistence.Query.Sql
 
                     _currentOffset = replayed.Offset;
                     _buffer.DeliverBuffer(TotalDemand);
-                })
-                .With<EventReplaySuccess>(success =>
-                {
+                    return true;
+                case EventReplaySuccess success:
                     _log.Debug("event replay completed, currOffset [{0}]", _currentOffset);
                     ReceiveRecoverySuccess(success.HighestSequenceNr);
-                })
-                .With<EventReplayFailure>(failure =>
-                {
+                    return true;
+                case EventReplayFailure failure:
                     _log.Debug("event replay failed, due to [{0}]", failure.Cause.Message);
                     _buffer.DeliverBuffer(TotalDemand);
                     OnErrorThenStop(failure.Cause);
-                })
-                .With<ReplayedAllEvents>(complete =>
-                {
+                    return true;
+                case ReplayedAllEvents _:
                     _completed = true;
                     if (_buffer.IsEmpty)
                         OnCompleteThenStop();
 
                     _buffer.DeliverBuffer(TotalDemand);
-                })
-                .With<Request>(_ => _buffer.DeliverBuffer(TotalDemand))
-                .With<Continue>(() => { })
-                .With<Cancel>(() => Context.Stop(Self))
-                .WasHandled;
+                    return true;
+                case Request _:
+                    _buffer.DeliverBuffer(TotalDemand);
+                    return true;
+                case Continue _:
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private void ReceiveIdleRequest()

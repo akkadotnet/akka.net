@@ -604,7 +604,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
-                    var rowCounter = 0;
+                    long rowCounter = 0;
                     while (await reader.ReadAsync(cancellationToken))
                     {
                         ++rowCounter;
