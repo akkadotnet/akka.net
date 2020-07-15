@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 
 namespace DocsExamples.Actor.UntypedActorAPI
 {
+    #region UntypedActor
     public class Follower : UntypedActor
     {
         private string identifyId = "1";
@@ -46,4 +47,5 @@ namespace DocsExamples.Actor.UntypedActorAPI
             };
         }
     }
+    #endregion
 }
