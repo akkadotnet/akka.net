@@ -26,6 +26,7 @@ namespace Akka.Persistence.Sqlite.Journal
             : base(configuration, serialization, timestampProvider)
         {
             ByTagSql = base.ByTagSql + " LIMIT @Take";
+            AllEventsSql = base.AllEventsSql + " LIMIT @Take";
 
             CreateEventsJournalSql = $@"
                 CREATE TABLE IF NOT EXISTS {configuration.FullJournalTableName} (
@@ -63,6 +64,8 @@ namespace Akka.Persistence.Sqlite.Journal
         /// TBD
         /// </summary>
         protected override string ByTagSql { get; }
+
+        protected override string AllEventsSql { get; }
 
         /// <summary>
         /// TBD

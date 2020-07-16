@@ -15,6 +15,10 @@ namespace Akka.Persistence.Query
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public interface IAllEventsQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> AllEvents(Akka.Persistence.Query.Offset offset);
+    }
     public interface ICurrentEventsByPersistenceIdQuery : Akka.Persistence.Query.IReadJournal
     {
         Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);

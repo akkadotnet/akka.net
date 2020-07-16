@@ -68,6 +68,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, Action<ReplayedTaggedMessage> callback);
 
+        Task<long> SelectAllEventsAsync(
+            DbConnection connection, 
+            CancellationToken cancellationToken, 
+            long fromOffset, 
+            long max, 
+            Action<ReplayedEvent> callback, 
+            Action<ReplayedAllEvents> completeCallback);
+
         /// <summary>
         /// Asynchronously returns single number considered as the highest sequence number in current journal for the provided <paramref name="persistenceId"/>.
         /// </summary>
@@ -359,6 +367,19 @@ namespace Akka.Persistence.Sql.Common.Journal
                 WHERE e.{Configuration.OrderingColumnName} > @Ordering AND e.{Configuration.TagsColumnName} LIKE @Tag
                 ORDER BY {Configuration.OrderingColumnName} ASC";
 
+            AllEventsSql =
+                $@"
+                SELECT {allEventColumnNames}, e.{Configuration.OrderingColumnName} as Ordering
+                FROM {Configuration.FullJournalTableName} e
+                WHERE e.{Configuration.OrderingColumnName} > @Ordering
+                ORDER BY {Configuration.OrderingColumnName} ASC";
+
+            HighestOrderingSql =
+                $@"
+                SELECT MAX(e.{Configuration.OrderingColumnName}) as Ordering
+                FROM {Configuration.FullJournalTableName} e
+                WHERE e.{Configuration.OrderingColumnName} > @Ordering";
+
             InsertEventSql = $@"
                 INSERT INTO {Configuration.FullJournalTableName} (
                     {Configuration.PersistenceIdColumnName},
@@ -414,6 +435,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// TBD
         /// </summary>
         protected virtual string ByTagSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected virtual string AllEventsSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected virtual string HighestOrderingSql { get; }
         /// <summary>
         /// TBD
         /// </summary>
@@ -550,6 +579,46 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var command = GetCommand(connection, HighestTagOrderingSql))
             {
                 AddParameter(command, "@Tag", DbType.String, "%;" + tag + ";%");
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
+                return maxOrdering;
+            }
+        }
+
+        public async Task<long> SelectAllEventsAsync(
+            DbConnection connection, 
+            CancellationToken cancellationToken, 
+            long fromOffset,
+            long max, 
+            Action<ReplayedEvent> callback,
+            Action<ReplayedAllEvents> completeCallback)
+        {
+            using (var command = GetCommand(connection, AllEventsSql))
+            {
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                AddParameter(command, "@Take", DbType.Int64, max);
+
+                var commandBehavior = Configuration.UseSequentialAccess ? 
+                    CommandBehavior.SequentialAccess : 
+                    CommandBehavior.Default;
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
+                {
+                    long rowCounter = 0;
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        ++rowCounter;
+                        var persistent = ReadEvent(reader);
+                        var ordering = reader.GetInt64(OrderingIndex);
+                        callback(new ReplayedEvent(persistent, ordering));
+                    }
+                    if(rowCounter < max)
+                        completeCallback(ReplayedAllEvents.Instance);
+                }
+            }
+
+            using (var command = GetCommand(connection, HighestOrderingSql))
+            {
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
                 var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
                 return maxOrdering;

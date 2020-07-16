@@ -172,6 +172,158 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
+    public sealed class ReplayAllEvents : IJournalRequest
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly long FromOffset;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly long Max;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly IActorRef ReplyTo;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
+        /// </summary>
+        /// <param name="fromOffset">TBD</param>
+        /// <param name="toOffset">TBD</param>
+        /// <param name="max">TBD</param>
+        /// <param name="tag">TBD</param>
+        /// <param name="replyTo">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown for a number of reasons. These include the following:
+        /// <ul>
+        /// <li>The specified <paramref name="fromOffset"/> is less than zero.</li>
+        /// <li>The specified <paramref name="toOffset"/> is less than or equal to zero.</li>
+        /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
+        /// </ul>
+        /// </exception>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
+        /// </exception>
+        public ReplayAllEvents(long fromOffset, long max, IActorRef replyTo)
+        {
+            if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+            if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", nameof(max));
+
+            FromOffset = fromOffset;
+            Max = max;
+            ReplyTo = replyTo;
+        }
+    }
+
+    public sealed class ReplayedAllEvents
+    {
+        public static ReplayedAllEvents Instance = new ReplayedAllEvents();
+
+        private ReplayedAllEvents() { }
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
+    public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly IPersistentRepresentation Persistent;
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public readonly long Offset;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="persistent">TBD</param>
+        /// <param name="tag">TBD</param>
+        /// <param name="offset">TBD</param>
+        public ReplayedEvent(IPersistentRepresentation persistent, long offset)
+        {
+            Persistent = persistent;
+            Offset = offset;
+        }
+    }
+
+    public sealed class EventReplaySuccess
+    {
+        public EventReplaySuccess(long highestSequenceNr)
+        {
+            HighestSequenceNr = highestSequenceNr;
+        }
+
+        /// <summary>
+        /// Highest stored sequence number.
+        /// </summary>
+        public long HighestSequenceNr { get; }
+
+        public bool Equals(EventReplaySuccess other)
+        {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(HighestSequenceNr, other.HighestSequenceNr);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (!(obj is EventReplaySuccess evt)) return false;
+            return Equals(evt);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => HighestSequenceNr.GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => $"EventReplaySuccess<highestSequenceNr: {HighestSequenceNr}>";
+    }
+
+    public sealed class EventReplayFailure
+    {
+        public EventReplayFailure(Exception cause)
+        {
+            Cause = cause;
+        }
+
+        /// <summary>
+        /// Highest stored sequence number.
+        /// </summary>
+        public Exception Cause { get; }
+
+        public bool Equals(EventReplayFailure other)
+        {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Cause, other.Cause);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (!(obj is EventReplayFailure f)) return false;
+            return Equals(f);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => Cause.GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    [Serializable]
     public sealed class ReplayTaggedMessages : IJournalRequest
     {
         /// <summary>
