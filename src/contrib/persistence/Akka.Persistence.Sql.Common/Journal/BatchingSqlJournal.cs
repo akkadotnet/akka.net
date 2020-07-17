@@ -486,9 +486,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected virtual string ByTagSql { get; }
 
-        protected virtual string AllEventsSql { get; set; }
+        /// <summary>
+        /// SQL query executed as result of <see cref="ReplayAllEvents"/> request to journal.
+        /// It's a part of persistence query protocol.
+        /// </summary>
+        protected virtual string AllEventsSql { get; }
 
-        protected virtual string HighestOrderingSql { get; set; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected virtual string HighestOrderingSql { get; }
 
         /// <summary>
         /// A named collection of SQL statements to be executed once journal actor gets initialized
@@ -518,6 +525,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
 
         /// <summary>
+        /// Flag determining if current journal has any subscribers for <see cref="NewEventAppended"/> and 
+        /// </summary>
+        protected bool HasNewEventsSubscribers => _newEventSubscriber.Count != 0;
+
+        /// <summary>
         /// Flag determining if incoming journal requests should be published in current actor system event stream.
         /// Useful mostly for tests.
         /// </summary>
@@ -538,6 +550,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
         private readonly HashSet<IActorRef> _allIdsSubscribers;
         private readonly HashSet<string> _allPersistenceIds;
+        private readonly HashSet<IActorRef> _newEventSubscriber;
 
         private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
@@ -556,6 +569,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
             _allIdsSubscribers = new HashSet<IActorRef>();
             _allPersistenceIds = new HashSet<string>();
+            _newEventSubscriber = new HashSet<IActorRef>();
 
             _remainingOperations = Setup.MaxConcurrentOperations;
             Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
@@ -703,10 +717,13 @@ namespace Akka.Persistence.Sql.Common.Journal
                     AddPersistenceIdSubscriber(msg);
                     return true;
                 case SubscribeAllPersistenceIds msg:
-                    AddAllSubscriber(msg);
+                    AddAllPersistenceIdsSubscriber(msg);
                     return true;
                 case SubscribeTag msg:
                     AddTagSubscriber(msg);
+                    return true;
+                case SubscribeNewEvents msg:
+                    AddNewEventsSubscriber(msg);
                     return true;
                 case Terminated msg:
                     RemoveSubscriber(msg.ActorRef);
@@ -811,6 +828,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             _allIdsSubscribers.Remove(subscriberRef);
             _persistenceIdSubscribers.RemoveItem(subscriberRef);
             _tagSubscribers.RemoveItem(subscriberRef);
+            _newEventSubscriber.Remove(subscriberRef);
+        }
+
+        private void AddNewEventsSubscriber(SubscribeNewEvents message)
+        {
+            var subscriber = Sender;
+            _newEventSubscriber.Add(subscriber);
+            Context.Watch(subscriber);
         }
 
         private void AddTagSubscriber(SubscribeTag message)
@@ -820,7 +845,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Context.Watch(subscriber);
         }
 
-        private void AddAllSubscriber(SubscribeAllPersistenceIds message)
+        private void AddAllPersistenceIdsSubscriber(SubscribeAllPersistenceIds message)
         {
             if (!HasAllIdsSubscribers)
             {
@@ -837,6 +862,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             var subscriber = Sender;
             _persistenceIdSubscribers.AddItem(message.PersistenceId, subscriber);
             Context.Watch(subscriber);
+        }
+
+        private void NotifyNewEventAppended()
+        {
+            if (HasNewEventsSubscribers)
+            {
+                foreach (var subscriber in _newEventSubscriber)
+                {
+                    subscriber.Tell(NewEventAppended.Instance);
+                }
+            }
         }
 
         private void NotifyTagChanged(string tag)
@@ -1109,10 +1145,8 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 using (var reader = await command.ExecuteReaderAsync())
                 {
-                    long rowCounter = 0;
                     while (await reader.ReadAsync())
                     {
-                        ++rowCounter;
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
                         maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
@@ -1122,8 +1156,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                             replyTo.Tell(new ReplayedEvent(adapted, ordering), ActorRefs.NoSender);
                         }
                     }
-                    if (rowCounter < req.Max)
-                        replyTo.Tell(ReplayedAllEvents.Instance);
                 }
 
                 replyTo.Tell(new EventReplaySuccess(maxSequenceNr));
@@ -1278,6 +1310,11 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         NotifyPersistenceIdChanged(persistenceId);
                     }
+                }
+
+                if (HasNewEventsSubscribers)
+                {
+                    NotifyNewEventAppended();
                 }
 
                 summary = summary ?? WriteMessagesSuccessful.Instance;

@@ -123,6 +123,27 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     /// <summary>
+    /// Subscribe the `sender` to new appended events.
+    /// Used by query-side. The journal will send <see cref="NewEventAppended"/> messages to
+    /// the subscriber when `asyncWriteMessages` has been called.
+    /// </summary>
+    [Serializable]
+    public sealed class SubscribeNewEvents : ISubscriptionCommand
+    {
+        public static SubscribeNewEvents Instance = new SubscribeNewEvents();
+
+        private SubscribeNewEvents() { }
+    }
+
+    [Serializable]
+    public sealed class NewEventAppended : IDeadLetterSuppression
+    {
+        public static NewEventAppended Instance = new NewEventAppended();
+
+        private NewEventAppended() { }
+    }
+
+    /// <summary>
     /// Subscribe the `sender` to changes (appended events) for a specific `tag`.
     /// Used by query-side. The journal will send <see cref="TaggedEventAppended"/> messages to
     /// the subscriber when `asyncWriteMessages` has been called.
@@ -181,6 +202,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// TBD
         /// </summary>
+        public readonly long ToOffset;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long Max;
         /// <summary>
         /// TBD
@@ -188,12 +213,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly IActorRef ReplyTo;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
+        /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
         /// </summary>
         /// <param name="fromOffset">TBD</param>
         /// <param name="toOffset">TBD</param>
         /// <param name="max">TBD</param>
-        /// <param name="tag">TBD</param>
         /// <param name="replyTo">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown for a number of reasons. These include the following:
@@ -203,25 +227,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
         /// </ul>
         /// </exception>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
-        /// </exception>
-        public ReplayAllEvents(long fromOffset, long max, IActorRef replyTo)
+        public ReplayAllEvents(long fromOffset, long toOffset, long max, IActorRef replyTo)
         {
             if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+            if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
             if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", nameof(max));
 
             FromOffset = fromOffset;
+            ToOffset = toOffset;
             Max = max;
             ReplyTo = replyTo;
         }
-    }
-
-    public sealed class ReplayedAllEvents
-    {
-        public static ReplayedAllEvents Instance = new ReplayedAllEvents();
-
-        private ReplayedAllEvents() { }
     }
 
     /// <summary>
