@@ -104,6 +104,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                     ReplayTaggedMessagesAsync(replay)
                     .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
                 })
+                .With<ReplayAllEvents>(replay =>
+                {
+                    ReplayAllEventsAsync(replay)
+                        .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
+                            failure: e => new EventReplayFailure(e));
+                })
                 .With<SubscribePersistenceId>(subscribe =>
                 {
                     AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
@@ -216,7 +222,30 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, replayedTagged.Tag, replayedTagged.Offset), ActorRefs.NoSender);
                             }
                         });
-                 }
+                }
+            }
+        }
+
+        protected virtual async Task<long> ReplayAllEventsAsync(ReplayAllEvents replay)
+        {
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
+                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                {
+                    return await QueryExecutor
+                        .SelectAllEventsAsync(connection, 
+                            cancellationToken.Token, 
+                            replay.FromOffset, 
+                            replay.Max, 
+                            replayedEvent => {
+                                foreach (var adapted in AdaptFromJournal(replayedEvent.Persistent))
+                                {
+                                    replay.ReplyTo.Tell(new ReplayedEvent(adapted, replayedEvent.Offset), ActorRefs.NoSender);
+                                }
+                            },
+                            complete => replay.ReplyTo.Tell(complete));
+                }
             }
         }
 
