@@ -8,7 +8,7 @@ using Akka.Persistence.TCK.Query;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests.Query
+namespace Akka.Persistence.Sqlite.Tests.Batching
 {
     public class BatchingCurrentSqliteAllEventsSpec : CurrentAllEventsSpec
     {
