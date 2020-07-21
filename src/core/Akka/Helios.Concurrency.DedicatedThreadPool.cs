@@ -94,16 +94,15 @@ namespace Helios.Concurrency
                 throw new ArgumentOutOfRangeException(nameof(numThreads), $"numThreads must be at least 1. Was {numThreads}");
         }
 #else
-        public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null, SynchronizationContext synchronizationContext = null)
-            : this(numThreads, DefaultThreadType, name, deadlockTimeout, synchronizationContext)
+        public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null)
+            : this(numThreads, DefaultThreadType, name, deadlockTimeout)
         { }
 
         public DedicatedThreadPoolSettings(
             int numThreads, 
             ThreadType threadType, 
             string name = null, 
-            TimeSpan? deadlockTimeout = null, 
-            SynchronizationContext synchronizationContext = null)
+            TimeSpan? deadlockTimeout = null)
         {
             Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
             ThreadType = threadType;
@@ -113,7 +112,6 @@ namespace Helios.Concurrency
                 throw new ArgumentOutOfRangeException("deadlockTimeout", string.Format("deadlockTimeout must be null or at least 1ms. Was {0}.", deadlockTimeout));
             if (numThreads <= 0)
                 throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
-            SynchronizationContext = synchronizationContext ?? SynchronizationContext.Current;
         }
 #endif
 
@@ -156,8 +154,6 @@ namespace Helios.Concurrency
         /// Gets the thread stack size, 0 represents the default stack size.
         /// </summary>
         public int ThreadMaxStackSize { get; private set; }
-
-        public SynchronizationContext SynchronizationContext { get; }
     }
 
     /// <summary>
