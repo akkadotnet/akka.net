@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 
 namespace DocsExamples.Actor.FiniteStateMachine
 {
+    #region FSMEvents
     // received events
     public class SetTarget
     {
@@ -48,7 +49,9 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
         public ImmutableList<object> Obj { get; }
     }
+    #endregion
 
+    #region FSMData
     // states
     public enum State
     {
@@ -83,4 +86,5 @@ namespace DocsExamples.Actor.FiniteStateMachine
             return new Todo(Target, queue);
         }
     }
+    #endregion
 }

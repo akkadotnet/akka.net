@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
+using Newtonsoft.Json;
 
 namespace Akka.Cluster
 {
@@ -67,7 +68,7 @@ namespace Akka.Cluster
         /// <summary>
         /// A snapshot of the current state of the <see cref="Cluster"/>
         /// </summary>
-        public sealed class CurrentClusterState
+        public sealed class CurrentClusterState : INoSerializationVerificationNeeded
         {
             private readonly ImmutableSortedSet<Member> _members;
             private readonly ImmutableHashSet<Member> _unreachable;
