@@ -404,8 +404,31 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         private string Join()
         {
-            var joined = String.Join("/", Elements);
-            return "/" + joined;
+            if (this is RootActorPath)
+                return "/";
+
+            // Resolve length of final string
+            int totalLength = 0;
+            ActorPath p = this;
+            while (!(p is RootActorPath))
+            {
+                totalLength += p.Name.Length + 1;
+                p = p.Parent;
+            }
+
+            // Concatenate segments (in reverse order) into buffer with '/' prefixes
+            char[] buffer = new char[totalLength];
+            int offset = buffer.Length;
+            p = this;
+            while (!(p is RootActorPath))
+            {
+                offset -= p.Name.Length + 1;
+                buffer[offset] = '/';
+                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+                p = p.Parent;
+            }
+
+            return new string(buffer);
         }
 
         /// <summary>
