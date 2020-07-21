@@ -1624,6 +1624,7 @@ namespace Akka.Actor
         public bool LogConfigOnStart { get; }
         public int LogDeadLetters { get; }
         public bool LogDeadLettersDuringShutdown { get; }
+        public System.TimeSpan LogDeadLettersSuspendDuration { get; }
         public string LogLevel { get; }
         public bool LoggerAsyncStart { get; }
         public System.TimeSpan LoggerStartTimeout { get; }

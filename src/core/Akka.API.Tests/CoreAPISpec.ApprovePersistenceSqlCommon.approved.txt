@@ -17,6 +17,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int TimestampIndex = 2;
         protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider TimestampProvider;
         protected AbstractQueryExecutor(Akka.Persistence.Sql.Common.Journal.QueryConfiguration configuration, Akka.Serialization.Serialization serialization, Akka.Persistence.Sql.Common.Journal.ITimestampProvider timestampProvider) { }
+        protected virtual string AllEventsSql { get; }
         protected virtual string AllPersistenceIdsSql { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
@@ -24,6 +25,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected abstract string CreateEventsJournalSql { get; }
         protected abstract string CreateMetaTableSql { get; }
         protected virtual string DeleteBatchSql { get; }
+        protected virtual string HighestOrderingSql { get; }
         protected virtual string HighestSequenceNrSql { get; }
         protected virtual string HighestTagOrderingSql { get; }
         protected virtual string InsertEventSql { get; }
@@ -37,6 +39,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
         public virtual System.Threading.Tasks.Task InsertBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, Akka.Persistence.Sql.Common.Journal.WriteJournalBatch write) { }
         protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
+        public System.Threading.Tasks.Task<long> SelectAllEventsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long fromOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedEvent> callback, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedAllEvents> completeCallback) { }
         public virtual System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<string>> SelectAllPersistenceIdsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
         public virtual System.Threading.Tasks.Task SelectByPersistenceIdAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> callback) { }
         public virtual System.Threading.Tasks.Task<long> SelectByTagAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedTaggedMessage> callback) { }
@@ -79,6 +82,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int SequenceNrIndex = 1;
         protected const int SerializerIdIndex = 6;
         protected BatchingSqlJournal(Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup setup) { }
+        protected virtual string AllEventsSql { get; set; }
         protected virtual string AllPersistenceIdsSql { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
@@ -86,6 +90,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected bool HasAllIdsSubscribers { get; }
         protected bool HasPersistenceIdSubscribers { get; }
         protected bool HasTagSubscribers { get; }
+        protected virtual string HighestOrderingSql { get; set; }
         protected virtual string HighestSequenceNrSql { get; }
         protected abstract System.Collections.Immutable.ImmutableDictionary<string, string> Initializers { get; }
         protected virtual string InsertEventSql { get; }
@@ -95,6 +100,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
         protected abstract TConnection CreateConnection(string connectionString);
         protected virtual System.Threading.Tasks.Task HandleDeleteMessagesTo(Akka.Persistence.DeleteMessagesTo req, TCommand command) { }
+        protected virtual System.Threading.Tasks.Task HandleReplayAllMessages(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents req, TCommand command) { }
         protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context) { }
         protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command) { }
         protected void NotifyNewPersistenceIdAdded(string persistenceId) { }
@@ -135,12 +141,31 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly long SequenceNr;
         public EventId(long id, long sequenceNr, string persistenceId) { }
     }
+    public sealed class EventReplayFailure
+    {
+        public EventReplayFailure(System.Exception cause) { }
+        public System.Exception Cause { get; }
+        public bool Equals(Akka.Persistence.Sql.Common.Journal.EventReplayFailure other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class EventReplaySuccess
+    {
+        public EventReplaySuccess(long highestSequenceNr) { }
+        public long HighestSequenceNr { get; }
+        public bool Equals(Akka.Persistence.Sql.Common.Journal.EventReplaySuccess other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public interface IJournalQueryExecutor
     {
         Akka.Persistence.Sql.Common.Journal.QueryConfiguration Configuration { get; }
         System.Threading.Tasks.Task CreateTablesAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long toSequenceNr);
         System.Threading.Tasks.Task InsertBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, Akka.Persistence.Sql.Common.Journal.WriteJournalBatch write);
+        System.Threading.Tasks.Task<long> SelectAllEventsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long fromOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedEvent> callback, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedAllEvents> completeCallback);
         System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<string>> SelectAllPersistenceIdsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task SelectByPersistenceIdAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> callback);
         System.Threading.Tasks.Task<long> SelectByTagAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedTaggedMessage> callback);
@@ -192,6 +217,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         public string FullMetaTableName { get; }
         public bool UseSequentialAccess { get; }
     }
+    public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        public readonly long FromOffset;
+        public readonly long Max;
+        public readonly Akka.Actor.IActorRef ReplyTo;
+        public ReplayAllEvents(long fromOffset, long max, Akka.Actor.IActorRef replyTo) { }
+    }
     public sealed class ReplayFilterSettings
     {
         public readonly bool IsDebug;
@@ -210,6 +242,16 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly string Tag;
         public readonly long ToOffset;
         public ReplayTaggedMessages(long fromOffset, long toOffset, long max, string tag, Akka.Actor.IActorRef replyTo) { }
+    }
+    public sealed class ReplayedAllEvents
+    {
+        public static Akka.Persistence.Sql.Common.Journal.ReplayedAllEvents Instance;
+    }
+    public sealed class ReplayedEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+    {
+        public readonly long Offset;
+        public readonly Akka.Persistence.IPersistentRepresentation Persistent;
+        public ReplayedEvent(Akka.Persistence.IPersistentRepresentation persistent, long offset) { }
     }
     public sealed class ReplayedTaggedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
     {
@@ -242,6 +284,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr) { }
         protected override bool ReceivePluginInternal(object message) { }
         public void RemoveSubscriber(Akka.Actor.IActorRef subscriber) { }
+        protected virtual System.Threading.Tasks.Task<long> ReplayAllEventsAsync(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents replay) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
         protected virtual System.Threading.Tasks.Task<long> ReplayTaggedMessagesAsync(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages replay) { }
         protected bool WaitingForInitialization(object message) { }
