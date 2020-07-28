@@ -73,8 +73,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CancellationToken cancellationToken, 
             long fromOffset, 
             long max, 
-            Action<ReplayedEvent> callback, 
-            Action<ReplayedAllEvents> completeCallback);
+            Action<ReplayedEvent> callback);
 
         /// <summary>
         /// Asynchronously returns single number considered as the highest sequence number in current journal for the provided <paramref name="persistenceId"/>.
@@ -590,8 +589,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             CancellationToken cancellationToken, 
             long fromOffset,
             long max, 
-            Action<ReplayedEvent> callback,
-            Action<ReplayedAllEvents> completeCallback)
+            Action<ReplayedEvent> callback)
         {
             using (var command = GetCommand(connection, AllEventsSql))
             {
@@ -604,16 +602,12 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
-                    long rowCounter = 0;
                     while (await reader.ReadAsync(cancellationToken))
                     {
-                        ++rowCounter;
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
                         callback(new ReplayedEvent(persistent, ordering));
                     }
-                    if(rowCounter < max)
-                        completeCallback(ReplayedAllEvents.Instance);
                 }
             }
 

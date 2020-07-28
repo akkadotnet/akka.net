@@ -19,7 +19,7 @@ namespace Akka.Persistence.Sql.TestKit
         protected static readonly string DefaultInvalidConnectionString = "INVALID_CONNECTION_STRING";
 
         public SqlJournalConnectionFailureSpec(Config config = null, ITestOutputHelper output = null)
-            : base(config)
+            : base(config, null, output)
         {
         }
 

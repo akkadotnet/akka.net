@@ -23,7 +23,8 @@ namespace Akka.Persistence.Query.Sql
         ICurrentEventsByPersistenceIdQuery,
         IEventsByTagQuery,
         ICurrentEventsByTagQuery,
-        IAllEventsQuery
+        IAllEventsQuery,
+        ICurrentAllEventsQuery
     {
         public static string Identifier = "akka.persistence.query.journal.sql";
 
@@ -215,9 +216,30 @@ namespace Akka.Persistence.Query.Sql
                     throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
             }
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
+        }
+
+        public Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset)
+        {
+            Sequence seq;
+            switch (offset)
+            {
+                case null:
+                case NoOffset _:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = s;
+                    break;
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentAllEvents");
         }
     }
 }
