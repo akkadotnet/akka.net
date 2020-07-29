@@ -71,12 +71,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, Action<ReplayedTaggedMessage> callback);
 
         Task<long> SelectAllEventsAsync(
-            DbConnection connection, 
+            DbConnection connection,
+            CancellationToken cancellationToken, 
             long fromOffset, 
             long toOffset,
             long max, 
-            Action<ReplayedEvent> callback,
-            CancellationToken cancellationToken);
+            Action<ReplayedEvent> callback);
 
         /// <summary>
         /// Asynchronously returns single number considered as the highest sequence number in current journal for the provided <paramref name="persistenceId"/>.
@@ -85,7 +85,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="cancellationToken">TBD</param>
         /// <param name="persistenceId">TBD</param>
         /// <returns>TBD</returns>
-        Task<long> SelectHighestSequenceNrAsync(DbConnection connection, string persistenceId, CancellationToken cancellationToken);
+        Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId);
 
         Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken);
 
@@ -594,12 +594,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
 
         public async Task<long> SelectAllEventsAsync(
-            DbConnection connection, 
+            DbConnection connection,
+            CancellationToken cancellationToken, 
             long fromOffset,
             long toOffset,
             long max, 
-            Action<ReplayedEvent> callback,
-            CancellationToken cancellationToken)
+            Action<ReplayedEvent> callback)
         {
             long maxOrdering;
             using (var command = GetCommand(connection, HighestOrderingSql))
@@ -639,7 +639,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="cancellationToken">TBD</param>
         /// <param name="persistenceId">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, string persistenceId, CancellationToken cancellationToken)
+        public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId)
         {
             using (var command = GetCommand(connection, HighestSequenceNrSql))
             {

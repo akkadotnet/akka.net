@@ -230,7 +230,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
                     return await QueryExecutor
-                        .SelectAllEventsAsync(connection, 
+                        .SelectAllEventsAsync(
+                            connection,
+                            cancellationToken.Token, 
                             replay.FromOffset, 
                             replay.ToOffset,
                             replay.Max, 
@@ -239,8 +241,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 {
                                     replay.ReplyTo.Tell(new ReplayedEvent(adapted, replayedEvent.Offset), ActorRefs.NoSender);
                                 }
-                            },
-                            cancellationToken.Token);
+                            });
                 }
             }
         }
@@ -493,7 +494,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 await connection.OpenAsync();
                 using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
-                    return await QueryExecutor.SelectHighestSequenceNrAsync(connection, persistenceId, cancellationToken.Token);
+                    return await QueryExecutor.SelectHighestSequenceNrAsync(connection, cancellationToken.Token, persistenceId);
                 }
             }
         }
