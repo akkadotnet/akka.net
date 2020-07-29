@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
+using Akka.Streams;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.Query.Sql
@@ -40,12 +41,16 @@ namespace Akka.Persistence.Query.Sql
         private readonly TimeSpan _refreshInterval;
         private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
+        private readonly ExtendedActorSystem _system;
+
+        private IPublisher<string> _persistenceIdsPublisher = null;
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
             _refreshInterval = config.GetTimeSpan("refresh-interval", null);
             _writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
+            _system = system;
         }
 
         /// <summary>
@@ -68,18 +73,32 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </para>
         /// </summary>
-        public Source<string, NotUsed> PersistenceIds() => 
-            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(true, _writeJournalPluginId))
-            .MapMaterializedValue(_ => NotUsed.Instance)
-            .Named("AllPersistenceIds") as Source<string, NotUsed>;
+        public Source<string, NotUsed> PersistenceIds()
+        {
+            if (_persistenceIdsPublisher is null)
+            {
+                var graph =
+                    Source.ActorPublisher<string>(
+                            LivePersistenceIdsPublisher.Props(
+                                _refreshInterval, 
+                                _writeJournalPluginId,
+                                () => _persistenceIdsPublisher = null))
+                        .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(), Keep.Right);
+                _persistenceIdsPublisher = graph.Run(_system.Materializer());
+            }
+
+            return Source.FromPublisher(_persistenceIdsPublisher)
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("AllPersistenceIds") as Source<string, NotUsed>;
+        }
 
         /// <summary>
         /// Same type of query as <see cref="PersistenceIds"/> but the stream
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
-        public Source<string, NotUsed> CurrentPersistenceIds() => 
-            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(false, _writeJournalPluginId))
+        public Source<string, NotUsed> CurrentPersistenceIds()
+            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_writeJournalPluginId))
             .MapMaterializedValue(_ => NotUsed.Instance)
             .Named("CurrentPersistenceIds") as Source<string, NotUsed>;
 
