@@ -3891,10 +3891,11 @@ namespace Akka.Pattern
         public bool IsClosed { get; }
         public bool IsHalfOpen { get; }
         public bool IsOpen { get; }
+        public System.Exception LastCaughtException { get; }
         public int MaxFailures { get; }
         public System.TimeSpan ResetTimeout { get; }
         public static Akka.Pattern.CircuitBreaker Create(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
-        public void Fail() { }
+        public void Fail(System.Exception cause = null) { }
         public Akka.Pattern.CircuitBreaker OnClose(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnHalfOpen(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnOpen(System.Action callback) { }
@@ -3917,6 +3918,7 @@ namespace Akka.Pattern
     public class OpenCircuitException : Akka.Actor.AkkaException
     {
         public OpenCircuitException() { }
+        public OpenCircuitException(System.Exception cause) { }
         public OpenCircuitException(string message) { }
         public OpenCircuitException(string message, System.Exception cause) { }
     }
@@ -5056,8 +5058,9 @@ namespace Akka.Util.Internal
     public interface IAtomicState
     {
         bool HasListeners { get; }
+        System.Exception LastCaughtException { get; }
         void AddListener(System.Action listener);
-        void Enter();
+        void Enter(System.Exception lastFailureCause);
         System.Threading.Tasks.Task<T> Invoke<T>(System.Func<System.Threading.Tasks.Task<T>> body);
     }
     public class static InterlockedSpin
