@@ -20,6 +20,8 @@ namespace Akka.Util.Internal
         private readonly ConcurrentQueue<Action> _listeners;
         private readonly TimeSpan _callTimeout;
 
+        public Exception LastCaughtException { get; protected set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -99,7 +101,7 @@ namespace Akka.Util.Internal
             bool throwException = capturedException != null;
             if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
             {
-                CallFails();
+                CallFails(capturedException?.SourceException);
                 if (throwException)
                     capturedException.Throw();
             }
@@ -138,7 +140,7 @@ namespace Akka.Util.Internal
             bool throwException = capturedException != null;
             if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
             {
-                CallFails();
+                CallFails(capturedException?.SourceException);
                 if (throwException) capturedException.Throw();
             }
             else
@@ -167,7 +169,7 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Invoked when call fails
         /// </summary>
-        protected internal abstract void CallFails();
+        protected internal abstract void CallFails(Exception cause);
 
         /// <summary>
         /// Invoked when call succeeds
@@ -183,8 +185,9 @@ namespace Akka.Util.Internal
         /// Enter the state. NotifyTransitionListeners is not awaited -- its "fire and forget". 
         /// It is up to the user to handle any errors that occur in this state.
         /// </summary>
-        public void Enter()
+        public void Enter(Exception lastFailureCause)
         {
+            LastCaughtException = lastFailureCause;
             EnterInternal();
             NotifyTransitionListeners();
         }
@@ -196,6 +199,8 @@ namespace Akka.Util.Internal
     /// </summary>
     public interface IAtomicState
     {
+        Exception LastCaughtException { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -215,6 +220,6 @@ namespace Akka.Util.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        void Enter();
+        void Enter(Exception lastFailureCause);
     }
 }

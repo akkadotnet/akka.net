@@ -37,9 +37,9 @@ namespace Akka.Pattern
         /// <param name="body">N/A</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
-        public override async Task<T> Invoke<T>(Func<Task<T>> body)
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            throw new OpenCircuitException();
+            throw new OpenCircuitException(LastCaughtException);
         }
 
         /// <summary>
@@ -48,16 +48,17 @@ namespace Akka.Pattern
         /// <param name="body">N/A</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
-        public override async Task Invoke(Func<Task> body)
+        public override Task Invoke(Func<Task> body)
         {
-            throw new OpenCircuitException();
+            throw new OpenCircuitException(LastCaughtException);
         }
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected internal override void CallFails()
+        protected internal override void CallFails(Exception cause)
         {
+            LastCaughtException = cause ?? new TimeoutException("Task execution timed out");
         }
 
         /// <summary>
@@ -65,6 +66,7 @@ namespace Akka.Pattern
         /// </summary>
         protected internal override void CallSucceeds()
         {
+            LastCaughtException = null;
         }
 
         /// <summary>
@@ -113,7 +115,7 @@ namespace Akka.Pattern
         {
             if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException();
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", LastCaughtException);
             }
             return await CallThrough(body);
         }
@@ -129,7 +131,7 @@ namespace Akka.Pattern
         {
             if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException();
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", LastCaughtException);
             }
             await CallThrough(body);
         }
@@ -137,8 +139,9 @@ namespace Akka.Pattern
         /// <summary>
         /// Reopen breaker on failed call.
         /// </summary>
-        protected internal override void CallFails()
+        protected internal override void CallFails(Exception cause)
         {
+            LastCaughtException = cause ?? new TimeoutException("Task execution timed out");
             _breaker.TripBreaker(this);
         }
 
@@ -147,6 +150,7 @@ namespace Akka.Pattern
         /// </summary>
         protected internal override void CallSucceeds()
         {
+            LastCaughtException = null;
             _breaker.ResetBreaker();
         }
 
@@ -210,8 +214,9 @@ namespace Akka.Pattern
         /// On failed call, the failure count is incremented.  The count is checked against the configured maxFailures, and
         /// the breaker is tripped if we have reached maxFailures.
         /// </summary>
-        protected internal override void CallFails()
+        protected internal override void CallFails(Exception cause)
         {
+            LastCaughtException = cause ?? new TimeoutException("Task execution timed out");
             if (IncrementAndGet() == _breaker.MaxFailures)
             {
                 _breaker.TripBreaker(this);
@@ -223,6 +228,7 @@ namespace Akka.Pattern
         /// </summary>
         protected internal override void CallSucceeds()
         {
+            LastCaughtException = null;
             Reset();
         }
 
