@@ -199,8 +199,6 @@ namespace Akka.Util.Internal
     /// </summary>
     public interface IAtomicState
     {
-        Exception LastCaughtException { get; }
-
         /// <summary>
         /// TBD
         /// </summary>
