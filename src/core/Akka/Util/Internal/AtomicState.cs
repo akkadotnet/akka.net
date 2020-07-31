@@ -20,8 +20,6 @@ namespace Akka.Util.Internal
         private readonly ConcurrentQueue<Action> _listeners;
         private readonly TimeSpan _callTimeout;
 
-        public Exception LastCaughtException { get; protected set; }
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -98,12 +96,16 @@ namespace Akka.Util.Internal
                 capturedException = ExceptionDispatchInfo.Capture(ex);
             }
 
-            bool throwException = capturedException != null;
-            if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
+            // Need to make sure that timeouts are reported as timeouts
+            if (capturedException != null)
             {
-                CallFails(capturedException?.SourceException);
-                if (throwException)
-                    capturedException.Throw();
+                CallFails(capturedException.SourceException);
+                capturedException.Throw();
+            }
+            else if (DateTime.UtcNow.CompareTo(deadline) >= 0)
+            {
+                CallFails(new TimeoutException(
+                    $"Execution did not complete within the time allotted {_callTimeout.TotalMilliseconds} ms"));
             }
             else
             {
@@ -137,11 +139,16 @@ namespace Akka.Util.Internal
                 capturedException = ExceptionDispatchInfo.Capture(ex);
             }
 
-            bool throwException = capturedException != null;
-            if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
+            // Need to make sure that timeouts are reported as timeouts
+            if (capturedException != null)
             {
                 CallFails(capturedException?.SourceException);
-                if (throwException) capturedException.Throw();
+                capturedException.Throw();
+            } 
+            else if (DateTime.UtcNow.CompareTo(deadline) >= 0)
+            {
+                CallFails(new TimeoutException(
+                    $"Execution did not complete within the time allotted {_callTimeout.TotalMilliseconds} ms"));
             }
             else
             {
@@ -185,9 +192,8 @@ namespace Akka.Util.Internal
         /// Enter the state. NotifyTransitionListeners is not awaited -- its "fire and forget". 
         /// It is up to the user to handle any errors that occur in this state.
         /// </summary>
-        public void Enter(Exception lastFailureCause)
+        public void Enter()
         {
-            LastCaughtException = lastFailureCause;
             EnterInternal();
             NotifyTransitionListeners();
         }
@@ -218,6 +224,6 @@ namespace Akka.Util.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        void Enter(Exception lastFailureCause);
+        void Enter();
     }
 }

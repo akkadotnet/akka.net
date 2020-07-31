@@ -5058,9 +5058,8 @@ namespace Akka.Util.Internal
     public interface IAtomicState
     {
         bool HasListeners { get; }
-        System.Exception LastCaughtException { get; }
         void AddListener(System.Action listener);
-        void Enter(System.Exception lastFailureCause);
+        void Enter();
         System.Threading.Tasks.Task<T> Invoke<T>(System.Func<System.Threading.Tasks.Task<T>> body);
     }
     public class static InterlockedSpin
