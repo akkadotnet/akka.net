@@ -284,8 +284,8 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
             => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
 
-        internal static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>()
-            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink")));
+        internal static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(Action onTerminated = null)
+            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink"), onTerminated));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will consume the stream and discard the elements.

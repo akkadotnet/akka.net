@@ -81,15 +81,19 @@ namespace Akka.Persistence.Query.Sql
                     Source.ActorPublisher<string>(
                             LivePersistenceIdsPublisher.Props(
                                 _refreshInterval, 
-                                _writeJournalPluginId,
-                                () => _persistenceIdsPublisher = null))
-                        .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(), Keep.Right);
+                                _writeJournalPluginId))
+                        .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
                 _persistenceIdsPublisher = graph.Run(_system.Materializer());
             }
 
             return Source.FromPublisher(_persistenceIdsPublisher)
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllPersistenceIds") as Source<string, NotUsed>;
+        }
+
+        private void PersistenceIdsShutdownCallback()
+        {
+            _persistenceIdsPublisher = null;
         }
 
         /// <summary>

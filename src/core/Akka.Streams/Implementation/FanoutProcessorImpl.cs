@@ -218,13 +218,16 @@ namespace Akka.Streams.Implementation
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
     internal sealed class FanoutProcessorImpl<T, TStreamBuffer> : ActorProcessorImpl where TStreamBuffer : IStreamBuffer<T>
     {
+        private readonly Action _onTerminated;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="settings">TBD</param>
+        /// <param name="onTerminated">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(ActorMaterializerSettings settings)
-            => Actor.Props.Create(() => new FanoutProcessorImpl<T, TStreamBuffer>(settings)).WithDeploy(Deploy.Local);
+        public static Props Props(ActorMaterializerSettings settings, Action onTerminated = null)
+            => Actor.Props.Create(() => new FanoutProcessorImpl<T, TStreamBuffer>(settings, onTerminated)).WithDeploy(Deploy.Local);
 
         /// <summary>
         /// TBD
@@ -235,10 +238,13 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="settings">TBD</param>
-        public FanoutProcessorImpl(ActorMaterializerSettings settings) : base(settings)
+        /// <param name="onTerminated">TBD</param>
+        public FanoutProcessorImpl(ActorMaterializerSettings settings, Action onTerminated) : base(settings)
         {
             PrimaryOutputs = new FanoutOutputs<T, TStreamBuffer>(settings.MaxInputBufferSize,
                 settings.InitialInputBufferSize, Self, this, AfterFlush);
+
+            _onTerminated = onTerminated;
 
             var running = new TransferPhase(PrimaryInputs.NeedsInput.And(PrimaryOutputs.NeedsDemand),
                 () => PrimaryOutputs.EnqueueOutputElement(PrimaryInputs.DequeueInputElement()));
@@ -268,6 +274,10 @@ namespace Akka.Streams.Implementation
             PrimaryOutputs.Complete();
         }
 
-        private void AfterFlush() => Context.Stop(Self);
+        private void AfterFlush()
+        {
+            _onTerminated?.Invoke();
+            Context.Stop(Self);
+        }
     }
 }

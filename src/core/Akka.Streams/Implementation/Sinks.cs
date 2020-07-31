@@ -208,14 +208,18 @@ namespace Akka.Streams.Implementation
     /// <typeparam name="TStreamBuffer">TBD</typeparam>
     internal sealed class FanoutPublisherSink<TIn, TStreamBuffer> : SinkModule<TIn, IPublisher<TIn>> where TStreamBuffer : IStreamBuffer<TIn>
     {
+        private readonly Action _onTerminated;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
-        public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape) : base(shape)
+        /// <param name="onTerminated">TBD</param>
+        public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape, Action onTerminated = null) : base(shape)
         {
             Attributes = attributes;
+            _onTerminated = onTerminated;
         }
 
         /// <summary>
@@ -229,7 +233,7 @@ namespace Akka.Streams.Implementation
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
-            => new FanoutPublisherSink<TIn, TStreamBuffer>(attributes, AmendShape(attributes));
+            => new FanoutPublisherSink<TIn, TStreamBuffer>(attributes, AmendShape(attributes), _onTerminated);
 
         /// <summary>
         /// TBD
@@ -237,7 +241,7 @@ namespace Akka.Streams.Implementation
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
-            => new FanoutPublisherSink<TIn, TStreamBuffer>(Attributes, shape);
+            => new FanoutPublisherSink<TIn, TStreamBuffer>(Attributes, shape, _onTerminated);
 
         /// <summary>
         /// TBD
@@ -249,7 +253,7 @@ namespace Akka.Streams.Implementation
         {
             var actorMaterializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = actorMaterializer.EffectiveSettings(Attributes);
-            var impl = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn, TStreamBuffer>.Props(settings));
+            var impl = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn, TStreamBuffer>.Props(settings, _onTerminated));
             var fanoutProcessor = new ActorProcessor<TIn, TIn>(impl);
             impl.Tell(new ExposedPublisher(fanoutProcessor));
             // Resolve cyclic dependency with actor. This MUST be the first message no matter what.

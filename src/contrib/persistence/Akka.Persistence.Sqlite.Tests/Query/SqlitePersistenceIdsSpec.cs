@@ -28,7 +28,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 metadata-table-name = journal_metadata
                 auto-initialize = on
                 connection-string = ""Filename=file:memdb-journal-persistenceids-{id}.db;Mode=Memory;Cache=Shared""
-                refresh-interval = 1s
+                refresh-interval = 200ms
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
