@@ -6,12 +6,16 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Reflection;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
+using Akka.Persistence.Query.Sql;
 using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
+using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -132,6 +136,41 @@ namespace Akka.Persistence.TCK.Query
                     .ExpectNext("q")
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(1000));
             });
+        }
+
+        [Fact]
+        public virtual async Task ReadJournal_should_deallocate_AllPersistenceIds_publisher_when_the_last_subscriber_left()
+        {
+            var journal = (SqlReadJournal)ReadJournal;
+
+            Setup("a", 1);
+            Setup("b", 1);
+
+            var source = journal.PersistenceIds();
+            var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
+            var probe2 = source.RunWith(this.SinkProbe<string>(), Materializer);
+
+            var fieldInfo = journal.GetType().GetField("_persistenceIdsPublisher", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.True(fieldInfo != null);
+
+            // Assert that publisher is running.
+            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(10)
+                .ExpectNextUnordered("a", "b")
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+
+            probe.Cancel();
+
+            // Assert that publisher is still alive when it still have a subscriber
+            Assert.True(fieldInfo.GetValue(journal) is IPublisher<string>);
+
+            probe2.Within(TimeSpan.FromSeconds(10), () => probe2.Request(4)
+                .ExpectNextUnordered("a", "b")
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+
+            // Assert that publisher is de-allocated when the last subscriber left
+            probe2.Cancel();
+            await Task.Delay(400);
+            Assert.True(fieldInfo.GetValue(journal) is null);
         }
 
         private IActorRef Setup(string persistenceId, int n)
