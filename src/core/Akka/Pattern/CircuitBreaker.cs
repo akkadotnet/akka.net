@@ -207,7 +207,7 @@ namespace Akka.Pattern
         /// caller Actor. In such a case, it is convenient to mark a failed call instead of using Future
         /// via <see cref="WithCircuitBreaker"/>
         /// </summary>
-        public void Fail(Exception cause = null) => _currentState.CallFails(cause);
+        public void Fail() => _currentState.CallFails(new UserCalledFailException());
 
         internal void OnFail(Exception cause) => LastCaughtException = cause;
 

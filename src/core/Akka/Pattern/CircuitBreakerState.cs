@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Tasks;
 using Akka.Util;
@@ -60,7 +61,7 @@ namespace Akka.Pattern
         {
             // This is a no-op, but CallFails() can be called from CircuitBreaker
             // (The function summary is a lie)
-            _breaker.OnFail(cause);
+            Debug.WriteLine($"Ignoring calls to [CallFails()] because {nameof(CircuitBreaker)} is in open state. Exception cause was: {cause}");
         }
 
         /// <summary>
@@ -70,7 +71,7 @@ namespace Akka.Pattern
         {
             // This is a no-op, but CallSucceeds() can be called from CircuitBreaker
             // (The function summary is a lie)
-            _breaker.OnSuccess();
+            Debug.WriteLine($"Ignoring calls to [CallSucceeds()] because {nameof(CircuitBreaker)} is in open state.");
         }
 
         /// <summary>
