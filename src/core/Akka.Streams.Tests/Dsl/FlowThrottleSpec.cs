@@ -329,7 +329,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact(Skip ="Racy")]
+        [Fact(Skip = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
         public void Throttle_for_various_cost_elements_must_emit_elements_according_to_cost()
         {
             this.AssertAllStagesStopped(() =>

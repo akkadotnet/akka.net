@@ -26,13 +26,14 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         private ImmutableDictionary<string, IImmutableSet<IActorRef>> _persistenceIdSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
         private ImmutableDictionary<string, IImmutableSet<IActorRef>> _tagSubscribers = ImmutableDictionary.Create<string, IImmutableSet<IActorRef>>();
+        private readonly HashSet<IActorRef> _newEventsSubscriber = new HashSet<IActorRef>();
         private readonly HashSet<IActorRef> _allPersistenceIdSubscribers = new HashSet<IActorRef>();
         private readonly ReaderWriterLockSlim _allPersistenceIdsLock = new ReaderWriterLockSlim();
         private HashSet<string> _allPersistenceIds = new HashSet<string>();
         private IImmutableDictionary<string, long> _tagSequenceNr = ImmutableDictionary<string, long>.Empty;
 
         private readonly CancellationTokenSource _pendingRequestsCancellation;
-        private JournalSettings _settings;
+        private readonly JournalSettings _settings;
 
         private ILoggingAdapter _log;
 
@@ -67,6 +68,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// TBD
         /// </summary>
+        protected bool HasNewEventSubscribers => _newEventsSubscriber.Count != 0;
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected bool HasAllPersistenceIdSubscribers => _allPersistenceIdSubscribers.Count != 0;
 
         /// <summary>
@@ -98,29 +103,39 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected override bool ReceivePluginInternal(object message)
         {
-            return message.Match()
-                .With<ReplayTaggedMessages>(replay =>
-                {
+            switch (message)
+            {
+                case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
-                    .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
-                })
-                .With<SubscribePersistenceId>(subscribe =>
-                {
+                        .PipeTo(replay.ReplyTo, success: h => new RecoverySuccess(h), failure: e => new ReplayMessagesFailure(e));
+                    return true;
+                case ReplayAllEvents replay:
+                    ReplayAllEventsAsync(replay)
+                        .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
+                            failure: e => new EventReplayFailure(e));
+                    return true;
+                case SubscribePersistenceId subscribe:
                     AddPersistenceIdSubscriber(Sender, subscribe.PersistenceId);
                     Context.Watch(Sender);
-                })
-                .With<SubscribeAllPersistenceIds>(subscribe =>
-                {
+                    return true;
+                case SubscribeAllPersistenceIds _:
                     AddAllPersistenceIdSubscriber(Sender);
                     Context.Watch(Sender);
-                })
-                .With<SubscribeTag>(subscribe =>
-                {
+                    return true;
+                case SubscribeTag subscribe:
                     AddTagSubscriber(Sender, subscribe.Tag);
                     Context.Watch(Sender);
-                })
-                .With<Terminated>(terminated => RemoveSubscriber(terminated.ActorRef))
-                .WasHandled;
+                    return true;
+                case SubscribeNewEvents _:
+                    AddNewEventsSubscriber(Sender);
+                    Context.Watch(Sender);
+                    return true;
+                case Terminated terminated:
+                    RemoveSubscriber(terminated.ActorRef);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <summary>
@@ -194,6 +209,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
             }
 
+            if (HasNewEventSubscribers)
+                NotifyNewEventAppended();
+
             return result;
         }
 
@@ -216,7 +234,29 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(adapted, replayedTagged.Tag, replayedTagged.Offset), ActorRefs.NoSender);
                             }
                         });
-                 }
+                }
+            }
+        }
+
+        protected virtual async Task<long> ReplayAllEventsAsync(ReplayAllEvents replay)
+        {
+            using (var connection = CreateDbConnection())
+            {
+                await connection.OpenAsync();
+                using (var cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
+                {
+                    return await QueryExecutor
+                        .SelectAllEventsAsync(connection, 
+                            cancellationToken.Token, 
+                            replay.FromOffset, 
+                            replay.Max, 
+                            replayedEvent => {
+                                foreach (var adapted in AdaptFromJournal(replayedEvent.Persistent))
+                                {
+                                    replay.ReplyTo.Tell(new ReplayedEvent(adapted, replayedEvent.Offset), ActorRefs.NoSender);
+                                }
+                            });
+                }
             }
         }
 
@@ -336,6 +376,13 @@ namespace Akka.Persistence.Sql.Common.Journal
                 .Select(kv => new KeyValuePair<string, IImmutableSet<IActorRef>>(kv.Key, kv.Value.Remove(subscriber))));
 
             _allPersistenceIdSubscribers.Remove(subscriber);
+
+            _newEventsSubscriber.Remove(subscriber);
+        }
+
+        public void AddNewEventsSubscriber(IActorRef subscriber)
+        {
+            _newEventsSubscriber.Add(subscriber);
         }
 
         /// <summary>
@@ -378,7 +425,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             else
             {
-                _persistenceIdSubscribers = _persistenceIdSubscribers.Add(persistenceId, subscriptions.Add(subscriber));
+                _persistenceIdSubscribers = _persistenceIdSubscribers.SetItem(persistenceId, subscriptions.Add(subscriber));
             }
         }
 
@@ -454,6 +501,17 @@ namespace Akka.Persistence.Sql.Common.Journal
                 var changed = new TaggedEventAppended(tag);
                 foreach (var subscriber in subscribers)
                     subscriber.Tell(changed);
+            }
+        }
+
+        private void NotifyNewEventAppended()
+        {
+            if (HasNewEventSubscribers)
+            {
+                foreach (var subscriber in _newEventsSubscriber)
+                {
+                    subscriber.Tell(NewEventAppended.Instance);
+                }
             }
         }
 

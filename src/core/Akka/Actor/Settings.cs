@@ -7,6 +7,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
@@ -54,22 +56,45 @@ namespace Akka.Actor
         /// <exception cref="ConfigurationException">
         /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
         /// </exception>
-        public Settings(ActorSystem system, Config config)
+        public Settings(ActorSystem system, Config config) : this(system, config, ActorSystemSetup.Empty)
         {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Settings" /> class.
+        /// </summary>
+        /// <param name="system">The system.</param>
+        /// <param name="config">The configuration.</param>
+        /// <param name="setup">The setup class used to help bootstrap the <see cref="ActorSystem"/></param>
+        /// <exception cref="ConfigurationException">
+        /// This exception is thrown if the 'akka.actor.provider' configuration item is not a valid type name or a valid actor ref provider.
+        /// </exception>
+        public Settings(ActorSystem system, Config config, ActorSystemSetup setup)
+        {
+            Setup = setup;
             _userConfig = config;
             _fallbackConfig = ConfigurationFactory.Default();
             RebuildConfig();
 
             System = system;
-            
+
+            var providerSelectionSetup = Setup.Get<BootstrapSetup>()
+                .FlatSelect(_ => _.ActorRefProvider)
+                .Select(_ => _.Fqn)
+                .GetOrElse(Config.GetString("akka.actor.provider", null));
+
+            ProviderSelectionType = ProviderSelection.GetProvider(providerSelectionSetup);
+
             ConfigVersion = Config.GetString("akka.version", null);
-            ProviderClass = GetProviderClass(Config.GetString("akka.actor.provider", null));
+            ProviderClass = ProviderSelectionType.Fqn;
+            HasCluster = ProviderSelectionType.HasCluster;
+
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
-            
+
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
 
             AskTimeout = Config.GetTimeSpan("akka.actor.ask-timeout", null, allowInfinite: true);
@@ -84,6 +109,7 @@ namespace Akka.Actor
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
+            LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
 
             //handled
             LogConfigOnStart = Config.GetBoolean("akka.log-config-on-start", false);
@@ -105,6 +131,10 @@ namespace Akka.Actor
                     break;
             }
             LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown", false);
+
+            const string key = "akka.log-dead-letters-suspend-duration";
+            LogDeadLettersSuspendDuration = Config.GetString(key, null) == "infinite" ? Timeout.InfiniteTimeSpan : Config.GetTimeSpan(key);
+
             AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive", false);
             DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive", false);
             DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle", false);
@@ -125,24 +155,6 @@ namespace Akka.Actor
                 throw new ConfigurationException(
                   "akka.coordinated-shutdown.run-by-actor-system-terminate=on and " +
                   "akka.coordinated-shutdown.terminate-actor-system=off is not a supported configuration combination.");
-
-            //TODO: dunno.. we don't have FiniteStateMachines, don't know what the rest is
-            /*              
-                final val SchedulerClass: String = getString("akka.scheduler.implementation")
-                final val Daemonicity: Boolean = getBoolean("akka.daemonic")                
-                final val DefaultVirtualNodesFactor: Int = getInt("akka.actor.deployment.default.virtual-nodes-factor")
-             */
-        }
-
-        private static string GetProviderClass(string provider)
-        {
-            switch (provider)
-            {
-                case "local": return typeof(LocalActorRefProvider).FullName;
-                case "remote": return "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
-                case "cluster": return "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
-                default: return provider;
-            }
         }
 
         /// <summary>
@@ -156,6 +168,21 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The configuration.</value>
         public Config Config { get; private set; }
+
+        /// <summary>
+        /// The setup used to help bootstrap this <see cref="ActorSystem"/>.
+        /// </summary>
+        public ActorSystemSetup Setup { get; }
+
+        /// <summary>
+        /// Used to indicate whether or not clustering is enabled for this <see cref="ActorSystem"/>.
+        /// </summary>
+        public bool HasCluster { get; }
+
+        /// <summary>
+        /// INTENRAL API
+        /// </summary>
+        public ProviderSelection ProviderSelectionType { get; }
 
         /// <summary>
         ///     Gets the configuration version.
@@ -236,6 +263,12 @@ namespace Akka.Actor
         public TimeSpan LoggerStartTimeout { get; private set; }
 
         /// <summary>
+        ///     Gets the logger start timeout.
+        /// </summary>
+        /// <value>The logger start timeout.</value>
+        public bool LoggerAsyncStart { get; private set; }
+
+        /// <summary>
         ///     Gets a value indicating whether [log configuration on start].
         /// </summary>
         /// <value><c>true</c> if [log configuration on start]; otherwise, <c>false</c>.</value>
@@ -252,6 +285,11 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [log dead letters during shutdown]; otherwise, <c>false</c>.</value>
         public bool LogDeadLettersDuringShutdown { get; private set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan LogDeadLettersSuspendDuration { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [add logging receive].

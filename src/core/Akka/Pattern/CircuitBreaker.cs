@@ -132,6 +132,9 @@ namespace Akka.Pattern
             get { return Closed.Current; }
         }
 
+        public Exception LastCaughtException { get; private set; }
+
+
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
         /// </summary>
@@ -197,12 +200,16 @@ namespace Akka.Pattern
         /// </summary>
         public void Succeed() => _currentState.CallSucceeds();
 
+        internal void OnSuccess() => LastCaughtException = null;
+
         /// <summary>
         /// Mark a failed call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
         /// caller Actor. In such a case, it is convenient to mark a failed call instead of using Future
         /// via <see cref="WithCircuitBreaker"/>
         /// </summary>
-        public void Fail() => _currentState.CallFails();
+        public void Fail() => _currentState.CallFails(new UserCalledFailException());
+
+        internal void OnFail(Exception cause) => LastCaughtException = cause;
 
         /// <summary>
         /// Return true if the internal state is Closed. WARNING: It is a "power API" call which you should use with care.

@@ -1,5 +1,62 @@
-#### 1.4.7 May 12 2020 ####
+#### 1.4.10 July 21 2020 ####
 **Placeholder for nightlies**
+
+#### 1.4.9 July 21 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.9 features some important bug fixes for Akka.NET v1.4:
+
+* [Akka: Re-enable dead letter logging after specified duration](https://github.com/akkadotnet/akka.net/pull/4513)
+* [Akka: Optimize allocations in `ActorPath.Join()`](https://github.com/akkadotnet/akka.net/pull/4510)
+* [Akka.IO: Optimize TCP-related actor creation in Akka.IO](https://github.com/akkadotnet/akka.net/pull/4509)
+* [Akka.DistributedData: Resolve "An Item with the same key but different value already exists" error during pruning](https://github.com/akkadotnet/akka.net/pull/4512)
+* [Akka.Cluster: Cluster event listener that logs all events](https://github.com/akkadotnet/akka.net/pull/4502)
+* [Akka.Cluster.Tools.Singleton.ClusterSingletonManager bug: An element with the same key but a different value already exists](https://github.com/akkadotnet/akka.net/issues/4474)
+
+To see the [full set of fixes in Akka.NET v1.4.8, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/40).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 1008 | 90 | Gregorius Soedharmo |
+| 5 | 475 | 27 | Ismael Hamed |
+| 3 | 6 | 6 | dependabot-preview[bot] |
+| 2 | 28 | 5 | Petri Kero |
+| 1 | 3 | 0 | Aaron Stannard |
+| 1 | 2 | 2 | tometchy |
+| 1 | 1 | 1 | to11mtm |
+| 1 | 1 | 1 | Kevin Preller |
+
+#### 1.4.8 June 17 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.8 features some important bug fixes for Akka.NET v1.4:
+
+* [Akka: fix issue with setting IActorRefProvider via BootstrapSetup](https://github.com/akkadotnet/akka.net/pull/4473)
+* [Akka.Cluster: Akka v1.4 Idle CPU usage increased comparing v1.3](https://github.com/akkadotnet/akka.net/issues/4434)
+* [Akka.Cluster.Sharding: Backport of the feature called ClusterDistribution in Lagom](https://github.com/akkadotnet/akka.net/pull/4455)
+* [Akka.TestKit: added ActorSystemSetup overload for TestKits](https://github.com/akkadotnet/akka.net/pull/4464)
+
+To see the [full set of fixes in Akka.NET v1.4.8, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/39).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 7 | 310 | 24 | Aaron Stannard |
+| 6 | 8 | 8 | dependabot-preview[bot] |
+| 2 | 669 | 10 | Ismael Hamed |
+| 2 | 38 | 27 | Gregorius Soedharmo |
+| 1 | 1 | 1 | Bartosz Sypytkowski |
+
+#### 1.4.7 May 26 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.7 is a fairly sizable path that introduces some significant new features and changes:
+
+* [Akka: added `akka.logger-async-start` HOCON setting to allow loggers to start without blocking `ActorSystem` creation](https://github.com/akkadotnet/akka.net/pull/4424) - useful for developers running Akka.NET on Xamarin or in other environments with low CPU counts;
+* [Akka: ported `ActorSystemSetup` to allow programmatic config of serializers and other `ActorSystem` properties](https://github.com/akkadotnet/akka.net/issues/4426)
+* [Akka.Streams: update and modernize Attributes](https://github.com/akkadotnet/akka.net/pull/4437)
+* [Akka.DistributedData.LightningDb: Wire format stabilized](https://github.com/akkadotnet/akka.net/issues/4261) - Akka.Distributed.Data.LightningDb is now ready for production use.
+
+To see the full set of changes for Akka.NET 1.4.7, please [see the 1.4.7 milestone](https://github.com/akkadotnet/akka.net/milestone/38).
 
 #### 1.4.6 May 12 2020 ####
 **Maintenance Release for Akka.NET 1.4**

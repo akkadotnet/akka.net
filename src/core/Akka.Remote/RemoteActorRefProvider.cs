@@ -698,7 +698,9 @@ namespace Akka.Remote
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
-                _log = Context.GetLogger();
+
+                // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
+                _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
                 InitFSM();
             }
 

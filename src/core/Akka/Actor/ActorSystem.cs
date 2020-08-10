@@ -6,19 +6,138 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
-using Akka.Configuration;
+using Akka.Actor.Setup;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
-using Akka.Configuration;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 using Config = Akka.Configuration.Config;
 
 namespace Akka.Actor
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    public abstract class ProviderSelection
+    {
+        private ProviderSelection(string identifier, string fqn, bool hasCluster)
+        {
+            Identifier = identifier;
+            Fqn = fqn;
+            HasCluster = hasCluster;
+        }
+
+        internal string Identifier { get; }
+        internal string Fqn { get; }
+        internal bool HasCluster { get; }
+
+        internal const string LocalActorRefProvider = "Akka.Actor.LocalActorRefProvider, Akka";
+        internal const string RemoteActorRefProvider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
+        internal const string ClusterActorRefProvider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
+
+        public sealed class Local : ProviderSelection
+        {
+            private Local() : base("local", LocalActorRefProvider, false)
+            {
+            }
+
+            public static readonly Local Instance = new Local();
+        }
+
+        public sealed class Remote : ProviderSelection
+        {
+            private Remote() : base("remote", RemoteActorRefProvider, false)
+            {
+            }
+
+            public static readonly Remote Instance = new Remote();
+        }
+
+        public sealed class Cluster : ProviderSelection
+        {
+            private Cluster() : base("cluster", ClusterActorRefProvider, true)
+            {
+            }
+
+            public static readonly Cluster Instance = new Cluster();
+        }
+
+        public sealed class Custom : ProviderSelection
+        {
+            public Custom(string fqn, string identifier = null, bool hasCluster = false) : base(
+                identifier ?? string.Empty, fqn, hasCluster)
+            {
+            }
+        }
+
+        internal static ProviderSelection GetProvider(string providerClass)
+        {
+            switch (providerClass)
+            {
+                case "local":
+                    return Local.Instance;
+                case "remote":
+                case RemoteActorRefProvider: // additional case for older configurations
+                    return Remote.Instance;
+                case "cluster":
+                case ClusterActorRefProvider: // additional case for older configurations
+                    return Cluster.Instance;
+                default:
+                    return new Custom(providerClass);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Core boostrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
+    /// on this class.
+    /// </summary>
+    public sealed class BootstrapSetup : Setup.Setup
+    {
+        internal BootstrapSetup() : this(Option<Config>.None, Option<ProviderSelection>.None)
+        {
+        }
+
+        internal BootstrapSetup(Option<Config> config, Option<ProviderSelection> actorRefProvider)
+        {
+            Config = config;
+            ActorRefProvider = actorRefProvider;
+        }
+
+        /// <summary>
+        /// Configuration to use for the <see cref="ActorSystem"/>. If no <see cref="Config"/> is given, the default reference
+        /// configuration will be loaded via <see cref="ConfigurationFactory.Load"/>.
+        /// </summary>
+        public Option<Config> Config { get; }
+
+        /// <summary>
+        /// Overrides the 'akka.actor.provider' setting in config. Can be 'local' (default), 'remote', or cluster.
+        ///
+        /// It can also be the fully qualified class name of an ActorRefProvider.
+        /// </summary>
+        public Option<ProviderSelection> ActorRefProvider { get; }
+
+        /// <summary>
+        /// Create a new <see cref="BootstrapSetup"/> instance.
+        /// </summary>
+        public static BootstrapSetup Create()
+        {
+            return new BootstrapSetup();
+        }
+
+        public BootstrapSetup WithActorRefProvider(ProviderSelection name)
+        {
+            return new BootstrapSetup(Config, name);
+        }
+
+        public BootstrapSetup WithConfig(Config config)
+        {
+            return new BootstrapSetup(config, ActorRefProvider);
+        }
+    }
+
     /// <summary>
     ///     An actor system is a hierarchical group of actors which share common
     ///     configuration, e.g. dispatchers, deployments, remote capabilities and
@@ -99,8 +218,36 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name and configuration.</returns>
         public static ActorSystem Create(string name, Config config)
         {
-            // var withFallback = config.WithFallback(ConfigurationFactory.Default());
-            return CreateAndStartSystem(name, config);
+            return CreateAndStartSystem(name, config, ActorSystemSetup.Empty);
+        }
+
+        /// <summary>
+        /// Shortcut for creating a new actor system with the specified name and settings.
+        /// </summary>
+        /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
+        /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
+        /// <returns>A newly created actor system with the given name and configuration.</returns>
+        public static ActorSystem Create(string name, BootstrapSetup setup)
+        {
+            return Create(name, ActorSystemSetup.Create(setup));
+        }
+
+        /// <summary>
+        /// Shortcut for creating a new actor system with the specified name and settings.
+        /// </summary>
+        /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
+        /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
+        /// <returns>A newly created actor system with the given name and configuration.</returns>
+        public static ActorSystem Create(string name, ActorSystemSetup setup)
+        {
+            var bootstrapSetup = setup.Get<BootstrapSetup>();
+            var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
+
+            return CreateAndStartSystem(name, appConfig, setup);
         }
 
         /// <summary>
@@ -112,12 +259,12 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name.</returns>
         public static ActorSystem Create(string name)
         {
-            return CreateAndStartSystem(name, ConfigurationFactory.Load());
+            return Create(name, ActorSystemSetup.Empty);
         }
 
-        private static ActorSystem CreateAndStartSystem(string name, Config withFallback)
+        private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
         {
-            var system = new ActorSystemImpl(name, withFallback);
+            var system = new ActorSystemImpl(name, withFallback, setup);
             system.Start();
             return system;
         }
@@ -249,13 +396,15 @@ namespace Akka.Actor
                         Log.Debug("Disposing system");
                         Terminate().Wait(); // System needs to be disposed before method returns
                     }
+
                     //Clean up unmanaged resources
                 }
+
                 _isDisposed = true;
             }
             finally
             {
-                
+
             }
         }
 
@@ -276,4 +425,3 @@ namespace Akka.Actor
         public abstract ActorSelection ActorSelection(string actorPath);
     }
 }
-

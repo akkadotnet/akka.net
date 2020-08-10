@@ -487,6 +487,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string ByTagSql { get; }
 
         /// <summary>
+        /// SQL query executed as result of <see cref="ReplayAllEvents"/> request to journal.
+        /// It's a part of persistence query protocol.
+        /// </summary>
+        protected virtual string AllEventsSql { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected virtual string HighestOrderingSql { get; }
+
+        /// <summary>
         /// A named collection of SQL statements to be executed once journal actor gets initialized
         /// and the <see cref="BatchingSqlJournalSetup.AutoInitialize"/> flag is set.
         /// </summary>
@@ -514,6 +525,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
 
         /// <summary>
+        /// Flag determining if current journal has any subscribers for <see cref="NewEventAppended"/> and 
+        /// </summary>
+        protected bool HasNewEventsSubscribers => _newEventSubscriber.Count != 0;
+
+        /// <summary>
         /// Flag determining if incoming journal requests should be published in current actor system event stream.
         /// Useful mostly for tests.
         /// </summary>
@@ -534,6 +550,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
         private readonly HashSet<IActorRef> _allIdsSubscribers;
         private readonly HashSet<string> _allPersistenceIds;
+        private readonly HashSet<IActorRef> _newEventSubscriber;
 
         private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
@@ -552,6 +569,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
             _allIdsSubscribers = new HashSet<IActorRef>();
             _allPersistenceIds = new HashSet<string>();
+            _newEventSubscriber = new HashSet<IActorRef>();
 
             _remainingOperations = Setup.MaxConcurrentOperations;
             Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
@@ -609,6 +627,19 @@ namespace Akka.Persistence.Sql.Common.Journal
                 WHERE e.{conventions.OrderingColumnName} > @Ordering AND e.{conventions.TagsColumnName} LIKE @Tag
                 ORDER BY {conventions.OrderingColumnName} ASC";
 
+            AllEventsSql =
+                $@"
+                SELECT {allEventColumnNames}, e.{conventions.OrderingColumnName} as Ordering
+                FROM {conventions.FullJournalTableName} e
+                WHERE e.{conventions.OrderingColumnName} > @Ordering
+                ORDER BY {conventions.OrderingColumnName} ASC";
+
+            HighestOrderingSql =
+                $@"
+                SELECT MAX(e.{conventions.OrderingColumnName}) as Ordering
+                FROM {conventions.FullJournalTableName} e
+                WHERE e.{conventions.OrderingColumnName} > @Ordering";
+
             InsertEventSql = $@"
                 INSERT INTO {conventions.FullJournalTableName} (
                     {conventions.PersistenceIdColumnName},
@@ -662,20 +693,53 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected sealed override bool Receive(object message)
         {
-            if (message is WriteMessages) BatchRequest((IJournalRequest)message);
-            else if (message is ReplayMessages) BatchRequest((IJournalRequest)message);
-            else if (message is BatchComplete) CompleteBatch((BatchComplete)message);
-            else if (message is DeleteMessagesTo) BatchRequest((IJournalRequest)message);
-            else if (message is ReplayTaggedMessages) BatchRequest((IJournalRequest)message);
-            else if (message is SubscribePersistenceId) AddPersistenceIdSubscriber((SubscribePersistenceId)message);
-            else if (message is SubscribeAllPersistenceIds) AddAllSubscriber((SubscribeAllPersistenceIds)message);
-            else if (message is SubscribeTag) AddTagSubscriber((SubscribeTag)message);
-            else if (message is Terminated) RemoveSubscriber(((Terminated)message).ActorRef);
-            else if (message is GetCurrentPersistenceIds) InitializePersistenceIds();
-            else if (message is CurrentPersistenceIds) SendCurrentPersistenceIds((CurrentPersistenceIds)message);
-            else if (message is ChunkExecutionFailure) FailChunkExecution((ChunkExecutionFailure)message);
-            else return false;
-            return true;
+            switch (message)
+            {
+                case WriteMessages msg:
+                    BatchRequest(msg);
+                    return true;
+                case ReplayMessages msg:
+                    BatchRequest(msg);
+                    return true;
+                case DeleteMessagesTo msg:
+                    BatchRequest(msg);
+                    return true;
+                case ReplayTaggedMessages msg:
+                    BatchRequest(msg);
+                    return true;
+                case ReplayAllEvents msg:
+                    BatchRequest(msg);
+                    return true;
+                case BatchComplete msg:
+                    CompleteBatch(msg);
+                    return true;
+                case SubscribePersistenceId msg:
+                    AddPersistenceIdSubscriber(msg);
+                    return true;
+                case SubscribeAllPersistenceIds msg:
+                    AddAllPersistenceIdsSubscriber(msg);
+                    return true;
+                case SubscribeTag msg:
+                    AddTagSubscriber(msg);
+                    return true;
+                case SubscribeNewEvents msg:
+                    AddNewEventsSubscriber(msg);
+                    return true;
+                case Terminated msg:
+                    RemoveSubscriber(msg.ActorRef);
+                    return true;
+                case GetCurrentPersistenceIds _:
+                    InitializePersistenceIds();
+                    return true;
+                case CurrentPersistenceIds msg:
+                    SendCurrentPersistenceIds(msg);
+                    return true;
+                case ChunkExecutionFailure msg:
+                    FailChunkExecution(msg);
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private void FailChunkExecution(ChunkExecutionFailure message)
@@ -698,6 +762,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                         break;
                     case ReplayTaggedMessages replayTagged:
                         replayTagged.ReplyTo.Tell(new ReplayMessagesFailure(cause));
+                        break;
+                    case ReplayAllEvents replayAll:
+                        replayAll.ReplyTo.Tell(new EventReplayFailure(cause));
                         break;
                 }
             }
@@ -761,6 +828,14 @@ namespace Akka.Persistence.Sql.Common.Journal
             _allIdsSubscribers.Remove(subscriberRef);
             _persistenceIdSubscribers.RemoveItem(subscriberRef);
             _tagSubscribers.RemoveItem(subscriberRef);
+            _newEventSubscriber.Remove(subscriberRef);
+        }
+
+        private void AddNewEventsSubscriber(SubscribeNewEvents message)
+        {
+            var subscriber = Sender;
+            _newEventSubscriber.Add(subscriber);
+            Context.Watch(subscriber);
         }
 
         private void AddTagSubscriber(SubscribeTag message)
@@ -770,7 +845,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             Context.Watch(subscriber);
         }
 
-        private void AddAllSubscriber(SubscribeAllPersistenceIds message)
+        private void AddAllPersistenceIdsSubscriber(SubscribeAllPersistenceIds message)
         {
             if (!HasAllIdsSubscribers)
             {
@@ -787,6 +862,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             var subscriber = Sender;
             _persistenceIdSubscribers.AddItem(message.PersistenceId, subscriber);
             Context.Watch(subscriber);
+        }
+
+        private void NotifyNewEventAppended()
+        {
+            if (HasNewEventsSubscribers)
+            {
+                foreach (var subscriber in _newEventSubscriber)
+                {
+                    subscriber.Tell(NewEventAppended.Instance);
+                }
+            }
         }
 
         private void NotifyTagChanged(string tag)
@@ -848,25 +934,23 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             Log.Warning("Batching journal buffer limit has been reached. Denying a request [{0}].", request);
 
-            if (request is WriteMessages)
+            switch (request)
             {
-                var r = (WriteMessages)request;
-                r.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
-            }
-            else if (request is ReplayMessages)
-            {
-                var r = (ReplayMessages)request;
-                r.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
-            }
-            else if (request is DeleteMessagesTo)
-            {
-                var r = (DeleteMessagesTo)request;
-                r.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, r.ToSequenceNr), ActorRefs.NoSender);
-            }
-            else if (request is ReplayTaggedMessages)
-            {
-                var r = (ReplayTaggedMessages)request;
-                r.ReplyTo.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                case WriteMessages msg:
+                    msg.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                    break;
+                case ReplayMessages msg:
+                    msg.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                    break;
+                case DeleteMessagesTo msg:
+                    msg.PersistentActor.Tell(new DeleteMessagesFailure(JournalBufferOverflowException.Instance, msg.ToSequenceNr), ActorRefs.NoSender);
+                    break;
+                case ReplayTaggedMessages msg:
+                    msg.ReplyTo.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                    break;
+                case ReplayAllEvents msg:
+                    msg.ReplyTo.Tell(new EventReplayFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                    break;
             }
         }
 
@@ -903,15 +987,27 @@ namespace Akka.Persistence.Sql.Common.Journal
                         {
                             var req = chunk.Requests[i];
 
-                            if (req is WriteMessages)
-                                await HandleWriteMessages((WriteMessages)req, command);
-                            else if (req is ReplayMessages)
-                                await HandleReplayMessages((ReplayMessages)req, command, context);
-                            else if (req is DeleteMessagesTo)
-                                await HandleDeleteMessagesTo((DeleteMessagesTo)req, command);
-                            else if (req is ReplayTaggedMessages)
-                                await HandleReplayTaggedMessages((ReplayTaggedMessages)req, command);
-                            else Unhandled(req);
+                            switch (req)
+                            {
+                                case WriteMessages msg:
+                                    await HandleWriteMessages(msg, command);
+                                    break;
+                                case ReplayMessages msg:
+                                    await HandleReplayMessages(msg, command, context);
+                                    break;
+                                case DeleteMessagesTo msg:
+                                    await HandleDeleteMessagesTo(msg, command);
+                                    break;
+                                case ReplayTaggedMessages msg:
+                                    await HandleReplayTaggedMessages(msg, command);
+                                    break;
+                                case ReplayAllEvents msg:
+                                    await HandleReplayAllMessages(msg, command);
+                                    break;
+                                default:
+                                    Unhandled(req);
+                                    break;
+                            }
                         }
 
                         tx.Commit();
@@ -1029,6 +1125,44 @@ namespace Akka.Persistence.Sql.Common.Journal
             catch (Exception cause)
             {
                 replyTo.Tell(new ReplayMessagesFailure(cause));
+            }
+        }
+
+        protected virtual async Task HandleReplayAllMessages(ReplayAllEvents req, TCommand command)
+        {
+            var replyTo = req.ReplyTo;
+
+            try
+            {
+                var maxSequenceNr = 0L;
+                var fromOffset = req.FromOffset;
+
+                command.CommandText = AllEventsSql;
+                command.Parameters.Clear();
+
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                AddParameter(command, "@Take", DbType.Int64, req.Max);
+
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var persistent = ReadEvent(reader);
+                        var ordering = reader.GetInt64(OrderingIndex);
+                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
+
+                        foreach (var adapted in AdaptFromJournal(persistent))
+                        {
+                            replyTo.Tell(new ReplayedEvent(adapted, ordering), ActorRefs.NoSender);
+                        }
+                    }
+                }
+
+                replyTo.Tell(new EventReplaySuccess(maxSequenceNr));
+            }
+            catch (Exception cause)
+            {
+                replyTo.Tell(new EventReplayFailure(cause));
             }
         }
 
@@ -1176,6 +1310,11 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         NotifyPersistenceIdChanged(persistenceId);
                     }
+                }
+
+                if (HasNewEventsSubscribers)
+                {
+                    NotifyNewEventAppended();
                 }
 
                 summary = summary ?? WriteMessagesSuccessful.Instance;

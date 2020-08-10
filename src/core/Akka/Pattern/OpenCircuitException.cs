@@ -21,6 +21,11 @@ namespace Akka.Pattern
         /// </summary>
         public OpenCircuitException() : base("Circuit Breaker is open; calls are failing fast") { }
 
+        public OpenCircuitException(Exception cause)
+            : base("Circuit Breaker is open; calls are failing fast", cause)
+        {
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>

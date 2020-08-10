@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 
 namespace DocsExamples.Actor.FiniteStateMachine
 {
+    #region FSMActorStart
     public class ExampleFSMActor : FSM<State, IData>
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -20,6 +21,7 @@ namespace DocsExamples.Actor.FiniteStateMachine
         {
             StartWith(State.Idle, Uninitialized.Instance);
 
+            #region FSMHandlers
             When(State.Idle, state =>
             {
                 if (state.FsmEvent is SetTarget target && state.StateData is Uninitialized)
@@ -40,7 +42,10 @@ namespace DocsExamples.Actor.FiniteStateMachine
 
                 return null;
             }, TimeSpan.FromSeconds(1));
+            #endregion
+            #endregion
 
+            #region UnhandledHandler
             WhenUnhandled(state =>
             {
                 if (state.FsmEvent is Queue q && state.StateData is Todo t)
@@ -53,7 +58,9 @@ namespace DocsExamples.Actor.FiniteStateMachine
                     return Stay();
                 }
             });
+            #endregion
 
+            #region TransitionHandler
             OnTransition((initialState, nextState) =>
             {
                 if (initialState == State.Active && nextState == State.Idle)
@@ -68,8 +75,11 @@ namespace DocsExamples.Actor.FiniteStateMachine
                     }
                 }
             });
+            #endregion
 
+            #region FSMActorEnd
             Initialize();
         }
     }
+    #endregion
 }
