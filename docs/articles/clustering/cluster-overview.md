@@ -38,7 +38,7 @@ Akka.Cluster lends itself naturally to [high availability](https://en.wikipedia.
 To put it bluntly, you should use clustering in any scenario where you have some or all of the following conditions:
 
 - A sizable traffic load
-- Non-trivial to perform
+- A non-trivial task to perform
 - An expectation of fast response times
 - The need for elastic scaling (e.g. bursty workloads)
 - A microservices architecture
