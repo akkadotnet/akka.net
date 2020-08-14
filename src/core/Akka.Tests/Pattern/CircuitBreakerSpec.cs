@@ -74,15 +74,17 @@ namespace Akka.Tests.Pattern
             Assert.True(breaker.Instance.CurrentFailureCount == 1);
         }
 
-        [Fact(DisplayName = "A synchronous circuit breaker that is closed must reset failure count after success method")]
+        [Fact(DisplayName = "A synchronous circuit breaker that is closed must reset failure count and clears cached last exception after success method")]
         public void Must_reset_failure_count_after_success_method()
         {
             var breaker = MultiFailureCb();
             Assert.True(breaker.Instance.CurrentFailureCount == 0);
             Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException)));
             Assert.True(breaker.Instance.CurrentFailureCount == 1);
+            Assert.True(breaker.Instance.LastCaughtException is TestException);
             breaker.Instance.Succeed();
             Assert.True(breaker.Instance.CurrentFailureCount == 0);
+            Assert.True(breaker.Instance.LastCaughtException is null);
         }
     }
 
@@ -100,6 +102,45 @@ namespace Akka.Tests.Pattern
             Assert.True( CheckLatch( breaker.ClosedLatch ) );
             Assert.Equal( SayTest( ), result );
         }
+
+        [Fact(DisplayName = "An asynchronous circuit breaker that is half open should pass only one call until it closes")]
+        public async Task Should_Pass_Only_One_Call_And_Transition_To_Close_On_Success()
+        {
+            var breaker = ShortResetTimeoutCb();
+            InterceptExceptionType<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException));
+            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+
+            var task1 = breaker.Instance.WithCircuitBreaker(() => DelayedSayTest(TimeSpan.FromSeconds(0.1)));
+            var task2 = breaker.Instance.WithCircuitBreaker(() => DelayedSayTest(TimeSpan.FromSeconds(0.1)));
+            var combined = Task.WhenAny(task1, task2).Unwrap();
+
+            // One of the 2 tasks will throw, because the circuit breaker is half open
+            Exception caughtException = null;
+            try
+            {
+                await combined;
+            }
+            catch (Exception e)
+            {
+                caughtException = e;
+            }
+            Assert.True(caughtException is OpenCircuitException);
+            Assert.StartsWith("Circuit breaker is half open", caughtException.Message);
+
+            // Wait until one of task completes
+            await Task.Delay(TimeSpan.FromSeconds(0.25));
+            Assert.True(CheckLatch(breaker.ClosedLatch));
+
+            // We don't know which one of the task got faulted
+            string result = null;
+            if (task1.IsCompleted && !task1.IsFaulted)
+                result = task1.Result;
+            else if (task2.IsCompleted && !task2.IsFaulted)
+                result = task2.Result;
+
+            Assert.Equal(SayTest(), result);
+        }
+
 
         [Fact(DisplayName = "A synchronous circuit breaker that is half open should pass call and transition to open on exception")]
         public void Should_Pass_Call_And_Transition_To_Open_On_Exception( )
@@ -239,6 +280,7 @@ namespace Akka.Tests.Pattern
 
             Assert.True( CheckLatch( breaker.OpenLatch ) );
             Assert.Equal( 1, breaker.Instance.CurrentFailureCount );
+            Assert.True(breaker.Instance.LastCaughtException is TimeoutException);
         }
     }
 
@@ -320,6 +362,12 @@ namespace Akka.Tests.Pattern
             return token.HasValue ? Task.Delay( toDelay, token.Value ) : Task.Delay( toDelay );
         }
 
+        public async Task<string> DelayedSayTest(TimeSpan delay)
+        {
+            await Task.Delay(delay);
+            return "Test";
+        }
+
         public void ThrowException( )
         {
             throw new TestException( "Test Exception" );
@@ -340,26 +388,46 @@ namespace Akka.Tests.Pattern
             }
             catch ( Exception ex )
             {
-                var aggregate = ex as AggregateException;
-                if ( aggregate != null )
+                if (ex is AggregateException aggregate)
                 {
-
                     // ReSharper disable once UnusedVariable
-                    foreach ( var temp in aggregate.InnerExceptions.Select( innerException => innerException as T ).Where( temp => temp == null ) )
+                    foreach (var temp in aggregate
+                        .InnerExceptions
+                        .Where(t => !(t is T)))
                     {
                         throw;
                     }
-                }
-                else
+                } else if (!(ex is T))
                 {
-                    var temp = ex as T;
+                    throw;
+                }
+            }
+            return true;
+        }
 
-                    if ( temp == null )
+        public async Task<bool> InterceptExceptionTypeAsync<T>(Task action) where T : Exception
+        {
+            try
+            {
+                await action;
+                return false;
+            }
+            catch (Exception ex)
+            {
+                if (ex is AggregateException aggregate)
+                {
+                    // ReSharper disable once UnusedVariable
+                    foreach (var temp in aggregate
+                        .InnerExceptions
+                        .Where(t => !(t is T)))
                     {
                         throw;
                     }
                 }
-
+                else if (!(ex is T))
+                {
+                    throw;
+                }
             }
             return true;
         }
