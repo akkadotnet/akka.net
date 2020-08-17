@@ -88,7 +88,7 @@ namespace Akka.Persistence.Query.Sql
 
             return Source.FromPublisher(_persistenceIdsPublisher)
                 .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("AllPersistenceIds") as Source<string, NotUsed>;
+                .Named("AllPersistenceIds");
         }
 
         private void PersistenceIdsShutdownCallback()
@@ -103,8 +103,8 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<string, NotUsed> CurrentPersistenceIds()
             => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_writeJournalPluginId))
-            .MapMaterializedValue(_ => NotUsed.Instance)
-            .Named("CurrentPersistenceIds") as Source<string, NotUsed>;
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentPersistenceIds");
 
         /// <summary>
         /// <see cref="EventsByPersistenceId"/> is used for retrieving events for a specific
@@ -135,7 +135,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
                 Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
-                    .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
+                    .Named("EventsByPersistenceId-" + persistenceId);
 
         /// <summary>
         /// Same type of query as <see cref="EventsByPersistenceId"/> but the event stream
@@ -145,7 +145,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
                 Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
-                    .Named("CurrentEventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
+                    .Named("CurrentEventsByPersistenceId-" + persistenceId);
 
         /// <summary>
         /// <see cref="EventsByTag"/> is used for retrieving events that were marked with
