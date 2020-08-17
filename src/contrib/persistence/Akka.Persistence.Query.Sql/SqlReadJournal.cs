@@ -6,18 +6,17 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Reactive.Streams;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
 using Akka.Streams;
-using Akka.Util.Internal;
 
 namespace Akka.Persistence.Query.Sql
 {
     public class SqlReadJournal : 
-        IReadJournal,
         IPersistenceIdsQuery,
         ICurrentPersistenceIdsQuery,
         IEventsByPersistenceIdQuery,
@@ -43,7 +42,37 @@ namespace Akka.Persistence.Query.Sql
         private readonly int _maxBufferSize;
         private readonly ExtendedActorSystem _system;
 
-        private IPublisher<string> _persistenceIdsPublisher = null;
+        private readonly ReaderWriterLockSlim _lock;
+        private IPublisher<string> _persistenceIdsPublisherDoNotUseDirectly;
+
+        private IPublisher<string> PersistenceIdsPublisher
+        {
+            get
+            {
+                _lock.EnterReadLock();
+                try
+                {
+                    return _persistenceIdsPublisherDoNotUseDirectly;
+                }
+                finally
+                {
+                    _lock.ExitReadLock();
+                }
+            }
+
+            set
+            {
+                _lock.EnterWriteLock();
+                try
+                {
+                    _persistenceIdsPublisherDoNotUseDirectly = value;
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
+                }
+            }
+        }
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
@@ -51,6 +80,9 @@ namespace Akka.Persistence.Query.Sql
             _writeJournalPluginId = config.GetString("write-plugin", null);
             _maxBufferSize = config.GetInt("max-buffer-size", 0);
             _system = system;
+
+            _lock = new ReaderWriterLockSlim();
+            PersistenceIdsPublisher = null;
         }
 
         /// <summary>
@@ -75,7 +107,7 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<string, NotUsed> PersistenceIds()
         {
-            if (_persistenceIdsPublisher is null)
+            if (PersistenceIdsPublisher is null)
             {
                 var graph =
                     Source.ActorPublisher<string>(
@@ -83,17 +115,18 @@ namespace Akka.Persistence.Query.Sql
                                 _refreshInterval, 
                                 _writeJournalPluginId))
                         .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
-                _persistenceIdsPublisher = graph.Run(_system.Materializer());
+
+                PersistenceIdsPublisher = graph.Run(_system.Materializer());
             }
 
-            return Source.FromPublisher(_persistenceIdsPublisher)
+            return Source.FromPublisher(PersistenceIdsPublisher)
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllPersistenceIds");
         }
 
         private void PersistenceIdsShutdownCallback()
         {
-            _persistenceIdsPublisher = null;
+            PersistenceIdsPublisher = null;
         }
 
         /// <summary>
