@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />

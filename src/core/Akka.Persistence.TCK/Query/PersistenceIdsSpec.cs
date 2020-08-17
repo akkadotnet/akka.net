@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
-using Akka.Persistence.Query.Sql;
 using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
@@ -141,7 +140,7 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public virtual async Task ReadJournal_should_deallocate_AllPersistenceIds_publisher_when_the_last_subscriber_left()
         {
-            var journal = (SqlReadJournal)ReadJournal;
+            var journal = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
             Setup("a", 1);
             Setup("b", 1);
