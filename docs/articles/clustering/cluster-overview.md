@@ -13,7 +13,7 @@ The best way to begin introducing Akka.Cluster is with brief overview of what it
 - Makes it easy to create peer-to-peer networks of Akka.NET applications
 - Allows peers to automatically discover new nodes and removed dead ones automatically with no configuration changes
 - Allows user-defined classes to subscribe to notifications about changes in the availability of nodes in the cluster
-- Introduces the concept of "roles" to distinguish different Akka.NET applications within a cluster; and
+- Introduces the concept of "roles" to distinguish different Akka.NET applications within a cluster
 - Allows you to create clustered routers, which are an extension of the built-in Akka.NET routers, except that clustered routers automatically adjust their routees list based on node availability.
 
 ## Benefits of Akka.Cluster
@@ -38,7 +38,7 @@ Akka.Cluster lends itself naturally to [high availability](https://en.wikipedia.
 To put it bluntly, you should use clustering in any scenario where you have some or all of the following conditions:
 
 - A sizable traffic load
-- Non-trivial to perform
+- A non-trivial task to perform
 - An expectation of fast response times
 - The need for elastic scaling (e.g. bursty workloads)
 - A microservices architecture
