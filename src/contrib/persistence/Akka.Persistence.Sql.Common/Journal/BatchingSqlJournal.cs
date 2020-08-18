@@ -575,8 +575,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                 e.{conventions.SerializerIdColumnName} as SerializerId";
 
             AllPersistenceIdsSql = $@"
-                SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as PersistenceId 
-                FROM {conventions.FullJournalTableName} e;";
+                SELECT DISTINCT u.Id as PersistenceId 
+                FROM (
+                    SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as Id 
+                    FROM {conventions.FullJournalTableName} e
+                    WHERE e.{conventions.OrderingColumnName} > @Ordering
+                    UNION
+                    SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as Id 
+                    FROM {conventions.FullMetaTableName} e
+                ) as u";
 
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
