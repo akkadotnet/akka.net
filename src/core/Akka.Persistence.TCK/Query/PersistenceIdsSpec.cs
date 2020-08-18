@@ -187,7 +187,7 @@ namespace Akka.Persistence.TCK.Query
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
             var probe2 = source.RunWith(this.SinkProbe<string>(), Materializer);
 
-            var fieldInfo = journal.GetType().GetProperty("PersistenceIdsPublisher", BindingFlags.NonPublic | BindingFlags.Instance);
+            var fieldInfo = journal.GetType().GetField("_persistenceIdsPublisher", BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.True(fieldInfo != null);
 
             // Assert that publisher is running.
