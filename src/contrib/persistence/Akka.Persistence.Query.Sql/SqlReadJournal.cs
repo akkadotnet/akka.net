@@ -42,37 +42,8 @@ namespace Akka.Persistence.Query.Sql
         private readonly int _maxBufferSize;
         private readonly ExtendedActorSystem _system;
 
-        private readonly ReaderWriterLockSlim _lock;
-        private IPublisher<string> _persistenceIdsPublisherDoNotUseDirectly;
-
-        private IPublisher<string> PersistenceIdsPublisher
-        {
-            get
-            {
-                _lock.EnterReadLock();
-                try
-                {
-                    return _persistenceIdsPublisherDoNotUseDirectly;
-                }
-                finally
-                {
-                    _lock.ExitReadLock();
-                }
-            }
-
-            set
-            {
-                _lock.EnterWriteLock();
-                try
-                {
-                    _persistenceIdsPublisherDoNotUseDirectly = value;
-                }
-                finally
-                {
-                    _lock.ExitWriteLock();
-                }
-            }
-        }
+        private readonly object _lock = new object();
+        private IPublisher<string> _persistenceIdsPublisher;
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
@@ -82,7 +53,7 @@ namespace Akka.Persistence.Query.Sql
             _system = system;
 
             _lock = new ReaderWriterLockSlim();
-            PersistenceIdsPublisher = null;
+            _persistenceIdsPublisher = null;
         }
 
         /// <summary>
@@ -107,26 +78,32 @@ namespace Akka.Persistence.Query.Sql
         /// </summary>
         public Source<string, NotUsed> PersistenceIds()
         {
-            if (PersistenceIdsPublisher is null)
+            lock (_lock)
             {
-                var graph =
-                    Source.ActorPublisher<string>(
-                            LivePersistenceIdsPublisher.Props(
-                                _refreshInterval, 
-                                _writeJournalPluginId))
-                        .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
+                if (_persistenceIdsPublisher is null)
+                {
+                    var graph =
+                        Source.ActorPublisher<string>(
+                                LivePersistenceIdsPublisher.Props(
+                                    _refreshInterval,
+                                    _writeJournalPluginId))
+                            .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
 
-                PersistenceIdsPublisher = graph.Run(_system.Materializer());
+                    _persistenceIdsPublisher = graph.Run(_system.Materializer());
+                }
+                return Source.FromPublisher(_persistenceIdsPublisher)
+                    .MapMaterializedValue(_ => NotUsed.Instance)
+                    .Named("AllPersistenceIds");
             }
 
-            return Source.FromPublisher(PersistenceIdsPublisher)
-                .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("AllPersistenceIds");
         }
 
         private void PersistenceIdsShutdownCallback()
         {
-            PersistenceIdsPublisher = null;
+            lock (_lock)
+            {
+                _persistenceIdsPublisher = null;
+            }
         }
 
         /// <summary>
