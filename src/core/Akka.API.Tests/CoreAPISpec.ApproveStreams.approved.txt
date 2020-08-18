@@ -3024,17 +3024,6 @@ namespace Akka.Streams.Implementation
         void WaitForUpstream(int waitForUpstream);
     }
     public interface ISpecViolation { }
-    public interface IStreamBuffer<T>
-    {
-        long CapacityLeft { get; }
-        bool IsEmpty { get; }
-        long Length { get; }
-        long Count(Akka.Streams.Implementation.ICursor cursor);
-        void InitCursor(Akka.Streams.Implementation.ICursor cursor);
-        void OnCursorRemoved(Akka.Streams.Implementation.ICursor cursor);
-        T Read(Akka.Streams.Implementation.ICursor cursor);
-        bool Write(T value);
-    }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class IdleInject<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
         where TIn : TOut
@@ -3336,7 +3325,7 @@ namespace Akka.Streams.Implementation
         public static void TryRequest(Reactive.Streams.ISubscription subscription, long demand) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public class ResizableMultiReaderRingBuffer<T> : Akka.Streams.Implementation.IStreamBuffer<T>
+    public class ResizableMultiReaderRingBuffer<T>
     {
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
         public ResizableMultiReaderRingBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
@@ -3353,7 +3342,7 @@ namespace Akka.Streams.Implementation
         public override string ToString() { }
         public bool Write(T value) { }
     }
-    public class RetainingMultiReaderBuffer<T> : Akka.Streams.Implementation.IStreamBuffer<T>
+    public class RetainingMultiReaderBuffer<T>
     {
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
         public RetainingMultiReaderBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
