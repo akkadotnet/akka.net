@@ -63,7 +63,7 @@ namespace Akka.Streams.Implementation
         long Cursor { get; set; }
     }
 
-    public interface IStreamBuffer<T>
+    internal interface IStreamBuffer<T>
     {
         bool IsEmpty { get; }
 
