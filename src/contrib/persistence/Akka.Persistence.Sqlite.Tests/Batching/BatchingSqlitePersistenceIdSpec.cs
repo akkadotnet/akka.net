@@ -17,17 +17,43 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
     public class BatchingSqlitePersistenceIdSpec : PersistenceIdsSpec
     {
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
+
+        public static string ConnectionString(int id) => $"Filename=file:memdb-persistenceids-{id}.db;Mode=Memory;Cache=Shared";
+
         public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
-            akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
-            akka.persistence.journal.sqlite {{
-                class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
-                plugin-dispatcher = ""akka.actor.default-dispatcher""
-                table-name = event_journal
-                metadata-table-name = journal_metadata
-                auto-initialize = on
-                connection-string = ""Datasource=memdb-journal-batch-persistenceids-{id}.db;Mode=Memory;Cache=Shared""
-                refresh-interval = 1s
+            akka.actor{{
+                serializers{{
+                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
+                }}
+                serialization-bindings {{
+                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
+                }}
+            }}
+            akka.persistence {{
+                publish-plugin-commands = on
+                journal {{
+                    plugin = ""akka.persistence.journal.sqlite""
+                    sqlite = {{
+                        class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        table-name = event_journal
+                        metadata-table-name = journal_metadata
+                        auto-initialize = on
+                        connection-string = ""{ConnectionString(id)}""
+                        refresh-interval = 200ms
+                    }}
+                }}
+                snapshot-store {{
+                    plugin = ""akka.persistence.snapshot-store.sqlite""
+                    sqlite {{
+                        class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
+                        plugin-dispatcher = ""akka.actor.default-dispatcher""
+                        table-name = snapshot_store
+                        auto-initialize = on
+                        connection-string = ""{ConnectionString(id)}""
+                    }}
+                }}
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());

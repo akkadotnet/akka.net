@@ -221,7 +221,7 @@ namespace Akka.Streams.TestKit
                 if(!elems.Contains(next.Element))
                     Assert(false, "unexpected elements [{0}] found in the result", next.Element);
                 elems.Remove(next.Element);
-
+                _probe.Log.Info($"Received '{next.Element}' within OnNext().");
                 return this;
             }
 

@@ -330,9 +330,16 @@ namespace Akka.Persistence.Sql.Common.Journal
                 e.{Configuration.SerializerIdColumnName} as SerializerId";
 
             AllPersistenceIdsSql = $@"
-                SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as PersistenceId 
-                FROM {Configuration.FullJournalTableName} e
-                WHERE e.{Configuration.OrderingColumnName} > @Ordering";
+                SELECT DISTINCT u.Id as PersistenceId 
+                FROM (
+                    SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as Id 
+                    FROM {Configuration.FullJournalTableName} e
+                    WHERE e.{Configuration.SequenceNrColumnName} > @SequenceNr
+                    UNION
+                    SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as Id 
+                    FROM {Configuration.FullMetaTableName} e
+                    WHERE e.{Configuration.SequenceNrColumnName} > @SequenceNr
+                ) as u";
 
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
@@ -484,7 +491,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             using (var command = GetCommand(connection, AllPersistenceIdsSql))
             {
-                AddParameter(command, "@Ordering", DbType.Int64, offset);
+                AddParameter(command, "@SequenceNr", DbType.Int64, offset);
 
                 using (var reader = await command.ExecuteReaderAsync(cancellationToken))
                 {
