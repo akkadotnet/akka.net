@@ -3329,6 +3329,7 @@ namespace Akka.Streams.Implementation
     {
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
         public ResizableMultiReaderRingBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public long AvailableData { get; }
         public long CapacityLeft { get; }
         public long ImmediatelyAvailable { get; }
         public bool IsEmpty { get; }
@@ -3346,6 +3347,7 @@ namespace Akka.Streams.Implementation
     {
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
         public RetainingMultiReaderBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public long AvailableData { get; }
         protected T[] Buffer { get; }
         public long CapacityLeft { get; }
         public bool IsEmpty { get; }
