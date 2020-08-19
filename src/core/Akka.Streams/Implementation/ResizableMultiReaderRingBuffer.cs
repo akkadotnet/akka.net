@@ -69,7 +69,7 @@ namespace Akka.Streams.Implementation
 
         long Length { get; }
 
-        long Count();
+        long AvailableData { get; }
 
         long CapacityLeft { get; }
 
@@ -141,13 +141,16 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public long Count(ICursor cursor) => Length - cursor.Cursor;
 
-        public long Count()
+        public long AvailableData
         {
-            var lowest = 0L;
-            foreach (var cursor in Cursors.Cursors)
-                lowest = Math.Max(cursor.Cursor, lowest);
+            get
+            {
+                var lowest = 0L;
+                foreach (var cursor in Cursors.Cursors)
+                    lowest = Math.Max(cursor.Cursor, lowest);
 
-            return Length - lowest;
+                return Length - lowest;
+            }
         }
 
         public T Read(ICursor cursor)
@@ -268,7 +271,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public long Length => _writeIndex - _readIndex;
 
-        public long Count() => Length;
+        public long AvailableData => Length;
 
         /// <summary>
         /// TBD
