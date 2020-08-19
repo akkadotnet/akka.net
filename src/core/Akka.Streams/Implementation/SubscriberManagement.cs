@@ -313,10 +313,9 @@ namespace Akka.Streams.Implementation
             if (_endOfStream is SubscriberManagement.NotReached)
             {
                 _pendingFromUpstream--;
-                var oldBufferLength = _buffer.Value.Length;
                 if (!_buffer.Value.Write(value))
                     throw new IllegalStateException("Output buffer overflow");
-                if (_buffer.Value.Length > oldBufferLength && Dispatch(_subscriptions))
+                if (_buffer.Value.Count() > 0 && Dispatch(_subscriptions))
                     RequestFromUpstreamIfRequired();
             }
             else throw new IllegalStateException("PushToDownStream(...) after CompleteDownstream() or AbortDownstream(...)");

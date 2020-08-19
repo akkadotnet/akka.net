@@ -69,6 +69,8 @@ namespace Akka.Streams.Implementation
 
         long Length { get; }
 
+        long Count();
+
         long CapacityLeft { get; }
 
         long Count(ICursor cursor);
@@ -138,6 +140,15 @@ namespace Akka.Streams.Implementation
         /// <param name="cursor">TBD</param>
         /// <returns>TBD</returns>
         public long Count(ICursor cursor) => Length - cursor.Cursor;
+
+        public long Count()
+        {
+            var lowest = 0L;
+            foreach (var cursor in Cursors.Cursors)
+                lowest = Math.Max(cursor.Cursor, lowest);
+
+            return Length - lowest;
+        }
 
         public T Read(ICursor cursor)
         {
@@ -256,6 +267,8 @@ namespace Akka.Streams.Implementation
         /// The number of elements currently in the buffer.
         /// </summary>
         public long Length => _writeIndex - _readIndex;
+
+        public long Count() => Length;
 
         /// <summary>
         /// TBD
