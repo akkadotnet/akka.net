@@ -153,7 +153,7 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
-            Setup("p", 1000);
+            Setup("p", 10);
 
             var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
@@ -162,16 +162,16 @@ namespace Akka.Persistence.TCK.Query
             {
                 return probe.Request(10)
                     .ExpectNext("p")
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(1000));
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200));
             });
 
-            Setup("q", 1000);
+            Setup("q", 10);
 
             probe.Within(TimeSpan.FromSeconds(10), () =>
             {
                 return probe.Request(10)
                     .ExpectNext("q")
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(1000));
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200));
             });
         }
 
