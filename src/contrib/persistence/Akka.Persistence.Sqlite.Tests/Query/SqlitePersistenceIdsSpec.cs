@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -17,11 +18,9 @@ namespace Akka.Persistence.Sqlite.Tests.Query
 {
     public class SqlitePersistenceIdsSpec : PersistenceIdsSpec
     {
-        public static readonly AtomicCounter Counter = new AtomicCounter(0);
+        public static string ConnectionString(string type) => $"Filename=file:memdb-persistenceids-{type}-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
 
-        public static string ConnectionString(int id) => $"Filename=file:memdb-persistenceids-{id}.db;Mode=Memory;Cache=Shared";
-
-        public static Config Config(int id) => ConfigurationFactory.ParseString($@"
+        public static Config Config => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.actor{{
                 serializers{{
@@ -41,7 +40,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                         table-name = event_journal
                         metadata-table-name = journal_metadata
                         auto-initialize = on
-                        connection-string = ""{ConnectionString(id)}""
+                        connection-string = ""{ConnectionString("journal")}""
                         refresh-interval = 200ms
                     }}
                 }}
@@ -52,14 +51,14 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         table-name = snapshot_store
                         auto-initialize = on
-                        connection-string = ""{ConnectionString(id)}""
+                        connection-string = ""{ConnectionString("snapshot")}""
                     }}
                 }}
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public SqlitePersistenceIdsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(SqlitePersistenceIdsSpec), output)
+        public SqlitePersistenceIdsSpec(ITestOutputHelper output) : base(Config, nameof(SqlitePersistenceIdsSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
