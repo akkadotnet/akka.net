@@ -3891,6 +3891,7 @@ namespace Akka.Pattern
         public bool IsClosed { get; }
         public bool IsHalfOpen { get; }
         public bool IsOpen { get; }
+        public System.Exception LastCaughtException { get; }
         public int MaxFailures { get; }
         public System.TimeSpan ResetTimeout { get; }
         public static Akka.Pattern.CircuitBreaker Create(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
@@ -3917,8 +3918,13 @@ namespace Akka.Pattern
     public class OpenCircuitException : Akka.Actor.AkkaException
     {
         public OpenCircuitException() { }
+        public OpenCircuitException(System.Exception cause) { }
         public OpenCircuitException(string message) { }
         public OpenCircuitException(string message, System.Exception cause) { }
+    }
+    public class UserCalledFailException : Akka.Actor.AkkaException
+    {
+        public UserCalledFailException() { }
     }
 }
 namespace Akka.Routing

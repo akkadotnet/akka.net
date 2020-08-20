@@ -9,6 +9,7 @@
   </PropertyGroup>
  
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />

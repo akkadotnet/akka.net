@@ -18,19 +18,35 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.TestKit.Performance
 {
+    /// <summary>
+    /// This spec measures execution times of the basic operations that an <see cref="Akka.Persistence.PersistentActor"/> provides,
+    /// using the provided Journal (plugin).
+    /// 
+    /// It is *NOT* meant to be a comprehensive benchmark, but rather aims to help plugin developers to easily determine
+    /// if their plugin's performance is roughly as expected. It also validates the plugin still works under "more messages" scenarios.
+    /// 
+    /// In case your journal plugin needs some kind of teardown, override the `AfterAll` method (don't forget to call `base` in your overridden methods).
+    /// </summary>
     public abstract class JournalPerfSpec : Akka.TestKit.Xunit2.TestKit
     {
-        private TestProbe testProbe;
+        private readonly TestProbe testProbe;
 
-        // Number of messages sent to the PersistentActor under test for each test iteration
-        private const int EventsCount = 10 * 1000;
+        /// <summary>
+        /// Number of messages sent to the PersistentActor under test for each test iteration
+        /// </summary>
+        protected int EventsCount = 10 * 1000;
 
-        // Number of measurement iterations each test will be run.
-        private const int MeasurementIterations = 10;
+        /// <summary>
+        /// Number of measurement iterations each test will be run.
+        /// </summary>
+        protected int MeasurementIterations = 10;
+        
+        /// <summary>
+        /// Override in order to customize timeouts used for ExpectMsg, in order to tune the awaits to your journal's perf
+        /// </summary>
+        protected TimeSpan ExpectDuration = TimeSpan.FromSeconds(10);
 
         private IReadOnlyList<int> Commands => Enumerable.Range(1, EventsCount).ToList();
-
-        private TimeSpan ExpectDuration = TimeSpan.FromSeconds(10);
 
         protected JournalPerfSpec(Config config, string actorSystem, ITestOutputHelper output)
             : base(config ?? Config.Empty, actorSystem, output)
@@ -49,6 +65,9 @@ namespace Akka.Persistence.TestKit.Performance
             testProbe.ExpectMsg(commands.Last(), ExpectDuration);
         }
 
+        /// <summary>
+        /// Executes a block of code multiple times (no warm-up)
+        /// </summary>
         internal void Measure(Func<TimeSpan, string> msg, Action block)
         {
             var measurements = new List<TimeSpan>(MeasurementIterations);

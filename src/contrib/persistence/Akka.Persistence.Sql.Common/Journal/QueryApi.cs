@@ -64,20 +64,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
-    /// <summary>
-    /// Subscribe the `sender` to current and new persistenceIds.
-    /// Used by query-side. The journal will send one <see cref="CurrentPersistenceIds"/> to the
-    /// subscriber followed by <see cref="PersistenceIdAdded"/> messages when new persistenceIds
-    /// are created.
-    /// </summary>
     [Serializable]
-    public sealed class SubscribeAllPersistenceIds : ISubscriptionCommand
+    public sealed class SelectCurrentPersistenceIds : IJournalRequest
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly SubscribeAllPersistenceIds Instance = new SubscribeAllPersistenceIds();
-        private SubscribeAllPersistenceIds() { }
+        public IActorRef ReplyTo { get; }
+        public long Offset { get; }
+
+        public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
+        {
+            Offset = offset;
+            ReplyTo = replyTo;
+        }
     }
 
     /// <summary>
@@ -91,35 +88,39 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public readonly IEnumerable<string> AllPersistenceIds;
 
+        public readonly long HighestOrderingNumber;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="allPersistenceIds">TBD</param>
-        public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds)
+        /// <param name="highestOrderingNumber">TBD</param>
+        public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, long highestOrderingNumber)
         {
             AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
+            HighestOrderingNumber = highestOrderingNumber;
         }
     }
 
     /// <summary>
-    /// TBD
+    /// Subscribe the `sender` to new appended events.
+    /// Used by query-side. The journal will send <see cref="NewEventAppended"/> messages to
+    /// the subscriber when `asyncWriteMessages` has been called.
     /// </summary>
     [Serializable]
-    public sealed class PersistenceIdAdded : IDeadLetterSuppression
+    public sealed class SubscribeNewEvents : ISubscriptionCommand
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string PersistenceId;
+        public static SubscribeNewEvents Instance = new SubscribeNewEvents();
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        public PersistenceIdAdded(string persistenceId)
-        {
-            PersistenceId = persistenceId;
-        }
+        private SubscribeNewEvents() { }
+    }
+
+    [Serializable]
+    public sealed class NewEventAppended : IDeadLetterSuppression
+    {
+        public static NewEventAppended Instance = new NewEventAppended();
+
+        private NewEventAppended() { }
     }
 
     /// <summary>
@@ -181,6 +182,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// TBD
         /// </summary>
+        public readonly long ToOffset;
+        /// <summary>
+        /// TBD
+        /// </summary>
         public readonly long Max;
         /// <summary>
         /// TBD
@@ -188,12 +193,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly IActorRef ReplyTo;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplayTaggedMessages"/> class.
+        /// Initializes a new instance of the <see cref="ReplayAllEvents"/> class.
         /// </summary>
         /// <param name="fromOffset">TBD</param>
         /// <param name="toOffset">TBD</param>
         /// <param name="max">TBD</param>
-        /// <param name="tag">TBD</param>
         /// <param name="replyTo">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown for a number of reasons. These include the following:
@@ -203,25 +207,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <li>The specified <paramref name="max"/> is less than or equal to zero.</li>
         /// </ul>
         /// </exception>
-        /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="tag"/> is null or empty.
-        /// </exception>
-        public ReplayAllEvents(long fromOffset, long max, IActorRef replyTo)
+        public ReplayAllEvents(long fromOffset, long toOffset, long max, IActorRef replyTo)
         {
             if (fromOffset < 0) throw new ArgumentException("From offset may not be a negative number", nameof(fromOffset));
+            if (toOffset <= 0) throw new ArgumentException("To offset must be a positive number", nameof(toOffset));
             if (max <= 0) throw new ArgumentException("Maximum number of replayed messages must be a positive number", nameof(max));
 
             FromOffset = fromOffset;
+            ToOffset = toOffset;
             Max = max;
             ReplyTo = replyTo;
         }
-    }
-
-    public sealed class ReplayedAllEvents
-    {
-        public static ReplayedAllEvents Instance = new ReplayedAllEvents();
-
-        private ReplayedAllEvents() { }
     }
 
     /// <summary>

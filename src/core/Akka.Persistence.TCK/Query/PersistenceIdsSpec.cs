@@ -6,12 +6,17 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
+using Akka.TestKit;
 using Akka.Util.Internal;
+using Reactive.Streams;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,11 +27,17 @@ namespace Akka.Persistence.TCK.Query
         protected ActorMaterializer Materializer { get; }
 
         protected IReadJournal ReadJournal { get; set; }
+        protected IActorRef SnapshotStore => Extension.SnapshotStoreFor(null);
+        protected PersistenceExtension Extension { get; }
+
+        private readonly TestProbe _senderProbe;
 
         protected PersistenceIdsSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
             : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
+            Extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
+            _senderProbe = CreateTestProbe();
         }
 
         [Fact]
@@ -78,6 +89,36 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
+        public virtual void ReadJournal_AllPersistenceIds_should_find_events_on_both_journal_and_snapshot_store()
+        {
+            var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
+
+            WriteSnapshot("a", 2);
+            WriteSnapshot("b", 2);
+            WriteSnapshot("c", 2);
+            Setup("d", 2);
+            Setup("e", 2);
+            Setup("f", 2);
+
+            var source = queries.PersistenceIds();
+            var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
+
+            var expectedUniqueList = new List<string>(){"a", "b", "c", "d", "e", "f"};
+
+            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(3)
+                .ExpectNextWithinSet(expectedUniqueList)
+                .ExpectNextWithinSet(expectedUniqueList)
+                .ExpectNextWithinSet(expectedUniqueList)
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+
+            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(3)
+                .ExpectNextWithinSet(expectedUniqueList)
+                .ExpectNextWithinSet(expectedUniqueList)
+                .ExpectNextWithinSet(expectedUniqueList)
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+        }
+
+        [Fact]
         public virtual void ReadJournal_AllPersistenceIds_should_only_deliver_what_requested_if_there_is_more_in_the_buffer()
         {
             var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
@@ -112,7 +153,7 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
-            Setup("p", 1000);
+            Setup("p", 10);
 
             var source = queries.PersistenceIds();
             var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
@@ -121,20 +162,55 @@ namespace Akka.Persistence.TCK.Query
             {
                 return probe.Request(10)
                     .ExpectNext("p")
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(1000));
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200));
             });
 
-            Setup("q", 1000);
+            Setup("q", 10);
 
             probe.Within(TimeSpan.FromSeconds(10), () =>
             {
                 return probe.Request(10)
                     .ExpectNext("q")
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(1000));
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200));
             });
         }
 
-        private IActorRef Setup(string persistenceId, int n)
+        [Fact]
+        public virtual async Task ReadJournal_should_deallocate_AllPersistenceIds_publisher_when_the_last_subscriber_left()
+        {
+            var journal = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
+
+            Setup("a", 1);
+            Setup("b", 1);
+
+            var source = journal.PersistenceIds();
+            var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
+            var probe2 = source.RunWith(this.SinkProbe<string>(), Materializer);
+
+            var fieldInfo = journal.GetType().GetField("_persistenceIdsPublisher", BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.True(fieldInfo != null);
+
+            // Assert that publisher is running.
+            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(10)
+                .ExpectNextUnordered("a", "b")
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+
+            probe.Cancel();
+
+            // Assert that publisher is still alive when it still have a subscriber
+            Assert.True(fieldInfo.GetValue(journal) is IPublisher<string>);
+
+            probe2.Within(TimeSpan.FromSeconds(10), () => probe2.Request(4)
+                .ExpectNextUnordered("a", "b")
+                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+
+            // Assert that publisher is de-allocated when the last subscriber left
+            probe2.Cancel();
+            await Task.Delay(400);
+            Assert.True(fieldInfo.GetValue(journal) is null);
+        }
+
+        protected IActorRef Setup(string persistenceId, int n)
         {
             var pref = Sys.ActorOf(Query.TestActor.Props(persistenceId));
             for (int i = 1; i <= n; i++)
@@ -145,6 +221,23 @@ namespace Akka.Persistence.TCK.Query
 
             return pref;
         }
+
+        protected IActorRef WriteSnapshot(string persistenceId, int n)
+        {
+            var pref = Sys.ActorOf(Query.TestActor.Props(persistenceId));
+            for (var i = 1; i <= n; i++)
+            {
+                pref.Tell($"{persistenceId}-{i}");
+                ExpectMsg($"{persistenceId}-{i}-done");
+            }
+
+            var metadata = new SnapshotMetadata(persistenceId, n + 10);
+            SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{n}"), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<SaveSnapshotSuccess>();
+
+            return pref;
+        }
+
 
         protected override void Dispose(bool disposing)
         {

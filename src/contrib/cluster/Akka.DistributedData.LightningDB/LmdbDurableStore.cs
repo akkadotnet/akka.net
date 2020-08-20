@@ -18,6 +18,7 @@ using Akka.Serialization;
 using Akka.DistributedData.Internal;
 using LightningDB;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Akka.DistributedData.LightningDB
 {
@@ -145,8 +146,8 @@ namespace Akka.DistributedData.LightningDB
             if(IsDbInitialized)
             {
                 var (env, db, _) = Lmdb;
-                try { db.Dispose(); } catch { }
-                try { env.Dispose(); } catch { }
+                try { db?.Dispose(); } catch { }
+                try { env?.Dispose(); } catch { }
             }
         }
 
@@ -196,26 +197,24 @@ namespace Akka.DistributedData.LightningDB
                     return;
                 }
 
-                var l = Lmdb;
+                var (environment, db, _) = Lmdb;
                 var t0 = Stopwatch.StartNew();
-                using (var tx = l.env.BeginTransaction(TransactionBeginFlags.ReadOnly))
-                using (var cursor = tx.CreateCursor(l.db))
+                using (var tx = environment.BeginTransaction(TransactionBeginFlags.ReadOnly))
+                using (var cursor = tx.CreateCursor(db))
                 {
                     try
                     {
-                        var n = 0;
-                        var builder = ImmutableDictionary.CreateBuilder<string, DurableDataEnvelope>();
-                        foreach (var entry in cursor)
-                        {
-                            n++;
-                            var key = Encoding.UTF8.GetString(entry.Key.CopyToNewArray());
-                            var envelope = (DurableDataEnvelope)_serializer.FromBinary(entry.Value.CopyToNewArray(), _manifest);
-                            builder.Add(key, envelope);
-                        }
+                        var data = cursor.AsEnumerable().Select((x, i)
+                            => {
+                                var (key, value) = x;
+                                return new KeyValuePair<string, DurableDataEnvelope>(
+                                    Encoding.UTF8.GetString(key.CopyToNewArray()),
+                                    (DurableDataEnvelope)_serializer.FromBinary(value.CopyToNewArray(), _manifest));
+                            }).ToImmutableDictionary();
 
-                        if (builder.Count > 0)
+                        if (data.Count > 0)
                         {
-                            var loadData = new LoadData(builder.ToImmutable());
+                            var loadData = new LoadData(data);
                             Sender.Tell(loadData);
                         }
 
@@ -223,7 +222,7 @@ namespace Akka.DistributedData.LightningDB
 
                         t0.Stop();
                         if (_log.IsDebugEnabled)
-                            _log.Debug($"Load all of [{n}] entries took [{t0.ElapsedMilliseconds}]");
+                            _log.Debug($"Load all of [{data.Count}] entries took [{t0.ElapsedMilliseconds}]");
 
                         Become(Active);
                     }

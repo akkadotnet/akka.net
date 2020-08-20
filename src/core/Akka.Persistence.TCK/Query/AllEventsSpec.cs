@@ -13,8 +13,6 @@ namespace Akka.Persistence.TCK.Query
 {
     public class AllEventsSpec : Akka.TestKit.Xunit2.TestKit
     {
-        private static Config InternalConfig = "akka.persistence.query.journal.sql.max-buffer-size = 3";
-
         protected ActorMaterializer Materializer { get; }
 
         protected IReadJournal ReadJournal { get; set; }
@@ -23,9 +21,7 @@ namespace Akka.Persistence.TCK.Query
             Config config = null, 
             string actorSystemName = null, 
             ITestOutputHelper output = null)
-            : base(
-                config == null ? InternalConfig : InternalConfig.WithFallback(config), 
-                actorSystemName, output)
+            : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -37,7 +33,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_query_AllEvents_should_find_existing_events()
+        public virtual void ReadJournal_query_AllEvents_should_find_new_events()
         {
             var queries = ReadJournal as IAllEventsQuery;
             var a = Sys.ActorOf(Query.TestActor.Props("a"));
@@ -45,34 +41,27 @@ namespace Akka.Persistence.TCK.Query
 
             a.Tell("hello");
             ExpectMsg("hello-done");
+
+            var eventSrc = queries.AllEvents(NoOffset.Instance);
+            var probe = eventSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(2);
+            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 1L && p.Event.Equals("hello"));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+
             a.Tell("world");
             ExpectMsg("world-done");
             b.Tell("test");
             ExpectMsg("test-done");
 
-            var eventSrc = queries.AllEvents(NoOffset.Instance);
-            var probe = eventSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-
-            probe.Request(2);
-            probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 1L && p.Event.Equals("hello"));
             probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("world"));
 
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
-            probe.Request(2);
+            probe.Request(10);
             probe.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("test"));
-            probe.ExpectComplete();
+            probe.Cancel();
         }
 
-        [Fact]
-        public virtual void ReadJournal_query_AllEvents_should_complete_when_no_events()
-        {
-            var queries = ReadJournal as IAllEventsQuery;
-
-            var eventSrc = queries.AllEvents(NoOffset.Instance);
-            var probe = eventSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe.Request(2).ExpectComplete();
-        }
 
         [Fact]
         public virtual void ReadJournal_query_AllEvents_should_find_events_from_offset_exclusive()
@@ -81,54 +70,42 @@ namespace Akka.Persistence.TCK.Query
 
             var a = Sys.ActorOf(Query.TestActor.Props("a"));
             var b = Sys.ActorOf(Query.TestActor.Props("b"));
+            var c = Sys.ActorOf(Query.TestActor.Props("c"));
 
-            a.Tell("hello");
-            ExpectMsg("hello-done");
-            a.Tell("world");
-            ExpectMsg("world-done");
-            b.Tell("test");
-            ExpectMsg("test-done");
+            a.Tell("keep");
+            ExpectMsg("keep-done");
+            a.Tell("calm");
+            ExpectMsg("calm-done");
+            b.Tell("and");
+            ExpectMsg("and-done");
+            a.Tell("keep");
+            ExpectMsg("keep-done");
+            a.Tell("streaming");
+            ExpectMsg("streaming-done");
 
             var eventSrc1 = queries.AllEvents(NoOffset.Instance);
             var probe1 = eventSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe1.Request(2);
-            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 1L && p.Event.Equals("hello"));
-            var offs = probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("world")).Offset;
+            probe1.Request(4);
+            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 1L && p.Event.Equals("keep"));
+            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 2L && p.Event.Equals("calm"));
+            probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("and"));
+            var offs = probe1.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 3L && p.Event.Equals("keep")).Offset;
             probe1.Cancel();
 
             var eventSrc2 = queries.AllEvents(offs);
             var probe2 = eventSrc2.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe2.Request(10);
-            // hello and world is not included, since exclusive offset
-            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 1L && p.Event.Equals("test"));
+
+            b.Tell("new");
+            ExpectMsg("new-done");
+            c.Tell("events");
+            ExpectMsg("events-done");
+
+            // everything before "streaming" are not included, since exclusive offset
+            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "a" && p.SequenceNr == 4L && p.Event.Equals("streaming"));
+            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("new"));
+            probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "c" && p.SequenceNr == 1L && p.Event.Equals("events"));
             probe2.Cancel();
-        }
-
-        [Fact]
-        public virtual void ReadJournal_query_AllEvents_should_see_all_150_events()
-        {
-            var queries = ReadJournal as IAllEventsQuery;
-            var a = Sys.ActorOf(Query.TestActor.Props("a"));
-
-            for (var i = 0; i < 150; ++i)
-            {
-                a.Tell("a green apple");
-                ExpectMsg("a green apple-done");
-            }
-
-            var greenSrc = queries.AllEvents(NoOffset.Instance);
-            var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe.Request(150);
-            for (var i = 0; i < 150; ++i)
-            {
-                var idx = i + 1;
-                probe.ExpectNext<EventEnvelope>(p =>
-                    p.PersistenceId == "a" && p.SequenceNr == idx && p.Event.Equals("a green apple"));
-                Output.WriteLine(idx.ToString());
-            }
-
-            probe.ExpectComplete();
-            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
     }
 }

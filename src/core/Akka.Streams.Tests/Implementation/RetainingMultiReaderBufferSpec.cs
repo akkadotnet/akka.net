@@ -1,124 +1,74 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ResizableMultiReaderRingBufferSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Streams.Implementation;
-using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Xunit;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class ResizableMultiReaderRingBufferSpec : AkkaSpec
+    public class RetainingMultiReaderBufferSpec
     {
         [Theory]
-        [InlineData(2, 4, 1, "0 0 (size=0, writeIx=0, readIx=0, cursors=1)")]
-        [InlineData(4, 4, 3, "0 0 0 0 (size=0, writeIx=0, readIx=0, cursors=3)")]
-        public void A_ResizableMultiReaderRingBuffer_should_initially_be_empty(int iSize, int mSize, int cursorCount, string expected)
+        [InlineData(2, 4, 1, "0 0 (size=0, cursors=1)")]
+        [InlineData(4, 4, 3, "0 0 0 0 (size=0, cursors=3)")]
+        public void A_RetainingMultiReaderBufferSpec_should_initially_be_empty(int iSize, int mSize, int cursorCount, string expected)
         {
             var test = new Test(iSize, mSize, cursorCount);
             test.Inspect().Should().Be(expected);
         }
 
         [Fact]
-        public void A_ResizableMultiReaderRingBuffer_should_fail_reads_if_nothing_can_be_read()
+        public void A_RetainingMultiReaderBufferSpec_should_fail_reads_if_nothing_can_be_read()
         {
             var test = new Test(4, 4, 3);
             test.Write(1).Should().BeTrue();
             test.Write(2).Should().BeTrue();
             test.Write(3).Should().BeTrue();
-            test.Inspect().Should().Be("1 2 3 0 (size=3, writeIx=3, readIx=0, cursors=3)");
+            test.Inspect().Should().Be("1 2 3 0 (size=3, cursors=3)");
             test.Read(0).Should().Be(1);
             test.Read(0).Should().Be(2);
             test.Read(1).Should().Be(1);
-            test.Inspect().Should().Be("1 2 3 0 (size=3, writeIx=3, readIx=0, cursors=3)");
+            test.Inspect().Should().Be("1 2 3 0 (size=3, cursors=3)");
             test.Read(0).Should().Be(3);
             test.Read(0).Should().Be(null);
             test.Read(1).Should().Be(2);
-            test.Inspect().Should().Be("1 2 3 0 (size=3, writeIx=3, readIx=0, cursors=3)");
+            test.Inspect().Should().Be("1 2 3 0 (size=3, cursors=3)");
             test.Read(2).Should().Be(1);
-            test.Inspect().Should().Be("0 2 3 0 (size=2, writeIx=3, readIx=1, cursors=3)");
+            test.Inspect().Should().Be("1 2 3 0 (size=3, cursors=3)");
             test.Read(1).Should().Be(3);
             test.Read(1).Should().Be(null);
             test.Read(2).Should().Be(2);
             test.Read(2).Should().Be(3);
-            test.Inspect().Should().Be("0 0 0 0 (size=0, writeIx=3, readIx=3, cursors=3)");
+            test.Inspect().Should().Be("1 2 3 0 (size=3, cursors=3)");
         }
 
         [Fact]
-        public void A_ResizableMultiReaderRingBuffer_should_fail_write_if_there_is_no_more_space()
-        {
-            var test = new Test(4, 4, 2);
-            test.Write(1).Should().BeTrue();
-            test.Write(2).Should().BeTrue();
-            test.Write(3).Should().BeTrue();
-            test.Write(4).Should().BeTrue();
-            test.Write(5).Should().BeFalse();
-            test.Read(0).Should().Be(1);
-            test.Write(5).Should().BeFalse();
-            test.Read(1).Should().Be(1);
-            test.Write(5).Should().BeTrue();
-            test.Read(0).Should().Be(2);
-            test.Read(0).Should().Be(3);
-            test.Read(0).Should().Be(4);
-            test.Read(1).Should().Be(2);
-            test.Write(6).Should().BeTrue();
-            test.Inspect().Should().Be("5 6 3 4 (size=4, writeIx=6, readIx=2, cursors=2)");
-            test.Read(0).Should().Be(5);
-            test.Read(0).Should().Be(6);
-            test.Read(0).Should().Be(null);
-            test.Read(1).Should().Be(3);
-            test.Read(1).Should().Be(4);
-            test.Read(1).Should().Be(5);
-            test.Read(1).Should().Be(6);
-            test.Read(1).Should().Be(null);
-            test.Inspect().Should().Be("0 0 0 0 (size=0, writeIx=6, readIx=6, cursors=2)");
-            test.Write(7).Should().BeTrue();
-            test.Write(8).Should().BeTrue();
-            test.Write(9).Should().BeTrue();
-            test.Inspect().Should().Be("9 0 7 8 (size=3, writeIx=9, readIx=6, cursors=2)");
-            test.Read(0).Should().Be(7);
-            test.Read(0).Should().Be(8);
-            test.Read(0).Should().Be(9);
-            test.Read(0).Should().Be(null);
-            test.Read(1).Should().Be(7);
-            test.Read(1).Should().Be(8);
-            test.Read(1).Should().Be(9);
-            test.Read(1).Should().Be(null);
-            test.Inspect().Should().Be("0 0 0 0 (size=0, writeIx=9, readIx=9, cursors=2)");
-        }
-
-        [Fact]
-        public void A_ResizableMultiReaderRingBuffer_should_automatically_frow_if_possible()
+        public void A_RetainingMultiReaderBufferSpec_should_automatically_grow_if_possible()
         {
             var test = new Test(2, 8, 2);
             test.Write(1).Should().BeTrue();
-            test.Inspect().Should().Be("1 0 (size=1, writeIx=1, readIx=0, cursors=2)");
+            test.Inspect().Should().Be("1 0 (size=1, cursors=2)");
             test.Write(2).Should().BeTrue();
-            test.Inspect().Should().Be("1 2 (size=2, writeIx=2, readIx=0, cursors=2)");
+            test.Inspect().Should().Be("1 2 (size=2, cursors=2)");
             test.Write(3).Should().BeTrue();
-            test.Inspect().Should().Be("1 2 3 0 (size=3, writeIx=3, readIx=0, cursors=2)");
+            test.Inspect().Should().Be("1 2 3 0 (size=3, cursors=2)");
             test.Write(4).Should().BeTrue();
-            test.Inspect().Should().Be("1 2 3 4 (size=4, writeIx=4, readIx=0, cursors=2)");
+            test.Inspect().Should().Be("1 2 3 4 (size=4, cursors=2)");
             test.Read(0).Should().Be(1);
             test.Read(0).Should().Be(2);
             test.Read(0).Should().Be(3);
             test.Read(1).Should().Be(1);
             test.Read(1).Should().Be(2);
             test.Write(5).Should().BeTrue();
-            test.Inspect().Should().Be("5 0 3 4 (size=3, writeIx=5, readIx=2, cursors=2)");
+            test.Inspect().Should().Be("1 2 3 4 5 0 0 0 (size=5, cursors=2)");
             test.Write(6).Should().BeTrue();
-            test.Inspect().Should().Be("5 6 3 4 (size=4, writeIx=6, readIx=2, cursors=2)");
+            test.Inspect().Should().Be("1 2 3 4 5 6 0 0 (size=6, cursors=2)");
             test.Write(7).Should().BeTrue();
-            test.Inspect().Should().Be("3 4 5 6 7 0 0 0 (size=5, writeIx=5, readIx=0, cursors=2)");
+            test.Inspect().Should().Be("1 2 3 4 5 6 7 0 (size=7, cursors=2)");
             test.Read(0).Should().Be(4);
             test.Read(0).Should().Be(5);
             test.Read(0).Should().Be(6);
@@ -130,11 +80,11 @@ namespace Akka.Streams.Tests.Implementation
             test.Read(1).Should().Be(6);
             test.Read(1).Should().Be(7);
             test.Read(1).Should().Be(null);
-            test.Inspect().Should().Be("0 0 0 0 0 0 0 0 (size=0, writeIx=5, readIx=5, cursors=2)");
+            test.Inspect().Should().Be("1 2 3 4 5 6 7 0 (size=7, cursors=2)");
         }
 
         [Fact]
-        public void A_ResizableMultiReaderRingBuffer_should_pass_the_stress_test()
+        public void A_RetainingMultiReaderBufferSpec_should_pass_the_stress_test()
         {
             // create 100 buffers with an initialSize of 1 and a maxSize of 1 to 64,
             // for each one attach 1 to 8 cursors and randomly try reading and writing to the buffer;
@@ -150,7 +100,7 @@ namespace Akka.Streams.Tests.Implementation
             });
 
             var random = new Random();
-            for(var bit = 1; bit <= MAXSIZEBIT_LIMIT; bit++)
+            for (var bit = 1; bit <= MAXSIZEBIT_LIMIT; bit++)
                 for (var n = 1; n <= 2; n++)
                 {
                     var counter = 1;
@@ -192,7 +142,7 @@ namespace Akka.Streams.Tests.Implementation
                 }
         }
 
-        private class TestBuffer : ResizableMultiReaderRingBuffer<int?>
+        private class TestBuffer : RetainingMultiReaderBuffer<int?>
         {
             public ICursors UnderlyingCursors { get; }
 
@@ -203,8 +153,8 @@ namespace Akka.Streams.Tests.Implementation
 
             public string Inspect()
             {
-                return UnderlyingArray.Select(x => x ?? 0).Aggregate("", (s, i) => s + i + " ") +
-                ToString().SkipWhile(c => c != '(').Aggregate("", (s, c) => s+c );
+                return Buffer.Select(x => x ?? 0).Aggregate("", (s, i) => s + i + " ") +
+                ToString().SkipWhile(c => c != '(').Aggregate("", (s, c) => s + c);
             }
         }
 
