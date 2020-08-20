@@ -1,4 +1,6 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Query.Sql")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
@@ -2632,7 +2634,7 @@ namespace Akka.Streams.Implementation
     public class ActorSubscriptionWithCursor<TIn> : Akka.Streams.Implementation.ActorSubscription<TIn>, Akka.Streams.Implementation.ICursor, Reactive.Streams.ISubscription
     {
         public ActorSubscriptionWithCursor(Akka.Actor.IActorRef implementor, Reactive.Streams.ISubscriber<TIn> subscriber) { }
-        public int Cursor { get; }
+        public long Cursor { get; }
         public bool IsActive { get; }
         public long TotalDemand { get; }
         public void Dispatch(object element) { }
@@ -2749,6 +2751,12 @@ namespace Akka.Streams.Implementation
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
+    }
+    public class DistinctRetainingMultiReaderBuffer<T> : Akka.Streams.Implementation.RetainingMultiReaderBuffer<T>
+    {
+        public DistinctRetainingMultiReaderBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public override string ToString() { }
+        public override bool Write(T value) { }
     }
     public sealed class EmptyModule : Akka.Streams.Implementation.Module
     {
@@ -2962,7 +2970,7 @@ namespace Akka.Streams.Implementation
     public interface IActorSubscription : Reactive.Streams.ISubscription { }
     public interface ICursor
     {
-        int Cursor { get; set; }
+        long Cursor { get; set; }
     }
     public interface ICursors
     {
@@ -3320,19 +3328,36 @@ namespace Akka.Streams.Implementation
     public class ResizableMultiReaderRingBuffer<T>
     {
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
-        public ResizableMultiReaderRingBuffer(int initialSize, int maxSize, Akka.Streams.Implementation.ICursors cursors) { }
-        public int CapacityLeft { get; }
-        public int ImmediatelyAvailable { get; }
+        public ResizableMultiReaderRingBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public long AvailableData { get; }
+        public long CapacityLeft { get; }
+        public long ImmediatelyAvailable { get; }
         public bool IsEmpty { get; }
-        public int Length { get; }
+        public long Length { get; }
         public bool NonEmpty { get; }
-        protected object[] UnderlyingArray { get; }
-        public int Count(Akka.Streams.Implementation.ICursor cursor) { }
+        protected T[] UnderlyingArray { get; }
+        public long Count(Akka.Streams.Implementation.ICursor cursor) { }
         public void InitCursor(Akka.Streams.Implementation.ICursor cursor) { }
         public void OnCursorRemoved(Akka.Streams.Implementation.ICursor cursor) { }
         public T Read(Akka.Streams.Implementation.ICursor cursor) { }
         public override string ToString() { }
         public bool Write(T value) { }
+    }
+    public class RetainingMultiReaderBuffer<T>
+    {
+        protected readonly Akka.Streams.Implementation.ICursors Cursors;
+        public RetainingMultiReaderBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public long AvailableData { get; }
+        protected T[] Buffer { get; }
+        public long CapacityLeft { get; }
+        public bool IsEmpty { get; }
+        public long Length { get; }
+        public long Count(Akka.Streams.Implementation.ICursor cursor) { }
+        public void InitCursor(Akka.Streams.Implementation.ICursor cursor) { }
+        public void OnCursorRemoved(Akka.Streams.Implementation.ICursor cursor) { }
+        public T Read(Akka.Streams.Implementation.ICursor cursor) { }
+        public override string ToString() { }
+        public virtual bool Write(T value) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class SeqStage<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<T>>>

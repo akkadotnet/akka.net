@@ -141,7 +141,7 @@ namespace Akka.Persistence.Query.Sql
         public LiveAllEventsPublisher(long fromOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
             : base(fromOffset, maxBufferSize, writeJournalPluginId)
         {
-            _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
+            _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
         }
 
         protected override long ToOffset => long.MaxValue;
