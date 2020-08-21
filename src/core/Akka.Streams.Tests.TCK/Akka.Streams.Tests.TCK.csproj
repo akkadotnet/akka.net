@@ -2,7 +2,7 @@
 <Import Project="..\..\common.props" />
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
-    <AssemblyName>Akka.Streams.Tests</AssemblyName>
+    <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
     <!-- Reactive.Streams.TCK isn't compatible with .NET Core -->
     <!-- Reactive. -->
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>

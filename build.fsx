@@ -232,6 +232,7 @@ Target "RunTests" (fun _ ->
     let projects = 
         let rawProjects = match (isWindows) with 
                             | true -> !! "./src/**/*.Tests.*sproj"
+                                      ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
                             | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
         rawProjects |> Seq.choose filterProjects
     
