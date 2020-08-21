@@ -1069,14 +1069,22 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var maxSequenceNr = 0L;
+                var toOffset = req.ToOffset;
                 var fromOffset = req.FromOffset;
+                var max = req.Max;
+
+                var take = Math.Min(toOffset - fromOffset, max);
+
+                command.CommandText = HighestOrderingSql;
+                command.Parameters.Clear();
+
+                var maxOrdering = (await command.ExecuteScalarAsync()) as long? ?? 0L;
 
                 command.CommandText = AllEventsSql;
                 command.Parameters.Clear();
 
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                AddParameter(command, "@Take", DbType.Int64, req.Max);
+                AddParameter(command, "@Take", DbType.Int64, take);
 
                 using (var reader = await command.ExecuteReaderAsync())
                 {
@@ -1084,7 +1092,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
-                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
 
                         foreach (var adapted in AdaptFromJournal(persistent))
                         {
@@ -1093,7 +1100,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     }
                 }
 
-                replyTo.Tell(new EventReplaySuccess(maxSequenceNr));
+                replyTo.Tell(new EventReplaySuccess(maxOrdering));
             }
             catch (Exception cause)
             {
