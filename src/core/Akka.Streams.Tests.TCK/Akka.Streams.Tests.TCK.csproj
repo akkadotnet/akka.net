@@ -4,8 +4,7 @@
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
     <!-- Reactive.Streams.TCK isn't compatible with .NET Core -->
-    <!-- Reactive. -->
-    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
@@ -24,10 +23,8 @@
     <PackageReference Include="Reactive.Streams.TCK" Version="1.0.2" />
     <!-- !!!WARNING!!! 
          NUNIT VERSION HAVE TO MATCH WITH THE VERSION USED BY REACTIVE TCK. 
-         NEVER ADD NUNIT PACKAGE, WE ARE RELYING ON REACTIVE.STREAMS.TCK TO PROVIDE 
-         THE DEPENDENCY 
          !!!WARNING!!! -->
-    <!-- <PackageReference Include="NUnit" Version="3.7.1" /> -->
+    <PackageReference Include="NUnit" Version="3.7.1" Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
