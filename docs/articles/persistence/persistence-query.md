@@ -50,7 +50,7 @@ The predefined queries are:
 
 **AllPersistenceIdsQuery (PersistentIds) and CurrentPersistenceIdsQuery**
 
-`AllPersistenceIds`, or `PersistenceIds` in `IPersistenceIdsQuery`, is used to retrieve all cached persistenceIds of all persistent actors inside the `ActorSystem` where the journal actor is instantiated. Note that since this is a cached value, this query will only report `PersistentIds` that passed to the journal since the journal creation time (local cache).
+`AllPersistenceIds` or `PersistenceIds`, and `CurrentPersistenceIds` in `IPersistenceIdsQuery` is used for retrieving all persistenceIds of all persistent actors.
 
 ```csharp
 var queries = PersistenceQuery.Get(actorSystem)
@@ -64,7 +64,7 @@ The returned event stream is unordered and you can expect different order for mu
 
 The stream is not completed when it reaches the end of the currently used `PersistenceIds`, but it continues to push new `PersistenceIds` when new persistent actors are created. Corresponding query that is completed when it reaches the end of the currently used `PersistenceIds` is provided by `CurrentPersistenceIds`.
 
-The write journal is notifying the query side as soon as new `PersistenceIds` are created and there is no periodic polling or batching involved in this query.
+Periodic polling of new `PersistenceIds` are done on the query side by retrieving the events in batches that sometimes can be delayed up to the configured `refresh-interval` or given `RefreshInterval` hint.
 
 The stream is completed with failure if there is a failure in executing the query in the backend journal.
 
