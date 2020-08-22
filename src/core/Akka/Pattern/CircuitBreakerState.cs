@@ -30,28 +30,39 @@ namespace Akka.Pattern
         {
             _breaker = breaker;
         }
-
+        
         /// <summary>
-        /// N/A
+        /// Calculate remaining duration until reset to inform the caller in case a backoff algorithm is useful
         /// </summary>
-        /// <typeparam name="T">N/A</typeparam>
-        /// <param name="body">N/A</param>
-        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
-        /// <returns>N/A</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
+        /// <returns>Duration to when the breaker will attempt a reset by transitioning to half-open</returns>
+        private TimeSpan RemainingDuration()
         {
-            throw new OpenCircuitException(_breaker.LastCaughtException);
+            var fromOpened = DateTime.UtcNow.Ticks - Current;
+            var diff = _breaker.CurrentResetTimeout.Ticks - fromOpened;
+            return diff <= 0L ? TimeSpan.Zero : TimeSpan.FromTicks(diff);
         }
 
         /// <summary>
         /// N/A
         /// </summary>
-        /// <param name="body">N/A</param>
+        /// <typeparam name="T">N/A</typeparam>
+        /// <param name="body">Implementation of the call that needs protected</param>
+        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
+        /// <returns>N/A</returns>
+        public override Task<T> Invoke<T>(Func<Task<T>> body)
+        {
+            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
+        }
+
+        /// <summary>
+        /// N/A
+        /// </summary>
+        /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
         public override Task Invoke(Func<Task> body)
         {
-            throw new OpenCircuitException(_breaker.LastCaughtException);
+            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
         }
 
         /// <summary>
@@ -75,12 +86,19 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// On entering this state, schedule an attempted reset and store the entry time to
+        /// On entering this state, schedule an attempted reset via <see cref="Actor.IScheduler"/> and store the entry time to
         /// calculate remaining time before attempted reset.
         /// </summary>
         protected override void EnterInternal()
         {
-            Task.Delay(_breaker.ResetTimeout).ContinueWith(task => _breaker.AttemptReset());
+            GetAndSet(DateTime.UtcNow.Ticks);
+            _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
+
+            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor);
+            if (nextResetTimeout < _breaker.MaxResetTimeout)
+            {
+                _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);
+            }
         }
 
         /// <summary>
@@ -120,7 +138,7 @@ namespace Akka.Pattern
         {
             if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException);
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
             }
             return await CallThrough(body);
         }
@@ -136,7 +154,7 @@ namespace Akka.Pattern
         {
             if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException);
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
             }
             await CallThrough(body);
         }
@@ -243,6 +261,7 @@ namespace Akka.Pattern
         protected override void EnterInternal()
         {
             Reset();
+            _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, _breaker.ResetTimeout);
         }
 
         /// <summary>
