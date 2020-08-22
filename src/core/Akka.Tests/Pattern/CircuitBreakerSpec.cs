@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -345,6 +346,29 @@ namespace Akka.Tests.Pattern
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
         }
+        
+        [Fact(DisplayName = "An asynchronous circuit breaker that is open should increase the reset timeout after it transits to open again")]
+        public void Should_Reset_Timeout_After_It_Transits_To_Open_Again()
+        {
+            var breaker = NonOneFactorCb();
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)).Wait()));
+            Assert.True(CheckLatch(breaker.OpenLatch));
+
+            var e1 = InterceptException<OpenCircuitException>(() => breaker.Instance.WithSyncCircuitBreaker(SayTest));
+            var shortRemainingDuration = e1.RemainingDuration;
+
+            Thread.Sleep(1000);
+            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+
+            // transit to open again
+            Assert.True(InterceptExceptionType<TestException>(() => breaker.Instance.WithCircuitBreaker(() => Task.Run(ThrowException)).Wait()));
+            Assert.True(CheckLatch(breaker.OpenLatch));
+
+            var e2 = InterceptException<OpenCircuitException>(() => breaker.Instance.WithSyncCircuitBreaker(SayTest));
+            var longRemainingDuration = e2.RemainingDuration;
+
+            Assert.True(shortRemainingDuration < longRemainingDuration);
+        }
     }
 
     public class CircuitBreakerSpecBase : AkkaSpec
@@ -368,14 +392,25 @@ namespace Akka.Tests.Pattern
             return "Test";
         }
 
-        public void ThrowException( )
-        {
-            throw new TestException( "Test Exception" );
-        }
+        [DebuggerStepThrough]
+        public void ThrowException() => throw new TestException("Test Exception");
 
-        public string SayTest( )
+        public string SayTest( ) => "Test";
+        
+        protected T InterceptException<T>(Action actionThatThrows) where T : Exception
         {
-            return "Test";
+            return Assert.Throws<T>(() =>
+            {
+                try
+                {
+                    actionThatThrows();
+                }
+                catch (AggregateException ex)
+                {
+                    foreach (var e in ex.Flatten().InnerExceptions.Where(e => e is T).Select(e => e))
+                        throw e;                     
+                }
+            });
         }
 
         [SuppressMessage( "Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter" )]
@@ -434,27 +469,32 @@ namespace Akka.Tests.Pattern
 
         public TestBreaker ShortCallTimeoutCb( )
         {
-            return new TestBreaker( new CircuitBreaker( 1, TimeSpan.FromMilliseconds( 50 ), TimeSpan.FromMilliseconds( 500 ) ) );
+            return new TestBreaker( new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds( 50 ), TimeSpan.FromMilliseconds( 500 ) ) );
         }
 
         public TestBreaker ShortResetTimeoutCb( )
         {
-            return new TestBreaker( new CircuitBreaker( 1, TimeSpan.FromMilliseconds( 1000 ), TimeSpan.FromMilliseconds( 50 ) ) );
+            return new TestBreaker( new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds( 1000 ), TimeSpan.FromMilliseconds( 50 ) ) );
         }
 
         public TestBreaker LongCallTimeoutCb( )
         {
-            return new TestBreaker( new CircuitBreaker( 1, TimeSpan.FromMilliseconds( 5000 ), TimeSpan.FromMilliseconds( 500 ) ) );
+            return new TestBreaker( new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds( 5000 ), TimeSpan.FromMilliseconds( 500 ) ) );
         }
 
         public TestBreaker LongResetTimeoutCb( )
         {
-            return new TestBreaker( new CircuitBreaker( 1, TimeSpan.FromMilliseconds( 100 ), TimeSpan.FromMilliseconds( 5000 ) ) );
+            return new TestBreaker( new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds( 100 ), TimeSpan.FromMilliseconds( 5000 ) ) );
         }
 
         public TestBreaker MultiFailureCb( )
         {
-            return new TestBreaker( new CircuitBreaker( 5, TimeSpan.FromMilliseconds( 200 ), TimeSpan.FromMilliseconds( 500 ) ) );
+            return new TestBreaker( new CircuitBreaker(Sys.Scheduler, 5, TimeSpan.FromMilliseconds( 200 ), TimeSpan.FromMilliseconds( 500 ) ) );
+        }
+        
+        public TestBreaker NonOneFactorCb()
+        {
+            return new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds(2000), TimeSpan.FromMilliseconds(1000), TimeSpan.FromDays(1), 5));
         }
     }
 
