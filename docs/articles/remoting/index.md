@@ -97,7 +97,7 @@ akka {
 See [Akka Remote Reference Config File](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote/Configuration/Remote.conf) for additional information on HOCON settings available in akka remote.
 
 ## Addresses, Transports, Endpoints, and Associations
-In the above section we mentioned that you have to bind a *transport* to an IP address and port, we did in that in HOCON inside the `dot-netty.tcp` section. Why did we have to do any of that?
+In the above section we mentioned that you have to bind a *transport* to an IP address and port, we did that in HOCON inside the `dot-netty.tcp` section. Why did we have to do any of that?
 
 Well, let's take a step back to define some key terms you'll need to be familiar with in order to use Akka.Remote:
 
