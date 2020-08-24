@@ -50,7 +50,7 @@ namespace Akka.Persistence.Query.Sql
 
         protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
-        protected abstract void ReceiveRecoverySuccess(long highestSequenceNr);
+        protected abstract void ReceiveRecoverySuccess(long highestOrderingNr);
 
         protected override bool Receive(object message)
         {
@@ -101,6 +101,10 @@ namespace Akka.Persistence.Query.Sql
             switch (message)
             {
                 case ReplayedEvent replayed:
+                    // ReplayEvent might overshoot the current ToOffset target
+                    if (replayed.Offset > ToOffset)
+                        return true;
+
                     Buffer.Add(new EventEnvelope(
                         offset: new Sequence(replayed.Offset),
                         persistenceId: replayed.Persistent.PersistenceId,
@@ -165,7 +169,7 @@ namespace Akka.Persistence.Query.Sql
                 OnCompleteThenStop();
         }
 
-        protected override void ReceiveRecoverySuccess(long highestSequenceNr)
+        protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
             if (Buffer.IsEmpty && CurrentOffset > ToOffset)
@@ -198,12 +202,12 @@ namespace Akka.Persistence.Query.Sql
                 Self.Tell(AllEventsPublisher.Continue.Instance);
         }
 
-        protected override void ReceiveRecoverySuccess(long highestSequenceNr)
+        protected override void ReceiveRecoverySuccess(long highestOrderingNr)
         {
             Buffer.DeliverBuffer(TotalDemand);
 
-            if (highestSequenceNr < ToOffset)
-                _toOffset = highestSequenceNr;
+            if (highestOrderingNr < ToOffset)
+                _toOffset = highestOrderingNr;
 
             if (Buffer.IsEmpty && CurrentOffset >= ToOffset)
                 OnCompleteThenStop();
