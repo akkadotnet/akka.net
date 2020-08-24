@@ -559,6 +559,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
+                Context.System.Scheduler,
                 maxFailures: Setup.CircuitBreakerSettings.MaxFailures,
                 callTimeout: Setup.CircuitBreakerSettings.CallTimeout,
                 resetTimeout: Setup.CircuitBreakerSettings.ResetTimeout);
