@@ -406,7 +406,7 @@ namespace Akka.Persistence.Journal
                                 ? TryUnwrapException(t.Exception)
                                 : new OperationCanceledException(
                                     "WriteMessagesAsync canceled, possibly due to timing out."));
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception), counter, message.PersistentActor, self));
+                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception, atomicWriteCount), counter, message.PersistentActor, self));
                         resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
                     }
                 }, _continuationOptions);
