@@ -599,7 +599,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        public async Task<long> SelectAllEventsAsync(
+        public virtual async Task<long> SelectAllEventsAsync(
             DbConnection connection,
             CancellationToken cancellationToken, 
             long fromOffset,
