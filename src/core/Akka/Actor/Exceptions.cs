@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 
 namespace Akka.Actor
 {
@@ -31,18 +30,6 @@ namespace Akka.Actor
             : base(message, cause)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AkkaException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected AkkaException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
 
         /// <summary>
         /// The exception that is the cause of the current exception.
@@ -73,18 +60,6 @@ namespace Akka.Actor
             : base(message, innerException)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="InvalidActorNameException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected InvalidActorNameException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -100,23 +75,11 @@ namespace Akka.Actor
             : base(message)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AskTimeoutException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected AskTimeoutException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
     /// This exception is thrown when an actor is interrupted in the midst of processing messages.
-    /// 
+    ///
     /// This is an exception typically thrown when the underlying dispatcher's threads are aborted.
     /// </summary>
     public class ActorInterruptedException : AkkaException
@@ -173,26 +136,6 @@ namespace Akka.Actor
             Actor = actor;
         }
 
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ActorInitializationException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected ActorInitializationException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-            Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
-        }
-
-        public override void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            if (info == null) throw new ArgumentNullException(nameof(info));
-            info.AddValue("Actor", Actor);
-            base.GetObjectData(info, context);
-        }
-#endif
-
         /// <summary>
         /// Retrieves the actor whose initialization logic failed.
         /// </summary>
@@ -242,18 +185,6 @@ namespace Akka.Actor
             : base(message, cause)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="LoggerInitializationException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected LoggerInitializationException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -274,18 +205,6 @@ namespace Akka.Actor
             : base(message)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ActorKilledException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected ActorKilledException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -302,18 +221,6 @@ namespace Akka.Actor
             : base(message)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IllegalActorStateException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected IllegalActorStateException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -329,18 +236,6 @@ namespace Akka.Actor
             : base(message)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IllegalActorNameException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected IllegalActorNameException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -360,18 +255,6 @@ namespace Akka.Actor
         {
             _deadActor = deadActor;
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DeathPactException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected DeathPactException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
 
         /// <summary>
         /// Retrieves the actor that has been terminated.
@@ -411,18 +294,6 @@ namespace Akka.Actor
             exception = cause;
             this.optionalMessage = optionalMessage;
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PreRestartException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected PreRestartException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -445,18 +316,6 @@ namespace Akka.Actor
             _originalCause = originalCause;
         }
 
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PostRestartException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected PostRestartException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
-
         ///<summary>
         /// Retrieves the exception which caused the restart in the first place.
         /// </summary>
@@ -475,18 +334,6 @@ namespace Akka.Actor
             : base()
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ActorNotFoundException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected ActorNotFoundException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
 
         /// <summary>
         /// <see cref="ActorNotFoundException"/> that takes a descriptive <paramref name="message"/> and optional <paramref name="innerException"/>.
@@ -521,18 +368,6 @@ namespace Akka.Actor
             : base(message)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="InvalidMessageException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected InvalidMessageException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 }
 

@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.ExceptionServices;
-using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.DistributedData
@@ -66,7 +65,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to retrieve a data value for the
     /// given `key`. The `Replicator` will reply with one of the <see cref="IGetResponse"/> messages.
-    /// 
+    ///
     /// The optional `request` context is included in the reply messages. This is a convenient
     /// way to pass contextual information (e.g. original sender) without having to use `ask`
     /// or maintain local correlation data structures.
@@ -115,7 +114,7 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
-    /// Common response interface on <see cref="Get"/> request. It can take one of 
+    /// Common response interface on <see cref="Get"/> request. It can take one of
     /// the tree possible values:
     /// <ul>
     /// <li><see cref="GetSuccess"/> with the result of the request.</li>
@@ -153,7 +152,7 @@ namespace Akka.DistributedData
         bool IsFailure { get; }
 
         /// <summary>
-        /// Tries to return a result of the request, given a replicated collection 
+        /// Tries to return a result of the request, given a replicated collection
         /// <paramref name="key"/> used when sending a <see cref="Replicator.Get"/> request.
         /// </summary>
         /// <typeparam name="T">Replicated data.</typeparam>
@@ -320,13 +319,13 @@ namespace Akka.DistributedData
     /// Register a subscriber that will be notified with a <see cref="Changed"/> message
     /// when the value of the given <see cref="Key"/> is changed. Current value is also
     /// sent as a <see cref="Changed"/> message to a new subscriber.
-    /// 
+    ///
     /// Subscribers will be notified periodically with the configured `notify-subscribers-interval`,
     /// and it is also possible to send an explicit `FlushChanges` message to
     /// the <see cref="Replicator"/> to notify the subscribers immediately.
-    /// 
+    ///
     /// The subscriber will automatically be unregistered if it is terminated.
-    /// 
+    ///
     /// If the key is deleted the subscriber is notified with a <see cref="DataDeleted"/> message.
     /// </summary>
     [Serializable]
@@ -465,14 +464,14 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// Send this message to the local <see cref="Replicator"/> to update a data value for the
-    /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the 
+    /// given <see cref="Key"/>. The <see cref="Replicator"/> will reply with one of the
     /// <see cref="IUpdateResponse"/> messages.
-    /// 
+    ///
     /// The current data value for the <see cref="Key"/> is passed as parameter to the <see cref="Modify"/> function.
     /// It is <see langword="null"/> if there is no value for the <see cref="Key"/>, and otherwise <see cref="Request"/>. The function
     /// is supposed to return the new value of the data, which will then be replicated according to
     /// the given <see cref="IWriteConsistency"/>.
-    /// 
+    ///
     /// The <see cref="Modify"/> function is called by the `<see cref="Replicator"/>` actor and must therefore be a pure
     /// function that only uses the data parameter and stable fields from enclosing scope. It must
     /// for example not access `sender()` reference of an enclosing actor.
@@ -498,11 +497,11 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Modify value of local <see cref="Replicator"/> and replicate with given <see cref="IWriteConsistency"/>.
-        /// 
+        ///
         /// The current value for the <see cref="Key"/> is passed to the <see cref="Modify"/> function.
         /// If there is no current data value for the <see cref="Key"/> the <paramref name="initial"/> value will be
         /// passed to the <see cref="Modify"/> function.
-        /// 
+        ///
         /// The optional <paramref name="request"/> context is included in the reply messages. This is a convenient
         /// way to pass contextual information (e.g. original sender) without having to use `ask`
         /// or local correlation data structures.
@@ -604,7 +603,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// The direct replication of the <see cref="Update"/> could not be fulfill according to
     /// the given <see cref="IWriteConsistency"/> level and <see cref="IWriteConsistency.Timeout"/>.
-    /// 
+    ///
     /// The <see cref="Update"/> was still performed locally and possibly replicated to some nodes.
     /// It will eventually be disseminated to other replicas, unless the local replica
     /// crashes before it has been able to communicate with other replicas.
@@ -689,7 +688,7 @@ namespace Akka.DistributedData
     /// The local store or direct replication of the <see cref="Update"/> could not be fulfill according to
     /// the given <see cref="IWriteConsistency"/> due to durable store errors. This is
     /// only used for entries that have been configured to be durable.
-    /// 
+    ///
     /// The <see cref="Update"/> was still performed in memory locally and possibly replicated to some nodes,
     /// but it might not have been written to durable storage.
     /// It will eventually be disseminated to other replicas, unless the local replica

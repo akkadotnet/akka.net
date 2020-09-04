@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 
 namespace Akka.Streams
 {
@@ -109,16 +108,5 @@ namespace Akka.Streams
         public BufferOverflowException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BufferOverflowException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected BufferOverflowException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 }

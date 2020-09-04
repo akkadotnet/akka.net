@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
@@ -35,17 +34,6 @@ namespace Akka.Streams.Implementation
         public SubscriptionTimeoutException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SubscriptionTimeoutException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected SubscriptionTimeoutException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -90,7 +78,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Subscription timeout which does not start any scheduled events and always returns `true`.
     /// This specialized implementation is to be used for "noop" timeout mode.
     /// </summary>
@@ -141,7 +129,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// Provides support methods to create Publishers and Subscribers which time-out gracefully,
     /// and are cancelled subscribing an <see cref="CancellingSubscriber{T}"/> to the publisher, or by calling onError on the timed-out subscriber.
-    /// 
+    ///
     /// See "akka.stream.materializer.subscription-timeout" for configuration options.
     /// </summary>
     internal interface IStreamSubscriptionTimeoutSupport

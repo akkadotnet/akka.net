@@ -6,13 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-#if CORECLR
 namespace Akka.MultiNodeTestRunner.Shared.Extensions
 {
     internal static class TypeExtension
@@ -23,4 +18,3 @@ namespace Akka.MultiNodeTestRunner.Shared.Extensions
         }
     }
 }
-#endif

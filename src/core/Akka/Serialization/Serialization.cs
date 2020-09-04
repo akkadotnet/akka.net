@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
@@ -24,7 +23,7 @@ namespace Akka.Serialization
 {
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Serialization information needed for serializing local actor refs.
     /// </summary>
     [InternalApi]
@@ -220,7 +219,7 @@ namespace Akka.Serialization
                 AddSerializationMap(messageType, serializer);
             }
 
-            
+
         }
 
         private Information SerializationInfo => System.Provider.SerializationInformation;

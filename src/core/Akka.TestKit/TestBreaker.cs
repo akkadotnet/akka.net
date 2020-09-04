@@ -5,11 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Pattern;
 
 namespace Akka.TestKit

@@ -6,14 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 
 namespace Akka.Persistence.Snapshot
 {
     /// <summary>
     /// Used as a default snapshot-store in case no other store was configured.
-    /// 
+    ///
     /// If a <see cref="PersistentActor"/> calls the <see cref="Eventsourced.SaveSnapshot(object)"/> method,
     /// and at the same time does not configure a specific snapshot-store to be used *and* no default snapshot-store
     /// is available, then the <see cref="NoSnapshotStore"/> will be used to signal a snapshot store failure.
@@ -48,17 +47,6 @@ namespace Akka.Persistence.Snapshot
             public NoSnapshotStoreException(string message, Exception innerException) : base(message, innerException)
             {
             }
-
-#if SERIALIZATION
-            /// <summary>
-            /// Initializes a new instance of the <see cref="NoSnapshotStoreException"/> class.
-            /// </summary>
-            /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-            /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-            protected NoSnapshotStoreException(SerializationInfo info, StreamingContext context) : base(info, context)
-            {
-            }
-#endif
         }
 
         /// <summary>

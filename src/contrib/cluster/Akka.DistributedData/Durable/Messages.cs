@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
 
@@ -48,10 +47,10 @@ namespace Akka.DistributedData.Durable
 
     /// <summary>
     /// Request to load all entries.
-    /// 
+    ///
     /// It must reply with 0 or more `LoadData` messages
     /// followed by one `LoadAllCompleted` message to the `sender` (the `Replicator`).
-    /// 
+    ///
     /// If the `LoadAll` fails it can throw `LoadFailedException` and the `Replicator` supervisor
     /// will stop itself and the durable store.
     /// </summary>
@@ -90,12 +89,6 @@ namespace Akka.DistributedData.Durable
         public LoadFailedException(string message, Exception cause) : base(message, cause)
         {
         }
-
-#if SERIALIZATION
-        public LoadFailedException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 
     public sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>

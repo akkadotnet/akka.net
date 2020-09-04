@@ -11,12 +11,9 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using System.Runtime.Serialization;
-using Akka.Event;
 using Akka.Persistence.Journal;
 using Akka.Persistence;
 using System.Threading;
-using Akka.Util.Internal;
 using Akka.Actor.Internal;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -42,18 +39,6 @@ namespace Akka.Cluster.Sharding.Tests
             : base(message)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -147,8 +132,6 @@ namespace Akka.Cluster.Sharding.Tests
             else Stash.Stash();
             return true;
         }
-
-
 
         /// <summary>
         /// TBD
@@ -396,6 +379,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             return (T)await AskEx(self, messageFactory, provider, timeout, cancellationToken);
         }
+
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
             if (InternalCurrentActorCellKeeper.Current != null)

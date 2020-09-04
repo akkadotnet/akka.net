@@ -9,13 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Coordination;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Remote;
 using Akka.Util.Internal;
 using static Akka.Cluster.ClusterEvent;
@@ -523,17 +521,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         public ClusterSingletonManagerIsStuckException(string message) : base(message) { }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuckException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        public ClusterSingletonManagerIsStuckException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -741,7 +728,7 @@ namespace Akka.Cluster.Tools.Singleton
             if(_removed.TryGetValue(node, out _))
             {
                 _removed = _removed.SetItem(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
-            } 
+            }
             else
             {
                 _removed = _removed.Add(node, Deadline.Now + TimeSpan.FromMinutes(15.0));

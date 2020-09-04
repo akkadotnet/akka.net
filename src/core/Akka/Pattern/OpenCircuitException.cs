@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.Pattern
@@ -17,14 +16,14 @@ namespace Akka.Pattern
     public class OpenCircuitException : AkkaException
     {
         public TimeSpan RemainingDuration { get; }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
-        public OpenCircuitException() 
-            : base("Circuit Breaker is open; calls are failing fast") 
+        public OpenCircuitException()
+            : base("Circuit Breaker is open; calls are failing fast")
         { }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
@@ -52,7 +51,7 @@ namespace Akka.Pattern
         public OpenCircuitException(string message, Exception cause)
             : this(message, cause, TimeSpan.Zero)
         { }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
@@ -64,7 +63,7 @@ namespace Akka.Pattern
         {
             RemainingDuration = remainingDuration;
         }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
         /// </summary>
@@ -81,17 +80,5 @@ namespace Akka.Pattern
         public OpenCircuitException(Exception cause, TimeSpan remainingDuration)
             : this("Circuit Breaker is open; calls are failing fast", cause, remainingDuration)
         { }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="OpenCircuitException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected OpenCircuitException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 }

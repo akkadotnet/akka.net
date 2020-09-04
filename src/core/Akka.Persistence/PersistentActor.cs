@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
@@ -34,13 +33,13 @@ namespace Akka.Persistence
 
     /// <summary>
     /// Recovery mode configuration object to be return in <see cref="Eventsourced.Recovery"/>
-    /// 
+    ///
     /// By default recovers from latest snapshot replays through to the last available event (last sequenceNr).
-    /// 
+    ///
     /// Recovery will start from a snapshot if the persistent actor has previously saved one or more snapshots
     /// and at least one of these snapshots matches the specified <see cref="FromSnapshot"/> criteria.
     /// Otherwise, recovery will start from scratch by replaying all stored events.
-    /// 
+    ///
     /// If recovery starts from a snapshot, the <see cref="PersistentActor"/> is offered that snapshot with a
     /// <see cref="SnapshotOffer"/> message, followed by replayed messages, if any, that are younger than the snapshot, up to the
     /// specified upper sequence number bound (<see cref="ToSequenceNr"/>).
@@ -55,7 +54,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Convenience method for skipping recovery in <see cref="PersistentActor"/>.
-        /// 
+        ///
         /// It will still retrieve previously highest sequence number so that new events are persisted with
         /// higher sequence numbers rather than starting from 1 and assuming that there are no
         /// previous event with that sequence number.
@@ -135,17 +134,6 @@ namespace Akka.Persistence
         public RecoveryTimedOutException(string message, Exception cause = null) : base(message, cause)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RecoveryTimedOutException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        public RecoveryTimedOutException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -513,7 +501,7 @@ namespace Akka.Persistence
         #endregion
 
         #region Command helper methods
-        
+
         private void EnsureMayConfigureCommandHandlers()
         {
             if (_matchCommandBuilders.Count <= 0)

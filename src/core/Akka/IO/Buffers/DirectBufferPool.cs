@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -24,7 +23,7 @@ namespace Akka.IO.Buffers
     }
 
     /// <summary>
-    /// An interface used to acquire/release recyclable chunks of 
+    /// An interface used to acquire/release recyclable chunks of
     /// bytes to be reused without need to triggering GC.
     /// </summary>
     public interface IBufferPool
@@ -39,8 +38,8 @@ namespace Akka.IO.Buffers
 
         /// <summary>
         /// Rents a sequence of byte buffers representing (potentially non-continuous) range of memory
-        /// that is big enough to fit the <paramref name="minimumSize"/> requested. Once rent, byte 
-        /// buffers are expected to be released using <see cref="Release(System.ArraySegment{byte})"/> 
+        /// that is big enough to fit the <paramref name="minimumSize"/> requested. Once rent, byte
+        /// buffers are expected to be released using <see cref="Release(System.ArraySegment{byte})"/>
         /// method.
         /// </summary>
         /// <param name="minimumSize">
@@ -65,13 +64,13 @@ namespace Akka.IO.Buffers
     /// <summary>
     /// Direct buffer pool is used by <see cref="TcpExt"/>, <see cref="UdpExt"/>, <see cref="UdpConnectedExt"/>
     /// for receving reusable buffers for receving data without triggering too much GC pauses.
-    /// 
+    ///
     /// For performance bytes are allocated in large blocks called segments. Then each segment is cut into
     /// pieces (byte buffers). Those buffers are rent to the callers, and need to be released later. If buffer
-    /// pool gets saturated, a new segments it created (and therefore a new collection of byte buffers to be 
-    /// used). Once allocated segments are never released until their owner (ActorSystem extension) is not 
+    /// pool gets saturated, a new segments it created (and therefore a new collection of byte buffers to be
+    /// used). Once allocated segments are never released until their owner (ActorSystem extension) is not
     /// disposed - which usually happens, when actor system is terminated.
-    /// 
+    ///
     /// In order to avoid infinite growing of memory, a maximum number of segments can be configured (see:
     /// `akka.io.[extension-type].direct-buffer-pool.buffer-pool-limit`. Once it will be fully saturated,
     /// an <see cref="BufferPoolAllocationException"/> will be thrown.
@@ -175,7 +174,7 @@ namespace Akka.IO.Buffers
 
                 throw new BufferPoolAllocationException($"Couldn't allocate enough byte buffer to fill the tolal requested size of {minimumSize} bytes");
             }
-            catch 
+            catch
             {
                 for (int i = 0; i < received; i++) Release(result[i]);
                 throw;

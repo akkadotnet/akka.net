@@ -6,10 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -17,11 +13,7 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
-using DotNetty.Common.Concurrency;
-using FluentAssertions;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton

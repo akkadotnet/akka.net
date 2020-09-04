@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Akka.Dispatch;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
@@ -26,7 +25,7 @@ namespace Akka.Actor
     /// <code>
     ///   private Props props = Props.Empty();
     ///   private Props props = Props.Create(() => new MyActor(arg1, arg2));
-    /// 
+    ///
     ///   private Props otherProps = props.WithDispatcher("dispatcher-id");
     ///   private Props otherProps = props.WithDeploy(deployment info);
     /// </code>
@@ -162,7 +161,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// A pre-configured <see cref="Akka.Actor.Props"/> that doesn't create actors.
-        /// 
+        ///
         /// <note>
         /// The value of this field is null.
         /// </note>
@@ -193,7 +192,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Props" /> class.
-        /// 
+        ///
         /// <note>
         /// <see cref="Props"/> configured in this way uses the <see cref="Akka.Actor.Deploy"/> deployer.
         /// </note>
@@ -453,7 +452,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Props" /> with a given <paramref name="mailbox" />.
-        /// 
+        ///
         /// <note>
         /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
         /// </note>
@@ -469,7 +468,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Props" /> with a given <paramref name="dispatcher" />.
-        /// 
+        ///
         /// <note>
         /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
         /// </note>
@@ -485,7 +484,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// Creates a new <see cref="Akka.Actor.Props" /> with a given router.
-        /// 
+        ///
         /// <note>
         /// This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
         /// </note>
@@ -533,13 +532,13 @@ namespace Akka.Actor
             //{
             //    copy.Deploy = deploy;
             //}
-            
+
             return copy;
         }
 
         ///  <summary>
         ///  Creates a new <see cref="Akka.Actor.Props" /> with a given supervisor strategy.
-        /// 
+        ///
         ///  <note>
         ///  This method is immutable and returns a new instance of <see cref="Akka.Actor.Props" />.
         ///  </note>
@@ -557,7 +556,7 @@ namespace Akka.Actor
         //cache the creator
         /// <summary>
         /// Creates a new actor using the configured actor producer.
-        /// 
+        ///
         /// <remarks>
         /// This method is only useful when called during actor creation by the ActorSystem.
         /// </remarks>
@@ -729,7 +728,7 @@ namespace Akka.Actor
     /// <summary>
     /// This class represents a specialized <see cref="Akka.Actor.Props"/> that uses dynamic invocation
     /// to create new actor instances, rather than a traditional <see cref="System.Activator"/>.
-    /// 
+    ///
     /// <note>
     /// This is intended to be used in conjunction with Dependency Injection.
     /// </note>
@@ -773,12 +772,10 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             Props initialCopy = base.Copy();
-#if CLONEABLE
-            var invokerCopy = (Func<TActor>)invoker.Clone();
-#else
+
             // TODO: CORECLR FIX IT
             var invokerCopy = (Func<TActor>)invoker;
-#endif
+
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 
@@ -811,7 +808,7 @@ namespace Akka.Actor
         /// <summary>
         /// This method is used by <see cref="Akka.Actor.Props"/> to signal the producer that it can
         /// release it's reference.
-        /// 
+        ///
         /// <remarks>
         /// To learn more about using Dependency Injection in .NET, see <see href="http://www.amazon.com/Dependency-Injection-NET-Mark-Seemann/dp/1935182501">HERE</see>.
         /// </remarks>

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Google.Protobuf;
-using System.Runtime.Serialization;
 using Akka.Event;
 
 namespace Akka.Remote.Transport
@@ -54,7 +53,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Asynchronously opens a logical duplex link between two <see cref="Transport"/> entities over a network. It could be backed
         /// with a real transport layer connection (TCP), socketless connections provided over datagram protocols (UDP), and more.
-        /// 
+        ///
         /// This call returns a Task of an <see cref="AssociationHandle"/>. A faulted Task indicates that the association attempt was
         /// unsuccessful. If the exception is <see cref="InvalidAssociationException"/> then the association request was invalid and it's
         /// impossible to recover.
@@ -66,7 +65,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Shuts down the transport layer and releases all of the corresponding resources. Shutdown is asynchronous and is signaled
         /// by the result of the returned Task.
-        /// 
+        ///
         /// The transport SHOULD try flushing pending writes before becoming completely closed.
         /// </summary>
         /// <returns>Task signaling the completion of the shutdown.</returns>
@@ -98,18 +97,6 @@ namespace Akka.Remote.Transport
             : base(message, cause)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="InvalidAssociationException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected InvalidAssociationException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -326,7 +313,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// A Service Provider Interface (SPI) layer for abstracting over logical links (associations) created by a <see cref="Transport"/>.
     /// Handles are responsible for providing an API for sending and receiving from the underlying channel.
-    /// 
+    ///
     /// To register a listener for processing incoming payload data, the listener must be registered by completing the Task returned by
     /// <see cref="AssociationHandle.ReadHandlerSource"/>. Incoming data is not processed until this registration takes place.
     /// </summary>
@@ -364,11 +351,11 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// Asynchronously sends the specified <paramref name="payload"/> to the remote endpoint. This method's implementation MUST be thread-safe
         /// as it might be called from different threads. This method MUST NOT block.
-        /// 
+        ///
         /// Writes guarantee ordering of messages, but not their reception. The call to write returns with a boolean indicating if the
-        /// channel was ready for writes or not. A return value of false indicates that the channel is not yet ready for deliver 
+        /// channel was ready for writes or not. A return value of false indicates that the channel is not yet ready for deliver
         /// (e.g.: the write buffer is full)and the sender  needs to wait until the channel becomes ready again.
-        /// 
+        ///
         /// Returning false also means that the current write was dropped (this MUST be guaranteed to ensure duplication-free delivery).
         /// </summary>
         /// <param name="payload">The payload to be delivered to the remote endpoint.</param>
@@ -381,7 +368,7 @@ namespace Akka.Remote.Transport
         /// Closes the underlying transport link, if needed. Some transports might not need an explicit teardown (UDP) and some
         /// transports may not support it. Remote endpoint of the channel or connection MAY be notified, but this is not
         /// guaranteed.
-        /// 
+        ///
         /// The transport that provides the handle MUST guarantee that <see cref="Disassociate()"/> could be called arbitrarily many times.
         /// </summary>
         [Obsolete("Use the method that states reasons to make sure disassociation reasons are logged.")]
@@ -391,7 +378,7 @@ namespace Akka.Remote.Transport
         /// Closes the underlying transport link, if needed. Some transports might not need an explicit teardown (UDP) and some
         /// transports may not support it. Remote endpoint of the channel or connection MAY be notified, but this is not
         /// guaranteed.
-        /// 
+        ///
         /// The transport that provides the handle MUST guarantee that <see cref="Disassociate()"/> could be called arbitrarily many times.
         /// </summary>
         public void Disassociate(string reason, ILoggingAdapter log)

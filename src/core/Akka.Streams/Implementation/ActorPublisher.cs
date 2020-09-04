@@ -9,8 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
@@ -113,15 +111,6 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         public NormalShutdownException(string message) : base(message) { }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="NormalShutdownException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected NormalShutdownException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-#endif
     }
 
     /// <summary>
@@ -158,7 +147,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// When you instantiate this class, or its subclasses, you MUST send an ExposedPublisher message to the wrapped
     /// ActorRef! If you don't need to subclass, prefer the apply() method on the companion object which takes care of this.
     /// </summary>

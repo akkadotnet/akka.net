@@ -6,10 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Globalization;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -18,7 +15,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
-using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Cluster.Sharding.ShardRegion;
@@ -27,7 +23,6 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingLeaseSpec : AkkaSpec
     {
-
         public static Config GetConfig()
         {
             return ConfigurationFactory.ParseString(@"
@@ -121,7 +116,6 @@ namespace Akka.Cluster.Sharding.Tests
 
             region = ClusterSharding.Get(Sys).ShardRegion(typeName);
         }
-
 
         private TestLease LeaseForShard(int shardId)
         {

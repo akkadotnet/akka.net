@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Serialization;
@@ -224,17 +223,6 @@ namespace Akka.Persistence
         public MaxUnconfirmedMessagesExceededException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MaxUnconfirmedMessagesExceededException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
-        protected MaxUnconfirmedMessagesExceededException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 
     #endregion
@@ -335,7 +323,7 @@ namespace Akka.Persistence
 
         /// <summary>
         /// Interval between redelivery attempts.
-        /// 
+        ///
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redeliver-interval'
         /// configuration key.
         /// </summary>
@@ -346,7 +334,7 @@ namespace Akka.Persistence
         /// (burst frequency is half of the redelivery interval).
         /// If there's a lot of unconfirmed messages (e.g. if the destination is not available for a long time),
         /// this helps prevent an overwhelming amount of messages to be sent at once.
-        /// 
+        ///
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.redelivery-burst-limit'
         /// configuration key.
         /// </summary>
@@ -355,7 +343,7 @@ namespace Akka.Persistence
         /// <summary>
         /// After this number of delivery attempts a <see cref="UnconfirmedWarning" /> message will be sent to
         /// <see cref="ActorBase.Self" />. The count is reset after restart.
-        /// 
+        ///
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.warn-after-number-of-unconfirmed-attempts'
         /// configuration key.
         /// </summary>
@@ -365,7 +353,7 @@ namespace Akka.Persistence
         /// Maximum number of unconfirmed messages, that this actor is allowed to hold in the memory.
         /// if this number is exceeded, <see cref="AtLeastOnceDeliverySemantic.Deliver" /> will not accept more
         /// messages and it will throw <see cref="MaxUnconfirmedMessagesExceededException" />.
-        /// 
+        ///
         /// The default value can be configure with the 'akka.persistence.at-least-once-delivery.max-unconfirmed-messages'
         /// configuration key.
         /// </summary>
@@ -473,7 +461,7 @@ namespace Akka.Persistence
         /// Full state of the <see cref="AtLeastOnceDeliverySemantic"/>. It can be saved with
         /// <see cref="Eventsourced.SaveSnapshot" />. During recovery the snapshot received in
         /// <see cref="SnapshotOffer"/> should be set with <see cref="SetDeliverySnapshot"/>.
-        /// 
+        ///
         /// The <see cref="AtLeastOnceDeliverySnapshot"/> contains the full delivery state,
         /// including unconfirmed messages. If you need a custom snapshot for other parts of the
         /// actor state you must also include the <see cref="AtLeastOnceDeliverySnapshot"/>.

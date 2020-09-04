@@ -8,8 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
@@ -436,7 +434,7 @@ namespace Akka.Cluster.Sharding.Serialization
             var p = Proto.Msg.ShardRegionStats.Parser.ParseFrom(b);
             return new ShardRegionStats(p.Stats.ToImmutableDictionary());
         }
-        
+
         // GetClusterShardingStats
         private static Proto.Msg.GetClusterShardingStats GetClusterShardingStatsToProto(GetClusterShardingStats stats)
         {
@@ -450,7 +448,7 @@ namespace Akka.Cluster.Sharding.Serialization
             var p = Proto.Msg.GetClusterShardingStats.Parser.ParseFrom(b);
             return new GetClusterShardingStats(p.Timeout.ToTimeSpan());
         }
-        
+
         // ClusterShardingStats
         private static Proto.Msg.ClusterShardingStats ClusterShardingStatsToProto(ClusterShardingStats stats)
         {
@@ -473,7 +471,7 @@ namespace Akka.Cluster.Sharding.Serialization
             }
             return new ClusterShardingStats(dict.ToImmutableDictionary());
         }
-        
+
         private static AddressData AddressToProto(Address address)
         {
             var message = new AddressData();
@@ -483,7 +481,7 @@ namespace Akka.Cluster.Sharding.Serialization
             message.Protocol = address.Protocol;
             return message;
         }
-        
+
         private static Address AddressFrom(AddressData addressProto)
         {
             return new Address(

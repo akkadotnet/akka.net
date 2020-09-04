@@ -13,7 +13,6 @@ using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
-using System.Runtime.Serialization;
 
 namespace Akka.Remote.Transport
 {
@@ -47,18 +46,6 @@ namespace Akka.Remote.Transport
         {
             Msg = msg;
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FailureInjectorException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        private FailureInjectorException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
 
         /// <summary>
         /// Retrieves the message of the simulated failure.
@@ -240,7 +227,7 @@ namespace Akka.Remote.Transport
                 _allMode = all.Mode;
                 return Task.FromResult(true);
             }
-            
+
             if (message is One)
             {
                 var one = message as One;
@@ -369,7 +356,7 @@ namespace Akka.Remote.Transport
                 var drop = mode as Drop;
                 if (Rng.NextDouble() <= drop.OutboundDropP)
                 {
-                    if (_shouldDebugLog) 
+                    if (_shouldDebugLog)
                         _log.Debug("Dropping outbound [{0}] for [{1}] {2}", instance.GetType(), remoteAddress, debugMessage);
                     return true;
                 }

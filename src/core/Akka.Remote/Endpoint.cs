@@ -8,19 +8,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
-using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
-using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
@@ -190,18 +185,6 @@ namespace Akka.Remote
         /// <param name="message">The message that describes the error.</param>
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public EndpointException(string message, Exception cause = null) : base(message, cause) { }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EndpointException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected EndpointException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -1892,7 +1875,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-           
+
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;

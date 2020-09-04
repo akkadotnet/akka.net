@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
@@ -311,54 +310,5 @@ namespace Akka.Persistence.TCK.Journal
 
             Assertions.AssertEqual(_receiverProbe.ExpectMsg<RecoverySuccess>().HighestSequenceNr, 6L);
         }
-
-#if !CORECLR
-        /// <summary>
-        /// JSON serializer should fail on this
-        /// </summary>
-        private class NotSerializableEvent : ISerializable
-        {
-            public NotSerializableEvent(bool foo) { }
-
-            public void GetObjectData(SerializationInfo info, StreamingContext context)
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        [Fact]
-        public void Journal_optionally_may_reject_non_serializable_events()
-        {
-            if (!SupportsRejectingNonSerializableObjects) return;
-
-            var msgs = Enumerable.Range(6, 3).Select(i =>
-            {
-                var evt = i == 7 ? (object) new NotSerializableEvent(false) : "b-" + i;
-                return new AtomicWrite(new Persistent(evt, i, Pid, sender: ActorRefs.NoSender, writerGuid: WriterGuid));
-            }).ToArray();
-
-            var probe = CreateTestProbe();
-            Journal.Tell(new WriteMessages(msgs, probe.Ref, ActorInstanceId));
-            probe.ExpectMsg<WriteMessagesSuccessful>();
-
-            var pid = Pid;
-            var writerGuid = WriterGuid;
-            probe.ExpectMsg<WriteMessageSuccess>(m => m.Persistent.SequenceNr == 6L &&
-                                                      m.Persistent.PersistenceId.Equals(pid) &&
-                                                      m.Persistent.Sender == null &&
-                                                      m.Persistent.WriterGuid.Equals(writerGuid) &&
-                                                      m.Persistent.Payload.Equals("b-6"));
-            probe.ExpectMsg<WriteMessageRejected>(m => m.Persistent.SequenceNr == 7L &&
-                                                       m.Persistent.PersistenceId.Equals(pid) &&
-                                                       m.Persistent.Sender == null &&
-                                                       m.Persistent.WriterGuid.Equals(writerGuid) &&
-                                                       m.Persistent.Payload is NotSerializableEvent);
-            probe.ExpectMsg<WriteMessageSuccess>(m => m.Persistent.SequenceNr == 8L &&
-                                                      m.Persistent.PersistenceId.Equals(pid) &&
-                                                      m.Persistent.Sender == null &&
-                                                      m.Persistent.WriterGuid.Equals(writerGuid) &&
-                                                      m.Persistent.Payload.Equals("b-8"));
-        }
-#endif
     }
 }

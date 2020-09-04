@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.Remote
@@ -336,18 +335,6 @@ namespace Akka.Remote
             : base($"Resent buffer capacity of {c} has been reached.")
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ResendBufferCapacityReachedException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected ResendBufferCapacityReachedException(SerializationInfo info, StreamingContext context)
-            : base(info, context)
-        {
-        }
-#endif
     }
 
     /// <summary>
@@ -431,7 +418,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// Puts a new message in the buffer. 
+        /// Puts a new message in the buffer.
         /// </summary>
         /// <param name="msg">The message to be stored for possible future transmission.</param>
         /// <exception cref="ArgumentException">Thrown if an out-of-sequence message is attempted to be stored.</exception>

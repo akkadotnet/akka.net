@@ -11,7 +11,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -103,17 +102,6 @@ namespace Akka.Remote.Transport.DotNetty
         public DotNettyTransportException(string message, Exception cause = null) : base(message, cause)
         {
         }
-
-#if SERIALIZATION
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DotNettyTransportException"/> class.
-        /// </summary>
-        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
-        protected DotNettyTransportException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-#endif
     }
 
     internal abstract class DotNettyTransport : Transport
@@ -304,7 +292,7 @@ namespace Akka.Remote.Transport.DotNetty
             return endpoint;
         }
 
-        #region private methods 
+        #region private methods
 
         private void SetInitialChannelPipeline(IChannel channel)
         {
