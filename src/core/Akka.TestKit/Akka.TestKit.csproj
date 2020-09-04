@@ -27,10 +27,6 @@
     </Compile>
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);UNSAFE_THREADING</DefineConstants>
-  </PropertyGroup>
-
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
