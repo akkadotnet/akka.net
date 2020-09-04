@@ -100,12 +100,24 @@ namespace Akka.TestKit
 
         private static string GetCallerName()
         {
-            // TODO: FIX THIS FOR .NET CORE (see Git history)
-            return "AkkaSpec";
+#if CORECLR
+            // TODO: CORECLR FIX IT
+            var name = "AkkaSpec";
+#else
+            var systemNumber = Interlocked.Increment(ref _systemNumber);
+            var stackTrace = new StackTrace(0);
+            var name = stackTrace.GetFrames().
+                Select(f => f.GetMethod()).
+                Where(m => m.DeclaringType != null).
+                SkipWhile(m => m.DeclaringType.Name == "AkkaSpec").
+                Select(m => _nameReplaceRegex.Replace(m.DeclaringType.Name + "-" + systemNumber, "-")).
+                FirstOrDefault() ?? "test";
+#endif
+            return name;
         }
 
         public static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
-
+        
         protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
         {
             MessageEnvelope envelope;
@@ -115,7 +127,7 @@ namespace Akka.TestKit
                 Assertions.Fail(string.Format("expected message of type {0} but timed out after {1}", typeof(T), GetTimeoutOrDefault(timeout)));
             var message = envelope.Message;
             Assertions.AssertTrue(message != null, string.Format("expected {0} but got null message", hint));
-            //TODO: Check next line.
+            //TODO: Check next line. 
             Assertions.AssertTrue(function.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(message)), string.Format("expected {0} but got {1} instead", hint, message));
             return function.Invoke(message);
         }
@@ -146,7 +158,7 @@ namespace Akka.TestKit
             }
             throw new ThrowsException(typeof(Exception));
         }
-
+        
         protected async Task InterceptAsync(Func<Task> asyncActionThatThrows)
         {
             try

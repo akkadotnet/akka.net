@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -16,7 +17,9 @@ using Akka.Coordination;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
+using Akka.Util.Extensions;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,6 +40,8 @@ namespace Akka.Cluster.Sharding.Tests
                 return true;
             }
         }
+
+
 
         static ShardSpec()
         {
@@ -152,6 +157,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private string NextShardId() => $"{shardIds.GetAndIncrement()}";
 
+
         [Fact]
         public void Cluster_Shard_should_not_initialize_the_shard_until_the_lease_is_acquired()
         {
@@ -180,6 +186,7 @@ namespace Akka.Cluster.Sharding.Tests
             setup.Lease.SetNextAcquireResult(Task.FromResult(true));
             setup.Parent.ExpectMsg(new ShardInitialized(setup.ShardId));
         }
+
 
         [Fact]
         public void Cluster_Shard_should_shutdown_if_lease_is_lost()

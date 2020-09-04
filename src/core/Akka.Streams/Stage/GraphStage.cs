@@ -7,15 +7,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
+using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
@@ -408,13 +412,13 @@ namespace Akka.Streams.Stage
     ///  <para>* Possible mutable state, accessible from the <see cref="InHandler"/> and <see cref="OutHandler"/> callbacks, but not from anywhere
     ///    else (as such access would not be thread-safe)</para>
     ///  <para>* The lifecycle hooks <see cref="PreStart"/> and <see cref="PostStop"/></para>
-    ///  <para>* Methods for performing stream processing actions, like pulling or pushing elements</para>
+    ///  <para>* Methods for performing stream processing actions, like pulling or pushing elements</para> 
     /// The stage logic is completed once all its input and output ports have been closed. This can be changed by
     /// setting <see cref="SetKeepGoing"/> to true.
     /// <para />
     /// The <see cref="PostStop"/> lifecycle hook on the logic itself is called once all ports are closed. This is the only tear down
     /// callback that is guaranteed to happen, if the actor system or the materializer is terminated the handlers may never
-    /// see any callbacks to <see cref="InHandler.OnUpstreamFailure"/>, <see cref="InHandler.OnUpstreamFinish"/> or <see cref="OutHandler.OnDownstreamFinish"/>.
+    /// see any callbacks to <see cref="InHandler.OnUpstreamFailure"/>, <see cref="InHandler.OnUpstreamFinish"/> or <see cref="OutHandler.OnDownstreamFinish"/>. 
     /// Therefore stage resource cleanup should always be done in <see cref="PostStop"/>.
     /// </summary>
     public abstract class GraphStageLogic : IStageLogging
@@ -843,14 +847,14 @@ namespace Akka.Streams.Stage
         protected IMaterializer Materializer => Interpreter.Materializer;
 
         /// <summary>
-        /// An <see cref="IMaterializer"/> that may run fusable parts of the graphs that it materializes
-        /// within the same actor as the current GraphStage(if fusing is available). This materializer
+        /// An <see cref="IMaterializer"/> that may run fusable parts of the graphs that it materializes 
+        /// within the same actor as the current GraphStage(if fusing is available). This materializer 
         /// must not be shared outside of the GraphStage.
         /// </summary>
         protected IMaterializer SubFusingMaterializer => Interpreter.SubFusingMaterializer;
 
         /// <summary>
-        /// If this method returns true when all ports had been closed then the stage is not stopped
+        /// If this method returns true when all ports had been closed then the stage is not stopped 
         /// until <see cref="CompleteStage"/> or <see cref="FailStage"/> are explicitly called
         /// </summary>
         public virtual bool KeepGoingAfterAllPortsClosed => false;
@@ -873,7 +877,7 @@ namespace Akka.Streams.Stage
         private ILoggingAdapter _log;
 
         /// <summary>
-        /// Override to customise reported log source
+        /// Override to customise reported log source 
         /// </summary>
         protected object LogSource => this;
 
@@ -1063,7 +1067,7 @@ namespace Akka.Streams.Stage
         /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
         /// can be retrieved via this method. After <see cref="Grab{T}(Inlet)"/> has been called the port is considered to be empty, and further
         /// calls to <see cref="Grab{T}(Inlet)"/> will fail until the port is pulled again and a new element is pushed as a response.
-        ///
+        /// 
         /// The method <see cref="IsAvailable(Inlet)"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -1100,7 +1104,7 @@ namespace Akka.Streams.Stage
         /// Once the callback <see cref="InHandler.OnPush"/> for an input port has been invoked, the element that has been pushed
         /// can be retrieved via this method. After <see cref="Grab{T}(Inlet{T})"/> has been called the port is considered to be empty, and further
         /// calls to <see cref="Grab{T}(Inlet{T})"/> will fail until the port is pulled again and a new element is pushed as a response.
-        ///
+        /// 
         /// The method <see cref="IsAvailable(Inlet)"/> can be used to query if the port has an element that can be grabbed or not.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -1109,7 +1113,7 @@ namespace Akka.Streams.Stage
         protected internal T Grab<T>(Inlet<T> inlet) => Grab<T>((Inlet)inlet);
 
         /// <summary>
-        /// Indicates whether there is already a pending pull for the given input port. If this method returns true
+        /// Indicates whether there is already a pending pull for the given input port. If this method returns true 
         /// then <see cref="IsAvailable(Inlet)"/> must return false for that same port.
         /// </summary>
         /// <param name="inlet">TBD</param>
@@ -1118,7 +1122,7 @@ namespace Akka.Streams.Stage
             => (GetConnection(inlet).PortState & (InReady | InClosed)) == 0;
 
         /// <summary>
-        /// Indicates whether there is already a pending pull for the given input port. If this method returns true
+        /// Indicates whether there is already a pending pull for the given input port. If this method returns true 
         /// then <see cref="IsAvailable(Inlet)"/> must return false for that same port.
         /// </summary>
         /// <param name="inlet">TBD</param>
@@ -1128,7 +1132,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
         /// element. After calling <see cref="Grab{T}(Inlet{T})"/> this method will return false.
-        ///
+        /// 
         /// If this method returns true then <see cref="HasBeenPulled"/> will return false for that same port.
         /// </summary>
         /// <param name="inlet">TBD</param>
@@ -1158,7 +1162,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Indicates whether there is an element waiting at the given input port. <see cref="Grab{T}(Inlet{T})"/> can be used to retrieve the
         /// element. After calling <see cref="Grab{T}(Inlet{T})"/> this method will return false.
-        ///
+        /// 
         /// If this method returns true then <see cref="HasBeenPulled"/> will return false for that same port.
         /// </summary>
         /// <param name="inlet">TBD</param>
@@ -1312,7 +1316,7 @@ namespace Akka.Streams.Stage
         /// suspending execution if necessary. This action replaces the <see cref="InHandler"/>
         /// for the given inlet if suspension is needed and reinstalls the current
         /// handler upon receiving the last <see cref="InHandler.OnPush"/> signal.
-        ///
+        /// 
         /// If upstream closes before N elements have been read,
         /// the <paramref name="onComplete"/> function is invoked with the elements which were read.
         /// </summary>
@@ -1571,11 +1575,11 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
-        /// current <see cref="GraphStage{TShape}"/> with an asynchronous notification. The delegate returned
+        /// current <see cref="GraphStage{TShape}"/> with an asynchronous notification. The delegate returned 
         /// is safe to be called from other threads and it will in the background thread-safely
         /// delegate to the passed callback function. I.e. it will be called by the external world and
         /// the passed handler will be invoked eventually in a thread-safe way by the execution environment.
-        ///
+        /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -1586,11 +1590,11 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Obtain a callback object that can be used asynchronously to re-enter the
-        /// current <see cref="GraphStage{TShape}"/> with an asynchronous notification. The delegate returned
+        /// current <see cref="GraphStage{TShape}"/> with an asynchronous notification. The delegate returned 
         /// is safe to be called from other threads and it will in the background thread-safely
         /// delegate to the passed callback function. I.e. it will be called by the external world and
         /// the passed handler will be invoked eventually in a thread-safe way by the execution environment.
-        ///
+        /// 
         /// This object can be cached and reused within the same <see cref="GraphStageLogic"/>.
         /// </summary>
         /// <param name="handler">TBD</param>
@@ -1602,12 +1606,12 @@ namespace Akka.Streams.Stage
         /// Initialize a <see cref="StageActorRef"/> which can be used to interact with from the outside world "as-if" an actor.
         /// The messages are looped through the <see cref="GetAsyncCallback{T}"/> mechanism of <see cref="GraphStage{TShape}"/> so they are safe to modify
         /// internal state of this stage.
-        ///
+        /// 
         /// This method must (the earliest) be called after the <see cref="GraphStageLogic"/> constructor has finished running,
         /// for example from the <see cref="PreStart"/> callback the graph stage logic provides.
-        ///
+        /// 
         /// Created <see cref="StageActorRef"/> to get messages and watch other actors in synchronous way.
-        ///
+        /// 
         /// The <see cref="StageActorRef"/>'s lifecycle is bound to the Stage, in other words when the Stage is finished,
         /// the Actor will be terminated as well. The entity backing the <see cref="StageActorRef"/> is not a real Actor,
         /// but the <see cref="GraphStageLogic"/> itself, therefore it does not react to <see cref="PoisonPill"/>.
@@ -1634,11 +1638,11 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// Override and return a name to be given to the StageActor of this stage.
-        ///
+        /// 
         /// This method will be only invoked and used once, during the first <see cref="GetStageActor"/>
         /// invocation whichc reates the actor, since subsequent `getStageActors` calls function
         /// like `become`, rather than creating new actors.
-        ///
+        /// 
         /// Returns an empty string by default, which means that the name will a unique generated String (e.g. "$$a").
         /// </summary>
         [ApiMayChange]
@@ -1673,7 +1677,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// INTERNAL API
-        ///
+        /// 
         /// This allows the dynamic creation of an Inlet for a GraphStage which is
         /// connected to a Sink that is available for materialization (e.g. using
         /// the <see cref="GraphStageLogic.SubFusingMaterializer"/>). Care needs to be taken to cancel this Inlet
@@ -1806,7 +1810,7 @@ namespace Akka.Streams.Stage
 
         /// <summary>
         /// INTERNAL API
-        ///
+        /// 
         /// This allows the dynamic creation of an Outlet for a GraphStage which is
         /// connected to a Source that is available for materialization (e.g. using
         /// the <see cref="GraphStageLogic.SubFusingMaterializer"/>). Care needs to be taken to complete this
@@ -1902,7 +1906,7 @@ namespace Akka.Streams.Stage
             }
 
             /// <summary>
-            /// Complete this output port.
+            /// Complete this output port. 
             /// </summary>
             public void Complete()
             {
@@ -1977,7 +1981,7 @@ namespace Akka.Streams.Stage
     public interface IOutHandler
     {
         /// <summary>
-        /// Called when the output port has received a pull, and therefore ready to emit an element,
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
         /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
         /// </summary>
         void OnPull();
@@ -1994,7 +1998,7 @@ namespace Akka.Streams.Stage
     public abstract class OutHandler : IOutHandler
     {
         /// <summary>
-        /// Called when the output port has received a pull, and therefore ready to emit an element,
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
         /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
         /// </summary>
         public abstract void OnPull();
@@ -2029,7 +2033,7 @@ namespace Akka.Streams.Stage
         public virtual void OnUpstreamFailure(Exception e) => Current.ActiveStage.FailStage(e);
 
         /// <summary>
-        /// Called when the output port has received a pull, and therefore ready to emit an element,
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
         /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
         /// </summary>
         public abstract void OnPull();
@@ -2108,7 +2112,7 @@ namespace Akka.Streams.Stage
         }
 
         /// <summary>
-        /// Called when the output port has received a pull, and therefore ready to emit an element,
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
         /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
         /// </summary>
         public abstract void OnPull();
@@ -2164,7 +2168,7 @@ namespace Akka.Streams.Stage
         public virtual void OnUpstreamFailure(Exception e) => FailStage(e);
 
         /// <summary>
-        /// Called when the output port has received a pull, and therefore ready to emit an element,
+        /// Called when the output port has received a pull, and therefore ready to emit an element, 
         /// i.e. <see cref="GraphStageLogic.Push{T}"/> is now allowed to be called on this port.
         /// </summary>
         public abstract void OnPull();
@@ -2186,6 +2190,15 @@ namespace Akka.Streams.Stage
         /// </summary>
         public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
         private StageActorRefNotInitializedException() : base("You must first call GetStageActorRef(StageActorRef.Receive), to initialize the actor's behavior") { }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StageActorRefNotInitializedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected StageActorRefNotInitializedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>
@@ -2229,7 +2242,7 @@ namespace Akka.Streams.Stage
     }
 
     /// <summary>
-    /// Input handler that terminates the state upon receiving completion
+    /// Input handler that terminates the state upon receiving completion 
     /// if the given condition holds at that time.The stage fails upon receiving a failure.
     /// </summary>
     public class ConditionalTerminateInput : InHandler

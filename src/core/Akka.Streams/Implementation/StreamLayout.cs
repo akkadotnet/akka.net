@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Annotations;
 using Akka.Pattern;
 using Akka.Streams.Dsl;
@@ -729,7 +730,7 @@ namespace Akka.Streams.Implementation
             if (Keep.IsLeft(matFunc) && IsIgnorable(matComputationRight)) comp = matComputationLeft;
             else if (Keep.IsRight(matFunc) && IsIgnorable(matComputationLeft)) comp = matComputationRight;
             else comp = new StreamLayout.Combine((x, y) => matFunc((T1)x, (T2)y), matComputationLeft, matComputationRight);
-
+            
             return new CompositeModule(
                 subModules: modulesLeft.Union(modulesRight).ToImmutableArray(),
                 shape: new AmorphousShape(
@@ -1239,7 +1240,7 @@ namespace Akka.Streams.Implementation
             Shape shape,
             IImmutableDictionary<OutPort, InPort> downstreams,
             IImmutableDictionary<InPort, OutPort> upstreams,
-            IImmutableDictionary<InPort, IModule> inOwners,
+            IImmutableDictionary<InPort, IModule> inOwners, 
             IImmutableDictionary<OutPort, IModule> outOwners,
             IImmutableList<(IModule, StreamLayout.IMaterializedValueNode)> materializedValues,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
@@ -1261,7 +1262,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public override StreamLayout.IMaterializedValueNode MaterializedValueComputation { get; }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -1482,12 +1483,12 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
-    ///
+    /// 
     /// This is a transparent processor that shall consume as little resources as
     /// possible. Due to the possibility of receiving uncoordinated inputs from both
     /// downstream and upstream, this needs an atomic state machine which looks a
     /// little like this:
-    ///
+    /// 
     /// <![CDATA[
     ///            +--------------+      (2)    +------------+
     ///            |     null     | ----------> | Subscriber |
@@ -1507,26 +1508,26 @@ namespace Akka.Streams.Implementation
     /// ]]>
     /// The idea is to keep the major state in only one atomic reference. The actions
     /// that can happen are:
-    ///
+    /// 
     ///  (1) onSubscribe
     ///  (2) subscribe
     ///  (3) onError / onComplete
     ///  (4) onNext
     ///      (*) Inert can be reached also by cancellation after which onNext is still fine
     ///          so we just silently ignore possible spec violations here
-    ///
+    /// 
     /// Any event that occurs in a state where no matching outgoing arrow can be found
     /// is a spec violation, leading to the shutdown of this processor (meaning that
     /// the state is updated such that all following actions match that of a failed
     /// Publisher or a cancelling Subscriber, and the non-guilty party is informed if
     /// already connected).
-    ///
+    /// 
     /// request() can only be called after the Subscriber has received the Subscription
     /// and that also means that onNext() will only happen after having transitioned into
     /// the Both state as well. The Publisher state means that if the real
     /// Publisher terminates before we get the Subscriber, we can just forget about the
     /// real one and keep an already finished one around for the Subscriber.
-    ///
+    /// 
     /// The Subscription that is offered to the Subscriber must cancel the original
     /// Publisher if things go wrong (like `request(0)` coming in from downstream) and
     /// it must ensure that we drop the Subscriber reference when `cancel` is invoked.
@@ -1944,7 +1945,7 @@ namespace Akka.Streams.Implementation
             private static readonly Buffering NoBufferedDemand = new Buffering(0);
             private readonly ISubscription _real;
             private readonly VirtualProcessor<T> _processor;
-
+            
             public WrappedSubscription(ISubscription real, VirtualProcessor<T> processor) : base(NoBufferedDemand)
             {
                 _real = real;
@@ -2011,7 +2012,7 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
-    ///
+    /// 
     /// The implementation of <see cref="Sink.AsPublisher{T}"/> needs to offer a <see cref="IPublisher{T}"/> that
     /// defers to the upstream that is connected during materialization. This would
     /// be trivial if it were not for materialized value computations that may even
@@ -2022,7 +2023,7 @@ namespace Akka.Streams.Implementation
     /// purpose of subscription timeoutsï¿½the subscription would always already be
     /// established from the Actorï¿½s perspective, regardless of whether a downstream
     /// will ever be connected.
-    ///
+    /// 
     /// One important consideration is that this <see cref="IPublisher{T}"/> must not retain a reference
     /// to the <see cref="ISubscriber{T}"/> after having hooked it up with the real <see cref="IPublisher{T}"/>, hence
     /// the use of `Inert.subscriber` as a tombstone.
@@ -2140,13 +2141,24 @@ namespace Akka.Streams.Implementation
                 : base("Materialization aborted.", innerException)
             {
             }
+
+#if SERIALIZATION
+            /// <summary>
+            /// Initializes a new instance of the <see cref="MaterializationPanicException" /> class.
+            /// </summary>
+            /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+            protected MaterializationPanicException(SerializationInfo info, StreamingContext context)
+                : base(info, context)
+            {
+            }
+#endif
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         protected readonly IModule TopLevel;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -2360,7 +2372,7 @@ namespace Akka.Streams.Implementation
                 }
                 else if(submodule is CompositeModule || submodule is FusedModule)
                     materializedValues.Add(submodule, MaterializeComposite(submodule, subEffectiveAttributes));
-
+                
                 //EmptyModule, nothing to do or say
             }
 
@@ -2452,7 +2464,7 @@ namespace Akka.Streams.Implementation
         protected void AssignPort(InPort inPort, object subscriberOrVirtual)
         {
             Subscribers[inPort] = subscriberOrVirtual;
-
+            
             // Interface (unconnected) ports of the current scope will be wired when exiting the scope
             if (CurrentLayout.Upstreams.TryGetValue(inPort, out var outPort))
                 if (Publishers.TryGetValue(outPort, out var publisher))
@@ -2503,7 +2515,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         Inlet In { get; }
-
+        
         /// <summary>
         /// TBD
         /// </summary>

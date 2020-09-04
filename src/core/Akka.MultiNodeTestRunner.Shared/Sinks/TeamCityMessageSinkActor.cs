@@ -6,9 +6,20 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Event;
+#if CORECLR
+using Akka.MultiNodeTestRunner.Shared.Extensions;
+#endif
 using Akka.MultiNodeTestRunner.Shared.Reporting;
+using JetBrains.TeamCity.ServiceMessages;
 using JetBrains.TeamCity.ServiceMessages.Write.Special;
+using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl.Writer;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -40,7 +51,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
         protected override void HandleNewSpec(BeginNewSpec beginNewSpec)
-        {
+        {         
             _teamCityFlowWriter = _teamCityTestSuiteWriter.OpenFlow();
             _teamCityTestWriter = _teamCityFlowWriter.OpenTest($"{beginNewSpec.ClassName}.{beginNewSpec.MethodName}");
 
@@ -67,7 +78,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             _teamCityTestWriter?.WriteStdOutput(
                 $"[NODE{nodeSuccess.NodeIndex}:{nodeSuccess.NodeRole}][{DateTime.UtcNow.ToShortTimeString()}]: SPEC PASSED: {nodeSuccess.Message}");
             Console.ResetColor();
-
+            
             base.HandleNodeSpecPass(nodeSuccess);
         }
 

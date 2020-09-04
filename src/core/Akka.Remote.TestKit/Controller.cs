@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Immutable;
 using System.Net;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using DotNetty.Transport.Channels;
@@ -18,7 +20,7 @@ namespace Akka.Remote.TestKit
     /// This controls test execution by managing barriers (delegated to
     /// <see cref="BarrierCoordinator"/>, its child) and allowing
     /// network and other failures to be injected at the test nodes.
-    ///
+    /// 
     /// INTERNAL API.
     /// </summary>
     internal class Controller : UntypedActor, ILogReceive
@@ -95,6 +97,17 @@ namespace Akka.Remote.TestKit
             /// </summary>
             /// <param name="message">The message that describes the error.</param>
             public ClientDisconnectedException(string message) : base(message){}
+
+#if SERIALIZATION
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
+            /// </summary>
+            /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+            protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
+            {
+            }
+#endif
         }
 
         public class GetNodes
@@ -346,7 +359,7 @@ namespace Akka.Remote.TestKit
                     {
                         if (!_nodes.TryGetValue(throttle.Target, out var target)) throw new IllegalActorStateException($"Throttle target {throttle.Target} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
                         if (!_nodes.TryGetValue(throttle.Node, out var source)) throw new IllegalActorStateException($"Throttle source {throttle.Node} was not found among nodes registered in {nameof(Controller)}: {string.Join(", ", _nodes.Keys)}");
-
+                        
                         source.FSM.Forward(new ToClient<ThrottleMsg>(new ThrottleMsg(target.Addr, throttle.Direction, throttle.RateMBit)));
                         return;
                     }

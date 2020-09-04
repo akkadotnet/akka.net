@@ -5,8 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 
+#if CORECLR
 namespace System.CodeDom.Compiler
 {
     public class CompilerErrorCollection : List<CompilerError>
@@ -19,3 +22,4 @@ namespace System.CodeDom.Compiler
         public bool IsWarning { get; set; }
     }
 }
+#endif

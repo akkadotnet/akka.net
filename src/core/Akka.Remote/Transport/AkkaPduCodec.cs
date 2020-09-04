@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
+using System.Runtime.Serialization;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
@@ -26,6 +27,18 @@ namespace Akka.Remote.Transport
         /// <param name="message">The message that describes the error.</param>
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public PduCodecException(string message, Exception cause = null) : base(message, cause) { }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PduCodecException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected PduCodecException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 
     /*
@@ -78,7 +91,7 @@ namespace Akka.Remote.Transport
 
     /// <summary>
     /// INTERNAL API.
-    ///
+    /// 
     /// Represents a heartbeat on the wire.
     /// </summary>
     internal sealed class Heartbeat : IAkkaPdu { }
@@ -185,7 +198,7 @@ namespace Akka.Remote.Transport
 
     /// <summary>
     /// INTERNAL API
-    ///
+    /// 
     /// A codec that is able to convert Akka PDUs from and to <see cref="ByteString"/>
     /// </summary>
     internal abstract class AkkaPduCodec
@@ -424,7 +437,7 @@ namespace Akka.Remote.Transport
                     {
                         ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
                     }
-
+                    
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.Sender != null)

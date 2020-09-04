@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using System.Runtime.Serialization;
 
 namespace Akka.Persistence.Journal
 {
@@ -35,6 +36,18 @@ namespace Akka.Persistence.Journal
             : base(message)
         {
         }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected AsyncReplayTimeoutException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 
     /// <summary>

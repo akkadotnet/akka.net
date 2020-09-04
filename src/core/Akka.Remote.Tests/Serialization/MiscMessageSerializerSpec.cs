@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Remote.Configuration;
 using Akka.Remote.Routing;
 using Akka.Remote.Serialization;

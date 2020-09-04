@@ -27,6 +27,18 @@ namespace Akka.Streams.Implementation
         private NothingToReadException()
         {
         }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NothingToReadException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected NothingToReadException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 
     /// <summary>
@@ -162,7 +174,7 @@ namespace Akka.Streams.Implementation
                 Length++;
                 return true;
             }
-
+            
             if (Buffer.LongLength >= long.MaxValue) return false;
 
             // if we are full but can grow we do so
@@ -205,7 +217,7 @@ namespace Akka.Streams.Implementation
     {
         private readonly int _maxSizeBit;
         private T[] _array;
-
+        
         /// <summary>
         /// Two counters counting the number of elements ever written and read; wrap-around is
         /// handled by always looking at differences or masked values
@@ -236,7 +248,7 @@ namespace Akka.Streams.Implementation
             if ((initialSize & (initialSize - 1)) != 0 || initialSize <= 0 || initialSize > maxSize)
                 throw new ArgumentException("initialSize must be a power of 2 that is > 0 and <= maxSize");
 
-
+            
             if ((maxSize & (maxSize - 1)) != 0 || maxSize <= 0 || maxSize > int.MaxValue / 2)
                 throw new ArgumentException("maxSize must be a power of 2 that is > 0 and < Int.MaxValue/2");
 
@@ -297,7 +309,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// Tries to write the given value into the buffer thereby potentially growing the backing array.
         /// Returns true if the write was successful and false if the buffer is full and cannot grow anymore.
-        /// </summary>
+        /// </summary> 
         /// <param name="value">TBD</param>
         /// <returns>TBD</returns>
         public bool Write(T value)

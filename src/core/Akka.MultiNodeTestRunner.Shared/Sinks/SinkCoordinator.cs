@@ -37,7 +37,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         /// <summary>
         /// Test run is complete. Shut down all sinks.
-        ///
+        /// 
         /// NOTE: Sending this message also means that the <see cref="ActorSystem"/> will be shut down.
         /// </summary>
         public class CloseAllSinks { }
@@ -187,7 +187,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         {
             foreach (var sink in Sinks)
             {
+#if CORECLR
                 sink.LogRunnerMessage(message.Message, Assembly.GetEntryAssembly().GetName().Name, LogLevel.InfoLevel);
+#else
+                sink.LogRunnerMessage(message.Message, Assembly.GetExecutingAssembly().GetName().Name, LogLevel.InfoLevel);
+#endif
             }
         }
 

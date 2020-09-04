@@ -18,6 +18,7 @@
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
+    <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
     <FsCheckVersion>2.14.3</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>

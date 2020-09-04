@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Pattern;
@@ -345,7 +346,7 @@ namespace Akka.Tests.Pattern
             Assert.True( InterceptExceptionType<TestException>( ( ) => breaker.Instance.WithCircuitBreaker( () => Task.Factory.StartNew( ThrowException ) ).Wait( ) ) );
             Assert.True( CheckLatch( breaker.HalfOpenLatch ) );
         }
-
+        
         [Fact(DisplayName = "An asynchronous circuit breaker that is open should increase the reset timeout after it transits to open again")]
         public void Should_Reset_Timeout_After_It_Transits_To_Open_Again()
         {
@@ -395,7 +396,7 @@ namespace Akka.Tests.Pattern
         public void ThrowException() => throw new TestException("Test Exception");
 
         public string SayTest( ) => "Test";
-
+        
         protected T InterceptException<T>(Action actionThatThrows) where T : Exception
         {
             return Assert.Throws<T>(() =>
@@ -407,7 +408,7 @@ namespace Akka.Tests.Pattern
                 catch (AggregateException ex)
                 {
                     foreach (var e in ex.Flatten().InnerExceptions.Where(e => e is T).Select(e => e))
-                        throw e;
+                        throw e;                     
                 }
             });
         }
@@ -490,7 +491,7 @@ namespace Akka.Tests.Pattern
         {
             return new TestBreaker( new CircuitBreaker(Sys.Scheduler, 5, TimeSpan.FromMilliseconds( 200 ), TimeSpan.FromMilliseconds( 500 ) ) );
         }
-
+        
         public TestBreaker NonOneFactorCb()
         {
             return new TestBreaker(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromMilliseconds(2000), TimeSpan.FromMilliseconds(1000), TimeSpan.FromDays(1), 5));
@@ -513,6 +514,13 @@ namespace Akka.Tests.Pattern
             : base( message, innerException )
         {
         }
+
+#if SERIALIZATION
+        protected TestException( SerializationInfo info, StreamingContext context )
+            : base( info, context )
+        {
+        }
+#endif
     }
 
 }

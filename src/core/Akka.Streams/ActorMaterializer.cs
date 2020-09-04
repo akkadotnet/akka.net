@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -238,6 +239,18 @@ namespace Akka.Streams
         {
             Actor = actor;
         }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbruptTerminationException" /> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected AbruptTerminationException(SerializationInfo info, StreamingContext context) : base(info, context)
+        {
+            Actor = (IActorRef)info.GetValue("Actor", typeof(IActorRef));
+        }
+#endif
     }
 
     /// <summary>
@@ -251,6 +264,15 @@ namespace Akka.Streams
         /// <param name="message">The message that describes the error.</param>
         /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public MaterializationException(string message, Exception innerException) : base(message, innerException) { }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MaterializationException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected MaterializationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#endif
     }
 
     /// <summary>
@@ -260,7 +282,7 @@ namespace Akka.Streams
     /// </summary>
     public sealed class AbruptStageTerminationException : Exception
     {
-        public AbruptStageTerminationException(GraphStageLogic logic)
+        public AbruptStageTerminationException(GraphStageLogic logic) 
             : base($"GraphStage {logic} terminated abruptly, caused by for example materializer or actor system termination.")
         {
 
@@ -269,7 +291,7 @@ namespace Akka.Streams
 
 
     /// <summary>
-    /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>.
+    /// This class describes the configurable properties of the <see cref="ActorMaterializer"/>. 
     /// Please refer to the withX methods for descriptions of the individual settings.
     /// </summary>
     public sealed class ActorMaterializerSettings
@@ -527,7 +549,7 @@ namespace Akka.Streams
                 case "cancel": mode = StreamSubscriptionTimeoutTerminationMode.CancelTermination; break;
                 default: throw new ArgumentException("akka.stream.materializer.subscribtion-timeout.mode was not defined or has invalid value. Valid values are: no, off, false, noop, warn, cancel");
             }
-
+            
             return new StreamSubscriptionTimeoutSettings(
                 mode: mode,
                 timeout: c.GetTimeSpan("timeout", TimeSpan.FromSeconds(5)));
@@ -585,7 +607,7 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// This mode describes what shall happen when the subscription timeout expires
+    /// This mode describes what shall happen when the subscription timeout expires 
     /// for substream Publishers created by operations like <see cref="InternalFlowOperations.PrefixAndTail{T,TMat}"/>.
     /// </summary>
     public enum StreamSubscriptionTimeoutTerminationMode

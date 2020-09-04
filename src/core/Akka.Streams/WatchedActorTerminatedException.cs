@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Streams.Dsl;
 
@@ -19,8 +20,20 @@ namespace Akka.Streams
     /// <seealso cref="SourceOperations.Watch{T,TMat}"/>
     public class WatchedActorTerminatedException : AkkaException
     {
-        public WatchedActorTerminatedException(string stageName, IActorRef actorRef)
+        public WatchedActorTerminatedException(string stageName, IActorRef actorRef) 
             : base($"Actor watched by [{stageName}] has terminated! Was: {actorRef}")
         { }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AkkaException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected WatchedActorTerminatedException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 }

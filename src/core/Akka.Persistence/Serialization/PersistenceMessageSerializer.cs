@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization.Proto.Msg;
 using Akka.Serialization;
+using Akka.Util;
 using Google.Protobuf;
 
 namespace Akka.Persistence.Serialization
@@ -32,7 +33,7 @@ namespace Akka.Persistence.Serialization
             if (obj is AtomicWrite aw) return GetAtomicWrite(aw).ToByteArray();
             if (obj is AtLeastOnceDeliverySnapshot snap) return GetAtLeastOnceDeliverySnapshot(snap).ToByteArray();
             if (obj is PersistentFSM.StateChangeEvent stateEvent) return GetStateChangeEvent(stateEvent).ToByteArray();
-            if (obj.GetType().GetTypeInfo().IsGenericType
+            if (obj.GetType().GetTypeInfo().IsGenericType 
                 && obj.GetType().GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) return GetPersistentFSMSnapshot(obj).ToByteArray();
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");

@@ -31,7 +31,7 @@ namespace Akka.Tools.MatchHandler
         //        return false;
         //
         //Since both share the same signature they can both use the same expression tree, i.e. the same Matcher-function
-        //
+        //    
         //Actions, Funcs and Predicates that are specified by the user in Match-calls are added to lists, like a closure.
         //For the example above the captured variables for the two builders are:
         //    builder1:  action = s=>F(s); predicate = s=>s==""
@@ -67,7 +67,7 @@ namespace Akka.Tools.MatchHandler
         /// <param name="handler">The handler that is invoked when everything matches.</param>
         /// <param name="shouldHandle">An optional predicate to test if the item matches. If it returns <c>true</c> the <paramref name="handler"/> is invoked.</param>
         /// <exception cref="InvalidOperationException">
-        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built.
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
         /// </exception>
         /// <exception cref="ArgumentOutOfRangeException">
         /// This exception is thrown if the current state is unknown.
@@ -96,7 +96,7 @@ namespace Akka.Tools.MatchHandler
         /// This exception is thrown if the current state is unknown.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built.
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
         /// </exception>
         public void Match(Type handlesType, Action<TItem> handler, Predicate<TItem> shouldHandle = null)
         {
@@ -118,7 +118,7 @@ namespace Akka.Tools.MatchHandler
         /// This exception is thrown if the current state is unknown.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built.
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
         /// </exception>
         public void Match<T>(Func<T, bool> handler) where T : TItem
         {
@@ -141,7 +141,7 @@ namespace Akka.Tools.MatchHandler
         /// This exception is thrown if the current state is unknown.
         /// </exception>
         /// <exception cref="InvalidOperationException">
-        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built.
+        /// This exception is thrown if a handler that catches all messages has been added or a partial action has already been built. 
         /// </exception>
         public void Match(Type handlesType, Func<TItem, bool> handler)
         {
@@ -170,6 +170,21 @@ namespace Akka.Tools.MatchHandler
             _state = State.Built;
             return partialAction;
         }
+
+#if !CORECLR
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="typeBuilder">TBD</param>
+        /// <param name="methodName">TBD</param>
+        /// <param name="attributes">TBD</param>
+        /// <returns>TBD</returns>
+        public void BuildToMethod(TypeBuilder typeBuilder, string methodName, MethodAttributes attributes = MethodAttributes.Public | MethodAttributes.Static)
+        {
+            _compiler.CompileToMethod(_typeHandlers, _arguments, new MatchBuilderSignature(_signature), typeBuilder, methodName, methodAttributes: attributes);
+            _state = State.Built;
+        }
+#endif
 
         private static void EnsureCanHandleType(Type handlesType)
         {

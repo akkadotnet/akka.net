@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.Pattern
@@ -31,5 +32,17 @@ namespace Akka.Pattern
         public IllegalStateException(string message, Exception innerEx) : base(message, innerEx)
         {
         }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IllegalStateException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected IllegalStateException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 }

@@ -33,7 +33,7 @@ namespace Akka.Streams
     /// It is also used in the Java DSL for "untyped Outlets" as a work-around
     /// for otherwise unreasonable existential types.
     /// </summary>
-    public abstract class OutPort
+    public abstract class OutPort 
     {
         /// <summary>
         /// TBD
@@ -42,8 +42,8 @@ namespace Akka.Streams
     }
 
     /// <summary>
-    /// An Inlet is a typed input to a Shape. Its partner in the Module view
-    /// is the InPort(which does not bear an element type because Modules only
+    /// An Inlet is a typed input to a Shape. Its partner in the Module view 
+    /// is the InPort(which does not bear an element type because Modules only 
     /// express the internal structural hierarchy of stream topologies).
     /// </summary>
     public abstract class Inlet : InPort
@@ -174,6 +174,9 @@ namespace Akka.Streams
     /// otherwise it is just a black box.
     /// </summary>
     public abstract class Shape
+#if CLONEABLE
+     : ICloneable
+#endif
     {
         /// <summary>
         /// Gets list of all input ports.
@@ -242,7 +245,7 @@ namespace Akka.Streams
         /// TBD
         /// </summary>
         public static readonly ClosedShape Instance = new ClosedShape();
-
+        
         private ClosedShape() { }
 
         /// <summary>

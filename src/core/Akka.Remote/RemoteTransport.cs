@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -16,7 +17,7 @@ namespace Akka.Remote
 {
     /// <summary>
     /// INTERNAL API.
-    ///
+    /// 
     /// The remote transport is responsible for sending and receiving messages.
     /// Each transport has an address, which it should provide in Serialization.CurrentTransportInformation (thread-local)
     /// while serializing ActorReferences (which might also be part of messages). This address must
@@ -53,7 +54,7 @@ namespace Akka.Remote
         public abstract ISet<Address> Addresses { get; }
 
         /// <summary>
-        /// The default transport address of the <see cref="ActorSystem"/>.
+        /// The default transport address of the <see cref="ActorSystem"/>. 
         /// This is the listen address of the default transport.
         /// </summary>
         public abstract Address DefaultAddress { get; }
@@ -130,6 +131,18 @@ namespace Akka.Remote
             : base(message, cause)
         {
         }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RemoteTransportException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected RemoteTransportException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 }
 

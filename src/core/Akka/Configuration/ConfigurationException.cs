@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.Configuration
@@ -38,6 +39,18 @@ namespace Akka.Configuration
         public ConfigurationException(string message, Exception exception): base(message, exception)
         {
         }
+
+#if SERIALIZATION
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigurationException"/> class.
+        /// </summary>
+        /// <param name="info">The object that holds the serialized object data.</param>
+        /// <param name="context">The contextual information about the source or destination.</param>
+        protected ConfigurationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+#endif
     }
 }
 

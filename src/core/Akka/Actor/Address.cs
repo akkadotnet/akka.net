@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Akka.Util;
@@ -17,12 +18,15 @@ namespace Akka.Actor
     /// The address specifies the physical location under which an Actor can be
     /// reached. Examples are local addresses, identified by the <see cref="ActorSystem"/>'s
     /// name, and remote addresses, identified by protocol, host and port.
-    ///
+    ///  
     /// This class is sealed to allow use as a case class (copy method etc.); if
     /// for example a remote transport would want to associate additional
     /// information with an address, then this must be done externally.
     /// </summary>
     public sealed class Address : IEquatable<Address>, IComparable<Address>, IComparable, ISurrogated
+#if CLONEABLE
+        , ICloneable
+#endif
     {
         #region comparer
 
@@ -278,7 +282,7 @@ namespace Akka.Actor
             if (string.IsNullOrEmpty(uri.UserInfo))
             {
                 var systemName = uri.Host;
-
+                
                 return new Address(protocol, systemName);
             }
             else
@@ -347,9 +351,9 @@ namespace Akka.Actor
     /// <summary>
     /// Extractor class for so-called "relative actor paths" - as in "relative URI", not
     /// "relative to some other actors."
-    ///
+    /// 
     /// Examples:
-    ///
+    /// 
     ///  * "grand/child"
     ///  * "/user/hello/world"
     /// </summary>

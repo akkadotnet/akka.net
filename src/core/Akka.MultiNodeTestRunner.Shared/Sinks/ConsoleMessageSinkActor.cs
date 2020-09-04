@@ -9,13 +9,16 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
+#if CORECLR
+using Akka.MultiNodeTestRunner.Shared.Extensions;
+#endif
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
     /// <summary>
     /// <see cref="MessageSinkActor"/> implementation that logs all of its output directly to the <see cref="Console"/>.
-    ///
+    /// 
     /// Has no persistence capabilities. Can optionally use a <see cref="TestRunCoordinator"/> to provide total "end of test" reporting.
     /// </summary>
     public class ConsoleMessageSinkActor : TestCoordinatorEnabledMessageSink
