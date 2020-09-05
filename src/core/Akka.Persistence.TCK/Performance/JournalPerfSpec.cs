@@ -60,13 +60,13 @@ namespace Akka.Persistence.TestKit.Performance
 
         internal IActorRef BenchActor(string pid, int replyAfter)
         {
-            return Sys.ActorOf(Props.Create(() => new BenchActor(pid, testProbe, EventsCount)));;
+            return Sys.ActorOf(Props.Create(() => new BenchActor(pid, testProbe, EventsCount, false)));;
         }
         
         internal (IActorRef aut,TestProbe probe) BenchActorNewProbe(string pid, int replyAfter)
         {
             var tp = CreateTestProbe();
-            return (Sys.ActorOf(Props.Create(() => new BenchActor(pid, tp, EventsCount))), tp);
+            return (Sys.ActorOf(Props.Create(() => new BenchActor(pid, tp, EventsCount, false))), tp);
         }
         
         internal (IActorRef aut,TestProbe probe) BenchActorNewProbeGroup(string pid, int numActors, int numMsgs)
@@ -75,7 +75,7 @@ namespace Akka.Persistence.TestKit.Performance
             return (
                 Sys.ActorOf(Props
                     .Create(() =>
-                        new BenchActor(pid, tp, numMsgs, false))
+                        new BenchActor(pid, tp, numMsgs, true))
                     .WithRouter(new RoundRobinPool(numActors))), tp);
         }
 
@@ -101,7 +101,6 @@ namespace Akka.Persistence.TestKit.Performance
 
             for (int i = 0; i < numExpect; i++)
             {
-                //Output.WriteLine("Expecting " + i);
                 autSet.probe.ExpectMsg(commands.Last(), ExpectDuration);    
             }
 
@@ -133,6 +132,13 @@ namespace Akka.Persistence.TestKit.Performance
             Output.WriteLine($"Average time: {avgTime} ms, {msgPerSec} msg/sec");
         }
         
+        /// <summary>
+        /// Executes a block of actions intended for a group
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="block">Block to Measure</param>
+        /// <param name="numMsg">Messages per Group worker</param>
+        /// <param name="numGroup">Number of workers in Group being measured</param>
         internal void MeasureGroup(Func<TimeSpan, string> msg, Action block, int numMsg,int numGroup)
         {
             var measurements = new List<TimeSpan>(MeasurementIterations);
@@ -359,19 +365,14 @@ namespace Akka.Persistence.TestKit.Performance
         private const int BatchSize = 50;
         private List<Cmd> _batch = new List<Cmd>(BatchSize);
         
-        public BenchActor(string persistenceId, IActorRef replyTo, int replyAfter, bool groupName)
+        public BenchActor(string persistenceId, IActorRef replyTo, int replyAfter, bool isGroup = false)
         {
-            PersistenceId = persistenceId + MurmurHash.StringHash(Context.Parent.Path.Name + Context.Self.Path.Name);
+            PersistenceId = isGroup? persistenceId : persistenceId + MurmurHash.StringHash(Context.Parent.Path.Name + Context.Self.Path.Name);
             ReplyTo = replyTo;
             ReplyAfter = replyAfter;
         }
-
-        public BenchActor(string persistenceId, IActorRef replyTo, int replyAfter)
-        {
-            PersistenceId = persistenceId;
-            ReplyTo = replyTo;
-            ReplyAfter = replyAfter;
-        }
+        
+        
 
         public override string PersistenceId { get; }
         public IActorRef ReplyTo { get; }
