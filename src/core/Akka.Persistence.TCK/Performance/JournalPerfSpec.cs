@@ -259,7 +259,7 @@ namespace Akka.Persistence.TestKit.Performance
         public void PersistenceActor_performance_must_measure_PersistGroup200()
         {
             int numGroup = 200;
-            int numCommands = Math.Max(Math.Min(EventsCount/100,500),10);
+            int numCommands = Math.Max(Math.Min(EventsCount/200,500),10);
             RunPersistGroupBenchmark(numGroup, numCommands);
         }
 
