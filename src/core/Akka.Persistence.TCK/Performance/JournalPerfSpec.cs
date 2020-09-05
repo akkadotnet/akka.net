@@ -367,7 +367,11 @@ namespace Akka.Persistence.TestKit.Performance
         
         public BenchActor(string persistenceId, IActorRef replyTo, int replyAfter, bool isGroup = false)
         {
-            PersistenceId = isGroup? persistenceId : persistenceId + MurmurHash.StringHash(Context.Parent.Path.Name + Context.Self.Path.Name);
+            PersistenceId = isGroup
+                ? persistenceId +
+                  MurmurHash.StringHash(
+                      Context.Parent.Path.Name + Context.Self.Path.Name)
+                : persistenceId;
             ReplyTo = replyTo;
             ReplyAfter = replyAfter;
         }
