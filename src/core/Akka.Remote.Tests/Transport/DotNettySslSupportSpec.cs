@@ -120,8 +120,8 @@ namespace Akka.Remote.Tests.Transport
 
         private string Thumbprint { get; set; }
 
-        
-        
+
+
         [Fact]
         public void Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -168,7 +168,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         #region helper classes / methods
-        
+
 
         protected override void Dispose(bool disposing)
         {
@@ -182,8 +182,7 @@ namespace Akka.Remote.Tests.Transport
 
         private void InstallCert()
         {
-            var store = new X509Store("My", StoreLocation.CurrentUser);
-            try
+            using (var store = new X509Store("My", StoreLocation.CurrentUser))
             {
                 store.Open(OpenFlags.ReadWrite);
 
@@ -192,25 +191,12 @@ namespace Akka.Remote.Tests.Transport
                 Thumbprint = cert.Thumbprint;
                 store.Add(cert);
             }
-            finally
-            {
-#if NET452 //netstandard 1.6 doesn't have close on store
-                store.Close();
-#else
-#endif
-            }
-
         }
-
 
         private void RemoveCert()
         {
-            var store = new X509Store("My", StoreLocation.CurrentUser);
-            try
+            using (var store = new X509Store("My", StoreLocation.CurrentUser))
             {
-
-
-                
                 store.Open(OpenFlags.ReadWrite);
                 var certs = store.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
                 if (certs.Count > 0)
@@ -218,14 +204,8 @@ namespace Akka.Remote.Tests.Transport
                     store.Remove(certs[0]);
                 }
             }
-            finally
-            {
-#if NET452 //NetStandard1.6 doesn't have close on store.
-                store.Close();
-#else
-#endif
-            }
         }
+
         public class Echo : ReceiveActor
         {
             public Echo()
