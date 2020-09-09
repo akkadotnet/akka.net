@@ -223,6 +223,10 @@ namespace Akka.Cluster.Sharding
                     coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Add(request.ShardRegion);
                     ContinueRebalance(coordinator, shards.ToImmutableHashSet());
                 }
+                else
+                {
+                    coordinator.Log.Debug("Unknown region requested graceful shutdown [{0}]", request.ShardRegion);
+                }
             }
         }
 
