@@ -230,6 +230,34 @@ namespace Akka.Persistence.Journal
         }
     }
 
+    [Serializable]
+    internal class ReadWriteEventAdapter : IEventAdapter
+    {
+        private readonly IWriteEventAdapter _writeEventAdapter;
+        private readonly IEnumerable<IReadEventAdapter> _readEventAdapters;
+
+        public ReadWriteEventAdapter(IEnumerable<IReadEventAdapter> readEventAdapter, IWriteEventAdapter writeEventAdapter)
+        {
+            _readEventAdapters = readEventAdapter;
+            _writeEventAdapter = writeEventAdapter;
+        }
+
+        public string Manifest(object evt)
+        {
+            return _writeEventAdapter.Manifest(evt);
+        }
+
+        public object ToJournal(object evt)
+        {
+            return _writeEventAdapter.ToJournal(evt);
+        }
+
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            return EventSequence.Create(_readEventAdapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
+        }
+    }
+
     /// <summary>
     /// TBD
     /// </summary>
@@ -302,7 +330,7 @@ namespace Akka.Persistence.Journal
                 var type = Type.GetType(kv.Key);
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
-                    : new NoopWriteEventAdapter(new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h])));
+                    : CombineAdapters(kv.Value.Select(h => handlers[h]));
                 return new KeyValuePair<Type, IEventAdapter>(type, adapter);
             }).ToList());
 
@@ -330,6 +358,16 @@ namespace Akka.Persistence.Journal
 
                 return buf;
             });
+        }
+
+        private static IEventAdapter CombineAdapters(IEnumerable<IEventAdapter> adapters)
+        {
+            var writeAdapters = adapters.Where(a => a is NoopReadEventAdapter);
+            if (writeAdapters.Count() == 0)
+                return new NoopWriteEventAdapter(new CombinedReadEventAdapter(adapters));
+            else if (writeAdapters.Count() == 1)
+                return new ReadWriteEventAdapter(adapters.Where(a => a is NoopWriteEventAdapter), writeAdapters.First());
+            throw new IllegalStateException("Cannot have multiple write adapters for a single adapter binding");
         }
 
         private static int IndexWhere<T>(IList<T> list, Predicate<T> predicate)
