@@ -817,8 +817,10 @@ namespace Akka.Cluster.Sharding
         private void SendGracefulShutdownToCoordinator()
         {
             if (GracefulShutdownInProgress)
-                CoordinatorSelection
-                    .ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
+            {
+                Log.Debug("Sending graceful shutdown to {0}", CoordinatorSelection);
+                CoordinatorSelection.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
+            } 
         }
 
         private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
