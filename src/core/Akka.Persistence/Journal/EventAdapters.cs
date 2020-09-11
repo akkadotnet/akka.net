@@ -234,11 +234,11 @@ namespace Akka.Persistence.Journal
     internal class ReadWriteEventAdapter : IEventAdapter
     {
         private readonly IWriteEventAdapter _writeEventAdapter;
-        private readonly IEnumerable<IReadEventAdapter> _readEventAdapters;
+        private readonly IReadEventAdapter _readEventAdapter;
 
-        public ReadWriteEventAdapter(IEnumerable<IReadEventAdapter> readEventAdapter, IWriteEventAdapter writeEventAdapter)
+        public ReadWriteEventAdapter(IReadEventAdapter readEventAdapter, IWriteEventAdapter writeEventAdapter)
         {
-            _readEventAdapters = readEventAdapter;
+            _readEventAdapter = readEventAdapter;
             _writeEventAdapter = writeEventAdapter;
         }
 
@@ -254,7 +254,7 @@ namespace Akka.Persistence.Journal
 
         public IEventSequence FromJournal(object evt, string manifest)
         {
-            return EventSequence.Create(_readEventAdapters.SelectMany(adapter => adapter.FromJournal(evt, manifest).Events));
+            return _readEventAdapter.FromJournal(evt, manifest);
         }
     }
 
@@ -366,7 +366,7 @@ namespace Akka.Persistence.Journal
             if (writeAdapters.Count() == 0)
                 return new NoopWriteEventAdapter(new CombinedReadEventAdapter(adapters));
             else if (writeAdapters.Count() == 1)
-                return new ReadWriteEventAdapter(adapters.Where(a => a is NoopWriteEventAdapter), writeAdapters.First());
+                return new ReadWriteEventAdapter(new CombinedReadEventAdapter(adapters.Where(a => a is NoopWriteEventAdapter)), writeAdapters.First());
             throw new IllegalStateException("Cannot have multiple write adapters for a single adapter binding");
         }
 
