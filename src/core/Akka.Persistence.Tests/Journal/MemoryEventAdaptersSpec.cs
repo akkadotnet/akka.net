@@ -51,7 +51,7 @@ akka.persistence.journal {
       """ + typeof (ReadMeEvent).FullName + @", Akka.Persistence.Tests"" = reader
       """ + typeof (WriteMeEvent).FullName + @", Akka.Persistence.Tests"" = writer
       """ + typeof(ReadMeTwiceEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader]
-      """ + typeof(ReadWriteEvent).FullName + @", Akka.Persistence.Tests"" = [reader, writer]
+      """ + typeof(ReadWriteEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader, writer]
     }
   }
 }").WithFallback(ConfigurationFactory.Default());
@@ -138,10 +138,10 @@ akka.persistence.journal.inmem {
             var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
 
             var readWriteAdapter = adapters.Get<ReadWriteEvent>();
-            readWriteAdapter.FromJournal(readWriteAdapter.ToJournal(new ReadWriteEvent()), "").Events
+            var events = readWriteAdapter.FromJournal(readWriteAdapter.ToJournal(new ReadWriteEvent()), "").Events
                 .Select(c => c.ToString())
                 .Should()
-                .BeEquivalentTo("from-to-ReadWriteEvent()");
+                .BeEquivalentTo("from-to-ReadWriteEvent()", "again-to-ReadWriteEvent()");
         }
 
     }
