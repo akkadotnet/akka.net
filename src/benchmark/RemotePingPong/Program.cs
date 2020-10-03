@@ -55,7 +55,10 @@ namespace RemotePingPong
 
                 dot-netty.tcp {
                     port = 0
-                    hostname = ""localhost""
+                    hostname = """"
+                    batching {
+                        flush-interval = 40ms
+                    }
                 }
               }
             }");
@@ -69,7 +72,7 @@ namespace RemotePingPong
 
         private static void Main(params string[] args)
         {
-            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal;
             uint timesToRun;
             if (args.Length == 0 || !uint.TryParse(args[0], out timesToRun))
             {
@@ -82,7 +85,7 @@ namespace RemotePingPong
 
         private static async void Start(uint timesToRun)
         {
-            const long repeat = 100000L;
+            const long repeat = 50000L;
 
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)
@@ -116,9 +119,18 @@ namespace RemotePingPong
                 var bestThroughput = 0L;
                 foreach (var throughput in GetClientSettings())
                 {
-                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
-                    bestThroughput = result1.Item2;
-                    redCount = result1.Item3;
+                    try
+                    {
+                        var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
+                        bestThroughput = result1.Item2;
+                        redCount = result1.Item3;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
+                    
                 }
             }
 
@@ -145,9 +157,9 @@ namespace RemotePingPong
         private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
+            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 9001));
 
-            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
+            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 9002));
 
             List<Task<long>> tasks = new List<Task<long>>();
             List<IActorRef> receivers = new List<IActorRef>();

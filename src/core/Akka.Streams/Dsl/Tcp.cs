@@ -182,11 +182,18 @@ namespace Akka.Streams.Dsl
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
+            IPAddress[] ipAddresses;
+            if (IPAddress.TryParse(host,out var ipAddress))
+            {
+                ipAddresses = new[] { ipAddress };
+            }
+            else
+            {
+                ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;   
+            }
             // DnsEndpoint isn't allowed
-            var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
             if (ipAddresses.Length == 0)
                 throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
-
             return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
                 options, halfClose, idleTimeout, BindShutdownTimeout));
         }

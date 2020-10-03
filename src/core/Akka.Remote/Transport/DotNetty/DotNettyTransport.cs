@@ -13,10 +13,13 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Streams;
+using Akka.Streams.Dsl;
 using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
@@ -25,6 +28,10 @@ using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;
 using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
+using ByteOrder = DotNetty.Buffers.ByteOrder;
+using ByteString = Google.Protobuf.ByteString;
+using Dns = System.Net.Dns;
+using Tcp = Akka.Streams.Dsl.Tcp;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -72,7 +79,9 @@ namespace Akka.Remote.Transport.DotNetty
         protected void Init(IChannel channel, IPEndPoint remoteSocketAddress, Address remoteAddress, object msg,
             out AssociationHandle op)
         {
-            var localAddress = DotNettyTransport.MapSocketToAddress((IPEndPoint)channel.LocalAddress, Transport.SchemeIdentifier, Transport.System.Name, Transport.Settings.Hostname);
+            var localAddress = DotNettyTransport.MapSocketToAddress(
+                (IPEndPoint)channel.LocalAddress, Transport.SchemeIdentifier,
+                Transport.System.Name, Transport.Settings.Hostname);
 
             if (localAddress != null)
             {
@@ -115,6 +124,9 @@ namespace Akka.Remote.Transport.DotNetty
         }
 #endif
     }
+
+
+    
 
     internal abstract class DotNettyTransport : Transport
     {
@@ -409,7 +421,7 @@ namespace Akka.Remote.Transport.DotNetty
             return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
         }
 
-        private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
+        internal static async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
@@ -427,12 +439,21 @@ namespace Akka.Remote.Transport.DotNetty
 
         public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null, int? publicPort = null)
         {
-            return socketAddress == null
-                ? null
-                : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), publicPort ?? socketAddress.Port);
+            try
+            {
+                return socketAddress == null
+                    ? null
+                    : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), publicPort ?? socketAddress.Port);
+            }
+            catch (Exception e)
+            {
+                global::System.Console.WriteLine(e);
+                throw;
+            }
+            
         }
 
-        private static string SafeMapHostName(string hostName)
+        internal static string SafeMapHostName(string hostName)
         {
             IPAddress ip;
             return !string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out ip) ? SafeMapIPv6(ip) : hostName;

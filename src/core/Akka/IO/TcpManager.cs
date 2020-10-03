@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 
@@ -76,14 +77,31 @@ namespace Akka.IO
             if (c != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c));
+                if (c.Options.Any(r => r is Inet.SO.TlsConnectionOption))
+                {
+                    Context.ActorOf(Props.Create<TlsOutgoingConnection>(() =>
+                        new TlsOutgoingConnection(_tcp, commander, c)));
+                }
+                else
+                {
+                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c));
+                }
                 return true;
             }
             var b = message as Bind;
             if (b != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b));
+                if (b.Options.Any(r => r is Inet.SO.TlsConnectionOption))
+                {
+                    Context.ActorOf(Props.Create<TlsListener>(() =>
+                        new TlsListener(_tcp, commander, b)));
+                }
+                else
+                {
+                    Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b));    
+                }
+                
                 return true;
             }
             var dl = message as DeadLetter;
