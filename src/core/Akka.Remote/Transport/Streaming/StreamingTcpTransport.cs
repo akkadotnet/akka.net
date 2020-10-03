@@ -35,11 +35,17 @@ namespace Akka.Remote.Transport.Streaming
         {
             _queue = queue;
         }
+        public StreamingTcpAssociationHandle(Address localAddress,
+            Address remoteAddress,
+            TaskCompletionSource<ISourceQueueWithComplete<IO.ByteString>> queueTask) : base(localAddress, remoteAddress)
+        {
+            queueTask.Task.ContinueWith(r => _queue = r.Result);
+        }
 
         public override bool Write(ByteString payload)
         {
             
-            return _queue.OfferAsync(IO.ByteString.FromImmutable(payload.ToByteArray())).Result is QueueOfferResult
+            return _queue?.OfferAsync(IO.ByteString.FromImmutable(payload.ToByteArray())).Result is QueueOfferResult
                 .Enqueued;
         }
 
@@ -141,25 +147,29 @@ namespace Akka.Remote.Transport.Streaming
             (ic =>
             {
                 var receiveFlow = this.receiveFlow();
-                var sendFlowPreMat = preMaterializedSendFlow();
+                var sendFlow = this.sendFlow();
                 AssociationListenerPromise.Task.ContinueWith(r =>
                 {
                     var listener = r.Result;
                     var remoteAddress =
                         DotNettyTransport.MapSocketToAddress(
                             (IPEndPoint)ic.RemoteAddress, "tcp", base.System.Name);
+                    var queuePromise =
+                        new TaskCompletionSource<
+                            ISourceQueueWithComplete<IO.ByteString>>();
                     AssociationHandle handle;
                     handle = new StreamingTcpAssociationHandle(_addr,
                         remoteAddress,
-                        sendFlowPreMat.Item1);
+                        queuePromise);
                     handle.ReadHandlerSource.Task.ContinueWith(s =>
                     {   
                         var otherListener = s.Result;
                         RegisterListener(otherListener, remoteAddress, null);
                     }, TaskContinuationOptions.ExecuteSynchronously);
-                    ic.HandleWith(
-                        Flow.FromSinkAndSource(receiveFlow,
-                            sendFlowPreMat.Item2).Async(), _mat);
+                    var outQueue = ic.HandleWith(
+                        Flow.FromSinkAndSource(receiveFlow.Async(),
+                            sendFlow.Async(),(c,q)=>q).Async(), _mat);
+                    queuePromise.SetResult(outQueue);
                     listener.Notify(new InboundAssociation(handle));
                 });
                 return NotUsed.Instance;
@@ -199,9 +209,47 @@ namespace Akka.Remote.Transport.Streaming
                         Settings.SendBufferSize ?? 256 * 1024)));
             
             var receiveFlow = this.receiveFlow();
+            
+            var queuePromise =
+                    new TaskCompletionSource<
+                        ISourceQueueWithComplete<IO.ByteString>>();
+            var handle = new StreamingTcpAssociationHandle(_addr,remoteAddress, queuePromise);
+            handle.ReadHandlerSource.Task.ContinueWith(s =>
+            {   
+                var listener = s.Result;
+                RegisterListener(listener, remoteAddress, null);
+            }, TaskContinuationOptions.ExecuteSynchronously);
+            var run = c.JoinMaterialized(Flow
+                .FromSinkAndSource(receiveFlow.Async(), sendFlow().Async(),
+                    (NotUsed a, ISourceQueueWithComplete<IO.ByteString> b) => b)
+                .Async().Recover(
+                    ex =>
+                    {
+                        _listner.Notify(
+                            new Disassociated(DisassociateInfo.Unknown));
+                        return IO.ByteString.Empty;
+                    }),(oc,sq)=>(oc,sq)).Run(_mat);
+            queuePromise.SetResult(run.sq);
+            return handle;
+        }
 
+        
+        public async Task<AssociationHandle> AssociateA(Address remoteAddress)
+        {
+            
+            var c =base.System.TcpStream().OutgoingConnection(
+                DotNettyTransport.AddressToSocketAddress(remoteAddress),
+                _outAddr,
+                ImmutableList.Create<Inet.SocketOption>(
+                    new Inet.SO.ReceiveBufferSize(
+                        Settings.ReceiveBufferSize ?? 256 * 1024),
+                    new Inet.SO.SendBufferSize(
+                        Settings.SendBufferSize ?? 256 * 1024)));
+            
+            var receiveFlow = this.receiveFlow();
+
+            
             var sendFlowPreMat = preMaterializedSendFlow();
-            //TaskCompletionSource<ISourceQueueWithComplete<>
             var handle = new StreamingTcpAssociationHandle(_addr,remoteAddress, sendFlowPreMat.Item1);
             handle.ReadHandlerSource.Task.ContinueWith(s =>
             {   
@@ -222,6 +270,8 @@ namespace Akka.Remote.Transport.Streaming
             return sendFlow()
                 .PreMaterialize(_mat);
         }
+        
+        
 
         private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
         {
