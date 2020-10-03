@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -36,7 +38,8 @@ namespace Akka.Remote.Transport.Streaming
 
         public override bool Write(ByteString payload)
         {
-            return _queue.OfferAsync(IO.ByteString.CopyFrom(payload.ToByteArray())).Result is QueueOfferResult
+            
+            return _queue.OfferAsync(IO.ByteString.FromImmutable(payload.ToByteArray())).Result is QueueOfferResult
                 .Enqueued;
         }
 
@@ -65,7 +68,7 @@ namespace Akka.Remote.Transport.Streaming
         {
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
             System = system;
-            _mat = ActorMaterializer.Create(system);
+            _mat = ActorMaterializer.Create(system,ActorMaterializerSettings.Create(System), namePrefix:"streaming-transport");
             if (system.Settings.Config.HasPath("akka.remote.dot-netty.tcp"))
             {
                 var dotNettyFallbackConfig =
@@ -78,10 +81,16 @@ namespace Akka.Remote.Transport.Streaming
                 var heliosFallbackConfig = system.Settings.Config.GetConfig("akka.remote.helios.tcp");
                 config = heliosFallbackConfig.WithFallback(config);
             }
-
+            
             Settings = DotNettyTransportSettings.Create(config);
 
         }
+
+        public override long MaximumPayloadBytes
+        {
+            get { return Settings.MaxFrameSize; }
+        }
+
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
             if (IPAddress.TryParse(Settings.Hostname, out IPAddress ip))
@@ -112,7 +121,7 @@ namespace Akka.Remote.Transport.Streaming
                         new Inet.SO.SendBufferSize(Settings.SendBufferSize
                                                    ?? 256 * 1024),
                         new Inet.SO.ReceiveBufferSize(
-                            Settings.ReceiveBufferSize ?? 256 * 1024)));
+                            Settings.ReceiveBufferSize ?? 256 * 1024)), backlog:4096);
             var mappedAddr = _listenAddress is IPEndPoint p
                     ? p
                     : await DnsToIPEndpoint(_listenAddress as DnsEndPoint)
@@ -127,10 +136,9 @@ namespace Akka.Remote.Transport.Streaming
                 systemName: base.System.Name,
                 hostName: Settings.PublicHostname,
                 publicPort: Settings.PublicPort);
-            
-
-            
-            _connectionSource.RunForeach(ic =>
+            //_connectionSource.Via
+            _serverBindingTask = _connectionSource.Select
+            (ic =>
             {
                 var receiveFlow = this.receiveFlow();
                 var sendFlowPreMat = preMaterializedSendFlow();
@@ -144,14 +152,21 @@ namespace Akka.Remote.Transport.Streaming
                     handle = new StreamingTcpAssociationHandle(_addr,
                         remoteAddress,
                         sendFlowPreMat.Item1);
+                    handle.ReadHandlerSource.Task.ContinueWith(s =>
+                    {   
+                        var otherListener = s.Result;
+                        RegisterListener(otherListener, remoteAddress, null);
+                    }, TaskContinuationOptions.ExecuteSynchronously);
                     ic.HandleWith(
-                        Flow.FromSinkAndSource(receiveFlow.Async(),
-                            sendFlowPreMat.Item2.Async()).Async(), _mat);
+                        Flow.FromSinkAndSource(receiveFlow,
+                            sendFlowPreMat.Item2).Async(), _mat);
                     listener.Notify(new InboundAssociation(handle));
                 });
-            }, _mat);
+                return NotUsed.Instance;
+            }).ToMaterialized(Sink.Ignore<NotUsed>(),Keep.Left).Run(_mat);
             return (_addr, AssociationListenerPromise);
         }
+        
         protected async Task<IPEndPoint> DnsToIPEndpoint(DnsEndPoint dns)
         {
             IPEndPoint endpoint;
@@ -186,22 +201,41 @@ namespace Akka.Remote.Transport.Streaming
             var receiveFlow = this.receiveFlow();
 
             var sendFlowPreMat = preMaterializedSendFlow();
+            //TaskCompletionSource<ISourceQueueWithComplete<>
             var handle = new StreamingTcpAssociationHandle(_addr,remoteAddress, sendFlowPreMat.Item1);
             handle.ReadHandlerSource.Task.ContinueWith(s =>
             {   
                 var listener = s.Result;
                 RegisterListener(listener, remoteAddress, null);
             }, TaskContinuationOptions.ExecuteSynchronously);
-            c.Join(Flow.FromSinkAndSource(receiveFlow.Async(), sendFlowPreMat.Item2.Async()).Async()).Run(_mat);
+            c.Join(Flow.FromSinkAndSource(receiveFlow, sendFlowPreMat.Item2).Async().Recover(
+                ex =>
+                {
+                    _listner.Notify(new Disassociated(DisassociateInfo.Unknown));
+                    return IO.ByteString.Empty;
+                }) ).Run(_mat);
             return handle;
         }
 
         private (ISourceQueueWithComplete<IO.ByteString>, Source<IO.ByteString, NotUsed>) preMaterializedSendFlow()
         {
-            return Source
-                .Queue<IO.ByteString>(5000, OverflowStrategy.Backpressure)
-                .Via(Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
+            return sendFlow()
                 .PreMaterialize(_mat);
+        }
+
+        private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
+        {
+            return Source
+                .Queue<IO.ByteString>(5000, OverflowStrategy.DropNew).Async()
+                .Via(
+                    Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
+                .BatchWeighted(16 * 1024,
+                    bs => bs.Count, bs => new List<IO.ByteString>() { bs },
+                    (bsl, bs) =>
+                    {
+                        bsl.Add(bs);
+                        return bsl;
+                    }).Select( bsl => new IO.ByteString(bsl));
         }
 
         private Sink<IO.ByteString, NotUsed> receiveFlow()
@@ -209,8 +243,9 @@ namespace Akka.Remote.Transport.Streaming
             return Flow.Create<IO.ByteString>()
                 .Via(Framing.SimpleFramingProtocolDecoder(Settings.MaxFrameSize)).Select(r =>
                 {
+                    var bs = ByteString.CopyFrom(r.ToArray());
                     _listner?.Notify(
-                        new InboundPayload(ByteString.CopyFrom(r.ToArray())));
+                        new InboundPayload(bs));
                     return  NotUsed.Instance;
                 } ).ToMaterialized(Sink.Ignore<NotUsed>() ,Keep.Left);
         }
@@ -222,7 +257,7 @@ namespace Akka.Remote.Transport.Streaming
 
         public override async Task<bool> Shutdown()
         {
-            await _serverBindingTask.Result.Unbind();
+            await _serverBindingTask.Result.Unbind().ConfigureAwait(false);
             return true;
         }
     }

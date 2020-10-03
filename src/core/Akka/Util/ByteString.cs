@@ -140,6 +140,11 @@ namespace Akka.IO
             return new ByteString(array, offset, count);
         }
 
+        public static ByteString FromImmutable(byte[] immutableBytes)
+        {
+            return new ByteString(immutableBytes,0,immutableBytes.Length);
+        }
+
         /// <summary>
         /// Creates a new <see cref="ByteString"/> by wrapping raw collection of byte segements. 
         /// WARNING: 
@@ -190,6 +195,12 @@ namespace Akka.IO
 
         private readonly int _count;
         private readonly ByteBuffer[] _buffers;
+
+        public ByteString(IList<ByteString> buffers)
+        {
+            _count = buffers.Sum(s => s.Count);
+            _buffers = buffers.SelectMany(r=>r._buffers).ToArray();
+        }
 
         private ByteString(ByteBuffer[] buffers, int count)
         {

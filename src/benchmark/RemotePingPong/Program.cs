@@ -57,6 +57,7 @@ namespace RemotePingPong
                     port = 0
                     hostname = """"
                     batching {
+                        enabled = false
                         flush-interval = 40ms
                     }
                 }
@@ -140,8 +141,8 @@ namespace RemotePingPong
 
         public static IEnumerable<int> GetClientSettings()
         {
-            yield return 1;
-            yield return 5;
+            //yield return 1;
+            //yield return 5;
             yield return 10;
             yield return 15;
             yield return 20;
@@ -203,7 +204,6 @@ namespace RemotePingPong
             var waiting = Task.WhenAll(tasks);
             await Task.WhenAll(waiting);
             sw.Stop();
-
             // force clean termination
             var termination = Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() }).Wait(TimeSpan.FromSeconds(10));
 
