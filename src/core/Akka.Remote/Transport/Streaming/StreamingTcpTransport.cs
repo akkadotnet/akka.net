@@ -15,6 +15,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.IO;
 using Akka.Remote.Transport.DotNetty;
 using Akka.Streams;
@@ -44,9 +45,17 @@ namespace Akka.Remote.Transport.Streaming
 
         public override bool Write(ByteString payload)
         {
+
+            try
+            {
+                return _queue?.OfferAsync(IO.ByteString.FromImmutable(payload.ToByteArray())).Result is QueueOfferResult
+                    .Enqueued;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
             
-            return _queue?.OfferAsync(IO.ByteString.FromImmutable(payload.ToByteArray())).Result is QueueOfferResult
-                .Enqueued;
         }
 
         public override void Disassociate()
@@ -147,7 +156,7 @@ namespace Akka.Remote.Transport.Streaming
             (ic =>
             {
                 var receiveFlow = this.receiveFlow();
-                var sendFlow = this.sendFlow();
+                
                 AssociationListenerPromise.Task.ContinueWith(r =>
                 {
                     var listener = r.Result;
@@ -166,9 +175,18 @@ namespace Akka.Remote.Transport.Streaming
                         var otherListener = s.Result;
                         RegisterListener(otherListener, remoteAddress, null);
                     }, TaskContinuationOptions.ExecuteSynchronously);
-                    var outQueue = ic.HandleWith(
-                        Flow.FromSinkAndSource(receiveFlow.Async(),
-                            sendFlow.Async(),(c,q)=>q).Async(), _mat);
+                    var outQueue = ic.HandleWith(buildFlow()
+                        .Recover(
+                            ex =>
+                            {
+                                //ic.HandleWith(
+                                //    Flow.FromSinkAndSource(
+                                //        Sink.Cancelled<IO.ByteString>(),
+                                //        Source.Empty<IO.ByteString>()), _mat);
+                                _listner.Notify(
+                                    new Disassociated(DisassociateInfo.Unknown));
+                                return IO.ByteString.Empty;
+                            }), _mat);
                     queuePromise.SetResult(outQueue);
                     listener.Notify(new InboundAssociation(handle));
                 });
@@ -176,6 +194,7 @@ namespace Akka.Remote.Transport.Streaming
             }).ToMaterialized(Sink.Ignore<NotUsed>(),Keep.Left).Run(_mat);
             return (_addr, AssociationListenerPromise);
         }
+
         
         protected async Task<IPEndPoint> DnsToIPEndpoint(DnsEndPoint dns)
         {
@@ -208,7 +227,6 @@ namespace Akka.Remote.Transport.Streaming
                     new Inet.SO.SendBufferSize(
                         Settings.SendBufferSize ?? 256 * 1024)));
             
-            var receiveFlow = this.receiveFlow();
             
             var queuePromise =
                     new TaskCompletionSource<
@@ -219,10 +237,7 @@ namespace Akka.Remote.Transport.Streaming
                 var listener = s.Result;
                 RegisterListener(listener, remoteAddress, null);
             }, TaskContinuationOptions.ExecuteSynchronously);
-            var run = c.JoinMaterialized(Flow
-                .FromSinkAndSource(receiveFlow.Async(), sendFlow().Async(),
-                    (NotUsed a, ISourceQueueWithComplete<IO.ByteString> b) => b)
-                .Async().Recover(
+            var run = c.JoinMaterialized(buildFlow().Recover(
                     ex =>
                     {
                         _listner.Notify(
@@ -234,59 +249,32 @@ namespace Akka.Remote.Transport.Streaming
         }
 
         
-        public async Task<AssociationHandle> AssociateA(Address remoteAddress)
-        {
-            
-            var c =base.System.TcpStream().OutgoingConnection(
-                DotNettyTransport.AddressToSocketAddress(remoteAddress),
-                _outAddr,
-                ImmutableList.Create<Inet.SocketOption>(
-                    new Inet.SO.ReceiveBufferSize(
-                        Settings.ReceiveBufferSize ?? 256 * 1024),
-                    new Inet.SO.SendBufferSize(
-                        Settings.SendBufferSize ?? 256 * 1024)));
-            
-            var receiveFlow = this.receiveFlow();
-
-            
-            var sendFlowPreMat = preMaterializedSendFlow();
-            var handle = new StreamingTcpAssociationHandle(_addr,remoteAddress, sendFlowPreMat.Item1);
-            handle.ReadHandlerSource.Task.ContinueWith(s =>
-            {   
-                var listener = s.Result;
-                RegisterListener(listener, remoteAddress, null);
-            }, TaskContinuationOptions.ExecuteSynchronously);
-            c.Join(Flow.FromSinkAndSource(receiveFlow, sendFlowPreMat.Item2).Async().Recover(
-                ex =>
-                {
-                    _listner.Notify(new Disassociated(DisassociateInfo.Unknown));
-                    return IO.ByteString.Empty;
-                }) ).Run(_mat);
-            return handle;
-        }
-
-        private (ISourceQueueWithComplete<IO.ByteString>, Source<IO.ByteString, NotUsed>) preMaterializedSendFlow()
-        {
-            return sendFlow()
-                .PreMaterialize(_mat);
-        }
-        
-        
-
         private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
         {
             return Source
-                .Queue<IO.ByteString>(5000, OverflowStrategy.DropNew).Async()
+                .Queue<IO.ByteString>(128, OverflowStrategy.DropNew)
                 .Via(
                     Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
-                .BatchWeighted(16 * 1024,
-                    bs => bs.Count, bs => new List<IO.ByteString>() { bs },
+                .GroupedWithin(128,TimeSpan.FromMilliseconds(20))
+                .SelectMany(r=>r)
+                .BatchWeighted( Settings.BatchWriterSettings.MaxPendingBytes,
+                    bs => bs.Count, bs => new List<IO.ByteString>(64) { bs },
                     (bsl, bs) =>
                     {
                         bsl.Add(bs);
                         return bsl;
-                    }).Select( bsl => new IO.ByteString(bsl));
+                    })
+                .Select(  bsl =>
+                {
+                    return new IO.ByteString(bsl);
+                });
         }
+        private Flow<IO.ByteString, IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> buildFlow()
+        {
+            return Flow.FromSinkAndSource(receiveFlow(),
+                sendFlow(),(c,q)=>q);
+        }
+        private ILoggingAdapter logger => System.Log; 
 
         private Sink<IO.ByteString, NotUsed> receiveFlow()
         {
