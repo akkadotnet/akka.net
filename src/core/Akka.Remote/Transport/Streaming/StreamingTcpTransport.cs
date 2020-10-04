@@ -251,12 +251,14 @@ namespace Akka.Remote.Transport.Streaming
         private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
         {
             return Source
-                .Queue<IO.ByteString>(128, OverflowStrategy.DropNew)
+                .Queue<IO.ByteString>(512, OverflowStrategy.DropNew)
                 .Via(
                     Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
-                .GroupedWithin(128, TimeSpan.FromMilliseconds(20))
+                //.Async()
+                .GroupedWithin(256, TimeSpan.FromMilliseconds(20))
                 .SelectMany(r => r)
-                .BatchWeighted(Settings.BatchWriterSettings.MaxPendingBytes * 2,
+                .Async()
+                .BatchWeighted(64*1000,
                     bs => bs.Count, bs => new List<IO.ByteString>(128) { bs },
                     (bsl, bs) =>
                     {
@@ -265,7 +267,7 @@ namespace Akka.Remote.Transport.Streaming
                     }).Via(createBufferedSelectFlow()); /*
                 .Select(   bsl =>
                 {
-                    //logger.Error($"{bsl.Count} - {bsl.Sum(r=>r.Count)}"); 
+                    logger.Error($"{bsl.Count} - {bsl.Sum(r=>r.Count)}"); 
                     return new IO.ByteString(bsl);
                 }).WithAttributes(Attributes.CreateInputBuffer(1,1));*/
         }
@@ -274,7 +276,7 @@ namespace Akka.Remote.Transport.Streaming
         {
             return Flow.Create<List<IO.ByteString>>().Select(bsl =>
             {
-                //logger.Error($"{bsl.Count} - {bsl.Sum(r=>r.Count)}"); 
+                //logger.Error($"Wrote {bsl.Count} - {bsl.Sum(r=>r.Count)} bytes"); 
                 return new IO.ByteString(bsl);
             }).Async().AddAttributes(Attributes.CreateInputBuffer(1,1));
         }
