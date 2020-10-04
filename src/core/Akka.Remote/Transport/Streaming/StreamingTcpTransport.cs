@@ -155,7 +155,6 @@ namespace Akka.Remote.Transport.Streaming
             _serverBindingTask = _connectionSource.Select
             (ic =>
             {
-                var receiveFlow = this.receiveFlow();
                 
                 AssociationListenerPromise.Task.ContinueWith(r =>
                 {
@@ -255,24 +254,34 @@ namespace Akka.Remote.Transport.Streaming
                 .Queue<IO.ByteString>(128, OverflowStrategy.DropNew)
                 .Via(
                     Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
-                .GroupedWithin(128,TimeSpan.FromMilliseconds(20))
-                .SelectMany(r=>r)
-                .BatchWeighted( Settings.BatchWriterSettings.MaxPendingBytes,
-                    bs => bs.Count, bs => new List<IO.ByteString>(64) { bs },
+                .GroupedWithin(128, TimeSpan.FromMilliseconds(20))
+                .SelectMany(r => r)
+                .BatchWeighted(Settings.BatchWriterSettings.MaxPendingBytes * 2,
+                    bs => bs.Count, bs => new List<IO.ByteString>(128) { bs },
                     (bsl, bs) =>
                     {
                         bsl.Add(bs);
                         return bsl;
-                    })
-                .Select(  bsl =>
+                    }).Via(createBufferedSelectFlow()); /*
+                .Select(   bsl =>
                 {
+                    //logger.Error($"{bsl.Count} - {bsl.Sum(r=>r.Count)}"); 
                     return new IO.ByteString(bsl);
-                });
+                }).WithAttributes(Attributes.CreateInputBuffer(1,1));*/
+        }
+
+        private Flow<List<IO.ByteString>, IO.ByteString, NotUsed> createBufferedSelectFlow()
+        {
+            return Flow.Create<List<IO.ByteString>>().Select(bsl =>
+            {
+                //logger.Error($"{bsl.Count} - {bsl.Sum(r=>r.Count)}"); 
+                return new IO.ByteString(bsl);
+            }).Async().AddAttributes(Attributes.CreateInputBuffer(1,1));
         }
         private Flow<IO.ByteString, IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> buildFlow()
         {
             return Flow.FromSinkAndSource(receiveFlow(),
-                sendFlow(),(c,q)=>q);
+                sendFlow().Async(),(c,q)=>q);
         }
         private ILoggingAdapter logger => System.Log; 
 
