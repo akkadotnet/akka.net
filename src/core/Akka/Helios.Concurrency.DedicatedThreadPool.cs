@@ -39,61 +39,6 @@ namespace Helios.Concurrency
         /// </summary>
         public const ThreadType DefaultThreadType = ThreadType.Background;
 
-#if UNSAFE_THREADING
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="numThreads">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="deadlockTimeout">TBD</param>
-        /// <param name="apartmentState">TBD</param>
-        /// <param name="exceptionHandler">TBD</param>
-        /// <param name="threadMaxStackSize">TBD</param>
-        public DedicatedThreadPoolSettings(int numThreads,
-                                           string name = null,
-                                           TimeSpan? deadlockTimeout = null,
-                                           ApartmentState apartmentState = ApartmentState.Unknown,
-                                           Action<Exception> exceptionHandler = null,
-                                           int threadMaxStackSize = 0)
-            : this(numThreads, DefaultThreadType, name, deadlockTimeout, apartmentState, exceptionHandler, threadMaxStackSize)
-        { }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DedicatedThreadPoolSettings"/> class.
-        /// </summary>
-        /// <param name="numThreads">TBD</param>
-        /// <param name="threadType">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="deadlockTimeout">TBD</param>
-        /// <param name="apartmentState">TBD</param>
-        /// <param name="exceptionHandler">TBD</param>
-        /// <param name="threadMaxStackSize">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">
-        /// This exception is thrown if the given <paramref name="deadlockTimeout"/> is set to less than 1ms.
-        /// It can also be thrown if the given <paramref name="numThreads"/> is set to less than one.
-        /// </exception>
-        public DedicatedThreadPoolSettings(int numThreads,
-                                           ThreadType threadType,
-                                           string name = null,
-                                           TimeSpan? deadlockTimeout = null,
-                                           ApartmentState apartmentState = ApartmentState.Unknown,
-                                           Action<Exception> exceptionHandler = null,
-                                           int threadMaxStackSize = 0)
-        {
-            Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
-            ThreadType = threadType;
-            NumThreads = numThreads;
-            DeadlockTimeout = deadlockTimeout;
-            ApartmentState = apartmentState;
-            ExceptionHandler = exceptionHandler ?? (ex => { });
-            ThreadMaxStackSize = threadMaxStackSize;
-
-            if (deadlockTimeout.HasValue && deadlockTimeout.Value.TotalMilliseconds <= 0)
-                throw new ArgumentOutOfRangeException(nameof(deadlockTimeout), $"deadlockTimeout must be null or at least 1ms. Was {deadlockTimeout}.");
-            if (numThreads <= 0)
-                throw new ArgumentOutOfRangeException(nameof(numThreads), $"numThreads must be at least 1. Was {numThreads}");
-        }
-#else
         public DedicatedThreadPoolSettings(int numThreads, string name = null, TimeSpan? deadlockTimeout = null)
             : this(numThreads, DefaultThreadType, name, deadlockTimeout)
         { }
@@ -113,7 +58,6 @@ namespace Helios.Concurrency
             if (numThreads <= 0)
                 throw new ArgumentOutOfRangeException("numThreads", string.Format("numThreads must be at least 1. Was {0}", numThreads));
         }
-#endif
 
         /// <summary>
         /// The total number of threads to run in this thread pool.
@@ -125,16 +69,9 @@ namespace Helios.Concurrency
         /// </summary>
         public ThreadType ThreadType { get; private set; }
 
-#if UNSAFE_THREADING
-        /// <summary>
-        /// Apartment state for threads to run in this thread pool
-        /// </summary>
-        public ApartmentState ApartmentState { get; private set; }
-#endif
-
         /// <summary>
         /// Interval to check for thread deadlocks.
-        /// 
+        ///
         /// If a thread takes longer than <see cref="DeadlockTimeout"/> it will be aborted
         /// and replaced.
         /// </summary>
@@ -296,7 +233,7 @@ namespace Helios.Concurrency
                 _currentThreadIsRunningTasks = true;
                 try
                 {
-                    // Process all available items in the queue. 
+                    // Process all available items in the queue.
                     while (true)
                     {
                         Task item;
@@ -314,11 +251,11 @@ namespace Helios.Concurrency
                             _tasks.RemoveFirst();
                         }
 
-                        // Execute the task we pulled out of the queue 
+                        // Execute the task we pulled out of the queue
                         TryExecuteTask(item);
                     }
                 }
-                // We're done processing items on the current thread 
+                // We're done processing items on the current thread
                 finally { _currentThreadIsRunningTasks = false; }
             });
         }
@@ -413,21 +350,13 @@ namespace Helios.Concurrency
                 _pool = pool;
                 _threadExit = new TaskCompletionSource<object>();
 
-#if UNSAFE_THREADING
-                var thread = new Thread(RunThread, pool.Settings.ThreadMaxStackSize);
-#else
-                var thread = new Thread(RunThread);
-#endif
-
-                thread.IsBackground = pool.Settings.ThreadType == ThreadType.Background;
+                var thread = new Thread(RunThread)
+                {
+                    IsBackground = pool.Settings.ThreadType == ThreadType.Background,
+                };
 
                 if (pool.Settings.Name != null)
                     thread.Name = string.Format("{0}_{1}", pool.Settings.Name, workerId);
-
-#if UNSAFE_THREADING
-                if (pool.Settings.ApartmentState != ApartmentState.Unknown)
-                    thread.SetApartmentState(pool.Settings.ApartmentState);
-#endif
 
                 thread.Start();
             }
@@ -602,7 +531,7 @@ namespace Helios.Concurrency
 
             private static readonly int ProcessorCount = Environment.ProcessorCount;
 
-            // We track everything we care about in a single 64-bit struct to allow us to 
+            // We track everything we care about in a single 64-bit struct to allow us to
             // do CompareExchanges on this for atomic updates.
             [StructLayout(LayoutKind.Explicit)]
             private struct SemaphoreState
@@ -674,7 +603,7 @@ namespace Helios.Concurrency
                 }
 
                 //
-                // Now we're a spinner.  
+                // Now we're a spinner.
                 //
                 int numSpins = 0;
                 const int spinLimitPerProcessor = 50;

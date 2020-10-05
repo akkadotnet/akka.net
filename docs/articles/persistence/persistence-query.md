@@ -48,9 +48,9 @@ Akka persistence query comes with a number of query interfaces built in and sugg
 
 The predefined queries are:
 
-**AllPersistenceIdsQuery and CurrentPersistenceIdsQuery**
+**AllPersistenceIdsQuery (PersistentIds) and CurrentPersistenceIdsQuery**
 
-`AllPersistenceIds` is used for retrieving all persistenceIds of all persistent actors.
+`AllPersistenceIds` or `PersistenceIds`, and `CurrentPersistenceIds` in `IPersistenceIdsQuery` is used for retrieving all persistenceIds of all persistent actors.
 
 ```csharp
 var queries = PersistenceQuery.Get(actorSystem)
@@ -64,7 +64,7 @@ The returned event stream is unordered and you can expect different order for mu
 
 The stream is not completed when it reaches the end of the currently used `PersistenceIds`, but it continues to push new `PersistenceIds` when new persistent actors are created. Corresponding query that is completed when it reaches the end of the currently used `PersistenceIds` is provided by `CurrentPersistenceIds`.
 
-The write journal is notifying the query side as soon as new `PersistenceIds` are created and there is no periodic polling or batching involved in this query.
+Periodic polling of new `PersistenceIds` are done on the query side by retrieving the events in batches that sometimes can be delayed up to the configured `refresh-interval` or given `RefreshInterval` hint.
 
 The stream is completed with failure if there is a failure in executing the query in the backend journal.
 
@@ -154,6 +154,42 @@ var furtherBlueThings = readJournal.EventsByTag("blue", offset: 10);
 ```
 
 As you can see, we can use all the usual stream combinators available from Akka Streams on the resulting query stream, including for example taking the first 10 and cancelling the stream. It is worth pointing out that the built-in `EventsByTag` query has an optionally supported offset parameter (of type Long) which the journals can use to implement resumable-streams. For example a journal may be able to use a WHERE clause to begin the read starting from a specific row, or in a datastore that is able to order events by insertion time it could treat the Long as a timestamp and select only older events.
+
+If your usage does not require a live stream, you can use the `CurrentEventsByTag` query.
+
+**AllEvents and CurrentAllEvents**
+
+`AllEvents` allows replaying and monitoring all events regardless of which `PersistenceId` they are associated with. The goal of this query is to allow replaying and monitoring for all events that are stored inside a journal, regardless of its source.Please refer to your read journal plugin's documentation to find out if and how it is supported.
+
+The stream is not completed when it reaches the last event recorded, but it continues to push new events when new event are persisted. Corresponding query that is completed when it reaches the end of the last event persisted when the query id called is provided by `CurrentAllEvents`.
+
+The write journal is notifying the query side as soon as new events are created and there is no periodic polling or batching involved in this query.
+
+> [!NOTE]
+> A very important thing to keep in mind when using queries spanning multiple `PersistenceIds`, such as `AllEvents` is that the order of events at which the events appear in the stream rarely is guaranteed (or stable between materializations).
+
+Journals may choose to opt for strict ordering of the events, and should then document explicitly what kind of ordering guarantee they provide - for example "ordered by timestamp ascending, independently of `PersistenceId`" is easy to achieve on relational databases, yet may be hard to implement efficiently on plain key-value datastores.
+
+In the example below we query all events which have been stored inside the journal.
+
+```csharp
+// assuming journal is able to work with numeric offsets we can:
+Source<EventEnvelope, NotUsed> allEvents = readJournal.AllEvents(offset: 0L);
+
+// replay the first 10 things stored:
+Task<ImmutableHashSet<object>> first10Things = allEvents
+    .Select(c => c.Event)
+    .Take(10) // cancels the query stream after pulling 10 elements
+    .RunAggregate(
+        ImmutableHashSet<object>.Empty,
+        (acc, c) => acc.Add(c),
+        mat);
+
+// start another query, from the known offset
+var next10Things = readJournal.AllEvents(offset: 10);
+```
+
+As you can see, we can use all the usual stream combinators available from Akka Streams on the resulting query stream, including for example taking the first 10 and cancelling the stream. It is worth pointing out that the built-in `AllEvents` query has an optionally supported offset parameter (of type Long) which the journals can use to implement resumable-streams. For example a journal may be able to use a WHERE clause to begin the read starting from a specific row, or in a datastore that is able to order events by insertion time it could treat the Long as a timestamp and select only older events.
 
 If your usage does not require a live stream, you can use the `CurrentEventsByTag` query.
 

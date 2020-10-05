@@ -10,9 +10,11 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sqlite.Tests.Query
 {
-    public class SqliteAllEventsSpec:AllEventsSpec
+    public class SqliteCurrentAllEventsSpec:CurrentAllEventsSpec
     {
-        public static Config Config => ConfigurationFactory.ParseString($@"
+        public static readonly AtomicCounter Counter = new AtomicCounter(0);
+
+        public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
             akka.persistence.journal.sqlite {{
@@ -21,13 +23,13 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""Filename=file:memdb-journal-eventsbytag-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared""
+                connection-string = ""Filename=file:memdb-journal-eventsbytag-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public SqliteAllEventsSpec(ITestOutputHelper output) : base(Config, nameof(SqliteAllEventsSpec), output)
+        public SqliteCurrentAllEventsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(SqliteCurrentAllEventsSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }

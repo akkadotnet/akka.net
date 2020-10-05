@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
@@ -34,8 +35,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
+        /// <param name="offset">TBD</param>
         /// <returns>TBD</returns>
-        Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken);
+        Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken, long offset);
 
         /// <summary>
         /// Asynchronously replays a <paramref name="callback"/> on all selected events for provided
@@ -69,12 +71,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, Action<ReplayedTaggedMessage> callback);
 
         Task<long> SelectAllEventsAsync(
-            DbConnection connection, 
+            DbConnection connection,
             CancellationToken cancellationToken, 
             long fromOffset, 
+            long toOffset,
             long max, 
-            Action<ReplayedEvent> callback, 
-            Action<ReplayedAllEvents> completeCallback);
+            Action<ReplayedEvent> callback);
 
         /// <summary>
         /// Asynchronously returns single number considered as the highest sequence number in current journal for the provided <paramref name="persistenceId"/>.
@@ -84,7 +86,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="persistenceId">TBD</param>
         /// <returns>TBD</returns>
         Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId);
-        
+
+        Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken);
+
         /// <summary>
         /// Asynchronously inserts a collection of events and theirs tags into a journal table.
         /// </summary>
@@ -326,8 +330,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                 e.{Configuration.SerializerIdColumnName} as SerializerId";
 
             AllPersistenceIdsSql = $@"
-                SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as PersistenceId 
-                FROM {Configuration.FullJournalTableName} e;";
+                SELECT DISTINCT u.Id as PersistenceId 
+                FROM (
+                    SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as Id 
+                    FROM {Configuration.FullJournalTableName} e
+                    WHERE e.{Configuration.OrderingColumnName} > @Ordering
+                    UNION
+                    SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as Id 
+                    FROM {Configuration.FullMetaTableName} e
+                ) as u";
 
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
@@ -377,8 +388,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             HighestOrderingSql =
                 $@"
                 SELECT MAX(e.{Configuration.OrderingColumnName}) as Ordering
-                FROM {Configuration.FullJournalTableName} e
-                WHERE e.{Configuration.OrderingColumnName} > @Ordering";
+                FROM {Configuration.FullJournalTableName} e";
 
             InsertEventSql = $@"
                 INSERT INTO {Configuration.FullJournalTableName} (
@@ -474,19 +484,23 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
+        /// <param name="offset">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken)
+        public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken, long offset)
         {
             using (var command = GetCommand(connection, AllPersistenceIdsSql))
-            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                var builder = ImmutableArray.CreateBuilder<string>();
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    builder.Add(reader.GetString(0));
-                }
+                AddParameter(command, "@Ordering", DbType.Int64, offset);
 
-                return builder.ToImmutable();
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                {
+                    var builder = ImmutableArray.CreateBuilder<string>();
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        builder.Add(reader.GetString(0));
+                    }
+                    return builder.ToImmutable();
+                }
             }
         }
 
@@ -585,18 +599,26 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        public async Task<long> SelectAllEventsAsync(
-            DbConnection connection, 
+        public virtual async Task<long> SelectAllEventsAsync(
+            DbConnection connection,
             CancellationToken cancellationToken, 
             long fromOffset,
+            long toOffset,
             long max, 
-            Action<ReplayedEvent> callback,
-            Action<ReplayedAllEvents> completeCallback)
+            Action<ReplayedEvent> callback)
         {
+            long maxOrdering;
+            using (var command = GetCommand(connection, HighestOrderingSql))
+            {
+                maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
+            }
+
             using (var command = GetCommand(connection, AllEventsSql))
             {
+                var take = Math.Min(toOffset - fromOffset, max);
+
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                AddParameter(command, "@Take", DbType.Int64, max);
+                AddParameter(command, "@Take", DbType.Int64, take);
 
                 var commandBehavior = Configuration.UseSequentialAccess ? 
                     CommandBehavior.SequentialAccess : 
@@ -604,25 +626,16 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
                 {
-                    long rowCounter = 0;
                     while (await reader.ReadAsync(cancellationToken))
                     {
-                        ++rowCounter;
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
                         callback(new ReplayedEvent(persistent, ordering));
                     }
-                    if(rowCounter < max)
-                        completeCallback(ReplayedAllEvents.Instance);
                 }
             }
 
-            using (var command = GetCommand(connection, HighestOrderingSql))
-            {
-                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                var maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
-                return maxOrdering;
-            }
+            return maxOrdering;
         }
 
         /// <summary>
@@ -638,6 +651,15 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
 
+                var result = await command.ExecuteScalarAsync(cancellationToken);
+                return result is long ? Convert.ToInt64(result) : 0L;
+            }
+        }
+
+        public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken)
+        {
+            using (var command = GetCommand(connection, HighestOrderingSql))
+            {
                 var result = await command.ExecuteScalarAsync(cancellationToken);
                 return result is long ? Convert.ToInt64(result) : 0L;
             }

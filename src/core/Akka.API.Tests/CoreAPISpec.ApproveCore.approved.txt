@@ -3888,15 +3888,20 @@ namespace Akka.Pattern
     }
     public class CircuitBreaker
     {
-        public CircuitBreaker(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout, System.TimeSpan maxResetTimeout, double exponentialBackoffFactor) { }
         public System.TimeSpan CallTimeout { get; }
         public long CurrentFailureCount { get; }
+        public double ExponentialBackoffFactor { get; }
         public bool IsClosed { get; }
         public bool IsHalfOpen { get; }
         public bool IsOpen { get; }
+        public System.Exception LastCaughtException { get; }
         public int MaxFailures { get; }
+        public System.TimeSpan MaxResetTimeout { get; }
         public System.TimeSpan ResetTimeout { get; }
-        public static Akka.Pattern.CircuitBreaker Create(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public Akka.Actor.IScheduler Scheduler { get; }
+        public static Akka.Pattern.CircuitBreaker Create(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
         public void Fail() { }
         public Akka.Pattern.CircuitBreaker OnClose(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnHalfOpen(System.Action callback) { }
@@ -3904,6 +3909,7 @@ namespace Akka.Pattern
         public void Succeed() { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
+        public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
@@ -3921,7 +3927,16 @@ namespace Akka.Pattern
     {
         public OpenCircuitException() { }
         public OpenCircuitException(string message) { }
+        public OpenCircuitException(string message, System.TimeSpan remainingDuration) { }
         public OpenCircuitException(string message, System.Exception cause) { }
+        public OpenCircuitException(string message, System.Exception cause, System.TimeSpan remainingDuration) { }
+        public OpenCircuitException(System.Exception cause) { }
+        public OpenCircuitException(System.Exception cause, System.TimeSpan remainingDuration) { }
+        public System.TimeSpan RemainingDuration { get; }
+    }
+    public class UserCalledFailException : Akka.Actor.AkkaException
+    {
+        public UserCalledFailException() { }
     }
 }
 namespace Akka.Routing

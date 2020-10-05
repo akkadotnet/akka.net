@@ -19,6 +19,10 @@ namespace Akka.Persistence.Query
     {
         Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> AllEvents(Akka.Persistence.Query.Offset offset);
     }
+    public interface ICurrentAllEventsQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentAllEvents(Akka.Persistence.Query.Offset offset);
+    }
     public interface ICurrentEventsByPersistenceIdQuery : Akka.Persistence.Query.IReadJournal
     {
         Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr);

@@ -1253,15 +1253,9 @@ namespace Akka.Cluster.Sharding
         /// <param name="from">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        /// <param name="shuttingDownRegions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, IEnumerable<IActorRef> shuttingDownRegions)
-        {
-            if (shuttingDownRegions.Count() > regions.Count())
-                throw new ArgumentException($"'shuttingDownRegions' must be a subset of 'regions'.", nameof(shuttingDownRegions));
-
-            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions, shuttingDownRegions));
-        }
+        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions) => 
+            Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
 
         private readonly ShardId _shard;
         private readonly IActorRef _from;
@@ -1279,18 +1273,19 @@ namespace Akka.Cluster.Sharding
         /// <param name="from">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        /// <param name="shuttingDownRegions">TBD</param>
-        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, IEnumerable<IActorRef> shuttingDownRegions)
+        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
         {
             _shard = shard;
             _from = @from;
 
-            foreach (var region in shuttingDownRegions)
-                Context.Watch(region);
-
             _remaining = new HashSet<IActorRef>(regions);
             foreach (var region in _remaining)
+            {
+                Context.Watch(region);
                 region.Tell(new PersistentShardCoordinator.BeginHandOff(shard));
+            }
+            
+            Log.Debug("Rebalance [{0}] from region [{1}]", shard, regions);
 
             Timers.StartSingleTimer("hand-off-timeout", ReceiveTimeout.Instance, handOffTimeout);
         }
@@ -1305,14 +1300,15 @@ namespace Akka.Cluster.Sharding
             switch (message)
             {
                 case PersistentShardCoordinator.BeginHandOffAck hoa when _shard == hoa.Shard:
-                    Log.Debug("BeginHandOffAck for shard [{0}] received from {1}.", _shard, Sender);
+                    Log.Debug("BeginHandOffAck for shard [{0}] received from [{1}].", _shard, Sender);
                     Acked(Sender);
                     return true;
                 case Terminated t:
-                    Log.Debug("ShardRegion {0} terminated while waiting for BeginHandOffAck for shard [{1}].", t.ActorRef, _shard);
+                    Log.Debug("ShardRegion [{0}] terminated while waiting for BeginHandOffAck for shard [{1}].", t.ActorRef, _shard);
                     Acked(t.ActorRef);
                     return true;
                 case ReceiveTimeout _:
+                    Log.Debug("Rebalance of [{0}] from [{1}] timed out", _shard, _from);
                     Done(false);
                     return true;
             }

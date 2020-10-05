@@ -8,29 +8,30 @@ using Akka.Persistence.TCK.Query;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Sqlite.Tests.Query
+namespace Akka.Persistence.Sqlite.Tests.Batching
 {
-    public class SqliteAllEventsSpec:AllEventsSpec
+    public class BatchingCurrentSqliteAllEventsSpec : CurrentAllEventsSpec
     {
-        public static Config Config => ConfigurationFactory.ParseString($@"
+        public static readonly AtomicCounter Counter = new AtomicCounter(0);
+
+        public static Config Config(int id) => ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
             akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
             akka.persistence.journal.sqlite {{
-                class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+                class = ""Akka.Persistence.Sqlite.Journal.BatchingSqliteJournal, Akka.Persistence.Sqlite""
                 plugin-dispatcher = ""akka.actor.default-dispatcher""
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""Filename=file:memdb-journal-eventsbytag-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared""
+                connection-string = ""Filename=file:memdb-journal-eventsbytag-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
             .WithFallback(SqlReadJournal.DefaultConfiguration());
 
-        public SqliteAllEventsSpec(ITestOutputHelper output) : base(Config, nameof(SqliteAllEventsSpec), output)
+        public BatchingCurrentSqliteAllEventsSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingCurrentSqliteAllEventsSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
-
     }
 }

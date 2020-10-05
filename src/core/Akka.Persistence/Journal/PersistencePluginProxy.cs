@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Journal
 {
@@ -71,7 +73,7 @@ namespace Akka.Persistence.Journal
 
         private interface IPluginType
         {
-             string Qualifier { get; }
+            string Qualifier { get; }
         }
 
         private class Journal : IPluginType
@@ -117,7 +119,7 @@ namespace Akka.Persistence.Journal
                 throw new ArgumentException($"{pluginId}.{key} must be defined.");
             _startTarget = config.GetBoolean("start-target-" + _pluginType.Qualifier, false);
 
-            _selfAddress = ((ExtendedActorSystem) Context.System).Provider.DefaultAddress;
+            _selfAddress = ((ExtendedActorSystem)Context.System).Provider.DefaultAddress;
         }
 
         /// <summary>
@@ -233,7 +235,7 @@ namespace Akka.Persistence.Journal
             {
                 if (message is ActorIdentity)
                 {
-                    var ai = (ActorIdentity) message;
+                    var ai = (ActorIdentity)message;
                     if (_targetPluginId.Equals(ai.MessageId))
                     {
                         var target = ai.Subject;
@@ -265,13 +267,13 @@ namespace Akka.Persistence.Journal
             {
                 if (message is TargetLocation)
                 {
-                    var address = ((TargetLocation) message).Address;
+                    var address = ((TargetLocation)message).Address;
                     if (targetAtThisNode && !address.Equals(_selfAddress))
                         BecomeIdentifying(address);
                 }
                 else if (message is Terminated)
                 {
-                    var t = (Terminated) message;
+                    var t = (Terminated)message;
                     if (t.ActorRef.Equals(targetJournal))
                     {
                         Context.Unwatch(targetJournal);
@@ -293,16 +295,16 @@ namespace Akka.Persistence.Journal
             {
                 if (message is IJournalRequest)
                 {
-                     // exhaustive match
-                    if (message is WriteMessages)
+                    // exhaustive match
+                    if (message is WriteMessages w)
                     {
-                        var w = (WriteMessages) message;
-                        w.PersistentActor.Tell(new WriteMessagesFailed(TimeoutException()));
+                        var atomicWriteCount = w.Messages.Count(m => m is AtomicWrite);
+                        w.PersistentActor.Tell(new WriteMessagesFailed(TimeoutException(), atomicWriteCount));
                         foreach (var m in w.Messages)
                         {
                             if (m is AtomicWrite)
                             {
-                                foreach (var p in (IEnumerable<IPersistentRepresentation>) m.Payload)
+                                foreach (var p in (IEnumerable<IPersistentRepresentation>)m.Payload)
                                 {
                                     w.PersistentActor.Tell(new WriteMessageFailure(p, TimeoutException(),
                                         w.ActorInstanceId));
@@ -316,12 +318,12 @@ namespace Akka.Persistence.Journal
                     }
                     else if (message is ReplayMessages)
                     {
-                        var r = (ReplayMessages) message;
+                        var r = (ReplayMessages)message;
                         r.PersistentActor.Tell(new ReplayMessagesFailure(TimeoutException()));
                     }
                     else if (message is DeleteMessagesTo)
                     {
-                        var d = (DeleteMessagesTo) message;
+                        var d = (DeleteMessagesTo)message;
                         d.PersistentActor.Tell(new DeleteMessagesFailure(TimeoutException(), d.ToSequenceNr));
                     }
                 }
@@ -330,28 +332,28 @@ namespace Akka.Persistence.Journal
                     // exhaustive match
                     if (message is LoadSnapshot)
                     {
-                        var l = (LoadSnapshot) message;
+                        var l = (LoadSnapshot)message;
                         Sender.Tell(new LoadSnapshotFailed(TimeoutException()));
                     }
                     else if (message is SaveSnapshot)
                     {
-                        var s = (SaveSnapshot) message;
+                        var s = (SaveSnapshot)message;
                         Sender.Tell(new SaveSnapshotFailure(s.Metadata, TimeoutException()));
                     }
                     else if (message is DeleteSnapshot)
                     {
-                        var d = (DeleteSnapshot) message;
+                        var d = (DeleteSnapshot)message;
                         Sender.Tell(new DeleteSnapshotFailure(d.Metadata, TimeoutException()));
                     }
                     else if (message is DeleteSnapshots)
                     {
-                        var d = (DeleteSnapshots) message;
+                        var d = (DeleteSnapshots)message;
                         Sender.Tell(new DeleteSnapshotsFailure(d.Criteria, TimeoutException()));
                     }
                 }
                 else if (message is TargetLocation)
                 {
-                    BecomeIdentifying(((TargetLocation) message).Address);
+                    BecomeIdentifying(((TargetLocation)message).Address);
                 }
                 else if (message is Terminated)
                 {

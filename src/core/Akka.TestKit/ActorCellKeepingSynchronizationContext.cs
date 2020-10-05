@@ -39,17 +39,13 @@ namespace Akka.TestKit
         /// <param name="state">TBD</param>
         public override void Post(SendOrPostCallback d, object state)
         {
-#if UNSAFE_THREADING
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
-#else
             ThreadPool.QueueUserWorkItem(_ =>
-#endif
             {
                 var oldCell = InternalCurrentActorCellKeeper.Current;
                 var oldContext = Current;
                 SetSynchronizationContext(this);
                 InternalCurrentActorCellKeeper.Current = _cell;
-                
+
                 try
                 {
                     d(state);
@@ -85,4 +81,4 @@ namespace Akka.TestKit
             tcs.Task.Wait();
         }
     }
-} 
+}
