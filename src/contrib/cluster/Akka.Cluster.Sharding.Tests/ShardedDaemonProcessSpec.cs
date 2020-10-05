@@ -100,6 +100,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             var started = probe.ReceiveN(5);
             started.Count.ShouldBe(5);
+            probe.ExpectNoMsg();
         }
 
         [Fact]
