@@ -228,7 +228,7 @@ namespace Akka.Streams
         /// </summary>
         public sealed class CancellationStrategy:IMandatoryAttribute
         {
-            internal CancellationStrategy Default { get; } = new CancellationStrategy(new PropagateFailure());
+            internal static CancellationStrategy Default { get; } = new CancellationStrategy(new PropagateFailure());
 
             public IStrategy Strategy { get; }
 
@@ -595,6 +595,8 @@ namespace Akka.Streams
             /// <inheritdoc/>
             public override string ToString() => "SupervisionStrategy";
         }
+
+        public static Dispatcher IODispatcher { get; } = new Dispatcher("akka.stream.materializer.blocking-io-dispatcher");
 
         /// <summary>
         /// Enables additional low level troubleshooting logging at DEBUG log level

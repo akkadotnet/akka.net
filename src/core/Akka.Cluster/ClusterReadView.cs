@@ -153,6 +153,12 @@ namespace Akka.Cluster
                             readView._latestStats = stats;
                         })
                         .With<ClusterEvent.ClusterShuttingDown>(_ => { });
+
+                    // once captured, optional verbose logging of event
+                    if (!(clusterDomainEvent is ClusterEvent.SeenChanged) && _cluster.Settings.LogInfoVerbose)
+                    {
+                        _cluster.LogInfo("event {0}", clusterDomainEvent.GetType().Name);
+                    }
                 });
 
                 Receive<ClusterEvent.CurrentClusterState>(state =>
@@ -164,7 +170,7 @@ namespace Akka.Cluster
             protected override void PreStart()
             {
                 //subscribe to all cluster domain events
-                _cluster.Subscribe(Self, new []{ typeof(ClusterEvent.IClusterDomainEvent) });
+                _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IClusterDomainEvent) });
             }
 
             protected override void PostStop()

@@ -68,7 +68,7 @@ namespace Akka.Cluster
             public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
             public override string ToString() { }
         }
-        public sealed class CurrentClusterState
+        public sealed class CurrentClusterState : Akka.Actor.INoSerializationVerificationNeeded
         {
             public CurrentClusterState() { }
             public CurrentClusterState(System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> members, System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> unreachable, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> seenBy, Akka.Actor.Address leader, System.Collections.Immutable.ImmutableDictionary<string, Akka.Actor.Address> roleLeaderMap) { }
@@ -197,6 +197,7 @@ namespace Akka.Cluster
         public System.TimeSpan HeartbeatInterval { get; }
         public System.TimeSpan LeaderActionsInterval { get; }
         public bool LogInfo { get; }
+        public bool LogInfoVerbose { get; }
         public int MinNrOfMembers { get; }
         public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
         public int MonitoredByNrOfMembers { get; }

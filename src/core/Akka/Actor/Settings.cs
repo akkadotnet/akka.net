@@ -7,11 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
-using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -131,6 +131,10 @@ namespace Akka.Actor
                     break;
             }
             LogDeadLettersDuringShutdown = Config.GetBoolean("akka.log-dead-letters-during-shutdown", false);
+
+            const string key = "akka.log-dead-letters-suspend-duration";
+            LogDeadLettersSuspendDuration = Config.GetString(key, null) == "infinite" ? Timeout.InfiniteTimeSpan : Config.GetTimeSpan(key);
+
             AddLoggingReceive = Config.GetBoolean("akka.actor.debug.receive", false);
             DebugAutoReceive = Config.GetBoolean("akka.actor.debug.autoreceive", false);
             DebugLifecycle = Config.GetBoolean("akka.actor.debug.lifecycle", false);
@@ -257,7 +261,7 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The logger start timeout.</value>
         public TimeSpan LoggerStartTimeout { get; private set; }
-        
+
         /// <summary>
         ///     Gets the logger start timeout.
         /// </summary>
@@ -281,6 +285,11 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [log dead letters during shutdown]; otherwise, <c>false</c>.</value>
         public bool LogDeadLettersDuringShutdown { get; private set; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public TimeSpan LogDeadLettersSuspendDuration { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [add logging receive].

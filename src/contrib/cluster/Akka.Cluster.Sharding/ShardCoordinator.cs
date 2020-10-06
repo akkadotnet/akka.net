@@ -223,6 +223,10 @@ namespace Akka.Cluster.Sharding
                     coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Add(request.ShardRegion);
                     ContinueRebalance(coordinator, shards.ToImmutableHashSet());
                 }
+                else
+                {
+                    coordinator.Log.Debug("Unknown region requested graceful shutdown [{0}]", request.ShardRegion);
+                }
             }
         }
 
@@ -462,6 +466,13 @@ namespace Akka.Cluster.Sharding
 
         private static void ContinueRebalance<TCoordinator>(this TCoordinator coordinator, IImmutableSet<ShardId> shards) where TCoordinator : IShardCoordinator
         {
+            if (coordinator.Log.IsInfoEnabled && (shards.Count > 0 || !coordinator.RebalanceInProgress.IsEmpty))
+            {
+                coordinator.Log.Info("Starting rebalance for shards [{0}]. Current shards rebalancing: [{1}]",
+                    string.Join(",", shards),
+                    string.Join(",", coordinator.RebalanceInProgress.Keys));
+            }
+
             foreach (var shard in shards)
             {
                 if (!coordinator.RebalanceInProgress.ContainsKey(shard))
@@ -472,7 +483,7 @@ namespace Akka.Cluster.Sharding
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions, coordinator.GracefullShutdownInProgress)
+                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions)
                             .WithDispatcher(coordinator.Context.Props.Dispatcher));
                     }
                     else

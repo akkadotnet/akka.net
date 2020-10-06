@@ -13,6 +13,7 @@ namespace DocsExamples.Persistence.PersistentActor
 {
     public static class PersistentActorSpec
     {
+        #region PersistActor
         public class Cmd
         {
             public Cmd(string data)
@@ -106,5 +107,6 @@ namespace DocsExamples.Persistence.PersistentActor
 
             public override string PersistenceId { get; } = "sample-id-1";
         }
+        #endregion
     }
 }

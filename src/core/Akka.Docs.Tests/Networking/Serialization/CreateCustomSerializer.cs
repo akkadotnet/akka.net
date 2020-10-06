@@ -11,6 +11,7 @@ using Akka.Serialization;
 
 namespace DocsExamples.Networking.Serialization
 {
+    #region CustomSerialization
     public class MySerializer : Serializer
     {
         public MySerializer(ExtendedActorSystem system) : base(system)
@@ -47,4 +48,5 @@ namespace DocsExamples.Networking.Serialization
             throw new NotImplementedException();
         }
     }
+    #endregion
 }

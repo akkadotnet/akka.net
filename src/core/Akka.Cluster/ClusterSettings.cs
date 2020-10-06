@@ -35,7 +35,8 @@ namespace Akka.Cluster
             if (clusterConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterSettings>("akka.cluster");
 
-            LogInfo = clusterConfig.GetBoolean("log-info", false);
+            LogInfoVerbose = clusterConfig.GetBoolean("log-info-verbose", false);
+            LogInfo = LogInfoVerbose || clusterConfig.GetBoolean("log-info", false);
             _failureDetectorConfig = clusterConfig.GetConfig("failure-detector");
             FailureDetectorImplementationClass = _failureDetectorConfig.GetString("implementation-class", null);
             HeartbeatInterval = _failureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
@@ -69,7 +70,7 @@ namespace Akka.Cluster
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
             _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
-            if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
+            if (string.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.InternalDispatcherId;
             GossipDifferentViewProbability = clusterConfig.GetDouble("gossip-different-view-probability", 0);
             ReduceGossipDifferentViewProbability = clusterConfig.GetInt("reduce-gossip-different-view-probability", 0);
             SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);
@@ -92,6 +93,11 @@ namespace Akka.Cluster
             RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
             AllowWeaklyUpMembers = clusterConfig.GetBoolean("allow-weakly-up-members", false);
         }
+
+        /// <summary>
+        /// Determine whether to log verbose <see cref="Akka.Event.LogLevel.InfoLevel"/> messages for temporary troubleshooting.
+        /// </summary>
+        public bool LogInfoVerbose { get; }
 
         /// <summary>
         /// Determine whether to log <see cref="Akka.Event.LogLevel.InfoLevel"/> messages.

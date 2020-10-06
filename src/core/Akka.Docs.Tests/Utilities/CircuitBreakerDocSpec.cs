@@ -21,10 +21,10 @@ namespace DocsExamples.Utilities.CircuitBreakers
         public DangerousActor()
         {
             var breaker = new CircuitBreaker(
-                    maxFailures: 5,
-                    callTimeout: TimeSpan.FromSeconds(10),
-                    resetTimeout: TimeSpan.FromMinutes(1))
-                .OnOpen(NotifyMeOnOpen);
+                Context.System.Scheduler,
+                maxFailures: 5,
+                callTimeout: TimeSpan.FromSeconds(10),
+                resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
         }
 
         private void NotifyMeOnOpen()
@@ -42,10 +42,10 @@ namespace DocsExamples.Utilities.CircuitBreakers
         public DangerousActorCallProtection()
         {
             var breaker = new CircuitBreaker(
-                    maxFailures: 5,
-                    callTimeout: TimeSpan.FromSeconds(10),
-                    resetTimeout: TimeSpan.FromMinutes(1))
-                .OnOpen(NotifyMeOnOpen);
+                Context.System.Scheduler,
+                maxFailures: 5,
+                callTimeout: TimeSpan.FromSeconds(10),
+                resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
 
             var dangerousCall = "This really isn't that dangerous of a call after all";
 
@@ -77,7 +77,8 @@ namespace DocsExamples.Utilities.CircuitBreakers
         {
             _recipient = recipient;
             _breaker = new CircuitBreaker(
-                maxFailures: 5, 
+                Context.System.Scheduler,
+                maxFailures: 5,
                 callTimeout: TimeSpan.FromSeconds(10),
                 resetTimeout: TimeSpan.FromMinutes(1)).OnOpen(NotifyMeOnOpen);
         }

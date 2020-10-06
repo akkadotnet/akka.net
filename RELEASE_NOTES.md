@@ -1,5 +1,45 @@
-#### 1.4.9 June 17 2020 ####
+#### 1.4.11 August 20th 2020 ####
 **Placeholder for nightlies**
+
+#### 1.4.10 August 20th 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.10 includes some minor bug fixes and some major feature additions to Akka.Persistence.Query:
+
+* [Fixed: Akka.Persistence.Sql SqlJournal caching all Persistence Ids in memory does not scale](https://github.com/akkadotnet/akka.net/issues/4524)
+* [Fixed Akka.Persistence.Query PersistenceIds queries now work across all nodes, rather than local node](https://github.com/akkadotnet/akka.net/pull/4531)
+* [Akka.Actor: Akka.Pattern: Pass in clearer error message into OpenCircuitException](https://github.com/akkadotnet/akka.net/issues/4314)
+* [Akka.Persistence: Allow persistence plugins to customize JournalPerfSpec's default values](https://github.com/akkadotnet/akka.net/pull/4544)
+* [Akka.Remote: Racy RemotingTerminator actor crash in Akka.Remote initialization](https://github.com/akkadotnet/akka.net/issues/4530)
+
+To see the [full set of fixes in Akka.NET v1.4.10, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/41).
+
+
+
+#### 1.4.9 July 21 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.9 features some important bug fixes for Akka.NET v1.4:
+
+* [Akka: Re-enable dead letter logging after specified duration](https://github.com/akkadotnet/akka.net/pull/4513)
+* [Akka: Optimize allocations in `ActorPath.Join()`](https://github.com/akkadotnet/akka.net/pull/4510)
+* [Akka.IO: Optimize TCP-related actor creation in Akka.IO](https://github.com/akkadotnet/akka.net/pull/4509)
+* [Akka.DistributedData: Resolve "An Item with the same key but different value already exists" error during pruning](https://github.com/akkadotnet/akka.net/pull/4512)
+* [Akka.Cluster: Cluster event listener that logs all events](https://github.com/akkadotnet/akka.net/pull/4502)
+* [Akka.Cluster.Tools.Singleton.ClusterSingletonManager bug: An element with the same key but a different value already exists](https://github.com/akkadotnet/akka.net/issues/4474)
+
+To see the [full set of fixes in Akka.NET v1.4.9, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/40).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 1008 | 90 | Gregorius Soedharmo |
+| 5 | 475 | 27 | Ismael Hamed |
+| 3 | 6 | 6 | dependabot-preview[bot] |
+| 2 | 28 | 5 | Petri Kero |
+| 1 | 3 | 0 | Aaron Stannard |
+| 1 | 2 | 2 | tometchy |
+| 1 | 1 | 1 | to11mtm |
+| 1 | 1 | 1 | Kevin Preller |
 
 #### 1.4.8 June 17 2020 ####
 **Maintenance Release for Akka.NET 1.4**

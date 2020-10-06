@@ -5,6 +5,9 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- FIX for "<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>..." build error with the latest VS2019 update-->
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <!-- END FIX-->
   </PropertyGroup>
 
   <ItemGroup>

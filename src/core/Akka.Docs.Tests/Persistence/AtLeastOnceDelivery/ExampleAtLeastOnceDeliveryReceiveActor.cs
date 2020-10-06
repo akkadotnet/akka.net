@@ -10,6 +10,7 @@ using Akka.Persistence;
 
 namespace DocsExamples.Persistence.AtLeastOnceDelivery
 {
+    #region AtLeastOnceDelivery
     public class ExampleAtLeastOnceDeliveryReceiveActor : AtLeastOnceDeliveryReceiveActor
     {
         private readonly IActorRef _destionationActor = Context.ActorOf<ExampleDestinationAtLeastOnceDeliveryReceiveActor>();
@@ -53,4 +54,5 @@ namespace DocsExamples.Persistence.AtLeastOnceDelivery
             });
         }
     }
+    #endregion
 }

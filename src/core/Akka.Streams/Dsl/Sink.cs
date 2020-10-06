@@ -282,7 +282,10 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
         public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
-            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
+            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
+
+        internal static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(Action onTerminated = null)
+            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink"), onTerminated));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will consume the stream and discard the elements.
@@ -592,7 +595,7 @@ namespace Akka.Streams.Dsl
         {
             SinkModule<TIn, IPublisher<TIn>> publisherSink;
             if (fanout)
-                publisherSink = new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink"));
+                publisherSink = new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink"));
             else
                 publisherSink = new PublisherSink<TIn>(DefaultAttributes.PublisherSink, Shape<TIn>("PublisherSink"));
 
