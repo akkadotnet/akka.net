@@ -43,7 +43,11 @@ namespace Helios.Concurrency
             : this(numThreads, DefaultThreadType, name, deadlockTimeout)
         { }
 
-        public DedicatedThreadPoolSettings(int numThreads, ThreadType threadType, string name = null, TimeSpan? deadlockTimeout = null)
+        public DedicatedThreadPoolSettings(
+            int numThreads, 
+            ThreadType threadType, 
+            string name = null, 
+            TimeSpan? deadlockTimeout = null)
         {
             Name = name ?? ("DedicatedThreadPool-" + Guid.NewGuid());
             ThreadType = threadType;

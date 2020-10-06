@@ -70,7 +70,7 @@ namespace Akka.Cluster
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
             _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
-            if (String.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.DefaultDispatcherId;
+            if (string.IsNullOrEmpty(_useDispatcher)) _useDispatcher = Dispatchers.InternalDispatcherId;
             GossipDifferentViewProbability = clusterConfig.GetDouble("gossip-different-view-probability", 0);
             ReduceGossipDifferentViewProbability = clusterConfig.GetInt("reduce-gossip-different-view-probability", 0);
             SchedulerTickDuration = clusterConfig.GetTimeSpan("scheduler.tick-duration", null);

@@ -43,7 +43,7 @@ namespace Akka.DistributedData
                 throw ConfigurationException.NullOrEmptyConfig<ReplicatorSettings>();
 
             var dispatcher = config.GetString("use-dispatcher", null);
-            if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
+            if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.InternalDispatcherId;
 
             var durableConfig = config.GetConfig("durable");
             var durableKeys = durableConfig.GetStringList("keys");
@@ -63,7 +63,7 @@ namespace Akka.DistributedData
                 {
                     throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` is set to an invalid class {durableStoreType}.");
                 }
-                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(durableConfig.GetString("use-dispatcher"));
+                durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(dispatcher);
             }
 
             // TODO: This constructor call fails when these fields are not populated inside the Config object:
@@ -212,7 +212,7 @@ namespace Akka.DistributedData
         public ReplicatorSettings WithGossipInterval(TimeSpan gossipInterval) => Copy(gossipInterval: gossipInterval);
         public ReplicatorSettings WithNotifySubscribersInterval(TimeSpan notifySubscribersInterval) => Copy(notifySubscribersInterval: notifySubscribersInterval);
         public ReplicatorSettings WithMaxDeltaElements(int maxDeltaElements) => Copy(maxDeltaElements: maxDeltaElements);
-        public ReplicatorSettings WithDispatcher(string dispatcher) => Copy(dispatcher: string.IsNullOrEmpty(dispatcher) ? Dispatchers.DefaultDispatcherId : dispatcher);
+        public ReplicatorSettings WithDispatcher(string dispatcher) => Copy(dispatcher: string.IsNullOrEmpty(dispatcher) ? Dispatchers.InternalDispatcherId : dispatcher);
         public ReplicatorSettings WithPruning(TimeSpan pruningInterval, TimeSpan maxPruningDissemination) => 
             Copy(pruningInterval: pruningInterval, maxPruningDissemination: maxPruningDissemination);
         public ReplicatorSettings WithDurableKeys(IImmutableSet<string> durableKeys) => Copy(durableKeys: durableKeys);
