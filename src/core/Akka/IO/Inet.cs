@@ -227,6 +227,7 @@ namespace Akka.IO
             {
                 public X509Certificate2 Certificate { get;  }
                 public bool SuppressValidation { get; }
+                public bool ClientAsServer { get; set; }
 
                 public TlsConnectionOption(X509Certificate2 cert, bool suppressValidation)
                 {

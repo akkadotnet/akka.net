@@ -126,6 +126,7 @@ namespace Akka.IO
         {
             
             if (socket == null) throw new ArgumentNullException(nameof(socket));
+            TlsOptions = opt;
             Certificate = opt.Certificate;
             if (opt.SuppressValidation)
             {
@@ -142,6 +143,8 @@ namespace Akka.IO
             
             if (pullMode) SetStatus(ConnectionStatus.ReadingSuspended);
         }
+
+        public Inet.SO.TlsConnectionOption TlsOptions { get; protected set; }
 
 
         private bool IsWritePending
@@ -984,6 +987,7 @@ namespace Akka.IO
                 try
                 {
                     //_sendArgs.SetBuffer(_dataToSend);
+#pragma warning disable 4014
                     Task.Run(async () =>
                     {
                         foreach (var byteString in _dataToSend)
@@ -998,6 +1002,7 @@ namespace Akka.IO
 
                         return NotUsed.Instance;
                     }).PipeTo(_self, _self, s =>
+#pragma warning restore 4014
                     {
                         return IO.Tcp.SocketSent.Instance;
                     }, e =>

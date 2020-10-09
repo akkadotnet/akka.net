@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -311,7 +310,7 @@ namespace Akka.Remote.Transport.DotNetty
             //else
             //{
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-            endpoint = await ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
+            endpoint = await DnsHelpers.ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
             //}
             return endpoint;
         }
@@ -421,17 +420,7 @@ namespace Akka.Remote.Transport.DotNetty
             return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
         }
 
-        internal static async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
-        {
-            var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
-            var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
-            if (found == null)
-            {
-                throw new KeyNotFoundException($"Couldn't resolve IP endpoint from provided DNS name '{address}' with address family of '{addressFamily}'");
-            }
-
-            return new IPEndPoint(found, address.Port);
-        }
+        
 
         #endregion
 

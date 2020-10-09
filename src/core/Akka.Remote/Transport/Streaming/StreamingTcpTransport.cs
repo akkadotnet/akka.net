@@ -87,6 +87,8 @@ namespace Akka.Remote.Transport.Streaming
         private Address _addr;
         private EndPoint _listenAddress;
         private EndPoint _outAddr;
+        private TaskCompletionSource<Address> _boundAddressSource;
+        private EndPoint _myOutAddr;
 
         public StreamingTcpTransport(ActorSystem system, Config config)
         {
@@ -128,7 +130,7 @@ namespace Akka.Remote.Transport.Streaming
                 {
                     var hostName = Dns.GetHostName();
                     _listenAddress = new DnsEndPoint(hostName, Settings.Port);
-                    _outAddr = new DnsEndPoint(Settings.Hostname,0);
+                    _outAddr = new DnsEndPoint(hostName,0);
                 }
                 else
                 {
@@ -138,7 +140,9 @@ namespace Akka.Remote.Transport.Streaming
                 }
             }
             
-            
+            _myOutAddr = _outAddr is DnsEndPoint dep
+                ? await DnsToIPEndpoint(dep)
+                : _outAddr;
             _connectionSource =
                 System.TcpStream().Bind(Settings.Hostname, Settings.Port,
                     options: ImmutableList.Create<Inet.SocketOption>(
@@ -150,12 +154,8 @@ namespace Akka.Remote.Transport.Streaming
                 ? p
                 : await DnsToIPEndpoint(_listenAddress as DnsEndPoint);
                             
-            _addr = DotNettyTransport.MapSocketToAddress(
-                socketAddress: mappedAddr, 
-                schemeIdentifier: SchemeIdentifier,
-                systemName: base.System.Name,
-                hostName: Settings.PublicHostname,
-                publicPort: Settings.PublicPort);
+            
+            _boundAddressSource = new TaskCompletionSource<Address>();
             //_connectionSource.Via
             _serverBindingTask = _connectionSource.Select
             (ic =>
@@ -171,7 +171,7 @@ namespace Akka.Remote.Transport.Streaming
                         new TaskCompletionSource<
                             ISourceQueueWithComplete<IO.ByteString>>();
                     StreamingTcpAssociationHandle handle;
-                    handle = new StreamingTcpAssociationHandle(_addr,
+                    handle = new StreamingTcpAssociationHandle(_boundAddressSource.Task.Result,
                         remoteAddress,
                         queuePromise);
                     handle.ReadHandlerSource.Task.ContinueWith(s =>
@@ -192,6 +192,17 @@ namespace Akka.Remote.Transport.Streaming
                 });
                 return NotUsed.Instance;
             }).ToMaterialized(Sink.Ignore<NotUsed>(),Keep.Left).Run(_mat);
+            await _serverBindingTask.ContinueWith(sb=>
+            {
+                _addr =
+                    DotNettyTransport.MapSocketToAddress(
+                        socketAddress: (IPEndPoint)sb.Result.LocalAddress,
+                        schemeIdentifier: SchemeIdentifier,
+                        systemName: base.System.Name,
+                        hostName: Settings.PublicHostname,
+                        publicPort: Settings.PublicPort);
+                _boundAddressSource.SetResult(_addr);
+            });
             return (_addr, AssociationListenerPromise);
         }
 
@@ -212,10 +223,11 @@ namespace Akka.Remote.Transport.Streaming
 
         public override async Task<AssociationHandle> Associate(Address remoteAddress)
         {
-            
-            var c =base.System.TcpStream().OutgoingConnection(
-                DotNettyTransport.AddressToSocketAddress(remoteAddress),
-                _outAddr,
+            var addr = DotNettyTransport.AddressToSocketAddress(remoteAddress);
+            var c =base.System.TcpStream().OutgoingConnection(addr
+                ,
+                null,
+            //    _myOutAddr,
                 ImmutableList.Create<Inet.SocketOption>(
                     new Inet.SO.ReceiveBufferSize(
                         Settings.ReceiveBufferSize ?? 128 * 1024),
@@ -325,7 +337,7 @@ namespace Akka.Remote.Transport.Streaming
                     handle.Notify(
                         new InboundPayload(bs));
                     return  NotUsed.Instance;
-                } ).ToMaterialized(Sink.Ignore<NotUsed>() ,Keep.Left);
+                } ).ToMaterialized(Sink.Ignore<NotUsed>() ,Keep.None);
         }
 
         public override async Task<bool> Shutdown()

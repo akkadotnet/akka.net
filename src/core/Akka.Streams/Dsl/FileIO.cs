@@ -6,14 +6,30 @@
 //-----------------------------------------------------------------------
 
 using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Implementation.IO;
+using Akka.Streams.Implementation.IO.Compression;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
 
 namespace Akka.Streams.Dsl
 {
+    public static class Compression
+    {
+        public static Flow<ByteString, ByteString, NotUsed> Deflate()
+        {
+            return Flow.FromGraph(new CompressorFlow(() =>
+                new DeflateCompressor(CompressionMode.Compress)));
+        }
+
+        public static Flow<ByteString, ByteString, NotUsed> Inflate()
+        {
+            return Flow.FromGraph(new CompressorFlow(() =>
+                new DeflateCompressor(CompressionMode.Decompress)));
+        }
+    }
     // ReSharper disable once InconsistentNaming
     /// <summary>
     /// TBD
