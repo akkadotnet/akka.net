@@ -197,7 +197,7 @@ namespace Akka.Cluster
             ? members
             : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
 
-        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: '{Role})'";
+        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: '{Role}')";
     }
 
     internal sealed class KeepReferee : ISplitBrainStrategy
