@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using Akka.Actor;
 using System;
+using System.Linq;
+using Akka.IO.Buffers;
 using Akka.Util;
 
 namespace Akka.IO
@@ -38,7 +40,11 @@ namespace Akka.IO
         {
             _bindHandler = bindHandler;
             _options = options;
-
+            var poolOption = _options.OfType<Inet.SO.ByteBufferPoolSize>()
+                .FirstOrDefault();
+            BufferPool = poolOption != null
+                ? new DisabledBufferPool(poolOption.ByteBufferPoolSizeBytes)
+                : Tcp.BufferPool; 
             Context.Watch(bindHandler); // sign death pact
         }
 
@@ -58,5 +64,7 @@ namespace Akka.IO
         {
             throw new NotSupportedException();
         }
+
+        protected override IBufferPool BufferPool { get; }
     }
 }

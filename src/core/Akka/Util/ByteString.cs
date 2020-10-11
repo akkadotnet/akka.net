@@ -459,6 +459,12 @@ namespace Akka.IO
             return copy;
         }
 
+        internal ByteBuffer ReadOnlyCompacted()
+        {
+            var c = this.Compact();
+            return c._buffers[0];
+        }
+
         /// <summary>
         /// Appends <paramref name="other"/> <see cref="ByteString"/> at the tail
         /// of a current one, creating a new <see cref="ByteString"/> in result.

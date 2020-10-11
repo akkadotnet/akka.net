@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote</AssemblyTitle>
     <Description>Remote actor support for Akka.NET</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

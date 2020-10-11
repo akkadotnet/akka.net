@@ -223,6 +223,16 @@ namespace Akka.IO
                 }
             }
 
+            public class ByteBufferPoolSize : SocketOption
+            {
+                public int ByteBufferPoolSizeBytes { get; }
+
+                public ByteBufferPoolSize(int sizeBytes)
+                {
+                    ByteBufferPoolSizeBytes = sizeBytes;
+                }
+            }
+
             public class TlsConnectionOption : SocketOption
             {
                 public X509Certificate2 Certificate { get;  }

@@ -12,6 +12,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
+using Akka.IO.Buffers;
 using Akka.Util;
 
 namespace Akka.IO
@@ -37,7 +38,11 @@ namespace Akka.IO
         {
             _commander = commander;
             _connect = connect;
-
+            var poolOption =
+                connect.Options.OfType<Inet.SO.ByteBufferPoolSize>().FirstOrDefault();
+            BufferPool = poolOption != null
+                ? new DisabledBufferPool(poolOption.ByteBufferPoolSizeBytes)
+                : Tcp.BufferPool; 
             SignDeathPact(commander);
 
             foreach (var option in connect.Options)
@@ -51,6 +56,7 @@ namespace Akka.IO
             if (connect.Timeout.HasValue)
                 Context.SetReceiveTimeout(connect.Timeout.Value);  //Initiate connection timeout if supplied
         }
+        protected override IBufferPool BufferPool { get; }
 
         private void ReleaseConnectionSocketArgs()
         {

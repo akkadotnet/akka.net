@@ -104,7 +104,7 @@ namespace Akka.IO
         private CloseInformation _closedMessage;  // for ConnectionClosed message in postStop
 
         private IActorRef _watchedActor = Context.System.DeadLetters;
-
+        protected abstract IBufferPool BufferPool { get; }
         protected TcpConnection(TcpExt tcp, Socket socket, bool pullMode, Option<int> writeCommandsBufferMaxSize)
         {
             if (socket == null) throw new ArgumentNullException(nameof(socket));
@@ -625,7 +625,7 @@ namespace Akka.IO
             if (SendArgs != null) throw new InvalidOperationException($"Cannot acquire send SocketAsyncEventArgs. It's already has been initialized");
 
             ReceiveArgs = CreateSocketEventArgs(Self);
-            var buffer = Tcp.BufferPool.Rent();
+            var buffer = BufferPool.Rent();
             ReceiveArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
 
             SendArgs = CreateSocketEventArgs(Self);
@@ -639,7 +639,7 @@ namespace Akka.IO
                 ReleaseSocketEventArgs(ReceiveArgs);
                 // TODO: When using DirectBufferPool as a pool impelementation, there is potential risk,
                 // that socket was working while released. In that case releasing buffer may not be safe.
-                Tcp.BufferPool.Release(buffer);
+                BufferPool.Release(buffer);
                 ReceiveArgs = null;
             }
 
@@ -820,7 +820,7 @@ namespace Akka.IO
         {
             var acks = writes.Select(w => (w.Sender, (object)w.Command.Ack)).ToImmutableList();
             var dataList = writes.Select(w => w.Command.Data);
-            return new PendingBufferWrite(this, SendArgs, Self, acks, dataList, Tcp.BufferPool);
+            return new PendingBufferWrite(this, SendArgs, Self, acks, dataList, BufferPool);
         }
 
         //TODO: Port File IO - currently .NET Core doesn't support TransmitFile API
