@@ -744,7 +744,7 @@ namespace Akka.Cluster.Tools.Singleton
             if(_removed.TryGetValue(node, out _))
             {
                 _removed = _removed.SetItem(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
-            } 
+            }
             else
             {
                 _removed = _removed.Add(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
@@ -896,6 +896,9 @@ namespace Akka.Cluster.Tools.Singleton
                                 ? GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(initialOldestState.Oldest.FindAll(u => !u.Equals(_selfUniqueAddress))))
                                 : GoTo(ClusterSingletonState.Younger).Using(new YoungerData(initialOldestState.Oldest.FindAll(u => !u.Equals(_selfUniqueAddress))));
                         }
+                    case HandOverToMe _:
+                        // nothing to hand over in start
+                        return Stay();
                     default:
                         return null;
                 }
