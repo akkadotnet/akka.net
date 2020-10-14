@@ -332,12 +332,23 @@ namespace Akka.Cluster.Tests.MultiNode
             }, _config.First);
 
             EnterBarrier("after-second-down");
+
+            RunOn(() =>
+            {
+                // first should have sent immediate gossip to second when it downed second
+                // and second should then shutdown
+                AwaitAssert(() => Cluster.IsTerminated.Should().BeTrue());
+            }, _config.Second);
+
+            EnterBarrier("second-received-down");
+
             GossipTo(_config.First, _config.Third);
             RunOn(() =>
             {
                 AwaitAssert(() => ClusterView.UnreachableMembers.Select(c => c.Address).Should().Contain(GetAddress(_config.Second)));
                 AwaitMemberStatus(GetAddress(_config.Second), Akka.Cluster.MemberStatus.Down);
-                AwaitAssert(() => SeenLatestGossip().Should().BeEquivalentTo(ImmutableHashSet.Create(_config.First, _config.Third)));
+                // second will also gossip when it shuts down, so it has seen it
+                AwaitAssert(() => SeenLatestGossip().Should().BeEquivalentTo(ImmutableHashSet.Create(_config.First, _config.Second, _config.Third)));
             }, _config.First, _config.Third);
 
             EnterBarrier("after-4");
