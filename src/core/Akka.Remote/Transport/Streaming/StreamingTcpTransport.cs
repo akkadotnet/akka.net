@@ -272,7 +272,7 @@ namespace Akka.Remote.Transport.Streaming
                 .Queue<IO.ByteString>(64, OverflowStrategy.DropNew).Async()
                 .Via(
                     Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
-                .GroupedWithin(128, TimeSpan.FromMilliseconds(30))
+                .GroupedWithin(128, TimeSpan.FromMilliseconds(20))
                 .SelectMany(r => r)
                 .Async()
                 .BatchWeighted(32*1024,

@@ -140,10 +140,6 @@ namespace Akka.IO
             return new ByteString(array, offset, count);
         }
 
-        public static ByteString FromImmutable(byte[] immutableBytes)
-        {
-            return new ByteString(immutableBytes,0,immutableBytes.Length);
-        }
 
         /// <summary>
         /// Creates a new <see cref="ByteString"/> by wrapping raw collection of byte segements. 
