@@ -99,14 +99,22 @@ namespace Akka.Remote.Transport.Streaming
             _listener.Notify(inboundPayload);
         }
     }
+
     class StreamingTcpTransport : Transport
     {
         public sealed override string SchemeIdentifier { get; protected set; } =
             "tcp";
+
+        private StreamingTcpTransportSettings TransportSettings;
         private ActorMaterializer _mat;
-        private DotNettyTransportSettings Settings;
-        private Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> _connectionSource;
-        protected readonly TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise;
+        //private DotNettyTransportSettings Settings;
+
+        private Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>>
+            _connectionSource;
+
+        protected readonly TaskCompletionSource<IAssociationEventListener>
+            AssociationListenerPromise;
+
         private Task<Tcp.ServerBinding> _serverBindingTask;
         private Address _addr;
         private EndPoint _listenAddress;
@@ -115,9 +123,12 @@ namespace Akka.Remote.Transport.Streaming
 
         public StreamingTcpTransport(ActorSystem system, Config config)
         {
-            AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
+            AssociationListenerPromise =
+                new TaskCompletionSource<IAssociationEventListener>();
             System = system;
-            _mat = ActorMaterializer.Create(System,ActorMaterializerSettings.Create(System), namePrefix:"streaming-transport");
+            _mat = ActorMaterializer.Create(System,
+                ActorMaterializerSettings.Create(System),
+                namePrefix: "streaming-transport");
             if (system.Settings.Config.HasPath("akka.remote.dot-netty.tcp"))
             {
                 var dotNettyFallbackConfig =
@@ -125,197 +136,214 @@ namespace Akka.Remote.Transport.Streaming
                         "akka.remote.dot-netty.tcp");
                 config = dotNettyFallbackConfig.WithFallback(config);
             }
+
             if (system.Settings.Config.HasPath("akka.remote.helios.tcp"))
             {
-                var heliosFallbackConfig = system.Settings.Config.GetConfig("akka.remote.helios.tcp");
+                var heliosFallbackConfig =
+                    system.Settings.Config.GetConfig("akka.remote.helios.tcp");
                 config = heliosFallbackConfig.WithFallback(config);
             }
-            
-            Settings = DotNettyTransportSettings.Create(config);
+
+            TransportSettings = StreamingTcpTransportSettings.Create(config);
 
             SocketOptions = ImmutableList.Create<Inet.SocketOption>(
                 new Inet.SO.ReceiveBufferSize(
-                    Settings.ReceiveBufferSize ?? 128 * 1024),
+                    TransportSettings.SocketReceiveBufferSize),
                 new Inet.SO.SendBufferSize(
-                    Settings.SendBufferSize ?? 64 * 1024),
-                new Inet.SO.ByteBufferPoolSize(65536));
+                    TransportSettings.SocketSendBufferSize),
+                new Inet.SO.ByteBufferPoolSize(TransportSettings.TransportReceiveBufferSize));
         }
 
         private ImmutableList<Inet.SocketOption> SocketOptions { get; }
 
         public override long MaximumPayloadBytes
         {
-            get { return Settings.MaxFrameSize; }
+            get { return TransportSettings.MaxFrameSize; }
         }
 
-        public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
+        public override async
+            Task<(Address, TaskCompletionSource<IAssociationEventListener>)>
+            Listen()
         {
-            if (IPAddress.TryParse(Settings.Hostname, out IPAddress ip))
+            if (IPAddress.TryParse(TransportSettings.Hostname, out IPAddress ip))
             {
-                _listenAddress = new IPEndPoint(ip, Settings.Port);
-                _outAddr = new IPEndPoint(ip,0);
+                _listenAddress = new IPEndPoint(ip, TransportSettings.Port);
+                _outAddr = new IPEndPoint(ip, 0);
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(Settings.Hostname))
+                if (string.IsNullOrWhiteSpace(TransportSettings.Hostname))
                 {
                     var hostName = Dns.GetHostName();
-                    _listenAddress = new DnsEndPoint(hostName, Settings.Port);
-                    _outAddr = new DnsEndPoint(hostName,0);
+                    _listenAddress = new DnsEndPoint(hostName, TransportSettings.Port);
+                    _outAddr = new DnsEndPoint(hostName, 0);
                 }
                 else
                 {
                     _listenAddress =
-                        new DnsEndPoint(Settings.Hostname, Settings.Port);
-                    _outAddr = new DnsEndPoint(Settings.Hostname,0);
+                        new DnsEndPoint(TransportSettings.Hostname, TransportSettings.Port);
+                    _outAddr = new DnsEndPoint(TransportSettings.Hostname, 0);
                 }
             }
-            
-            
+
+
             _connectionSource =
-                System.TcpStream().Bind(Settings.Hostname, Settings.Port,
-                    options: SocketOptions, backlog:4096);
+                System.TcpStream().Bind(TransportSettings.Hostname, TransportSettings.Port,
+                    options: SocketOptions, backlog: TransportSettings.ConnectionBacklog);
             var mappedAddr = _listenAddress is IPEndPoint p
                 ? p
                 : await DnsToIPEndpoint(_listenAddress as DnsEndPoint);
-                            
-            
+
+
             _boundAddressSource = new TaskCompletionSource<Address>();
             //_connectionSource.Via
             _serverBindingTask = _connectionSource.Select
             (ic =>
             {
-                
                 AssociationListenerPromise.Task.ContinueWith(r =>
                 {
                     var listener = r.Result;
                     var remoteAddress =
                         DotNettyTransport.MapSocketToAddress(
-                            (IPEndPoint)ic.RemoteAddress, "tcp", base.System.Name);
+                            (IPEndPoint)ic.RemoteAddress, "tcp",
+                            base.System.Name);
                     var queuePromise =
                         new TaskCompletionSource<
                             ISourceQueueWithComplete<IO.ByteString>>();
-                    StreamingTcpAssociationHandle handle;
-                    handle = new StreamingTcpAssociationHandle(_boundAddressSource.Task.Result,
-                        remoteAddress,
-                        queuePromise);
-                    handle.ReadHandlerSource.Task.ContinueWith(s =>
-                    {   
-                        var otherListener = s.Result;
-                        handle.RegisterListener(otherListener);
-                    }, TaskContinuationOptions.ExecuteSynchronously);
+                    var handleAddr = _boundAddressSource.Task.Result;
+                    
+                    var handle = CreateStreamingTcpAssociationHandle(handleAddr, remoteAddress, queuePromise);
                     var outQueue = ic.HandleWith(buildFlow(handle)
                         .Recover(
                             ex =>
                             {
                                 handle.Notify(
-                                    new Disassociated(DisassociateInfo.Unknown));
+                                    new Disassociated(DisassociateInfo
+                                        .Unknown));
                                 return IO.ByteString.Empty;
                             }), _mat);
                     queuePromise.SetResult(outQueue);
                     listener.Notify(new InboundAssociation(handle));
                 });
                 return NotUsed.Instance;
-            }).ToMaterialized(Sink.Ignore<NotUsed>(),Keep.Left).Run(_mat);
-            await _serverBindingTask.ContinueWith(sb=>
+            }).ToMaterialized(Sink.Ignore<NotUsed>(), Keep.Left).Run(_mat);
+            await _serverBindingTask.ContinueWith(sb =>
             {
                 _addr =
                     DotNettyTransport.MapSocketToAddress(
                         socketAddress: (IPEndPoint)sb.Result.LocalAddress,
                         schemeIdentifier: SchemeIdentifier,
                         systemName: base.System.Name,
-                        hostName: Settings.PublicHostname,
-                        publicPort: Settings.PublicPort);
+                        hostName: TransportSettings.PublicHostname,
+                        publicPort: TransportSettings.PublicPort);
                 _boundAddressSource.SetResult(_addr);
             });
             return (_addr, AssociationListenerPromise);
         }
 
-        
+        private static StreamingTcpAssociationHandle
+            CreateStreamingTcpAssociationHandle(Address handleAddr,
+                Address remoteAddress, TaskCompletionSource<ISourceQueueWithComplete<IO.ByteString>> queuePromise)
+        {
+            StreamingTcpAssociationHandle handle;
+            handle = new StreamingTcpAssociationHandle(handleAddr
+                ,
+                remoteAddress,
+                queuePromise);
+            handle.ReadHandlerSource.Task.ContinueWith(s =>
+            {
+                var otherListener = s.Result;
+                handle.RegisterListener(otherListener);
+            }, TaskContinuationOptions.ExecuteSynchronously);
+            return handle;
+        }
+
+
         protected async Task<IPEndPoint> DnsToIPEndpoint(DnsEndPoint dns)
         {
             IPEndPoint endpoint;
 
-            var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
-            endpoint = await DnsHelpers.ResolveNameAsync(dns, addressFamily).ConfigureAwait(false);
+            var addressFamily = TransportSettings.DnsUseIpv6
+                ? AddressFamily.InterNetworkV6
+                : AddressFamily.InterNetwork;
+            endpoint = await DnsHelpers.ResolveNameAsync(dns, addressFamily)
+                .ConfigureAwait(false);
 
             return endpoint;
         }
+
         public override bool IsResponsibleFor(Address remote)
         {
             return true;
         }
-        public override async Task<AssociationHandle> Associate(Address remoteAddress)
+ 
+
+        public override async Task<AssociationHandle> Associate(
+            Address remoteAddress)
         {
             
             var addr = DotNettyTransport.AddressToSocketAddress(remoteAddress);
-            var c =base.System.TcpStream().OutgoingConnection(addr
-                ,
-                null,SocketOptions
+            var outConnectionSource = base.System.TcpStream().OutgoingConnection(
+                remoteAddress: addr,
+                localAddress: null,
+                options: SocketOptions
             );
-            
-            
             var queuePromise =
-                    new TaskCompletionSource<
-                        ISourceQueueWithComplete<IO.ByteString>>();
-            var handle = new StreamingTcpAssociationHandle(_addr,remoteAddress, queuePromise);
-            handle.ReadHandlerSource.Task.ContinueWith(s =>
-            {   
-                var listener = s.Result;
-                handle.RegisterListener(listener);
-            }, TaskContinuationOptions.ExecuteSynchronously);
-            var run = c.JoinMaterialized(buildFlow(handle).Recover(
-                    ex =>
-                    {
-                        handle.Notify(
-                            new Disassociated(DisassociateInfo.Unknown));
-                        return IO.ByteString.Empty;
-                    }),(oc,sq)=>(oc,sq)).Run(_mat);
+                new TaskCompletionSource<
+                    ISourceQueueWithComplete<IO.ByteString>>();
+            var handle =
+                CreateStreamingTcpAssociationHandle(_addr, remoteAddress,
+                    queuePromise);
+            var run = outConnectionSource.JoinMaterialized(buildFlow(handle).Recover(
+                ex =>
+                {
+                    handle.Notify(
+                        new Disassociated(DisassociateInfo.Unknown));
+                    return IO.ByteString.Empty;
+                }), (oc, sq) => (oc, sq)).Run(_mat);
             queuePromise.SetResult(run.sq);
             return handle;
         }
-
         
-        private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
+
+    private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
         {
             //TODO: Improve batching voodoo in pipeline.
-            return Source
-                .Queue<IO.ByteString>(64, OverflowStrategy.DropNew).Async()
+            var baseSource =  Source
+                .Queue<IO.ByteString>(TransportSettings.SendStreamQueueSize, OverflowStrategy.DropNew)
                 .Via(
-                    Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
-                .GroupedWithin(128, TimeSpan.FromMilliseconds(20))
-                .SelectMany(r => r)
-                .Async()
-                .BatchWeighted(32*1024,
+                    Framing.SimpleFramingProtocolEncoder(TransportSettings.MaxFrameSize));
+            
+            //If batch delay is 0, we don't want our delay stage.
+            if (TransportSettings.BatchGroupMaxMillis > 0)
+            {
+               baseSource = baseSource.GroupedWithin(TransportSettings.BatchGroupMaxCount, TimeSpan.FromMilliseconds(TransportSettings.BatchGroupMaxMillis))
+                    .SelectMany(r => r)
+                    .Async();
+            }
+            else
+            {
+                baseSource = baseSource.Async();
+            }
+            
+            return baseSource.BatchWeighted(TransportSettings.BatchGroupMaxBytes,
                     bs => bs.Count, 
-                    /*bs => new List<IO.ByteString>(256) { bs },
-                    (bsl, bs) =>
-                    {
-                        bsl.Add(bs);
-                        return bsl;
-                    })*/
                 bs=> bs,
                     (bs,nb)=>bs.Concat(nb))
-                .AddAttributes(Attributes.CreateInputBuffer(128,128))
-                .Via(createBufferedSelectFlow2())
-                //.Via(Compression.Deflate())
-                //.Via(Framing.SimpleFramingProtocolEncoder(Settings.MaxFrameSize))
+                .AddAttributes(Attributes.CreateInputBuffer(TransportSettings.BatchPumpInputMinBufferSize,TransportSettings.BatchPumpInputMaxBufferSize))
+                .Via(bufferedSelectFlow())
                 ;
         }
         private Flow<IO.ByteString, IO.ByteString, NotUsed>
-            createBufferedSelectFlow2()
+            bufferedSelectFlow()
         {
 
             return Flow.Create<IO.ByteString>()
-                .Select(b=>
-                {
-                    //logger.Error($"wrote {b.Count}");
-                    return b;
-                })
+                .Select(b=>b)
                 //Put an async boundary here so that we do not fuse
                 //And can properly batch to Socket.
                 .Async()
-                .AddAttributes(Attributes.CreateInputBuffer(1, 1))
+                .AddAttributes(Attributes.CreateInputBuffer(TransportSettings.SocketStageInputMinBufferSize, TransportSettings.SocketStageInputMinBufferSize))
                 ;
         }
 
@@ -333,17 +361,17 @@ namespace Akka.Remote.Transport.Streaming
             StreamingTcpAssociationHandle handle)
         {
             return Flow.Create<IO.ByteString>()
-                //.Via(Framing.SimpleFramingProtocolDecoder(Settings.MaxFrameSize))
-                //.Via(Compression.Inflate())
-                .Via(Framing.SimpleFramingProtocolDecoder(Settings.MaxFrameSize)).Select(r =>
+                .Via(Framing.SimpleFramingProtocolDecoder(TransportSettings.MaxFrameSize))
+                .Select(r =>
                 {
+                    //By using ReadOnlyCompacted() we might get lucky
+                    //and save on a copy here.
                         var bs = r.ReadOnlyCompacted();
                         var c = ByteString.CopyFrom(bs.Array, bs.Offset,
                             bs.Count);
                         handle.Notify(
                             new InboundPayload(c));
-                    
-                    return  NotUsed.Instance;
+                        return  NotUsed.Instance;
                 } ).ToMaterialized(Sink.Ignore<NotUsed>() ,Keep.None);
         }
 

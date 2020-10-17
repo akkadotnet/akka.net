@@ -68,7 +68,7 @@ namespace Akka.Remote.Tests
 
                 enabled-transports = [
                   ""akka.remote.test"",
-                  ""akka.remote.dot-netty.tcp"",
+                  ""akka.remote.streaming.tcp"",
                  # ""akka.remote.dot-netty.udp""
                 ]
 

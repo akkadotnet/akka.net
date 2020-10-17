@@ -57,7 +57,7 @@ namespace RemotePingPong
                     port = 0
                     hostname = """"
                     batching {
-                        enabled = false
+                        enabled = true
                         flush-interval = 40ms
                     }
                 }
@@ -158,9 +158,9 @@ namespace RemotePingPong
         private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 9001));
+            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
 
-            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 9002));
+            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
 
             List<Task<long>> tasks = new List<Task<long>>();
             List<IActorRef> receivers = new List<IActorRef>();
