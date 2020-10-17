@@ -1071,7 +1071,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        protected Queue<ByteString> ThrottledMessages = new Queue<ByteString>();
+        protected Queue<ArraySegment<byte>> ThrottledMessages = new Queue<ArraySegment<byte>>();
         /// <summary>
         /// TBD
         /// </summary>
@@ -1120,7 +1120,7 @@ namespace Akka.Remote.Transport
             {
                 if (@event.FsmEvent is InboundPayload && @event.StateData is ExposedHandle)
                 {
-                    var b = @event.FsmEvent.AsInstanceOf<InboundPayload>().Payload;
+                    var b = @event.FsmEvent.AsInstanceOf<InboundPayload>().ArraySegmentSafe();
                     ThrottledMessages.Enqueue(b);
                     var origin = PeekOrigin(b);
                     if (origin != null)
@@ -1137,7 +1137,7 @@ namespace Akka.Remote.Transport
             {
                 if (@event.FsmEvent is InboundPayload)
                 {
-                    var b = @event.FsmEvent.AsInstanceOf<InboundPayload>().Payload;
+                    var b = @event.FsmEvent.AsInstanceOf<InboundPayload>().ArraySegmentSafe();
                     ThrottledMessages.Enqueue(b);
                     return Stay();
                 }
@@ -1151,7 +1151,7 @@ namespace Akka.Remote.Transport
                     {
                         if (mode is Blackhole)
                         {
-                            ThrottledMessages = new Queue<ByteString>();
+                            ThrottledMessages = new Queue<ArraySegment<byte>>();
                             exposedHandle.Disassociate();
                             return Stop();
                         }
@@ -1180,7 +1180,7 @@ namespace Akka.Remote.Transport
                 if (@event.FsmEvent is InboundPayload)
                 {
                     var b = @event.FsmEvent.AsInstanceOf<InboundPayload>();
-                    ThrottledMessages.Enqueue(b.Payload);
+                    ThrottledMessages.Enqueue(b.ArraySegmentSafe());
                     return Stay();
                 }
 
@@ -1208,7 +1208,7 @@ namespace Akka.Remote.Transport
                 if (@event.FsmEvent is InboundPayload)
                 {
                     var b = @event.FsmEvent.AsInstanceOf<InboundPayload>();
-                    ThrottledMessages.Enqueue(b.Payload);
+                    ThrottledMessages.Enqueue(b.ArraySegmentSafe());
                     return Stay();
                 }
 
@@ -1221,17 +1221,17 @@ namespace Akka.Remote.Transport
                 {
                     var mode = @event.FsmEvent.AsInstanceOf<ThrottleMode>();
                     InboundThrottleMode = mode;
-                    if (mode is Blackhole) ThrottledMessages = new Queue<ByteString>();
+                    if (mode is Blackhole) ThrottledMessages = new Queue<ArraySegment<byte>>();
                     CancelTimer(DequeueTimerName);
                     if (ThrottledMessages.Any())
-                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Length));
+                        ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Count));
                     Sender.Tell(SetThrottleAck.Instance);
                     return Stay();
                 }
 
                 if (@event.FsmEvent is InboundPayload)
                 {
-                    ForwardOrDelay(@event.FsmEvent.AsInstanceOf<InboundPayload>().Payload);
+                    ForwardOrDelay(@event.FsmEvent.AsInstanceOf<InboundPayload>().ArraySegmentSafe());
                     return Stay();
                 }
 
@@ -1242,9 +1242,9 @@ namespace Akka.Remote.Transport
                         var payload = ThrottledMessages.Dequeue();
                         UpstreamListener.Notify(new InboundPayload(payload));
                         InboundThrottleMode = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(),
-                            payload.Length).Item1;
+                            payload.Count).Item1;
                         if (ThrottledMessages.Any())
-                            ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Length));
+                            ScheduleDequeue(InboundThrottleMode.TimeToAvailable(MonotonicClock.GetNanos(), ThrottledMessages.Peek().Count));
                     }
                     return Stay();
                 }
@@ -1291,7 +1291,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="b">Inbound <see cref="ByteString"/> received from network.</param>
         /// <returns></returns>
-        private Address PeekOrigin(ByteString b)
+        private Address PeekOrigin(ArraySegment<byte> b)
         {
             try
             {
@@ -1320,7 +1320,7 @@ namespace Akka.Remote.Transport
             }
         }
 
-        private void ForwardOrDelay(ByteString payload)
+        private void ForwardOrDelay(ArraySegment<byte> payload)
         {
             if (InboundThrottleMode is Blackhole)
             {
@@ -1330,7 +1330,7 @@ namespace Akka.Remote.Transport
             {
                 if (!ThrottledMessages.Any())
                 {
-                    var tokens = payload.Length;
+                    var tokens = payload.Count;
                     var res = InboundThrottleMode.TryConsumeTokens(MonotonicClock.GetNanos(), tokens);
                     var newBucket = res.Item1;
                     var success = res.Item2;

@@ -203,8 +203,8 @@ namespace Akka.Actor
             get
             {
                 if (this is RootActorPath) return EmptyElements;
-                var elements = (List<string>)Elements;
-                elements[elements.Count - 1] = AppendUidFragment(Name);
+                var elements = Elements is string[] s? s: Elements.ToArray();
+                elements[elements.Length - 1] = AppendUidFragment(Name);
                 return elements;
             }
         }
@@ -658,9 +658,13 @@ namespace Akka.Actor
                 var acc = new Stack<string>();
                 while (true)
                 {
+                    //ToList forces Enumerable creation
+                    //ToArray here uses Stack<T> internal impl
+                    //and is cleaner in alloc
                     if (p is RootActorPath)
-                        return acc.ToList();
+                        return acc.ToArray(); 
                     acc.Push(p.Name);
+                    
                     p = p.Parent;
                 }
             }

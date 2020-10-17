@@ -148,7 +148,8 @@ namespace Akka.Remote.Transport.Streaming
             Task<(Address, TaskCompletionSource<IAssociationEventListener>)>
             Listen()
         {
-            if (IPAddress.TryParse(TransportSettings.Hostname, out IPAddress ip))
+            if (IPAddress.TryParse(TransportSettings.Hostname,
+                out IPAddress ip))
             {
                 _listenAddress = new IPEndPoint(ip, TransportSettings.Port);
                 _outAddr = new IPEndPoint(ip, 0);
@@ -158,21 +159,25 @@ namespace Akka.Remote.Transport.Streaming
                 if (string.IsNullOrWhiteSpace(TransportSettings.Hostname))
                 {
                     var hostName = Dns.GetHostName();
-                    _listenAddress = new DnsEndPoint(hostName, TransportSettings.Port);
+                    _listenAddress =
+                        new DnsEndPoint(hostName, TransportSettings.Port);
                     _outAddr = new DnsEndPoint(hostName, 0);
                 }
                 else
                 {
                     _listenAddress =
-                        new DnsEndPoint(TransportSettings.Hostname, TransportSettings.Port);
+                        new DnsEndPoint(TransportSettings.Hostname,
+                            TransportSettings.Port);
                     _outAddr = new DnsEndPoint(TransportSettings.Hostname, 0);
                 }
             }
 
 
             _connectionSource =
-                System.TcpStream().Bind(TransportSettings.Hostname, TransportSettings.Port,
-                    options: SocketOptions, backlog: TransportSettings.ConnectionBacklog);
+                System.TcpStream().Bind(TransportSettings.Hostname,
+                    TransportSettings.Port,
+                    options: SocketOptions,
+                    backlog: TransportSettings.ConnectionBacklog);
             var mappedAddr = _listenAddress is IPEndPoint p
                 ? p
                 : await DnsToIPEndpoint(_listenAddress as DnsEndPoint);
@@ -194,8 +199,9 @@ namespace Akka.Remote.Transport.Streaming
                         new TaskCompletionSource<
                             ISourceQueueWithComplete<IO.ByteString>>();
                     var handleAddr = _boundAddressSource.Task.Result;
-                    
-                    var handle = CreateStreamingTcpAssociationHandle(handleAddr, remoteAddress, queuePromise);
+
+                    var handle = CreateStreamingTcpAssociationHandle(handleAddr,
+                        remoteAddress, queuePromise);
                     var outQueue = ic.HandleWith(buildFlow(handle)
                         .Recover(
                             ex =>
@@ -283,8 +289,8 @@ namespace Akka.Remote.Transport.Streaming
                     handle.Notify(
                         new Disassociated(DisassociateInfo.Unknown));
                     return IO.ByteString.Empty;
-                }), (oc, sq) => (oc, sq)).Run(_mat);
-            queuePromise.SetResult(run.sq);
+                }), (connectionTask, sendQueue) => (connectionTask, sendQueue)).Run(_mat);
+            queuePromise.SetResult(run.sendQueue);
             return handle;
         }
         
@@ -301,33 +307,36 @@ namespace Akka.Remote.Transport.Streaming
             if (TransportSettings.BatchGroupMaxMillis > 0)
             {
                baseSource = baseSource.GroupedWithin(TransportSettings.BatchGroupMaxCount, TimeSpan.FromMilliseconds(TransportSettings.BatchGroupMaxMillis))
-                    .SelectMany(r => r)
+                    .SelectMany(msg => msg)
                     .Async();
             }
             else
             {
                 baseSource = baseSource.Async();
             }
-            
-            return baseSource.BatchWeighted(TransportSettings.BatchGroupMaxBytes,
-                    bs => bs.Count, 
-                bs=> bs,
-                    (bs,nb)=>bs.Concat(nb))
-                .AddAttributes(Attributes.CreateInputBuffer(TransportSettings.BatchPumpInputMinBufferSize,TransportSettings.BatchPumpInputMaxBufferSize))
-                .Via(bufferedSelectFlow())
-                ;
+
+            return baseSource.BatchWeighted(
+                    TransportSettings.BatchGroupMaxBytes,
+                    msg => msg.Count,
+                    msg => msg,
+                    (oldMsgs, newMsg) => oldMsgs.Concat(newMsg))
+                .AddAttributes(Attributes.CreateInputBuffer(
+                    TransportSettings.BatchPumpInputMinBufferSize,
+                    TransportSettings.BatchPumpInputMaxBufferSize))
+                .Via(bufferedSelectFlow());
         }
         private Flow<IO.ByteString, IO.ByteString, NotUsed>
             bufferedSelectFlow()
         {
 
             return Flow.Create<IO.ByteString>()
-                .Select(b=>b)
+                .Select(b => b)
                 //Put an async boundary here so that we do not fuse
                 //And can properly batch to Socket.
                 .Async()
-                .AddAttributes(Attributes.CreateInputBuffer(TransportSettings.SocketStageInputMinBufferSize, TransportSettings.SocketStageInputMinBufferSize))
-                ;
+                .AddAttributes(Attributes.CreateInputBuffer(
+                    TransportSettings.SocketStageInputMinBufferSize,
+                    TransportSettings.SocketStageInputMinBufferSize));
         }
 
         private Flow<IO.ByteString, IO.ByteString,
@@ -335,7 +344,7 @@ namespace Akka.Remote.Transport.Streaming
             StreamingTcpAssociationHandle handle)
         {
             return Flow.FromSinkAndSource(receiveFlow(handle).Async(),
-                sendFlow().Async(),(c,q)=>q);
+                sendFlow().Async(),(_,sendQueue)=>sendQueue);
         }
         private ILoggingAdapter logger => System.Log;
         
@@ -349,11 +358,15 @@ namespace Akka.Remote.Transport.Streaming
                 {
                     //By using ReadOnlyCompacted() we might get lucky
                     //and save on a copy here.
+                    if (r.IsCompact == false)
+                    {
+                        Console.WriteLine("darn");
+                    }
                         var bs = r.ReadOnlyCompacted();
-                        var c = ByteString.CopyFrom(bs.Array, bs.Offset,
-                            bs.Count);
+                        //var newByteString = ByteString.CopyFrom(bs.Array, bs.Offset,
+                        //    bs.Count);
                         handle.Notify(
-                            new InboundPayload(c));
+                            new InboundPayload(bs));
                         return  NotUsed.Instance;
                 } ).ToMaterialized(Sink.Ignore<NotUsed>() ,Keep.None);
         }
