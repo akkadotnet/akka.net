@@ -377,6 +377,12 @@ namespace Akka.Remote.Transport
         /// </returns>
         public abstract bool Write(ByteString payload);
 
+        public virtual bool Write(IO.ByteString payload)
+        {
+            var rc = payload.ReadOnlyCompacted();
+            return Write(ByteString.CopyFrom(rc.Array, rc.Offset, rc.Count));
+        }
+
         /// <summary>
         /// Closes the underlying transport link, if needed. Some transports might not need an explicit teardown (UDP) and some
         /// transports may not support it. Remote endpoint of the channel or connection MAY be notified, but this is not

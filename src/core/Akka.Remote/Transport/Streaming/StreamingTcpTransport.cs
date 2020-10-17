@@ -29,6 +29,7 @@ using Tcp = Akka.Streams.Dsl.Tcp;
 
 namespace Akka.Remote.Transport.Streaming
 {
+
     
     class StreamingTcpAssociationHandle : AssociationHandle
     {
@@ -54,39 +55,21 @@ namespace Akka.Remote.Transport.Streaming
 
         public sealed override bool Write(ByteString payload)
         {
-            return _queue
-                    .OfferAsync(
-                        IO.ByteString.FromBytes(
-                            _getByteArrayUnsafeFunc(payload)
-                            ))
-                    .Result is QueueOfferResult
-                    .Enqueued;
+            return Write(
+                IO.ByteString.FromBytes(
+                    ByteStringConverters._getByteArrayUnsafeFunc(payload)
+                ));
         }
-        
 
-        private static readonly Func<Google.Protobuf.ByteString, byte[]> _getByteArrayUnsafeFunc = build();
-        
-
-        private static Func<Google.Protobuf.ByteString, byte[]> build()
+        public sealed override bool Write(IO.ByteString payload)
         {
-            //See if we can 'cheat' and grab the byte array directly.
-            //If for some reason we can't (CAS in Framework, change in protobuf)
-            //We instead fall-back to simple version which allocates
-            //but works.
-            try
-            {
-                var p = Expression.Parameter(typeof(ByteString));
-                return Expression.Lambda<Func<ByteString, byte[]>>(Expression.Field(p,
-                        typeof(ByteString).GetField("bytes",
-                            BindingFlags.NonPublic | BindingFlags.Instance)), p)
-                    .Compile();
-            }
-            catch (Exception e)
-            {
-                return s => s.ToByteArray();
-            }
-            
+            return _queue.OfferAsync(payload)
+                .Result is QueueOfferResult
+                .Enqueued;
         }
+        
+
+        
 
 
         public override void Disassociate()

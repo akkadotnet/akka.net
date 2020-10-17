@@ -420,7 +420,7 @@ namespace Akka.Remote.Transport
         /// <inheritdoc cref="AssociationHandle"/>
         public override bool Write(ByteString payload)
         {
-            return WrappedHandle.Write(Codec.ConstructPayload(payload));
+            return WrappedHandle.Write(Codec.ConstructByteString(payload));
         }
 
 #pragma warning disable CS0672 // Member overrides obsolete member
