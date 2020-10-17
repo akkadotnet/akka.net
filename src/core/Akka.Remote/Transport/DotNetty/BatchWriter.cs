@@ -141,18 +141,18 @@ namespace Akka.Remote.Transport.DotNetty
         public override Task CloseAsync(IChannelHandlerContext context)
         {
             // flush any pending writes first
-            context.Flush();
-            CanSchedule = false;
-            batchTimer?.Close();
             try
             {
+                batchTimer?.Close();
                 batchingTimer?.Dispose();
             }
-            catch (Exception e)
+            catch
             {
-                Console.WriteLine(e);
-                throw;
+                // ignored: still want to flush
             }
+
+            context.Flush();
+            CanSchedule = false;
             return base.CloseAsync(context);
         }
 
@@ -161,20 +161,6 @@ namespace Akka.Remote.Transport.DotNetty
             var batchContext = new FlushTask(context,this);
             batchingTimer = new System.Threading.Timer((ctx) => ((FlushTask)ctx).DoFlush(),
                 batchContext, Settings.FlushInterval, Settings.FlushInterval);
-            /*batchTimer = new Timer();
-            batchTimer.Interval = Settings.FlushInterval.TotalMilliseconds;
-            
-            
-            void OnBatchTimerOnElapsed(object sender, ElapsedEventArgs args)
-            {
-                
-            }
-
-            batchTimer.Elapsed += OnBatchTimerOnElapsed;
-            batchTimer.Enabled = true;*/
-            // Schedule a recurring flush - only fires when there's writable data
-            //var task = new FlushTask(context, Settings.FlushInterval, this);
-            //context.Executor.Schedule(task, Settings.FlushInterval);
         }
 
         public void Reset()
@@ -192,7 +178,6 @@ namespace Akka.Remote.Transport.DotNetty
             public FlushTask(IChannelHandlerContext context, BatchWriter writer)
             {
                 _context = context;
-                //_interval = interval;
                 _writer = writer;
             }
 
@@ -204,35 +189,13 @@ namespace Akka.Remote.Transport.DotNetty
                     _context.Flush();
                     _writer.Reset();
                 }
-                
-                //if(_writer.CanSchedule)
-                //    _context.Executor.Schedule(this, _interval); // reschedule
             }
 
             public void DoFlush()
             {
-                try
+                if (_writer.HasPendingWrites)
                 {
-
-                
-                    if (_writer.HasPendingWrites)
-                    {
-                        Run();
-                        // execute a flush operation
-                        //_context.Executor.Execute(this);
-                        //Reset();
-                    }
-
-                    //if (_writer.CanSchedule)
-                    {
-                        //_writer.batchingTimer
-                        //_writer.batchTimer.Enabled = true;
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
+                    _context.Executor.Execute(this);
                 }
             }
         }
