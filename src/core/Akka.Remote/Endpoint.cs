@@ -1895,13 +1895,14 @@ namespace Akka.Remote
            
             Receive<InboundPayload>(inbound =>
             {
-                var payload = inbound.Payload;
-                if (payload.Length > Transport.MaximumPayloadBytes)
+
+                var payload = inbound.ArraySegmentSafe();
+                if (payload.Count > Transport.MaximumPayloadBytes)
                 {
                     var reason = new OversizedPayloadException(
                         string.Format("Discarding oversized payload received: max allowed size {0} bytes, actual size {1} bytes.",
                             Transport.MaximumPayloadBytes,
-                            payload.Length));
+                            payload.Count));
                     _log.Error(reason, "Transient error while reading from association (association remains live)");
                 }
                 else
@@ -1967,7 +1968,8 @@ namespace Akka.Remote
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<InboundPayload>(payload =>
             {
-                var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
+                var payloadBytes = payload.ArraySegmentSafe();
+                var ackAndMessage = TryDecodeMessageAndAck(payloadBytes);
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
             });
@@ -2037,7 +2039,7 @@ namespace Akka.Remote
             deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
         }
 
-        private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)
+        private AckAndMessage TryDecodeMessageAndAck(ArraySegment<byte> pdu)
         {
             try
             {

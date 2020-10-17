@@ -122,6 +122,19 @@ namespace Akka.Remote.Transport
     /// </summary>
     public sealed class InboundPayload : IHandleEvent
     {
+        public InboundPayload(ArraySegment<byte> payload)
+        {
+            ASPayload = payload;
+        }
+
+        public ArraySegment<byte> ArraySegmentSafe()
+        {
+            return ASPayload ??
+                new ArraySegment<byte>(ByteStringConverters._getByteArrayUnsafeFunc(
+                   Payload));
+        }
+        public ArraySegment<byte>? ASPayload { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -139,7 +152,7 @@ namespace Akka.Remote.Transport
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"InboundPayload(size = {Payload.Length} bytes)";
+            return $"InboundPayload(size = {Payload?.Length ?? ArraySegmentSafe().Count } bytes)";
         }
     }
 
