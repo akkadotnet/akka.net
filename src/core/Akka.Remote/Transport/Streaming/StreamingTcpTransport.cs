@@ -358,14 +358,8 @@ namespace Akka.Remote.Transport.Streaming
                 {
                     //By using ReadOnlyCompacted() we might get lucky
                     //and save on a copy here.
-                    if (r.IsCompact == false)
-                    {
-                        Console.WriteLine("darn");
-                    }
-                        var bs = r.ReadOnlyCompacted();
-                        //var newByteString = ByteString.CopyFrom(bs.Array, bs.Offset,
-                        //    bs.Count);
-                        handle.Notify(
+                    var bs = r.ReadOnlyCompacted();
+                    handle.Notify(
                             new InboundPayload(bs));
                         return  NotUsed.Instance;
                 } ).ToMaterialized(Sink.Ignore<NotUsed>() ,Keep.None);

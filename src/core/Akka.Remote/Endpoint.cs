@@ -1331,6 +1331,17 @@ namespace Akka.Remote
             return MessageSerializer.Serialize(_system, _handle.LocalAddress, msg);
         }
 
+
+
+        private SerializedIOBSMessage SerializeIOBSMessage(object msg)
+        {
+            if (_handle == null)
+            {
+                throw new EndpointException("Internal error: No handle was present during serialization of outbound message.");
+            }
+            return MessageSerializer.SerializeIOBS(_system, _handle.LocalAddress, msg);   
+        }
+
         private int _writeCount = 0;
         private int _maxWriteCount = MaxWriteCount;
         private long _adaptiveBackoffNanos = 1000000L; // 1 ms
@@ -1438,20 +1449,36 @@ namespace Akka.Remote
                     _log.Debug("RemoteMessage: {0} to [{1}]<+[{2}] from [{3}]", send.Message,
                         send.Recipient, send.Recipient.Path, send.SenderOption ?? _system.DeadLetters);
                 }
-
-                var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
-
-                _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
-
-                if (pdu.Length > Transport.MaximumPayloadBytes)
+                
+                //var oldPdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
+                //    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                var pdu = _codec.ConstructMessage(
+                    send.Recipient.LocalAddressToUse, send.Recipient,
+                    this.SerializeIOBSMessage(send.Message), send.SenderOption,
+                    send.Seq, _lastAck);
+                //var p = _codec as AkkaPduProtobuffCodec;
+                //var m1 =p.constructMessageEnvelopePB(send.Recipient.LocalAddressToUse,
+                //    send.Recipient, this.SerializeMessage(send.Message),
+                //    send.SenderOption, send.Seq, _lastAck);
+                //var m2 = p.ConstructMainMessageBS(
+                //    send.Recipient.LocalAddressToUse, send.Recipient,
+                //    this.SerializeIOBSMessage(send.Message), send.SenderOption,
+                //    send.Seq, _lastAck);
+                //Console.WriteLine(m1.Length);
+                //Console.WriteLine(m2.Count);
+                //oldPdu.ToByteArray().Select((i, b) => (i, b))
+                //    .Join(pdu.ToArray().Select((i, b) => (i, b)), (i) => i.b,
+                //        (i) => i.b, (b1, b2) => (b1.i, b1.b, b2.i)).ToList();
+                _remoteMetrics.LogPayloadBytes(send.Message, pdu.Count);
+                //GC.KeepAlive(oldPdu);
+                if (pdu.Count > Transport.MaximumPayloadBytes)// || oldPdu.Length>Transport.MaximumPayloadBytes)
                 {
                     var reason = new OversizedPayloadException(
                         string.Format("Discarding oversized payload sent to {0}: max allowed size {1} bytes, actual size of encoded {2} was {3} bytes.",
                             send.Recipient,
                             Transport.MaximumPayloadBytes,
                             send.Message.GetType(),
-                            pdu.Length));
+                            pdu.Count));
                     _log.Error(reason, "Transient association error (association remains live)");
                     return true;
                 }
