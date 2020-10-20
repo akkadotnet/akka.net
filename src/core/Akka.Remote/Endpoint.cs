@@ -19,9 +19,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Serialization;
-using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Remote.Transport;
-using Akka.Routing;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -47,42 +45,6 @@ namespace Akka.Remote
             IActorRef senderOption = null);
     }
 
-    public class DefaultMessageDispatcherActor : ActorBase
-    {
-        private readonly DefaultMessageDispatcher _dispatcher;
-
-        public DefaultMessageDispatcherActor(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
-        {
-            _dispatcher = new DefaultMessageDispatcher(system,provider,log);
-        }
-        protected override bool Receive(object message)
-        {
-            if (message is DispatchMessage msg)
-            {
-                _dispatcher.Dispatch(msg.Recipient,msg.RecipientAddress,msg.Message,msg.SenderOption);
-                return true;
-            }
-
-            return false;
-        }
-    }
-
-    public class DispatchMessage
-    {
-        internal DispatchMessage(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
-            IActorRef senderOption = null)
-        {
-            RecipientAddress = recipientAddress;
-            SenderOption = senderOption;
-            Recipient = recipient;
-            Message = message;
-        }
-
-        public Address RecipientAddress { get; }
-        public IActorRef SenderOption { get; }
-        public IInternalActorRef Recipient { get;  }
-        internal SerializedMessage Message { get;  }
-    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -1055,20 +1017,7 @@ namespace Akka.Remote
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
             _system = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _provider = RARP.For(Context.System).Provider;
-            _msgDispatchers = Props
-                .Create(() =>
-                    new DefaultMessageDispatcherActor(_system, _provider, _log))
-                .WithRouter(new ConsistentHashingPool(5,
-                    o =>
-                    {
-                        if (o is DispatchMessage d)
-                        {
-                            return d.RecipientAddress;
-                        }
-
-                        return o;
-                    })).WithDispatcher("akka.actor.default-dispatcher");
-            //_msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
+            _msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
             _receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
             _ackDeadline = NewAckDeadline();
@@ -1096,7 +1045,7 @@ namespace Akka.Remote
 
         private IActorRef _reader;
         private readonly AtomicCounter _readerId = new AtomicCounter(0);
-        //private readonly IInboundMessageDispatcher _msgDispatcher;
+        private readonly IInboundMessageDispatcher _msgDispatcher;
 
         private Ack _lastAck = null;
         private Deadline _ackDeadline;
@@ -1358,7 +1307,7 @@ namespace Akka.Remote
             var newReader =
                 Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
-                        EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatchers,
+                        EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatcher,
                             Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor)
                             .WithDeploy(Deploy.Local)),
                     string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
@@ -1402,7 +1351,6 @@ namespace Akka.Remote
         private int _fullBackoffCount = 1;
         private int _smallBackoffCount = 0;
         private int _noBackoffCount = 0;
-        private Props _msgDispatchers;
 
         private void AdjustAdaptiveBackup()
         {
@@ -1917,7 +1865,7 @@ namespace Akka.Remote
                     AkkaProtocolTransport transport,
                     RemoteSettings settings,
                     AkkaPduCodec codec,
-                    Props msgDispatch,
+                    IInboundMessageDispatcher msgDispatch,
                     bool inbound,
                     int uid,
                     ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
@@ -1925,7 +1873,7 @@ namespace Akka.Remote
                     base(localAddress, remoteAddress, transport, settings)
         {
             _receiveBuffers = receiveBuffers;
-            _msgDispatch = Context.ActorOf(msgDispatch);
+            _msgDispatch = msgDispatch;
             Inbound = inbound;
             _uid = uid;
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
@@ -1939,7 +1887,7 @@ namespace Akka.Remote
         private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private readonly int _uid;
-        private readonly IActorRef _msgDispatch;
+        private readonly IInboundMessageDispatcher _msgDispatch;
 
         private readonly IRemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
@@ -2000,10 +1948,10 @@ namespace Akka.Remote
                         {
                             try
                             {
-                                _msgDispatch.Tell(new DispatchMessage(ackAndMessage.MessageOption.Recipient,
+                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
                                     ackAndMessage.MessageOption.RecipientAddress,
                                     ackAndMessage.MessageOption.SerializedMessage,
-                                    ackAndMessage.MessageOption.SenderOptional));
+                                    ackAndMessage.MessageOption.SenderOptional);
                             }
                             catch (SerializationException e)
                             {
@@ -2115,7 +2063,7 @@ namespace Akka.Remote
 
             // Notify writer that some messages can be acked
             Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
-            deliverable.Deliverables.ForEach(msg => _msgDispatch.Tell(new DispatchMessage(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional)));
+            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ArraySegment<byte> pdu)
@@ -2154,7 +2102,7 @@ namespace Akka.Remote
                     AkkaProtocolTransport transport,
                     RemoteSettings settings,
                     AkkaPduCodec codec,
-                    Props dispatcher,
+                    IInboundMessageDispatcher dispatcher,
                     bool inbound,
                     int uid,
                     ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> receiveBuffers,
