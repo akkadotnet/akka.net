@@ -183,7 +183,7 @@ namespace Akka.Cluster
             if (remaining.Contains(oldest))
             {
                 return DownIfAlone && context.Remaining.Count == 1 && context.Unreachable.Count > 0 // oldest is current node, and it's alone, but not the only node in the cluster
-                    ? context.Remaining 
+                    ? context.Remaining
                     : context.Unreachable;
             }
             if (DownIfAlone && context.Unreachable.Count == 1) // oldest is unreachable, but it's alone
@@ -222,7 +222,7 @@ namespace Akka.Cluster
             var isRefereeReachable = context.Remaining.Any(m => m.Address == Address);
 
             if (!isRefereeReachable) return context.Remaining; // referee is unreachable
-            else if (context.Remaining.Count < DownAllIfLessThanNodes) return context.Remaining.Union(context.Unreachable); // referee is reachable but there are too few remaining nodes 
+            else if (context.Remaining.Count < DownAllIfLessThanNodes) return context.Remaining.Union(context.Unreachable); // referee is reachable but there are too few remaining nodes
             else return context.Unreachable;
         }
 
@@ -241,7 +241,7 @@ namespace Akka.Cluster
 
         #endregion
 
-        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy) => 
+        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy) =>
             Actor.Props.Create(() => new SplitBrainDecider(stableAfter, strategy)).WithDeploy(Deploy.Local);
 
         private readonly Cluster _cluster;

@@ -32,7 +32,6 @@ namespace Akka.Coordination
         public LeaseSettings(string leaseName, string ownerName, Akka.Coordination.TimeoutSettings timeoutSettings, Akka.Configuration.Config leaseConfig) { }
         public Akka.Configuration.Config LeaseConfig { get; }
         public string LeaseName { get; }
-        public System.Type LeaseType { get; }
         public string OwnerName { get; }
         public Akka.Coordination.TimeoutSettings TimeoutSettings { get; }
         public static Akka.Coordination.LeaseSettings Create(Akka.Configuration.Config config, string leaseName, string ownerName) { }
