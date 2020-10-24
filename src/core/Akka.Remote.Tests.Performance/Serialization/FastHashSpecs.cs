@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Remote.Serialization;
+using Akka.Util;
 using NBench;
 
 namespace Akka.Remote.Tests.Performance.Serialization

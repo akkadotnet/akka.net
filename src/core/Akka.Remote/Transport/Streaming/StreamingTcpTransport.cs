@@ -306,9 +306,13 @@ namespace Akka.Remote.Transport.Streaming
             //If batch delay is 0, we don't want our delay stage.
             if (TransportSettings.BatchGroupMaxMillis > 0)
             {
-               baseSource = baseSource.GroupedWithin(TransportSettings.BatchGroupMaxCount, TimeSpan.FromMilliseconds(TransportSettings.BatchGroupMaxMillis))
-                    .SelectMany(msg => msg)
-                    .Async();
+                baseSource = baseSource.GroupedWithin(
+                        TransportSettings.BatchGroupMaxCount,
+                        TimeSpan.FromMilliseconds(TransportSettings
+                            .BatchGroupMaxMillis))
+                    .Async()
+                    .SelectMany(msg => msg);
+                   
             }
             else
             {
@@ -330,7 +334,11 @@ namespace Akka.Remote.Transport.Streaming
         {
 
             return Flow.Create<IO.ByteString>()
-                .Select(b => b)
+                .Select(b =>
+                {
+                    //Console.WriteLine(b.Count);
+                    return b;
+                })
                 //Put an async boundary here so that we do not fuse
                 //And can properly batch to Socket.
                 .Async()

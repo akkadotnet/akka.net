@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Text;
 using Akka.Actor;
 using System.Threading;
+using Akka.Util;
 
 namespace Akka.Remote.Serialization
 {
@@ -17,9 +19,9 @@ namespace Akka.Remote.Serialization
     internal sealed class ActorPathThreadLocalCache : ExtensionIdProvider<ActorPathThreadLocalCache>, IExtension
     {
         private readonly ThreadLocal<ActorPathCache> _current = new ThreadLocal<ActorPathCache>(() => new ActorPathCache());
-
+        private readonly  ThreadLocal<ActorPathFastCache> _currentAs = new ThreadLocal<ActorPathFastCache>(()=>new ActorPathFastCache());
         public ActorPathCache Cache => _current.Value;
-
+        public ActorPathFastCache FastCache => _currentAs.Value;
         public override ActorPathThreadLocalCache CreateExtension(ExtendedActorSystem system)
         {
             return new ActorPathThreadLocalCache();
@@ -31,6 +33,39 @@ namespace Akka.Remote.Serialization
         }
     }
 
+    public class HeldSegment
+    {
+        public HeldSegment(ArraySegment<byte> segment)
+        {
+            Segment = segment;
+        }
+        public ArraySegment<byte> Segment { get; }
+    }
+    internal sealed class ActorPathFastCache : LruBoundedCache<HeldSegment, ActorPath>
+    {
+        public ActorPathFastCache(int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
+        {
+            
+        }
+
+        protected override int Hash(HeldSegment k)
+        {
+            return FastHash.OfStringFast(new Span<byte>(k.Segment.Array,k.Segment.Offset,k.Segment.Count));
+        }
+
+        protected override ActorPath Compute(HeldSegment k)
+        {
+            if (ActorPath.TryParse(Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
+                k.Segment.Count), out var actorPath))
+                return actorPath;
+            return null;
+        }
+
+        protected override bool IsCacheable(ActorPath v)
+        {
+            return v != null;
+        }
+    }
     /// <summary>
     /// INTERNAL API
     /// </summary>

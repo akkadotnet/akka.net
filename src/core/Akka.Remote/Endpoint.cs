@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -20,6 +21,7 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Serialization;
 using Akka.Remote.Transport;
+using Akka.Routing;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -45,6 +47,42 @@ namespace Akka.Remote
             IActorRef senderOption = null);
     }
 
+    public class DefaultMessageDispatcherActor : ActorBase
+    {
+        private readonly DefaultMessageDispatcher _dispatcher;
+
+        public DefaultMessageDispatcherActor(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
+        {
+            _dispatcher = new DefaultMessageDispatcher(system,provider,log);
+        }
+        protected override bool Receive(object message)
+        {
+            if (message is DispatchMessage msg)
+            {
+                _dispatcher.Dispatch(msg.Recipient,msg.RecipientAddress,msg.Message,msg.SenderOption);
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    public class DispatchMessage
+    {
+        internal DispatchMessage(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
+            IActorRef senderOption = null)
+        {
+            RecipientAddress = recipientAddress;
+            SenderOption = senderOption;
+            Recipient = recipient;
+            Message = message;
+        }
+
+        public Address RecipientAddress { get; }
+        public IActorRef SenderOption { get; }
+        public IInternalActorRef Recipient { get;  }
+        internal SerializedMessage Message { get;  }
+    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -1017,6 +1055,19 @@ namespace Akka.Remote
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
             _system = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _provider = RARP.For(Context.System).Provider;
+            _msgDispatchers = Props
+                .Create(() =>
+                    new DefaultMessageDispatcherActor(_system, _provider, _log))
+                .WithRouter(new ConsistentHashingPool(10,
+                    o =>
+                    {
+                        if (o is DispatchMessage d)
+                        {
+                            return BitConverter.GetBytes(d.Recipient.Path.Uid);
+                        }
+
+                        return o;
+                    }).WithDispatcher("akka.actor.default-dispatcher")).WithDispatcher("akka.actor.default-dispatcher");
             _msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
             _receiveBuffers = receiveBuffers;
             Inbound = handleOrActive != null;
@@ -1307,7 +1358,7 @@ namespace Akka.Remote
             var newReader =
                 Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
-                        EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec, _msgDispatcher,
+                        EndpointReader.ReaderProps(LocalAddress, RemoteAddress, Transport, Settings, _codec,_msgDispatchers, _msgDispatcher,
                             Inbound, (int)handle.HandshakeInfo.Uid, _receiveBuffers, _reliableDeliverySupervisor)
                             .WithDeploy(Deploy.Local)),
                     string.Format("endpointReader-{0}-{1}", AddressUrlEncoder.Encode(RemoteAddress), _readerId.Next()));
@@ -1351,6 +1402,7 @@ namespace Akka.Remote
         private int _fullBackoffCount = 1;
         private int _smallBackoffCount = 0;
         private int _noBackoffCount = 0;
+        private Props _msgDispatchers;
 
         private void AdjustAdaptiveBackup()
         {
@@ -1865,6 +1917,7 @@ namespace Akka.Remote
                     AkkaProtocolTransport transport,
                     RemoteSettings settings,
                     AkkaPduCodec codec,
+                    Props msgDispatchers,
                     IInboundMessageDispatcher msgDispatch,
                     bool inbound,
                     int uid,
@@ -1873,6 +1926,7 @@ namespace Akka.Remote
                     base(localAddress, remoteAddress, transport, settings)
         {
             _receiveBuffers = receiveBuffers;
+            //_msgDispatchers = Context.ActorOf(msgDispatchers);
             _msgDispatch = msgDispatch;
             Inbound = inbound;
             _uid = uid;
@@ -1887,6 +1941,7 @@ namespace Akka.Remote
         private readonly IActorRef _reliableDeliverySupervisor;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private readonly int _uid;
+        private readonly IActorRef _msgDispatchers;
         private readonly IInboundMessageDispatcher _msgDispatch;
 
         private readonly IRemoteActorRefProvider _provider;
@@ -1948,10 +2003,17 @@ namespace Akka.Remote
                         {
                             try
                             {
-                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                    ackAndMessage.MessageOption.RecipientAddress,
-                                    ackAndMessage.MessageOption.SerializedMessage,
+                                _msgDispatch.Dispatch(
+                                    ackAndMessage.MessageOption.Recipient,
+                                    ackAndMessage.MessageOption
+                                        .RecipientAddress,
+                                    ackAndMessage.MessageOption
+                                        .SerializedMessage,
                                     ackAndMessage.MessageOption.SenderOptional);
+                                //_msgDispatchers.Tell(new DispatchMessage(ackAndMessage.MessageOption.Recipient,
+                                //    ackAndMessage.MessageOption.RecipientAddress,
+                                //    ackAndMessage.MessageOption.SerializedMessage,
+                                //    ackAndMessage.MessageOption.SenderOptional));
                             }
                             catch (SerializationException e)
                             {
@@ -1987,6 +2049,18 @@ namespace Akka.Remote
               sm.SerializerId,
               sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
               error.Message);
+        }
+
+        private void LogTransientSerializationError(
+            MessageAS parse, Exception error)
+        {
+            var pl = parse.SerializedMessage;
+            _log.Warning(
+                "Serializer not defined for message with serializer id [{0}] and manifest [{1}]. " +
+                "Transient association error (association remains live). {2}",
+                pl.SerId,
+                pl.HasManifest==false ? "" : Encoding.UTF8.GetString(pl.Manifest().Array,pl.Manifest().Offset,pl.Manifest().Count),
+                error.Message);
         }
 
         private void NotReading()
@@ -2078,6 +2152,19 @@ namespace Akka.Remote
             }
         }
 
+        private AckAndMessageAS TryDecodeMessageAndAckAS(ArraySegment<byte> pdu)
+        {
+            try
+            {
+                return _codec.GetAckAndMessage(pdu, _provider, LocalAddress);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
         #endregion
 
         #region Static members
@@ -2102,6 +2189,7 @@ namespace Akka.Remote
                     AkkaProtocolTransport transport,
                     RemoteSettings settings,
                     AkkaPduCodec codec,
+                    Props dispatchers,
                     IInboundMessageDispatcher dispatcher,
                     bool inbound,
                     int uid,
@@ -2111,7 +2199,7 @@ namespace Akka.Remote
             return
                 Props.Create(
                     () =>
-                        new EndpointReader(localAddress, remoteAddress, transport, settings, codec, dispatcher, inbound,
+                        new EndpointReader(localAddress, remoteAddress, transport, settings, codec,dispatchers, dispatcher, inbound,
                             uid, receiveBuffers, reliableDeliverySupervisor))
                             .WithDispatcher(settings.Dispatcher);
         }

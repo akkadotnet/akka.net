@@ -19,6 +19,28 @@ using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
+
+    internal class NameAndUidLRUCache : LruBoundedCache<string, NameAndUid>
+    {
+        public NameAndUidLRUCache() : base(1024,600)
+        {
+        }
+
+        protected override int Hash(string k)
+        {
+            return FastHash.OfStringFast(k);
+        }
+
+        protected override NameAndUid Compute(string k)
+        {
+         return   ActorCell._splitNameAndUidInternal(k);
+        }
+
+        protected override bool IsCacheable(NameAndUid v)
+        {
+            return true;
+        }
+    }
     /// <summary>
     /// INTERNAL API.
     ///
@@ -484,6 +506,14 @@ namespace Akka.Actor
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
         public static NameAndUid SplitNameAndUid(string name)
+        {
+            return _splitNameAndUidInternal(name);
+            //return _NameAndUidLruCache.GetOrCompute(name);
+        }
+        
+        private static readonly NameAndUidLRUCache _NameAndUidLruCache = new NameAndUidLRUCache();
+
+        internal static NameAndUid _splitNameAndUidInternal(string name)
         {
             var i = name.IndexOf('#');
             return i < 0

@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 using Akka.Actor;
+using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
@@ -31,9 +32,19 @@ namespace Akka.Remote
         public static object Deserialize(ExtendedActorSystem system, SerializedMessage messageProtocol)
         {
             return system.Serialization.Deserialize(
-                messageProtocol.Message.ToByteArray(),
+                 ByteStringConverters._getByteArrayUnsafeFunc(messageProtocol.Message),
                 messageProtocol.SerializerId,
                 !messageProtocol.MessageManifest.IsEmpty ? messageProtocol.MessageManifest.ToStringUtf8() : null);
+        }
+
+        public static object Deserialize(ExtendedActorSystem system,
+            AkkaPduProtobuffCodec.AckAndMessageParser.EnvelopeContainerParser.
+                PayloadParser parser)
+        {
+            var ms = parser.Manifest() != default
+                ? Encoding.UTF8.GetString(parser.GetManifestSpan().ToArray()):null;
+            return system.Serialization.Deserialize(
+                parser.GetMessageByteSpan().ToArray(), parser.SerId, ms);
         }
 
         /// <summary>

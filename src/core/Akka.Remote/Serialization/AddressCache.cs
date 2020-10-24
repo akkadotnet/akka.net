@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Text;
 using System.Threading;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.Remote.Serialization
 {
@@ -19,6 +21,7 @@ namespace Akka.Remote.Serialization
         public AddressThreadLocalCache()
         {
             _current = new ThreadLocal<AddressCache>(() => new AddressCache());
+            _currentAS = new ThreadLocal<AddressCacheFast>(()=> new AddressCacheFast());
         }
 
         public override AddressThreadLocalCache CreateExtension(ExtendedActorSystem system)
@@ -27,12 +30,42 @@ namespace Akka.Remote.Serialization
         }
 
         private readonly ThreadLocal<AddressCache> _current;
-
+        private readonly ThreadLocal<AddressCacheFast> _currentAS;
         public AddressCache Cache => _current.Value;
+        public AddressCacheFast CacheAS=>_currentAS.Value;
 
         public static AddressThreadLocalCache For(ActorSystem system)
         {
             return system.WithExtension<AddressThreadLocalCache, AddressThreadLocalCache>();
+        }
+    }
+    internal sealed class AddressCacheFast : LruBoundedCache<HeldSegment, Address>
+    {
+        public AddressCacheFast(int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
+        {
+        }
+
+        protected override int Hash(HeldSegment k)
+        {
+            return FastHash.OfStringFast(new Span<byte>(k.Segment.Array,
+                k.Segment.Offset, k.Segment.Count));
+        }
+
+        protected override Address Compute(HeldSegment k)
+        {
+            Address addr;
+            if (ActorPath.TryParseAddress(
+                Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
+                    k.Segment.Count), out addr))
+            {
+                return addr;
+            }
+            return Address.AllSystems;
+        }
+
+        protected override bool IsCacheable(Address v)
+        {
+            return v != Address.AllSystems;
         }
     }
 

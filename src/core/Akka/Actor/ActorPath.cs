@@ -655,7 +655,7 @@ namespace Akka.Actor
             get
             {
                 ActorPath p = this;
-                var acc = new Stack<string>();
+                var acc = new Stack<string>(8);
                 while (true)
                 {
                     //ToList forces Enumerable creation
