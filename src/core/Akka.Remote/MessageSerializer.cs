@@ -38,13 +38,13 @@ namespace Akka.Remote
         }
 
         public static object Deserialize(ExtendedActorSystem system,
-            AkkaPduProtobuffCodec.AckAndMessageParser.EnvelopeContainerParser.
+            FastMessageParser.
                 PayloadParser parser)
         {
             var ms = parser.Manifest() != default
-                ? Encoding.UTF8.GetString(parser.GetManifestSpan().ToArray()):null;
+                ? parser.ManifestString():null;
             return system.Serialization.Deserialize(
-                parser.GetMessageByteSpan().ToArray(), parser.SerId, ms);
+                parser.GetMessageByteSpan(), parser.SerId, ms);
         }
 
         /// <summary>

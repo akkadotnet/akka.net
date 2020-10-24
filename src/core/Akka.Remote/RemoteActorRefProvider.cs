@@ -478,7 +478,7 @@ namespace Akka.Remote
         {
             if (_actorPathThreadLocalCache != null)
             {
-                path = _actorPathThreadLocalCache.FastCache.GetOrCompute(new HeldSegment(actorPath));
+                path = _actorPathThreadLocalCache.Cache.GetOrCompute( Encoding.UTF8.GetString(actorPath.Array,actorPath.Offset,actorPath.Count));
                 return path != null;
             }
             else // cache not initialized yet

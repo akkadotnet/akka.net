@@ -73,6 +73,13 @@ namespace RemotePingPong
 
         private static void Main(params string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+            {
+                Console.WriteLine(eventArgs.ExceptionObject as Exception);
+                Console.WriteLine("STACKOVERFLOW");
+                Console.WriteLine(sender);
+                Console.WriteLine(eventArgs.ExceptionObject as Exception);
+            };
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal;
             uint timesToRun;
             if (args.Length == 0 || !uint.TryParse(args[0], out timesToRun))
@@ -195,11 +202,14 @@ namespace RemotePingPong
                 throw new Exception("Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
             }
 
+            var rng = new Random();
+            var rand = new byte[2048];
+            rng.NextBytes(rand);
             var sw = Stopwatch.StartNew();
             receivers.ForEach(c =>
             {
                 for (var i = 0; i < 50; i++) // prime the pump so EndpointWriters can take advantage of their batching model
-                    c.Tell("hit");
+                    c.Tell(rand);
             });
             var waiting = Task.WhenAll(tasks);
             await Task.WhenAll(waiting);

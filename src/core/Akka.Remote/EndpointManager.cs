@@ -404,7 +404,7 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="uid">TBD</param>
             /// <param name="buffer">TBD</param>
-            public ResendState(int uid, AckedReceiveBuffer<Message> buffer)
+            public ResendState(int uid, AckedReceiveBuffer<MessageAS> buffer)
             {
                 Buffer = buffer;
                 Uid = uid;
@@ -418,7 +418,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public AckedReceiveBuffer<Message> Buffer { get; private set; }
+            public AckedReceiveBuffer<MessageAS> Buffer { get; private set; }
 
             public bool Equals(ResendState other)
             {

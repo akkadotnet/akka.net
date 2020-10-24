@@ -16,12 +16,16 @@ namespace Akka.Remote.Serialization
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal sealed class AddressThreadLocalCache : ExtensionIdProvider<AddressThreadLocalCache>, IExtension
     {
         public AddressThreadLocalCache()
         {
             _current = new ThreadLocal<AddressCache>(() => new AddressCache());
-            _currentAS = new ThreadLocal<AddressCacheFast>(()=> new AddressCacheFast());
+            //_currentAS = new ThreadLocal<AddressCacheFast>(()=> new AddressCacheFast());
         }
 
         public override AddressThreadLocalCache CreateExtension(ExtendedActorSystem system)
@@ -30,9 +34,9 @@ namespace Akka.Remote.Serialization
         }
 
         private readonly ThreadLocal<AddressCache> _current;
-        private readonly ThreadLocal<AddressCacheFast> _currentAS;
+        //private readonly ThreadLocal<AddressCacheFast> _currentAS;
         public AddressCache Cache => _current.Value;
-        public AddressCacheFast CacheAS=>_currentAS.Value;
+        //public AddressCacheFast CacheAS=>_currentAS.Value;
 
         public static AddressThreadLocalCache For(ActorSystem system)
         {
@@ -47,12 +51,21 @@ namespace Akka.Remote.Serialization
 
         protected override int Hash(HeldSegment k)
         {
-            return FastHash.OfStringFast(new Span<byte>(k.Segment.Array,
+            var addr = Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
+                k.Segment.Count);
+            var hash = FastHash.OfStringFast(new Span<byte>(k.Segment.Array,
                 k.Segment.Offset, k.Segment.Count));
+            Console.WriteLine("hash address - " + hash +" addr - " + addr);
+            return hash;
         }
 
         protected override Address Compute(HeldSegment k)
         {
+            var addrstr = Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
+                k.Segment.Count);
+            var hash = FastHash.OfStringFast(new Span<byte>(k.Segment.Array,
+                k.Segment.Offset, k.Segment.Count));
+            Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} - compute address - " + hash +" addr - " + addrstr);
             Address addr;
             if (ActorPath.TryParseAddress(
                 Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,

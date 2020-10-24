@@ -55,6 +55,7 @@ namespace Akka.Util
         /// <returns>A 32-bit pseudo-random hash value.</returns>
         public static int OfStringFast(Span<byte> s)
         {
+            Console.WriteLine("spanhash");
             var len = s.Length;
             var s0 = 391408L; // seed value 1, DON'T CHANGE
             var s1 = 601258L; // seed value 2, DON'T CHANGE
