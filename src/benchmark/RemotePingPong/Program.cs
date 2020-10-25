@@ -209,7 +209,7 @@ namespace RemotePingPong
             receivers.ForEach(c =>
             {
                 for (var i = 0; i < 50; i++) // prime the pump so EndpointWriters can take advantage of their batching model
-                    c.Tell(rand);
+                    c.Tell("hi");
             });
             var waiting = Task.WhenAll(tasks);
             await Task.WhenAll(waiting);

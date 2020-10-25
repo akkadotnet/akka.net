@@ -110,7 +110,7 @@ namespace Akka.Remote.Transport.Streaming
                 new TaskCompletionSource<IAssociationEventListener>();
             System = system;
             _mat = ActorMaterializer.Create(System,
-                ActorMaterializerSettings.Create(System),
+                ActorMaterializerSettings.Create(System).WithDispatcher("akka.remote.streaming-remote-dispatcher"),
                 namePrefix: "streaming-transport");
             if (system.Settings.Config.HasPath("akka.remote.dot-netty.tcp"))
             {

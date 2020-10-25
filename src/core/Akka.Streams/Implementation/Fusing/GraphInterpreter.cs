@@ -344,7 +344,8 @@ namespace Akka.Streams.Implementation.Fusing
         // Using an Object-array avoids holding on to the GraphInterpreter class
         // when this accidentally leaks onto threads that are not stopped when this
         // class should be unloaded.
-        private static readonly ThreadLocal<object[]> CurrentInterpreter = new ThreadLocal<object[]>(() => new object[1]);
+        [ThreadStatic]
+        private static object[] CurrentInterpreter;
 
         /// <summary>
         /// TBD
@@ -354,16 +355,16 @@ namespace Akka.Streams.Implementation.Fusing
         {
             get
             {
-                if (CurrentInterpreter.Value[0] == null)
+                if (CurrentInterpreter?[0] == null)
                     throw new InvalidOperationException("Something went terribly wrong!");
-                return (GraphInterpreter) CurrentInterpreter.Value[0];
+                return (GraphInterpreter) CurrentInterpreter[0];
             }
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public static GraphInterpreter CurrentInterpreterOrNull => (GraphInterpreter) CurrentInterpreter.Value[0];
+        public static GraphInterpreter CurrentInterpreterOrNull => (GraphInterpreter) CurrentInterpreter?[0];
 
         /// <summary>
         /// TBD
@@ -649,7 +650,12 @@ namespace Akka.Streams.Implementation.Fusing
             if (IsDebug)
                 Console.WriteLine(
                     $"{Name} ---------------- EXECUTE {QueueStatus()} (running={RunningStagesCount}, shutdown={ShutdownCounters()})");
-            var currentInterpreterHolder = CurrentInterpreter.Value;
+            if (CurrentInterpreter is null)
+            {
+                Interlocked.CompareExchange(ref CurrentInterpreter,
+                    new object[1], null);
+            }
+            var currentInterpreterHolder = CurrentInterpreter;
             var previousInterpreter = currentInterpreterHolder[0];
             currentInterpreterHolder[0] = this;
             var eventsRemaining = eventLimit;
@@ -794,7 +800,12 @@ namespace Akka.Streams.Implementation.Fusing
             if (!IsStageCompleted(logic))
             {
                 if (IsDebug) Console.WriteLine($"{Name} ASYNC {evt} ({handler}) [{logic}]");
-                var currentInterpreterHolder = CurrentInterpreter.Value;
+                if (CurrentInterpreter == null)
+                {
+                    Interlocked.CompareExchange(ref CurrentInterpreter,
+                        new object[1], null);
+                }
+                var currentInterpreterHolder = CurrentInterpreter;
                 var previousInterpreter = currentInterpreterHolder[0];
                 currentInterpreterHolder[0] = this;
                 try

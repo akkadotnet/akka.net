@@ -19,9 +19,9 @@ namespace Akka.Remote.Serialization
     internal sealed class ActorPathThreadLocalCache : ExtensionIdProvider<ActorPathThreadLocalCache>, IExtension
     {
         private readonly ThreadLocal<ActorPathCache> _current = new ThreadLocal<ActorPathCache>(() => new ActorPathCache());
-        //private readonly  ThreadLocal<ActorPathFastCache> _currentAs = new ThreadLocal<ActorPathFastCache>(()=>new ActorPathFastCache());
+        private readonly  ThreadLocal<ActorPathFastCache> _currentAs = new ThreadLocal<ActorPathFastCache>(()=>new ActorPathFastCache());
         public ActorPathCache Cache => _current.Value;
-        //public ActorPathFastCache FastCache => _currentAs.Value;
+        public ActorPathFastCache FastCache => _currentAs.Value;
         public override ActorPathThreadLocalCache CreateExtension(ExtendedActorSystem system)
         {
             return new ActorPathThreadLocalCache();
@@ -41,32 +41,17 @@ namespace Akka.Remote.Serialization
         }
         public ArraySegment<byte> Segment { get; }
     }
-    internal sealed class ActorPathFastCache : LruBoundedCache<HeldSegment, ActorPath>
+    internal sealed class ActorPathFastCache : LruSegmentCache<ActorPath>
     {
         public ActorPathFastCache(int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
         {
             
         }
+        
 
-        protected override int Hash(HeldSegment k)
+        protected override ActorPath Compute(ReadOnlySpan<byte> k)
         {
-            var addr = Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
-                k.Segment.Count);
-            var hash = FastHash.OfStringFast(new Span<byte>(k.Segment.Array,
-                k.Segment.Offset, k.Segment.Count));
-            Console.WriteLine("hash path - " + hash +" addr - " + addr);
-            return FastHash.OfStringFast(new Span<byte>(k.Segment.Array,k.Segment.Offset,k.Segment.Count));
-        }
-
-        protected override ActorPath Compute(HeldSegment k)
-        {
-            var addrstr = Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
-                k.Segment.Count);
-            var hash = FastHash.OfStringFast(new Span<byte>(k.Segment.Array,
-                k.Segment.Offset, k.Segment.Count));
-            Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} - compute path - " + hash +" addr - " + addrstr);
-            if (ActorPath.TryParse(Encoding.UTF8.GetString(k.Segment.Array, k.Segment.Offset,
-                k.Segment.Count), out var actorPath))
+            if (ActorPath.TryParse(Encoding.UTF8.GetString(k.ToArray()), out var actorPath))
                 return actorPath;
             return null;
         }
