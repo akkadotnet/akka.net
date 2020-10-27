@@ -8,6 +8,7 @@
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Util;
 
 namespace Akka.Cluster.Tests
 {
@@ -17,14 +18,14 @@ namespace Akka.Cluster.Tests
     [InternalApi]
     public static class TestMember
     {
-        public static Member Create(Address address, MemberStatus status, int uid = 0)
+        public static Member Create(Address address, MemberStatus status, int uid = 0, AkkaVersion appVersion = null)
         {
-            return Create(address, status, ImmutableHashSet.Create<string>(), uid);
+            return Create(address, status, ImmutableHashSet.Create<string>(), uid, appVersion: appVersion);
         }
 
-        public static Member Create(Address address, MemberStatus status, ImmutableHashSet<string> roles, int uid = 0, int upNumber = 0)
+        public static Member Create(Address address, MemberStatus status, ImmutableHashSet<string> roles, int uid = 0, int upNumber = 0, AkkaVersion appVersion = null)
         {
-            return Member.Create(new UniqueAddress(address, uid), upNumber, status, roles);
+            return Member.Create(new UniqueAddress(address, uid), upNumber, status, roles, appVersion ?? AkkaVersion.Zero);
         }
     }
 }
