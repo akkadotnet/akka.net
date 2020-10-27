@@ -1943,9 +1943,9 @@ namespace Akka.Remote
             });
             Receive<Disassociated>(disassociated =>
             {
-                if (Context.System.EventStream.IsSubscribing(typeof(Disassociated)))
+                if (Context.System.EventStream.IsSubscribing(typeof(ValueTuple<Disassociated, Address>)))
                 {
-                    Context.System.EventStream.Publish(disassociated);
+                    Context.System.EventStream.Publish(ValueTuple.Create<Disassociated, Address>(disassociated, this.RemoteAddress));
                 }
                 HandleDisassociated(disassociated.Info);
             });
@@ -1972,9 +1972,9 @@ namespace Akka.Remote
         {
             Receive<Disassociated>(disassociated =>
             {
-                if (Context.System.EventStream.IsSubscribing(typeof(Disassociated)))
+                if (Context.System.EventStream.IsSubscribing(typeof(ValueTuple<Disassociated, Address>)))
                 {
-                    Context.System.EventStream.Publish(disassociated);
+                    Context.System.EventStream.Publish(ValueTuple.Create<Disassociated, Address>(disassociated, this.RemoteAddress));
                 }
                 HandleDisassociated(disassociated.Info);
             });
