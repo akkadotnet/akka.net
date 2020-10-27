@@ -1941,7 +1941,14 @@ namespace Akka.Remote
                     }
                 }
             });
-            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
+            Receive<Disassociated>(disassociated =>
+            {
+                if (Context.System.EventStream.IsSubscribing(typeof(Disassociated)))
+                {
+                    Context.System.EventStream.Publish(disassociated);
+                }
+                HandleDisassociated(disassociated.Info);
+            });
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 SaveState();
@@ -1963,7 +1970,14 @@ namespace Akka.Remote
 
         private void NotReading()
         {
-            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
+            Receive<Disassociated>(disassociated =>
+            {
+                if (Context.System.EventStream.IsSubscribing(typeof(Disassociated)))
+                {
+                    Context.System.EventStream.Publish(disassociated);
+                }
+                HandleDisassociated(disassociated.Info);
+            });
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<InboundPayload>(payload =>
             {
