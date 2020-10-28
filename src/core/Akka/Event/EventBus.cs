@@ -226,7 +226,7 @@ namespace Akka.Event
             }
         }
 
-        public bool IsSubscribing(TClassifier eventClass)
+        public bool HasSubscribers(TClassifier eventClass)
         {
             return _classifiers.ContainsKey(eventClass);
         }

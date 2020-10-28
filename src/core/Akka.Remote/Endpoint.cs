@@ -1874,7 +1874,7 @@ namespace Akka.Remote
         {
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
-                if(resendState.Uid == _uid)
+                if (resendState.Uid == _uid)
                 {
                     _ackedReceiveBuffer = resendState.Buffer;
                     DeliverAndAck();
@@ -1892,7 +1892,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-           
+
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;
@@ -1941,14 +1941,7 @@ namespace Akka.Remote
                     }
                 }
             });
-            Receive<Disassociated>(disassociated =>
-            {
-                if (Context.System.EventStream.IsSubscribing(typeof(ValueTuple<Disassociated, Address>)))
-                {
-                    Context.System.EventStream.Publish(ValueTuple.Create<Disassociated, Address>(disassociated, this.RemoteAddress));
-                }
-                HandleDisassociated(disassociated.Info);
-            });
+            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 SaveState();
@@ -1970,14 +1963,7 @@ namespace Akka.Remote
 
         private void NotReading()
         {
-            Receive<Disassociated>(disassociated =>
-            {
-                if (Context.System.EventStream.IsSubscribing(typeof(ValueTuple<Disassociated, Address>)))
-                {
-                    Context.System.EventStream.Publish(ValueTuple.Create<Disassociated, Address>(disassociated, this.RemoteAddress));
-                }
-                HandleDisassociated(disassociated.Info);
-            });
+            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<InboundPayload>(payload =>
             {
