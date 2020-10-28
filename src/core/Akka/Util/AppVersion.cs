@@ -29,29 +29,29 @@ namespace Akka.Util
     ///  `-` separator. The number of commits from the tag is handled as a numeric part.
     ///  For example `1.0.0+3-73475dce26` is less than `1.0.10+10-ed316bd024` (3 < 10).
     /// </summary>
-    public class AkkaVersion : IComparable<AkkaVersion>, IEquatable<AkkaVersion>
+    public class AppVersion : IComparable<AppVersion>, IEquatable<AppVersion>
     {
-        public static readonly AkkaVersion Zero = new AkkaVersion("0.0.0");
+        public static readonly AppVersion Zero = new AppVersion("0.0.0");
         private const int Undefined = 0;
 
         private int[] numbers = Array.Empty<int>();
         private string rest = "";
 
         [JsonConstructor]
-        internal AkkaVersion(string version)
+        internal AppVersion(string version)
         {
             this.Version = version;
         }
 
-        public static AkkaVersion Create(string version)
+        public static AppVersion Create(string version)
         {
-            var v = new AkkaVersion(version);
+            var v = new AppVersion(version);
             return v.Parse();
         }
 
         public string Version { get; }
 
-        private AkkaVersion Parse()
+        private AppVersion Parse()
         {
             (int, string) ParseLastPart(string s)
             {
@@ -174,7 +174,7 @@ namespace Akka.Util
             return this;
         }
 
-        public int CompareTo(AkkaVersion other)
+        public int CompareTo(AppVersion other)
         {
             if (Version == other.Version) // String equals without requiring parse
                 return 0;
@@ -209,24 +209,24 @@ namespace Akka.Util
             }
         }
 
-        public bool Equals(AkkaVersion other)
+        public bool Equals(AppVersion other)
         {
             return other != null && Version == other.Version;
         }
 
         public override bool Equals(object obj)
         {
-            return base.Equals(obj as AkkaVersion);
+            return base.Equals(obj as AppVersion);
         }
 
-        public static bool operator ==(AkkaVersion first, AkkaVersion second)
+        public static bool operator ==(AppVersion first, AppVersion second)
         {
             if (object.ReferenceEquals(first, null))
                 return object.ReferenceEquals(second, null);
             return first.Equals(second);
         }
 
-        public static bool operator !=(AkkaVersion first, AkkaVersion second)
+        public static bool operator !=(AppVersion first, AppVersion second)
         {
             return !(first == second);
         }

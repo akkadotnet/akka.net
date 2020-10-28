@@ -56,7 +56,7 @@ namespace Akka.Cluster.Tests
         {
             var address = new Address("akka.tcp", "sys1", "host1", 9000);
             var m1 = TestMember.Create(address, MemberStatus.Joining);
-            var m11 = Member.Create(new UniqueAddress(address, -3), ImmutableHashSet<string>.Empty, AkkaVersion.Zero);
+            var m11 = Member.Create(new UniqueAddress(address, -3), ImmutableHashSet<string>.Empty, AppVersion.Zero);
             var m2 = m1.Copy(status: MemberStatus.Up);
             var m22 = m11.Copy(status: MemberStatus.Up);
             var m3 = TestMember.Create(address.WithPort(10000), MemberStatus.Up);
@@ -89,7 +89,7 @@ namespace Akka.Cluster.Tests
 
             //different uid
             var a = TestMember.Create(address1, MemberStatus.Joining);
-            var b = Member.Create(new UniqueAddress(address1, -3), ImmutableHashSet<string>.Empty, AkkaVersion.Zero);
+            var b = Member.Create(new UniqueAddress(address1, -3), ImmutableHashSet<string>.Empty, AppVersion.Zero);
             Member.Ordering.Compare(a, b).Should().Be(1);
             Member.Ordering.Compare(b, a).Should().Be(-1);
         }

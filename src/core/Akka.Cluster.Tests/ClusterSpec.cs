@@ -80,8 +80,8 @@ namespace Akka.Cluster.Tests
             ClusterView.Members.Select(m => m.Address).ToImmutableHashSet()
                 .Should().BeEquivalentTo(ImmutableHashSet.Create(_selfAddress));
             AwaitAssert(() => ClusterView.Status.Should().Be(MemberStatus.Up));
-            ClusterView.Self.AppVersion.Should().Be(AkkaVersion.Create("1.2.3"));
-            ClusterView.Members.FirstOrDefault(i => i.Address == _selfAddress).AppVersion.Should().Be(AkkaVersion.Create("1.2.3"));
+            ClusterView.Self.AppVersion.Should().Be(AppVersion.Create("1.2.3"));
+            ClusterView.Members.FirstOrDefault(i => i.Address == _selfAddress).AppVersion.Should().Be(AppVersion.Create("1.2.3"));
             ClusterView.State.HasMoreThanOneAppVersion.Should().BeFalse();
         }
 
