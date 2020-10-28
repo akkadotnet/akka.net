@@ -4678,6 +4678,19 @@ namespace Akka.Serialization
 }
 namespace Akka.Util
 {
+    public class AkkaVersion : System.IComparable<Akka.Util.AkkaVersion>, System.IEquatable<Akka.Util.AkkaVersion>
+    {
+        public static readonly Akka.Util.AkkaVersion Zero;
+        public string Version { get; }
+        public int CompareTo(Akka.Util.AkkaVersion other) { }
+        public static Akka.Util.AkkaVersion Create(string version) { }
+        public bool Equals(Akka.Util.AkkaVersion other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static bool ==(Akka.Util.AkkaVersion first, Akka.Util.AkkaVersion second) { }
+        public static bool !=(Akka.Util.AkkaVersion first, Akka.Util.AkkaVersion second) { }
+    }
     public class AtomicBoolean
     {
         public AtomicBoolean(bool initialValue = False) { }
