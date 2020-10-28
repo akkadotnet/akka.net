@@ -42,20 +42,12 @@ namespace Akka.Streams.Tests
 
             var result = new List<string>();
             var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
-                .RunForeach(bs =>
-                {
-                    var str = bs.ToString(Encoding.ASCII);
-                    result.Add(str);
-                    Output.WriteLine(str);
-                }, Materializer);
+                .RunForeach(bs => result.Add(bs.ToString(Encoding.ASCII)), Materializer);
 
             await Task.WhenAll(writeToStreamTask, readFromStreamTask);
 
             var expected = Enumerable.Range(0, 100)
-                .SelectMany(i =>
-                {
-                    return i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString());
-                });
+                .SelectMany(i => i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString()));
             expected.SequenceEqual(result).ShouldBeTrue();
         }
     }
