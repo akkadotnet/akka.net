@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Util;
 using Akka.Util.Internal;
 using Newtonsoft.Json;
 
@@ -29,10 +30,11 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="uniqueAddress">TBD</param>
         /// <param name="roles">TBD</param>
+        /// <param name="appVersion">Application version</param>
         /// <returns>TBD</returns>
-        internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles)
+        internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles, AkkaVersion appVersion)
         {
-            return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles);
+            return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles, appVersion);
         }
 
         /// <summary>
@@ -42,7 +44,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         internal static Member Removed(UniqueAddress node)
         {
-            return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>());
+            return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>(), AkkaVersion.Zero);
         }
 
         /// <summary>
@@ -66,16 +68,22 @@ namespace Akka.Cluster
         public ImmutableHashSet<string> Roles { get; }
 
         /// <summary>
+        /// Application version
+        /// </summary>
+        public AkkaVersion AppVersion { get; }
+
+        /// <summary>
         /// Creates a new <see cref="Member"/>.
         /// </summary>
         /// <param name="uniqueAddress">The address of the member.</param>
         /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
         /// <param name="status">The status of this member.</param>
         /// <param name="roles">The roles for this member. Can be empty.</param>
+        /// <param name="appVersion">Application version</param>
         /// <returns>A new member instance.</returns>
-        internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles, AkkaVersion appVersion)
         {
-            return new Member(uniqueAddress, upNumber, status, roles);
+            return new Member(uniqueAddress, upNumber, status, roles, appVersion);
         }
 
         /// <summary>
@@ -85,12 +93,14 @@ namespace Akka.Cluster
         /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
         /// <param name="status">The status of this member.</param>
         /// <param name="roles">The roles for this member. Can be empty.</param>
-        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        /// <param name="appVersion">Application version</param>
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles, AkkaVersion appVersion)
         {
             UniqueAddress = uniqueAddress;
             UpNumber = upNumber;
             Status = status;
             Roles = roles;
+            AppVersion = appVersion ?? AkkaVersion.Zero;
         }
 
         /// <summary>
@@ -100,9 +110,10 @@ namespace Akka.Cluster
         /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
         /// <param name="status">The status of this member.</param>
         /// <param name="roles">The roles for this member. Can be empty.</param>
+        /// <param name="appVersion">Application version</param>
         [JsonConstructor]
-        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, IEnumerable<string> roles)
-         : this(uniqueAddress, upNumber, status, roles.ToImmutableHashSet())
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, IEnumerable<string> roles, AkkaVersion appVersion)
+         : this(uniqueAddress, upNumber, status, roles.ToImmutableHashSet(), appVersion)
         {
 
         }
@@ -139,7 +150,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="object.ToString"/>
         public override string ToString()
         {
-            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
+            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber}, version={AppVersion})";
         }
 
         /// <summary>
@@ -185,7 +196,7 @@ namespace Akka.Cluster
             if (!AllowedTransitions[oldStatus].Contains(status))
                 throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
 
-            return new Member(UniqueAddress, UpNumber, status, Roles);
+            return new Member(UniqueAddress, UpNumber, status, Roles, AppVersion);
         }
 
         /// <summary>
@@ -195,7 +206,7 @@ namespace Akka.Cluster
         /// <returns>A new copy of this member with the provided upNumber.</returns>
         public Member CopyUp(int upNumber)
         {
-            return new Member(UniqueAddress, upNumber, Status, Roles).Copy(status: MemberStatus.Up);
+            return new Member(UniqueAddress, upNumber, Status, Roles, AppVersion).Copy(status: MemberStatus.Up);
         }
 
         /// <summary>
