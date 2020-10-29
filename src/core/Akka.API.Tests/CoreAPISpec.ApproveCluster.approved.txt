@@ -185,7 +185,7 @@ namespace Akka.Cluster
     {
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
         public bool AllowWeaklyUpMembers { get; }
-        public Akka.Util.AkkaVersion AppVersion { get; }
+        public Akka.Util.AppVersion AppVersion { get; }
         public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
         [System.ObsoleteAttribute("Use Cluster.DowningProvider.DownRemovalMargin [1.1.2]")]
         public System.TimeSpan DownRemovalMargin { get; }
@@ -232,7 +232,7 @@ namespace Akka.Cluster
         public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> AddressOrdering;
         public static readonly System.Collections.Generic.IComparer<Akka.Cluster.Member> AgeOrdering;
         public Akka.Actor.Address Address { get; }
-        public Akka.Util.AkkaVersion AppVersion { get; }
+        public Akka.Util.AppVersion AppVersion { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
         public Akka.Cluster.MemberStatus Status { get; }
         public Akka.Cluster.UniqueAddress UniqueAddress { get; }

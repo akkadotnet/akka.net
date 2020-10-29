@@ -106,7 +106,7 @@ namespace Akka.Cluster.Serialization
         private static InternalClusterAction.Join JoinFrom(byte[] bytes)
         {
             var join = Proto.Msg.Join.Parser.ParseFrom(bytes);
-            AkkaVersion ver = join.HasAppVersion ? AkkaVersion.Create(join.AppVersion) : AkkaVersion.Zero;
+            AppVersion ver = join.HasAppVersion ? AppVersion.Create(join.AppVersion) : AppVersion.Zero;
             return new InternalClusterAction.Join(UniqueAddressFrom(join.Node), join.Roles.ToImmutableHashSet(), ver);
         }
 
@@ -236,7 +236,7 @@ namespace Akka.Cluster.Serialization
 
             int MapUniqueAddress(UniqueAddress address) => MapWithErrorMessage(addressMapping, address, "address");
 
-            int MapAppVersion(AkkaVersion appVersion) => MapWithErrorMessage(appVersionMapping, appVersion.Version, "appVersion");
+            int MapAppVersion(AppVersion appVersion) => MapWithErrorMessage(appVersionMapping, appVersion.Version, "appVersion");
 
             Proto.Msg.Member MemberToProto(Member m)
             {
@@ -273,7 +273,7 @@ namespace Akka.Cluster.Serialization
             var addressMapping = gossip.AllAddresses.Select(UniqueAddressFrom).ToList();
             var roleMapping = gossip.AllRoles.ToList();
             var hashMapping = gossip.AllHashes.ToList();
-            var appVersionMapping = gossip.AllAppVersions.Select(i => AkkaVersion.Create(i)).ToList();
+            var appVersionMapping = gossip.AllAppVersions.Select(i => AppVersion.Create(i)).ToList();
 
             Member MemberFromProto(Proto.Msg.Member member) =>
                 Member.Create(
@@ -281,7 +281,7 @@ namespace Akka.Cluster.Serialization
                     member.UpNumber,
                     (MemberStatus)member.Status,
                     member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet(),
-                    appVersionMapping.Any() ? appVersionMapping[member.AppVersionIndex] : AkkaVersion.Zero
+                    appVersionMapping.Any() ? appVersionMapping[member.AppVersionIndex] : AppVersion.Zero
                     );
 
             var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);

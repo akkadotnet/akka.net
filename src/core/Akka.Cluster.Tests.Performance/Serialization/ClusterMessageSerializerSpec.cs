@@ -37,8 +37,8 @@ namespace Akka.Cluster.Tests.Performance.Serialization
 
         internal Lazy<InternalClusterAction.Welcome> WelcomeMessage { get; } = new Lazy<InternalClusterAction.Welcome>(() =>
         {
-            var member1 = new Member(new UniqueAddress(new Address("akka.tcp", "system", "some.host.org", 4718), 34), 1, MemberStatus.Joining, ImmutableHashSet<string>.Empty, AkkaVersion.Zero);
-            var member2 = new Member(new UniqueAddress(new Address("akka.tcp", "system", "some.host.org", 4710), 35), 1, MemberStatus.Joining, ImmutableHashSet<string>.Empty, AkkaVersion.Zero);
+            var member1 = new Member(new UniqueAddress(new Address("akka.tcp", "system", "some.host.org", 4718), 34), 1, MemberStatus.Joining, ImmutableHashSet<string>.Empty, AppVersion.Zero);
+            var member2 = new Member(new UniqueAddress(new Address("akka.tcp", "system", "some.host.org", 4710), 35), 1, MemberStatus.Joining, ImmutableHashSet<string>.Empty, AppVersion.Zero);
 
             var node1 = new VectorClock.Node("node1");
             var node2 = new VectorClock.Node("node2");

@@ -68,7 +68,7 @@ namespace Akka.Cluster
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
-            AppVersion = AkkaVersion.Create(clusterConfig.GetString("app-version"));
+            AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
             _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
@@ -194,7 +194,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Application version
         /// </summary>
-        public AkkaVersion AppVersion { get; }
+        public AppVersion AppVersion { get; }
 
         /// <summary>
         /// TBD

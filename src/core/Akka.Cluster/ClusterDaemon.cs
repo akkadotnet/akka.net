@@ -142,11 +142,11 @@ namespace Akka.Cluster
             /// <param name="node">the node that wants to join the cluster</param>
             /// <param name="roles">TBD</param>
             /// <param name="appVersion">Application version</param>
-            public Join(UniqueAddress node, ImmutableHashSet<string> roles, AkkaVersion appVersion)
+            public Join(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
             {
                 _node = node;
                 _roles = roles;
-                AppVersion = appVersion ?? AkkaVersion.Zero;
+                AppVersion = appVersion ?? Util.AppVersion.Zero;
             }
 
             /// <summary>
@@ -158,7 +158,7 @@ namespace Akka.Cluster
             /// </summary>
             public ImmutableHashSet<string> Roles { get { return _roles; } }
 
-            public AkkaVersion AppVersion { get; }
+            public AppVersion AppVersion { get; }
 
             /// <inheritdoc/>
             public override bool Equals(object obj)
@@ -1561,7 +1561,7 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="node">TBD</param>
         /// <param name="roles">TBD</param>
-        public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AkkaVersion appVersion)
+        public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             var selfStatus = _latestGossip.GetMember(SelfUniqueAddress).Status;
             if (!node.Address.Protocol.Equals(_cluster.SelfAddress.Protocol))
