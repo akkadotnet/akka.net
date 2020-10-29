@@ -207,7 +207,7 @@ namespace Akka.Dispatch
                 var settings = new DedicatedThreadPoolSettings(
                     ThreadPoolConfig.ScaledPoolSize(
                         fje.GetInt("parallelism-min"), 
-                        1.0, 
+                        fje.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
                         fje.GetInt("parallelism-max")),
                         name:config.GetString("id"));
                 return settings;
