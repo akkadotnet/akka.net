@@ -58,7 +58,11 @@ namespace Akka.Dispatch
         /// <param name="scheduler">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
-        public DefaultDispatcherPrerequisites(EventStream eventStream, IScheduler scheduler, Settings settings, Mailboxes mailboxes)
+        public DefaultDispatcherPrerequisites(
+            EventStream eventStream, 
+            IScheduler scheduler, 
+            Settings settings, 
+            Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
             Settings = settings;

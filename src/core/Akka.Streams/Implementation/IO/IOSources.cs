@@ -160,7 +160,12 @@ namespace Akka.Streams.Implementation.IO
             {
                 // can throw, i.e. FileNotFound
                 var inputStream = _createInputStream();
-                var props = InputStreamPublisher.Props(inputStream, ioResultPromise, _chunkSize);
+                var props = InputStreamPublisher
+                    .Props(inputStream, ioResultPromise, _chunkSize)
+                    .WithDispatcher(context
+                        .EffectiveAttributes
+                        .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
+                        .Name);
                 var actorRef = materializer.ActorOf(context, props);
                 pub = new ActorPublisherImpl<ByteString>(actorRef);
             }

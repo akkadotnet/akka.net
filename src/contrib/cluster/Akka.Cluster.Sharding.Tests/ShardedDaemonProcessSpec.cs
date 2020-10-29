@@ -100,6 +100,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             var started = probe.ReceiveN(5);
             started.Count.ShouldBe(5);
+            probe.ExpectNoMsg();
         }
 
         [Fact]
@@ -123,7 +124,7 @@ namespace Akka.Cluster.Sharding.Tests
             Cluster.Get(Sys).Join(Cluster.Get(Sys).SelfAddress);
 
             var probe = CreateTestProbe();
-            var settings = ShardedDaemonProcessSettings.Create(Sys).WithShardingSettings(ClusterShardingSettings.Create(Sys).WithRole("workers"));
+            var settings = ShardedDaemonProcessSettings.Create(Sys).WithRole("workers");
             ShardedDaemonProcess.Get(Sys).Init("roles", 3, id => MyActor.Props(id, probe.Ref), settings);
 
             probe.ExpectNoMsg();

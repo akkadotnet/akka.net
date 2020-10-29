@@ -230,10 +230,12 @@ namespace Akka.Cluster.Sharding
     public sealed class ShardedDaemonProcessSettings
     {
         public readonly System.TimeSpan KeepAliveInterval;
+        public readonly string Role;
         public readonly Akka.Cluster.Sharding.ClusterShardingSettings ShardingSettings;
         public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Sharding.ShardedDaemonProcessSettings FromConfig(Akka.Configuration.Config config) { }
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithKeepAliveInterval(System.TimeSpan keepAliveInterval) { }
+        public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithRole(string role) { }
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
     }
     public sealed class ShardingEnvelope
