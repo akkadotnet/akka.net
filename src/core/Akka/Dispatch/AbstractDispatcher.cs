@@ -58,7 +58,11 @@ namespace Akka.Dispatch
         /// <param name="scheduler">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
-        public DefaultDispatcherPrerequisites(EventStream eventStream, IScheduler scheduler, Settings settings, Mailboxes mailboxes)
+        public DefaultDispatcherPrerequisites(
+            EventStream eventStream, 
+            IScheduler scheduler, 
+            Settings settings, 
+            Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
             Settings = settings;
@@ -218,9 +222,7 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class ThreadPoolExecutorServiceFactory : ExecutorServiceConfigurator
     {
-#if APPDOMAIN
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
-#endif
 
         /// <summary>
         /// TBD
@@ -229,10 +231,9 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
-#if APPDOMAIN
             if (IsFullTrusted)
                 return new FullThreadPoolExecutorServiceImpl(id);
-#endif
+
             return new PartialTrustThreadPoolExecutorService(id);
         }
 

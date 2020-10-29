@@ -37,7 +37,7 @@ namespace Akka.Streams.Implementation
         bool IsActive { get; set; }
 
         /// <summary>
-        ///  Do not increment directly, use <see cref="SubscriberManagement{T}.MoreRequested"/> instead (it provides overflow protection)!
+        ///  Do not increment directly, use <see cref="SubscriberManagement{T, TStreamBuffer}.MoreRequested"/> instead (it provides overflow protection)!
         /// </summary>
         long TotalDemand { get; set; } // number of requested but not yet dispatched elements
     }
@@ -143,9 +143,10 @@ namespace Akka.Streams.Implementation
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal abstract class SubscriberManagement<T> : ICursors
+    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    internal abstract class SubscriberManagement<T, TStreamBuffer> : ICursors where TStreamBuffer : IStreamBuffer<T>
     {
-        private readonly Lazy<ResizableMultiReaderRingBuffer<T>> _buffer;
+        private readonly Lazy<IStreamBuffer<T>> _buffer;
 
         // optimize for small numbers of subscribers by keeping subscribers in a plain list
         private ICollection<ISubscriptionWithCursor<T>> _subscriptions = new List<ISubscriptionWithCursor<T>>();
@@ -161,8 +162,8 @@ namespace Akka.Streams.Implementation
         /// </summary>
         protected SubscriberManagement()
         {
-            _buffer = new Lazy<ResizableMultiReaderRingBuffer<T>>(() =>
-                new ResizableMultiReaderRingBuffer<T>(InitialBufferSize, MaxBufferSize, this));
+            _buffer = new Lazy<IStreamBuffer<T>>(() 
+                => (IStreamBuffer<T>) Activator.CreateInstance(typeof(TStreamBuffer), InitialBufferSize, MaxBufferSize, this));
         }
 
         /// <summary>
@@ -213,40 +214,39 @@ namespace Akka.Streams.Implementation
         /// <param name="elements">TBD</param>
         protected void MoreRequested(ISubscriptionWithCursor<T> subscription, long elements)
         {
-            if (subscription.IsActive)
+            if (!subscription.IsActive) return;
+
+            // check for illegal demand See 3.9
+            if (elements < 1)
             {
-                // check for illegal demand See 3.9
-                if (elements < 1)
+                try
                 {
-                    try
+                    ReactiveStreamsCompliance.TryOnError(subscription.Subscriber, ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
+                }
+                finally
+                {
+                    UnregisterSubscriptionInternal(subscription);
+                }
+            }
+            else
+            {
+                if (_endOfStream is SubscriberManagement.NotReached || _endOfStream is SubscriberManagement.Completed)
+                {
+                    var d = subscription.TotalDemand + elements;
+                    // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
+                    var demand = d < 1 ? long.MaxValue : d;
+                    subscription.TotalDemand = demand;
+                    // returns Long.MinValue if the subscription is to be terminated
+                    var remainingRequested = DispatchFromBufferAndReturnRemainingRequested(demand, subscription, _endOfStream);
+                    if (remainingRequested == long.MinValue)
                     {
-                        ReactiveStreamsCompliance.TryOnError(subscription.Subscriber, ReactiveStreamsCompliance.NumberOfElementsInRequestMustBePositiveException);
-                    }
-                    finally
-                    {
+                        _endOfStream.Apply(subscription.Subscriber);
                         UnregisterSubscriptionInternal(subscription);
                     }
-                }
-                else
-                {
-                    if (_endOfStream is SubscriberManagement.NotReached || _endOfStream is SubscriberManagement.Completed)
+                    else
                     {
-                        var d = subscription.TotalDemand + elements;
-                        // Long overflow, Reactive Streams Spec 3:17: effectively unbounded
-                        var demand = d < 1 ? long.MaxValue : d;
-                        subscription.TotalDemand = demand;
-                        // returns Long.MinValue if the subscription is to be terminated
-                        var remainingRequested = DispatchFromBufferAndReturnRemainingRequested(demand, subscription, _endOfStream);
-                        if (remainingRequested == long.MinValue)
-                        {
-                            _endOfStream.Apply(subscription.Subscriber);
-                            UnregisterSubscriptionInternal(subscription);
-                        }
-                        else
-                        {
-                            subscription.TotalDemand = remainingRequested;
-                            RequestFromUpstreamIfRequired();
-                        }
+                        subscription.TotalDemand = remainingRequested;
+                        RequestFromUpstreamIfRequired();
                     }
                 }
             }
@@ -315,7 +315,7 @@ namespace Akka.Streams.Implementation
                 _pendingFromUpstream--;
                 if (!_buffer.Value.Write(value))
                     throw new IllegalStateException("Output buffer overflow");
-                if (Dispatch(_subscriptions))
+                if (_buffer.Value.AvailableData > 0 && Dispatch(_subscriptions))
                     RequestFromUpstreamIfRequired();
             }
             else throw new IllegalStateException("PushToDownStream(...) after CompleteDownstream() or AbortDownstream(...)");

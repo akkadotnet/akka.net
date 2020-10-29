@@ -74,6 +74,16 @@ namespace Akka.Persistence.Query
         Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset);
     }
 
+    public interface ICurrentAllEventsQuery : IReadJournal
+    {
+        Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset);
+    }
+
+    public interface IAllEventsQuery : IReadJournal
+    {
+        Source<EventEnvelope, NotUsed> AllEvents(Offset offset);
+    }
+
     /// <summary>
     /// A plugin may optionally support this query by implementing this trait.
     /// </summary>

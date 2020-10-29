@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 
 namespace DocsExamples.Networking.ClusterClient
 {
+    #region ReceptionistListener
     public class ReceptionistListener : UntypedActor
     {
         private readonly IActorRef _targetReceptionist;
@@ -52,4 +53,5 @@ namespace DocsExamples.Networking.ClusterClient
             };
         }
     }
+    #endregion
 }

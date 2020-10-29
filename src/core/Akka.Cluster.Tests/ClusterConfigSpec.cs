@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -45,7 +46,8 @@ namespace Akka.Cluster.Tests
             settings.MinNrOfMembers.Should().Be(1);
             settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);
             settings.Roles.Should().BeEquivalentTo(ImmutableHashSet<string>.Empty);
-            settings.UseDispatcher.Should().Be(Dispatchers.DefaultDispatcherId);
+            settings.AppVersion.Should().Be(AppVersion.Zero);
+            settings.UseDispatcher.Should().Be(Dispatchers.InternalDispatcherId);
             settings.GossipDifferentViewProbability.Should().Be(0.8);
             settings.ReduceGossipDifferentViewProbability.Should().Be(400);
 

@@ -12,6 +12,7 @@ namespace DocsExamples.Persistence.PersistentActor
 {
     public static class PersistAsync
     {
+        #region PersistAsync
         public class MyPersistentActor : UntypedPersistentActor
         {
             public override string PersistenceId => "my-stable-persistence-id";
@@ -32,6 +33,7 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
 
         public static void MainApp()
         {

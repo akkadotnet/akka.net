@@ -13,6 +13,7 @@ using Xunit;
 
 namespace DocsExamples.Actor.FiniteStateMachine
 {
+    #region FSMTest
     public class ExampleFSMActorTests : TestKit
     {
         [Fact]
@@ -38,4 +39,5 @@ namespace DocsExamples.Actor.FiniteStateMachine
             ExpectNoMsg();
         }
     }
+    #endregion
 }

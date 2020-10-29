@@ -89,7 +89,7 @@ namespace Akka.IO
             {
                 var saea = message as SocketAsyncEventArgs;
                 if (saea.SocketError == SocketError.Success)
-                    Context.ActorOf(Props.Create(() => new TcpIncomingConnection(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode)));
+                    Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode));
                 saea.AcceptSocket = null;
 
                 if (!_socket.AcceptAsync(saea))

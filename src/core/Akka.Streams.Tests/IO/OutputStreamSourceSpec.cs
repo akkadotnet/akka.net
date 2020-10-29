@@ -213,7 +213,7 @@ namespace Akka.Streams.Tests.IO
                         TestActor);
                     var actorRef = ExpectMsg<StreamSupervisor.Children>()
                             .Refs.First(c => c.Path.ToString().Contains("outputStreamSource"));
-                    Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                    Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                 }
                 finally
                 {

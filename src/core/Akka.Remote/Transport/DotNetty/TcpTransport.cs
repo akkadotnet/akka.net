@@ -40,7 +40,9 @@ namespace Akka.Remote.Transport.DotNetty
         
         protected override AssociationHandle CreateHandle(IChannel channel, Address localAddress, Address remoteAddress)
         {
-            return new TcpAssociationHandle(localAddress, remoteAddress, Transport, channel);
+            if(Transport.Settings.BatchWriterSettings.EnableBatching)
+                return new BatchingTcpAssociationHandle(localAddress, remoteAddress, Transport, channel);
+            return new NonBatchingTcpAssociationHandle(localAddress, remoteAddress, Transport, channel);
         }
         
         public override void ChannelInactive(IChannelHandlerContext context)
@@ -159,11 +161,11 @@ namespace Akka.Remote.Transport.DotNetty
         }
     }
 
-    internal sealed class TcpAssociationHandle : AssociationHandle
+    internal sealed class BatchingTcpAssociationHandle : AssociationHandle
     {
         private readonly IChannel _channel;
 
-        public TcpAssociationHandle(Address localAddress, Address remoteAddress, DotNettyTransport transport, IChannel channel)
+        public BatchingTcpAssociationHandle(Address localAddress, Address remoteAddress, DotNettyTransport transport, IChannel channel)
             : base(localAddress, remoteAddress)
         {
             _channel = channel;
@@ -193,7 +195,41 @@ namespace Akka.Remote.Transport.DotNetty
             _channel.CloseAsync();
         }
     }
-    
+
+    internal sealed class NonBatchingTcpAssociationHandle : AssociationHandle
+    {
+        private readonly IChannel _channel;
+
+        public NonBatchingTcpAssociationHandle(Address localAddress, Address remoteAddress, DotNettyTransport transport, IChannel channel)
+            : base(localAddress, remoteAddress)
+        {
+            _channel = channel;
+        }
+
+        public override bool Write(ByteString payload)
+        {
+            if (_channel.Open)
+            {
+                var data = ToByteBuffer(_channel, payload);
+                _channel.WriteAndFlushAsync(data);
+                return true;
+            }
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IByteBuffer ToByteBuffer(IChannel channel, ByteString payload)
+        {
+            var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
+            return buffer;
+        }
+
+        public override void Disassociate()
+        {
+            _channel.CloseAsync();
+        }
+    }
+
     internal sealed class TcpTransport : DotNettyTransport
     {
         public TcpTransport(ActorSystem system, Config config) : base(system, config)
