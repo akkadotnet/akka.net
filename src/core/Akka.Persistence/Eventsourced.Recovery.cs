@@ -462,9 +462,9 @@ namespace Akka.Persistence
                     _isWriteInProgress = false;
                     FlushJournalBatch();
                     break;
-                case WriteMessagesFailed _:
-                    _isWriteInProgress = false;
-                    // it will be stopped by the first WriteMessageFailure message
+                case WriteMessagesFailed failed:
+                    // if writeCount > 0 then WriteMessageFailure will follow that will stop the actor
+                    if (failed.WriteCount == 0) _isWriteInProgress = false;
                     break;
                 case RecoveryTick _:
                     // we may have one of these in the mailbox before the scheduled timeout

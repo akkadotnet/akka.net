@@ -13,6 +13,7 @@ namespace DocsExamples.Persistence.PersistentActor
 {
     public static class AvoidPoisonPill
     {
+        #region AvoidPoisonPill1
         public class Shutdown {}
 
         public class SafePersistentActor : UntypedPersistentActor
@@ -40,12 +41,14 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
 
         public static void MainApp()
         {
             var system = ActorSystem.Create("AvoidPoisonPill");
             var persistentActor = system.ActorOf<SafePersistentActor>();
 
+            #region AvoidPoisonPill2
             // UN-SAFE, due to PersistentActor's command stashing:
             persistentActor.Tell("a");
             persistentActor.Tell("b");
@@ -73,6 +76,7 @@ namespace DocsExamples.Persistence.PersistentActor
             //   # unstashing;                            internal-stash = []
             // Shutdown
             // -- stop --
+            #endregion
         }
     }
 }

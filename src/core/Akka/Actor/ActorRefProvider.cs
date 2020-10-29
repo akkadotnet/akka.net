@@ -256,7 +256,7 @@ namespace Akka.Actor
         /// </summary>
         public EventStream EventStream { get { return _eventStream; } }
 
-        private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
+        private MessageDispatcher InternalDispatcher => _system.Dispatchers.InternalDispatcher;
 
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
@@ -296,7 +296,7 @@ namespace Akka.Actor
                 return Directive.Stop;
             });
             var props = Props.Create<GuardianActor>(rootGuardianStrategy);
-            var rootGuardian = new RootGuardianActorRef(system, props, DefaultDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
+            var rootGuardian = new RootGuardianActorRef(system, props, InternalDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
             return rootGuardian;
         }
 
@@ -314,9 +314,30 @@ namespace Akka.Actor
         {
             var cell = rootGuardian.Cell;
             cell.ReserveChild(name);
-            var props = Props.Create<GuardianActor>(UserGuardianSupervisorStrategy);
+            // make user provided guardians not run on internal dispatcher
+            MessageDispatcher dispatcher;
+            if (_system.GuardianProps.IsEmpty)
+            {
+                dispatcher = InternalDispatcher;
+            }
+            else
+            {
+                var props = _system.GuardianProps.Value;
+                var dispatcherId =
+                    props.Deploy.Dispatcher == Deploy.DispatcherSameAsParent
+                        ? Dispatchers.DefaultDispatcherId
+                        : props.Dispatcher;
+                dispatcher = _system.Dispatchers.Lookup(dispatcherId);
+            }
 
-            var userGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            var userGuardian = new LocalActorRef(
+                _system,
+                _system.GuardianProps.GetOrElse(Props.Create<GuardianActor>(UserGuardianSupervisorStrategy)),
+                dispatcher, 
+                _defaultMailbox, 
+                rootGuardian, 
+                RootPath / name);
+
             cell.InitChild(userGuardian);
             userGuardian.Start();
             return userGuardian;
@@ -328,7 +349,7 @@ namespace Akka.Actor
             cell.ReserveChild(name);
             var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
 
-            var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            var systemGuardian = new LocalActorRef(_system, props, InternalDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
             cell.InitChild(systemGuardian);
             systemGuardian.Start();
             return systemGuardian;

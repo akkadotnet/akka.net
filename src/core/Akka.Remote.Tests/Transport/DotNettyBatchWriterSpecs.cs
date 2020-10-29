@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using DotNetty.Buffers;
@@ -57,7 +58,26 @@ namespace Akka.Remote.Tests.Transport
             Flush = new FlushLogger(helper);
         }
 
+        [Fact]
+        public void Bugfix4434_should_overwrite_default_BatchWriterSettings()
+        {
+            Config c = @"
+                akka.remote.dot-netty.tcp{
+                    batching{
+                        enabled = false
+                        max-pending-writes = 50
+                        max-pending-bytes = 32k
+                        flush-interval = 10ms
+                    }
+                }
+            ";
+            var s = DotNettyTransportSettings.Create(c.GetConfig("akka.remote.dot-netty.tcp"));
 
+            s.BatchWriterSettings.EnableBatching.Should().BeFalse();
+            s.BatchWriterSettings.FlushInterval.Should().NotBe(BatchWriterSettings.DefaultFlushInterval);
+            s.BatchWriterSettings.MaxPendingBytes.Should().NotBe(BatchWriterSettings.DefaultMaxPendingBytes);
+            s.BatchWriterSettings.MaxPendingWrites.Should().NotBe(BatchWriterSettings.DefaultMaxPendingWrites);
+        }
 
         /// <summary>
         /// Stay below the write / count and write / byte threshold. Rely on the timer.

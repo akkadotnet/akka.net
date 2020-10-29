@@ -390,7 +390,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public int Cursor { get; private set; }
+        public long Cursor { get; private set; }
 
         long ISubscriptionWithCursor<TIn>.TotalDemand
         {
@@ -409,7 +409,7 @@ namespace Akka.Streams.Implementation
         /// <param name="element">TBD</param>
         public void Dispatch(TIn element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
 
-        int ICursor.Cursor
+        long ICursor.Cursor
         {
             get { return Cursor; }
             set { Cursor = value; }

@@ -38,10 +38,5 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
         }
-
-        [Fact(Skip = "Not implemented, due to bugs on NetCore")]
-        public override void ReadJournal_query_CurrentPersistenceIds_should_not_see_new_events_after_complete()
-        {
-        }
     }
 }

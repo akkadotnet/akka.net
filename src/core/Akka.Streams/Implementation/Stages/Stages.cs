@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Dispatch;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 
@@ -20,7 +21,7 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
-        public static readonly Attributes IODispatcher = ActorAttributes.CreateDispatcher("akka.stream.default-blocking-io-dispatcher");
+        public static readonly Attributes IODispatcher = ActorAttributes.CreateDispatcher(ActorAttributes.IODispatcher.Name);
 
         /// <summary>
         /// TBD

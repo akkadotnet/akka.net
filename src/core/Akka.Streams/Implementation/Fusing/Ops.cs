@@ -3020,6 +3020,14 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnUpstreamFinish()
             {
                 _finished = true;
+
+                // Fix for issue #4514
+                // Force check if we have a dangling last element because:
+                // OnTimer may close the group just before OnUpstreamFinish is called
+                // (race condition), dropping the last element in the stream.
+                if (IsAvailable(_stage._in))
+                    NextElement(Grab(_stage._in));
+
                 if (_groupEmitted)
                     CompleteStage();
                 else
@@ -3052,8 +3060,11 @@ namespace Akka.Streams.Implementation.Fusing
                     ScheduleRepeatedly(GroupedWithinTimer, _stage._timeout);
                     CloseGroup();
                 }
-                else
+                // Do not pull if we're finished.
+                else if (!_finished)
+                {
                     Pull(_stage._in);
+                }
             }
 
             private void CloseGroup()

@@ -20,7 +20,7 @@ namespace Akka.Remote.Transport.DotNetty
 {
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Defines the settings for the <see cref="DotNettyTransport"/>.
     /// </summary>
     internal sealed class DotNettyTransportSettings
@@ -119,7 +119,7 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         /// <summary>
-        /// Transport mode used by underlying socket channel. 
+        /// Transport mode used by underlying socket channel.
         /// Currently only TCP is supported.
         /// </summary>
         public readonly TransportMode TransportMode;
@@ -132,7 +132,7 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool EnableSsl;
 
         /// <summary>
-        /// Sets a connection timeout for all outbound connections 
+        /// Sets a connection timeout for all outbound connections
         /// i.e. how long a connect may take until it is timed out.
         /// </summary>
         public readonly TimeSpan ConnectTimeout;
@@ -169,7 +169,7 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly SslSettings Ssl;
 
         /// <summary>
-        /// If set to true, we will use IPv6 addresses upon DNS resolution for 
+        /// If set to true, we will use IPv6 addresses upon DNS resolution for
         /// host names. Otherwise IPv4 will be used.
         /// </summary>
         public readonly bool DnsUseIpv6;
@@ -191,8 +191,8 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool TcpNoDelay;
 
         /// <summary>
-        /// If set to true, we will enforce usage of IPv4 or IPv6 addresses upon DNS 
-        /// resolution for host names. If true, we will use IPv6 enforcement. Otherwise, 
+        /// If set to true, we will enforce usage of IPv4 or IPv6 addresses upon DNS
+        /// resolution for host names. If true, we will use IPv6 enforcement. Otherwise,
         /// we will use IPv4.
         /// </summary>
         public readonly bool EnforceIpFamily;
@@ -220,7 +220,7 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool BackwardsCompatibilityModeEnabled;
 
         /// <summary>
-        /// When set to true, it will enable logging of DotNetty user events 
+        /// When set to true, it will enable logging of DotNetty user events
         /// and message frames.
         /// </summary>
         public readonly bool LogTransport;
@@ -247,7 +247,7 @@ namespace Akka.Remote.Transport.DotNetty
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
             int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, 
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder,
             bool enableBufferPooling, BatchWriterSettings batchWriterSettings)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
@@ -358,13 +358,10 @@ namespace Akka.Remote.Transport.DotNetty
 
         public SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
         {
-
-            var store = new X509Store(storeName, storeLocation);
-            try
+            using (var store = new X509Store(storeName, storeLocation))
             {
                 store.Open(OpenFlags.ReadOnly);
 
-                
                 var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
                 if (find.Count == 0)
                 {
@@ -375,17 +372,8 @@ namespace Akka.Remote.Transport.DotNetty
                 Certificate = find[0];
                 SuppressValidation = suppressValidation;
             }
-            finally
-            {
-#if  NET45 //netstandard1.6 doesn't have close on store.
-                store.Close();
-#else
-#endif
-
-            }
-
         }
-            
+
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
         {
             if (string.IsNullOrEmpty(certificatePath))
