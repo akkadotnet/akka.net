@@ -308,10 +308,10 @@ namespace Akka.Remote
             var n = 0;
             while (true)
             {
-                var nameAndUid = ActorCell.SplitNameAndUid(path);
+                var nameAndUid = ActorCell.SplitNameAndUidStruct(path);
                 if (TryGetChild(nameAndUid.Name, out var child))
                 {
-                    if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
+                    if (nameAndUid.uid != ActorCell.UndefinedUid && nameAndUid.uid != child.Path.Uid)
                         return Nobody.Instance;
                     return n == 0 ? child : child.GetChild(name.TakeRight(n));
                 }

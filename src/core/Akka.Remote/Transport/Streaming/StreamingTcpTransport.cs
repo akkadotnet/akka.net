@@ -134,7 +134,8 @@ namespace Akka.Remote.Transport.Streaming
                     TransportSettings.SocketReceiveBufferSize),
                 new Inet.SO.SendBufferSize(
                     TransportSettings.SocketSendBufferSize),
-                new Inet.SO.ByteBufferPoolSize(TransportSettings.TransportReceiveBufferSize));
+                new Inet.SO.ByteBufferPoolSize(TransportSettings.TransportReceiveBufferSize),
+                new Inet.SO.WorkerDispatcher("akka.remote.streaming-remote-dispatcher") );
         }
 
         private ImmutableList<Inet.SocketOption> SocketOptions { get; }

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Event;
@@ -80,11 +81,11 @@ namespace Akka.IO
                 if (c.Options.Any(r => r is Inet.SO.TlsConnectionOption))
                 {
                     Context.ActorOf(Props.Create<TlsOutgoingConnection>(() =>
-                        new TlsOutgoingConnection(_tcp, commander, c)));
+                        new TlsOutgoingConnection(_tcp, commander, c)).WithDispatcherIfNeeded(c.Options));
                 }
                 else
                 {
-                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c));
+                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDispatcherIfNeeded(c.Options));
                 }
                 return true;
             }
@@ -117,6 +118,22 @@ namespace Akka.IO
             throw new ArgumentException($"The supplied message of type {message.GetType().Name} is invalid. Only Connect and Bind messages are supported. " +
                                         $"If you are going to manage your connection state, you need to communicate with Tcp.Connected sender actor. " +
                                         $"See more here: https://getakka.net/articles/networking/io.html", nameof(message));
+        }
+
+        
+    }
+    static class TcpActorPropsExtensions
+    {
+        public static Props WithDispatcherIfNeeded(this Props props,
+            IEnumerable<Inet.SocketOption> options)
+        {
+            if (options.FirstOrDefault(o => o is Inet.SO.WorkerDispatcher) is
+                Inet.SO.WorkerDispatcher opt)
+            {
+                return props.WithDispatcher(opt.Dispatcher);
+            }
+
+            return props;
         }
     }
 }

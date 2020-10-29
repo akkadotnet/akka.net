@@ -148,8 +148,8 @@ namespace RemotePingPong
 
         public static IEnumerable<int> GetClientSettings()
         {
-            //yield return 1;
-            //yield return 5;
+            yield return 1;
+            yield return 5;
             yield return 10;
             yield return 15;
             yield return 20;

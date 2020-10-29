@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
@@ -511,7 +512,7 @@ namespace Akka.Actor
             //return _NameAndUidLruCache.GetOrCompute(name);
         }
         
-        private static readonly NameAndUidLRUCache _NameAndUidLruCache = new NameAndUidLRUCache();
+        //private static readonly NameAndUidLRUCache _NameAndUidLruCache = new NameAndUidLRUCache();
 
         internal static NameAndUid _splitNameAndUidInternal(string name)
         {
@@ -519,6 +520,15 @@ namespace Akka.Actor
             return i < 0
                 ? new NameAndUid(name, UndefinedUid)
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
+        }
+
+        internal static (string Name, int uid) SplitNameAndUidStruct(string name)
+        {
+            
+            var i = name.IndexOf('#');
+            return i < 0
+                ? (name, UndefinedUid)
+                : (name.Substring(0, i), Int32.Parse(name.Substring(i+1)));
         }
 
         /// <summary>
