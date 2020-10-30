@@ -134,7 +134,7 @@ namespace Akka.Cluster.Sharding
         {
             region.Tell(new PersistentShardCoordinator.HostShard(shard));
             var cancel = coordinator.Context.System.Scheduler.ScheduleTellOnceCancelable(
-                coordinator.Settings.TunningParameters.ShardStartTimeout,
+                coordinator.Settings.TuningParameters.ShardStartTimeout,
                 coordinator.Self,
                 new ResendShardHost(shard, region),
                 coordinator.Self);
@@ -235,7 +235,7 @@ namespace Akka.Cluster.Sharding
             if (ok)
                 coordinator.Log.Debug("Rebalance shard [{0}] completed successfully", shard);
             else
-                coordinator.Log.Warning("Rebalance shard [{0}] didn't complete within [{1}]", shard, coordinator.Settings.TunningParameters.HandOffTimeout);
+                coordinator.Log.Warning("Rebalance shard [{0}] didn't complete within [{1}]", shard, coordinator.Settings.TuningParameters.HandOffTimeout);
 
             // The shard could have been removed by ShardRegionTerminated
             if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
@@ -483,7 +483,7 @@ namespace Akka.Cluster.Sharding
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TunningParameters.HandOffTimeout, regions)
+                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TuningParameters.HandOffTimeout, regions)
                             .WithDispatcher(coordinator.Context.Props.Dispatcher));
                     }
                     else

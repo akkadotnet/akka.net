@@ -446,11 +446,11 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId = extractEntityId;
             ExtractShardId = extractShardId;
             HandOffStopMessage = handOffStopMessage;
-            RememberedEntitiesRecoveryStrategy = Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+            RememberedEntitiesRecoveryStrategy = Settings.TuningParameters.EntityRecoveryStrategy == "constant"
                 ? EntityRecoveryStrategy.ConstantStrategy(
                     Context.System,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
                 : EntityRecoveryStrategy.AllStrategy;
 
             var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
@@ -766,7 +766,7 @@ namespace Akka.Cluster.Sharding
 
                 if (!shard.IdByRef.IsEmpty)
                 {
-                    var entityHandOffTimeout = (shard.Settings.TunningParameters.HandOffTimeout - TimeSpan.FromSeconds(5));
+                    var entityHandOffTimeout = (shard.Settings.TuningParameters.HandOffTimeout - TimeSpan.FromSeconds(5));
                     if (entityHandOffTimeout < TimeSpan.FromSeconds(1))
                         entityHandOffTimeout = TimeSpan.FromSeconds(1);
                     shard.Log.Debug("Starting HandOffStopper for shard [{0}] to terminate [{1}] entities.",
@@ -896,7 +896,7 @@ namespace Akka.Cluster.Sharding
                 {
                     if (shard.MessageBuffers.TryGetValue(id, out var buffer))
                     {
-                        if (shard.TotalBufferSize() >= shard.Settings.TunningParameters.BufferSize)
+                        if (shard.TotalBufferSize() >= shard.Settings.TuningParameters.BufferSize)
                         {
                             shard.Log.Warning("Buffer is full, dropping message for entity [{0}]", id);
                             shard.Context.System.DeadLetters.Tell(message);
@@ -1035,7 +1035,7 @@ namespace Akka.Cluster.Sharding
 
             SendStart(ids);
 
-            var resendInterval = settings.TunningParameters.RetryInterval;
+            var resendInterval = settings.TuningParameters.RetryInterval;
             _tickTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(resendInterval, resendInterval, Self, Tick.Instance, ActorRefs.NoSender);
         }
 

@@ -51,9 +51,39 @@ namespace Akka.Cluster.Sharding
         Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress);
     }
 
+    public static class ShardAllocationStrategy
+    {
+        /// <summary>
+        /// <see cref="IShardAllocationStrategy"/> that allocates new shards to the <see cref="ShardRegion"/> (node) with least
+        /// number of previously allocated shards.
+        ///
+        /// When a node is added to the cluster the shards on the existing nodes will be rebalanced to the new node.
+        /// The <see cref="LeastShardAllocationStrategy"/> picks shards for rebalancing from the <see cref="ShardRegion"/>s with most number
+        /// of previously allocated shards.They will then be allocated to the <see cref="ShardRegion"/> with least number of
+        /// previously allocated shards, i.e. new members in the cluster.The amount of shards to rebalance in each
+        /// round can be limited to make it progress slower since rebalancing too many shards at the same time could
+        /// result in additional load on the system.For example, causing many Event Sourced entites to be started
+        /// at the same time.
+        ///
+        /// It will not rebalance when there is already an ongoing rebalance in progress.
+        /// </summary>
+        /// <param name="absoluteLimit">The maximum number of shards that will be rebalanced in one rebalance round</param>
+        /// <param name="relativeLimit">Fraction (&lt; 1.0) of total number of (known) shards that will be rebalanced in one rebalance round</param>
+        /// <returns></returns>
+        public static IShardAllocationStrategy LeastShardAllocationStrategy(int absoluteLimit, double relativeLimit)
+        {
+            return new Internal.LeastShardAllocationStrategy(absoluteLimit, relativeLimit);
+        }
+    }
+
     /// <summary>
-    /// The default implementation of <see cref="Akka.Cluster.Sharding.LeastShardAllocationStrategy"/> allocates new shards
-    /// to the <see cref="ShardRegion"/> with least number of previously allocated shards.
+    /// Use <see cref="ShardAllocationStrategy.LeastShardAllocationStrategy(int, double)"/> instead.
+    /// The new rebalance algorithm was included in Akka.Net 1.4.11. It can reach optimal balance in
+    /// less rebalance rounds (typically 1 or 2 rounds). The amount of shards to rebalance in each
+    /// round can still be limited to make it progress slower.
+    ///
+    /// This implementation of <see cref="IShardAllocationStrategy"/>
+    /// allocates new shards to the <see cref="ShardRegion"/> with least number of previously allocated shards.
     ///
     /// When a node is added to the cluster the shards on the existing nodes will be rebalanced to the new node.
     /// evenly spread on the remaining nodes (by picking regions with least shards).

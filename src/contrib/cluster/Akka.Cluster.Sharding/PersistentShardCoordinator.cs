@@ -1297,7 +1297,7 @@ namespace Akka.Cluster.Sharding
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;
 
-            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RebalanceInterval, Settings.TunningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
+            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
 
             Cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
@@ -1420,7 +1420,7 @@ namespace Akka.Cluster.Sharding
             {
                 case SaveSnapshotSuccess m:
                     Log.Debug("Persistent snapshot saved successfully");
-                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TunningParameters.KeepNrOfBatches, Settings.TunningParameters.SnapshotAfter);
+                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TuningParameters.KeepNrOfBatches, Settings.TuningParameters.SnapshotAfter);
                     break;
 
                 case SaveSnapshotFailure m:
@@ -1463,7 +1463,7 @@ namespace Akka.Cluster.Sharding
 
         private void SaveSnapshotWhenNeeded()
         {
-            if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
+            if (LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(CurrentState);

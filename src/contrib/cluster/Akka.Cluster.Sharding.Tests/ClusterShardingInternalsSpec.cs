@@ -67,7 +67,7 @@ namespace Akka.Cluster.Sharding.Tests
                   settings: settingsWithRole,
                   extractEntityId: ExtractEntityId,
                   extractShardId: ExtractShardId,
-                  allocationStrategy: new LeastShardAllocationStrategy(0, 0),
+                  allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(3, 0.1),
                   handOffStopMessage: PoisonPill.Instance);
 
             var proxy = clusterSharding.StartProxy(

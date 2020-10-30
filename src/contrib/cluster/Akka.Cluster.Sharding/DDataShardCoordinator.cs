@@ -62,10 +62,10 @@ namespace Akka.Cluster.Sharding
             MinMembers = string.IsNullOrEmpty(settings.Role)
                 ? Cluster.Settings.MinNrOfMembers
                 : Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
-            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RebalanceInterval, Settings.TunningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
+            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
 
-            _readConsistency = new ReadMajority(settings.TunningParameters.WaitingForStateTimeout, majorityMinCap);
-            _writeConsistency = new WriteMajority(settings.TunningParameters.UpdatingStateTimeout, majorityMinCap);
+            _readConsistency = new ReadMajority(settings.TuningParameters.WaitingForStateTimeout, majorityMinCap);
+            _writeConsistency = new WriteMajority(settings.TuningParameters.UpdatingStateTimeout, majorityMinCap);
             _coordinatorStateKey = new LWWRegisterKey<PersistentShardCoordinator.State>(typeName + "CoordinatorState");
             _allShardsKey = new GSetKey<string>($"shard-{typeName}-all");
             _allKeys = rememberEntities

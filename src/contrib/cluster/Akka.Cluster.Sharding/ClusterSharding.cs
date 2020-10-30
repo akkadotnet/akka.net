@@ -183,8 +183,7 @@ namespace Akka.Cluster.Sharding
     /// allocation strategy. The default implementation <see cref="LeastShardAllocationStrategy"/>
     /// picks shards for handoff from the <see cref="Sharding.ShardRegion"/> with most number of previously allocated shards.
     /// They will then be allocated to the <see cref="Sharding.ShardRegion"/> with least number of previously allocated shards,
-    /// i.e. new members in the cluster. There is a configurable threshold of how large the difference
-    /// must be to begin the rebalancing. This strategy can be replaced by an application specific
+    /// i.e. new members in the cluster. This strategy can be replaced by an application specific
     /// implementation.
     /// </para>
     /// <para>
@@ -1113,11 +1112,22 @@ namespace Akka.Cluster.Sharding
 
         public IShardAllocationStrategy DefaultShardAllocationStrategy(ClusterShardingSettings settings)
         {
-            return new LeastShardAllocationStrategy(
-                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
-                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
-        }
 
+            if (settings.TuningParameters.LeastShardAllocationAbsoluteLimit > 0)
+            {
+                // new algorithm
+                var absoluteLimit = settings.TuningParameters.LeastShardAllocationAbsoluteLimit;
+                var relativeLimit = settings.TuningParameters.LeastShardAllocationRelativeLimit;
+                return ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit, relativeLimit);
+            }
+            else
+            {
+                // old algorithm
+                var threshold = settings.TuningParameters.LeastShardAllocationRebalanceThreshold;
+                var maxSimultaneousRebalance = settings.TuningParameters.LeastShardAllocationMaxSimultaneousRebalance;
+                return new LeastShardAllocationStrategy(threshold, maxSimultaneousRebalance);
+            }
+        }
     }
 
     /// <summary>
@@ -1190,7 +1200,7 @@ namespace Akka.Cluster.Sharding
             {
                 if (self.EntityId(msg) != null)
                     return (self.EntityId(msg), self.EntityMessage(msg));
-                
+
                 return Option<(string, object)>.None;
             };
 
@@ -1254,7 +1264,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions) => 
+        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions) =>
             Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
 
         private readonly ShardId _shard;
@@ -1284,7 +1294,7 @@ namespace Akka.Cluster.Sharding
                 Context.Watch(region);
                 region.Tell(new PersistentShardCoordinator.BeginHandOff(shard));
             }
-            
+
             Log.Debug("Rebalance [{0}] from region [{1}]", shard, regions);
 
             Timers.StartSingleTimer("hand-off-timeout", ReceiveTimeout.Instance, handOffTimeout);

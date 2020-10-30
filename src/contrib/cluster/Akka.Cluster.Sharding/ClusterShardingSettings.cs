@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding
     /// TBD
     /// </summary>
     [Serializable]
-    public class TunningParameters
+    public class TuningParameters
     {
         /// <summary>
         /// TBD
@@ -81,6 +81,9 @@ namespace Akka.Cluster.Sharding
         public readonly TimeSpan EntityRecoveryConstantRateStrategyFrequency;
         public readonly int EntityRecoveryConstantRateStrategyNumberOfEntities;
 
+        public readonly int LeastShardAllocationAbsoluteLimit;
+        public readonly double LeastShardAllocationRelativeLimit;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -101,11 +104,13 @@ namespace Akka.Cluster.Sharding
         /// <param name="entityRecoveryStrategy">TBD</param>
         /// <param name="entityRecoveryConstantRateStrategyFrequency">TBD</param>
         /// <param name="entityRecoveryConstantRateStrategyNumberOfEntities">TBD</param>
+        /// <param name="leastShardAllocationAbsoluteLimit">TBD</param>
+        /// <param name="leastShardAllocationRelativeLimit">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="entityRecoveryStrategy"/> is invalid.
         /// Acceptable values include: all | constant
         /// </exception>
-        public TunningParameters(
+        public TuningParameters(
             TimeSpan coordinatorFailureBackoff,
             TimeSpan retryInterval,
             int bufferSize,
@@ -122,7 +127,10 @@ namespace Akka.Cluster.Sharding
             TimeSpan updatingStateTimeout,
             string entityRecoveryStrategy,
             TimeSpan entityRecoveryConstantRateStrategyFrequency,
-            int entityRecoveryConstantRateStrategyNumberOfEntities)
+            int entityRecoveryConstantRateStrategyNumberOfEntities,
+            int leastShardAllocationAbsoluteLimit,
+            double leastShardAllocationRelativeLimit
+            )
         {
             if (entityRecoveryStrategy != "all" && entityRecoveryStrategy != "constant")
                 throw new ArgumentException($"Unknown 'entity-recovery-strategy' [{entityRecoveryStrategy}], valid values are 'all' or 'constant'");
@@ -144,6 +152,8 @@ namespace Akka.Cluster.Sharding
             EntityRecoveryStrategy = entityRecoveryStrategy;
             EntityRecoveryConstantRateStrategyFrequency = entityRecoveryConstantRateStrategyFrequency;
             EntityRecoveryConstantRateStrategyNumberOfEntities = entityRecoveryConstantRateStrategyNumberOfEntities;
+            LeastShardAllocationAbsoluteLimit = leastShardAllocationAbsoluteLimit;
+            LeastShardAllocationRelativeLimit = leastShardAllocationRelativeLimit;
         }
     }
 
@@ -198,7 +208,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// Additional tuning parameters, see descriptions in reference.conf
         /// </summary>
-        public readonly TunningParameters TunningParameters;
+        public readonly TuningParameters TuningParameters;
 
         /// <summary>
         /// TBD
@@ -237,7 +247,7 @@ namespace Akka.Cluster.Sharding
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<ClusterShardingSettings>();
 
-            var tuningParameters = new TunningParameters(
+            var tuningParameters = new TuningParameters(
                 coordinatorFailureBackoff: config.GetTimeSpan("coordinator-failure-backoff"),
                 retryInterval: config.GetTimeSpan("retry-interval"),
                 bufferSize: config.GetInt("buffer-size"),
@@ -254,7 +264,9 @@ namespace Akka.Cluster.Sharding
                 updatingStateTimeout: config.GetTimeSpan("updating-state-timeout"),
                 entityRecoveryStrategy: config.GetString("entity-recovery-strategy"),
                 entityRecoveryConstantRateStrategyFrequency: config.GetTimeSpan("entity-recovery-constant-rate-strategy.frequency"),
-                entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"));
+                entityRecoveryConstantRateStrategyNumberOfEntities: config.GetInt("entity-recovery-constant-rate-strategy.number-of-entities"),
+                leastShardAllocationAbsoluteLimit: config.GetInt("least-shard-allocation-strategy.rebalance-absolute-limit"),
+                leastShardAllocationRelativeLimit : config.GetDouble("least-shard-allocation-strategy.rebalance-relative-limit"));
 
             var coordinatorSingletonSettings = ClusterSingletonManagerSettings.Create(singletonConfig);
             var role = config.GetString("role", null);
@@ -280,7 +292,7 @@ namespace Akka.Cluster.Sharding
                 snapshotPluginId: config.GetString("snapshot-plugin-id"),
                 passivateIdleEntityAfter: passivateIdleAfter,
                 stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode"), ignoreCase: true),
-                tunningParameters: tuningParameters,
+                tuningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings,
                 leaseSettings: lease);
         }
@@ -294,7 +306,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="snapshotPluginId">TBD</param>
         /// <param name="passivateIdleEntityAfter">TBD</param>
         /// <param name="stateStoreMode">TBD</param>
-        /// <param name="tunningParameters">TBD</param>
+        /// <param name="tuningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
         public ClusterShardingSettings(
             string role,
@@ -303,9 +315,9 @@ namespace Akka.Cluster.Sharding
             string snapshotPluginId,
             TimeSpan passivateIdleEntityAfter,
             StateStoreMode stateStoreMode,
-            TunningParameters tunningParameters,
+            TuningParameters tuningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings)
-            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, tunningParameters, coordinatorSingletonSettings, null)
+            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, tuningParameters, coordinatorSingletonSettings, null)
         {
         }
 
@@ -318,7 +330,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="snapshotPluginId">TBD</param>
         /// <param name="passivateIdleEntityAfter">TBD</param>
         /// <param name="stateStoreMode">TBD</param>
-        /// <param name="tunningParameters">TBD</param>
+        /// <param name="tuningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
         /// <param name="leaseSettings">TBD</param>
         public ClusterShardingSettings(
@@ -328,7 +340,7 @@ namespace Akka.Cluster.Sharding
             string snapshotPluginId,
             TimeSpan passivateIdleEntityAfter,
             StateStoreMode stateStoreMode,
-            TunningParameters tunningParameters,
+            TuningParameters tuningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings,
             LeaseUsageSettings leaseSettings)
         {
@@ -338,7 +350,7 @@ namespace Akka.Cluster.Sharding
             SnapshotPluginId = snapshotPluginId;
             PassivateIdleEntityAfter = passivateIdleEntityAfter;
             StateStoreMode = stateStoreMode;
-            TunningParameters = tunningParameters;
+            TuningParameters = tuningParameters;
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
             LeaseSettings = leaseSettings;
         }
@@ -406,17 +418,17 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="tunningParameters">TBD</param>
+        /// <param name="tuningParameters">TBD</param>
         /// <exception cref="ArgumentNullException">
-        /// This exception is thrown when the specified <paramref name="tunningParameters"/> is undefined.
+        /// This exception is thrown when the specified <paramref name="tuningParameters"/> is undefined.
         /// </exception>
         /// <returns>TBD</returns>
-        public ClusterShardingSettings WithTuningParameters(TunningParameters tunningParameters)
+        public ClusterShardingSettings WithTuningParameters(TuningParameters tuningParameters)
         {
-            if (tunningParameters == null)
-                throw new ArgumentNullException(nameof(tunningParameters), $"ClusterShardingSettings requires {nameof(tunningParameters)} to be provided");
+            if (tuningParameters == null)
+                throw new ArgumentNullException(nameof(tuningParameters), $"ClusterShardingSettings requires {nameof(tuningParameters)} to be provided");
 
-            return Copy(tunningParameters: tunningParameters);
+            return Copy(tuningParameters: tuningParameters);
         }
 
         public ClusterShardingSettings WithPassivateIdleAfter(TimeSpan duration)
@@ -452,7 +464,7 @@ namespace Akka.Cluster.Sharding
             string snapshotPluginId = null,
             TimeSpan? passivateIdleAfter = null,
             StateStoreMode? stateStoreMode = null,
-            TunningParameters tunningParameters = null,
+            TuningParameters tuningParameters = null,
             ClusterSingletonManagerSettings coordinatorSingletonSettings = null,
             Option<LeaseUsageSettings> leaseSettings = default)
         {
@@ -463,7 +475,7 @@ namespace Akka.Cluster.Sharding
                 snapshotPluginId: snapshotPluginId ?? SnapshotPluginId,
                 passivateIdleEntityAfter: passivateIdleAfter ?? PassivateIdleEntityAfter,
                 stateStoreMode: stateStoreMode ?? StateStoreMode,
-                tunningParameters: tunningParameters ?? TunningParameters,
+                tuningParameters: tuningParameters ?? TuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings ?? CoordinatorSingletonSettings,
                 leaseSettings: leaseSettings.HasValue ? leaseSettings.Value : LeaseSettings);
         }

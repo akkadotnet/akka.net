@@ -378,7 +378,7 @@ namespace Akka.Cluster.Sharding
             _replicator = replicator;
             _majorityMinCap = majorityMinCap;
 
-            _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
+            _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RetryInterval, Settings.TuningParameters.RetryInterval, Self, Retry.Instance, Self);
             SetupCoordinatedShutdown();
         }
 
@@ -681,7 +681,7 @@ namespace Akka.Cluster.Sharding
         private void BufferMessage(ShardId shardId, Msg message, IActorRef sender)
         {
             var totalBufferSize = TotalBufferSize;
-            if (totalBufferSize >= Settings.TunningParameters.BufferSize)
+            if (totalBufferSize >= Settings.TuningParameters.BufferSize)
             {
                 if (_loggedFullBufferWarning)
                     Log.Debug("{0}: Buffer is full, dropping message for shard [{1}]", TypeName, shardId);
@@ -701,7 +701,7 @@ namespace Akka.Cluster.Sharding
 
                 // log some insight to how buffers are filled up every 10% of the buffer capacity
                 var total = totalBufferSize + 1;
-                var bufferSize = Settings.TunningParameters.BufferSize;
+                var bufferSize = Settings.TuningParameters.BufferSize;
                 if (total % (bufferSize / 10) == 0)
                 {
                     const string logMsg = "{0}: ShardRegion is using [{1} %] of its buffer capacity.";
@@ -1090,7 +1090,7 @@ namespace Akka.Cluster.Sharding
                     // if persist fails it will stop
                     Log.Debug("{0}: Shard [{1}] terminated while not being handed off", TypeName, shard);
                     if (Settings.RememberEntities)
-                        Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
+                        Context.System.Scheduler.ScheduleTellOnce(Settings.TuningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
                 }
 
                 TryCompleteGracefulShutdown();
