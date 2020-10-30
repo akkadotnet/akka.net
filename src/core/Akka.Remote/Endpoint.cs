@@ -2272,7 +2272,7 @@ namespace Akka.Remote
                 "Serializer not defined for message with serializer id [{0}] and manifest [{1}]. " +
                 "Transient association error (association remains live). {2}",
                 pl.SerId,
-                pl.HasManifest==false ? "" : Encoding.UTF8.GetString(pl.Manifest().Array,pl.Manifest().Offset,pl.Manifest().Count),
+                pl.HasManifest==false ? "" : Encoding.UTF8.GetString(pl.Manifest().ToArray()),
                 error.Message);
         }
 

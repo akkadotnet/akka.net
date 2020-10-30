@@ -9,10 +9,7 @@ using System;
 using System.Buffers.Binary;
 using System.Buffers.Text;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Akka.Actor;
 using Google.Protobuf;
 using System.Runtime.Serialization;
@@ -404,424 +401,6 @@ namespace Akka.Remote.Transport
         public abstract AckAndMessageAS GetAckAndMessage(ArraySegment<byte> raw, IRemoteActorRefProvider provider, Address localAddress);
     }
 
-    internal class FastMessageParser
-    {
-        [Conditional("DEBUG")]
-        static void log(int bytes = 0, [CallerMemberName] string cn = "")
-        {
-            //Console.WriteLine($"{Thread.CurrentThread.ManagedThreadId} - {cn} - {bytes} bytes");
-        }
-        private static (ArraySegment<byte> first, ArraySegment<byte>
-            second) SliceSegment(ArraySegment<byte> raw)
-        {
-            var count = raw.Count;
-            var firstOffset = raw.Offset;
-            var startAt = firstOffset + 1;
-            var arr = raw.Array;
-            //log(raw.Count);
-            var nextPos = ReadRawInt64WithNewBufferPos(
-                new Span<byte>(arr, startAt, count - 1));
-            var readBytes = (int)nextPos.Item1;
-            startAt = nextPos.Item2 + startAt;
-                    
-            var nextPosition = startAt + readBytes;
-            return (
-                new ArraySegment<byte>(arr, startAt, readBytes),
-                new ArraySegment<byte>(arr, nextPosition,
-                    count+ firstOffset - nextPosition));
-        }
-        public static (ulong,int) ReadRawInt64WithNewBufferPos(Span<byte> buffer)
-        {
-            //log(buffer.Length);
-            int bufferPos = 0;
-
-            ulong result = buffer[bufferPos++];
-            if (result < 128)
-            {
-                return (result, bufferPos);
-            }
-            result &= 0x7f;
-            int shift = 7;
-            do
-            {
-                byte b = buffer[bufferPos++];
-                result |= (ulong)(b & 0x7F) << shift;
-                if (b < 0x80)
-                {
-                    return (result, bufferPos);
-                }
-                shift += 7;
-            }
-            while (shift < 64);
-
-            throw new ProtoParseException();
-        }
-        //message AckAndEnvelopeContainer {
-        //AcknowledgementInfo ack = 1;
-        //RemoteEnvelope envelope = 2;
-        //}
-        //message AcknowledgementInfo {
-        //    fixed64 cumulativeAck = 1;
-        //    repeated fixed64 nacks = 2;
-        //}
-        //message RemoteEnvelope {
-        //ActorRefData recipient = 1;
-        //Payload message = 2;
-        //ActorRefData sender = 4;
-        //fixed64 seq = 5;
-        //}
-        //actorefData - Path - 01
-        //fixed64 cumulativeAck = 1;
-        //repeated fixed64 nacks = 2;
-        //
-        //message Payload {
-        //bytes message = 1;
-        //int32 serializerId = 2;
-        //bytes messageManifest = 3;
-        //}
-        //
-        //
-        public class PayloadParser //: IEquatable<PayloadParser>
-                {
-                    
-                    private readonly ArraySegment<byte> _manifestBytes;
-                    private readonly bool _manifestSet;
-                    private readonly ArraySegment<byte> _payloadMessageBytes;
-                    //private ArraySegment<byte> _payloadRawSegment;
-                    private readonly int _serId;
-                    //private EnvelopeContainerParser _ecp;
-                    //private ArraySegment<byte> _second;
-                    //private (ulong, int) _ser;
-
-                    public byte[] GetMessageByteSpan()
-                    {
-                        //log(_payloadMessageBytes.Count);
-                        //var r = SliceSegment(_payloadMessageBytes);
-                        //return new Span<byte>(r.first.Array,r.first.Offset,r.first.Count).ToArray();
-                        return new Span<byte>(_payloadMessageBytes.Array,_payloadMessageBytes.Offset,_payloadMessageBytes.Count).ToArray();
-                    }
-                    public int SerId
-                    {
-                        get => _serId;
-                    }
-                    public bool HasManifest
-                    {
-                        get => _manifestSet;
-                    }
-
-                    public ArraySegment<byte> Manifest()
-                    {
-                        return _manifestBytes;
-                    }
-                    public string ManifestString()
-                    {
-                        return Encoding.UTF8.GetString(_manifestBytes.Array, _manifestBytes.Offset+2,_manifestBytes.Count);
-                    }
-                    public ReadOnlySpan<byte> GetManifestSpan()
-                    {
-                        return new ReadOnlySpan<byte>(_manifestBytes.Array,_manifestBytes.Offset+2,_manifestBytes.Count);
-                    }
-                    
-                    public PayloadParser(ArraySegment<byte> raw)
-                    {
-                        //log(raw.Count);
-                        //_ecp = ecp;
-                        //_payloadRawSegment = raw;
-                        var _messageAndRest = SliceSegment(raw);
-                        _payloadMessageBytes = _messageAndRest.first;
-                        var serIdAndBufferPos = ReadRawInt64WithNewBufferPos(
-                            new Span<byte>(_messageAndRest.second.Array,
-                                _messageAndRest.second.Offset+1,
-                                _messageAndRest.second.Count-1));
-                        _serId = (int)serIdAndBufferPos.Item1;
-                        var nextItem = serIdAndBufferPos.Item2;
-                        var second = _messageAndRest.second;
-                        if (nextItem + 1 >=
-                            second.Count)
-                        {
-                            _manifestSet = false;
-                            _manifestBytes = default;
-                            //Console.WriteLine("hyh");
-                        }
-                        else
-                        {
-                            _manifestSet = true;
-                            var nextVarInt = ReadRawInt64WithNewBufferPos(
-                                new Span<byte>(second.Array,
-                                    second.Offset + nextItem + 2,
-                                    second.Count - (nextItem + 2)));
-                            var nextSegment =
-                                new ArraySegment<byte>(
-                                    second.Array,
-                                    second.Offset + 1 +
-                                    nextVarInt.Item2, (int)nextVarInt.Item1);
-                            _manifestBytes = nextSegment;
-                        }
-                    }
-
-                    
-                }
-        public struct EnvelopeContainerParser
-            {
-                
-                private readonly ReadOnlyMemory<byte> _rec;
-                private readonly  ArraySegment<byte> _msg;
-                private readonly ArraySegment<byte> _sender;
-                private readonly long _seq;
-                private readonly  bool _hasSender;
-
-                public PayloadParser GetPayloadParser()
-                {
-                    return  new PayloadParser(_msg);
-                }
-                public ReadOnlySpan<byte> SenderUtf8Bytes()
-                {
-                    return new ReadOnlySpan<byte>(_sender.Array,_sender.Offset,_sender.Count);
-                }
-                public ArraySegment<byte> SenderSegment()
-                {
-                    return _sender;
-                }
-                public bool HasSender
-                {
-                    get => _hasSender;
-                }
-
-                public ReadOnlySpan<byte> ReceiverUtf8Bytes()
-                {
-                    return _rec.Span;
-                }
-
-                public ReadOnlyMemory<byte> ReceiverSegment()
-                {
-                    return _rec;
-                }
-
-                public ArraySegment<byte> MessageArraySegment()
-                {
-                    return _msg;
-                }
-
-                public long GetSequenceNumber()
-                {
-                    return _seq;
-                }
-
-                public EnvelopeContainerParser(ArraySegment<byte> raw)
-                {
-                    //log(raw.Count);
-                    //_raw = raw;
-                    var recAndRest = SliceSegment(raw);
-                    _rec = SliceSegment(recAndRest.first).first;
-                    var msgAndRest = SliceSegment(recAndRest.second);
-                    _msg = msgAndRest.first;
-                    var second = msgAndRest.second;
-                    if (second.Array[second.Offset] ==
-                        (4 << 3 | 2))
-                    {
-                        //have sender.
-                        _hasSender = true;
-                        var senderAndRest = SliceSegment(second);
-                        _sender = SliceSegment(senderAndRest.first).first;
-                        _seq = (long)BinaryPrimitives.ReadUInt64LittleEndian(
-                            new ReadOnlySpan<byte>(senderAndRest.second.Array,
-                                senderAndRest.second.Offset + 1,
-                                senderAndRest.second.Count - 1));
-                    }
-                    else
-                    {
-                        _hasSender = false;
-                        _sender = default;
-                        _seq = (long)BinaryPrimitives.ReadUInt64LittleEndian(
-                            new ReadOnlySpan<byte>(second.Array,
-                                second.Offset + 1, second.Count - 1));
-                    }
-                }
-
-                
-            }
-        public class AckAndMessageParser
-        {
-            
-            public AckAndMessageAS BuildAckAndMessage(IRemoteActorRefProvider rarp, Address localAddress,AddressThreadLocalCache act)
-            {
-                var ack = _ackSet ? BuildAck() : null;
-
-                MessageAS msg = null;
-                if (_msgSet)
-                {
-                    var parse = GetEnvelopeContainerParser();
-                    var innerParse = parse.GetPayloadParser();
-                var addy = rarp.ResolveActorRefWithLocalAddress(parse.ReceiverSegment(),
-                    localAddress);
-                Address recipientAddress;
-                if (act != null)
-                {
-                    var rs = parse.ReceiverSegment();
-                    recipientAddress =
-                        act.CacheAS.GetOrCompute( rs.Span);
-                }
-                else
-                {
-                    var rc = parse.ReceiverSegment();
-                    ActorPath.TryParseAddress(Encoding.UTF8.GetString(rc.ToArray()),
-                        out recipientAddress);
-                }
-
-                IInternalActorRef sendre = null;
-                if (parse.HasSender)
-                {
-                    sendre =
-                        rarp.ResolveActorRefWithLocalAddress(parse.SenderSegment(), localAddress);
-                }
-
-                SeqNo ackOption = null;
-                if ((ulong)parse.GetSequenceNumber() != AkkaPduProtobuffCodec.SeqUndefined)
-                {
-                    ackOption = parse.GetSequenceNumber();
-                }
-
-                msg = new MessageAS(addy, recipientAddress,innerParse, sendre, ackOption);
-                }
-                //var msg = _msgSet ? new Message(,,new Payload(innerParse.GetMessageByteSpan())) : null;
-                return new AckAndMessageAS(ack, msg);
-            }
-            
-            public EnvelopeContainerParser GetEnvelopeContainerParser()
-            {
-                return new EnvelopeContainerParser(_msgBytes);
-            }
-            
-            internal ArraySegment<byte> _ackBytes;
-            private ArraySegment<byte> _msgBytes;
-            private bool _ackSet;
-            //private ArraySegment<byte> _rawBytes;
-            private bool _msgSet;
-
-            public AckAndMessageParser(ArraySegment<byte> raw)
-            {
-              //  _rawBytes = raw;
-              if (raw.Count < 256 && raw.Array.Length > 1024)
-              {
-                  //Console.WriteLine("copy");
-                  var array = new byte[raw.Count];
-                  Array.Copy(raw.Array,raw.Offset,array,0,raw.Count);
-                  
-                  raw =new ArraySegment<byte>(array); 
-              }
-                var firstByte = raw.Array[raw.Offset];
-                if (firstByte == (01 << 3 | 2))
-                {
-                    var remaining = GetAndSetAckSection(raw);
-                    if (remaining.Count > 0)
-                    {
-                        GetAndSetMsgSection(remaining);
-                    }
-                }
-                else
-                {
-                    var remaining = GetAndSetMsgSection(raw);
-                    if (remaining.Count > 0)
-                    {
-                        GetAndSetAckSection(remaining);
-                    }
-                }
-            }
-
-            public Ack BuildAck()
-            {
-                if (_ackSet)
-                {
-                    var seq = new SeqNo((long)BinaryPrimitives.ReadUInt64LittleEndian(
-                        new ReadOnlySpan<byte>(_ackBytes.Array,
-                            _ackBytes.Offset + 1, 8)));
-                    var nacks = new SeqNo[0];
-                    if (_ackBytes.Count - 10 > 0)
-                    {
-                        var nextLength = ReadRawInt64WithNewBufferPos(
-                            new Span<byte>(_ackBytes.Array,
-                                _ackBytes.Offset + 10, _ackBytes.Count - 10));
-                        var numEntries = (int)nextLength.Item1;
-                        var unAcks = new Span<byte>(_ackBytes.Array,
-                            _ackBytes.Offset + nextLength.Item2, numEntries * 8);
-                        var acks= MemoryMarshal.Cast<byte, long>(unAcks);
-                        nacks = new SeqNo[acks.Length];
-                        for (int i = 0; i < acks.Length; i++)
-                        {
-                            nacks[i] = acks[i];
-                        }    
-                    }
-                    
-                    return  new Ack(seq,nacks);
-                }
-
-                return null;
-            }
-
-            private ArraySegment<byte> GetAndSetMsgSection(ArraySegment<byte> raw)
-            {
-                _msgSet = true;
-                var nextPos = ReadRawInt64WithNewBufferPos(
-                    new Span<byte>(raw.Array, raw.Offset + 1, raw.Count - 1));
-                var readBytes = (int)nextPos.Item1;
-                var startAt = nextPos.Item2 + raw.Offset + 1;
-                _msgBytes = new ArraySegment<byte>(raw.Array, startAt, readBytes);
-                var nextPosition = startAt + readBytes;
-                return new ArraySegment<byte>(raw.Array,nextPosition,raw.Count+raw.Offset-nextPosition);
-            }
-
-            private ArraySegment<byte> GetAndSetAckSection(ArraySegment<byte> raw)
-            {
-                _ackSet = true;
-                var nextPos = ReadRawInt64WithNewBufferPos(
-                    new Span<byte>(raw.Array, raw.Offset + 1, raw.Count - 1));
-                var readBytes = (int)nextPos.Item1;
-                var startAt = nextPos.Item2 + raw.Offset + 1;
-                _ackBytes = new ArraySegment<byte>(raw.Array, startAt, readBytes);
-                var nextPosition = startAt + readBytes;
-                return new ArraySegment<byte>(raw.Array,nextPosition,raw.Count+raw.Offset-nextPosition);/*
-                int startAt = 0;
-                int nextPosition = 0;
-                int readBytes = 0;
-                try
-                {
-
-                
-                //Console.WriteLine(raw.Array[raw.Offset]);
-                _ackSet = true;
-                var nextPos = ReadRawInt64WithNewBufferPos(
-                    new Span<byte>(raw.Array, raw.Offset + 1, raw.Count - 1));
-                readBytes = (int)nextPos.Item1;
-                startAt = nextPos.Item2 + raw.Offset + 1;
-                _ackBytes = new ArraySegment<byte>(raw.Array, startAt, readBytes);
-                nextPosition =
-                    Math.Min(startAt + readBytes + 1, raw.Array.Length);
-                var nextCount =
-                    Math.Max(raw.Count + raw.Offset - nextPosition, 0);
-                return new ArraySegment<byte>(raw.Array,nextPosition,nextCount);
-                }
-                catch (Exception e)
-                {
-                    var pl = AckAndEnvelopeContainer.Parser.ParseFrom(_rawBytes.Array,
-                        _rawBytes.Offset, _rawBytes.Count);
-                    Console.WriteLine(pl.ToString());
-                    Console.WriteLine(e);
-                    Console.WriteLine($"${startAt} - {readBytes} - {nextPosition} - {raw.Count} - {raw.Offset}");
-                    throw;
-                }*/
-            }
-            /*
-            var length =
-                        ReadRawInt64WithNewBufferPos(
-                            new Span<byte>(raw.Array, raw.Offset+1, raw.Count-1));
-                    var readBytes = (int)length.Item1;
-                    var startAt = length.Item2+raw.Offset+1;
-                    var result =
-                        new ArraySegment<byte>(raw.Array, startAt, readBytes);*/
-            
-        }
-    }
-
     /// <summary>
     /// TBD
     /// </summary>
@@ -906,13 +485,6 @@ namespace Akka.Remote.Transport
                 else
                     throw new PduCodecException(
                         "Error decoding Akka PDU: Neither message nor control message were contained");
-                //var pdu =
-                //    AkkaProtocolMessage.Parser.ParseFrom(raw.Array, raw.Offset,
-                //        raw.Count);
-                //if (pdu.Instruction != null)
-                //    return DecodeControlPdu(pdu.Instruction);
-                //else if (!pdu.Payload.IsEmpty)
-                //    return new Payload(pdu.Payload); // TODO HasPayload
                 
             }
             catch (ProtoParseException ppe)
@@ -940,12 +512,7 @@ namespace Akka.Remote.Transport
 
         public override IO.ByteString ConstructPayload(ArraySegment<byte> payload)
         {
-            //var msg =  new AkkaProtocolMessage() { Payload = ByteString.CopyFrom(payload.Array,payload.Offset,payload.Count) }.ToByteString();
             var ret =  ConstructByteString(IO.ByteString.FromBytes(payload));
-            //if (msg.Length != ret.Count)
-            //{
-            //    throw    new Exception();
-            //}
 
             return ret;
         }
@@ -1233,35 +800,9 @@ namespace Akka.Remote.Transport
                     : null, seq ?? SeqUndefined);
             var newEnvelope = retStr.Concat(EncodeMessageAsField(2,
                 remoteEnvelopeBs));
-            //Console.WriteLine("IO-Ackenv"+(int)(newEnvelope.Count));
             return newEnvelope;
         }
-
         
-
-        //public  IO.ByteString ConstructMainMessageBS(Address localAddress, IActorRef recipient, SerializedIOBSMessage serializedMessage,
-        //    IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null)
-        //{
-        //    
-        //    var ackAndEnvelope = new AckAndEnvelopeContainer();
-        //
-        //    var seq = seqOption != null ? (ulong?)seqOption.RawValue : null;
-        //    var retStr = IO.ByteString.Empty;
-        //    if (ackOption != null)
-        //    {
-        //        var ackInfo = CreateAckInfo(ackOption);
-        //        retStr = retStr.Concat(ackInfo);
-        //    }
-        //
-        //    var remoteEnvelopeBs = CreateRemoteEnvelopeBS(
-        //        SerializeActorRef(recipient.Path.Address, recipient),
-        //        serializedMessage,
-        //        (senderOption != null && senderOption.Path != null)
-        //            ? SerializeActorRef(localAddress, senderOption)
-        //            : null, seq ?? SeqUndefined);
-        //    return remoteEnvelopeBs;
-        //
-        //}
         public IO.ByteString CreateRemoteEnvelopeBS(ActorRefData ad, SerializedIOBSMessage message, ActorRefData sender, ulong seq)
         {
             
@@ -1277,7 +818,6 @@ namespace Akka.Remote.Transport
             }
             ret = ret.Concat(WriteSingleLongAs64Bit(5, (ulong)seq));
             
-            //Console.WriteLine("IO-env " + ret.Count);
             return ret;
         }
 
@@ -1313,23 +853,11 @@ namespace Akka.Remote.Transport
             ret1[0] = (byte)(position << 3 | 1);
             BinaryPrimitives.WriteUInt64LittleEndian(new Span<byte>(ret1,1,8),value );
             return IO.ByteString.FromBytes(ret1);
-            //var ret = new byte[1];
-            //ret[0] = (byte)(position << 3 | 1);
-            //var final =IO.ByteString.FromBytes(ret)
-            //    .Concat(IO.ByteString.FromBytes(BitConverter.GetBytes(value)));
-            //if (final.Count != ret1.Length)
-            //{
-            //    Console.WriteLine("oops" + ret1.ToString() + final.ToArray().ToString());
-            //}
-            //
-            //return final;
         }
 
         IO.ByteString WriteRepeatedLongsAs64Bit(int position, SortedSet<SeqNo> longs)
         {
             IO.ByteString ret = IO.ByteString.Empty;
-            //var seq = longs.Count;
-            //var c = longs.Count;
             var byteArr = new byte[longs.Count * 8];
             var ctr = 0;
             foreach (var l in longs)
@@ -1339,11 +867,6 @@ namespace Akka.Remote.Transport
                 ctr = ctr + 8;
             }
 
-            //ret =  IO.ByteString.FromBytes(longs.Select(r =>
-            //{
-            //    var lb = BitConverter.GetBytes(r.RawValue);
-            //    return new ArraySegment<byte>(lb, 0, lb.Length);
-            //}));
             var headerBuffer = EncodeVarIntPreBuffer(ret.Count);
             headerBuffer.Array[0] = (byte)(position << 3 | 2);
             return IO.ByteString.FromBytes(headerBuffer).Concat(ret);
@@ -1401,8 +924,11 @@ namespace Akka.Remote.Transport
         {
 
             int id = data.serId;
-            var serId = AkkaPduProtobuffCodec.CreateSerIdHeader(data.serId);//SerCache.SidCache.GetOrCompute(id);
-                IO.ByteString msg = null;
+
+            //Don't bother caching Serializer IDs, size of bytestring is small enough it's not worth it.
+            var serId = 
+                AkkaPduProtobuffCodec.CreateSerIdField(data.serId);//SerCache.SidCache.GetOrCompute(id);
+            IO.ByteString msg = null;
 
                 if (data?.message == null)
                 {
@@ -1421,15 +947,21 @@ namespace Akka.Remote.Transport
                 }
                     
                 //var serId = IO.ByteString.FromBytes(serIdBytes.Array,
-                //    serIdBytes.Offset, serIdBytes.Count);
+                //serIdBytes.Offset, serIdBytes.Count);
             
+                //If manifest is small (thinking some of the proto 2 char things)
+                //We probably shouldn't try to cache manifest.
                 var manifest = data.manifest==null?IO.ByteString.Empty: SerCache.ManiCache.GetOrCompute(data.manifest);
-            
                 var ret = msg.Concat(manifest);
                 return ret;
         }
 
-        internal static ArraySegment<byte> CreateSerIdHeader(int id)
+        /// <summary>
+        /// Creates a Serializer ID Field.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        internal static ArraySegment<byte> CreateSerIdField(int id)
         {
             var serIdBytes = EncodeVarIntPreBuffer(id);
             serIdBytes.Array[0] = payloadSerIdByte;
@@ -1599,7 +1131,7 @@ namespace Akka.Remote.Transport
     
             protected override Akka.IO.ByteString Compute(int k)
             {
-                return IO.ByteString.FromBytes(AkkaPduProtobuffCodec.CreateSerIdHeader(k));
+                return IO.ByteString.FromBytes(AkkaPduProtobuffCodec.CreateSerIdField(k));
             }
     
             protected override bool IsCacheable(IO.ByteString v)

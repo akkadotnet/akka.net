@@ -41,10 +41,10 @@ namespace Akka.Remote
             FastMessageParser.
                 PayloadParser parser)
         {
-            var ms = parser.Manifest() != default
+            var ms = parser.Manifest().Length != 0
                 ? parser.ManifestString():null;
             return system.Serialization.Deserialize(
-                parser.GetMessageByteSpan(), parser.SerId, ms);
+                parser.GetMessageByteSpan().ToArray(), parser.SerId, ms);
         }
 
         /// <summary>
