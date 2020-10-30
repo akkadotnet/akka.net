@@ -110,7 +110,7 @@ namespace Akka.Remote.Transport.Streaming
                 new TaskCompletionSource<IAssociationEventListener>();
             System = system;
             _mat = ActorMaterializer.Create(System,
-                ActorMaterializerSettings.Create(System),
+                ActorMaterializerSettings.Create(System).WithDispatcher("akka.remote.default-remote-dispatcher"),
                 namePrefix: "streaming-transport");
             if (system.Settings.Config.HasPath("akka.remote.dot-netty.tcp"))
             {
@@ -134,7 +134,8 @@ namespace Akka.Remote.Transport.Streaming
                     TransportSettings.SocketReceiveBufferSize),
                 new Inet.SO.SendBufferSize(
                     TransportSettings.SocketSendBufferSize),
-                new Inet.SO.ByteBufferPoolSize(TransportSettings.TransportReceiveBufferSize));
+                new Inet.SO.ByteBufferPoolSize(TransportSettings.TransportReceiveBufferSize),
+                new Inet.SO.WorkerDispatcher("akka.remote.default-remote-dispatcher"));
         }
 
         private ImmutableList<Inet.SocketOption> SocketOptions { get; }
@@ -306,9 +307,11 @@ namespace Akka.Remote.Transport.Streaming
             //If batch delay is 0, we don't want our delay stage.
             if (TransportSettings.BatchGroupMaxMillis > 0)
             {
-               baseSource = baseSource.GroupedWithin(TransportSettings.BatchGroupMaxCount, TimeSpan.FromMilliseconds(TransportSettings.BatchGroupMaxMillis))
-                    .SelectMany(msg => msg)
-                    .Async();
+                baseSource = baseSource.GroupedWithin(
+                        TransportSettings.BatchGroupMaxCount,
+                        TimeSpan.FromMilliseconds(TransportSettings
+                            .BatchGroupMaxMillis))
+                    .SelectMany(msg => msg);
             }
             else
             {

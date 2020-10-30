@@ -245,6 +245,16 @@ namespace Akka.IO
                     SuppressValidation = suppressValidation;
                 }
             }
+            
+            public class WorkerDispatcher : SocketOption
+            {
+                public string Dispatcher { get; }
+
+                public WorkerDispatcher(string dispatcher)
+                {
+                    Dispatcher = dispatcher;
+                }
+            }
         }
 
         /// <summary>
