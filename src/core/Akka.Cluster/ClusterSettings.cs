@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Util;
 
 namespace Akka.Cluster
 {
@@ -56,17 +57,18 @@ namespace Akka.Cluster
 
             var key = "down-removal-margin";
             var useDownRemoval = clusterConfig.GetString(key, "");
-            DownRemovalMargin = 
+            DownRemovalMargin =
                 (
-                    useDownRemoval.ToLowerInvariant().Equals("off") || 
-                    useDownRemoval.ToLowerInvariant().Equals("false") || 
+                    useDownRemoval.ToLowerInvariant().Equals("off") ||
+                    useDownRemoval.ToLowerInvariant().Equals("false") ||
                     useDownRemoval.ToLowerInvariant().Equals("no")
-                ) ? TimeSpan.Zero : 
+                ) ? TimeSpan.Zero :
                 clusterConfig.GetTimeSpan("down-removal-margin", null);
 
             AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
+            AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
             _useDispatcher = clusterConfig.GetString("use-dispatcher", null);
@@ -188,6 +190,11 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public ImmutableHashSet<string> Roles { get; }
+
+        /// <summary>
+        /// Application version
+        /// </summary>
+        public AppVersion AppVersion { get; }
 
         /// <summary>
         /// TBD
