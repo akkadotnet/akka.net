@@ -569,25 +569,25 @@ namespace Akka.Cluster.Sharding
             {
                 if (actorSelections.Count > 0)
                 {
-                    var coordinatorMessage = Cluster.State.Unreachable.Contains(MembersByAge.First()) 
-                        ? $"Coordinator [{MembersByAge.First()}] is unreachable." 
+                    var coordinatorMessage = Cluster.State.Unreachable.Contains(MembersByAge.First())
+                        ? $"Coordinator [{MembersByAge.First()}] is unreachable."
                         : $"Coordinator [{MembersByAge.First()}] is reachable.";
 
-                    Log.Warning("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. Total [{2}] buffered messages. [{3}]", 
-                        TypeName, 
-                        string.Join(", ", actorSelections.Select(i => i.PathString)), 
-                        TotalBufferSize, 
+                    Log.Warning("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. Total [{2}] buffered messages. [{3}]",
+                        TypeName,
+                        string.Join(", ", actorSelections.Select(i => i.PathString)),
+                        TotalBufferSize,
                         coordinatorMessage);
                 }
                 else
                 {
                     // Members start off as "Removed"
                     var partOfCluster = Cluster.SelfMember.Status != MemberStatus.Removed;
-                    var possibleReason = partOfCluster 
-                        ? "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?" 
+                    var possibleReason = partOfCluster
+                        ? "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?"
                         : "Probably, no seed-nodes configured and manual cluster join not performed?";
 
-                    Log.Warning("{0}: No coordinator found to register. {1} Total [{2}] buffered messages.", 
+                    Log.Warning("{0}: No coordinator found to register. {1} Total [{2}] buffered messages.",
                         TypeName, possibleReason, TotalBufferSize);
                 }
             }
@@ -718,7 +718,7 @@ namespace Akka.Cluster.Sharding
             switch (command)
             {
                 case Retry _:
-                    SendGracefulShutdownToCoordinator();
+                    SendGracefulShutdownToCoordinatorIfInProgress();
 
                     if (ShardBuffers.Count != 0) _retryCount++;
 
@@ -735,7 +735,7 @@ namespace Akka.Cluster.Sharding
                 case GracefulShutdown _:
                     Log.Debug("{0}: Starting graceful shutdown of region and all its shards", TypeName);
                     GracefulShutdownInProgress = true;
-                    SendGracefulShutdownToCoordinator();
+                    SendGracefulShutdownToCoordinatorIfInProgress();
                     TryCompleteGracefulShutdown();
                     break;
 
@@ -814,13 +814,13 @@ namespace Akka.Cluster.Sharding
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
         }
 
-        private void SendGracefulShutdownToCoordinator()
+        private void SendGracefulShutdownToCoordinatorIfInProgress()
         {
             if (GracefulShutdownInProgress)
             {
                 Log.Debug("Sending graceful shutdown to {0}", CoordinatorSelection);
                 CoordinatorSelection.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
-            } 
+            }
         }
 
         private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
@@ -829,15 +829,27 @@ namespace Akka.Cluster.Sharding
             {
                 case PersistentShardCoordinator.HostShard hs:
                     {
-                        var shard = hs.Shard;
-                        Log.Debug("{0}: Host shard [{1}]", TypeName, shard);
-                        RegionByShard = RegionByShard.SetItem(shard, Self);
-                        UpdateRegionShards(Self, shard);
+                        if (GracefulShutdownInProgress)
+                        {
+                            Log.Debug("{0}: Ignoring Host Shard request for [{1}] as region is shutting down", TypeName, hs.Shard);
 
-                        // Start the shard, if already started this does nothing
-                        GetShard(shard);
+                            // if the coordinator is sending HostShard to a region that is shutting down
+                            // it means that it missed the shutting down message (coordinator moved?)
+                            // we want to inform it as soon as possible so it doesn't keep trying to allocate the shard here
+                            SendGracefulShutdownToCoordinatorIfInProgress();
+                        }
+                        else
+                        {
+                            var shard = hs.Shard;
+                            Log.Debug("{0}: Host shard [{1}]", TypeName, shard);
+                            RegionByShard = RegionByShard.SetItem(shard, Self);
+                            UpdateRegionShards(Self, shard);
 
-                        Sender.Tell(new PersistentShardCoordinator.ShardStarted(shard));
+                            // Start the shard, if already started this does nothing
+                            GetShard(shard);
+
+                            Sender.Tell(new PersistentShardCoordinator.ShardStarted(shard));
+                        }
                     }
                     break;
                 case PersistentShardCoordinator.ShardHome home:
