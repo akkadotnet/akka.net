@@ -23,7 +23,7 @@ namespace Akka.Remote.Transport.DotNetty
     ///
     /// Defines the settings for the <see cref="DotNettyTransport"/>.
     /// </summary>
-    internal sealed class DotNettyTransportSettings
+    public sealed class DotNettyTransportSettings
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
@@ -280,13 +280,13 @@ namespace Akka.Remote.Transport.DotNetty
             BatchWriterSettings = batchWriterSettings;
         }
     }
-    internal enum TransportMode
+    public enum TransportMode
     {
         Tcp,
         Udp
     }
 
-    internal sealed class SslSettings
+    public sealed class SslSettings
     {
         public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)

@@ -55,7 +55,11 @@ namespace RemotePingPong
 
                 dot-netty.tcp {
                     port = 0
-                    hostname = ""localhost""
+                    hostname = """"
+                    batching {
+                        enabled = true
+                        flush-interval = 40ms
+                    }
                 }
               }
             }");
@@ -69,7 +73,14 @@ namespace RemotePingPong
 
         private static void Main(params string[] args)
         {
-            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
+            AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+            {
+                Console.WriteLine(eventArgs.ExceptionObject as Exception);
+                Console.WriteLine("STACKOVERFLOW");
+                Console.WriteLine(sender);
+                Console.WriteLine(eventArgs.ExceptionObject as Exception);
+            };
+            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal;
             uint timesToRun;
             if (args.Length == 0 || !uint.TryParse(args[0], out timesToRun))
             {
@@ -82,7 +93,7 @@ namespace RemotePingPong
 
         private static async void Start(uint timesToRun)
         {
-            const long repeat = 100000L;
+            const long repeat = 50000L;
 
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)
@@ -116,9 +127,18 @@ namespace RemotePingPong
                 var bestThroughput = 0L;
                 foreach (var throughput in GetClientSettings())
                 {
-                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
-                    bestThroughput = result1.Item2;
-                    redCount = result1.Item3;
+                    try
+                    {
+                        var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
+                        bestThroughput = result1.Item2;
+                        redCount = result1.Item3;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
+                    
                 }
             }
 
@@ -182,16 +202,18 @@ namespace RemotePingPong
                 throw new Exception("Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
             }
 
+            var rng = new Random();
+            var rand = new byte[2048];
+            rng.NextBytes(rand);
             var sw = Stopwatch.StartNew();
             receivers.ForEach(c =>
             {
                 for (var i = 0; i < 50; i++) // prime the pump so EndpointWriters can take advantage of their batching model
-                    c.Tell("hit");
+                    c.Tell("hi");
             });
             var waiting = Task.WhenAll(tasks);
             await Task.WhenAll(waiting);
             sw.Stop();
-
             // force clean termination
             var termination = Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() }).Wait(TimeSpan.FromSeconds(10));
 

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -420,7 +421,12 @@ namespace Akka.Remote.Transport
         /// <inheritdoc cref="AssociationHandle"/>
         public override bool Write(ByteString payload)
         {
-            return WrappedHandle.Write(Codec.ConstructPayload(payload));
+            return WrappedHandle.Write(Codec.ConstructByteString(payload));
+        }
+        
+        public override bool Write(IO.ByteString payload)
+        {
+            return WrappedHandle.Write(Codec.ConstructByteString(payload));
         }
 
 #pragma warning disable CS0672 // Member overrides obsolete member
@@ -642,7 +648,7 @@ namespace Akka.Remote.Transport
         /// <param name="handlerListener">TBD</param>
         /// <param name="wrappedHandle">TBD</param>
         /// <param name="queue">TBD</param>
-        public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<ByteString> queue)
+        public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<ArraySegment<byte>> queue)
         {
             Queue = queue;
             WrappedHandle = wrappedHandle;
@@ -662,7 +668,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Queue<ByteString> Queue { get; private set; }
+        public Queue<ArraySegment<byte>> Queue { get; private set; }
     }
 
     /// <summary>
@@ -895,11 +901,13 @@ namespace Akka.Remote.Transport
             {
                 switch (@event.FsmEvent)
                 {
+                    
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
                     case InboundPayload p when @event.StateData is OutboundUnderlyingAssociated ola:
                         {
-                            var pdu = DecodePdu(p.Payload);
+                            
+                            var pdu = DecodePdu(p.ArraySegmentSafe());
                             /*
                              * This state is used for OutboundProtocolState actors when they receive
                              * a reply back from the inbound end of the association.
@@ -925,7 +933,7 @@ namespace Akka.Remote.Transport
                                                     new AssociatedWaitHandler(
                                                         NotifyOutboundHandler(wrappedHandle, handshakeInfo,
                                                             statusCompletionSource), wrappedHandle,
-                                                        new Queue<ByteString>()));
+                                                        new Queue<ArraySegment<byte>>()));
                                     }
                                 case Disassociate d:
                                     //After receiving Disassociate we MUST NOT send back a Disassociate (loop)
@@ -946,7 +954,7 @@ namespace Akka.Remote.Transport
                     // Events for inbound associations
                     case InboundPayload p when @event.StateData is InboundUnassociated iu:
                         {
-                            var pdu = DecodePdu(p.Payload);
+                            var pdu = DecodePdu(p.ArraySegmentSafe());
                             /*
                              * This state is used by inbound protocol state actors
                              * when they receive an association attempt from the
@@ -968,7 +976,7 @@ namespace Akka.Remote.Transport
                                     return GoTo(AssociationState.Open).Using(
                                         new AssociatedWaitHandler(
                                             NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
-                                            wrappedHandle, new Queue<ByteString>()));
+                                            wrappedHandle, new Queue<ArraySegment<byte>>()));
 
                                 // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
                                 default:
@@ -1007,7 +1015,7 @@ namespace Akka.Remote.Transport
                         return Stop(new Failure(d.Info));
                     case InboundPayload ip:
                         {
-                            var pdu = DecodePdu(ip.Payload);
+                            var pdu = DecodePdu(ip.ArraySegmentSafe());
                             switch (pdu)
                             {
                                 case Disassociate d:
@@ -1021,14 +1029,14 @@ namespace Akka.Remote.Transport
                                     switch (@event.StateData)
                                     {
                                         case AssociatedWaitHandler awh:
-                                            var nQueue = new Queue<ByteString>(awh.Queue);
-                                            nQueue.Enqueue(p.Bytes);
+                                            var nQueue = new Queue<ArraySegment<byte>>(awh.Queue);
+                                            nQueue.Enqueue(p.ASBytes);
                                             return
                                                 Stay()
                                                     .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
                                                         nQueue));
                                         case ListenerReady lr:
-                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                            lr.Listener.Notify(new InboundPayload(p.ASBytes));
                                             return Stay();
                                         default:
                                             throw new AkkaProtocolException(
@@ -1275,7 +1283,18 @@ namespace Akka.Remote.Transport
             return readHandlerPromise.Task;
         }
 
-        private IAkkaPdu DecodePdu(ByteString pdu)
+        //private IAkkaPdu DecodePdu(ByteString pdu)
+        //{
+        //    try
+        //    {
+        //        return _codec.DecodePdu(pdu);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw new AkkaProtocolException($"Error while decoding incoming Akka PDU of length {pdu.Length}", ex);
+        //    }
+        //}
+        private IAkkaPdu DecodePdu(ArraySegment<byte> pdu)
         {
             try
             {
@@ -1283,7 +1302,7 @@ namespace Akka.Remote.Transport
             }
             catch (Exception ex)
             {
-                throw new AkkaProtocolException($"Error while decoding incoming Akka PDU of length {pdu.Length}", ex);
+                throw new AkkaProtocolException($"Error while decoding incoming Akka PDU of length {pdu.Count}", ex);
             }
         }
 

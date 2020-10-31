@@ -203,8 +203,8 @@ namespace Akka.Actor
             get
             {
                 if (this is RootActorPath) return EmptyElements;
-                var elements = (List<string>)Elements;
-                elements[elements.Count - 1] = AppendUidFragment(Name);
+                var elements = Elements is string[] s? s: Elements.ToArray();
+                elements[elements.Length - 1] = AppendUidFragment(Name);
                 return elements;
             }
         }
@@ -276,8 +276,8 @@ namespace Akka.Actor
         /// <returns>A newly created <see cref="ChildActorPath"/></returns>
         public static ActorPath operator /(ActorPath path, string name)
         {
-            var nameAndUid = ActorCell.SplitNameAndUid(name);
-            return new ChildActorPath(path, nameAndUid.Name, nameAndUid.Uid);
+            var nameAndUid = ActorCell.SplitNameAndUidStruct(name);
+            return new ChildActorPath(path, nameAndUid.Name, nameAndUid.uid);
         }
 
         /// <summary>
@@ -355,6 +355,7 @@ namespace Akka.Actor
 
         private static bool TryParseAddress(string path, out Address address, out Uri uri)
         {
+            
             //This code corresponds to AddressFromURIString.unapply
             address = null;
             if (!Uri.TryCreate(path, UriKind.Absolute, out uri))
@@ -655,12 +656,16 @@ namespace Akka.Actor
             get
             {
                 ActorPath p = this;
-                var acc = new Stack<string>();
+                var acc = new Stack<string>(8);
                 while (true)
                 {
+                    //ToList forces Enumerable creation
+                    //ToArray here uses Stack<T> internal impl
+                    //and is cleaner in alloc
                     if (p is RootActorPath)
-                        return acc.ToList();
+                        return acc.ToArray(); 
                     acc.Push(p.Name);
+                    
                     p = p.Parent;
                 }
             }

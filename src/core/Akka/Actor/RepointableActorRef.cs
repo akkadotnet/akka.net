@@ -292,11 +292,11 @@ namespace Akka.Actor
                 case "":
                     return ActorRefs.Nobody;
                 default:
-                    var nameAndUid = ActorCell.SplitNameAndUid(next);
+                    var nameAndUid = ActorCell.SplitNameAndUidStruct(next);
                     if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out var stats))
                     {
                         var crs = stats as ChildRestartStats;
-                        var uid = nameAndUid.Uid;
+                        var uid = nameAndUid.uid;
                         if (crs != null && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
                         {
                             if (name.Skip(1).Any())
@@ -305,7 +305,7 @@ namespace Akka.Actor
                                 return crs.Child;
                         }
                     }
-                    else if (Lookup is ActorCell cell && cell.TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+                    else if (Lookup is ActorCell cell && cell.TryGetFunctionRef(nameAndUid.Name, nameAndUid.uid, out var functionRef))
                     {
                         return functionRef;
                     }

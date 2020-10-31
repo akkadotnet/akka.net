@@ -385,17 +385,17 @@ namespace Akka.Actor
             }
             else
             {
-                var nameAndUid = SplitNameAndUid(name);
+                var nameAndUid = SplitNameAndUidStruct(name);
                 if (TryGetChildRestartStatsByName(nameAndUid.Name, out var stats))
                 {
-                    var uid = nameAndUid.Uid;
+                    var uid = nameAndUid.uid;
                     if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
                     {
                         child = stats.Child;
                         return true;
                     }
                 }
-                else if (TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+                else if (TryGetFunctionRef(nameAndUid.Name, nameAndUid.uid, out var functionRef))
                 {
                     child = functionRef;
                     return true;

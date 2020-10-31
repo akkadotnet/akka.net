@@ -140,6 +140,7 @@ namespace Akka.IO
             return new ByteString(array, offset, count);
         }
 
+
         /// <summary>
         /// Creates a new <see cref="ByteString"/> by wrapping raw collection of byte segements. 
         /// WARNING: 
@@ -190,6 +191,12 @@ namespace Akka.IO
 
         private readonly int _count;
         private readonly ByteBuffer[] _buffers;
+
+        public ByteString(IList<ByteString> buffers)
+        {
+            _count = buffers.Sum(s => s.Count);
+            _buffers = buffers.SelectMany(r=>r._buffers).ToArray();
+        }
 
         private ByteString(ByteBuffer[] buffers, int count)
         {
@@ -449,6 +456,12 @@ namespace Akka.IO
             var copy = new byte[_count];
             this.CopyTo(copy, 0, _count);
             return copy;
+        }
+
+        internal ByteBuffer ReadOnlyCompacted()
+        {
+            var c = this.Compact();
+            return c._buffers[0];
         }
 
         /// <summary>

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor.Internal;
@@ -19,6 +20,28 @@ using Assert = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
+
+    internal class NameAndUidLRUCache : LruBoundedCache<string, NameAndUid>
+    {
+        public NameAndUidLRUCache() : base(1024,600)
+        {
+        }
+
+        protected override int Hash(string k)
+        {
+            return FastHash.OfStringFast(k);
+        }
+
+        protected override NameAndUid Compute(string k)
+        {
+         return   ActorCell._splitNameAndUidInternal(k);
+        }
+
+        protected override bool IsCacheable(NameAndUid v)
+        {
+            return true;
+        }
+    }
     /// <summary>
     /// INTERNAL API.
     ///
@@ -485,10 +508,27 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static NameAndUid SplitNameAndUid(string name)
         {
+            return _splitNameAndUidInternal(name);
+            //return _NameAndUidLruCache.GetOrCompute(name);
+        }
+        
+        //private static readonly NameAndUidLRUCache _NameAndUidLruCache = new NameAndUidLRUCache();
+
+        internal static NameAndUid _splitNameAndUidInternal(string name)
+        {
             var i = name.IndexOf('#');
             return i < 0
                 ? new NameAndUid(name, UndefinedUid)
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
+        }
+
+        internal static (string Name, int uid) SplitNameAndUidStruct(string name)
+        {
+            
+            var i = name.IndexOf('#');
+            return i < 0
+                ? (name, UndefinedUid)
+                : (name.Substring(0, i), Int32.Parse(name.Substring(i+1)));
         }
 
         /// <summary>

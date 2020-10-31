@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Text;
 using Akka.Actor;
+using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
@@ -30,9 +32,19 @@ namespace Akka.Remote
         public static object Deserialize(ExtendedActorSystem system, SerializedMessage messageProtocol)
         {
             return system.Serialization.Deserialize(
-                messageProtocol.Message.ToByteArray(),
+                 ByteStringConverters._getByteArrayUnsafeFunc(messageProtocol.Message),
                 messageProtocol.SerializerId,
                 !messageProtocol.MessageManifest.IsEmpty ? messageProtocol.MessageManifest.ToStringUtf8() : null);
+        }
+
+        public static object Deserialize(ExtendedActorSystem system,
+            FastMessageParser.
+                PayloadParser parser)
+        {
+            var ms = parser.Manifest().Length != 0
+                ? parser.ManifestString():null;
+            return system.Serialization.Deserialize(
+                parser.GetMessageByteSpan().ToArray(), parser.SerId, ms);
         }
 
         /// <summary>
@@ -80,5 +92,50 @@ namespace Akka.Remote
                 Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
             }
         }
+        public static SerializedIOBSMessage SerializeIOBS(ExtendedActorSystem system, Address address, object message)
+        {
+            var serializer = system.Serialization.FindSerializerFor(message);
+
+            var oldInfo = Akka.Serialization.Serialization.CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    Akka.Serialization.Serialization.CurrentTransportInformation =
+                        system.Provider.SerializationInformation;
+
+                var serializedMsg = new SerializedIOBSMessage()
+                {
+                    message = serializer.ToBinary(message),
+                    serId = serializer.Identifier
+                };
+
+                if (serializer is SerializerWithStringManifest serializer2)
+                {
+                    var manifest = serializer2.Manifest(message);
+                    if (!string.IsNullOrEmpty(manifest))
+                    {
+                        serializedMsg.manifest = manifest;
+                    }
+                }
+                else
+                {
+                    if (serializer.IncludeManifest)
+                        serializedMsg.manifest =message.GetType().TypeQualifiedName();
+                }
+
+                return serializedMsg;
+            }
+            finally
+            {
+                Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
+            }
+        }
+    }
+
+    public class SerializedIOBSMessage
+    {
+        public byte[] message { get; set; }
+        public int serId { get; set; }
+        public string manifest { get; set; }
     }
 }

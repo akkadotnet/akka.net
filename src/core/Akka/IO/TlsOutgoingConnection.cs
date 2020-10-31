@@ -1,9 +1,9 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TcpOutgoingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="TlsOutgoingConnection.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -11,8 +11,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
-using Akka.IO.Buffers;
 using Akka.Util;
 
 namespace Akka.IO
@@ -20,29 +20,26 @@ namespace Akka.IO
     /// <summary>
     /// TBD
     /// </summary>
-    internal sealed class TcpOutgoingConnection : TcpConnection
+    internal sealed class TlsOutgoingConnection : TlsConnection
     {
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
 
-        private SocketAsyncEventArgs _connectArgs;
+        private SendReceiveArgsFake _connectArgs;
 
-        public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
+        public TlsOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
-                   tcp,
-                   tcp.Settings.OutgoingSocketForceIpv4
-                       ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
-                       : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
-                   connect.PullMode,
-                   tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
+                tcp,
+                tcp.Settings.OutgoingSocketForceIpv4
+                    ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { Blocking = false }
+                    : new Socket(SocketType.Stream, ProtocolType.Tcp) { Blocking = false },
+                ((Inet.SO.TlsConnectionOption)connect.Options.FirstOrDefault(r=>r is Inet.SO.TlsConnectionOption)),
+                connect.PullMode,
+                tcp.Settings.WriteCommandsQueueMaxSize >= 0 ? tcp.Settings.WriteCommandsQueueMaxSize : Option<int>.None)
         {
             _commander = commander;
             _connect = connect;
-            var poolOption =
-                connect.Options.OfType<Inet.SO.ByteBufferPoolSize>().FirstOrDefault();
-            BufferPool = poolOption != null
-                ? new DisabledBufferPool(poolOption.ByteBufferPoolSizeBytes)
-                : Tcp.BufferPool; 
+
             SignDeathPact(commander);
 
             foreach (var option in connect.Options)
@@ -56,7 +53,6 @@ namespace Akka.IO
             if (connect.Timeout.HasValue)
                 Context.SetReceiveTimeout(connect.Timeout.Value);  //Initiate connection timeout if supplied
         }
-        protected override IBufferPool BufferPool { get; }
 
         private void ReleaseConnectionSocketArgs()
         {
@@ -150,6 +146,10 @@ namespace Akka.IO
             };
         }
 
+        protected override void Authenticate()
+        {
+            SslStream.AuthenticateAsServer(this.Certificate);
+        }
 
         private void Register(IPEndPoint address, IPEndPoint fallbackAddress)
         {
@@ -160,14 +160,19 @@ namespace Akka.IO
                 _connectArgs = CreateSocketEventArgs(Self);
                 _connectArgs.RemoteEndPoint = address;
                 // we don't setup buffer here, it shouldn't be necessary just for connection
-                if (!Socket.ConnectAsync(_connectArgs))
-                    Self.Tell(IO.Tcp.SocketConnected.Instance);
+
+                Socket.ConnectAsync(address).PipeTo(Self, Self,
+                    () => IO.Tcp.SocketConnected.Instance,(e)=>
+                    {
+                        ReportConnectFailure(() => { throw e; });
+                        return NotUsed.Instance;
+                    });
 
                 Become(Connecting(Tcp.Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
             });
         }
 
-        private Receive Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args, IPEndPoint fallbackAddress)
+        private Receive Connecting(int remainingFinishConnectRetries, SendReceiveArgsFake args, IPEndPoint fallbackAddress)
         {
             return message =>
             {
@@ -190,8 +195,14 @@ namespace Akka.IO
                         args.RemoteEndPoint = fallbackAddress;
                         Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
                         {
-                            if (!Socket.ConnectAsync(args))
-                                self.Tell(IO.Tcp.SocketConnected.Instance);
+                            Socket.ConnectAsync(args.RemoteEndPoint)
+                                .PipeTo(self, self,
+                                    () => IO.Tcp.SocketConnected.Instance,
+                                    (e)=>
+                                    {
+                                        ReportConnectFailure(() => { throw e; });
+                                        return NotUsed.Instance;
+                                    });
                         });
                         Context.Become(Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
                     }
@@ -200,8 +211,14 @@ namespace Akka.IO
                         var self = Self;
                         Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
                         {
-                            if (!Socket.ConnectAsync(args))
-                                self.Tell(IO.Tcp.SocketConnected.Instance);
+                            Socket.ConnectAsync(args.RemoteEndPoint)
+                                .PipeTo(self, self,
+                                    () => IO.Tcp.SocketConnected.Instance,
+                                    (e)=>
+                                    {
+                                        ReportConnectFailure(() => { throw e; });
+                                        return NotUsed.Instance;
+                                    });
                         });
                         Context.Become(Connecting(remainingFinishConnectRetries - 1, args, null));
                     }

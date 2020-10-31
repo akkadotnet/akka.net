@@ -463,7 +463,8 @@ namespace Akka.Remote.Tests.Transport
                 var attempt = (WriteAttempt)associationRegistry.LogSnapshot().Last();
                 if (attempt.Sender.Equals(_localAddress) && attempt.Recipient.Equals(_remoteAddress))
                 {
-                    codec.DecodePdu(attempt.Payload)
+                    var pl = attempt.Payload.ToByteArray();
+                    codec.DecodePdu(new ArraySegment<byte>(pl,0,pl.Length))
                         .Match()
                         .With<Heartbeat>(h => rValue = true)
                         .Default(msg => rValue = false);
@@ -482,7 +483,8 @@ namespace Akka.Remote.Tests.Transport
                 var attempt = (WriteAttempt)associationRegistry.LogSnapshot().Last();
                 if (attempt.Sender.Equals(_localAddress) && attempt.Recipient.Equals(_remoteAddress))
                 {
-                    codec.DecodePdu(attempt.Payload)
+                    var att = attempt.Payload.ToByteArray();
+                    codec.DecodePdu(new ArraySegment<byte>(att,0,att.Length))
                         .Match()
                         .With<Associate>(h => rValue = h.Info.Origin.Equals(_localAddress) && h.Info.Uid == uid)
                         .Default(msg => rValue = false);
@@ -499,11 +501,16 @@ namespace Akka.Remote.Tests.Transport
             if (associationRegistry.LogSnapshot().Last() is WriteAttempt)
             {
                 var attempt = (WriteAttempt)associationRegistry.LogSnapshot().Last();
-                if (attempt.Sender.Equals(_localAddress) && attempt.Recipient.Equals(_remoteAddress))
-                    codec.DecodePdu(attempt.Payload)
+                if (attempt.Sender.Equals(_localAddress) &&
+                    attempt.Recipient.Equals(_remoteAddress))
+                {
+                    var pl = attempt.Payload.ToByteArray();
+                    codec.DecodePdu(new ArraySegment<byte>(pl,0,pl.Length))
                         .Match()
                         .With<Disassociate>(h => rValue = true)
                         .Default(msg => rValue = false);
+                }
+                    
             }
 
             return rValue;

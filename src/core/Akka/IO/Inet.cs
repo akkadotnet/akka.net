@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Akka.IO
 {
@@ -219,6 +220,39 @@ namespace Akka.IO
                 public override void AfterConnect(Socket s)
                 {
                     //TODO: What is the .NET equivalent
+                }
+            }
+
+            public class ByteBufferPoolSize : SocketOption
+            {
+                public int ByteBufferPoolSizeBytes { get; }
+
+                public ByteBufferPoolSize(int sizeBytes)
+                {
+                    ByteBufferPoolSizeBytes = sizeBytes;
+                }
+            }
+
+            public class TlsConnectionOption : SocketOption
+            {
+                public X509Certificate2 Certificate { get;  }
+                public bool SuppressValidation { get; }
+                public bool ClientAsServer { get; set; }
+
+                public TlsConnectionOption(X509Certificate2 cert, bool suppressValidation)
+                {
+                    Certificate = cert;
+                    SuppressValidation = suppressValidation;
+                }
+            }
+
+            public class WorkerDispatcher : SocketOption
+            {
+                public string Dispatcher { get; }
+
+                public WorkerDispatcher(string dispatcher)
+                {
+                    Dispatcher = dispatcher;
                 }
             }
         }
