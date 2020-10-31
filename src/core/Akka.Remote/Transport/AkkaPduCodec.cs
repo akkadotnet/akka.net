@@ -443,9 +443,9 @@ namespace Akka.Remote.Transport
                 {
                     //ControlPdu
                     var length =
-                       FastMessageParser.ReadRawInt64WithNewBufferPos(
+                       FastMessageParser.ReadRawInt32WithNewBufferPos(
                             new Span<byte>(raw.Array, raw.Offset+1, raw.Count-1));
-                    var readBytes = (int)length.Item1;
+                    var readBytes = length.Item1;
                     var startAt = length.Item2+raw.Offset+1;
                     {
                         var state = raw.Array[startAt + 1];
@@ -474,9 +474,9 @@ namespace Akka.Remote.Transport
                 {
                     
                     var length =
-                      FastMessageParser.ReadRawInt64WithNewBufferPos(
+                      FastMessageParser.ReadRawInt32WithNewBufferPos(
                             new Span<byte>(raw.Array, raw.Offset+1, raw.Count-1));
-                    var readBytes = (int)length.Item1;
+                    var readBytes = length.Item1;
                     var startAt = length.Item2+raw.Offset+1;
                     var result =
                         new ArraySegment<byte>(raw.Array, startAt, readBytes);
@@ -533,7 +533,7 @@ namespace Akka.Remote.Transport
                 .Concat(payload);
         }
         
-         
+        
         /// <summary>
         /// Creates a Protobuf header for a Length delimited field.
         /// </summary>
@@ -951,7 +951,13 @@ namespace Akka.Remote.Transport
             
                 //If manifest is small (thinking some of the proto 2 char things)
                 //We probably shouldn't try to cache manifest.
-                var manifest = data.manifest==null?IO.ByteString.Empty: SerCache.ManiCache.GetOrCompute(data.manifest);
+                var manifest = data.manifest == null
+                    ? IO.ByteString.Empty
+                    :
+                    data.manifest.Length > 30
+                        ?
+                        SerCache.ManiCache.GetOrCompute(data.manifest)
+                        : CreateManifest(data.manifest);
                 var ret = msg.Concat(manifest);
                 return ret;
         }

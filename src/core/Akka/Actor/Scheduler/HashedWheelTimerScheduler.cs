@@ -221,7 +221,7 @@ namespace Akka.Actor
 
                     }
 
-                    Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
+                    Thread.Sleep((int)sleepMs);
                 }
             }
         }

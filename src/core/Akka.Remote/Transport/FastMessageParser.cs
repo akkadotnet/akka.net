@@ -40,9 +40,9 @@ namespace Akka.Remote.Transport
             var startAt = firstOffset + 1;
             var arr = raw.Array;
             //log(raw.Count);
-            var nextPos = ReadRawInt64WithNewBufferPos(
+            var nextPos = ReadRawInt32WithNewBufferPos(
                 new Span<byte>(arr, startAt, count - 1));
-            var readBytes = (int)nextPos.Item1;
+            var readBytes = nextPos.Item1;
             startAt = nextPos.Item2 + startAt;
                     
             var nextPosition = startAt + readBytes;
@@ -59,7 +59,7 @@ namespace Akka.Remote.Transport
             var startAt = firstOffset + 1;
             var arr = raw.Array;
             //log(raw.Count);
-            var nextPos = ReadRawInt64WithNewBufferPos(
+            var nextPos = ReadRawInt32WithNewBufferPos(
                 new Span<byte>(arr, startAt, count - 1));
             var readBytes = (int)nextPos.Item1;
             startAt = nextPos.Item2 + startAt;
@@ -77,9 +77,9 @@ namespace Akka.Remote.Transport
             var startAt = 1;
             var arr = raw.Span;
             //log(raw.Count);
-            var nextPos = ReadRawInt64WithNewBufferPos(
+            var nextPos = ReadRawInt32WithNewBufferPos(
                 arr.Slice(startAt, count - 1));
-            var readBytes = (int)nextPos.Item1;
+            var readBytes = nextPos.Item1;
             startAt = nextPos.Item2 + startAt;
                     
             var nextPosition = startAt + readBytes;
@@ -87,6 +87,39 @@ namespace Akka.Remote.Transport
                 raw.Slice( startAt, readBytes),
                 raw.Slice( nextPosition,
                     count- nextPosition));
+        }
+        /// <summary>
+        /// Reads a Int32 (-not- SInt32) from the buffer, returning the value
+        /// as well as the number of bytes advanced.
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public static (int, int) ReadRawInt32WithNewBufferPos(ReadOnlySpan<byte> buffer)
+        {
+            //log(buffer.Length);
+            int bufferPos = 0;
+
+            int result = buffer[bufferPos++];
+            if (result < 128)
+            {
+                return (result, bufferPos);
+            }
+            result &= 0x7f;
+            int shift = 7;
+            do
+            {
+                byte b = buffer[bufferPos++];
+                result |= (b & 0x7F) << shift;
+                if (b < 0x80)
+                {
+                    return (result, bufferPos);
+                }
+                shift += 7;
+            }
+            while (shift < 64);
+
+            throw new Exception();
         }
         /// <summary>
         /// Reads a Raw Unsigned Int64 from a 128, returning both the unsigned int64,
@@ -216,11 +249,11 @@ namespace Akka.Remote.Transport
                 var array = raw.ToArray();
                 var _messageAndRest = SliceSegment(new ArraySegment<byte>(array));
                 _payloadMessageBytes = _messageAndRest.first;
-                var serIdAndBufferPos = ReadRawInt64WithNewBufferPos(
+                var serIdAndBufferPos = ReadRawInt32WithNewBufferPos(
                     new Span<byte>(_messageAndRest.second.Array,
                         _messageAndRest.second.Offset+1,
                         _messageAndRest.second.Count-1));
-                _serId = (int)serIdAndBufferPos.Item1;
+                _serId = serIdAndBufferPos.Item1;
                 var nextItem = serIdAndBufferPos.Item2;
                 var second = _messageAndRest.second;
                 if (nextItem + 1 >=
@@ -233,10 +266,11 @@ namespace Akka.Remote.Transport
                 else
                 {
                     _manifestSet = true;
-                    var nextVarInt = ReadRawInt64WithNewBufferPos(
-                        new Span<byte>(second.Array,
-                            second.Offset + nextItem + 2,
-                            second.Count - (nextItem + 2)));
+                    var nextVarInt = ReadRawInt32WithNewBufferPos(
+                        second.AsSpan(nextItem + 2));
+                        //new Span<byte>(second.Array,
+                        //    second.Offset + nextItem + 2,
+                        //    second.Count - (nextItem + 2)));
                     var nextSegment =
                         new ArraySegment<byte>(
                             second.Array,
@@ -447,10 +481,10 @@ namespace Akka.Remote.Transport
                     var nacks = new SeqNo[0];
                     if (_ackBytes.Count - 10 > 0)
                     {
-                        var nextLength = ReadRawInt64WithNewBufferPos(
+                        var nextLength = ReadRawInt32WithNewBufferPos(
                             new Span<byte>(_ackBytes.Array,
                                 _ackBytes.Offset + 10, _ackBytes.Count - 10));
-                        var numEntries = (int)nextLength.Item1;
+                        var numEntries = nextLength.Item1;
                         var unAcks = new Span<byte>(_ackBytes.Array,
                             _ackBytes.Offset + nextLength.Item2, numEntries * 8);
                         var acks= MemoryMarshal.Cast<byte, long>(unAcks);
@@ -477,7 +511,7 @@ namespace Akka.Remote.Transport
             private ArraySegment<byte> GetAndSetMsgSection(ArraySegment<byte> raw)
             {
                 _msgSet = true;
-                var nextPos = ReadRawInt64WithNewBufferPos(
+                var nextPos = ReadRawInt32WithNewBufferPos(
                     new Span<byte>(raw.Array, raw.Offset + 1, raw.Count - 1));
                 var readBytes = (int)nextPos.Item1;
                 var startAt = nextPos.Item2 + raw.Offset + 1;
@@ -495,9 +529,9 @@ namespace Akka.Remote.Transport
             private ArraySegment<byte> GetAndSetAckSection(ArraySegment<byte> raw)
             {
                 _ackSet = true;
-                var nextPos = ReadRawInt64WithNewBufferPos(
+                var nextPos = ReadRawInt32WithNewBufferPos(
                     new Span<byte>(raw.Array, raw.Offset + 1, raw.Count - 1));
-                var readBytes = (int)nextPos.Item1;
+                var readBytes = nextPos.Item1;
                 var startAt = nextPos.Item2 + raw.Offset + 1;
                 _ackBytes = new ArraySegment<byte>(raw.Array, startAt, readBytes);
                 var nextPosition = startAt + readBytes;
