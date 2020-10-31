@@ -262,7 +262,7 @@ namespace Akka.Cluster.Sharding
             {
                 var guardianName = system.Settings.Config.GetString("akka.cluster.sharding.guardian-name");
                 var dispatcher = system.Settings.Config.GetString("akka.cluster.sharding.use-dispatcher");
-                if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
+                if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.InternalDispatcherId;
                 return system.SystemActorOf(Props.Create(() => new ClusterShardingGuardian()).WithDispatcher(dispatcher), guardianName);
             });
         }

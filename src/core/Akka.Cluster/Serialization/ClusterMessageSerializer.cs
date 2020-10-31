@@ -99,13 +99,15 @@ namespace Akka.Cluster.Serialization
             var message = new Proto.Msg.Join();
             message.Node = UniqueAddressToProto(join.Node);
             message.Roles.AddRange(join.Roles);
+            message.AppVersion = join.AppVersion.Version;
             return message.ToByteArray();
         }
 
         private static InternalClusterAction.Join JoinFrom(byte[] bytes)
         {
             var join = Proto.Msg.Join.Parser.ParseFrom(bytes);
-            return new InternalClusterAction.Join(UniqueAddressFrom(join.Node), join.Roles.ToImmutableHashSet());
+            AppVersion ver = join.HasAppVersion ? AppVersion.Create(join.AppVersion) : AppVersion.Zero;
+            return new InternalClusterAction.Join(UniqueAddressFrom(join.Node), join.Roles.ToImmutableHashSet(), ver);
         }
 
         private static byte[] WelcomeMessageBuilder(InternalClusterAction.Welcome welcome)
@@ -229,8 +231,12 @@ namespace Akka.Cluster.Serialization
             var roleMapping = allRoles.ZipWithIndex();
             var allHashes = gossip.Version.Versions.Keys.Select(x => x.ToString()).ToList();
             var hashMapping = allHashes.ZipWithIndex();
+            var allAppVersions = allMembers.Select(i => i.AppVersion.Version).ToImmutableHashSet();
+            var appVersionMapping = allAppVersions.ZipWithIndex();
 
             int MapUniqueAddress(UniqueAddress address) => MapWithErrorMessage(addressMapping, address, "address");
+
+            int MapAppVersion(AppVersion appVersion) => MapWithErrorMessage(appVersionMapping, appVersion.Version, "appVersion");
 
             Proto.Msg.Member MemberToProto(Member m)
             {
@@ -239,6 +245,7 @@ namespace Akka.Cluster.Serialization
                 protoMember.UpNumber = m.UpNumber;
                 protoMember.Status = (Proto.Msg.Member.Types.MemberStatus)m.Status;
                 protoMember.RolesIndexes.AddRange(m.Roles.Select(s => MapWithErrorMessage(roleMapping, s, "role")));
+                protoMember.AppVersionIndex = MapAppVersion(m.AppVersion);
                 return protoMember;
             }
 
@@ -257,6 +264,7 @@ namespace Akka.Cluster.Serialization
             message.Members.AddRange(membersProtos);
             message.Overview = overview;
             message.Version = VectorClockToProto(gossip.Version, hashMapping);
+            message.AllAppVersions.AddRange(allAppVersions);
             return message;
         }
 
@@ -265,13 +273,16 @@ namespace Akka.Cluster.Serialization
             var addressMapping = gossip.AllAddresses.Select(UniqueAddressFrom).ToList();
             var roleMapping = gossip.AllRoles.ToList();
             var hashMapping = gossip.AllHashes.ToList();
+            var appVersionMapping = gossip.AllAppVersions.Select(i => AppVersion.Create(i)).ToList();
 
             Member MemberFromProto(Proto.Msg.Member member) =>
                 Member.Create(
                     addressMapping[member.AddressIndex],
                     member.UpNumber,
                     (MemberStatus)member.Status,
-                    member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet());
+                    member.RolesIndexes.Select(x => roleMapping[x]).ToImmutableHashSet(),
+                    appVersionMapping.Any() ? appVersionMapping[member.AppVersionIndex] : AppVersion.Zero
+                    );
 
             var members = gossip.Members.Select((Func<Proto.Msg.Member, Member>)MemberFromProto).ToImmutableSortedSet(Member.Ordering);
             var reachability = ReachabilityFromProto(gossip.Overview.ObserverReachability, addressMapping);

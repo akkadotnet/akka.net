@@ -54,7 +54,11 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, ConfigurationFactory.Default(), ActorSystemSetup.Empty)
+            : this(
+                name, 
+                ConfigurationFactory.Default(), 
+                ActorSystemSetup.Empty, 
+                Option<Props>.None)
         {
         }
 
@@ -69,7 +73,11 @@ namespace Akka.Actor.Internal
         ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').
         /// </exception>
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="config"/> is undefined.</exception>
-        public ActorSystemImpl(string name, Config config, ActorSystemSetup setup)
+        public ActorSystemImpl(
+            string name, 
+            Config config, 
+            ActorSystemSetup setup, 
+            Option<Props>? guardianProps = null)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
@@ -79,7 +87,10 @@ namespace Akka.Actor.Internal
             if(config is null)
                 throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
 
-            _name = name;            
+            _name = name;
+
+            GuardianProps = guardianProps ?? Option<Props>.None;
+
             ConfigureSettings(config, setup);
             ConfigureEventStream();
             ConfigureLoggers();
@@ -133,6 +144,8 @@ namespace Akka.Actor.Internal
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+
+        public Option<Props> GuardianProps { get; }
 
         /// <summary>
         /// Creates a new system actor that lives under the "/system" guardian.
@@ -246,7 +259,9 @@ namespace Akka.Actor.Internal
         /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
-            return _provider.Guardian.Cell.AttachChild(props, false, name);
+            if(GuardianProps.IsEmpty)
+                return _provider.Guardian.Cell.AttachChild(props, false, name);
+            throw new InvalidOperationException($"cannot create top-level actor { (string.IsNullOrEmpty(name) ? "" : $"[{name} ]")}from the outside on ActorSystem with custom user guardian");
         }
 
         /// <inheritdoc/>
@@ -396,6 +411,7 @@ namespace Akka.Actor.Internal
 
         private void ConfigureSettings(Config config, ActorSystemSetup setup)
         {
+            // TODO: on this line, in scala, the config is validated with `Dispatchers.InternalDispatcherId` path removed.
             _settings = new Settings(this, config, setup);
         }
 
@@ -448,7 +464,14 @@ namespace Akka.Actor.Internal
 
         private void ConfigureDispatchers()
         {
-            _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
+            _dispatchers = new Dispatchers(
+                this, 
+                new DefaultDispatcherPrerequisites(
+                    EventStream, 
+                    Scheduler, 
+                    Settings, 
+                    Mailboxes),
+                _log);
         }
 
         private void ConfigureActorProducerPipeline()

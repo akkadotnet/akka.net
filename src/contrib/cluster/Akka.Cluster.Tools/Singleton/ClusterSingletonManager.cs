@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Coordination;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote;
@@ -604,7 +605,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>TBD</returns>
         public static Props Props(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
-            return Actor.Props.Create(() => new ClusterSingletonManager(singletonProps, terminationMessage, settings)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ClusterSingletonManager(singletonProps, terminationMessage, settings))
+                .WithDispatcher(Dispatchers.InternalDispatcherId)
+                .WithDeploy(Deploy.Local);
         }
 
         private readonly Props _singletonProps;

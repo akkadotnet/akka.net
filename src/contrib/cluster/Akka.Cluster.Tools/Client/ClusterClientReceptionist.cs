@@ -133,7 +133,7 @@ namespace Akka.Cluster.Tools.Client
             {
                 var name = _config.GetString("name");
                 var dispatcher = _config.GetString("use-dispatcher", null);
-                if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
+                if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.InternalDispatcherId;
 
                 // important to use var mediator here to activate it outside of ClusterReceptionist constructor
                 var mediator = PubSubMediator;

@@ -75,7 +75,7 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
 
             var probe = CreateTestProbe();
             ShardedDaemonProcess.Get(Sys).Init("the-fearless", 4, id => ProcessActor.Props(id, probe.Ref));
-            EnterBarrier("actor-set-initialized");
+            EnterBarrier("sharded-daemon-process-initialized");
 
             RunOn(() =>
             {
@@ -87,7 +87,7 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
                 }).ToList();
                 startedIds.Count.Should().Be(4);
             }, _config.First);
-            EnterBarrier("actor-set-started");
+            EnterBarrier("sharded-daemon-process-started");
         }
 
         private void FormCluster(RoleName first, params RoleName[] rest)
