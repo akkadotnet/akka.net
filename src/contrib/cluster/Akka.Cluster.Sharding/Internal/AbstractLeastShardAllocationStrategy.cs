@@ -104,9 +104,10 @@ namespace Akka.Cluster.Sharding.Internal
         {
             // Avoid rebalance when rolling update is in progress
             // (This will ignore versions on members with no shard regions, because of sharding role or not yet completed joining)
-            var version = regionEntries.First().Member.AppVersion;
-            var allNodesSameVersion = regionEntries.All(r => r.Member.AppVersion == version);
-
+            var region = regionEntries.FirstOrDefault();
+            if (region == null)
+                return false; // empty list of regions, probably not a good time to rebalance...
+            var allNodesSameVersion = regionEntries.All(r => r.Member.AppVersion == region.Member.AppVersion);
             // Rebalance requires ack from regions and proxies - no need to rebalance if it cannot be completed
             // FIXME #29589, we currently only look at same dc but proxies in other dcs may delay complete as well right now
             var neededMembersReachable = !ClusterState.Members.Any(m => ClusterState.Unreachable.Contains(m));
