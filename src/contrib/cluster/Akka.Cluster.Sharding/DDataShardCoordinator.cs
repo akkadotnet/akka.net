@@ -16,7 +16,7 @@ namespace Akka.Cluster.Sharding
 {
     internal sealed class DDataShardCoordinator : ActorBase, IShardCoordinator, IWithUnboundedStash
     {
-        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities) => 
+        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities) =>
             Actor.Props.Create(() => new DDataShardCoordinator(typeName, settings, allocationStrategy, replicator, majorityMinCap, rememberEntities)).WithDeploy(Deploy.Local);
 
         public PersistentShardCoordinator.State CurrentState { get; set; }
@@ -82,6 +82,19 @@ namespace Akka.Cluster.Sharding
             GetAllShards();
 
             Context.Become(WaitingForState(_allKeys));
+        }
+
+        protected override void PreStart()
+        {
+            switch (AllocationStrategy)
+            {
+                case IStartableAllocationStrategy strategy:
+                    strategy.Start();
+                    break;
+                case IActorSystemDependentAllocationStrategy strategy:
+                    strategy.Start(Context.System);
+                    break;
+            }
         }
 
         protected override bool Receive(object message) => throw new NotImplementedException(); // should never be called
@@ -208,7 +221,7 @@ namespace Akka.Cluster.Sharding
                         var newRemainingKeys = remainingKeys.Remove(_coordinatorStateKey);
                         if (newRemainingKeys.IsEmpty)
                             UnbecomeAfterUpdate(e, afterUpdateCallback);
-                        else 
+                        else
                             Context.Become(WaitingForUpdate(e, afterUpdateCallback, newRemainingKeys));
                         return true;
 
@@ -266,7 +279,7 @@ namespace Akka.Cluster.Sharding
                         return true;
 
                     case PersistentShardCoordinator.GetShardHome getShardHome:
-                        if (!this.HandleGetShardHome(getShardHome)) 
+                        if (!this.HandleGetShardHome(getShardHome))
                             Stash.Stash();
                         return true;
 

@@ -15,11 +15,20 @@ using Xunit;
 using FluentAssertions;
 using System.Collections;
 using System;
+using Akka.Util;
+using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class LeastShardAllocationStrategySpec : TestKit.Xunit2.TestKit
     {
+        private class DummyActorRef : MinimalActorRef
+        {
+            public override IActorRefProvider Provider => throw new NotImplementedException();
+
+            public override ActorPath Path => new RootActorPath(new Address("akka", "myapp")) / "system" / "fake";
+        }
+
         internal static IImmutableDictionary<IActorRef, IImmutableList<string>> AfterRebalance(
             IShardAllocationStrategy allocationStrategy,
             IImmutableDictionary<IActorRef, IImmutableList<string>> allocations,
@@ -52,6 +61,31 @@ namespace Akka.Cluster.Sharding.Tests
             IImmutableSet<string> rebalance)
         {
             return CountShardsPerRegion(AfterRebalance(allocationStrategy, allocations, rebalance));
+        }
+
+        private class DummyActorRef2 : MinimalActorRef
+        {
+            public DummyActorRef2(ActorPath path)
+            {
+                Path = path;
+            }
+            public override IActorRefProvider Provider => throw new NotImplementedException();
+
+            public override ActorPath Path { get; }
+        }
+
+
+        internal static Member NewUpMember(string host, int port = 252525, AppVersion version = null)
+        {
+            return Member.Create(
+              new UniqueAddress(new Address("akka", "myapp", host, port), 1),
+              ImmutableHashSet<string>.Empty,
+              version ?? AppVersion.Create("1.0.0")).Copy(MemberStatus.Up);
+        }
+
+        internal static IActorRef NewFakeRegion(string idForDebug, Member member)
+        {
+            return new DummyActorRef2(new RootActorPath(member.Address) / "system" / "fake" / idForDebug);
         }
 
 
@@ -175,33 +209,58 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        private readonly IActorRef _regionA;
-        private readonly IActorRef _regionB;
-        private readonly IActorRef _regionC;
+        private readonly Member memberA;
+        private readonly Member memberB;
+        private readonly Member memberC;
+
+        private readonly IActorRef regionA;
+        private readonly IActorRef regionB;
+        private readonly IActorRef regionC;
 
         private readonly IImmutableList<string> shards = Enumerable.Range(1, 999).Select(n => n.ToString("000")).ToImmutableList();
-        private readonly IShardAllocationStrategy strategyWithoutLimits = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1000, relativeLimit: 1.0);
-
-        private class DummyActorRef : MinimalActorRef
-        {
-            public override IActorRefProvider Provider => throw new NotImplementedException();
-
-            public override ActorPath Path => new RootActorPath(new Address("akka", "myapp")) / "system" / "fake";
-        }
+        private readonly IShardAllocationStrategy strategyWithoutLimits;
 
         public LeastShardAllocationStrategySpec()
         {
-            _regionA = Sys.ActorOf(Props.Empty, "regionA");
-            _regionB = Sys.ActorOf(Props.Empty, "regionB");
-            _regionC = Sys.ActorOf(Props.Empty, "regionC");
+            memberA = NewUpMember("127.0.0.1");
+            memberB = NewUpMember("127.0.0.2");
+            memberC = NewUpMember("127.0.0.3");
+
+            regionA = NewFakeRegion("regionA", memberA);
+            regionB = NewFakeRegion("regionB", memberB);
+            regionC = NewFakeRegion("regionC", memberC);
+
+            strategyWithoutLimits = StrategyWithFakeCluster(absoluteLimit: 1000, relativeLimit: 1.0);
+        }
+
+        internal class TestLeastShardAllocationStrategy : Internal.LeastShardAllocationStrategy
+        {
+            private readonly Func<CurrentClusterState> clusterState;
+            private readonly Func<Member> selfMember;
+
+            public TestLeastShardAllocationStrategy(int absoluteLimit, double relativeLimit, Func<CurrentClusterState> clusterState, Func<Member> selfMember) :
+                base(absoluteLimit, relativeLimit)
+            {
+                this.clusterState = clusterState;
+                this.selfMember = selfMember;
+            }
+
+            protected override CurrentClusterState ClusterState => clusterState();
+            protected override Member SelfMember => selfMember();
+        }
+
+        private IShardAllocationStrategy StrategyWithFakeCluster(int absoluteLimit, double relativeLimit)
+        {
+            // we don't really "start" it as we fake the cluster access
+            return new TestLeastShardAllocationStrategy(absoluteLimit, relativeLimit, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(memberA, memberB, memberC)), () => memberA);
         }
 
         private IImmutableDictionary<IActorRef, IImmutableList<string>> CreateAllocations(int aCount, int bCount = 0, int cCount = 0)
         {
             IImmutableDictionary<IActorRef, IImmutableList<string>> allocations = ImmutableDictionaryKeepOrder<IActorRef, IImmutableList<string>>.Empty;
-            allocations = allocations.Add(_regionA, shards.Take(aCount).ToImmutableList());
-            allocations = allocations.Add(_regionB, shards.Skip(aCount).Take(bCount).ToImmutableList());
-            allocations = allocations.Add(_regionC, shards.Skip(aCount + bCount).Take(cCount).ToImmutableList());
+            allocations = allocations.Add(regionA, shards.Take(aCount).ToImmutableList());
+            allocations = allocations.Add(regionB, shards.Skip(aCount).Take(bCount).ToImmutableList());
+            allocations = allocations.Add(regionC, shards.Skip(aCount + bCount).Take(cCount).ToImmutableList());
             return allocations;
         }
 
@@ -210,7 +269,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var allocationStrategy = strategyWithoutLimits;
             var allocations = CreateAllocations(aCount: 1, bCount: 1);
-            allocationStrategy.AllocateShard(_regionA, "003", allocations).Result.Should().Be(_regionC);
+            allocationStrategy.AllocateShard(regionA, "003", allocations).Result.Should().Be(regionC);
         }
 
         [Fact]
@@ -269,7 +328,7 @@ namespace Akka.Cluster.Sharding.Tests
             var allocations = CreateAllocations(aCount: 4, bCount: 4, cCount: 2);
             var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
             result.Should().BeEquivalentTo("001");
-            AllocationCountsAfterRebalance(allocationStrategy, allocations, result).Should().Equal(3, 4, 3);
+            AllocationCountsAfterRebalance(allocationStrategy, allocations, result).OrderBy(i => i).Should().Equal(new[] { 3, 4, 3 }.OrderBy(i => i));
         }
 
         [Fact]
@@ -286,7 +345,7 @@ namespace Akka.Cluster.Sharding.Tests
             // second phase will find the diff of 2, resulting in [3, 4, 3]
             var result2 = allocationStrategy.Rebalance(allocations2, ImmutableHashSet<string>.Empty).Result;
             result2.Should().BeEquivalentTo("002");
-            AllocationCountsAfterRebalance(allocationStrategy, allocations2, result2).Should().Equal(3, 4, 3);
+            AllocationCountsAfterRebalance(allocationStrategy, allocations2, result2).OrderBy(i => i).Should().Equal(new[] { 3, 4, 3 }.OrderBy(i => i));
         }
 
         [Fact]
@@ -309,7 +368,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void LeastShardAllocationStrategy_must_respect_absolute_limit_of_number_shards()
         {
-            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 3, relativeLimit: 1.0);
+            var allocationStrategy = StrategyWithFakeCluster(absoluteLimit: 3, relativeLimit: 1.0);
             var allocations = CreateAllocations(aCount: 1, bCount: 9);
             var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
             result.Should().BeEquivalentTo("002", "003", "004");
@@ -319,7 +378,7 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void LeastShardAllocationStrategy_must_respect_relative_limit_of_number_shards()
         {
-            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 5, relativeLimit: 0.3);
+            var allocationStrategy = StrategyWithFakeCluster(absoluteLimit: 5, relativeLimit: 0.3);
             var allocations = CreateAllocations(aCount: 1, bCount: 9);
             var result = allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result;
             result.Should().BeEquivalentTo("002", "003", "004");
@@ -332,6 +391,99 @@ namespace Akka.Cluster.Sharding.Tests
             var allocationStrategy = strategyWithoutLimits;
             var allocations = CreateAllocations(aCount: 10);
             allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("002", "003")).Result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_must_prefer_least_shards_latest_version_non_downed_leaving_or_exiting_nodes()
+        {
+            // old version, up
+            var oldMember = NewUpMember("127.0.0.1", version: AppVersion.Create("1.0.0"));
+            // leaving, new version
+            var leavingMember = NewUpMember("127.0.0.2", version: AppVersion.Create("1.0.0")).Copy(MemberStatus.Leaving);
+            // new version, up
+            var newVersionMember1 = NewUpMember("127.0.0.3", version: AppVersion.Create("1.0.1"));
+            // new version, up
+            var newVersionMember2 = NewUpMember("127.0.0.4", version: AppVersion.Create("1.0.1"));
+            // new version, up
+            var newVersionMember3 = NewUpMember("127.0.0.5", version: AppVersion.Create("1.0.1"));
+
+            var fakeLocalRegion = NewFakeRegion("oldapp", oldMember);
+            var fakeRegionA = NewFakeRegion("leaving", leavingMember);
+            var fakeRegionB = NewFakeRegion("fewest", newVersionMember1);
+            var fakeRegionC = NewFakeRegion("oneshard", newVersionMember2);
+            var fakeRegionD = NewFakeRegion("most", newVersionMember3);
+
+            var shardsAndMembers = ImmutableList.Create(
+                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionB, newVersionMember1, ImmutableList<string>.Empty),
+                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionA, leavingMember, ImmutableList<string>.Empty),
+                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionD, newVersionMember3, ImmutableList.Create("ShardId2", "ShardId3")),
+                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeLocalRegion, oldMember, ImmutableList<string>.Empty),
+                new Internal.AbstractLeastShardAllocationStrategy.RegionEntry(fakeRegionC, newVersionMember2, ImmutableList.Create("ShardId1"))
+                );
+
+            var sortedRegions =
+                shardsAndMembers.Sort(Internal.AbstractLeastShardAllocationStrategy.ShardSuitabilityOrdering.Instance).Select(i => i.Region);
+
+            // only node b has the new version
+            sortedRegions.Should().Equal(
+                fakeRegionB, // fewest shards, newest version, up
+                fakeRegionC, // newest version, up
+                fakeRegionD, // most shards, up
+                fakeLocalRegion, // old app version
+                fakeRegionA); // leaving
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_must_not_rebalance_when_rolling_update_in_progress()
+        {
+            var member1 = NewUpMember("127.0.0.1", version: AppVersion.Create("1.0.0"));
+            var member2 = NewUpMember("127.0.0.1", version: AppVersion.Create("1.0.1"));
+
+            // multiple versions to simulate rolling update in progress
+            var allocationStrategy =
+                new TestLeastShardAllocationStrategy(absoluteLimit: 1000, relativeLimit: 1.0, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(member1, member2)), () => member1);
+
+            var allocations = CreateAllocations(aCount: 5, bCount: 5);
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002")).Result.Should().BeEmpty();
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052")).Result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_must_not_rebalance_when_regions_are_unreachable()
+        {
+            var member1 = NewUpMember("127.0.0.1");
+            var member2 = NewUpMember("127.0.0.2");
+
+            // multiple versions to simulate rolling update in progress
+            var allocationStrategy =
+                new TestLeastShardAllocationStrategy(absoluteLimit: 1000, relativeLimit: 1.0, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(member1, member2), unreachable: ImmutableHashSet.Create(member2)), () => member2);
+
+
+            var allocations = CreateAllocations(aCount: 5, bCount: 5);
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002")).Result.Should().BeEmpty();
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052")).Result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void LeastShardAllocationStrategy_must_not_rebalance_when_members_are_joining_dc()
+        {
+            var member1 = NewUpMember("127.0.0.1");
+            var member2 =
+                Member.Create(
+                    new UniqueAddress(new Address("akka", "myapp", "127.0.0.2", 252525), 1),
+                    ImmutableHashSet<string>.Empty,
+                    member1.AppVersion);
+
+            // multiple versions to simulate rolling update in progress
+            var allocationStrategy =
+                new TestLeastShardAllocationStrategy(absoluteLimit: 1000, relativeLimit: 1.0, () => new CurrentClusterState().Copy(members: ImmutableSortedSet.Create(member1, member2), unreachable: ImmutableHashSet.Create(member2)), () => member2);
+
+            var allocations = CreateAllocations(aCount: 5, bCount: 5);
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet<string>.Empty).Result.Should().BeEmpty();
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002")).Result.Should().BeEmpty();
+            allocationStrategy.Rebalance(allocations, ImmutableHashSet.Create("001", "002", "051", "052")).Result.Should().BeEmpty();
         }
     }
 }

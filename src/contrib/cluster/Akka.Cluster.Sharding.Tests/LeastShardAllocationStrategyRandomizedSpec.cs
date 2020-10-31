@@ -16,22 +16,26 @@ using FluentAssertions;
 using System.Collections;
 using System;
 using FluentAssertions.Execution;
+using static Akka.Cluster.ClusterEvent;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class LeastShardAllocationStrategyRandomizedSpec : TestKit.Xunit2.TestKit
     {
-        private readonly IShardAllocationStrategy strategyWithoutLimits = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 100000, relativeLimit: 1.0);
+        private readonly IShardAllocationStrategy strategyWithoutLimits;
         private int rndSeed;
         private Random rnd;
         private int iteration = 1;
         private int iterationsPerTest = 10;
+
+        private ImmutableSortedSet<Member> clusterMembers = ImmutableSortedSet<Member>.Empty;
 
         public LeastShardAllocationStrategyRandomizedSpec()
         {
             rndSeed = DateTime.UtcNow.Millisecond;
             rnd = new Random(rndSeed);
             Log.Info($"Random seed: {rndSeed}");
+            strategyWithoutLimits = StrategyWithFakeCluster();
         }
 
         private IImmutableDictionary<IActorRef, IImmutableList<string>> CreateAllocations(IImmutableDictionary<IActorRef, int> countPerRegion)
@@ -39,6 +43,11 @@ namespace Akka.Cluster.Sharding.Tests
             return countPerRegion.ToImmutableDictionary(i => i.Key, i => (IImmutableList<string>)Enumerable.Range(1, i.Value).Select(n => n.ToString("000")).Select(n => $"{i.Key.Path.Name}-{n}").ToImmutableList());
         }
 
+        private IShardAllocationStrategy StrategyWithFakeCluster(int absoluteLimit = 100000, double relativeLimit = 1.0)
+        {
+            // we don't really "start" it as we fake the cluster access
+            return new LeastShardAllocationStrategySpec.TestLeastShardAllocationStrategy(absoluteLimit, relativeLimit, () => new CurrentClusterState().Copy(members: clusterMembers), () => clusterMembers.FirstOrDefault());
+        }
 
         private void TestRebalance(
             IShardAllocationStrategy allocationStrategy,
@@ -50,7 +59,12 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 iteration += 1;
                 var numberOfRegions = rnd.Next(maxRegions) + 1;
-                var regions = Enumerable.Range(1, numberOfRegions).Select(n => Sys.ActorOf(Props.Empty, $"{iteration}-R{n}")).ToImmutableList();
+
+                var memberArray = Enumerable.Range(1, numberOfRegions).Select(n => LeastShardAllocationStrategySpec.NewUpMember("127.0.0.1", port: n)).ToArray();
+                clusterMembers = ImmutableSortedSet.Create(memberArray);//.toIndexedSeq: _ *);
+                var regions = Enumerable.Range(1, numberOfRegions).Select(n => LeastShardAllocationStrategySpec.NewFakeRegion($"{iteration}-R{n}", memberArray[n - 1]));
+
+                //var regions = Enumerable.Range(1, numberOfRegions).Select(n => Sys.ActorOf(Props.Empty, $"{iteration}-R{n}")).ToImmutableList();
                 var countPerRegion = regions.ToImmutableDictionary(region => region, region => rnd.Next(maxShardsPerRegion));
                 var allocations = CreateAllocations(countPerRegion);
                 TestRebalance(allocationStrategy, allocations, ImmutableList.Create(allocations), expectedMaxSteps);
@@ -58,7 +72,6 @@ namespace Akka.Cluster.Sharding.Tests
                     Sys.Stop(region);
             }
         }
-
 
         private void TestRebalance(
               IShardAllocationStrategy allocationStrategy,
@@ -141,7 +154,7 @@ namespace Akka.Cluster.Sharding.Tests
             var absoluteLimit = 3 + rnd.Next(7) + 3;
             var relativeLimit = 0.05 + (rnd.NextDouble() * 0.95);
 
-            var strategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit, relativeLimit);
+            var strategy = StrategyWithFakeCluster(absoluteLimit, relativeLimit);
             TestRebalance(strategy, maxRegions: 20, maxShardsPerRegion: 20, expectedMaxSteps: 20);
         }
     }

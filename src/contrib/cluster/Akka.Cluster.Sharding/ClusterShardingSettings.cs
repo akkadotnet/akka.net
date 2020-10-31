@@ -169,6 +169,9 @@ namespace Akka.Cluster.Sharding
     [Serializable]
     public sealed class ClusterShardingSettings : INoSerializationVerificationNeeded
     {
+        public const string StateStoreModePersistence = "Persistence";
+        public const string StateStoreModeDData = "DData";
+
         /// <summary>
         /// Specifies that this entity type requires cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.

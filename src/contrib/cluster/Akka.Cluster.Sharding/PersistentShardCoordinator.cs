@@ -1310,6 +1310,19 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public override String PersistenceId { get; }
 
+        protected override void PreStart()
+        {
+            switch (AllocationStrategy)
+            {
+                case IStartableAllocationStrategy strategy:
+                    strategy.Start();
+                    break;
+                case IActorSystemDependentAllocationStrategy strategy:
+                    strategy.Start(Context.System);
+                    break;
+            }
+        }
+
         protected override void PostStop()
         {
             base.PostStop();

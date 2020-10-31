@@ -33,7 +33,7 @@ namespace Akka.Cluster.Sharding.Internal
     /// It will not rebalance when there is already an ongoing rebalance in progress.
     /// </summary>
     [Serializable]
-    internal sealed class LeastShardAllocationStrategy : IShardAllocationStrategy
+    internal class LeastShardAllocationStrategy : AbstractLeastShardAllocationStrategy
     {
         private static readonly Task<IImmutableSet<ShardId>> emptyRebalanceResult = Task.FromResult<IImmutableSet<ShardId>>(ImmutableHashSet<ShardId>.Empty);
 
@@ -54,23 +54,10 @@ namespace Akka.Cluster.Sharding.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="requester">TBD</param>
-        /// <param name="shardId">TBD</param>
-        /// <param name="currentShardAllocations">TBD</param>
-        /// <returns>TBD</returns>
-        public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations)
-        {
-            var min = currentShardAllocations.OrderBy(i => i.Value.Count).FirstOrDefault();
-            return Task.FromResult(min.Key);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="currentShardAllocations">TBD</param>
         /// <param name="rebalanceInProgress">TBD</param>
         /// <returns>TBD</returns>
-        public Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
+        public override Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
         {
             int Limit(int numberOfShards)
             {
@@ -80,18 +67,19 @@ namespace Akka.Cluster.Sharding.Internal
             IImmutableSet<ShardId> RebalancePhase1(
                 int numberOfShards,
                 int optimalPerRegion,
-                ImmutableList<IImmutableList<ShardId>> sortedAllocations
+                IImmutableList<RegionEntry> sortedEntries
                 )
             {
                 var selected = ImmutableList.CreateBuilder<ShardId>();
 
-                foreach (var shards in sortedAllocations)
+                foreach (var entry in sortedEntries)
                 {
-                    if (shards.Count > optimalPerRegion)
+                    if (entry.ShardIds.Count > optimalPerRegion)
                     {
-                        selected.AddRange(shards.Take(shards.Count - optimalPerRegion));
+                        selected.AddRange(entry.ShardIds.Take(entry.ShardIds.Count - optimalPerRegion));
                     }
                 }
+
                 var result = selected.ToImmutable();
                 return result.Take(Limit(numberOfShards)).ToImmutableHashSet();
             }
@@ -99,13 +87,13 @@ namespace Akka.Cluster.Sharding.Internal
             Task<IImmutableSet<ShardId>> RebalancePhase2(
                 int numberOfShards,
                 int optimalPerRegion,
-                ImmutableList<IImmutableList<ShardId>> sortedAllocations)
+                IImmutableList<RegionEntry> sortedEntries)
             {
                 // In the first phase the optimalPerRegion is rounded up, and depending on number of shards per region and number
                 // of regions that might not be the exact optimal.
                 // In second phase we look for diff of >= 2 below optimalPerRegion and rebalance that number of shards.
-                var countBelowOptimal =
-                  sortedAllocations.Select(shards => Math.Max(0, (optimalPerRegion - 1) - shards.Count)).Sum();
+                var countBelowOptimal = sortedEntries.Select(entry => Math.Max(0, (optimalPerRegion - 1) - entry.ShardIds.Count)).Sum();
+
                 if (countBelowOptimal == 0)
                 {
                     return emptyRebalanceResult;
@@ -113,13 +101,14 @@ namespace Akka.Cluster.Sharding.Internal
                 else
                 {
                     var selected = ImmutableList.CreateBuilder<ShardId>();
-                    foreach (var shards in sortedAllocations)
+                    foreach (var entry in sortedEntries)
                     {
-                        if (shards.Count >= optimalPerRegion)
+                        if (entry.ShardIds.Count >= optimalPerRegion)
                         {
-                            selected.Add(shards.First());
+                            selected.Add(entry.ShardIds.First());
                         }
                     }
+
                     var result = selected.ToImmutable().Take(Math.Min(countBelowOptimal, Limit(numberOfShards))).ToImmutableHashSet();
                     return Task.FromResult<IImmutableSet<ShardId>>(result);
                 }
@@ -132,26 +121,33 @@ namespace Akka.Cluster.Sharding.Internal
             }
             else
             {
-                var numberOfShards = currentShardAllocations.Values.Sum(i => i.Count);
-                var numberOfRegions = currentShardAllocations.Count;
-                if (numberOfRegions == 0 || numberOfShards == 0)
+                var sortedRegionEntries = RegionEntriesFor(currentShardAllocations).OrderBy(i => i, ShardSuitabilityOrdering.Instance).ToImmutableList();
+                if (!IsAGoodTimeToRebalance(sortedRegionEntries))
                 {
                     return emptyRebalanceResult;
                 }
                 else
                 {
-                    var sortedAllocations = currentShardAllocations.Values.OrderBy(i => i.Count).ToImmutableList();//.toVector.sortBy(_.size);
-                    var optimalPerRegion = numberOfShards / numberOfRegions + ((numberOfShards % numberOfRegions == 0) ? 0 : 1);
-
-                    var result1 = RebalancePhase1(numberOfShards, optimalPerRegion, sortedAllocations);
-
-                    if (result1.Count > 0)
+                    var numberOfShards = sortedRegionEntries.Select(i => i.ShardIds.Count).Sum();
+                    var numberOfRegions = sortedRegionEntries.Count;
+                    if (numberOfRegions == 0 || numberOfShards == 0)
                     {
-                        return Task.FromResult<IImmutableSet<ShardId>>(result1);
+                        return emptyRebalanceResult;
                     }
                     else
                     {
-                        return RebalancePhase2(numberOfShards, optimalPerRegion, sortedAllocations);
+                        var optimalPerRegion = numberOfShards / numberOfRegions + ((numberOfShards % numberOfRegions == 0) ? 0 : 1);
+
+                        var result1 = RebalancePhase1(numberOfShards, optimalPerRegion, sortedRegionEntries);
+
+                        if (result1.Count > 0)
+                        {
+                            return Task.FromResult<IImmutableSet<ShardId>>(result1);
+                        }
+                        else
+                        {
+                            return RebalancePhase2(numberOfShards, optimalPerRegion, sortedRegionEntries);
+                        }
                     }
                 }
             }
