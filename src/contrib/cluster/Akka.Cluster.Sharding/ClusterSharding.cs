@@ -1256,19 +1256,29 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal class RebalanceWorker : ActorBase, IWithTimers
     {
+        public class ShardRegionTerminated
+        {
+            public ShardRegionTerminated(IActorRef region)
+            {
+                Region = region;
+            }
+
+            public IActorRef Region { get; }
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
+        /// <param name="shardRegionFrom">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions) =>
-            Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
+        public static Props Props(string shard, IActorRef shardRegionFrom, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions) =>
+            Actor.Props.Create(() => new RebalanceWorker(shard, shardRegionFrom, handOffTimeout, regions));
 
         private readonly ShardId _shard;
-        private readonly IActorRef _from;
+        private readonly IActorRef _shardRegionFrom;
         private readonly ISet<IActorRef> _remaining;
         private ILoggingAdapter _log;
 
@@ -1280,22 +1290,21 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
+        /// <param name="shardRegionFrom">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        public RebalanceWorker(string shard, IActorRef shardRegionFrom, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
         {
             _shard = shard;
-            _from = @from;
+            _shardRegionFrom = shardRegionFrom;
 
             _remaining = new HashSet<IActorRef>(regions);
             foreach (var region in _remaining)
             {
-                Context.Watch(region);
                 region.Tell(new PersistentShardCoordinator.BeginHandOff(shard));
             }
 
-            Log.Debug("Rebalance [{0}] from region [{1}]", shard, regions);
+            Log.Debug("Rebalance of shard [{0}] from [{1}] regions", shard, regions.Count());
 
             Timers.StartSingleTimer("hand-off-timeout", ReceiveTimeout.Instance, handOffTimeout);
         }
@@ -1313,12 +1322,12 @@ namespace Akka.Cluster.Sharding
                     Log.Debug("BeginHandOffAck for shard [{0}] received from [{1}].", _shard, Sender);
                     Acked(Sender);
                     return true;
-                case Terminated t:
-                    Log.Debug("ShardRegion [{0}] terminated while waiting for BeginHandOffAck for shard [{1}].", t.ActorRef, _shard);
-                    Acked(t.ActorRef);
+                case ShardRegionTerminated t:
+                    Log.Debug("ShardRegion [{0}] terminated while waiting for BeginHandOffAck for shard [{1}].", t.Region, _shard);
+                    Acked(t.Region);
                     return true;
                 case ReceiveTimeout _:
-                    Log.Debug("Rebalance of [{0}] from [{1}] timed out", _shard, _from);
+                    Log.Debug("Rebalance of [{0}] from [{1}] timed out", _shard, _shardRegionFrom);
                     Done(false);
                     return true;
             }
@@ -1327,13 +1336,16 @@ namespace Akka.Cluster.Sharding
 
         private void Acked(IActorRef shardRegion)
         {
-            Context.Unwatch(shardRegion);
             _remaining.Remove(Sender);
             if (_remaining.Count == 0)
             {
                 Log.Debug("All shard regions acked, handing off shard [{0}].", _shard);
-                _from.Tell(new PersistentShardCoordinator.HandOff(_shard));
+                _shardRegionFrom.Tell(new PersistentShardCoordinator.HandOff(_shard));
                 Context.Become(StoppingShard);
+            }
+            else
+            {
+                Log.Debug("Remaining shard regions: {0}", _remaining.Count);
             }
         }
 
@@ -1346,6 +1358,10 @@ namespace Akka.Cluster.Sharding
                     return true;
                 case ReceiveTimeout _:
                     Done(false);
+                    return true;
+                case ShardRegionTerminated t:
+                    Log.Debug("ShardRegion [{0}] terminated while waiting for ShardStopped for shard [{1}].", t.Region, _shard);
+                    Done(true);
                     return true;
             }
             return false;

@@ -29,6 +29,8 @@ namespace Akka.Cluster.Sharding
         ILoggingAdapter Log { get; }
         ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; }
         ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; }
+        ImmutableHashSet<IActorRef> RebalanceWorkers { get; set; }
+
         // regions that have requested handoff, for graceful shutdown
         ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; }
         ImmutableHashSet<IActorRef> AliveRegions { get; set; }
@@ -229,6 +231,7 @@ namespace Akka.Cluster.Sharding
 
         private static void HandleRebalanceDone<TCoordinator>(this TCoordinator coordinator, string shard, bool ok) where TCoordinator : IShardCoordinator
         {
+            coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Remove(coordinator.Sender);
             if (ok)
                 coordinator.Log.Debug("Rebalance shard [{0}] completed successfully", shard);
             else
@@ -282,7 +285,8 @@ namespace Akka.Cluster.Sharding
 
         private static void HandleRebalanceTick<TCoordinator>(this TCoordinator coordinator) where TCoordinator : IShardCoordinator
         {
-            if (coordinator.CurrentState.Regions.Count != 0)
+            // don't rebalance with un-acked shards, will cause unnecessary rebalance
+            if (coordinator.CurrentState.Regions.Count != 0 && coordinator.UnAckedHostShards.IsEmpty)
             {
                 var shardsTask = coordinator.AllocationStrategy.Rebalance(coordinator.CurrentState.Regions, coordinator.RebalanceInProgress.Keys.ToImmutableHashSet());
                 if (shardsTask.IsCompleted && !shardsTask.IsFaulted)
@@ -353,6 +357,9 @@ namespace Akka.Cluster.Sharding
 
         private static void RegionTerminated<TCoordinator>(this TCoordinator coordinator, IActorRef terminatedRef) where TCoordinator : IShardCoordinator
         {
+            foreach (var rebalanceWorker in coordinator.RebalanceWorkers)
+                rebalanceWorker.Tell(new RebalanceWorker.ShardRegionTerminated(terminatedRef));
+
             if (coordinator.CurrentState.Regions.TryGetValue(terminatedRef, out var shards))
             {
                 coordinator.Log.Debug("ShardRegion terminated: [{0}]", terminatedRef);
@@ -481,8 +488,9 @@ namespace Akka.Cluster.Sharding
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
 
                         var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.Context.ActorOf(RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TuningParameters.HandOffTimeout, regions)
-                            .WithDispatcher(coordinator.Context.Props.Dispatcher));
+                        coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Add(coordinator.Context.ActorOf(
+                            RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TuningParameters.HandOffTimeout, regions)
+                            .WithDispatcher(coordinator.Context.Props.Dispatcher)));
                     }
                     else
                         coordinator.Log.Debug("Rebalance of non-existing shard [{0}] is ignored", shard);
