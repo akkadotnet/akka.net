@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -26,7 +27,7 @@ namespace Akka.Cluster.Sharding
     /// It delegates messages targeted to other shards to the responsible
     /// <see cref="ShardRegion"/> actor on other nodes.
     /// </summary>
-    public class ShardRegion : ActorBase
+    public class ShardRegion : ActorBase, IWithTimers
     {
         #region messages
 
@@ -41,6 +42,15 @@ namespace Akka.Cluster.Sharding
             /// </summary>
             public static readonly Retry Instance = new Retry();
             private Retry() { }
+        }
+
+        internal sealed class RegisterRetry : IShardRegionCommand
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static readonly RegisterRetry Instance = new RegisterRetry();
+            private RegisterRetry() { }
         }
 
         /// <summary>
@@ -345,9 +355,11 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         protected IImmutableSet<IActorRef> HandingOff = ImmutableHashSet<IActorRef>.Empty;
 
-        private readonly ICancelable _retryTask;
         private IActorRef _coordinator;
         private int _retryCount;
+        private TimeSpan _retryInterval;
+        private TimeSpan _initRegistrationDelay;
+        private TimeSpan _nextRegistrationDelay;
         private bool _loggedFullBufferWarning;
         private const int RetryCountThreshold = 5;
 
@@ -378,8 +390,11 @@ namespace Akka.Cluster.Sharding
             _replicator = replicator;
             _majorityMinCap = majorityMinCap;
 
-            _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RetryInterval, Settings.TuningParameters.RetryInterval, Self, Retry.Instance, Self);
             SetupCoordinatedShutdown();
+
+            _retryInterval = Settings.TuningParameters.RetryInterval;
+            _initRegistrationDelay = TimeSpan.FromMilliseconds(100).Max(new TimeSpan(_retryInterval.Ticks / 2 / 2 / 2));
+            _nextRegistrationDelay = _initRegistrationDelay;
         }
 
         private void SetupCoordinatedShutdown()
@@ -404,6 +419,9 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+
+        public ITimerScheduler Timers { get; set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -451,7 +469,6 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-
         /// <inheritdoc cref="ActorBase.PreStart"/>
         /// <summary>
         /// Subscribe to MemberEvent, re-subscribe when restart
@@ -459,6 +476,8 @@ namespace Akka.Cluster.Sharding
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
+            Timers.StartPeriodicTimer(Retry.Instance, Retry.Instance, Settings.TuningParameters.RetryInterval);
+            StartRegistration();
             LogPassivateIdleEntities();
         }
 
@@ -468,7 +487,6 @@ namespace Akka.Cluster.Sharding
             base.PostStop();
             Cluster.Unsubscribe(Self);
             _gracefulShutdownProgress.TrySetResult(Done.Instance);
-            _retryTask.Cancel();
         }
 
         private void LogPassivateIdleEntities()
@@ -506,7 +524,7 @@ namespace Akka.Cluster.Sharding
                         after?.Address.ToString() ?? string.Empty);
 
                 _coordinator = null;
-                Register();
+                StartRegistration();
             }
         }
 
@@ -557,6 +575,29 @@ namespace Akka.Cluster.Sharding
             Log.Debug("{0}: Shard was initialized [{1}]", TypeName, id);
             StartingShards = StartingShards.Remove(id);
             DeliverBufferedMessage(id, shardRef);
+        }
+
+        void StartRegistration()
+        {
+            _nextRegistrationDelay = _initRegistrationDelay;
+
+            Register();
+            ScheduleNextRegistration();
+        }
+
+        void ScheduleNextRegistration()
+        {
+            if (_nextRegistrationDelay < _retryInterval)
+            {
+                Timers.StartSingleTimer(RegisterRetry.Instance, RegisterRetry.Instance, _nextRegistrationDelay);
+                // exponentially increasing retry interval until reaching the normal retryInterval
+                _nextRegistrationDelay += _nextRegistrationDelay;
+            }
+        }
+
+        void FinishRegistration()
+        {
+            Timers.Cancel(RegisterRetry.Instance);
         }
 
         private void Register()
@@ -732,6 +773,14 @@ namespace Akka.Cluster.Sharding
 
                     break;
 
+                case RegisterRetry _:
+                    if (_coordinator == null)
+                    {
+                        Register();
+                        ScheduleNextRegistration();
+                    }
+                    break;
+
                 case GracefulShutdown _:
                     Log.Debug("{0}: Starting graceful shutdown of region and all its shards", TypeName);
                     GracefulShutdownInProgress = true;
@@ -882,6 +931,7 @@ namespace Akka.Cluster.Sharding
                 case PersistentShardCoordinator.RegisterAck ra:
                     _coordinator = ra.Coordinator;
                     Context.Watch(_coordinator);
+                    FinishRegistration();
                     RequestShardBufferHomes();
                     break;
                 case PersistentShardCoordinator.BeginHandOff bho:
@@ -1066,7 +1116,10 @@ namespace Akka.Cluster.Sharding
         private void HandleTerminated(Terminated terminated)
         {
             if (_coordinator != null && _coordinator.Equals(terminated.ActorRef))
+            {
                 _coordinator = null;
+                StartRegistration();
+            }
             else if (Regions.TryGetValue(terminated.ActorRef, out var shards))
             {
                 RegionByShard = RegionByShard.RemoveRange(shards);
