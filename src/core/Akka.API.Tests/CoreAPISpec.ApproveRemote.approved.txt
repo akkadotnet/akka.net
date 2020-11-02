@@ -186,6 +186,7 @@ namespace Akka.Remote
         public Akka.Actor.Address DefaultAddress { get; }
         public Akka.Actor.Deployer Deployer { get; set; }
         public Akka.Actor.LocalActorRef Guardian { get; }
+        public Akka.Actor.IActorRef IgnoreRef { get; }
         public Akka.Actor.IInternalActorRef RemoteDaemon { get; }
         public Akka.Remote.RemoteSettings RemoteSettings { get; }
         public Akka.Actor.IActorRef RemoteWatcher { get; }

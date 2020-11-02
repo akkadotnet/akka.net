@@ -97,15 +97,15 @@ namespace Akka.Actor
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup
     {
-        internal BootstrapSetup() 
+        internal BootstrapSetup()
             : this(
-                Option<Config>.None, 
+                Option<Config>.None,
                 Option<ProviderSelection>.None)
         {
         }
 
         internal BootstrapSetup(
-            Option<Config> config, 
+            Option<Config> config,
             Option<ProviderSelection> actorRefProvider)
         {
             Config = config;
@@ -185,6 +185,8 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The dead letters.</value>
         public abstract IActorRef DeadLetters { get; }
+
+        public abstract IActorRef IgnoreRef { get; }
 
         /// <summary>Gets the dispatchers.</summary>
         /// <value>The dispatchers.</value>
@@ -339,7 +341,7 @@ namespace Akka.Actor
         /// <para>
         /// If `akka.coordinated-shutdown.run-by-actor-system-terminate` is configured to `off`
         /// it will not run `CoordinatedShutdown`, but the `ActorSystem` and its actors
-        /// will still be terminated.        
+        /// will still be terminated.
         /// </para>
         /// <para>
         /// Terminates this actor system. This will stop the guardian actor, which in turn will recursively stop

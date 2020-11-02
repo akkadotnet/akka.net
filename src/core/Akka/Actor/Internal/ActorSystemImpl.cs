@@ -55,9 +55,9 @@ namespace Akka.Actor.Internal
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
             : this(
-                name, 
-                ConfigurationFactory.Default(), 
-                ActorSystemSetup.Empty, 
+                name,
+                ConfigurationFactory.Default(),
+                ActorSystemSetup.Empty,
                 Option<Props>.None)
         {
         }
@@ -74,9 +74,9 @@ namespace Akka.Actor.Internal
         /// </exception>
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="config"/> is undefined.</exception>
         public ActorSystemImpl(
-            string name, 
-            Config config, 
-            ActorSystemSetup setup, 
+            string name,
+            Config config,
+            ActorSystemSetup setup,
             Option<Props>? guardianProps = null)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
@@ -120,6 +120,9 @@ namespace Akka.Actor.Internal
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
+
+        /// <inheritdoc cref="ActorSystem"/>
+        public override IActorRef IgnoreRef { get { return Provider.IgnoreRef; } }
 
         /// <inheritdoc cref="ActorSystem"/>
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
@@ -190,7 +193,7 @@ namespace Akka.Actor.Internal
 
         /// <summary>
         /// Shuts down the <see cref="ActorSystem"/> without all of the usual guarantees,
-        /// i.e. we may not guarantee that remotely deployed actors are properly shut down 
+        /// i.e. we may not guarantee that remotely deployed actors are properly shut down
         /// when we abort.
         /// </summary>
         public override void Abort()
@@ -465,11 +468,11 @@ namespace Akka.Actor.Internal
         private void ConfigureDispatchers()
         {
             _dispatchers = new Dispatchers(
-                this, 
+                this,
                 new DefaultDispatcherPrerequisites(
-                    EventStream, 
-                    Scheduler, 
-                    Settings, 
+                    EventStream,
+                    Scheduler,
+                    Settings,
                     Mailboxes),
                 _log);
         }
@@ -533,7 +536,7 @@ namespace Akka.Actor.Internal
         internal override void FinalTerminate()
         {
             Log.Debug("System shutdown initiated");
-            if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null) 
+            if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
                 Stop(_logDeadLetterListener);
             _provider.Guardian.Stop();
         }
