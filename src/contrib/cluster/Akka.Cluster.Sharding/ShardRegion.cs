@@ -32,7 +32,8 @@ namespace Akka.Cluster.Sharding
         #region messages
 
         /// <summary>
-        /// TBD
+        /// Periodic tick to run some house-keeping.
+        /// This message is continuously sent to `self` using a timer configured with `retryInterval`.
         /// </summary>
         [Serializable]
         internal sealed class Retry : IShardRegionCommand
@@ -44,6 +45,17 @@ namespace Akka.Cluster.Sharding
             private Retry() { }
         }
 
+        /// <summary>
+        /// Similar to <see cref="Retry"/> but used only when <see cref="ShardRegion"/> is starting and when we detect that
+        /// the coordinator is moving.
+        ///
+        /// This is to ensure that a <see cref="ShardRegion"/> can register as soon as possible while the
+        /// <see cref="ShardCoordinator"/> is in the process of recovering its state.
+        ///
+        /// This message is sent to `Self` using a interval lower then <see cref="Retry"/> (higher frequency).
+        /// The interval increases exponentially until it equals <see cref="_retryInterval"/> in which case
+        /// we stop to schedule it and let <see cref="Retry"/> take over.
+        /// </summary>
         internal sealed class RegisterRetry : IShardRegionCommand
         {
             /// <summary>
@@ -759,17 +771,25 @@ namespace Akka.Cluster.Sharding
             switch (command)
             {
                 case Retry _:
-                    SendGracefulShutdownToCoordinatorIfInProgress();
-
+                    // retryCount is used to avoid flooding the logs
+                    // it's used inside register() whenever shardBuffers.nonEmpty
+                    // therefore we update it if needed on each Retry msg
+                    // the reason why it's updated here is because we don't want to increase it on each RegisterRetry, only on Retry
                     if (ShardBuffers.Count != 0) _retryCount++;
 
+                    // we depend on the coordinator each time, if empty we need to register
+                    // otherwise we can try to deliver some buffered messages
                     if (_coordinator == null) Register();
                     else
                     {
-                        RequestShardBufferHomes();
+                        // Note: we do try to deliver buffered messages even in the middle of
+                        // a graceful shutdown every message that we manage to deliver is a win
+                        TryRequestShardBufferHomes();
                     }
 
-                    TryCompleteGracefulShutdown();
+                    // eventually, also re-trigger a graceful shutdown if one is in progress
+                    SendGracefulShutdownToCoordinatorIfInProgress();
+                    TryCompleteGracefulShutdownIfInProgress();
 
                     break;
 
@@ -785,7 +805,7 @@ namespace Akka.Cluster.Sharding
                     Log.Debug("{0}: Starting graceful shutdown of region and all its shards", TypeName);
                     GracefulShutdownInProgress = true;
                     SendGracefulShutdownToCoordinatorIfInProgress();
-                    TryCompleteGracefulShutdown();
+                    TryCompleteGracefulShutdownIfInProgress();
                     break;
 
                 default:
@@ -857,7 +877,7 @@ namespace Akka.Cluster.Sharding
             return Task.WhenAll(tasks);
         }
 
-        private void TryCompleteGracefulShutdown()
+        private void TryCompleteGracefulShutdownIfInProgress()
         {
             if (GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
@@ -867,8 +887,9 @@ namespace Akka.Cluster.Sharding
         {
             if (GracefulShutdownInProgress)
             {
-                Log.Debug("Sending graceful shutdown to {0}", CoordinatorSelection);
-                CoordinatorSelection.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
+                var actorSelections = CoordinatorSelection;
+                Log.Debug("Sending graceful shutdown to {0}", actorSelections);
+                actorSelections.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
             }
         }
 
@@ -932,7 +953,7 @@ namespace Akka.Cluster.Sharding
                     _coordinator = ra.Coordinator;
                     Context.Watch(_coordinator);
                     FinishRegistration();
-                    RequestShardBufferHomes();
+                    TryRequestShardBufferHomes();
                     break;
                 case PersistentShardCoordinator.BeginHandOff bho:
                     {
@@ -991,17 +1012,34 @@ namespace Akka.Cluster.Sharding
             Regions = Regions.SetItem(regionRef, shards.Add(shard));
         }
 
-        private void RequestShardBufferHomes()
+        /// <summary>
+        /// Send GetShardHome for all shards with buffered messages
+        /// If coordinator is empty, nothing happens
+        /// </summary>
+        private void TryRequestShardBufferHomes()
         {
-            foreach (var buffer in ShardBuffers)
+            if (_coordinator != null)
             {
-                const string logMsg = "{0}: Retry request for shard [{1}] homes from coordinator at [{2}]. [{3}] buffered messages.";
-                if (_retryCount >= RetryCountThreshold)
-                    Log.Warning(logMsg, TypeName, buffer.Key, _coordinator, buffer.Value.Count);
-                else
-                    Log.Debug(logMsg, TypeName, buffer.Key, _coordinator, buffer.Value.Count);
+                foreach (var buffer in ShardBuffers)
+                {
+                    Log.Debug("{0}: Requesting shard home for [{1}] from coordinator at [{2}]. [{3}] buffered messages.",
+                        TypeName,
+                        buffer.Key,
+                        _coordinator,
+                        buffer.Value.Count);
 
-                _coordinator.Tell(new PersistentShardCoordinator.GetShardHome(buffer.Key));
+                    _coordinator.Tell(new PersistentShardCoordinator.GetShardHome(buffer.Key));
+                }
+            }
+
+            if (_retryCount >= RetryCountThreshold && _retryCount % RetryCountThreshold == 0 && Log.IsWarningEnabled)
+            {
+                Log.Warning(
+                    "{0}: Requested shard homes [{1}] from coordinator at [{2}]. [{3}] total buffered messages.",
+                    TypeName,
+                    string.Join(", ", ShardBuffers.Keys.OrderBy(i => i)),
+                    _coordinator,
+                    ShardBuffers.Values.Sum(i => i.Count));
             }
         }
 
@@ -1146,7 +1184,9 @@ namespace Akka.Cluster.Sharding
                         Context.System.Scheduler.ScheduleTellOnce(Settings.TuningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
                 }
 
-                TryCompleteGracefulShutdown();
+                // did this shard get removed because the ShardRegion is shutting down?
+                // If so, we can try to speed-up the region shutdown. We don't need to wait for the next tick.
+                TryCompleteGracefulShutdownIfInProgress();
             }
         }
     }

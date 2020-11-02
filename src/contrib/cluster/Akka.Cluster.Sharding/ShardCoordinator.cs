@@ -220,7 +220,7 @@ namespace Akka.Cluster.Sharding
                 {
                     coordinator.Log.Debug("Graceful shutdown of region [{0}] with shards [{1}]", request.ShardRegion, string.Join(", ", shards));
                     coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Add(request.ShardRegion);
-                    ContinueRebalance(coordinator, shards.ToImmutableHashSet());
+                    coordinator.ShutdownShards(request.ShardRegion, shards.ToImmutableHashSet());
                 }
                 else
                 {
@@ -232,31 +232,38 @@ namespace Akka.Cluster.Sharding
         private static void HandleRebalanceDone<TCoordinator>(this TCoordinator coordinator, string shard, bool ok) where TCoordinator : IShardCoordinator
         {
             coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Remove(coordinator.Sender);
-            if (ok)
-                coordinator.Log.Debug("Rebalance shard [{0}] completed successfully", shard);
-            else
-                coordinator.Log.Warning("Rebalance shard [{0}] didn't complete within [{1}]", shard, coordinator.Settings.TuningParameters.HandOffTimeout);
 
-            // The shard could have been removed by ShardRegionTerminated
-            if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
+            if (ok)
             {
-                if (ok)
+                coordinator.Log.Debug("Shard [{0}] deallocation completed successfully.", shard);
+
+                // The shard could have been removed by ShardRegionTerminated
+                if (coordinator.CurrentState.Shards.TryGetValue(shard, out var region))
+                {
                     coordinator.Update(new PersistentShardCoordinator.ShardHomeDeallocated(shard), e =>
                     {
+                        coordinator.Log.Debug("Shard [{0}] deallocated after", shard);
+
                         coordinator.CurrentState = coordinator.CurrentState.Updated(e);
                         coordinator.ClearRebalanceInProgress(shard);
                         AllocateShardHomesForRememberEntities(coordinator);
                         coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(shard), coordinator.IgnoreRef);
                     });
+                }
                 else
                 {
-                    // rebalance not completed, graceful shutdown will be retried
-                    coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Remove(region);
                     coordinator.ClearRebalanceInProgress(shard);
                 }
             }
             else
             {
+                coordinator.Log.Warning("Shard [{0}] deallocation didn't complete within [{1}].", shard, coordinator.Settings.TuningParameters.HandOffTimeout);
+
+                // was that due to a graceful region shutdown?
+                // if so, consider the region as still alive and let it retry to gracefully shutdown later
+                foreach (var region in coordinator.CurrentState.Shards.Values)
+                    coordinator.GracefullShutdownInProgress = coordinator.GracefullShutdownInProgress.Remove(region);
+
                 coordinator.ClearRebalanceInProgress(shard);
             }
         }
@@ -469,6 +476,33 @@ namespace Akka.Cluster.Sharding
             return true;
         }
 
+        /// <summary>
+        /// Start a RebalanceWorker to manage the shard rebalance.
+        /// Does nothing if the shard is already in the process of being rebalanced.
+        /// </summary>
+        /// <typeparam name="TCoordinator">TBD</typeparam>
+        /// <param name="coordinator">TBD</param>
+        /// <param name="shard">TBD</param>
+        /// <param name="from">TBD</param>
+        /// <param name="isRebalance">TBD</param>
+        private static void StartShardRebalanceIfNeeded<TCoordinator>(
+            this TCoordinator coordinator,
+            ShardId shard,
+            IActorRef from,
+            bool isRebalance)
+            where TCoordinator : IShardCoordinator
+        {
+            if (!coordinator.RebalanceInProgress.ContainsKey(shard))
+            {
+                coordinator.RebalanceInProgress = coordinator.RebalanceInProgress.SetItem(shard, ImmutableHashSet<IActorRef>.Empty);
+
+                var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
+                coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Add(coordinator.Context.ActorOf(
+                    RebalanceWorker.Props(shard, from, coordinator.Settings.TuningParameters.HandOffTimeout, regions, isRebalance)
+                    .WithDispatcher(coordinator.Context.Props.Dispatcher)));
+            }
+        }
+
         private static void ContinueRebalance<TCoordinator>(this TCoordinator coordinator, IImmutableSet<ShardId> shards) where TCoordinator : IShardCoordinator
         {
             if (coordinator.Log.IsInfoEnabled && (shards.Count > 0 || !coordinator.RebalanceInProgress.IsEmpty))
@@ -480,21 +514,29 @@ namespace Akka.Cluster.Sharding
 
             foreach (var shard in shards)
             {
+                // optimisation: check if not already in progress before fetching region
                 if (!coordinator.RebalanceInProgress.ContainsKey(shard))
                 {
                     if (coordinator.CurrentState.Shards.TryGetValue(shard, out var rebalanceFromRegion))
                     {
-                        coordinator.RebalanceInProgress = coordinator.RebalanceInProgress.SetItem(shard, ImmutableHashSet<IActorRef>.Empty);
                         coordinator.Log.Debug("Rebalance shard [{0}] from [{1}]", shard, rebalanceFromRegion);
-
-                        var regions = coordinator.CurrentState.Regions.Keys.Union(coordinator.CurrentState.RegionProxies);
-                        coordinator.RebalanceWorkers = coordinator.RebalanceWorkers.Add(coordinator.Context.ActorOf(
-                            RebalanceWorker.Props(shard, rebalanceFromRegion, coordinator.Settings.TuningParameters.HandOffTimeout, regions)
-                            .WithDispatcher(coordinator.Context.Props.Dispatcher)));
+                        coordinator.StartShardRebalanceIfNeeded(shard, rebalanceFromRegion, isRebalance: true);
                     }
                     else
                         coordinator.Log.Debug("Rebalance of non-existing shard [{0}] is ignored", shard);
                 }
+            }
+        }
+
+
+        private static void ShutdownShards<TCoordinator>(this TCoordinator coordinator, IActorRef shuttingDownRegion, IImmutableSet<ShardId> shards)
+            where TCoordinator : IShardCoordinator
+        {
+            if (coordinator.Log.IsInfoEnabled && shards.Count > 0)
+                coordinator.Log.Info("Starting shutting down shards [{0}] due to region shutting down.", string.Join(", ", shards));
+            foreach (var shard in shards)
+            {
+                coordinator.StartShardRebalanceIfNeeded(shard, shuttingDownRegion, isRebalance: false);
             }
         }
 
