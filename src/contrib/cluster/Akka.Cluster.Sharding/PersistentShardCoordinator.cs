@@ -1270,6 +1270,7 @@ namespace Akka.Cluster.Sharding
         IActorRef IShardCoordinator.Self => Self;
         IActorRef IShardCoordinator.Sender => Sender;
         IActorContext IShardCoordinator.Context => Context;
+        IActorRef IShardCoordinator.IgnoreRef => Context.System.IgnoreRef;
 
         /// <summary>
         /// TBD

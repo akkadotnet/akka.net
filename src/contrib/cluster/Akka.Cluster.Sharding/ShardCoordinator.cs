@@ -34,6 +34,7 @@ namespace Akka.Cluster.Sharding
         ImmutableHashSet<IActorRef> AliveRegions { get; set; }
         ImmutableHashSet<IActorRef> RegionTerminationInProgress { get; set; }
         TimeSpan RemovalMargin { get; }
+        IActorRef IgnoreRef { get; }
         void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : PersistentShardCoordinator.IDomainEvent;
         bool HasAllRegionsRegistered();
     }
@@ -91,10 +92,6 @@ namespace Akka.Cluster.Sharding
                 case RebalanceDone msg: HandleRebalanceDone(coordinator, msg.Shard, msg.Ok); return true;
                 case PersistentShardCoordinator.GracefulShutdownRequest msg: HandleGracefulShutdownRequest(coordinator, msg); return true;
                 case GetClusterShardingStats msg: HandleGetClusterShardingStats(coordinator, msg); return true;
-                case PersistentShardCoordinator.ShardHome _:
-                    // On rebalance, we send ourselves a GetShardHome message to reallocate a
-                    // shard. This receive handles the "response" from that message. i.e. Ignores it.
-                    return true;
                 case ClusterEvent.ClusterShuttingDown msg:
                     coordinator.Log.Debug("Shutting down shard coordinator");
                     // can't stop because supervisor will start it again,
@@ -125,7 +122,7 @@ namespace Akka.Cluster.Sharding
             {
                 foreach (var unallocatedShard in coordinator.CurrentState.UnallocatedShards)
                 {
-                    coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(unallocatedShard));
+                    coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(unallocatedShard), coordinator.IgnoreRef);
                 }
             }
         }
@@ -246,6 +243,7 @@ namespace Akka.Cluster.Sharding
                         coordinator.CurrentState = coordinator.CurrentState.Updated(e);
                         coordinator.ClearRebalanceInProgress(shard);
                         AllocateShardHomesForRememberEntities(coordinator);
+                        coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(shard), coordinator.IgnoreRef);
                     });
                 else
                 {
@@ -361,7 +359,7 @@ namespace Akka.Cluster.Sharding
                 coordinator.RegionTerminationInProgress = coordinator.RegionTerminationInProgress.Add(terminatedRef);
 
                 foreach (var shard in shards)
-                    coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(shard));
+                    coordinator.Self.Tell(new PersistentShardCoordinator.GetShardHome(shard), coordinator.IgnoreRef);
 
                 coordinator.Update(new PersistentShardCoordinator.ShardRegionTerminated(terminatedRef), e =>
                 {

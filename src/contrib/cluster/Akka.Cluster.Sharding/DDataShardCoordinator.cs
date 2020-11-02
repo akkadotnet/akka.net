@@ -27,6 +27,7 @@ namespace Akka.Cluster.Sharding
         IActorContext IShardCoordinator.Context => Context;
         IActorRef IShardCoordinator.Self => Self;
         IActorRef IShardCoordinator.Sender => Sender;
+        IActorRef IShardCoordinator.IgnoreRef => Context.System.IgnoreRef;
         public ILoggingAdapter Log { get; }
         public ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; } = ImmutableDictionary<string, ICancelable>.Empty;
         public ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; } = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
