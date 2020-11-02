@@ -169,7 +169,7 @@ namespace Akka.Cluster.Sharding
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public class ShardRegion : Akka.Actor.ActorBase
+    public class ShardRegion : Akka.Actor.ActorBase, Akka.Actor.IWithTimers
     {
         public readonly Akka.Cluster.Cluster Cluster;
         public readonly string CoordinatorPath;
@@ -191,6 +191,7 @@ namespace Akka.Cluster.Sharding
         public bool GracefulShutdownInProgress { get; }
         public Akka.Event.ILoggingAdapter Log { get; }
         protected object RegistrationMessage { get; }
+        public Akka.Actor.ITimerScheduler Timers { get; set; }
         public int TotalBufferSize { get; }
         protected bool MatchingRole(Akka.Cluster.Member member) { }
         protected override void PostStop() { }

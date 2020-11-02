@@ -196,26 +196,49 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// INTERNAL API. Sends stopMessage (e.g. <see cref="PoisonPill"/>) to the entities and when all of them have terminated it replies with `ShardStopped`.
         /// </summary>
-        internal class HandOffStopper : ReceiveActor
+        internal class HandOffStopper : ReceiveActor, IWithTimers
         {
+            private class StopTimeout
+            {
+                public static readonly StopTimeout Instance = new StopTimeout();
+
+                private StopTimeout()
+                {
+                }
+            }
+
+            private class StopTimeoutWarning
+            {
+                public static readonly StopTimeoutWarning Instance = new StopTimeoutWarning();
+
+                private StopTimeoutWarning()
+                {
+                }
+            }
+
+            private static readonly TimeSpan StopTimeoutWarningAfter = TimeSpan.FromSeconds(5);
+
             private ILoggingAdapter _log;
             /// <summary>
             /// TBD
             /// </summary>
             public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
+            public ITimerScheduler Timers { get; set; }
+
             /// <summary>
             /// TBD
             /// </summary>
+            /// <param name="typeName">TBD</param>
             /// <param name="shard">TBD</param>
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
             /// <param name="handoffTimeout">TBD</param>
             /// <returns>TBD</returns>
-            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
+            public static Props Props(string typeName, ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
-                return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage, handoffTimeout)).WithDeploy(Deploy.Local);
+                return Actor.Props.Create(() => new HandOffStopper(typeName, shard, replyTo, entities, stopMessage, handoffTimeout)).WithDeploy(Deploy.Local);
             }
 
             /// <summary>
@@ -223,22 +246,16 @@ namespace Akka.Cluster.Sharding
             /// them have terminated it replies with `ShardStopped`.
             /// If the entities don't terminate after `handoffTimeout` it will try stopping them forcefully.
             /// </summary>
+            /// <param name="typeName">TBD</param>
             /// <param name="shard">TBD</param>
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
             /// <param name="handoffTimeout">TBD</param>
-            public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
+            public HandOffStopper(string typeName, ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
                 var remaining = new HashSet<IActorRef>(entities);
 
-                Receive<ReceiveTimeout>(t =>
-                {
-                    Log.Warning("HandOffStopMessage[{0}] is not handled by some of the entities of the [{1}] shard after [{2}], " +
-                        "stopping the remaining [{3}] entities.", stopMessage.GetType(), shard, handoffTimeout, remaining.Count);
-                    foreach (var r in remaining)
-                        Context.Stop(r);
-                });
                 Receive<Terminated>(t =>
                 {
                     remaining.Remove(t.ActorRef);
@@ -248,8 +265,29 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
                 });
+                Receive<StopTimeoutWarning>(s =>
+                {
+                    Log.Warning(
+                        $"{typeName}: [{remaining.Count}] of the entities in shard [{{0}}] not stopped after [{{1}}]. " +
+                        "Maybe the handOffStopMessage [{2}] is not handled? {3}",
+                        shard,
+                        StopTimeoutWarningAfter,
+                        stopMessage.GetType(),
+                        (CoordinatedShutdown.Get(Context.System).ShutdownReason != null) ?
+                            "" // the region will be shutdown earlier so would be confusing to say more
+                            : $"Waiting additional [{handoffTimeout}] before stopping the remaining entities.");
+                });
+                Receive<StopTimeout>(s =>
+                {
+                    Log.Warning($"{typeName}: HandOffStopMessage[{{0}}] is not handled by some of the entities in shard [{{1}}] after [{{2}}], " +
+                        "stopping the remaining [{3}] entities.", stopMessage.GetType(), shard, handoffTimeout, remaining.Count);
 
-                Context.SetReceiveTimeout(handoffTimeout);
+                    foreach (var r in remaining)
+                        Context.Stop(r);
+                });
+
+                Timers.StartSingleTimer(StopTimeoutWarning.Instance, StopTimeoutWarning.Instance, StopTimeoutWarningAfter);
+                Timers.StartSingleTimer(StopTimeout.Instance, StopTimeout.Instance, handoffTimeout);
 
                 foreach (var aref in remaining)
                 {
@@ -803,9 +841,31 @@ namespace Akka.Cluster.Sharding
 
                 case GracefulShutdown _:
                     Log.Debug("{0}: Starting graceful shutdown of region and all its shards", TypeName);
+
+                    var coordShutdown = CoordinatedShutdown.Get(Context.System);
+                    if (coordShutdown.ShutdownReason != null)
+                    {
+                        // use a shorter timeout than the coordinated shutdown phase to be able to log better reason for the timeout
+                        var timeout = coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterShardingShutdownRegion) - TimeSpan.FromSeconds(1);
+                        if (timeout > TimeSpan.Zero)
+                        {
+                            Timers.StartSingleTimer(GracefulShutdownTimeout.Instance, GracefulShutdownTimeout.Instance, timeout);
+                        }
+                    }
+
                     GracefulShutdownInProgress = true;
                     SendGracefulShutdownToCoordinatorIfInProgress();
                     TryCompleteGracefulShutdownIfInProgress();
+                    break;
+
+                case GracefulShutdownTimeout _:
+                    Log.Warning(
+                        "{0}: Graceful shutdown of shard region timed out, region will be stopped. Remaining shards [{1}], " +
+                        "remaining buffered messages [{2}].",
+                        TypeName,
+                        string.Join(", ", Shards.Keys),
+                        TotalBufferSize);
+                    Context.Stop(Self);
                     break;
 
                 default:
@@ -880,7 +940,10 @@ namespace Akka.Cluster.Sharding
         private void TryCompleteGracefulShutdownIfInProgress()
         {
             if (GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
+            {
+                Log.Debug("{0}: Completed graceful shutdown of region.", TypeName);
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
+            }
         }
 
         private void SendGracefulShutdownToCoordinatorIfInProgress()

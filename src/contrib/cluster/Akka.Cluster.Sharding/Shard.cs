@@ -772,7 +772,7 @@ namespace Akka.Cluster.Sharding
                     shard.Log.Debug("Starting HandOffStopper for shard [{0}] to terminate [{1}] entities.",
                         shard.ShardId, shard.IdByRef.Keys.Count());
                     shard.HandOffStopper = shard.Context.Watch(shard.Context.ActorOf(
-                        ShardRegion.HandOffStopper.Props(shard.ShardId, replyTo, shard.IdByRef.Keys, shard.HandOffStopMessage, entityHandOffTimeout)));
+                        ShardRegion.HandOffStopper.Props(shard.TypeName, shard.ShardId, replyTo, shard.IdByRef.Keys, shard.HandOffStopMessage, entityHandOffTimeout)));
 
                     //During hand off we only care about watching for termination of the hand off stopper
                     shard.Context.Become(message =>
