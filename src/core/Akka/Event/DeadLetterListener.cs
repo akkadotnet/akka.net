@@ -41,6 +41,7 @@ namespace Akka.Event
         protected override void PreStart()
         {
             _eventStream.Subscribe(Self, typeof(DeadLetter));
+            _eventStream.Subscribe(Self, typeof(Dropped));
         }
 
         /// <summary>
@@ -85,10 +86,10 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
                     IncrementCount();
-                    LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, "");
+                    LogDeadLetter(d, "");
                     return true;
                 }
                 return false;
@@ -99,17 +100,17 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
                     IncrementCount();
                     if (_count == _maxCount)
                     {
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, ", no more dead letters will be logged");
+                        LogDeadLetter(d, ", no more dead letters will be logged");
                         Context.Stop(Self);
                     }
                     else
                     {
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, "");
+                        LogDeadLetter(d, "");
                     }
                     return true;
                 }
@@ -121,18 +122,18 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
                     IncrementCount();
                     if (_count == _maxCount)
                     {
                         var doneMsg = $", no more dead letters will be logged in next [{suspendDuration}]";
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, doneMsg);
+                        LogDeadLetter(d, doneMsg);
                         Context.Become(ReceiveWhenSuspended(suspendDuration, Deadline.Now + suspendDuration));
                     }
                     else
                     {
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, "");
+                        LogDeadLetter(d, "");
                     }
                     return true;
                 }
@@ -144,13 +145,13 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
                     IncrementCount();
                     if (suspendDeadline.IsOverdue)
                     {
                         var doneMsg = $", of which {(_count - _maxCount - 1).ToString()} were not logged. The counter will be reset now";
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, doneMsg);
+                        LogDeadLetter(d, doneMsg);
                         _count = 0;
                         Context.Become(ReceiveWithSuspendLogging(suspendDuration));
                     }
@@ -160,16 +161,35 @@ namespace Akka.Event
             };
         }
 
-        private void LogDeadLetter(object message, IActorRef snd, IActorRef recipient, string doneMsg)
+        private void LogDeadLetter(AllDeadLetters d, string doneMsg)
         {
-            var origin = ReferenceEquals(snd, Context.System.DeadLetters) ? "without sender" : $"from {snd.Path}";
+            var origin = IsReal(d.Sender) ? $" from {d.Sender}" : "";
+
+            string logMessage;
+            switch (d)
+            {
+                case Dropped dropped:
+                    var destination = IsReal(d.Recipient) ? $" to {d.Recipient}" : "";
+                    logMessage = $"Message [{d.Message.GetType().Name}]{origin}{destination} was dropped. {dropped.Reason}. " +
+                    $"[{_count}] dead letters encountered{doneMsg}. ";
+                    break;
+                default:
+                    logMessage = $"Message [{d.Message.GetType().Name}]{origin} to {d.Recipient} was not delivered. " +
+                    $"[{_count}] dead letters encountered{doneMsg}. " +
+                    $"If this is not an expected behavior then {d.Recipient} may have terminated unexpectedly. ";
+                    break;
+            }
             _eventStream.Publish(new Info(
-                recipient.Path.ToString(),
-                recipient.GetType(),
-                $"Message [{message.GetType().Name}] {origin} to {recipient.Path} was not delivered. [{_count.ToString()}] dead letters encountered{doneMsg}. " +
-                $"If this is not an expected behavior then {recipient.Path} may have terminated unexpectedly. " +
+                d.Recipient.Path.ToString(),
+                d.Recipient.GetType(),
+                logMessage +
                 "This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' " +
                 "and 'akka.log-dead-letters-during-shutdown'."));
+        }
+
+        private bool IsReal(IActorRef snd)
+        {
+            return !ReferenceEquals(snd, ActorRefs.NoSender) && !ReferenceEquals(snd, Context.System.DeadLetters) && !(snd is DeadLetterActorRef);
         }
 
         /// <summary>
@@ -209,9 +229,9 @@ namespace Akka.Event
             public TimeSpan TimeLeft { get { return When - DateTime.UtcNow; } }
 
             #region Overrides
-            
+
             /// <inheritdoc/>
-            public override bool Equals(object obj) => 
+            public override bool Equals(object obj) =>
                 obj is Deadline deadline && Equals(deadline);
 
             /// <inheritdoc/>
