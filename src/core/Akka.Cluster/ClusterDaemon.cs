@@ -1747,6 +1747,17 @@ namespace Akka.Cluster
                 UpdateLatestGossip(newGossip);
 
                 Publish(_latestGossip);
+
+                if (address == _cluster.SelfAddress)
+                {
+                    // spread the word quickly, without waiting for next gossip tick
+                    SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
+                }
+                else
+                {
+                    // try to gossip immediately to downed node, as a STONITH signal
+                    GossipTo(member.UniqueAddress);
+                }
             }
             else if (member != null)
             {
@@ -1994,6 +2005,12 @@ namespace Akka.Cluster
                 _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
             }
 
+            if (selfStatus == MemberStatus.Down && localGossip.GetMember(SelfUniqueAddress).Status != MemberStatus.Down)
+            {
+                _log.Warning("Received gossip where this member has been downed, from [{0}]", from.Address);
+                ShutdownSelfWhenDown();
+            }
+
             if (talkback)
             {
                 // send back gossip to sender() when sender() had different view, i.e. merge, or sender() had
@@ -2032,7 +2049,8 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsGossipSpeedupNeeded()
         {
-            return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
+            return _latestGossip.Members.Any(m => m.Status == MemberStatus.Down) ||
+                _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
         }
 
         private void SendGossipRandom(int n)
@@ -2541,8 +2559,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         public bool ValidNodeForGossip(UniqueAddress node)
         {
-            return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
-                    _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(node);
+            return !node.Equals(SelfUniqueAddress) && _latestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, node);
         }
 
         /// <summary>

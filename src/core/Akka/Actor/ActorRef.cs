@@ -708,6 +708,23 @@ namespace Akka.Actor
         /// <returns>If the child exists, it returns the child actor. Otherwise, we return <see cref="ActorRefs.Nobody"/>.</returns>
         public abstract IInternalActorRef GetSingleChild(string name);
 
+        private IEnumerable<IActorRef> SelfAndChildren()
+        {
+            yield return this;
+            foreach(var child in Children.SelectMany(x =>
+            {
+                switch(x)
+                {
+                    case ActorRefWithCell cell:
+                        return cell.SelfAndChildren();
+                    default:
+                        return new[] { x };
+                }
+            }))
+            {
+                yield return child;
+            }
+        }
     }
 
     /// <summary>
