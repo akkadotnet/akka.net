@@ -476,13 +476,36 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPush()
             {
-                var result = WithSupervision(() => _stage._func(Grab(_stage.In)));
+                Option<object> result;
+                if (_stage._isDefinedFunc is null)
+                {
+                    // Old faulty behaviour, depends on the collector function
+                    // to return null to signal no processing happened.
+                    // Wrap the function to check for null
+                    result = WithSupervision(() =>
+                    {
+                        var r = _stage._func(Grab(_stage.In));
+                        return r != null ? r : (object)NotApplied.Instance;
+                    });
+                }
+                else
+                {
+                    var input = Grab(_stage.In);
+                    result = WithSupervision(() =>
+                        _stage._isDefinedFunc(input) ? _stage._func(input) : (object)NotApplied.Instance);
+                }
+
                 if (result.HasValue)
                 {
-                    if (result.Value.IsDefaultForType())
-                        Pull(_stage.In);
-                    else
-                        Push(_stage.Out, result.Value);
+                    switch (result.Value)
+                    {
+                        case NotApplied _:
+                            Pull(_stage.In);
+                            break;
+                        case TOut r:
+                            Push(_stage.Out, r);
+                            break;
+                    }
                 }
             }
 
@@ -499,19 +522,31 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!HasBeenPulled(_stage.In))
                     Pull(_stage.In);
             }
+
+            private class NotApplied
+            {
+                public static readonly NotApplied Instance = new NotApplied();
+                private NotApplied() {}
+            }
         }
 
         #endregion
 
+        private readonly Func<TIn, bool> _isDefinedFunc = null;
         private readonly Func<TIn, TOut> _func;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="func">TBD</param>
-        public Collect(Func<TIn, TOut> func)
+        [Obsolete("Deprecated. Please use the .ctor(Func, Func) constructor")]
+        public Collect(Func<TIn, TOut> func) : this(null, func)
+        { }
+
+        public Collect(Func<TIn, bool> isDefined, Func<TIn, TOut> collector)
         {
-            _func = func;
+            _func = collector;
+            _isDefinedFunc = isDefined;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
