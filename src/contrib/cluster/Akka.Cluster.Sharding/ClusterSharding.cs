@@ -1352,7 +1352,7 @@ namespace Akka.Cluster.Sharding
 
         private void Acked(IActorRef shardRegion)
         {
-            _remaining.Remove(Sender);
+            _remaining.Remove(shardRegion);
             if (_remaining.Count == 0)
             {
                 Log.Debug("All shard regions acked, handing off shard [{0}].", _shard);
