@@ -293,7 +293,7 @@ namespace Akka.Streams.Tests.Dsl
                     var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("unfoldResourceSourceAsync"));
                     try
                     {
-                        Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                        Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                     }
                     finally
                     {

@@ -709,8 +709,12 @@ namespace Akka.Persistence
     }
     public sealed class WriteMessagesFailed : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessagesFailed>
     {
+        [System.ObsoleteAttribute("Deprecated since Akka 1.4.11, use the overloaded one which accepts the number of " +
+            "failed atomic writes instead.")]
         public WriteMessagesFailed(System.Exception cause) { }
+        public WriteMessagesFailed(System.Exception cause, int writeCount) { }
         public System.Exception Cause { get; }
+        public int WriteCount { get; }
         public bool Equals(Akka.Persistence.WriteMessagesFailed other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }

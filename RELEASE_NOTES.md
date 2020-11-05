@@ -1,4 +1,31 @@
-#### 1.4.10 August 20th 2020 ####
+#### 1.4.11 November 5 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.11 includes some significant additions to Akka.NET:
+
+* [Akka: How prevent "Scheduled sending of heartbeat was delayed" and occasionally network partitions](https://github.com/akkadotnet/akka.net/issues/4432) - all `/system` actors now run on a dedicated dispatcher. This should significantly improve reliablity for Akka.Cluster, Akka.Persistence, and other built-in Akka.NET systems inside heavily utilized environments.
+* [Akka: Double wildcard implementation for ActorSelection](https://github.com/akkadotnet/akka.net/pull/4375)
+* [Akka.Remote: Null reference exception due to RemoteActorRefProvider.RemoteInternals](https://github.com/akkadotnet/akka.net/issues/4579)
+* [Akka.Persistence: Fix premature reset of the 'writeInProgress' flag in case of persistence failure](https://github.com/akkadotnet/akka.net/pull/4556)
+* [Akka.Cluster: disseminate downing decisions faste](https://github.com/akkadotnet/akka.net/pull/4598)
+* [Cluster - Add app-version to the Member information](https://github.com/akkadotnet/akka.net/pull/4577) - you can now specify which version of your software is running on each node.
+* [Akka.Cluster.Sharding: Bring ShardedDaemonProcess up to date](https://github.com/akkadotnet/akka.net/pull/4571)
+
+To see the [full set of fixes in Akka.NET v1.4.11, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/42).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 1020 | 164 | Gregorius Soedharmo |
+| 7 | 399 | 178 | Ismael Hamed |
+| 4 | 5 | 5 | dependabot-preview[bot] |
+| 4 | 108 | 104 | Aaron Stannard |
+| 2 | 232 | 26 | to11mtm |
+| 2 | 2 | 2 | Pierre Irrmann |
+| 2 | 1969 | 269 | zbynek001 |
+| 2 | 155 | 445 | huysentruitw |
+| 1 | 1 | 1 | Guillaume Caya-Letourneau |
+
+#### 1.4.10 August 20 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 
 Akka.NET v1.4.10 includes some minor bug fixes and some major feature additions to Akka.Persistence.Query:

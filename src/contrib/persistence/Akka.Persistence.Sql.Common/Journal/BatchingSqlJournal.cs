@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -559,6 +560,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
+                Context.System.Scheduler,
                 maxFailures: Setup.CircuitBreakerSettings.MaxFailures,
                 callTimeout: Setup.CircuitBreakerSettings.CallTimeout,
                 resetTimeout: Setup.CircuitBreakerSettings.ResetTimeout);
@@ -735,7 +737,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                 switch (req)
                 {
                     case WriteMessages write:
-                        write.PersistentActor.Tell(new WriteMessagesFailed(cause));
+                        var atomicWriteCount = write.Messages.OfType<AtomicWrite>().Count();
+                        write.PersistentActor.Tell(new WriteMessagesFailed(cause, atomicWriteCount));
                         break;
                     case ReplayMessages replay:
                         replay.PersistentActor.Tell(new ReplayMessagesFailure(cause));
@@ -843,7 +846,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             switch (request)
             {
                 case WriteMessages msg:
-                    msg.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                    var atomicWriteCount = msg.Messages.OfType<AtomicWrite>().Count();
+                    msg.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance, atomicWriteCount), ActorRefs.NoSender);
                     break;
                 case ReplayMessages msg:
                     msg.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
@@ -1069,14 +1073,22 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var maxSequenceNr = 0L;
+                var toOffset = req.ToOffset;
                 var fromOffset = req.FromOffset;
+                var max = req.Max;
+
+                var take = Math.Min(toOffset - fromOffset, max);
+
+                command.CommandText = HighestOrderingSql;
+                command.Parameters.Clear();
+
+                var maxOrdering = (await command.ExecuteScalarAsync()) as long? ?? 0L;
 
                 command.CommandText = AllEventsSql;
                 command.Parameters.Clear();
 
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                AddParameter(command, "@Take", DbType.Int64, req.Max);
+                AddParameter(command, "@Take", DbType.Int64, take);
 
                 using (var reader = await command.ExecuteReaderAsync())
                 {
@@ -1084,7 +1096,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
-                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
 
                         foreach (var adapted in AdaptFromJournal(persistent))
                         {
@@ -1093,7 +1104,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     }
                 }
 
-                replyTo.Tell(new EventReplaySuccess(maxSequenceNr));
+                replyTo.Tell(new EventReplaySuccess(maxOrdering));
             }
             catch (Exception cause)
             {
@@ -1160,12 +1171,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
             var actorInstanceId = req.ActorInstanceId;
+            var atomicWriteCount = req.Messages.OfType<AtomicWrite>().Count();
 
             try
             {
                 command.CommandText = InsertEventSql;
 
-                var tagBuilder = new StringBuilder(16); // magic number
+                var tagBuilder = new StringBuilder(16); // magic number                
 
                 foreach (var envelope in req.Messages)
                 {
@@ -1204,8 +1216,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                             }
                             catch (DbException cause)
                             {
-                                // database-related exceptions should result in failure
-                                summary = new WriteMessagesFailed(cause);
+                                // database-related exceptions should result in failure                                
+                                summary = new WriteMessagesFailed(cause, atomicWriteCount);
                                 var response = (new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                             }
@@ -1252,7 +1264,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             catch (Exception cause)
             {
-                summary = new WriteMessagesFailed(cause);
+                summary = new WriteMessagesFailed(cause, atomicWriteCount);
             }
 
             var aref = req.PersistentActor;

@@ -26,6 +26,8 @@ namespace Akka.Persistence.TCK.Query
     {
         protected ActorMaterializer Materializer { get; }
 
+        protected virtual bool AllocatesAllPersistenceIDsPublisher => true;
+        
         protected IReadJournal ReadJournal { get; set; }
         protected IActorRef SnapshotStore => Extension.SnapshotStoreFor(null);
         protected PersistenceExtension Extension { get; }
@@ -178,36 +180,43 @@ namespace Akka.Persistence.TCK.Query
         [Fact]
         public virtual async Task ReadJournal_should_deallocate_AllPersistenceIds_publisher_when_the_last_subscriber_left()
         {
-            var journal = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
+            if (AllocatesAllPersistenceIDsPublisher)
+            {
+                var journal = ReadJournal.AsInstanceOf<IPersistenceIdsQuery>();
 
-            Setup("a", 1);
-            Setup("b", 1);
+                Setup("a", 1);
+                Setup("b", 1);
 
-            var source = journal.PersistenceIds();
-            var probe = source.RunWith(this.SinkProbe<string>(), Materializer);
-            var probe2 = source.RunWith(this.SinkProbe<string>(), Materializer);
+                var source = journal.PersistenceIds();
+                var probe =
+                    source.RunWith(this.SinkProbe<string>(), Materializer);
+                var probe2 =
+                    source.RunWith(this.SinkProbe<string>(), Materializer);
 
-            var fieldInfo = journal.GetType().GetField("_persistenceIdsPublisher", BindingFlags.NonPublic | BindingFlags.Instance);
-            Assert.True(fieldInfo != null);
+                var fieldInfo = journal.GetType()
+                    .GetField("_persistenceIdsPublisher",
+                        BindingFlags.NonPublic | BindingFlags.Instance);
+                Assert.True(fieldInfo != null);
 
-            // Assert that publisher is running.
-            probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(10)
-                .ExpectNextUnordered("a", "b")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+                // Assert that publisher is running.
+                probe.Within(TimeSpan.FromSeconds(10), () => probe.Request(10)
+                    .ExpectNextUnordered("a", "b")
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
 
-            probe.Cancel();
+                probe.Cancel();
 
-            // Assert that publisher is still alive when it still have a subscriber
-            Assert.True(fieldInfo.GetValue(journal) is IPublisher<string>);
+                // Assert that publisher is still alive when it still have a subscriber
+                Assert.True(fieldInfo.GetValue(journal) is IPublisher<string>);
 
-            probe2.Within(TimeSpan.FromSeconds(10), () => probe2.Request(4)
-                .ExpectNextUnordered("a", "b")
-                .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
+                probe2.Within(TimeSpan.FromSeconds(10), () => probe2.Request(4)
+                    .ExpectNextUnordered("a", "b")
+                    .ExpectNoMsg(TimeSpan.FromMilliseconds(200)));
 
-            // Assert that publisher is de-allocated when the last subscriber left
-            probe2.Cancel();
-            await Task.Delay(400);
-            Assert.True(fieldInfo.GetValue(journal) is null);
+                // Assert that publisher is de-allocated when the last subscriber left
+                probe2.Cancel();
+                await Task.Delay(400);
+                Assert.True(fieldInfo.GetValue(journal) is null);
+            }
         }
 
         protected IActorRef Setup(string persistenceId, int n)

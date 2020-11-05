@@ -499,7 +499,8 @@ namespace Akka.Persistence
         public void SetDeliverySnapshot(AtLeastOnceDeliverySnapshot snapshot)
         {
             _deliverySequenceNr = snapshot.CurrentDeliveryId;
-            DateTime now = DateTime.UtcNow;
+            // deliver on next tick
+            var now = DateTime.UtcNow - RedeliverInterval;
             _unconfirmed =
                 snapshot.UnconfirmedDeliveries.Select(
                     u => new KeyValuePair<long, Delivery>(u.DeliveryId, new Delivery(u.Destination, u.Message, now, 0)))
