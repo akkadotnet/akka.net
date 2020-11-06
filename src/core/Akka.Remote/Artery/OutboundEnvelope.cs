@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
+using Akka.Remote.Artery.Utils;
 using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
     internal static class OutboundEnvelope
     {
-        public static IOutboundEnvelope Create(Option<RemoteActorRef> recipient, object message, Option<IActorRef> sender)
+        public static IOutboundEnvelope Create(IOptionVal<RemoteActorRef> recipient, object message, IOptionVal<IActorRef> sender)
             => new ReusableOutboundEnvelope().Init(recipient, message, sender);
     }
 
@@ -17,9 +18,9 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal interface IOutboundEnvelope : INoSerializationVerificationNeeded
     {
-        Option<RemoteActorRef> Recipient { get; }
+        IOptionVal<RemoteActorRef> Recipient { get; }
         object Message { get; }
-        Option<IActorRef> Sender { get; }
+        IOptionVal<IActorRef> Sender { get; }
 
         IOutboundEnvelope WithMessage(object message);
         IOutboundEnvelope Copy();
@@ -35,9 +36,9 @@ namespace Akka.Remote.Artery
 
         internal ReusableOutboundEnvelope() {}
 
-        public Option<RemoteActorRef> Recipient { get; private set; } = Option<RemoteActorRef>.None;
+        public IOptionVal<RemoteActorRef> Recipient { get; private set; } = OptionVal.None<RemoteActorRef>();
         public object Message { get; private set; } = null;
-        public Option<IActorRef> Sender { get; private set; } = Option<IActorRef>.None;
+        public IOptionVal<IActorRef> Sender { get; private set; } = OptionVal.None<IActorRef>();
 
         public IOutboundEnvelope WithMessage(object message)
         {
@@ -50,15 +51,15 @@ namespace Akka.Remote.Artery
 
         internal void Clear()
         {
-            Recipient = Option<RemoteActorRef>.None;
+            Recipient = OptionVal.None<RemoteActorRef>();
             Message = null;
-            Sender = Option<IActorRef>.None;
+            Sender = OptionVal.None<IActorRef>();
         }
 
         public IOutboundEnvelope Init(
-            Option<RemoteActorRef> recipient,
+            IOptionVal<RemoteActorRef> recipient,
             object message,
-            Option<IActorRef> sender)
+            IOptionVal<IActorRef> sender)
         {
             Recipient = recipient;
             Message = message;

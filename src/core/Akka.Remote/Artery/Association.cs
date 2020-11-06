@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Artery.Compress;
-using Akka.Remote.Artery.Settings;
 using Akka.Remote.Artery.Utils;
+using Akka.Remote.Artery.Utils.Concurrent;
 using Akka.Streams;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Util;
@@ -107,14 +107,14 @@ namespace Akka.Remote.Artery
 
         public sealed class OutboundStreamMatValues
         {
-            public OptionVal<SharedKillSwitch> StreamKillSwitch { get; }
+            public IOptionVal<SharedKillSwitch> StreamKillSwitch { get; }
             public Task<Done> Completed { get; }
-            public OptionVal<IStopSignal> Stopping { get; }
+            public IOptionVal<IStopSignal> Stopping { get; }
 
             public OutboundStreamMatValues(
-                OptionVal<SharedKillSwitch> streamKillSwitch,
+                IOptionVal<SharedKillSwitch> streamKillSwitch,
                 Task<Done> completed,
-                OptionVal<IStopSignal> stopping)
+                IOptionVal<IStopSignal> stopping)
             {
                 StreamKillSwitch = streamKillSwitch;
                 Completed = completed;
@@ -137,15 +137,15 @@ namespace Akka.Remote.Artery
         private readonly SendQueue.IProducerApi<IOutboundEnvelope> _controlQueue;
 
         private volatile bool _queuesVisibility = false;
-        private volatile OptionVal<OutboundControlJunction.IOutboundControlIngress> _outboundControlIngress = OptionVal<OutboundControlJunction.IOutboundControlIngress>.None;
+        private volatile IOptionVal<OutboundControlJunction.IOutboundControlIngress> _outboundControlIngress = OptionVal.None<OutboundControlJunction.IOutboundControlIngress>();
         private volatile CountDownLatch _materializing = new CountDownLatch(1);
         private volatile List<OutboundCompressionAccess> _outboundCompressionAccess = new List<OutboundCompressionAccess>();
 
         // keyed by stream queue index
         private readonly AtomicReference<Dictionary<int, OutboundStreamMatValues>> _streamMatValues = new AtomicReference<Dictionary<int, OutboundStreamMatValues>>();
 
-        private readonly AtomicReference<OptionVal<Cancelable>> _idleTimer = new AtomicReference<OptionVal<Cancelable>>(OptionVal<Cancelable>.None);
-        private readonly AtomicReference<OptionVal<Cancelable>> _stopQuarantinedTimer = new AtomicReference<OptionVal<Cancelable>>(OptionVal<Cancelable>.None);
+        private readonly AtomicReference<IOptionVal<Cancelable>> _idleTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
+        private readonly AtomicReference<IOptionVal<Cancelable>> _stopQuarantinedTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
 
         public ArteryTransport Transport { get; }
         public Materializer Materializer{ get; }

@@ -8,7 +8,6 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Artery.Compress;
-using Akka.Remote.Artery.Settings;
 using Akka.Remote.Artery.Utils;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -25,14 +24,14 @@ namespace Akka.Remote.Artery
     internal interface IInboundCompressions
     {
         void HitActorRef(long originUid, Address remote, IActorRef @ref, int n);
-        Option<IActorRef> DecompressActorRef(long originUid, byte tableVersion, int idx);
+        IOptionVal<IActorRef> DecompressActorRef(long originUid, byte tableVersion, int idx);
         void ConfirmActorRefCompressionAdvertisement(long originUid, byte tableVersion);
 
         // Triggers compression advertisement via control message
         void RunNextActorRefAdvertisement();
 
         void HitClassManifest(long originUid, Address remote, string manifest, int n);
-        Option<string> DecompressClassManifest(long originUid, byte tableVersion, int idx);
+        IOptionVal<string> DecompressClassManifest(long originUid, byte tableVersion, int idx);
         void ConfirmClassManifestCompressionAdvertisement(long originUid, byte tableVersion);
 
         // Triggers compression advertisement via control message
@@ -52,61 +51,62 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class InboundCompressionsImpl : IInboundCompressions
     {
-        private readonly Dictionary<long, InboundActorRefCompression> _actorRefsIns = new Dictionary<long, InboundActorRefCompression>();
+        private readonly Dictionary<long, InboundActorRefCompression> _actorRefsIns;
         private readonly ILoggingAdapter _inboundActorRefsLog;
+        private readonly Func<long, InboundActorRefCompression> _createInboundActorRefsForOrigin;
 
-        private readonly Dictionary<long, InboundManifestCompression> _classManifestsIns = new Dictionary<long, InboundManifestCompression>();
+        private readonly Dictionary<long, InboundManifestCompression> _classManifestsIns;
         private readonly ILoggingAdapter _inboundManifestLog;
-
-        private readonly ILoggingAdapter _log;
+        private readonly Func<long, InboundManifestCompression> _createInboundManifestsForOrigin;
 
         public ActorSystem System { get; }
         public IInboundContext InboundContext { get; }
-        public CompressionSettings Settings { get; }
+        public ArterySettings.CompressionSettings Settings { get; }
         public IRemotingFlightRecorder FlightRecorder { get; }
 
         public InboundCompressionsImpl(
             ActorSystem system,
             IInboundContext inboundContext, 
-            CompressionSettings settings,
-            IRemotingFlightRecorder flightRecorder)
+            ArterySettings.CompressionSettings settings,
+            IRemotingFlightRecorder flightRecorder = null)
         {
             System = system;
             InboundContext = inboundContext;
             Settings = settings;
-            FlightRecorder = flightRecorder;
+            FlightRecorder = flightRecorder ?? NoOpRemotingFlightRecorder.Instance;
 
+            _actorRefsIns = new Dictionary<long, InboundActorRefCompression>();
             _inboundActorRefsLog = Logging.GetLogger(System, typeof(InboundActorRefCompression));
+            _createInboundActorRefsForOrigin = (originUid) =>
+            {
+                var actorRefHitters = new TopHeavyHitters<IActorRef>(Settings.ActorRefs.Max);
+                return new InboundActorRefCompression(_inboundActorRefsLog, Settings, originUid, InboundContext,
+                    actorRefHitters);
+            };
+            _classManifestsIns = new Dictionary<long, InboundManifestCompression>();
             _inboundManifestLog = Logging.GetLogger(System, typeof(InboundManifestCompression));
-            _log = Logging.GetLogger(System, this);
-        }
-
-        private InboundActorRefCompression CreateInboundActorRefsForOrigin(long originUid)
-        {
-            var actorRefHitters = new TopHeavyHitters<IActorRef>(Settings.ActorRefs.Max);
-            return new InboundActorRefCompression(_inboundActorRefsLog, Settings, originUid, InboundContext, actorRefHitters);
+            _createInboundManifestsForOrigin = (originUid) =>
+            {
+                var manifestHitters = new TopHeavyHitters<string>(Settings.Manifests.Max);
+                return new InboundManifestCompression(_inboundManifestLog, Settings, originUid, InboundContext,
+                    manifestHitters);
+            };
         }
 
         private InboundActorRefCompression ActorRefsIn(long originUid)
-            => _actorRefsIns.ComputeIfAbsent(originUid, CreateInboundActorRefsForOrigin);
-
-        private InboundManifestCompression CreateInboundManifestsForOrigin(long originUid)
-        {
-            var manifestHitters = new TopHeavyHitters<string>(Settings.Manifests.Max);
-            return new InboundManifestCompression(_inboundManifestLog, Settings, originUid, InboundContext, manifestHitters);
-        }
+            => _actorRefsIns.ComputeIfAbsent(originUid, _createInboundActorRefsForOrigin);
 
         private InboundManifestCompression ClassManifestsIn(long originUid)
-            => _classManifestsIns.ComputeIfAbsent(originUid, CreateInboundManifestsForOrigin);
+            => _classManifestsIns.ComputeIfAbsent(originUid, _createInboundManifestsForOrigin);
 
         // actor ref compression ---
 
-        public Option<IActorRef> DecompressActorRef(long originUid, byte tableVersion, int idx)
+        public IOptionVal<IActorRef> DecompressActorRef(long originUid, byte tableVersion, int idx)
             => ActorRefsIn(originUid).Decompress(tableVersion, idx);
 
         public void HitActorRef(long originUid, Address address, IActorRef @ref, int n)
         {
-            DebugUtil.PrintLn($"HitActorRef({originUid}, {address}, {@ref}, {n})");
+            DebugUtil.PrintLn($"[compress] HitActorRef({originUid}, {address}, {@ref}, {n})");
             ActorRefsIn(originUid).Increment(address, @ref, n);
         }
 
@@ -122,27 +122,25 @@ namespace Akka.Remote.Artery
             var remove = new List<long>();
             foreach (var inbound in _actorRefsIns.Values)
             {
-                var association = InboundContext.Association(inbound.OriginUid);
-                if (association.HasValue)
+                switch (InboundContext.Association(inbound.OriginUid))
                 {
-                    if (association.Value.AssociationState.IsQuarantined(inbound.OriginUid))
+                    case Some<IOutboundContext> a when !a.Get.AssociationState.IsQuarantined(inbound.OriginUid):
                         FlightRecorder.CompressionActorRefAdvertisement(inbound.OriginUid);
-                    inbound.RunNextTableAdvertisement();
+                        inbound.RunNextTableAdvertisement();
+                        break;
+                    default:
+                        remove.Add(inbound.OriginUid);
+                        break;
                 }
-                else
-                {
-                    remove.Add(inbound.OriginUid);
-                }
-
-                foreach (var uid in remove)
-                {
-                    Close(uid);
-                }
+            }
+            foreach (var uid in remove)
+            {
+                Close(uid);
             }
         }
 
         // class manifest compression ---
-        public Option<string> DecompressClassManifest(long originUid, byte tableVersion, int idx)
+        public IOptionVal<string> DecompressClassManifest(long originUid, byte tableVersion, int idx)
             => ClassManifestsIn(originUid).Decompress(tableVersion, idx);
 
         public void HitClassManifest(long originUid, Address address, string manifest, int n)
@@ -162,21 +160,17 @@ namespace Akka.Remote.Artery
             var remove = new List<long>();
             foreach (var inbound in _classManifestsIns.Values)
             {
-                var association = InboundContext.Association(inbound.OriginUid);
-                if (association.HasValue)
+                switch (InboundContext.Association(inbound.OriginUid))
                 {
-                    if (!association.Value.AssociationState.IsQuarantined(inbound.OriginUid))
-                    {
+                    case Some<IOutboundContext> a when !a.Get.AssociationState.IsQuarantined(inbound.OriginUid):
                         FlightRecorder.CompressionClassManifestAdvertisement(inbound.OriginUid);
                         inbound.RunNextTableAdvertisement();
-                    }
-                    else
-                    {
+                        break;
+                    default:
                         remove.Add(inbound.OriginUid);
-                    }
+                        break;
                 }
             }
-
             foreach (var uid in remove)
             {
                 Close(uid);
@@ -213,29 +207,29 @@ namespace Akka.Remote.Artery
     {
         public InboundActorRefCompression(
             ILoggingAdapter log,
-            CompressionSettings settings,
+            ArterySettings.CompressionSettings settings,
             long originUid,
             IInboundContext inboundContext,
             TopHeavyHitters<IActorRef> heavyHitters) :
             base(log, settings, originUid, inboundContext, heavyHitters)
         { }
 
-        public override Option<IActorRef> Decompress(byte tableVersion, int idx)
-            => base.DecompressInternal(tableVersion, idx, 0);
+        public override IOptionVal<IActorRef> Decompress(byte tableVersion, int idx)
+            => DecompressInternal(tableVersion, idx);
 
         protected override void AdvertiseCompressionTable(
             IOutboundContext outboundContext,
             CompressionTable<IActorRef> table)
         {
             Log.Debug(
-                $"Advertise {Logging.SimpleName(this.GetType())} compression [{table}] to {outboundContext.RemoteAddress}#{OriginUid}");
+                $"Advertise {Logging.SimpleName(GetType())} compression [{table}] to {outboundContext.RemoteAddress}#{OriginUid}");
             outboundContext.SendControl(
-                CompressionProtocol.ActorRefCompressionAdvertisement(InboundContext.LocalAddress, table));
+                new CompressionProtocol.ActorRefCompressionAdvertisement(InboundContext.LocalAddress, table));
         }
 
         protected override ImmutableDictionary<IActorRef, int> BuildTableForAdvertisement(IEnumerable<IActorRef> elements)
         {
-            var mb = new Dictionary<IActorRef, int>();
+            var mb = ImmutableDictionary.CreateBuilder<IActorRef, int>();
             var idx = 0;
             foreach (var e in elements)
             {
@@ -252,7 +246,7 @@ namespace Akka.Remote.Artery
                 }
             }
 
-            return mb.ToImmutableDictionary();
+            return mb.ToImmutable();
         }
     }
 
@@ -263,7 +257,7 @@ namespace Akka.Remote.Artery
     {
         public InboundManifestCompression(
             ILoggingAdapter log,
-            CompressionSettings settings,
+            ArterySettings.CompressionSettings settings,
             long originUid,
             IInboundContext inboundContext,
             TopHeavyHitters<string> heavyHitters)
@@ -274,7 +268,7 @@ namespace Akka.Remote.Artery
         {
             Log.Debug($"Advertise {Logging.SimpleName(GetType())} compression [{table}] to [{outboundContext.RemoteAddress}#{OriginUid}]");
             outboundContext.SendControl(
-                CompressionProtocol.ClassManifestCompressionAdvertisement(InboundContext.LocalAddress, table));
+                new CompressionProtocol.ClassManifestCompressionAdvertisement(InboundContext.LocalAddress, table));
 
         }
 
@@ -283,9 +277,9 @@ namespace Akka.Remote.Artery
             if(!string.IsNullOrWhiteSpace(value)) base.Increment(remoteAddress, value, n);
         }
 
-        public override Option<string> Decompress(byte incomingTableVersion, int idx)
+        public override IOptionVal<string> Decompress(byte incomingTableVersion, int idx)
         {
-            return DecompressInternal(incomingTableVersion, idx, 0);
+            return DecompressInternal(incomingTableVersion, idx);
         }
     }
 
@@ -300,19 +294,23 @@ namespace Akka.Remote.Artery
     {
         public static int KeepOldTablesNumber => 3; // TODO: could be configurable
 
+        public static class Tables
+        {
+            public static Tables<T> Empty<T>()
+                => new Tables<T>(
+                    oldTables: new List<DecompressionTable<T>>(new[] { DecompressionTable.Disabled<T>() }),
+                    activeTable: DecompressionTable.Empty<T>(),
+                    nextTable: DecompressionTable.Empty<T>().Copy(version: 1),
+                    advertisementInProgress: Option<CompressionTable<T>>.None,
+                    keepOldTables: KeepOldTablesNumber);
+        }
+
         /// <summary>
         /// Encapsulates the various compression tables that Inbound Compression uses.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         public class Tables<T>
         {
-            public static Tables<T> Empty => new Tables<T>(
-                oldTables: new List<DecompressionTable<T>>( new []{ DecompressionTable<T>.Disabled }), 
-                activeTable: DecompressionTable<T>.Empty,
-                nextTable: DecompressionTable<T>.Empty.Copy(version: 1),
-                advertisementInProgress: Option<CompressionTable<T>>.None, 
-                keepOldTables: KeepOldTablesNumber);
-
             public List<DecompressionTable<T>> OldTables { get; }
             public DecompressionTable<T> ActiveTable { get; }
             public DecompressionTable<T> NextTable { get; }
@@ -320,7 +318,7 @@ namespace Akka.Remote.Artery
             public int KeepOldTable { get; }
 
             /// <summary>
-            /// TBD
+            /// Encapsulates the various compression tables that Inbound Compression uses.
             /// </summary>
             /// <param name="oldTables">
             /// is guaranteed to always have at-least one and at-most [[keepOldTables]] elements.
@@ -345,53 +343,45 @@ namespace Akka.Remote.Artery
                 KeepOldTable = keepOldTables;
             }
 
-            public Tables<T> Copy(
-                List<DecompressionTable<T>> oldTables = null,
-                DecompressionTable<T> activeTable = null,
-                DecompressionTable<T> nextTable = null,
-                Option<CompressionTable<T>>? advertisementInProgress = null,
-                int keepOldTables = -1)
-                => new Tables<T>(
-                        oldTables ?? OldTables,
-                        activeTable ?? ActiveTable,
-                        nextTable ?? NextTable,
-                        advertisementInProgress ?? AdvertisementInProgress,
-                        keepOldTables > -1 ? keepOldTables : KeepOldTable );
-
-            public Option<DecompressionTable<T>> SelectTable(int version)
+            public IOptionVal<DecompressionTable<T>> SelectTable(int version)
             {
                 if (ActiveTable.Version == version)
                 {
                     DebugUtil.PrintLn($"Found table [version: {version}], was [ACTIVE]{ActiveTable}");
-                    return new Option<DecompressionTable<T>>(ActiveTable);
+                    return OptionVal.Some(ActiveTable);
                 }
 
-                var found = Option<DecompressionTable<T>>.None;
-                // ARTERY: OldTable needs to be reversed?
+                var found = OptionVal.None<DecompressionTable<T>>();
                 foreach (var table in OldTables)
                 {
                     if(table.Version == version)
                     {
-                        found = new Option<DecompressionTable<T>>(table);
+                        found = OptionVal.Some(table);
                         break;
                     }
                 }
 
-                if (found.HasValue)
-                    DebugUtil.PrintLn($"Found table [version: {version}], was [OLD][{found}], " +
-                                      $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<T>, int>(ot => ot.Version))}]");
-                else
-                    DebugUtil.PrintLn($"Did not find table [version: {version}], " +
-                                      $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<T>, int>(ot => ot.Version))}], " +
-                                      $"ActiveTable: {ActiveTable}, " +
-                                      $"NextTable: {NextTable}");
-
+#if COMPRESS_DEBUG
+                switch (found)
+                {
+                    case Some<DecompressionTable<T>> t:
+                        DebugUtil.PrintLn($"Found table [version: {version}], was [OLD][{found}], " +
+                                          $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<T>, int>(ot => ot.Version))}]");
+                        break;
+                    default:
+                        DebugUtil.PrintLn($"Did not find table [version: {version}], " +
+                                          $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<T>, int>(ot => ot.Version))}], " +
+                                          $"ActiveTable: {ActiveTable}, " +
+                                          $"NextTable: {NextTable}");
+                        break;
+                }
+#endif
                 return found;
             }
 
             public Tables<T> StartUsingNextTable()
             {
-                byte IncrementTableVersion(byte version)
+                static byte IncrementTableVersion(byte version)
                     => (byte)(version == 127 ? 0 : ++version);
 
                 var newOldTables = new List<DecompressionTable<T>>( new []{ ActiveTable });
@@ -401,32 +391,44 @@ namespace Akka.Remote.Artery
                 return new Tables<T>(
                     oldTables: newOldTables,
                     activeTable: NextTable,
-                    nextTable: DecompressionTable<T>.Empty.Copy(version: IncrementTableVersion(NextTable.Version)),
+                    nextTable: DecompressionTable.Empty<T>().Copy(version: IncrementTableVersion(NextTable.Version)),
                     advertisementInProgress: Option<CompressionTable<T>>.None,
                     keepOldTables: KeepOldTable);
             }
+
+            public Tables<T> Copy(
+                List<DecompressionTable<T>> oldTables = null,
+                DecompressionTable<T> activeTable = null,
+                DecompressionTable<T> nextTable = null,
+                Option<CompressionTable<T>>? advertisementInProgress = null,
+                int keepOldTables = -1)
+                => new Tables<T>(
+                    oldTables ?? OldTables,
+                    activeTable ?? ActiveTable,
+                    nextTable ?? NextTable,
+                    advertisementInProgress ?? AdvertisementInProgress,
+                    keepOldTables > -1 ? keepOldTables : KeepOldTable);
         }
 
         public ILoggingAdapter Log { get; }
-        public CompressionSettings Settings { get; }
+        public ArterySettings.CompressionSettings Settings { get; }
         public long OriginUid { get; }
         public IInboundContext InboundContext { get; }
         public TopHeavyHitters<T> HeavyHitters { get; }
 
-        public Tables<T> CompressionTables { get; protected set; } = Tables<T>.Empty;
+        private Tables<T> _tables = Tables.Empty<T>();
 
         // We should not continue sending advertisements to an association that might be dead (not quarantined yet)
         private volatile bool _alive = true;
-        public bool Alive => Volatile.Read(ref _alive);
 
-        public int ResendCount { get; set; } = 0;
-        public int MaxResendCount { get; set; } = 3;
+        private int _resendCount = 0;
+        private const int MaxResendCount = 3;
 
-        public CountMinSketch Cms { get; } = new CountMinSketch(16, 1024, (int)DateTime.Now.TimeOfDay.TotalMilliseconds);
+        private readonly CountMinSketch _cms = new CountMinSketch(16, 1024, (int)DateTime.Now.TimeOfDay.TotalMilliseconds);
 
         protected InboundCompression(
             ILoggingAdapter log,
-            CompressionSettings settings,
+            ArterySettings.CompressionSettings settings,
             long originUid,
             IInboundContext inboundContext,
             TopHeavyHitters<T> heavyHitters)
@@ -448,7 +450,7 @@ namespace Akka.Remote.Artery
         /// <param name="incomingTableVersion"></param>
         /// <param name="idx"></param>
         /// <returns></returns>
-        public abstract Option<T> Decompress(byte incomingTableVersion, int idx);
+        public abstract IOptionVal<T> Decompress(byte incomingTableVersion, int idx);
 
         /// <summary>
         /// Decompress given identifier into its original representation.
@@ -457,62 +459,68 @@ namespace Akka.Remote.Artery
         /// </summary>
         /// <param name="incomingTableVersion"></param>
         /// <param name="idx"></param>
-        /// <param name="attemptCounter"></param>
         /// <returns></returns>
         /// <exception cref="UnknownCompressedIdException">
         /// if given id is not known, this may indicate a bug – such situation should not happen.
         /// </exception>
-        public Option<T> DecompressInternal(byte incomingTableVersion, int idx, int attemptCounter)
+        public IOptionVal<T> DecompressInternal(byte incomingTableVersion, int idx)
         {
-            // effectively should never loop more than once, to avoid infinite recursion blow up eagerly
-            if(attemptCounter > 2)
-                throw new IllegalStateException($"Unable to decompress {idx} from table {incomingTableVersion}. Internal tables: {CompressionTables}");
-
-            var current = CompressionTables;
-            var activeVersion = current.ActiveTable.Version;
-
-            bool IncomingVersionIsAdvertisementInProgress()
-                => current.AdvertisementInProgress.HasValue &&
-                   incomingTableVersion == current.AdvertisementInProgress.Value.Version;
-
-            // no compression, bail out early
-            if (incomingTableVersion == DecompressionTable<T>.DisabledVersion)
-                return Option<T>.None;
-
-            var currentTable = current.SelectTable(version: incomingTableVersion);
-            if (currentTable.HasValue)
+            var attemptCounter = 0;
+            while (true)
             {
-                var selectedTable = currentTable.Value;
-                var value = selectedTable[idx];
-                if(value is object)
-                    return new Option<T>(value);
-                throw new UnknownCompressedIdException(idx);
-            }
+                // effectively should never loop more than once, to avoid infinite recursion blow up eagerly
+                if (attemptCounter > 2) 
+                    throw new IllegalStateException($"Unable to decompress {idx} from table {incomingTableVersion}. Internal tables: {_tables}");
 
-            if (IncomingVersionIsAdvertisementInProgress())
-            {
-                Log.Debug($"Received first value from OriginUid [{OriginUid}] compressed using the advertised compression table, " +
-                          $"flipping to it (version: {current.NextTable.Version})");
-                ConfirmAdvertisement(incomingTableVersion, gaveUp: false);
-                return DecompressInternal(incomingTableVersion, idx, ++attemptCounter); // recurse
-            }
+                var current = _tables;
+                var activeVersion = current.ActiveTable.Version;
 
-            // which means that incoming version was > nextTable.version, which likely that
-            // it is using a table that was built for previous incarnation of this system
-            Log.Warning($"Inbound message from OriginUid{OriginUid} is using unknown compression table version. " +
-                        "It may have been sent with compression table built for previous incarnation of this system. " +
-                        $"Versions ActiveTable: {activeVersion}, NextTable: {current.NextTable.Version}, IncomingTable: {incomingTableVersion}");
-            return Option<T>.None;
+                if (incomingTableVersion == DecompressionTable.DisabledVersion)
+                {
+                    // no compression, bail out early
+                    return OptionVal.None<T>();
+                }
+
+                var selectedTable = current.SelectTable(version: incomingTableVersion);
+                if (selectedTable.IsDefined)
+                {
+                    var value = selectedTable.Get[idx];
+                    if (value != null) return OptionVal.Some(value);
+                    throw new UnknownCompressedIdException(idx);
+                }
+
+                var incomingVersionIsAdvertisementInProgress =
+                    current.AdvertisementInProgress.HasValue
+                    && incomingTableVersion == current.AdvertisementInProgress.Value.Version;
+
+                if (incomingVersionIsAdvertisementInProgress)
+                {
+                    Log.Debug($"Received first value from OriginUid [{OriginUid}] compressed using the advertised compression table, " + $"flipping to it (version: {current.NextTable.Version})");
+                    ConfirmAdvertisement(incomingTableVersion, gaveUp: false);
+                    attemptCounter++;
+                    continue;
+                }
+
+                // any other case
+                // which means that incoming version was > nextTable.version, which likely that
+                // it is using a table that was built for previous incarnation of this system
+                Log.Warning($"Inbound message from OriginUid{OriginUid} is using unknown compression table version. " + "It may have been sent with compression table built for previous incarnation of this system. " + $"Versions ActiveTable: {activeVersion}, NextTable: {current.NextTable.Version}, IncomingTable: {incomingTableVersion}");
+                return OptionVal.None<T>();
+            }
         }
 
         public void ConfirmAdvertisement(byte tableVersion, bool gaveUp)
         {
-            if (!CompressionTables.AdvertisementInProgress.HasValue)
+            if (!_tables.AdvertisementInProgress.HasValue)
                 return; // already confirmed
 
-            var inProgress = CompressionTables.AdvertisementInProgress.Value;
+            var inProgress = _tables.AdvertisementInProgress.Value;
             if(tableVersion == inProgress.Version)
-                Log.Debug($"{(gaveUp ? "Gave up" : "Confirmed")} compression table version [{tableVersion}] for OriginUid [{OriginUid}]");
+            {
+                _tables = _tables.StartUsingNextTable();
+                Log.Debug(
+                    $"{(gaveUp ? "Gave up" : "Confirmed")} compression table version [{tableVersion}] for OriginUid [{OriginUid}]");
+            }
             else
                 Log.Debug($"{(gaveUp ? "Gave up" : "Confirmed")} compression table version [{tableVersion}] for OriginUid [{OriginUid}] but other version in progress [{inProgress.Version}]");
         }
@@ -526,7 +534,7 @@ namespace Akka.Remote.Artery
         /// <param name="n"></param>
         public virtual void Increment(Address remoteAddress, T value, long n)
         {
-            var count = Cms.AddObjectAndEstimateCount(value, n);
+            var count = _cms.AddObjectAndEstimateCount(value, n);
             AddAndCheckIfHeavyHitterDetected(value, count);
             Volatile.Write(ref _alive, true);
         }
@@ -554,55 +562,53 @@ namespace Akka.Remote.Artery
         /// </summary>
         public void RunNextTableAdvertisement()
         {
-            DebugUtil.PrintLn($"RunNextTableAdvertisement, tables = {CompressionTables}");
+            DebugUtil.PrintLn($"RunNextTableAdvertisement, tables = {_tables}");
 
-            if (!CompressionTables.AdvertisementInProgress.HasValue)
+            if (!_tables.AdvertisementInProgress.HasValue)
             {
-                var association = InboundContext.Association(OriginUid);
-                if (association.HasValue)
+                switch (InboundContext.Association(OriginUid))
                 {
-                    if (association.Value.IsOrdinaryMessageStreamActive())
-                    {
-                        if (Volatile.Read(ref _alive))
+                    case Some<IOutboundContext> association:
+                        if (Volatile.Read(ref _alive) && association.Get.IsOrdinaryMessageStreamActive())
                         {
-                            var table = PrepareCompressionAdvertisement(CompressionTables.NextTable.Version);
-                            // TODO expensive, check if building the other way wouldn't be faster?
-                            var nextState = CompressionTables.Copy(nextTable: table.Invert(),
+                            var table = PrepareCompressionAdvertisement(_tables.NextTable.Version);
+                            // TODO ARTERY expensive, check if building the other way wouldn't be faster?
+                            var nextState = _tables.Copy(
+                                nextTable: table.Invert(),
                                 advertisementInProgress: new Option<CompressionTable<T>>(table));
-                            CompressionTables = nextState;
+                            _tables = nextState;
                             Volatile.Write(ref _alive, false); // will be set to true on first incoming message
-                            ResendCount = 0;
-                            AdvertiseCompressionTable(association.Value, table);
-                        }
-                        else
+                            _resendCount = 0;
+                            AdvertiseCompressionTable(association.Get, table);
+                        } else if (association.Get.IsOrdinaryMessageStreamActive())
                         {
-                            Log.Debug($"{Logging.SimpleName(CompressionTables.ActiveTable)} for OriginUid [{OriginUid}] not changed, no need to advertise same.");
+                            Log.Debug($"{Logging.SimpleName(_tables.ActiveTable)} for OriginUid [{OriginUid}] not changed, no need to advertise same.");
                         }
-                    }
-                    // ARTERY: Original code does not have code for this condition
-                }
-                else
-                {
-                    // otherwise it's too early, association not ready yet.
-                    // so we don't build the table since we would not be able to send it anyway.
-                    Log.Debug($"No Association for OriginUid [{OriginUid}] yet, unable to advertise compression table.");
+                        break;
+                    default:
+                        // otherwise it's too early, association not ready yet.
+                        // so we don't build the table since we would not be able to send it anyway.
+                        Log.Debug($"No Association for OriginUid [{OriginUid}] yet, unable to advertise compression table.");
+                        break;
                 }
             }
             else
             {
-                ResendCount++;
-                var inProgress = CompressionTables.AdvertisementInProgress.Value;
-                if (ResendCount <= MaxResendCount)
+                _resendCount++;
+                var inProgress = _tables.AdvertisementInProgress.Value;
+                if (_resendCount <= MaxResendCount)
                 {
                     // The ActorRefCompressionAdvertisement message is resent because it can be lost
-
-                    var association = InboundContext.Association(OriginUid);
-                    if (association.HasValue)
+                    switch (InboundContext.Association(OriginUid))
                     {
-                        Log.Debug($"Advertisement in progress for OriginUid [{OriginUid}] version [{inProgress.Version}], resending [{ResendCount}:{MaxResendCount}]");
-                        AdvertiseCompressionTable(association.Value, inProgress);
+                        case Some<IOutboundContext> association:
+                            Log.Debug($"Advertisement in progress for OriginUid [{OriginUid}] version [{inProgress.Version}], resending [{_resendCount}:{MaxResendCount}]");
+                            AdvertiseCompressionTable(association.Get, inProgress); // resend
+                            break;
+                        default:
+                            // no-op
+                            break;
                     }
-                    // ARTERY: Original code does not have code for this condition
                 }
                 else
                 {
@@ -629,12 +635,14 @@ namespace Akka.Remote.Artery
 
         protected virtual ImmutableDictionary<T, int> BuildTableForAdvertisement(IEnumerable<T> elements)
         {
-            // TODO optimized somewhat, check if still to heavy; could be encoded into simple array
-            return elements.ZipWithIndex().ToImmutableDictionary();
+            // TODO ARTERY optimized somewhat, check if still to heavy; could be encoded into simple array
+            var mb = ImmutableDictionary.CreateBuilder<T, int>();
+            mb.AddRange(elements.ZipWithIndex());
+            return mb.ToImmutable();
         }
 
         public override string ToString()
-            => $"{Logging.SimpleName(GetType())}(CountMinSketch: {Cms}, HeavyHitters: {HeavyHitters})";
+            => $"{Logging.SimpleName(GetType())}(CountMinSketch: {_cms}, HeavyHitters: {HeavyHitters})";
     }
 
     internal class UnknownCompressedIdException : AkkaException
@@ -654,22 +662,26 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class NoInboundCompressions : IInboundCompressions
     {
+        public static readonly NoInboundCompressions Instance = new NoInboundCompressions();
+
+        private NoInboundCompressions() { }
+
         public void HitActorRef(long originUid, Address remote, IActorRef @ref, int n) { }
-        public Option<IActorRef> DecompressActorRef(long originUid, byte tableVersion, int idx)
+        public IOptionVal<IActorRef> DecompressActorRef(long originUid, byte tableVersion, int idx)
         {
             if(idx < 0) 
                 throw new ArgumentException($"Attempted decompression of illegal compression id: {idx}");
-            return Option<IActorRef>.None;
+            return OptionVal.None<IActorRef>();
         }
         public void ConfirmActorRefCompressionAdvertisement(long originUid, byte tableVersion) { }
         public void RunNextActorRefAdvertisement() { }
 
         public void HitClassManifest(long originUid, Address remote, string manifest, int n) { }
-        public Option<string> DecompressClassManifest(long originUid, byte tableVersion, int idx)
+        public IOptionVal<string> DecompressClassManifest(long originUid, byte tableVersion, int idx)
         {
             if (idx < 0)
                 throw new ArgumentException($"Attempted decompression of illegal compression id: {idx}");
-            return Option<string>.None;
+            return OptionVal.None<string>();
         }
         public void ConfirmClassManifestCompressionAdvertisement(long originUid, byte tableVersion) { }
         public void RunNextClassManifestAdvertisement() { }

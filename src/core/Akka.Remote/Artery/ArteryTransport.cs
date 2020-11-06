@@ -53,7 +53,7 @@ namespace Akka.Remote.Artery
         /// <see cref="Option{OutboundContext}"/> if an association is found.
         /// <see cref="Option{OutboundContext}.None"/> if the UID is unknown, i.e. handshake not completed.
         /// </returns>
-        Option<IOutboundContext> Association(long uid);
+        IOptionVal<IOutboundContext> Association(long uid);
 
         Task<Done> CompleteHandshake(UniqueAddress peer);
 

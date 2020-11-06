@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
+using Akka.Remote.Artery.Utils;
 using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
     internal interface IInboundEnvelope : INoSerializationVerificationNeeded
     {
-        Option<IInternalActorRef> Recipient { get; }
-        Option<IActorRef> Sender { get; }
+        IOptionVal<IInternalActorRef> Recipient { get; }
+        IOptionVal<IActorRef> Sender { get; }
         long OriginUid { get; }
-        Option<IOutboundContext> Association { get; }
+        IOptionVal<IOutboundContext> Association { get; }
 
         int Serializer { get; }
         string ClassManifest { get; }
@@ -44,11 +45,11 @@ namespace Akka.Remote.Artery
         /// <param name="association"></param>
         /// <returns></returns>
         public static IInboundEnvelope Create(
-            Option<IInternalActorRef> recipient,
+            IOptionVal<IInternalActorRef> recipient,
             object message,
-            Option<IActorRef> sender,
+            IOptionVal<IActorRef> sender,
             long originUid,
-            Option<IOutboundContext> association)
+            IOptionVal<IOutboundContext> association)
             => new ReusableInboundEnvelope()
                 .Init(recipient, sender, originUid, -1, "", 0, null, association, 0)
                 .WithMessage(message);
@@ -59,10 +60,10 @@ namespace Akka.Remote.Artery
         public static ObjectPool<ReusableInboundEnvelope> CreateObjectPool(int capacity)
             => new ObjectPool<ReusableInboundEnvelope>(capacity, create: () => new ReusableInboundEnvelope(), clear: env => env.Clear());
 
-        public Option<IInternalActorRef> Recipient { get; private set; }
-        public Option<IActorRef> Sender { get; private set; }
+        public IOptionVal<IInternalActorRef> Recipient { get; private set; }
+        public IOptionVal<IActorRef> Sender { get; private set; }
         public long OriginUid { get; private set; }
-        public Option<IOutboundContext> Association { get; private set; }
+        public IOptionVal<IOutboundContext> Association { get; private set; }
         public int Serializer { get; private set; }
         public string ClassManifest { get; private set; }
         public object Message { get; private set; }
@@ -86,29 +87,29 @@ namespace Akka.Remote.Artery
 
         public IInboundEnvelope WithRecipient(IInternalActorRef @ref)
         {
-            Recipient = new Option<IInternalActorRef>(@ref);
+            Recipient = OptionVal.Apply(@ref);
             return this;
         }
 
         public void Clear()
         {
-            Recipient = Option<IInternalActorRef>.None;
+            Recipient = OptionVal.None<IInternalActorRef>();
             Message = null;
-            Sender = Option<IActorRef>.None;
+            Sender = OptionVal.None<IActorRef>();
             OriginUid = 0;
-            Association = Option<IOutboundContext>.None;
+            Association = OptionVal.None<IOutboundContext>();
             Lane = 0;
         }
 
         public IInboundEnvelope Init(
-            Option<IInternalActorRef> recipient,
-            Option<IActorRef> sender,
+            IOptionVal<IInternalActorRef> recipient,
+            IOptionVal<IActorRef> sender,
             long originUid,
             int serializer,
             string classManifest,
             byte flags,
             EnvelopeBuffer envelopeBuffer,
-            Option<IOutboundContext> association,
+            IOptionVal<IOutboundContext> association,
             int lane)
         {
             Recipient = recipient;

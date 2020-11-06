@@ -8,16 +8,19 @@ using Akka.Util.Internal;
 
 namespace Akka.Remote.Artery.Compress
 {
+    internal static class DecompressionTable
+    {
+        public const byte DisabledVersion = unchecked((byte)-1);
+        public static DecompressionTable<T> Empty<T>() => new DecompressionTable<T>(0, 0, ImmutableArray<T>.Empty);
+        public static DecompressionTable<T> Disabled<T>() => new DecompressionTable<T>(0, DisabledVersion, ImmutableArray<T>.Empty);
+    }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T"></typeparam>
     internal sealed class DecompressionTable<T>
     {
-        public const byte DisabledVersion = unchecked((byte)-1);
-        public static DecompressionTable<T> Empty = new DecompressionTable<T>(0, 0, ImmutableArray<T>.Empty);
-        public static DecompressionTable<T> Disabled = new DecompressionTable<T>(0, DisabledVersion, ImmutableArray<T>.Empty);
-
         public long OriginUid { get; }
 
         /// <summary>
