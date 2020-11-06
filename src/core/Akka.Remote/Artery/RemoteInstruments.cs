@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Configuration;
-using System.IO;
 using System.Linq;
-using System.Text;
+using System.Reflection;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Artery.Internal;
 using Akka.Remote.Artery.Utils;
-using Akka.Util;
 using Akka.Util.Internal;
+using ConfigurationException = Akka.Configuration.ConfigurationException;
 
 namespace Akka.Remote.Artery
 {
@@ -33,7 +31,7 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Instrument identifier.
         ///
-        /// MUST be >= 1 and < 32.
+        /// MUST be &gt;= 1 and &lt; 32.
         ///
         /// Values between 1 and 7 are reserved for Akka internal use.
         /// </summary>
@@ -100,6 +98,79 @@ namespace Akka.Remote.Artery
             long time);
     }
 
+    internal class LoggingRemoteInstrument : RemoteInstrument
+    {
+        private readonly int _logFrameSizeExceeding;
+        private readonly ILoggingAdapter _log;
+        private readonly ConcurrentDictionary<Type, int> _maxPayloadBytes;
+
+        public LoggingRemoteInstrument(ActorSystem system)
+        {
+            var settings = system
+                .AsInstanceOf<ExtendedActorSystem>()
+                .Provider
+                .AsInstanceOf<RemoteActorRefProvider>()
+                .Transport
+                .AsInstanceOf<ArteryTransport>()
+                .Settings;
+            _logFrameSizeExceeding = settings.LogFrameSizeExceeding.Get;
+            _log = Logging.GetLogger(system, this);
+            _maxPayloadBytes = new ConcurrentDictionary<Type, int>();
+        }
+
+        public override byte Identifier => 1; // Cinnamon is using 0
+        public override void RemoteWriteMetadata(IActorRef recipient, object message, IActorRef sender, ByteBuffer buffer)
+        {
+            // no-op
+        }
+
+        public override void RemoteMessageSent(IActorRef recipient, object message, IActorRef sender, int size, long time)
+        {
+            if (size >= _logFrameSizeExceeding)
+            {
+                var clazz = message switch
+                {
+                    IWrappedMessage x => x.Message.GetType(),
+                    _ => message.GetType()
+                };
+
+                // 10% threshold until next log
+                var newMax = (int)(size * 1.1);
+
+                while (true)
+                {
+                    if (!_maxPayloadBytes.TryGetValue(clazz, out var max))
+                    {
+                        if (_maxPayloadBytes.TryAdd(clazz, newMax))
+                            _log.Info($"Payload size for [{clazz.Name}] is [{size}] bytes. Sent to {recipient}");
+                        else
+                            continue;
+                    }
+                    else if (size > max)
+                    {
+                        if (_maxPayloadBytes.TryUpdate(clazz, newMax, max))
+                            _log.Info(
+                                $"New maximum payload size for [{clazz.Name}] is [{size}] bytes. Sent to {recipient}.");
+                        else
+                            continue;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        public override void RemoteReadMetadata(IActorRef recipient, object message, IActorRef sender, ByteBuffer buffer)
+        {
+            // no-op
+        }
+
+        public override void RemoteMessageReceived(IActorRef recipient, object message, IActorRef sender, int size, long time)
+        {
+            // no-op
+        }
+    }
+
     /// <summary>
     /// INTERNAL API
     ///
@@ -123,7 +194,6 @@ namespace Akka.Remote.Artery
         public static RemoteInstruments Apply(ExtendedActorSystem system)
             => new RemoteInstruments(system);
 
-        private readonly ExtendedActorSystem _system;
         private readonly ILoggingAdapter _log;
         private readonly ImmutableList<RemoteInstrument> _instruments;
 
@@ -141,27 +211,26 @@ namespace Akka.Remote.Artery
 
         public RemoteInstruments(ExtendedActorSystem system, ILoggingAdapter log, ImmutableList<RemoteInstrument> instruments)
         {
-            _system = system;
             _log = log;
             _instruments = instruments.Sort((x, y) => x.Identifier - y.Identifier);
 
             TimeSerialization = _instruments.Exists(ri => ri.SerializationTimingEnabled);
         }
 
-        public void Serialize(Option<IOutboundEnvelope> outboundEnvelope, ByteBuffer buffer)
+        public void Serialize(IOptionVal<IOutboundEnvelope> outboundEnvelope, ByteBuffer buffer)
         {
-            if (_instruments.Count > 0 && outboundEnvelope.HasValue)
+            if (_instruments.Count > 0 && outboundEnvelope.IsDefined)
             {
-                var startPos = buffer.Position;
-                var oe = outboundEnvelope.Value;
+                var startPos = buffer.Position();
+                var oe = outboundEnvelope.Get;
                 try
                 {
                     buffer.PutInt(0);
-                    var dataPos = buffer.Position;
+                    var dataPos = buffer.Position();
                     var i = 0;
                     while (i < _instruments.Count)
                     {
-                        var rewindPos = buffer.Position;
+                        var rewindPos = buffer.Position();
                         var instrument = _instruments[i];
                         try
                         {
@@ -172,71 +241,149 @@ namespace Akka.Remote.Artery
                             if (!e.NonFatal()) throw;
                             _log.Debug(
                                 $"Skipping serialization of RemoteInstrument {instrument.Identifier} since it failed with {e.Message}");
-                            buffer.Position = rewindPos;
+                            buffer.Position(rewindPos);
                         }
 
                         ++i;
                     }
 
-                    var endPos = buffer.Position;
+                    var endPos = buffer.Position();
                     if (endPos == dataPos)
                     {
                         // no instruments wrote anything so we need to rewind to start
-                        buffer.Position = startPos;
+                        buffer.Position(startPos);
                     }
                     else
                     {
                         // some instruments wrote data, so write the total length
-                        buffer.PutInt((int)startPos, (int)(endPos - dataPos));
+                        buffer.PutInt(startPos, (endPos - dataPos));
                     }
                 }
                 catch(Exception e)
                 {
                     if (!e.NonFatal()) throw;
                     _log.Debug($"Skipping serialization of all RemoteInstruments due to unhandled failure {e.Message}");
-                    buffer.Position = startPos;
+                    buffer.Position(startPos);
                 }
             }
         }
 
-        private void SerializeInstrument(RemoteInstrument instrument, IOutboundEnvelope outboundEnvelope,
+        private void SerializeInstrument(
+            RemoteInstrument instrument, 
+            IOutboundEnvelope outboundEnvelope,
             ByteBuffer buffer)
         {
-            var startPos = buffer.Position;
+            var startPos = buffer.Position();
             buffer.PutInt(0);
-            var dataPos = buffer.Position;
+            var dataPos = buffer.Position();
             instrument.RemoteWriteMetadata(
-                outboundEnvelope.Recipient.GetOrElse(null),
+                outboundEnvelope.Recipient.OrNull(),
                 outboundEnvelope.Message,
-                outboundEnvelope.Sender.GetOrElse(null),
+                outboundEnvelope.Sender.OrNull(),
                 buffer);
-            var endPos = buffer.Position;
+            var endPos = buffer.Position();
             if (endPos == dataPos)
             {
                 // if the instrument didn't write anything, then rewind to the start
-                buffer.Position = startPos;
+                buffer.Position(startPos);
             }
             else
             {
                 // the instrument wrote something so we need to write the identifier and length
-                buffer.PutInt(startPos, CombineKeyLength(instrument.Identifier, (int)(endPos - dataPos)));
+                buffer.PutInt(startPos, CombineKeyLength(instrument.Identifier, endPos - dataPos));
             }
         }
 
         public void Deserialize(IInboundEnvelope inboundEnvelope)
         {
-            // ARTERY: NOT IMPLEMENTED
+            if (inboundEnvelope.Flag(EnvelopeBuffer.MetadataPresentFlag))
+            {
+                inboundEnvelope.EnvelopeBuffer.ByteBuffer.Position(EnvelopeBuffer.MetadataContainerAndLiteralSectionOffset);
+                DeserializeRaw(inboundEnvelope);
+            }
         }
 
         public void DeserializeRaw(IInboundEnvelope inboundEnvelope)
         {
-            // ARTERY: NOT IMPLEMENTED
+            var buffer = inboundEnvelope.EnvelopeBuffer.ByteBuffer;
+            var l = buffer.GetInt();
+            var endPos = buffer.Position() + l;
+            try
+            {
+                if (!_instruments.IsEmpty)
+                {
+                    var i = 0;
+                    while (i < _instruments.Count && buffer.Position() < endPos)
+                    {
+                        var instrument = _instruments[i];
+                        var startPos = buffer.Position();
+                        var keyAndLength = buffer.GetInt();
+                        var dataPos = buffer.Position();
+                        var key = GetKey(keyAndLength);
+                        var length = GetLength(keyAndLength);
+                        var nextPos = dataPos + length;
+                        var identifier = instrument.Identifier;
+                        if (key == identifier)
+                        {
+                            try
+                            {
+                                DeserializeInstrument(instrument, inboundEnvelope, buffer);
+                            }
+                            catch (Exception e)
+                            {
+                                if (!e.NonFatal())
+                                    throw;
+                                _log.Debug($"Skipping deserialization of RemoteInstrument {instrument.Identifier} since it failed with {e.Message}");
+                            }
+
+                            i++;
+                        }
+                        else if (key > identifier)
+                        {
+                            // since instruments are sorted on both sides skip this local one and retry the serialized one
+                            _log.Debug($"Skipping local RemoteInstrument {identifier} that has no matching data in the message");
+                            nextPos = startPos;
+                            i++;
+                        }
+                        else
+                        {
+                            // since instruments are sorted on both sides skip the serialized one and retry the local one
+                            _log.Debug($"Skipping serialized data in message for RemoteInstrument {key} that has no local match");
+                        }
+
+                        buffer.Position(nextPos);
+                    }
+                }
+                else
+                {
+                    if (_log.IsDebugEnabled)
+                        _log.Debug(
+                            $"Skipping serialized data in message for RemoteInstrument(s) [{string.Join(", ", new RemoteInstrumentIdEnumeratorRaw(buffer, endPos))}] that has no local match");
+                }
+            }
+            catch (Exception e)
+            {
+                if (!e.NonFatal())
+                    throw;
+                _log.Debug(
+                    $"Skipping further deserialization of remaining RemoteInstruments due to unhandled failure {e}");
+            }
+            finally
+            {
+                buffer.Position(endPos);
+            }
         }
 
-        private void DeserializeInstrument(RemoteInstrument instrument, IInboundEnvelope inboundEnvelope,
+        private void DeserializeInstrument(
+            RemoteInstrument instrument, 
+            IInboundEnvelope inboundEnvelope,
             ByteBuffer buffer)
         {
-            // ARTERY: NOT IMPLEMENTED
+            instrument.RemoteReadMetadata(
+                inboundEnvelope.Recipient.OrNull(),
+                inboundEnvelope.Message,
+                inboundEnvelope.Sender.OrNull(),
+                buffer);
         }
 
         public void MessageSent(IOutboundEnvelope outboundEnvelope, int size, long time)
@@ -255,103 +402,138 @@ namespace Akka.Remote.Artery
             }
         }
 
-        private void MessageSentInstrument(RemoteInstrument instrument, IOutboundEnvelope outboundEnvelope, int size, long time)
+        private void MessageSentInstrument(
+            RemoteInstrument instrument, 
+            IOutboundEnvelope outboundEnvelope, 
+            int size, 
+            long time)
         {
             instrument.RemoteMessageSent(
-                outboundEnvelope.Recipient.GetOrElse(null),
+                outboundEnvelope.Recipient.OrNull(),
                 outboundEnvelope.Message,
-                outboundEnvelope.Sender.GetOrElse(null),
+                outboundEnvelope.Sender.OrNull(),
                 size,
                 time);
         }
 
         public void MessageReceived(IInboundEnvelope inboundEnvelope, int size, long time)
         {
-            // ARTERY: NOT IMPLEMENTED
+            foreach (var instrument in _instruments)
+            {
+                try
+                {
+                    MessageReceivedInstrument(instrument, inboundEnvelope, size, time);
+                }
+                catch (Exception e)
+                {
+                    if (!e.NonFatal()) throw;
+                    _log.Debug($"Message received in RemoteInstrument {instrument.Identifier} failed with {e.Message}");
+                }
+            }
         }
 
-        public void MessageReceivedInstrument(RemoteInstrument instrument, IInboundEnvelope inboundEnvelope, int size,
+        public void MessageReceivedInstrument(
+            RemoteInstrument instrument, 
+            IInboundEnvelope inboundEnvelope, 
+            int size,
             long time)
         {
-            // ARTERY: NOT IMPLEMENTED
+            instrument.RemoteMessageReceived(
+                inboundEnvelope.Recipient.OrNull(),
+                inboundEnvelope.Message,
+                inboundEnvelope.Sender.OrNull(),
+                size,
+                time);
         }
 
-        private class RemoteInstrumentIdEnumerator : IEnumerator<int>
+        private class RemoteInstrumentIdEnumeratorRaw : IEnumerator<int>
         {
-            private readonly MemoryStream _buffer;
-            private readonly BinaryReader _reader;
-            private int _current;
+            private readonly ByteBuffer _buffer;
+            private readonly int _startPos;
+            private readonly int _endPos;
 
-            public RemoteInstrumentIdEnumerator(ByteBuffer buffer, int endPos)
+            public RemoteInstrumentIdEnumeratorRaw(ByteBuffer buffer, int endPos)
             {
-                if (endPos < buffer.Position) return;
+                _buffer = buffer;
+                _startPos = _buffer.Position();
+                _endPos = endPos;
 
-                _buffer = new MemoryStream(buffer.GetBuffer(), (int)buffer.Position, (int)(endPos - buffer.Position));
-                _reader = new BinaryReader(_buffer);
-
-                Reset();
             }
 
             public bool MoveNext()
             {
-                var len = GetLength(_current);
-                if (_buffer is null || len + _buffer.Position >= _buffer.Length)
+                if (_buffer.Position() >= _endPos) 
                     return false;
 
-                _buffer.Position += GetLength(_current);
-                _current = _reader.ReadInt32();
+                var keyAndLength = _buffer.GetInt();
+                _buffer.Position(_buffer.Position() + GetLength(keyAndLength));
+                Current = GetKey(keyAndLength);
                 return true;
             }
 
             public void Reset()
             {
-                _buffer.Position = 0;
-                _current = _reader.ReadInt32();
+                _buffer.Position(_startPos);
+                Current = 0;
             }
 
-            public int Current => GetKey(_current);
+            public int Current { get; private set; }
 
             object IEnumerator.Current => Current;
 
-            public void Dispose()
-            {
-                _buffer?.Dispose();
-                _reader?.Dispose();
-            }
+            public void Dispose() { }
         }
 
+        // key/length of a metadata element are encoded within a single integer:
+        // supports keys in the range of <0-31>
         private const int LengthMask = ~(31 << 26);
-        private static int CombineKeyLength(byte k, int l) => (k << 26) | (l & LengthMask);
+        private static int CombineKeyLength(byte k, int l) => ((int)k << 26) | (l & LengthMask);
         private static byte GetKey(int kl) => (byte)((uint)kl >> 26);
         private static int GetLength(int kl) => kl & LengthMask;
 
         public static ImmutableList<RemoteInstrument> Create(ExtendedActorSystem system, ILoggingAdapter log)
         {
-            var config = system.Settings.Config.GetConfig("akka.remote.artery.advanced");
-            if (config.IsNullOrEmpty())
-                throw Akka.Configuration.ConfigurationException.NullOrEmptyConfig<RemoteInstruments>();
+            var c = system.Settings.Config;
+            var path = "akka.remote.artery.advanced.instruments";
 
-            var typeList = config.GetStringList("instruments");
-            var remoteInstrumentType = typeof(RemoteInstrument);
-            var result = new List<RemoteInstrument>();
-            foreach (var typeName in typeList)
+            var configuredInstruments = c
+                .GetStringList(path)
+                .Select(fqcn =>
+                {
+                    var type = Type.GetType(fqcn);
+                    if(type == null)
+                        throw new ConfigurationException($"[akka.remote.artery.advanced.instruments] Failed to create instance of class [{fqcn}]");
+                    try
+                    {
+                        return (RemoteInstrument)Activator.CreateInstance(type);
+                    }
+                    catch
+                    {
+                        return (RemoteInstrument)Activator.CreateInstance(type, BindingFlags.CreateInstance, null, new[] { system });
+                    }
+                }).ToList();
+
+            return system.Provider switch
             {
-                RemoteInstrument instrument;
-                var type = Type.GetType(typeName);
-                if (!remoteInstrumentType.IsAssignableFrom(type))
-                    throw new IllegalArgumentException($"Class type {type} does not inherit {nameof(RemoteInstrument)} abstract class.");
-                try
+                RemoteActorRefProvider rarp => rarp.Transport switch
                 {
-                    instrument = (RemoteInstrument)Activator.CreateInstance(type);
-                }
-                catch
-                {
-                    instrument = (RemoteInstrument)Activator.CreateInstance(type, system);
-                }
-                result.Add(instrument);
-            }
+                    ArteryTransport artery => artery.Settings.LogFrameSizeExceeding switch
+                    {
+                        Some<int> _ => Add(configuredInstruments, new LoggingRemoteInstrument(system)).ToImmutableList(),
+                        _ => configuredInstruments.ToImmutableList()
+                    },
+                    _ => configuredInstruments.ToImmutableList(),
+                },
+                _ => configuredInstruments.ToImmutableList(),
+            };
+        }
 
-            return result.ToImmutableList();
+        private static IEnumerable<RemoteInstrument> Add(
+            ICollection<RemoteInstrument> list, 
+            RemoteInstrument instrument)
+        {
+            list.Add(instrument);
+            return list;
         }
     }
 }
