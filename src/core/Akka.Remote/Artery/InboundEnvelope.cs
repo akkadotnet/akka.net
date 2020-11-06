@@ -4,32 +4,51 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
+    internal interface IInboundEnvelope : INoSerializationVerificationNeeded
+    {
+        Option<IInternalActorRef> Recipient { get; }
+        Option<IActorRef> Sender { get; }
+        long OriginUid { get; }
+        Option<IOutboundContext> Association { get; }
+
+        int Serializer { get; }
+        string ClassManifest { get; }
+        object Message { get; }
+        EnvelopeBuffer EnvelopeBuffer { get; }
+
+        byte Flags { get; }
+        bool Flag(ByteFlag byteFlag);
+
+        IInboundEnvelope WithMessage(object message);
+
+        IInboundEnvelope ReleaseEnvelopeBuffer();
+
+        IInboundEnvelope WithRecipient(IInternalActorRef @ref);
+        IInboundEnvelope WithEnvelopeBuffer(EnvelopeBuffer envelopeBuffer);
+
+        int Lane { get; }
+        IInboundEnvelope CopyForLane(int lane);
+    }
+
     internal static class InboundEnvelope
     {
+        /// <summary>
+        /// Only used in tests
+        /// </summary>
+        /// <param name="recipient"></param>
+        /// <param name="message"></param>
+        /// <param name="sender"></param>
+        /// <param name="originUid"></param>
+        /// <param name="association"></param>
+        /// <returns></returns>
         public static IInboundEnvelope Create(
             Option<IInternalActorRef> recipient,
             Option<IActorRef> sender,
             long originUid,
-            int serializer,
-            string classManifest,
-            byte flags,
-            // ARTERY: EnvelopeBuffer not implemented yet
-            // EnvelopeBuffer envelopeBuffer, 
-            Option<IOutboundContext> association,
-            int lane)
-        {
-            return ReusableInboundEnvelope.Create(
-                recipient,
-                sender,
-                originUid,
-                serializer,
-                classManifest,
-                flags,
-                // ARTERY: EnvelopeBuffer not implemented yet
-                // envelopeBuffer,
-                association,
-                lane);
-        }
+            Option<IOutboundContext> association)
+            => new ReusableInboundEnvelope()
+                .Init(recipient, sender, originUid, -1, "", 0, null, association, 0)
+                .WithMessage(message);
     }
 
     internal class ReusableInboundEnvelope : IInboundEnvelope
@@ -42,9 +61,7 @@ namespace Akka.Remote.Artery
         public Option<IActorRef> Sender { get; private set; }
 
         public long OriginUid { get; private set; }
-
         public Option<IOutboundContext> Association { get; private set; }
-
         public int Serializer { get; private set; }
 
         public string ClassManifest { get; private set; }
@@ -97,8 +114,7 @@ namespace Akka.Remote.Artery
             int serializer,
             string classManifest,
             byte flags,
-            // ARTERY: EnvelopeBuffer not implemented yet
-            // EnvelopeBuffer envelopeBuffer, 
+            EnvelopeBuffer envelopeBuffer,
             Option<IOutboundContext> association,
             int lane)
         {
