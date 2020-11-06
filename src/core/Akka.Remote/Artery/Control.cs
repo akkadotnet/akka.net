@@ -4,33 +4,14 @@ using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Remote.Artery.Interfaces;
+using Akka.Remote.Artery.Utils;
 using Akka.Streams;
 using Akka.Streams.Stage;
 using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
-    /// <summary>
-    /// INTERNAL API
-    /// marker trait for protobuf-serializable artery messages
-    /// </summary>
-    internal interface IArteryMessage 
-    { }
-
-    /// <summary>
-    /// INTERNAL API
-    /// Marker trait for control messages that can be sent via the system message sub-channel
-    /// but don't need full reliable delivery. E.g. `HandshakeReq` and `Reply`.
-    /// </summary>
-    internal interface IControlMessage : IArteryMessage
-    { }
-
-    /// <summary>
-    /// INTERNAL API
-    /// Marker trait for reply messages
-    /// </summary>
-    internal interface IReply : IControlMessage
-    { }
 
     /// <summary>
     /// INTERNAL API
@@ -281,7 +262,7 @@ namespace Akka.Remote.Artery
             }
 
             private IOutboundEnvelope Wrap(IControlMessage message)
-                => _outboundEnvelopePool.Acquire().Init(Option<RemoteActorRef>.None, message, Option<IActorRef>.None);
+                => _outboundEnvelopePool.Acquire().Init(OptionVal.None<RemoteActorRef>(), message, OptionVal.None<IActorRef>());
 
             public void SendControlMessage(IControlMessage message)
                 => _sendControlMessageCallback.Invoke(message);

@@ -49,9 +49,9 @@ namespace Akka.Remote.Artery
         void TcpOutboundConnected(Address remoteAddress, string streamName);
         void TcpOutboundSent(int size);
 
-        void TcpInboundBound(string bindHost, InetSocketAddress address);
+        void TcpInboundBound(string bindHost, SocketAddress address);
         void TcpInboundUnbound(UniqueAddress localAddress);
-        void TcpInboundConnected(InetSocketAddress remoteAddress);
+        void TcpInboundConnected(SocketAddress remoteAddress);
         void TcpInboundReceived(int size);
     }
 
@@ -66,18 +66,25 @@ namespace Akka.Remote.Artery
         {
             if (system.Settings.Config.GetBoolean("akka.clr-flight-recorder.enabled"))
             {
+                // ARTERY NOT IMPLEMENTED YET
                 // ARTERY: supposed to return an instance of akka.remote.artery.jfr.JFRRemotingFlightRecorder
             }
-            return new NoOpRemotingFlightRecorder();
+            return NoOpRemotingFlightRecorder.Instance;
         }
     }
 
-    internal class NoOpRemotingFlightRecorder : IRemotingFlightRecorder
+    internal sealed class NoOpRemotingFlightRecorder : IRemotingFlightRecorder
     {
+        public static readonly NoOpRemotingFlightRecorder Instance = new NoOpRemotingFlightRecorder();
+
+        private NoOpRemotingFlightRecorder() {}
+
         public void TransportMediaDriverStarted(string directoryName) {}
         public void TransportStarted() {}
         public void TransportAeronErrorLogStarted() {}
         public void TransportTaskRunnerStarted() {}
+        public void TransportUniqueAddressSet(UniqueAddress uniqueAddress) {}
+
         public void TransportUniqueAddressSet() {}
         public void TransportMaterializerStarted() {}
         public void TransportStartupFinished() {}
@@ -114,9 +121,9 @@ namespace Akka.Remote.Artery
 
         public void TcpOutboundConnected(Address remoteAddress, string streamName) {}
         public void TcpOutboundSent(int size) {}
-        public void TcpInboundBound(string bindHost, InetSocketAddress address) {}
+        public void TcpInboundBound(string bindHost, SocketAddress address) {}
         public void TcpInboundUnbound(UniqueAddress localAddress) {}
-        public void TcpInboundConnected(InetSocketAddress remoteAddress) {}
+        public void TcpInboundConnected(SocketAddress remoteAddress) {}
         public void TcpInboundReceived(int size) {}
     }
 }

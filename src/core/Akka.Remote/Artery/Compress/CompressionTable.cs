@@ -31,7 +31,7 @@ namespace Akka.Remote.Artery.Compress
         public DecompressionTable<T> Invert()
         {
             if(Dictionary.IsEmpty)
-                return DecompressionTable<T>.Empty.Copy(originUid:OriginUid, version:Version);
+                return DecompressionTable.Empty<T>().Copy(originUid:OriginUid, version:Version);
 
             // TODO: these are some expensive sanity checks, about the numbers being consecutive, without gaps
             // TODO: we can remove them, make them re-map (not needed I believe though)

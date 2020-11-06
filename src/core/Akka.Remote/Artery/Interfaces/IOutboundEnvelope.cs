@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
+using Akka.Remote.Artery.Utils;
 using Akka.Util;
 
 namespace Akka.Remote.Artery.Interfaces
@@ -11,12 +12,11 @@ namespace Akka.Remote.Artery.Interfaces
     /// </summary>
     internal interface IOutboundEnvelope : INoSerializationVerificationNeeded
     {
-        Option<RemoteActorRef> Recipient { get; }
+        IOptionVal<RemoteActorRef> Recipient { get; }
         object Message { get; }
-        Option<IActorRef> Sender { get; }
+        IOptionVal<IActorRef> Sender { get; }
 
-        IOutboundEnvelope WithMessage(object Message);
+        IOutboundEnvelope WithMessage(object message);
         IOutboundEnvelope Copy();
     }
-
 }
