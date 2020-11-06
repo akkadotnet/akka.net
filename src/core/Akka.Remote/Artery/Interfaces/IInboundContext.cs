@@ -2,12 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Akka.Remote.Artery.Utils;
 
 namespace Akka.Remote.Artery.Interfaces
 {
     /// <summary>
     /// INTERNAL API
-    /// 
     /// Inbound API that is used by the stream operators.
     /// Separate trait to facilitate testing without real transport.
     /// </summary>
@@ -17,6 +17,8 @@ namespace Akka.Remote.Artery.Interfaces
         /// The local inbound address.
         /// </summary>
         UniqueAddress LocalAddress { get; }
+
+        ArterySettings Settings { get; }
 
         /// <summary>
         /// An inbound operator can send control message, e.g. a reply, to the origin
@@ -35,18 +37,16 @@ namespace Akka.Remote.Artery.Interfaces
 
         /// <summary>
         /// Lookup the outbound association for a given UID.
-        /// Will return `null` if the UID is unknown, i.e.
-        /// handshake not completed.
         /// </summary>
         /// <param name="uid"></param>
-        /// <returns></returns>
-        IOutboundContext Association(long uid);
+        /// <returns>
+        /// <see cref="Some{OutboundContext}"/> if an association is found.
+        /// <see cref="None{OutboundContext}"/> if the UID is unknown, i.e. handshake not completed.
+        /// </returns>
+        IOptionVal<IOutboundContext> Association(long uid);
 
         Task<Done> CompleteHandshake(UniqueAddress peer);
 
-        ArterySettings Settings { get; }
-
         void PublishDropped(IInboundEnvelope inbound, string reason);
     }
-
 }

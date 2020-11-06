@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Internal;
 using Akka.Remote.Artery.Utils;
 using Akka.Util.Internal;

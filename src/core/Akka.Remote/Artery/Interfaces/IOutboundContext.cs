@@ -5,10 +5,8 @@ using Akka.Actor;
 
 namespace Akka.Remote.Artery.Interfaces
 {
-
     /// <summary>
     /// INTERNAL API
-    /// 
     /// Outbound association API that is used by the stream operators.
     /// Separate trait to facilitate testing without real transport.
     /// </summary>
@@ -36,12 +34,12 @@ namespace Akka.Remote.Artery.Interfaces
         void SendControl(IControlMessage message);
 
         /// <summary>
-        /// return true` if any of the streams are active (not stopped due to idle)
+        /// 
         /// </summary>
-        /// <returns></returns>
+        /// <returns>`true` if any of the streams are active (not stopped due to idle)</returns>
         bool IsOrdinaryMessageStreamActive();
 
-        IControlMessageSubject ControlSubject { get; }
+        InboundControlJunction.IControlMessageSubject ControlSubject { get; }
 
         ArterySettings Settings { get; }
     }
