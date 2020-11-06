@@ -6,26 +6,47 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Utils
 {
-    public sealed class OptionVal<T>
+    public static class OptionVal
     {
-        public static readonly OptionVal<T> None = new OptionVal<T>(default);
+        public static IOptionVal<T> Apply<T>(T x)
+            => x == null ? (IOptionVal<T>)Utils.None<T>.Instance : new Some<T>(x);
 
+        public static IOptionVal<T> Some<T>(T x) => new Some<T>(x);
+
+        public static IOptionVal<T> None<T>() => Utils.None<T>.Instance;
+    }
+
+    public interface IOptionVal<T>
+    {
+        bool IsEmpty { get; }
+        bool IsDefined { get; }
+        T1 GetOrElse<T1>(T1 @default) where T1 : T;
+        Option<T> ToOption();
+        bool Contains<T1>(T1 it) where T1 : T;
+        T OrNull();
+        T Get { get; }
+    }
+
+    public sealed class Some<T> : IOptionVal<T>
+    {
         private readonly T _x;
 
-        public OptionVal(T x)
+        internal Some(T x)
         {
+            if(x == null)
+                throw new NoSuchElementException("OptionVal.Some");
             _x = x;
         }
 
         /// <summary>
         /// Returns true if the option is `OptionVal.None`, false otherwise.
         /// </summary>
-        public bool IsEmpty => _x == null;
+        public bool IsEmpty => false;
 
         /// <summary>
         /// Returns true if the option is `OptionVal.None`, false otherwise.
         /// </summary>
-        public bool IsDefined => !IsEmpty;
+        public bool IsDefined => true;
 
         /// <summary>
         /// Returns the option's value if the option is nonempty, otherwise return `default`.
@@ -33,24 +54,23 @@ namespace Akka.Remote.Artery.Utils
         /// <typeparam name="T1"></typeparam>
         /// <param name="default"></param>
         /// <returns></returns>
-        public T1 GetOrElse<T1>(T1 @default) where T1: T
-            => _x == null ? @default : (T1)_x;
+        public T1 GetOrElse<T1>(T1 @default) where T1 : T
+            => (T1)_x;
 
         /// <summary>
         ///  Convert to `Option[T]`
         /// </summary>
-        public Option<T> ToOption => new Option<T>(_x);
+        public Option<T> ToOption() => new Option<T>(_x);
 
         public bool Contains<T1>(T1 it) where T1 : T
-            => _x != null && _x.Equals(it);
+            => _x.Equals(it);
 
         /// <summary>
         /// Returns the option's value if it is nonempty, or `null` if it is empty.
         /// </summary>
-        /// <typeparam name="T1"></typeparam>
         /// <returns></returns>
-        public T1 OrNull<T1>() where T1 : T
-            => GetOrElse<T1>(default);
+        public T OrNull()
+            => _x;
 
         /// <summary>
         /// Returns the option's value.
@@ -59,16 +79,40 @@ namespace Akka.Remote.Artery.Utils
         /// The option must be nonEmpty.
         /// </remarks>
         /// <returns></returns>
-        public T Get()
-        {
-            if(_x == null)
-                throw new NoSuchElementException("OptionVal.None.Get");
-            return _x;
-        }
+        public T Get => _x;
 
         public override string ToString()
         {
-            return _x == null ? "None" : $"Some({_x})";
+            return $"Some<{GetType()}>({_x})";
+        }
+    }
+
+    public sealed class None<T> : IOptionVal<T>
+    {
+        public static readonly None<T> Instance = new None<T>();
+
+        private None() {}
+
+        public bool IsEmpty => true;
+        public bool IsDefined => false;
+
+        public T1 GetOrElse<T1>(T1 @default) where T1 : T
+            => @default;
+
+        public Option<T> ToOption()
+            => Option<T>.None;
+
+        public bool Contains<T1>(T1 it) where T1 : T
+            => false;
+
+        public T OrNull()
+            => default;
+
+        public T Get => throw new NoSuchElementException("OptionVal.None.Get");
+
+        public override string ToString()
+        {
+            return $"None<{GetType()}>";
         }
     }
 }
