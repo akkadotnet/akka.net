@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
 using Akka.Configuration;
+using Akka.Remote.Artery.Utils;
 using Akka.Util;
 using Akka.Streams;
 using TransportType = Akka.Remote.Artery.ArterySettings.TransportType;
@@ -332,6 +333,8 @@ namespace Akka.Remote.Artery
         public bool LogReceive { get; }
         public bool LogSend { get; }
 
+        public IOptionVal<int> LogFrameSizeExceeding { get; }
+
         public TransportType Transport { get; }
 
         /// <summary>
@@ -360,11 +363,17 @@ namespace Akka.Remote.Artery
             }
 
             SslEngineProviderClassName = _config.GetString("ssl.ssl-engine-provider");
+
             UntrustedMode = _config.GetBoolean("untrusted-mode");
             TrustedSelectionPaths = _config.GetStringList("trusted-selection-paths").ToImmutableHashSet();
+
             LogReceive = _config.GetBoolean("log-received-messages");
             LogSend = _config.GetBoolean("log-sent-messages");
-            
+
+            LogFrameSizeExceeding = _config.GetString("log-frame-size-exceeding").ToLowerInvariant().Equals("off")
+                ? OptionVal.None<int>()
+                : OptionVal.Some((int)(_config.GetByteSize("log-frame-size-exceeding") ?? 0)); // ARTERY a bit janky, check HOCON
+
             Transport = _config.GetString("transport").ToLowerInvariant() switch
             {
                 "aeron-udp" => throw new ConfigurationException("akka.remote.artery.transport: Aeron transport is not supported yet."),
