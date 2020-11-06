@@ -9,7 +9,7 @@ namespace Akka.Remote.Artery
     internal static class OutboundEnvelope
     {
         public static IOutboundEnvelope Create(Option<RemoteActorRef> recipient, object message, Option<IActorRef> sender)
-            => ReusableOutboundEnvelope.Create(recipient, message, sender);
+            => new ReusableOutboundEnvelope().Init(recipient, message, sender);
     }
 
     /// <summary>
@@ -21,7 +21,7 @@ namespace Akka.Remote.Artery
         object Message { get; }
         Option<IActorRef> Sender { get; }
 
-        IOutboundEnvelope WithMessage(object Message);
+        IOutboundEnvelope WithMessage(object message);
         IOutboundEnvelope Copy();
     }
 
