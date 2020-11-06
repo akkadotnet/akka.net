@@ -17,6 +17,8 @@ namespace DocsExamples.Actors
 {
     public class SchedulerSpecs : TestKit
     {
+        public sealed class StopPrinting{}
+        public sealed class CanPrint{}
 
         // <TimerActor>
         public sealed class Print { }
@@ -50,6 +52,62 @@ namespace DocsExamples.Actors
         }
         // </TimerActor>
 
+        public sealed class StartStopTimerActor : ReceiveActor, IWithTimers
+        {
+            public ITimerScheduler Timers { get; set; }
+
+            private int _count = 0;
+            private ILoggingAdapter _log = Context.GetLogger();
+
+            public StartStopTimerActor()
+            {
+                Receive<int>(i =>
+                {
+                    _count += i;
+                });
+
+                Receive<StopPrinting>(_ => StopPrintTimer());
+                Receive<CanPrint>(_ =>
+                {
+                    // <CheckTimer>
+                    var isPrintTimerActive = Timers.IsTimerActive("print");
+                    Sender.Tell(isPrintTimerActive);
+                    // </CheckTimer>
+                });
+                Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
+                Receive<Total>(_ => Sender.Tell(_count));
+            }
+
+            protected override void PreStart()
+            {
+                StartTimers();
+            }
+
+            private void StartTimers()
+            {
+                // <StartTimers>
+                
+                // start single timer that fires off 5 seconds in the future
+                Timers.StartSingleTimer("print", new Print(), TimeSpan.FromSeconds(5));
+
+                // start recurring timer
+                Timers.StartPeriodicTimer("add", 1, TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(20));
+                // </StartTimers>
+            }
+
+            private void StopPrintTimer()
+            {
+                // <StopTimers>
+                // cancels the print timer
+                Timers.Cancel("print");
+
+                // cancels all of the timers that belong to this actor
+                // (also called automatically when this actor is stopped)
+                Timers.CancelAll();
+                // </StopTimers>
+            }
+        }
+
         [Fact]
         public async Task TimerActorShouldIncrementOverTime()
         {
@@ -64,6 +122,20 @@ namespace DocsExamples.Actors
             var count2 = ExpectMsg<int>();
 
             count1.Should().BeLessThan(count2);
+        }
+
+        [Fact]
+        public async Task TimerShouldStopCorrectly()
+        {
+            var timerActor = Sys.ActorOf(Props.Create(() => new StartStopTimerActor()), "timers");
+
+            var canPrint1 = await timerActor.Ask<bool>(new CanPrint(), TimeSpan.FromSeconds(1));
+            canPrint1.Should().BeTrue();
+
+            timerActor.Tell(new StopPrinting());
+
+            var canPrint2 = await timerActor.Ask<bool>(new CanPrint(), TimeSpan.FromSeconds(1));
+            canPrint2.Should().BeFalse();
         }
     }
 }
