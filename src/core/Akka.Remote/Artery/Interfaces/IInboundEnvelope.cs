@@ -16,12 +16,10 @@ namespace Akka.Remote.Artery.Interfaces
         int Serializer { get; }
         string ClassManifest { get; }
         object Message { get; }
-        // ARTERY: EnvelopeBuffer not implemented yet
-        // EnvelopeBuffer EnvelopeBuffer { get; }
+        EnvelopeBuffer EnvelopeBuffer { get; }
 
         byte Flags { get; }
-        // ARTERY: ByteFlag not implemented yet
-        // bool Flag(ByteFlag byteFlag);
+        bool Flag(ByteFlag byteFlag);
 
         IInboundEnvelope WithMessage(object message);
 

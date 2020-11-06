@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Akka.Actor;
+﻿using Akka.Actor;
 using Akka.Remote.Artery.Utils;
-using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
@@ -58,18 +54,21 @@ namespace Akka.Remote.Artery
     internal class ReusableInboundEnvelope : IInboundEnvelope
     {
         public static ObjectPool<ReusableInboundEnvelope> CreateObjectPool(int capacity)
-            => new ObjectPool<ReusableInboundEnvelope>(capacity, create: () => new ReusableInboundEnvelope(), clear: env => env.Clear());
+            => new ObjectPool<ReusableInboundEnvelope>(
+                capacity, 
+                create: () => new ReusableInboundEnvelope(), 
+                clear: env => env.Clear());
 
-        public IOptionVal<IInternalActorRef> Recipient { get; private set; }
-        public IOptionVal<IActorRef> Sender { get; private set; }
-        public long OriginUid { get; private set; }
-        public IOptionVal<IOutboundContext> Association { get; private set; }
-        public int Serializer { get; private set; }
-        public string ClassManifest { get; private set; }
-        public object Message { get; private set; }
-        public EnvelopeBuffer EnvelopeBuffer { get; private set; }
-        public byte Flags { get; private set; }
-        public int Lane { get; private set; }
+        public IOptionVal<IInternalActorRef> Recipient { get; private set; } = OptionVal.None<IInternalActorRef>();
+        public IOptionVal<IActorRef> Sender { get; private set; } = OptionVal.None<IActorRef>();
+        public long OriginUid { get; private set; } = 0L;
+        public IOptionVal<IOutboundContext> Association { get; private set; } = OptionVal.None<IOutboundContext>();
+        public int Serializer { get; private set; } = 01;
+        public string ClassManifest { get; private set; } = null;
+        public byte Flags { get; private set; } = (byte)0;
+        public int Lane { get; private set; } = 0;
+        public object Message { get; private set; } = null;
+        public EnvelopeBuffer EnvelopeBuffer { get; private set; } = null;
 
         public bool Flag(ByteFlag byteFlag) => byteFlag.IsEnabled(Flags);
 
@@ -133,7 +132,7 @@ namespace Akka.Remote.Artery
 
         public IInboundEnvelope CopyForLane(int lane)
         {
-            var buf = EnvelopeBuffer is null ? null : EnvelopeBuffer.Copy();
+            var buf = EnvelopeBuffer?.Copy();
             var env = new ReusableInboundEnvelope();
             return env
                 .Init(Recipient, Sender, OriginUid, Serializer, ClassManifest, Flags, buf, Association, lane)

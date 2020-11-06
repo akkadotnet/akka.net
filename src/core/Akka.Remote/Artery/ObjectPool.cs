@@ -5,6 +5,7 @@ using System.Text;
 
 namespace Akka.Remote.Artery
 {
+    // ARTERY: This is a very rudimentary implementation of a pool, need to check to see if this is enough.
     internal class ObjectPool<T>
     {
         public int Capacity { get; }

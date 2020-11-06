@@ -15,7 +15,7 @@ namespace Akka.Remote.Artery.Interfaces
         object Message { get; }
         Option<IActorRef> Sender { get; }
 
-        IOutboundEnvelope WithMessage(object Message);
+        IOutboundEnvelope WithMessage(object message);
         IOutboundEnvelope Copy();
     }
 
