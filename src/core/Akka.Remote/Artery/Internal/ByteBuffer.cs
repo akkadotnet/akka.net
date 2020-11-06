@@ -30,6 +30,10 @@ namespace Akka.Remote.Artery.Internal
 
         private ByteBuffer(byte[] array) : this(array.Length)
         {
+            // NOTE: this might not be the best solution. Ideally, the array became the actual 
+            // backing array of the byte buffer. Maybe array.AsMemory would be a better implementation?
+            // If we do that, will the array persist when its reference is released outside the ByteBuffer?
+            // What is the life cycle of the array in memory?
             array.AsSpan().CopyTo(_buffer.Span);
         }
 
