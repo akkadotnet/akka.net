@@ -34,9 +34,8 @@ namespace Akka.Remote.Artery
 
     internal class ReusableInboundEnvelope : IInboundEnvelope
     {
-        // ARTERY: ObjectPool isn't implemented yet
-        // public static ObjectPool<ReusableInboundEnvelope> CreateObjectPool(int capacity)
-        //     => new ObjectPool<ReusableInboundEnvelope>(capacity, () => new ReusableInboundEnvelope(), env => env.Clear());
+        public static ObjectPool<ReusableInboundEnvelope> CreateObjectPool(int capacity)
+            => new ObjectPool<ReusableInboundEnvelope>(capacity, create: () => new ReusableInboundEnvelope(), clear: env => env.Clear());
 
         public Option<IInternalActorRef> Recipient { get; private set; }
 
