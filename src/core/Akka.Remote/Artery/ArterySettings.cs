@@ -253,9 +253,6 @@ namespace Akka.Remote.Artery
 
         internal sealed class CompressionSettings
         {
-            // unlocks additional very verbose debug logging of compression events (to stdout)
-            public const bool Debug = false;
-
             public Config Config { get; }
             public bool Enabled => ActorRefs.Enabled || Manifests.Enabled;
             public ActorRefsSettings ActorRefs { get; }
