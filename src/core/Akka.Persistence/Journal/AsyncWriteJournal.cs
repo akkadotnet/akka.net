@@ -54,6 +54,7 @@ namespace Akka.Persistence.Journal
             CanPublish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = new CircuitBreaker(
+                Context.System.Scheduler,
                 config.GetInt("circuit-breaker.max-failures", 0),
                 config.GetTimeSpan("circuit-breaker.call-timeout", null),
                 config.GetTimeSpan("circuit-breaker.reset-timeout", null));
@@ -405,7 +406,7 @@ namespace Akka.Persistence.Journal
                                 ? TryUnwrapException(t.Exception)
                                 : new OperationCanceledException(
                                     "WriteMessagesAsync canceled, possibly due to timing out."));
-                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception), counter, message.PersistentActor, self));
+                        _resequencer.Tell(new Desequenced(new WriteMessagesFailed(exception, atomicWriteCount), counter, message.PersistentActor, self));
                         resequence((x, _) => new WriteMessageFailure(x, exception, message.ActorInstanceId), null);
                     }
                 }, _continuationOptions);

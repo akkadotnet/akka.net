@@ -2,8 +2,9 @@
 <Import Project="..\..\common.props" />
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
-    <AssemblyName>Akka.Streams.Tests</AssemblyName>
-    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
+    <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
+    <!-- Reactive.Streams.TCK isn't compatible with .NET Core -->
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
@@ -18,8 +19,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
     <PackageReference Include="Reactive.Streams.TCK" Version="1.0.2" />
-    <PackageReference Include="NUnit" Version="3.12.0" />
+    <!-- !!!WARNING!!! 
+         NUNIT VERSION HAVE TO MATCH WITH THE VERSION USED BY REACTIVE TCK. 
+         !!!WARNING!!! -->
+    <PackageReference Include="NUnit" Version="3.7.1" Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'"/>
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">

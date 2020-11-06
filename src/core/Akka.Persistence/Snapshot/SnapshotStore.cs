@@ -38,6 +38,7 @@ namespace Akka.Persistence.Snapshot
             _publish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = CircuitBreaker.Create(
+                Context.System.Scheduler,
                 config.GetInt("circuit-breaker.max-failures", 0),
                 config.GetTimeSpan("circuit-breaker.call-timeout", null),
                 config.GetTimeSpan("circuit-breaker.reset-timeout", null));

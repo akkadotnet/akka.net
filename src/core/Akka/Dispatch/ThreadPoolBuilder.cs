@@ -42,23 +42,6 @@ namespace Akka.Dispatch
                 ThreadType.Foreground : ThreadType.Background;
         }
 
-#if UNSAFE_THREADING
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="cfg">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ApartmentState GetApartmentState(Config cfg)
-        {
-            var s = cfg.GetString("apartment", "");
-            return string.Compare(s, "sta", StringComparison.OrdinalIgnoreCase) == 0
-                ? ApartmentState.STA
-                : string.Compare(s, "mta", StringComparison.OrdinalIgnoreCase) == 0
-                    ? ApartmentState.MTA
-                    : ApartmentState.Unknown;
-        }
-#endif
-
         /// <summary>
         /// Default settings for <see cref="SingleThreadDispatcher"/> instances.
         /// </summary>

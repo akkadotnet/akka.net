@@ -606,6 +606,15 @@ As with the `PoisonPill` messasge, there is a distinction between killing a rout
 
 See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) for more details on how `Kill` message works.
 
+### Management Messages 
+
+Sending one of the following messages to a router can be used to manage its routees.
+
+- `Akka.Routing.GetRoutees` The router actor will respond with a `Akka.Routing.Routees` message, which contains a list of currently used routees.
+- `Akka.Routing.AddRoutee` The router actor will add the provided to its collection of routees.
+- `Akka.Routing.RemoveRoutee` The router actor will remove the provided routee to its collection of routees.
+- `Akka.Routing.AdjustPoolSize` The pool router actor will add or remove that number of routees to its collection of routees.
+
 ## Advanced
 
 ### How Routing is Designed within Akka.NET

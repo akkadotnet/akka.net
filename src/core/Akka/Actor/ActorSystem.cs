@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
@@ -33,12 +34,13 @@ namespace Akka.Actor
         internal string Fqn { get; }
         internal bool HasCluster { get; }
 
+        internal const string LocalActorRefProvider = "Akka.Actor.LocalActorRefProvider, Akka";
         internal const string RemoteActorRefProvider = "Akka.Remote.RemoteActorRefProvider, Akka.Remote";
         internal const string ClusterActorRefProvider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster";
 
         public sealed class Local : ProviderSelection
         {
-            private Local() : base("local", typeof(LocalActorRefProvider).FullName, false)
+            private Local() : base("local", LocalActorRefProvider, false)
             {
             }
 
@@ -95,11 +97,16 @@ namespace Akka.Actor
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup
     {
-        internal BootstrapSetup() : this(Option<Config>.None, Option<ProviderSelection>.None)
+        internal BootstrapSetup() 
+            : this(
+                Option<Config>.None, 
+                Option<ProviderSelection>.None)
         {
         }
 
-        internal BootstrapSetup(Option<Config> config, Option<ProviderSelection> actorRefProvider)
+        internal BootstrapSetup(
+            Option<Config> config, 
+            Option<ProviderSelection> actorRefProvider)
         {
             Config = config;
             ActorRefProvider = actorRefProvider;
@@ -263,7 +270,7 @@ namespace Akka.Actor
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
         {
-            var system = new ActorSystemImpl(name, withFallback, setup);
+            var system = new ActorSystemImpl(name, withFallback, setup, Option<Props>.None);
             system.Start();
             return system;
         }

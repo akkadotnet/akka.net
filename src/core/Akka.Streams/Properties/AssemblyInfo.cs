@@ -12,6 +12,8 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
+[assembly: InternalsVisibleTo("Akka.Persistence.Query.Sql")]
+[assembly: InternalsVisibleTo("Akka.Persistence.TCK")]
 [assembly: InternalsVisibleTo("Akka.Streams.Tests")]
 [assembly: InternalsVisibleTo("Akka.Streams.TestKit")]
 [assembly: InternalsVisibleTo("Akka.Benchmarks")]

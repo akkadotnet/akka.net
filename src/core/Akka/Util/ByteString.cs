@@ -443,6 +443,9 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         public byte[] ToArray()
         {
+            if (_count == 0)
+                return Array.Empty<byte>();
+
             var copy = new byte[_count];
             this.CopyTo(copy, 0, _count);
             return copy;

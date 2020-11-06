@@ -12,6 +12,7 @@ namespace DocsExamples.Persistence.PersistentActor
 {
     public static class NestedPersists
     {
+        #region NestedPersists1
         public class MyPersistentActor : UntypedPersistentActor
         {
             public override string PersistenceId => "my-stable-persistence-id";
@@ -41,12 +42,14 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
 
         public static void MainApp()
         {
             var system = ActorSystem.Create("NestedPersists");
             var persistentActor = system.ActorOf<MyPersistentActor>();
 
+            #region NestedPersists2
             persistentActor.Tell("a");
             persistentActor.Tell("b");
 
@@ -62,6 +65,7 @@ namespace DocsExamples.Persistence.PersistentActor
             // b-outer-2
             // b-inner-1
             // b-inner-2
+            #endregion
         }
     }
 }

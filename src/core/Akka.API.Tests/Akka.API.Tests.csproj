@@ -5,6 +5,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
+    <UserSecretsId>93253ee8-0410-4483-9809-9bb2d32860fa</UserSecretsId>
   </PropertyGroup>
   
   <ItemGroup>

@@ -1,5 +1,6 @@
 ﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
@@ -1590,6 +1591,13 @@ namespace Akka.Actor
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public class SelectChildRecursive : Akka.Actor.SelectionPathElement
+    {
+        public SelectChildRecursive() { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public class SelectParent : Akka.Actor.SelectionPathElement
     {
         public SelectParent() { }
@@ -1624,6 +1632,7 @@ namespace Akka.Actor
         public bool LogConfigOnStart { get; }
         public int LogDeadLetters { get; }
         public bool LogDeadLettersDuringShutdown { get; }
+        public System.TimeSpan LogDeadLettersSuspendDuration { get; }
         public string LogLevel { get; }
         public bool LoggerAsyncStart { get; }
         public System.TimeSpan LoggerStartTimeout { get; }
@@ -1840,12 +1849,13 @@ namespace Akka.Actor.Internal
     public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
     {
         public ActorSystemImpl(string name) { }
-        public ActorSystemImpl(string name, Akka.Configuration.Config config, Akka.Actor.Setup.ActorSystemSetup setup) { }
+        public ActorSystemImpl(string name, Akka.Configuration.Config config, Akka.Actor.Setup.ActorSystemSetup setup, System.Nullable<Akka.Util.Option<Akka.Actor.Props>> guardianProps = null) { }
         public override Akka.Actor.ActorProducerPipelineResolver ActorPipelineResolver { get; }
         public override Akka.Actor.IActorRef DeadLetters { get; }
         public override Akka.Dispatch.Dispatchers Dispatchers { get; }
         public override Akka.Event.EventStream EventStream { get; }
         public override Akka.Actor.IInternalActorRef Guardian { get; }
+        public Akka.Util.Option<Akka.Actor.Props> GuardianProps { get; }
         public override Akka.Event.ILoggingAdapter Log { get; }
         public override Akka.Actor.IInternalActorRef LookupRoot { get; }
         public override Akka.Dispatch.Mailboxes Mailboxes { get; }
@@ -2451,9 +2461,10 @@ namespace Akka.Dispatch
     }
     public sealed class Dispatchers
     {
+        public static readonly string DefaultBlockingDispatcherId;
         public static readonly string DefaultDispatcherId;
         public static readonly string SynchronizedDispatcherId;
-        public Dispatchers(Akka.Actor.ActorSystem system, Akka.Dispatch.IDispatcherPrerequisites prerequisites) { }
+        public Dispatchers(Akka.Actor.ActorSystem system, Akka.Dispatch.IDispatcherPrerequisites prerequisites, Akka.Event.ILoggingAdapter logger) { }
         public Akka.Configuration.Config DefaultDispatcherConfig { get; }
         public Akka.Dispatch.MessageDispatcher DefaultGlobalDispatcher { get; }
         public Akka.Dispatch.IDispatcherPrerequisites Prerequisites { get; }
@@ -3884,15 +3895,20 @@ namespace Akka.Pattern
     }
     public class CircuitBreaker
     {
-        public CircuitBreaker(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout, System.TimeSpan maxResetTimeout, double exponentialBackoffFactor) { }
         public System.TimeSpan CallTimeout { get; }
         public long CurrentFailureCount { get; }
+        public double ExponentialBackoffFactor { get; }
         public bool IsClosed { get; }
         public bool IsHalfOpen { get; }
         public bool IsOpen { get; }
+        public System.Exception LastCaughtException { get; }
         public int MaxFailures { get; }
+        public System.TimeSpan MaxResetTimeout { get; }
         public System.TimeSpan ResetTimeout { get; }
-        public static Akka.Pattern.CircuitBreaker Create(int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
+        public Akka.Actor.IScheduler Scheduler { get; }
+        public static Akka.Pattern.CircuitBreaker Create(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
         public void Fail() { }
         public Akka.Pattern.CircuitBreaker OnClose(System.Action callback) { }
         public Akka.Pattern.CircuitBreaker OnHalfOpen(System.Action callback) { }
@@ -3900,6 +3916,7 @@ namespace Akka.Pattern
         public void Succeed() { }
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
+        public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
@@ -3917,7 +3934,16 @@ namespace Akka.Pattern
     {
         public OpenCircuitException() { }
         public OpenCircuitException(string message) { }
+        public OpenCircuitException(string message, System.TimeSpan remainingDuration) { }
         public OpenCircuitException(string message, System.Exception cause) { }
+        public OpenCircuitException(string message, System.Exception cause, System.TimeSpan remainingDuration) { }
+        public OpenCircuitException(System.Exception cause) { }
+        public OpenCircuitException(System.Exception cause, System.TimeSpan remainingDuration) { }
+        public System.TimeSpan RemainingDuration { get; }
+    }
+    public class UserCalledFailException : Akka.Actor.AkkaException
+    {
+        public UserCalledFailException() { }
     }
 }
 namespace Akka.Routing
@@ -4658,6 +4684,19 @@ namespace Akka.Serialization
 }
 namespace Akka.Util
 {
+    public class AppVersion : System.IComparable<Akka.Util.AppVersion>, System.IEquatable<Akka.Util.AppVersion>
+    {
+        public static readonly Akka.Util.AppVersion Zero;
+        public string Version { get; }
+        public int CompareTo(Akka.Util.AppVersion other) { }
+        public static Akka.Util.AppVersion Create(string version) { }
+        public bool Equals(Akka.Util.AppVersion other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static bool ==(Akka.Util.AppVersion first, Akka.Util.AppVersion second) { }
+        public static bool !=(Akka.Util.AppVersion first, Akka.Util.AppVersion second) { }
+    }
     public class AtomicBoolean
     {
         public AtomicBoolean(bool initialValue = False) { }
@@ -4826,6 +4865,7 @@ namespace Akka.Util
         public static readonly Akka.Util.Option<T> None;
         public Option(T value) { }
         public bool HasValue { get; }
+        public bool IsEmpty { get; }
         public T Value { get; }
         public bool Equals(Akka.Util.Option<T> other) { }
         public override bool Equals(object obj) { }

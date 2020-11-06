@@ -7,6 +7,7 @@
 
 namespace DocsExamples.Persistence.AtLeastOnceDelivery
 {
+    #region AtLeastOnceDelivery
     public class Msg
     {
         public Msg(long deliveryId, string message)
@@ -54,4 +55,5 @@ namespace DocsExamples.Persistence.AtLeastOnceDelivery
 
         public long DeliveryId { get; }
     }
+    #endregion
 }
