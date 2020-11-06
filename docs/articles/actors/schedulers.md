@@ -42,4 +42,10 @@ This can be accomplished using the `ReceiveTimeout` capability.
 * The `ReceiveTimeout` will automatically be cancelled when the actor terminates.
 
 ## Scheduling Recurring Tasks with `IScheduler`
-While the `IWithTimers` interface is the recommended approach for working with actors
+While the `IWithTimers` interface is the recommended approach for working with actors, the `ActorSystem` itself includes the underlying [`IScheduler` interface](xref:Akka.Actor.IScheduler), which exposes timing primitives that can be used inside or outside of individual actors.
+
+[!code-csharp[Scheduler](../../../src/core/Akka.Docs.Tests/Actors/SchedulerSpecs.cs?name=Scheduler)]
+
+The `ActorSystem.Scheduler` can be used for any number of different types of tasks, but those tasks will not be cancelled automatically. You have to call the `IScheduler.Schedule_{method}_RepeatedlyCancelable` method, store the `ICancelable` returned by that method, and then call `ICancelable.Cancel()` once you're finished with it to dispose the method.
+
+To learn more about working with the `IScheduler`, please see [Akka.NET Bootcamp Unit 2 Lesson 3 - Using the Scheduler to Send Messages Later](https://github.com/petabridge/akka-bootcamp/blob/master/src/Unit-2/lesson3/README.md).

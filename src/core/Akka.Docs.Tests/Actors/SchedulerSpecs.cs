@@ -108,6 +108,46 @@ namespace DocsExamples.Actors
             }
         }
 
+        // <Scheduler>
+        public class SchedulerActor : ReceiveActor
+        {
+            private int _count = 0;
+            private ILoggingAdapter _log = Context.GetLogger();
+
+            private ICancelable _printTask;
+            private ICancelable _addTask;
+
+            public SchedulerActor()
+            {
+                Receive<int>(i =>
+                {
+                    _count += i;
+                });
+
+                Receive<Print>(_ => _log.Info("Current count is [{0}]", _count));
+                Receive<Total>(_ => Sender.Tell(_count));
+            }
+
+            protected override void PreStart()
+            {
+                // start two recurring timers
+                // both timers will be automatically disposed when actor is stopped
+                _printTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromSeconds(0.1),
+                    TimeSpan.FromSeconds(5), Self, new Print(), ActorRefs.NoSender);
+
+                _addTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(TimeSpan.FromMilliseconds(0), 
+                    TimeSpan.FromMilliseconds(20), Self, 1, ActorRefs.NoSender);
+            }
+
+            protected override void PostStop()
+            {
+                // have to cancel all recurring scheduled tasks
+                _printTask?.Cancel();
+                _addTask?.Cancel();
+            }
+        }
+        // </Scheduler>
+
         [Fact]
         public async Task TimerActorShouldIncrementOverTime()
         {
