@@ -65,7 +65,7 @@ namespace Akka.Remote.Artery
             return this;
         }
 
-        internal void Clear()
+        public void Clear()
         {
             Recipient = OptionVal.None<IInternalActorRef>();
             Message = null;
