@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -383,13 +384,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        // this little guy will be called only once, only by the current journal
-        private sealed class GetCurrentPersistenceIds
-        {
-            public static readonly GetCurrentPersistenceIds Instance = new GetCurrentPersistenceIds();
-            private GetCurrentPersistenceIds() { }
-        }
-
         private struct RequestChunk
         {
             public readonly int ChunkId;
@@ -463,7 +457,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string InsertEventSql { get; }
 
         /// <summary>
-        /// SQL query executed as result of <see cref="GetCurrentPersistenceIds"/> request to journal.
+        /// SQL query executed as result of <see cref="SelectCurrentPersistenceIds"/> request to journal.
         /// It's a part of persistence query protocol.
         /// </summary>
         protected virtual string AllPersistenceIdsSql { get; }
@@ -519,12 +513,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected bool HasTagSubscribers => _tagSubscribers.Count != 0;
 
         /// <summary>
-        /// Flag determining if current journal has any subscribers for <see cref="GetCurrentPersistenceIds"/> and 
-        /// <see cref="PersistenceIdAdded"/> messages.
-        /// </summary>
-        protected bool HasAllIdsSubscribers => _allIdsSubscribers.Count != 0;
-
-        /// <summary>
         /// Flag determining if current journal has any subscribers for <see cref="NewEventAppended"/> and 
         /// </summary>
         protected bool HasNewEventsSubscribers => _newEventSubscriber.Count != 0;
@@ -548,8 +536,6 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
-        private readonly HashSet<IActorRef> _allIdsSubscribers;
-        private readonly HashSet<string> _allPersistenceIds;
         private readonly HashSet<IActorRef> _newEventSubscriber;
 
         private readonly Akka.Serialization.Serialization _serialization;
@@ -567,8 +553,6 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             _persistenceIdSubscribers = new Dictionary<string, HashSet<IActorRef>>();
             _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
-            _allIdsSubscribers = new HashSet<IActorRef>();
-            _allPersistenceIds = new HashSet<string>();
             _newEventSubscriber = new HashSet<IActorRef>();
 
             _remainingOperations = Setup.MaxConcurrentOperations;
@@ -576,6 +560,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
+                Context.System.Scheduler,
                 maxFailures: Setup.CircuitBreakerSettings.MaxFailures,
                 callTimeout: Setup.CircuitBreakerSettings.CallTimeout,
                 resetTimeout: Setup.CircuitBreakerSettings.ResetTimeout);
@@ -592,8 +577,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                 e.{conventions.SerializerIdColumnName} as SerializerId";
 
             AllPersistenceIdsSql = $@"
-                SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as PersistenceId 
-                FROM {conventions.FullJournalTableName} e;";
+                SELECT DISTINCT u.Id as PersistenceId 
+                FROM (
+                    SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as Id 
+                    FROM {conventions.FullJournalTableName} e
+                    WHERE e.{conventions.OrderingColumnName} > @Ordering
+                    UNION
+                    SELECT DISTINCT e.{conventions.PersistenceIdColumnName} as Id 
+                    FROM {conventions.FullMetaTableName} e
+                ) as u";
 
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
@@ -637,8 +629,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             HighestOrderingSql =
                 $@"
                 SELECT MAX(e.{conventions.OrderingColumnName}) as Ordering
-                FROM {conventions.FullJournalTableName} e
-                WHERE e.{conventions.OrderingColumnName} > @Ordering";
+                FROM {conventions.FullJournalTableName} e";
 
             InsertEventSql = $@"
                 INSERT INTO {conventions.FullJournalTableName} (
@@ -710,14 +701,14 @@ namespace Akka.Persistence.Sql.Common.Journal
                 case ReplayAllEvents msg:
                     BatchRequest(msg);
                     return true;
+                case SelectCurrentPersistenceIds msg:
+                    BatchRequest(msg);
+                    return true;
                 case BatchComplete msg:
                     CompleteBatch(msg);
                     return true;
                 case SubscribePersistenceId msg:
                     AddPersistenceIdSubscriber(msg);
-                    return true;
-                case SubscribeAllPersistenceIds msg:
-                    AddAllPersistenceIdsSubscriber(msg);
                     return true;
                 case SubscribeTag msg:
                     AddTagSubscriber(msg);
@@ -727,12 +718,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     return true;
                 case Terminated msg:
                     RemoveSubscriber(msg.ActorRef);
-                    return true;
-                case GetCurrentPersistenceIds _:
-                    InitializePersistenceIds();
-                    return true;
-                case CurrentPersistenceIds msg:
-                    SendCurrentPersistenceIds(msg);
                     return true;
                 case ChunkExecutionFailure msg:
                     FailChunkExecution(msg);
@@ -752,7 +737,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                 switch (req)
                 {
                     case WriteMessages write:
-                        write.PersistentActor.Tell(new WriteMessagesFailed(cause));
+                        var atomicWriteCount = write.Messages.OfType<AtomicWrite>().Count();
+                        write.PersistentActor.Tell(new WriteMessagesFailed(cause, atomicWriteCount));
                         break;
                     case ReplayMessages replay:
                         replay.PersistentActor.Tell(new ReplayMessagesFailure(cause));
@@ -770,62 +756,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private void SendCurrentPersistenceIds(CurrentPersistenceIds message)
-        {
-            foreach (var persistenceId in message.AllPersistenceIds)
-            {
-                _allPersistenceIds.Add(persistenceId);
-            }
-
-            foreach (var subscriber in _allIdsSubscribers)
-            {
-                subscriber.Tell(message);
-            }
-        }
-
         #region subscriptions
-
-        private void InitializePersistenceIds()
-        {
-            var self = Self;
-            GetAllPersistenceIdsAsync()
-                .ContinueWith(task =>
-                {
-                    if (task.IsCanceled || task.IsFaulted)
-                    {
-                        var cause = (Exception)task.Exception ?? new OperationCanceledException("Cancellation occurred while trying to retrieve current persistence ids");
-                        Log.Error(cause, "Couldn't retrieve current persistence ids");
-                    }
-                    else
-                    {
-                        self.Tell(new CurrentPersistenceIds(task.Result));
-                    }
-                });
-        }
-
-        private async Task<IEnumerable<string>> GetAllPersistenceIdsAsync()
-        {
-            var result = new List<string>(256);
-            using (var connection = CreateConnection(Setup.ConnectionString))
-            {
-                await connection.OpenAsync();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = AllPersistenceIdsSql;
-
-                    var reader = await command.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        result.Add(reader.GetString(0));
-                    }
-                }
-            }
-            return result;
-        }
-
         private void RemoveSubscriber(IActorRef subscriberRef)
         {
-            _allIdsSubscribers.Remove(subscriberRef);
             _persistenceIdSubscribers.RemoveItem(subscriberRef);
             _tagSubscribers.RemoveItem(subscriberRef);
             _newEventSubscriber.Remove(subscriberRef);
@@ -842,18 +775,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var subscriber = Sender;
             _tagSubscribers.AddItem(message.Tag, subscriber);
-            Context.Watch(subscriber);
-        }
-
-        private void AddAllPersistenceIdsSubscriber(SubscribeAllPersistenceIds message)
-        {
-            if (!HasAllIdsSubscribers)
-            {
-                Self.Tell(GetCurrentPersistenceIds.Instance);
-            }
-
-            var subscriber = Sender;
-            _allIdsSubscribers.Add(subscriber);
             Context.Watch(subscriber);
         }
 
@@ -895,18 +816,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        protected void NotifyNewPersistenceIdAdded(string persistenceId)
-        {
-            if (_allPersistenceIds.Add(persistenceId) && HasAllIdsSubscribers)
-            {
-                var added = new PersistenceIdAdded(persistenceId);
-                foreach (var subscriber in _allIdsSubscribers)
-                {
-                    subscriber.Tell(added, ActorRefs.NoSender);
-                }
-            }
-        }
-
         #endregion
 
         /// <summary>
@@ -937,7 +846,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             switch (request)
             {
                 case WriteMessages msg:
-                    msg.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
+                    var atomicWriteCount = msg.Messages.OfType<AtomicWrite>().Count();
+                    msg.PersistentActor.Tell(new WriteMessagesFailed(JournalBufferOverflowException.Instance, atomicWriteCount), ActorRefs.NoSender);
                     break;
                 case ReplayMessages msg:
                     msg.PersistentActor.Tell(new ReplayMessagesFailure(JournalBufferOverflowException.Instance), ActorRefs.NoSender);
@@ -1004,6 +914,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 case ReplayAllEvents msg:
                                     await HandleReplayAllMessages(msg, command);
                                     break;
+                                case SelectCurrentPersistenceIds msg:
+                                    await HandleSelectCurrentPersistenceIds(msg, command);
+                                    break;
                                 default:
                                     Unhandled(req);
                                     break;
@@ -1039,8 +952,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
-
-            NotifyNewPersistenceIdAdded(persistenceId);
 
             try
             {
@@ -1084,6 +995,34 @@ namespace Akka.Persistence.Sql.Common.Journal
             var result = await command.ExecuteScalarAsync();
             var highestSequenceNr = result is long ? Convert.ToInt64(result) : 0L;
             return highestSequenceNr;
+        }
+
+        protected virtual async Task<long> ReadHighestSequenceNr(TCommand command)
+        {
+            command.CommandText = HighestOrderingSql;
+            command.Parameters.Clear();
+
+            var result = await command.ExecuteScalarAsync();
+            var highestSequenceNr = result is long ? Convert.ToInt64(result) : 0L;
+            return highestSequenceNr;
+        }
+
+        protected virtual async Task HandleSelectCurrentPersistenceIds(SelectCurrentPersistenceIds message, TCommand command)
+        {
+            long highestOrderingNumber = await ReadHighestSequenceNr(command);
+
+            var result = new List<string>(256);
+            command.CommandText = AllPersistenceIdsSql;
+            command.Parameters.Clear();
+            AddParameter(command, "@Ordering", DbType.Int64, message.Offset);
+
+            var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                result.Add(reader.GetString(0));
+            }
+
+            message.ReplyTo.Tell(new CurrentPersistenceIds(result, highestOrderingNumber));
         }
 
         protected virtual async Task HandleReplayTaggedMessages(ReplayTaggedMessages req, TCommand command)
@@ -1134,14 +1073,22 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var maxSequenceNr = 0L;
+                var toOffset = req.ToOffset;
                 var fromOffset = req.FromOffset;
+                var max = req.Max;
+
+                var take = Math.Min(toOffset - fromOffset, max);
+
+                command.CommandText = HighestOrderingSql;
+                command.Parameters.Clear();
+
+                var maxOrdering = (await command.ExecuteScalarAsync()) as long? ?? 0L;
 
                 command.CommandText = AllEventsSql;
                 command.Parameters.Clear();
 
                 AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
-                AddParameter(command, "@Take", DbType.Int64, req.Max);
+                AddParameter(command, "@Take", DbType.Int64, take);
 
                 using (var reader = await command.ExecuteReaderAsync())
                 {
@@ -1149,7 +1096,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     {
                         var persistent = ReadEvent(reader);
                         var ordering = reader.GetInt64(OrderingIndex);
-                        maxSequenceNr = Math.Max(maxSequenceNr, persistent.SequenceNr);
 
                         foreach (var adapted in AdaptFromJournal(persistent))
                         {
@@ -1158,7 +1104,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     }
                 }
 
-                replyTo.Tell(new EventReplaySuccess(maxSequenceNr));
+                replyTo.Tell(new EventReplaySuccess(maxOrdering));
             }
             catch (Exception cause)
             {
@@ -1178,8 +1124,6 @@ namespace Akka.Persistence.Sql.Common.Journal
                     debugEnabled: replaySettings.IsDebug))
                 : req.PersistentActor;
             var persistenceId = req.PersistenceId;
-
-            NotifyNewPersistenceIdAdded(persistenceId);
 
             try
             {
@@ -1227,12 +1171,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
             var actorInstanceId = req.ActorInstanceId;
+            var atomicWriteCount = req.Messages.OfType<AtomicWrite>().Count();
 
             try
             {
                 command.CommandText = InsertEventSql;
 
-                var tagBuilder = new StringBuilder(16); // magic number
+                var tagBuilder = new StringBuilder(16); // magic number                
 
                 foreach (var envelope in req.Messages)
                 {
@@ -1268,13 +1213,11 @@ namespace Akka.Persistence.Sql.Common.Journal
                                 var response = (new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                                 persistenceIds.Add(persistent.PersistenceId);
-
-                                NotifyNewPersistenceIdAdded(persistent.PersistenceId);
                             }
                             catch (DbException cause)
                             {
-                                // database-related exceptions should result in failure
-                                summary = new WriteMessagesFailed(cause);
+                                // database-related exceptions should result in failure                                
+                                summary = new WriteMessagesFailed(cause, atomicWriteCount);
                                 var response = (new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
                                 responses.Add(response);
                             }
@@ -1321,7 +1264,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
             catch (Exception cause)
             {
-                summary = new WriteMessagesFailed(cause);
+                summary = new WriteMessagesFailed(cause, atomicWriteCount);
             }
 
             var aref = req.PersistentActor;

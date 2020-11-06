@@ -287,18 +287,35 @@ namespace Akka.Persistence
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
+        [Obsolete("Deprecated since Akka 1.4.11, use the overloaded one which accepts the number of failed atomic writes instead.")]
         public WriteMessagesFailed(Exception cause)
         {
-            if (cause == null)
-                throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
+        }
 
-            Cause = cause;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="WriteMessagesFailed"/> class.
+        /// </summary>
+        /// <param name="cause">The cause of the failed <see cref="WriteMessages"/> request.</param>
+        /// <param name="writeCount">The number of atomic writes that failed.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+        /// </exception>
+        public WriteMessagesFailed(Exception cause, int writeCount)
+        {
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
+            WriteCount = writeCount;
         }
 
         /// <summary>
         /// The cause of the failed <see cref="WriteMessages"/> request.
         /// </summary>
         public Exception Cause { get; }
+
+        /// <summary>
+        /// The number of atomic writes that failed.
+        /// </summary>
+        public int WriteCount { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessagesFailed other)

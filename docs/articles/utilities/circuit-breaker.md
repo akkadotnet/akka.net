@@ -16,25 +16,20 @@ The Akka.NET library provides an implementation of a circuit breaker called `Akk
 ## What do they do?
 
 * During normal operation, a circuit breaker is in the `Closed` state:
-	* Exceptions or calls exceeding the configured `СallTimeout` increment a
-	  failure counter
-	* Successes reset the failure count to zero
-	* When the failure counter reaches a `MaxFailures` count, the breaker is
-	  tripped into `Open` state
+  * Exceptions or calls exceeding the configured `СallTimeout` increment a failure counter
+  * Successes reset the failure count to zero
+  * When the failure counter reaches a `MaxFailures` count, the breaker is tripped into `Open` state
 * While in `Open` state:
-	* All calls fail-fast with a `OpenCircuitException`
-	* After the configured `ResetTimeout`, the circuit breaker enters a
-	  `Half-Open` state
+  * All calls fail-fast with a `OpenCircuitException`
+  * After the configured `ResetTimeout`, the circuit breaker enters a `Half-Open` state
 * In `Half-Open` state:
-	* The first call attempted is allowed through without failing fast
-	* All other calls fail-fast with an exception just as in `Open` state
-	* If the first call succeeds, the breaker is reset back to `Closed` state
-	* If the first call fails, the breaker is tripped again into the `Open` state
-	  for another full `ResetTimeout`
+  * The first call attempted is allowed through without failing fast
+  * All other calls fail-fast with an exception just as in `Open` state
+  * If the first call succeeds, the breaker is reset back to `Closed` state and the `ResetTimeout` is reset
+  * If the first call fails, the breaker is tripped again into the `Open` state (as for exponential backoff circuit breaker, the `ResetTimeout` is multiplied by the exponential backoff factor)
 * State transition listeners:
-	* Callbacks can be provided for every state entry via `OnOpen`, `OnClose`,
-	  and `OnHalfOpen`
-	* These are executed in the `ExecutionContext` provided.
+  * Callbacks can be provided for every state entry via `OnOpen`, `OnClose`, and `OnHalfOpen`
+  * These are executed in the `ExecutionContext` provided.
 
 ![Circuit breaker states](/images/circuit-breaker-states.png)
 

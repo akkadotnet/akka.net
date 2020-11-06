@@ -17,7 +17,8 @@ namespace Akka.Streams.Implementation
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal class FanoutOutputs<T> : SubscriberManagement<T>, IOutputs
+    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    internal class FanoutOutputs<T, TStreamBuffer> : SubscriberManagement<T, TStreamBuffer>, IOutputs where TStreamBuffer : IStreamBuffer<T>
     {
         private long _downstreamBufferSpace;
         private bool _downstreamCompleted;
@@ -87,8 +88,7 @@ namespace Akka.Streams.Implementation
             NeedsDemandOrCancel = DefaultOutputTransferStates.NeedsDemandOrCancel(this);
             SubReceive = new SubReceive(message =>
             {
-                var publisher = message as ExposedPublisher;
-                if (publisher == null)
+                if (!(message is ExposedPublisher publisher))
                     throw new IllegalStateException($"The first message must be ExposedPublisher but was {message}");
 
                 ExposedPublisher = publisher.Publisher;
@@ -112,24 +112,22 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         protected bool DownstreamRunning(object message)
         {
-            if (message is SubscribePending)
-                SubscribePending();
-            else if (message is RequestMore)
+            switch (message)
             {
-                var requestMore = (RequestMore) message;
-                MoreRequested((ActorSubscriptionWithCursor<T>) requestMore.Subscription, requestMore.Demand);
-                _pump.Pump();
+                case SubscribePending _:
+                    SubscribePending();
+                    return true;
+                case RequestMore requestMore:
+                    MoreRequested((ActorSubscriptionWithCursor<T>) requestMore.Subscription, requestMore.Demand);
+                    _pump.Pump();
+                    return true;
+                case Cancel cancel:
+                    UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
+                    _pump.Pump();
+                    return true;
+                default:
+                    return false;
             }
-            else if (message is Cancel)
-            {
-                var cancel = (Cancel) message;
-                UnregisterSubscription((ActorSubscriptionWithCursor<T>) cancel.Subscription);
-                _pump.Pump();
-            }
-            else
-                return false;
-
-            return true;
         }
 
         /// <summary>
@@ -217,15 +215,19 @@ namespace Akka.Streams.Implementation
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    internal sealed class FanoutProcessorImpl<T> : ActorProcessorImpl
+    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    internal sealed class FanoutProcessorImpl<T, TStreamBuffer> : ActorProcessorImpl where TStreamBuffer : IStreamBuffer<T>
     {
+        private readonly Action _onTerminated;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="settings">TBD</param>
+        /// <param name="onTerminated">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(ActorMaterializerSettings settings)
-            => Actor.Props.Create(() => new FanoutProcessorImpl<T>(settings)).WithDeploy(Deploy.Local);
+        public static Props Props(ActorMaterializerSettings settings, Action onTerminated = null)
+            => Actor.Props.Create(() => new FanoutProcessorImpl<T, TStreamBuffer>(settings, onTerminated)).WithDeploy(Deploy.Local);
 
         /// <summary>
         /// TBD
@@ -236,10 +238,13 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <param name="settings">TBD</param>
-        public FanoutProcessorImpl(ActorMaterializerSettings settings) : base(settings)
+        /// <param name="onTerminated">TBD</param>
+        public FanoutProcessorImpl(ActorMaterializerSettings settings, Action onTerminated) : base(settings)
         {
-            PrimaryOutputs = new FanoutOutputs<T>(settings.MaxInputBufferSize,
+            PrimaryOutputs = new FanoutOutputs<T, TStreamBuffer>(settings.MaxInputBufferSize,
                 settings.InitialInputBufferSize, Self, this, AfterFlush);
+
+            _onTerminated = onTerminated;
 
             var running = new TransferPhase(PrimaryInputs.NeedsInput.And(PrimaryOutputs.NeedsDemand),
                 () => PrimaryOutputs.EnqueueOutputElement(PrimaryInputs.DequeueInputElement()));
@@ -269,6 +274,10 @@ namespace Akka.Streams.Implementation
             PrimaryOutputs.Complete();
         }
 
-        private void AfterFlush() => Context.Stop(Self);
+        private void AfterFlush()
+        {
+            _onTerminated?.Invoke();
+            Context.Stop(Self);
+        }
     }
 }

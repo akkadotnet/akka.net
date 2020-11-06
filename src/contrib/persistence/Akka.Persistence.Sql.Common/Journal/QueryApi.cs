@@ -64,20 +64,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         }
     }
 
-    /// <summary>
-    /// Subscribe the `sender` to current and new persistenceIds.
-    /// Used by query-side. The journal will send one <see cref="CurrentPersistenceIds"/> to the
-    /// subscriber followed by <see cref="PersistenceIdAdded"/> messages when new persistenceIds
-    /// are created.
-    /// </summary>
     [Serializable]
-    public sealed class SubscribeAllPersistenceIds : ISubscriptionCommand
+    public sealed class SelectCurrentPersistenceIds : IJournalRequest
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static readonly SubscribeAllPersistenceIds Instance = new SubscribeAllPersistenceIds();
-        private SubscribeAllPersistenceIds() { }
+        public IActorRef ReplyTo { get; }
+        public long Offset { get; }
+
+        public SelectCurrentPersistenceIds(long offset, IActorRef replyTo)
+        {
+            Offset = offset;
+            ReplyTo = replyTo;
+        }
     }
 
     /// <summary>
@@ -91,34 +88,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public readonly IEnumerable<string> AllPersistenceIds;
 
+        public readonly long HighestOrderingNumber;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="allPersistenceIds">TBD</param>
-        public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds)
+        /// <param name="highestOrderingNumber">TBD</param>
+        public CurrentPersistenceIds(IEnumerable<string> allPersistenceIds, long highestOrderingNumber)
         {
             AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
-        }
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    [Serializable]
-    public sealed class PersistenceIdAdded : IDeadLetterSuppression
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public readonly string PersistenceId;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        public PersistenceIdAdded(string persistenceId)
-        {
-            PersistenceId = persistenceId;
+            HighestOrderingNumber = highestOrderingNumber;
         }
     }
 

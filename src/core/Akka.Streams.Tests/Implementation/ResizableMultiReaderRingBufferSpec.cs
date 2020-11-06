@@ -244,7 +244,7 @@ namespace Akka.Streams.Tests.Implementation
 
         private class SimpleCursor : ICursor
         {
-            public int Cursor { get; set; }
+            public long Cursor { get; set; }
         }
 
         private class StressTestCursor : ICursor
@@ -291,7 +291,7 @@ namespace Akka.Streams.Tests.Implementation
                 }
             }
 
-            public int Cursor { get; set; }
+            public long Cursor { get; set; }
 
             public override string ToString() => $"cursorNr {_cursorNr}, ix {Cursor}, counter {_counter}";
         }

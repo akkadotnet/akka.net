@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -78,16 +79,17 @@ namespace Akka.Persistence.TCK.Query
 
             var greenSrc = queries.CurrentPersistenceIds();
             var probe = greenSrc.RunWith(this.SinkProbe<string>(), Materializer);
+            var set = new List<string> { "a", "b", "c" };
             probe.Request(2)
-                .ExpectNext("a")
-                .ExpectNext("c")
+                .ExpectNextWithinSet(set)
+                .ExpectNextWithinSet(set)
                 .ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             Setup("d", 1);
 
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
             probe.Request(5)
-                .ExpectNext("b")
+                .ExpectNextWithinSet(set)
                 .ExpectComplete();
         }
 
