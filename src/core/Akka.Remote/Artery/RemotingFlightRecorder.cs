@@ -49,9 +49,9 @@ namespace Akka.Remote.Artery
         void TcpOutboundConnected(Address remoteAddress, string streamName);
         void TcpOutboundSent(int size);
 
-        void TcpInboundBound(string bindHost, InetSocketAddress address);
+        void TcpInboundBound(string bindHost, SocketAddress address);
         void TcpInboundUnbound(UniqueAddress localAddress);
-        void TcpInboundConnected(InetSocketAddress remoteAddress);
+        void TcpInboundConnected(SocketAddress remoteAddress);
         void TcpInboundReceived(int size);
     }
 
@@ -121,9 +121,9 @@ namespace Akka.Remote.Artery
 
         public void TcpOutboundConnected(Address remoteAddress, string streamName) {}
         public void TcpOutboundSent(int size) {}
-        public void TcpInboundBound(string bindHost, InetSocketAddress address) {}
+        public void TcpInboundBound(string bindHost, SocketAddress address) {}
         public void TcpInboundUnbound(UniqueAddress localAddress) {}
-        public void TcpInboundConnected(InetSocketAddress remoteAddress) {}
+        public void TcpInboundConnected(SocketAddress remoteAddress) {}
         public void TcpInboundReceived(int size) {}
     }
 }
