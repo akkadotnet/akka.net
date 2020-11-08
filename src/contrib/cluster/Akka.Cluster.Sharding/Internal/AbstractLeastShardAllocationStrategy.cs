@@ -22,8 +22,8 @@ namespace Akka.Cluster.Sharding.Internal
     /// </summary>
     public abstract class AbstractLeastShardAllocationStrategy : IActorSystemDependentAllocationStrategy
     {
-        private static ImmutableHashSet<MemberStatus> JoiningCluster = ImmutableHashSet.Create(MemberStatus.Joining, MemberStatus.WeaklyUp);
-        private static ImmutableHashSet<MemberStatus> LeavingClusterStatuses = ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Exiting, MemberStatus.Down);
+        private static readonly ImmutableHashSet<MemberStatus> JoiningCluster = ImmutableHashSet.Create(MemberStatus.Joining, MemberStatus.WeaklyUp);
+        private static readonly ImmutableHashSet<MemberStatus> LeavingClusterStatuses = ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Exiting, MemberStatus.Down);
 
         public sealed class RegionEntry
         {

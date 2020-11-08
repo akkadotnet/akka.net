@@ -64,7 +64,6 @@ namespace Akka.Cluster.Sharding.Tests
                 ConfigurationFactory
                     .ParseString($@"""
                         akka.actor.provider = ""cluster""
-                        akka.cluster.downing-provider-class = akka.cluster.testkit.AutoDowning
                         akka.cluster.testkit.auto-down-unreachable-after = 0s
                         akka.cluster.sharding.state-store-mode = ""{mode}""
                         akka.cluster.sharding.remember-entities = {rememberEntities}
