@@ -340,6 +340,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IActorRef DeadLetters { get; }
         public abstract Akka.Dispatch.Dispatchers Dispatchers { get; }
         public abstract Akka.Event.EventStream EventStream { get; }
+        public abstract Akka.Actor.IActorRef IgnoreRef { get; }
         public abstract Akka.Event.ILoggingAdapter Log { get; }
         public abstract Akka.Dispatch.Mailboxes Mailboxes { get; }
         public abstract string Name { get; }
@@ -938,6 +939,7 @@ namespace Akka.Actor
         Akka.Actor.Address DefaultAddress { get; }
         Akka.Actor.Deployer Deployer { get; }
         Akka.Actor.LocalActorRef Guardian { get; }
+        Akka.Actor.IActorRef IgnoreRef { get; }
         Akka.Actor.IInternalActorRef RootGuardian { get; }
         Akka.Actor.ActorPath RootPath { get; }
         [Akka.Annotations.InternalApiAttribute()]
@@ -1233,6 +1235,7 @@ namespace Akka.Actor
         public Akka.Actor.Deployer Deployer { get; }
         public Akka.Event.EventStream EventStream { get; }
         public Akka.Actor.LocalActorRef Guardian { get; }
+        public Akka.Actor.IActorRef IgnoreRef { get; }
         public Akka.Event.ILoggingAdapter Log { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
@@ -1856,6 +1859,7 @@ namespace Akka.Actor.Internal
         public override Akka.Event.EventStream EventStream { get; }
         public override Akka.Actor.IInternalActorRef Guardian { get; }
         public Akka.Util.Option<Akka.Actor.Props> GuardianProps { get; }
+        public override Akka.Actor.IActorRef IgnoreRef { get; }
         public override Akka.Event.ILoggingAdapter Log { get; }
         public override Akka.Actor.IInternalActorRef LookupRoot { get; }
         public override Akka.Dispatch.Mailboxes Mailboxes { get; }
