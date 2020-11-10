@@ -85,6 +85,20 @@ namespace Akka.Cluster.Sharding
         }
     }
 
+    [Serializable]
+    internal sealed class GracefulShutdownTimeout : IShardRegionCommand
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly GracefulShutdownTimeout Instance = new GracefulShutdownTimeout();
+
+        private GracefulShutdownTimeout()
+        {
+        }
+    }
+
+
     /// <summary>
     /// We must be sure that a shard is initialized before to start send messages to it.
     /// Shard could be terminated during initialization.
