@@ -2045,7 +2045,6 @@ namespace Akka.Actor.Internal
 }
 namespace Akka.Actor.Setup
 {
-    [Akka.Annotations.InternalApiAttribute()]
     public sealed class ActorSystemSetup
     {
         public static readonly Akka.Actor.Setup.ActorSystemSetup Empty;
