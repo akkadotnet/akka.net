@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -69,6 +70,21 @@ namespace Akka.Cluster
 
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
             AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
+
+            if (AppVersion.Equals(AppVersion.Zero))
+            {
+                // user hasn't specified AppVersion in HOCON
+                // try looking it up via assembly
+                var entryAssembly = Assembly.GetEntryAssembly();
+                if (entryAssembly != null)
+                {
+                    var name = entryAssembly.GetName();
+                    AppVersion =
+                        AppVersion.Create($"{name.Version.Major}.{name.Version.Minor}.{name.Version.Revision}");
+                }
+               
+            }
+
             MinNrOfMembers = clusterConfig.GetInt("min-nr-of-members", 0);
 
             _useDispatcher = clusterConfig.GetString("use-dispatcher", null);

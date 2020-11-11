@@ -34,13 +34,13 @@ namespace Akka.Util
         public static readonly AppVersion Zero = new AppVersion("0.0.0");
         private const int Undefined = 0;
 
-        private int[] numbers = Array.Empty<int>();
-        private string rest = "";
+        private int[] _numbers = Array.Empty<int>();
+        private string _rest = "";
 
         [JsonConstructor]
         internal AppVersion(string version)
         {
-            this.Version = version;
+            Version = version;
         }
 
         public static AppVersion Create(string version)
@@ -110,7 +110,7 @@ namespace Akka.Util
                 }
             }
 
-            if (numbers.Length == 0)
+            if (_numbers.Length == 0)
             {
                 var nbrs = new int[4];
                 var segments = Version.Split('.');
@@ -168,8 +168,8 @@ namespace Akka.Util
                     throw new ArgumentOutOfRangeException($"Only 3 digits separated with '.' are supported. [{Version}]");
                 }
 
-                this.rest = rst;
-                this.numbers = nbrs;
+                this._rest = rst;
+                this._numbers = nbrs;
             }
             return this;
         }
@@ -183,24 +183,24 @@ namespace Akka.Util
                 Parse();
                 other.Parse();
                 var diff = 0;
-                diff = numbers[0] - other.numbers[0];
+                diff = _numbers[0] - other._numbers[0];
                 if (diff == 0)
                 {
-                    diff = numbers[1] - other.numbers[1];
+                    diff = _numbers[1] - other._numbers[1];
                     if (diff == 0)
                     {
-                        diff = numbers[2] - other.numbers[2];
+                        diff = _numbers[2] - other._numbers[2];
                         if (diff == 0)
                         {
-                            diff = numbers[3] - other.numbers[3];
+                            diff = _numbers[3] - other._numbers[3];
                             if (diff == 0)
                             {
-                                if (rest == "" && other.rest != "")
+                                if (_rest == "" && other._rest != "")
                                     diff = 1;
-                                if (other.rest == "" && rest != "")
+                                if (other._rest == "" && _rest != "")
                                     diff = -1;
                                 else
-                                    diff = rest.CompareTo(other.rest);
+                                    diff = _rest.CompareTo(other._rest);
                             }
                         }
                     }
@@ -235,11 +235,11 @@ namespace Akka.Util
         {
             Parse();
             var hashCode = 13;
-            hashCode = (hashCode * 397) ^ numbers[0];
-            hashCode = (hashCode * 397) ^ numbers[1];
-            hashCode = (hashCode * 397) ^ numbers[2];
-            hashCode = (hashCode * 397) ^ numbers[3];
-            hashCode = (hashCode * 397) ^ rest.GetHashCode();
+            hashCode = (hashCode * 397) ^ _numbers[0];
+            hashCode = (hashCode * 397) ^ _numbers[1];
+            hashCode = (hashCode * 397) ^ _numbers[2];
+            hashCode = (hashCode * 397) ^ _numbers[3];
+            hashCode = (hashCode * 397) ^ _rest.GetHashCode();
             return hashCode;
         }
 
