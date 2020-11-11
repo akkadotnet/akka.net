@@ -62,7 +62,15 @@ subtype of the other, a warning will be issued.
 Akka.NET provides serializers for POCO's (Plain Old C# Objects) and for `Google.Protobuf.IMessage` by default, so you don't usually need to add configuration for that.
 
 ### Configuring Serialization Bindings Programmatically
-As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup):
+As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup).
+
+First, we define a set of messages that all implement a common protocol and will be handled by the same serializer:
+
+[!code-csharp[SerializationProtocol](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Protocol)]
+
+And then a custom [`SerializerWithStringManifest` implementation](xref:Akka.Serialization.SerializerWithStringManifest) to perform the serialization:
+
+[!code-csharp[CustomSerializer](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Serializer)]
 
 
 
@@ -138,13 +146,13 @@ serializer.
 
 ### Serializer with String Manifest
 The `Serializer` illustrated above supports a class-based manifest (type hint). 
-For serialization of data that need to evolve over time, the `SerializerWithStringManifest` is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
+For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
 This means that the class can be moved/removed and the serializer can still deserialize old data by matching on the String. 
 This is especially useful for `Persistence`.
 
 The manifest string can also encode a version number that can be used in `FromBinary` to deserialize in different ways to migrate old data to new domain objects.
 
-If the data was originally serialized with `Serializer`, and in a later version of the system you change to `SerializerWithStringManifest`, the manifest string will be the full class name if you used `IncludeManifest=true`, otherwise it will be the empty string.
+If the data was originally serialized with `Serializer`, and in a later version of the system you change to [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest), the manifest string will be the full class name if you used `IncludeManifest=true`, otherwise it will be the empty string.
 
 This is how a `SerializerWithStringManifest` looks:
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/MyOwnSerializer2.cs?name=CustomSerialization)]
