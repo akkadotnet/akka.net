@@ -72,7 +72,42 @@ And then a custom [`SerializerWithStringManifest` implementation](xref:Akka.Seri
 
 [!code-csharp[CustomSerializer](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Serializer)]
 
+With our application protocol and serializer defined we can now create some serialization bindings - these tell Akka.NET which serializer to use whenever we make any calls to serialize messages.
 
+This is where we can use the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup) to create statically typed serialization bindings that can be checked by the compiler, rather than defining them through HOCON.
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=SerializerSetup)]
+
+The `SerializationSetup` takes a function with the following signature:
+
+```csharp
+Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>
+```
+
+The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a construtor argument.
+
+For each serialization binding you wish to create, you need to create [a `SerializerDetails` object](xref:Akka.Serialization.SerializerDetails) using the `SerializerDetails.Create` method:
+
+```csharp
+public static SerializerDetails Create(string alias, Serializer serializer, ImmutableHashSet<Type> useFor)
+```
+
+The `string alias` is the same alias you'd configure in HOCON's `akka.actor.serializers` section - and the serializer configured via `SerializationSetup` can be consumed by other parts of Akka.NET by referencing this alias, so make sure you pick a unique name.
+
+The `ImmutableHashSet<Type> useFor` is where you define your serialization type bindings - in this case, we bound the serializer to the `IAppProtocol` interface: any type that implements this interface will be handled by the `AppProtocolSerializer`.
+
+Now that we've created our `SerializationSetup`, we need to actually pass this into our `ActorSystem` - to do this we will want to combine our `SerializationSetup` with a [`BootstrapSetup` instance that holds the rest of our HOCON configuration](xref:Akka.Actor.BootstrapSetup):
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=MergedSetup)]
+
+And using the `ActorSystemSetup` produced by merged the `BootstrapSetup` and `SerializationSetup` together, we can create our `ActorSystem` and verify that the serialization bindings were configured correctly:
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Verification)]
+
+And that's how you can configure Akka.NET serialization programmatically.
+
+> [!NOTE]
+> There are other parts of Akka.NET that are possible to configure programmatically via `ActorSystemSetup`. [Read more about them here](xref:configuration).
 
 ### Verification
 Normally, messages sent between local actors (i.e. same CLR) do not undergo serialization.

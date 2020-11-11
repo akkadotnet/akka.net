@@ -1,11 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SerializationSetupDocSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
+using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Serialization;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Configs;
+using FluentAssertions;
+using Xunit;
 
 namespace DocsExamples.Configuration
 {
@@ -23,6 +31,13 @@ namespace DocsExamples.Configuration
         public AppProtocolSerializer(ExtendedActorSystem system) : base(system)
         {
         }
+
+        /// <summary>
+        /// Pick a custom value between 100-1000 - this gets included in the manifests
+        /// that are sent via Akka.Remote and Akka.Persistence, so it's important to pick
+        /// a unique and stable value for each custom serializer.
+        /// </summary>
+        public override int Identifier => 588;
 
         public override byte[] ToBinary(object obj)
         {
@@ -67,8 +82,48 @@ namespace DocsExamples.Configuration
     }
     // </Serializer>
 
-    public class SerializationSetupDocSpec : TestKit
+    public class SerializationSetupDocSpec
     {
+        // <SerializerSetup>
+        public static SerializationSetup SerializationSettings => 
+            SerializationSetup.Create(actorSystem => 
+                    ImmutableHashSet<SerializerDetails>.Empty.Add(
+                        SerializerDetails.Create("app-protocol", 
+                            new AppProtocolSerializer(actorSystem), 
+                            ImmutableHashSet<Type>.Empty.Add(typeof(IAppProtocol)))));
+        // </SerializerSetup>
 
+        // <MergedSetup>
+        public static readonly BootstrapSetup Bootstrap = BootstrapSetup.Create().WithConfig(
+            ConfigurationFactory.ParseString(@"
+            akka{
+                actor{
+                    serialize-messages = off
+                }
+            }
+        ").WithFallback(TestConfigs.DefaultConfig));
+
+        // Merges the SerializationSetup and BootstrapSetup together into a unified ActorSystemSetup class
+        public static readonly ActorSystemSetup ActorSystemSettings = ActorSystemSetup.Create(SerializationSettings, Bootstrap);
+        // </MergedSetup>
+
+        [Fact]
+        public void SerializationSetupShouldWorkAsExpected()
+        {
+            // <Verification>
+            // consume the ActorSystemSetup
+            using (var actorSystem = ActorSystem.Create("TestSerialization", ActorSystemSettings))
+            {
+                // implements IAppProtocol
+                var ack = new Ack();
+
+                // lookup the serializer configured by Akka.NET to manage Ack
+                var foundSerializer = actorSystem.Serialization.FindSerializerFor(ack);
+
+                // it's the custom serializer we specified in our SerializationSetup
+                foundSerializer.Should().BeOfType<AppProtocolSerializer>();
+            }
+            // </Verification>
+        }
     }
 }
