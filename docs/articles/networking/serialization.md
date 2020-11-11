@@ -61,6 +61,11 @@ subtype of the other, a warning will be issued.
 
 Akka.NET provides serializers for POCO's (Plain Old C# Objects) and for `Google.Protobuf.IMessage` by default, so you don't usually need to add configuration for that.
 
+### Configuring Serialization Bindings Programmatically
+As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup):
+
+
+
 ### Verification
 Normally, messages sent between local actors (i.e. same CLR) do not undergo serialization.
 For testing, it may be desirable to force serialization on all messages, both remote and local. 

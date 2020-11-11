@@ -5,6 +5,16 @@ title: Configuration
 
 # Akka.NET Configuration
 
+Akka.NET relies on [HOCON](xref:hocon) configuration to configure its various knobs and dials. 
+
+However, as of Akka.NET v1.4 we now support the [`Setup` class](xref:Akka.Actor.Setup.Setup) and the [`BootstrapSetup` constructs](xref:Akka.Actor.BootstrapSetup), which allow developers to configure various parts of Akka.NET using programmatic configuration in addition to HOCON.
+
+This article will explain how to use both in the context of your Akka.NET applications.
+
+## Programmatic Configuration with `Setup`
+
+## HOCON 
+
 *Quoted from [Akka.NET Bootcamp: Unit 2, Lesson 1 - "Using HOCON Configuration to Configure Akka.NET"](https://github.com/petabridge/akka-bootcamp/tree/master/src/Unit-2/lesson1 "Using HOCON Configuration to Configure Akka.NET")*
 
 Akka.NET leverages a configuration format, called HOCON, to allow you to configure your Akka.NET applications with whatever level of granularity you want.
