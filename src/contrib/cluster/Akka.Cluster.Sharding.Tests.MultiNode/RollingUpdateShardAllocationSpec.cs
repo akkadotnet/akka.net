@@ -48,52 +48,7 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-
-    public class RollingUpdateShardAllocationSpecMultiNode1 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode1() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode1(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode1))
-        {
-        }
-    }
-
-    public class RollingUpdateShardAllocationSpecMultiNode2 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode2() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode2(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode2))
-        {
-        }
-    }
-
-    public class RollingUpdateShardAllocationSpecMultiNode3 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode3() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode3(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode3))
-        {
-        }
-    }
-
-    public class RollingUpdateShardAllocationSpecMultiNode4 : RollingUpdateShardAllocationSpec
-    {
-        public RollingUpdateShardAllocationSpecMultiNode4() : this(new RollingUpdateShardAllocationSpecConfig())
-        {
-        }
-
-        protected RollingUpdateShardAllocationSpecMultiNode4(RollingUpdateShardAllocationSpecConfig config) : base(config, typeof(RollingUpdateShardAllocationSpecMultiNode4))
-        {
-        }
-    }
-
-    public abstract class RollingUpdateShardAllocationSpec : MultiNodeClusterShardingSpec
+    public class RollingUpdateShardAllocationSpec : MultiNodeClusterShardingSpec<RollingUpdateShardAllocationSpecConfig>
     {
         protected class GiveMeYourHome : ActorBase
         {
@@ -158,14 +113,16 @@ namespace Akka.Cluster.Sharding.Tests
 
 
         private const string TypeName = "home";
-        private readonly RollingUpdateShardAllocationSpecConfig config;
         private readonly Lazy<IActorRef> shardRegion;
+
+        public RollingUpdateShardAllocationSpec()
+            : this(new RollingUpdateShardAllocationSpecConfig(), typeof(RollingUpdateShardAllocationSpec))
+        {
+        }
 
         protected RollingUpdateShardAllocationSpec(RollingUpdateShardAllocationSpecConfig config, Type type)
             : base(config, type)
         {
-            this.config = config;
-
             shardRegion = new Lazy<IActorRef>(() =>
                 StartSharding(
                     Sys,
@@ -187,13 +144,13 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding_must_complete_a_rolling_upgrade();
         }
 
-        public void ClusterSharding_must_form_cluster()
+        private void ClusterSharding_must_form_cluster()
         {
             AwaitClusterUp(config.First, config.Second);
             EnterBarrier("cluster-started");
         }
 
-        public void ClusterSharding_must_start_cluster_sharding_on_first()
+        private void ClusterSharding_must_start_cluster_sharding_on_first()
         {
             RunOn(() =>
             {
@@ -219,7 +176,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("first-version-started");
         }
 
-        public void ClusterSharding_must_start_a_rolling_upgrade()
+        private void ClusterSharding_must_start_a_rolling_upgrade()
         {
             Join(config.Third, config.First);
 
@@ -260,7 +217,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("rolling-upgrade-in-progress");
         }
 
-        public void ClusterSharding_must_complete_a_rolling_upgrade()
+        private void ClusterSharding_must_complete_a_rolling_upgrade()
         {
             Join(config.Fourth, config.First);
 

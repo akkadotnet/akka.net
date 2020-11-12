@@ -8,7 +8,6 @@
 using System;
 using System.Linq;
 using Akka.Actor;
-using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Util;
@@ -16,7 +15,7 @@ using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingGetStatsSpecConfig : MultiNodeConfig
+    public class ClusterShardingGetStatsSpecConfig : MultiNodeClusterShardingConfig
     {
         public RoleName Controller { get; }
         public RoleName First { get; }
@@ -24,46 +23,16 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Third { get; }
 
         public ClusterShardingGetStatsSpecConfig()
+            : base(loglevel: "DEBUG", additionalConfig: @"
+            akka.log-dead-letters-during-shutdown = off
+            akka.cluster.sharding.updating-state-timeout = 2s
+            akka.cluster.sharding.waiting-for-state-timeout = 2s
+            ")
         {
             Controller = Role("controller");
             First = Role("first");
             Second = Role("second");
             Third = Role("third");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.actor {
-                        serializers {
-                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                        }
-                        serialization-bindings {
-                            ""System.Object"" = hyperion
-                        }
-                    }
-                    akka.loglevel = INFO
-                    akka.actor.provider = cluster
-                    akka.remote.log-remote-lifecycle-events = off
-                    akka.cluster.auto-down-unreachable-after = 0s
-                    akka.cluster.sharding {
-                        updating-state-timeout = 2s
-                        waiting-for-state-timeout = 2s
-                    }
-                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                    akka.persistence.journal.MemoryJournal {
-                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                        plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }
-                    akka.persistence.journal.memory-journal-shared {
-                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                        plugin-dispatcher = ""akka.actor.default-dispatcher""
-                        timeout = 5s
-                    }
-                "))
-                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
-                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             NodeConfig(new RoleName[] { First, Second, Third }, new Config[] {
                 ConfigurationFactory.ParseString(@"akka.cluster.roles=[""shard""]")
@@ -71,164 +40,75 @@ namespace Akka.Cluster.Sharding.Tests
         }
     }
 
-    public class ClusterShardingGetStatsSpec : MultiNodeClusterSpec
+    public class ClusterShardingGetStatsSpec : MultiNodeClusterShardingSpec<ClusterShardingGetStatsSpecConfig>
     {
         #region setup
 
-        [Serializable]
-        internal sealed class Stop
+        private const int NumberOfShards = 3;
+        private const string ShardTypeName = "Ping";
+
+        private ExtractEntityId extractEntityId = message =>
         {
-            public static readonly Stop Instance = new Stop();
-            private Stop()
+            switch (message)
             {
+                case PingPongActor.Ping msg:
+                    return (msg.Id.ToString(), message);
             }
-        }
+            return Option<(string, object)>.None;
+        };
 
-        [Serializable]
-        internal sealed class Ping
+        private ExtractShardId extractShardId = message =>
         {
-            public readonly int Id;
-
-            public Ping(int id)
+            switch (message)
             {
-                Id = id;
+                case PingPongActor.Ping msg:
+                    return (msg.Id % NumberOfShards).ToString();
             }
-        }
+            return null;
+        };
 
-        [Serializable]
-        internal sealed class Pong
-        {
-            public static readonly Pong Instance = new Pong();
-            private Pong()
-            {
-            }
-        }
-
-        internal class ShardedActor : ActorBase
-        {
-            public ShardedActor()
-            {
-            }
-
-            protected override bool Receive(object message)
-            {
-                switch (message)
-                {
-                    case Stop _:
-                        Context.Stop(Self);
-                        return true;
-                    case Ping p:
-                        Sender.Tell(Pong.Instance);
-                        return true;
-                }
-                return false;
-            }
-        }
-
-        readonly static int NumberOfShards = 3;
-        readonly static string ShardTypeName = "Ping";
-
-        internal ExtractEntityId extractEntityId = message => message is Ping p ? (p.Id.ToString(), message) : Option<(string, object)>.None;
-
-        internal ExtractShardId extractShardId = message => message is Ping p ? (p.Id % NumberOfShards).ToString() : null;
-
-        private Lazy<IActorRef> _region;
-
-        private readonly ClusterShardingGetStatsSpecConfig _config;
+        private readonly Lazy<IActorRef> _region;
 
         public ClusterShardingGetStatsSpec()
-            : this(new ClusterShardingGetStatsSpecConfig())
+            : this(new ClusterShardingGetStatsSpecConfig(), typeof(ClusterShardingGetStatsSpec))
         {
         }
 
-        protected ClusterShardingGetStatsSpec(ClusterShardingGetStatsSpecConfig config)
-            : base(config, typeof(ClusterShardingGetStatsSpec))
+        protected ClusterShardingGetStatsSpec(ClusterShardingGetStatsSpecConfig config, Type type)
+            : base(config, type)
         {
-            _config = config;
-
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion(ShardTypeName));
         }
 
-        protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
-
-        #endregion
-
-        private void Join(RoleName from)
+        private IActorRef StartShard()
         {
-            RunOn(() =>
-            {
-                Cluster.Join(GetAddress(_config.Controller));
-            }, from);
-            EnterBarrier(from.Name + "-joined");
-        }
-
-        private void StartShard()
-        {
-            ClusterSharding.Get(Sys).Start(
-               typeName: ShardTypeName,
-               entityProps: Props.Create<ShardedActor>(),
-               settings: ClusterShardingSettings.Create(Sys).WithRole("shard"),
-               extractEntityId: extractEntityId,
-               extractShardId: extractShardId);
-        }
-
-        private void StartProxy()
-        {
-            ClusterSharding.Get(Sys).StartProxy(
+            return StartSharding(
+                Sys,
                 typeName: ShardTypeName,
-                role: "shard",
+                entityProps: Props.Create(() => new PingPongActor()),
+                settings: settings.Value.WithRole("shard"),
                 extractEntityId: extractEntityId,
                 extractShardId: extractShardId);
         }
 
+        #endregion
+
         [MultiNodeFact]
         public void Inspecting_cluster_sharding_state_specs()
         {
-            Inspecting_cluster_sharding_state_should_setup_shared_journal();
-            Inspecting_cluster_sharding_state_should_join_cluster();
-            Inspecting_cluster_sharding_state_should_return_empty_state_when_no_sharded_actors_has_started();
-            Inspecting_cluster_sharding_state_should_trigger_sharded_actors();
-            Inspecting_cluster_sharding_state_should_get_shard_state();
-            Inspecting_cluster_sharding_state_should_return_stats_after_a_node_leaves();
+            Inspecting_cluster_sharding_state_must_join_cluster();
+            Inspecting_cluster_sharding_state_must_return_empty_state_when_no_sharded_actors_has_started();
+            Inspecting_cluster_sharding_state_must_trigger_sharded_actors();
+            Inspecting_cluster_sharding_state_must_get_shard_state();
+            Inspecting_cluster_sharding_state_must_return_stats_after_a_node_leaves();
         }
 
-        public void Inspecting_cluster_sharding_state_should_setup_shared_journal()
+        private void Inspecting_cluster_sharding_state_must_join_cluster()
         {
-            // start the Persistence extension
-            Persistence.Persistence.Instance.Apply(Sys);
-            RunOn(() =>
-            {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
-            }, _config.Controller);
-            EnterBarrier("persistence-started");
-
-            RunOn(() =>
-            {
-                Sys.ActorSelection(Node(_config.Controller) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
-                var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                sharedStore.Should().NotBeNull();
-
-                MemoryJournalShared.SetStore(sharedStore, Sys);
-            }, _config.First, _config.Second, _config.Third);
-            EnterBarrier("after-1");
-
-            RunOn(() =>
-            {
-                //check persistence running
-                var probe = CreateTestProbe();
-                var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
-                journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
-                probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
-            }, _config.First, _config.Second, _config.Third);
-            EnterBarrier("after-1-test");
-        }
-
-        public void Inspecting_cluster_sharding_state_should_join_cluster()
-        {
-            Join(_config.Controller);
-            Join(_config.First);
-            Join(_config.Second);
-            Join(_config.Third);
+            Join(config.Controller, config.Controller);
+            Join(config.First, config.Controller);
+            Join(config.Second, config.Controller);
+            Join(config.Third, config.Controller);
 
             // make sure all nodes are up
             Within(TimeSpan.FromSeconds(10), () =>
@@ -241,18 +121,24 @@ namespace Akka.Cluster.Sharding.Tests
 
             RunOn(() =>
             {
-                StartProxy();
-            }, _config.Controller);
+                StartProxy(
+                    Sys,
+                    typeName: ShardTypeName,
+                    role: "shard",
+                    extractEntityId: extractEntityId,
+                    extractShardId: extractShardId);
+
+            }, config.Controller);
 
             RunOn(() =>
             {
                 StartShard();
-            }, _config.First, _config.Second, _config.Third);
+            }, config.First, config.Second, config.Third);
 
             EnterBarrier("sharding started");
         }
 
-        public void Inspecting_cluster_sharding_state_should_return_empty_state_when_no_sharded_actors_has_started()
+        private void Inspecting_cluster_sharding_state_must_return_empty_state_when_no_sharded_actors_has_started()
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
@@ -264,13 +150,14 @@ namespace Akka.Cluster.Sharding.Tests
                     shardStats.Regions.Count.Should().Be(3);
                     shardStats.Regions.Values.Sum(i => i.Stats.Count).Should().Be(0);
                     shardStats.Regions.Keys.Should().OnlyContain(i => i.HasGlobalScope);
+                    shardStats.Regions.Values.Should().OnlyContain(i => i.Failed.Count == 0);
                 });
             });
 
             EnterBarrier("empty sharding");
         }
 
-        public void Inspecting_cluster_sharding_state_should_trigger_sharded_actors()
+        private void Inspecting_cluster_sharding_state_must_trigger_sharded_actors()
         {
             RunOn(() =>
             {
@@ -279,33 +166,33 @@ namespace Akka.Cluster.Sharding.Tests
                     AwaitAssert(() =>
                     {
                         var pingProbe = CreateTestProbe();
-
-
                         // trigger starting of 2 entities on first and second node
                         // but leave third node without entities
                         foreach (var n in new int[] { 1, 2, 4, 6 })
                         {
-                            _region.Value.Tell(new Ping(n), pingProbe.Ref);
+                            _region.Value.Tell(new PingPongActor.Ping(n), pingProbe.Ref);
                         }
-                        pingProbe.ReceiveWhile(null, m => (Pong)m, 4);
+                        pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
                     });
                 });
-            }, _config.Controller);
+            }, config.Controller);
 
             EnterBarrier("sharded actors started");
         }
 
-        public void Inspecting_cluster_sharding_state_should_get_shard_state()
+        private void Inspecting_cluster_sharding_state_must_get_shard_state()
         {
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 AwaitAssert(() =>
                 {
                     var probe = CreateTestProbe();
-                    _region.Value.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(10))), probe.Ref);
+                    var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
+                    region.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(10))), probe.Ref);
                     var regions = probe.ExpectMsg<ClusterShardingStats>().Regions;
                     regions.Count.Should().Be(3);
                     regions.Values.SelectMany(i => i.Stats.Values).Sum().Should().Be(4);
+                    regions.Values.Should().OnlyContain(i => i.Failed.Count == 0);
                     regions.Keys.Should().OnlyContain(i => i.HasGlobalScope);
                 });
             });
@@ -313,12 +200,12 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("got shard state");
         }
 
-        public void Inspecting_cluster_sharding_state_should_return_stats_after_a_node_leaves()
+        private void Inspecting_cluster_sharding_state_must_return_stats_after_a_node_leaves()
         {
             RunOn(() =>
             {
-                Cluster.Get(Sys).Leave(Node(_config.Third).Address);
-            }, _config.Controller);
+                Cluster.Get(Sys).Leave(Node(config.Third).Address);
+            }, config.Controller);
 
             RunOn(() =>
             {
@@ -329,10 +216,10 @@ namespace Akka.Cluster.Sharding.Tests
                         Cluster.Get(Sys).State.Members.Count.Should().Be(3);
                     });
                 });
-            }, _config.First, _config.Second);
+            }, config.First, config.Second);
 
             EnterBarrier("third node removed");
-
+            Sys.Log.Info("third node removed");
 
             RunOn(() =>
             {
@@ -344,15 +231,14 @@ namespace Akka.Cluster.Sharding.Tests
                         // make sure we have the 4 entities still alive across the fewer nodes
                         foreach (var n in new int[] { 1, 2, 4, 6 })
                         {
-                            _region.Value.Tell(new Ping(n), pingProbe.Ref);
+                            _region.Value.Tell(new PingPongActor.Ping(n), pingProbe.Ref);
                         }
-                        pingProbe.ReceiveWhile(null, m => (Pong)m, 4);
+                        pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 4);
                     });
                 });
-            }, _config.Controller);
+            }, config.Controller);
 
             EnterBarrier("shards revived");
-
 
             RunOn(() =>
             {
@@ -367,7 +253,7 @@ namespace Akka.Cluster.Sharding.Tests
                         regions.Values.SelectMany(i => i.Stats.Values).Sum().Should().Be(4);
                     });
                 });
-            }, _config.Controller);
+            }, config.Controller);
 
             EnterBarrier("done");
         }

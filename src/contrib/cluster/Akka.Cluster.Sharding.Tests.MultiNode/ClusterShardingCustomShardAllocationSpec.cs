@@ -6,75 +6,66 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Actor;
-using Akka.Cluster.TestKit;
-using Akka.Configuration;
-using Akka.Remote.TestKit;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
-using Akka.Util;
+using Akka.Actor;
+using Akka.Remote.TestKit;
+using Akka.TestKit;
+using Akka.TestKit.TestActors;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingCustomShardAllocationSpecConfig : MultiNodeConfig
+    public class ClusterShardingCustomShardAllocationSpecConfig : MultiNodeClusterShardingConfig
     {
         public RoleName First { get; }
         public RoleName Second { get; }
 
-        public ClusterShardingCustomShardAllocationSpecConfig()
+        public ClusterShardingCustomShardAllocationSpecConfig(StateStoreMode mode)
+            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+                akka.cluster.sharding.rebalance-interval = 1 s
+            ")
         {
             First = Role("first");
             Second = Role("second");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.actor {
-                        serializers {
-                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                        }
-                        serialization-bindings {
-                            ""System.Object"" = hyperion
-                        }
-                    }
-
-                    akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-                    akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                    akka.persistence.journal.MemoryJournal {
-                        class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                        plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }
-
-                    akka.persistence.journal.memory-journal-shared {
-                        class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                        plugin-dispatcher = ""akka.actor.default-dispatcher""
-                        timeout = 5s
-                    }
-                "))
-                .WithFallback(Sharding.ClusterSharding.DefaultConfig())
-                .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
 
-    public class ClusterShardingCustomShardAllocationSpec : MultiNodeClusterSpec
+    public class PersistentClusterShardingCustomShardAllocationSpecConfig : ClusterShardingCustomShardAllocationSpecConfig
+    {
+        public PersistentClusterShardingCustomShardAllocationSpecConfig()
+            : base(StateStoreMode.Persistence)
+        {
+        }
+    }
+
+    public class DDataClusterShardingCustomShardAllocationSpecConfig : ClusterShardingCustomShardAllocationSpecConfig
+    {
+        public DDataClusterShardingCustomShardAllocationSpecConfig()
+            : base(StateStoreMode.DData)
+        {
+        }
+    }
+
+    public class PersistentClusterShardingCustomShardAllocationSpec : ClusterShardingCustomShardAllocationSpec
+    {
+        public PersistentClusterShardingCustomShardAllocationSpec()
+            : base(new PersistentClusterShardingCustomShardAllocationSpecConfig(), typeof(PersistentClusterShardingCustomShardAllocationSpec))
+        {
+        }
+    }
+
+    public class DDataClusterShardingCustomShardAllocationSpec : ClusterShardingCustomShardAllocationSpec
+    {
+        public DDataClusterShardingCustomShardAllocationSpec()
+            : base(new DDataClusterShardingCustomShardAllocationSpecConfig(), typeof(DDataClusterShardingCustomShardAllocationSpec))
+        {
+        }
+    }
+
+    public abstract class ClusterShardingCustomShardAllocationSpec : MultiNodeClusterShardingSpec<ClusterShardingCustomShardAllocationSpecConfig>
     {
         #region setup
-
-        internal class Entity : ActorBase
-        {
-            protected override bool Receive(object message)
-            {
-                switch (message)
-                {
-                    case int id:
-                        Sender.Tell(id);
-                        return true;
-                }
-                return false;
-            }
-        }
 
         internal class AllocateReq
         {
@@ -162,7 +153,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        class TestAllocationStrategy : IShardAllocationStrategy
+        internal class TestAllocationStrategy : IShardAllocationStrategy
         {
             public readonly IActorRef Ref;
 
@@ -182,100 +173,45 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
+        private readonly Lazy<IActorRef> _region;
+        private readonly Lazy<IActorRef> _allocator;
 
-        internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
-
-        private Lazy<IActorRef> _region;
-        private Lazy<IActorRef> _allocator;
-
-        private readonly ClusterShardingCustomShardAllocationSpecConfig _config;
-
-        public ClusterShardingCustomShardAllocationSpec()
-            : this(new ClusterShardingCustomShardAllocationSpecConfig())
+        protected ClusterShardingCustomShardAllocationSpec(ClusterShardingCustomShardAllocationSpecConfig config, Type type)
+            : base(config, type)
         {
-        }
-
-        protected ClusterShardingCustomShardAllocationSpec(ClusterShardingCustomShardAllocationSpecConfig config)
-            : base(config, typeof(ClusterShardingCustomShardAllocationSpec))
-        {
-            _config = config;
-
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-
             _allocator = new Lazy<IActorRef>(() => Sys.ActorOf(Props.Create<Allocator>(), "allocator"));
         }
 
-        protected override int InitialParticipantsValueFactory { get { return Roles.Count; } }
-
-        #endregion
-
         private void Join(RoleName from, RoleName to)
         {
-            RunOn(() =>
-            {
-                Cluster.Join(GetAddress(to));
-                StartSharding();
-            }, from);
-            EnterBarrier(from.Name + "-joined");
+            Join(from, to, () =>
+                StartSharding(
+                    Sys,
+                    typeName: "Entity",
+                    entityProps: SimpleEchoActor.Props(),
+                    extractEntityId: IntExtractEntityId,
+                    extractShardId: IntExtractShardId,
+                    allocationStrategy: new TestAllocationStrategy(_allocator.Value))
+                );
         }
 
-        private void StartSharding()
-        {
-            ClusterSharding.Get(Sys).Start(
-                typeName: "Entity",
-                entityProps: Props.Create<Entity>(),
-                settings: ClusterShardingSettings.Create(Sys),
-                extractEntityId: extractEntityId,
-                extractShardId: extractShardId,
-                allocationStrategy: new TestAllocationStrategy(_allocator.Value),
-                handOffStopMessage: PoisonPill.Instance);
-        }
+        #endregion
 
         [MultiNodeFact]
         public void Cluster_sharding_with_custom_allocation_strategy_specs()
         {
-            Cluster_sharding_with_custom_allocation_strategy_should_setup_shared_journal();
-            Cluster_sharding_with_custom_allocation_strategy_should_use_specified_region();
-            Cluster_sharding_with_custom_allocation_strategy_should_rebalance_specified_shards();
+            Cluster_sharding_with_custom_allocation_strategy_must_use_specified_region();
+            Cluster_sharding_with_custom_allocation_strategy_must_rebalance_specified_shards();
         }
 
-        public void Cluster_sharding_with_custom_allocation_strategy_should_setup_shared_journal()
+        private void Cluster_sharding_with_custom_allocation_strategy_must_use_specified_region()
         {
-            // start the Persistence extension
-            Persistence.Persistence.Instance.Apply(Sys);
-            RunOn(() =>
+            Within(TimeSpan.FromSeconds(30), () =>
             {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
-            }, _config.First);
-            EnterBarrier("persistence-started");
+                StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
 
-            RunOn(() =>
-            {
-                Sys.ActorSelection(Node(_config.First) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null));
-                var sharedStore = ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(10)).Subject;
-                sharedStore.Should().NotBeNull();
-
-                MemoryJournalShared.SetStore(sharedStore, Sys);
-            }, _config.First, _config.Second);
-            EnterBarrier("after-1");
-
-            RunOn(() =>
-            {
-                //check persistence running
-                var probe = CreateTestProbe();
-                var journal = Persistence.Persistence.Instance.Get(Sys).JournalFor(null);
-                journal.Tell(new Persistence.ReplayMessages(0, 0, long.MaxValue, Guid.NewGuid().ToString(), probe.Ref));
-                probe.ExpectMsg<Persistence.RecoverySuccess>(TimeSpan.FromSeconds(10));
-            }, _config.First, _config.Second);
-            EnterBarrier("after-1-test");
-        }
-
-        public void Cluster_sharding_with_custom_allocation_strategy_should_use_specified_region()
-        {
-            Within(TimeSpan.FromSeconds(10), () =>
-            {
-                Join(_config.First, _config.First);
+                Join(config.First, config.First);
 
                 RunOn(() =>
                 {
@@ -284,31 +220,30 @@ namespace Akka.Cluster.Sharding.Tests
                     _region.Value.Tell(1);
                     ExpectMsg(1);
                     LastSender.Path.Should().Be(_region.Value.Path / "1" / "1");
-                }, _config.First);
+                }, config.First);
                 EnterBarrier("first-started");
 
-                Join(_config.Second, _config.First);
+                Join(config.Second, config.First);
 
                 _region.Value.Tell(2);
                 ExpectMsg(2);
-
                 RunOn(() =>
                 {
                     LastSender.Path.Should().Be(_region.Value.Path / "2" / "2");
-                }, _config.First);
+                }, config.First);
                 RunOn(() =>
                 {
-                    LastSender.Path.Should().Be(Node(_config.First) / "system" / "sharding" / "Entity" / "2" / "2");
-                }, _config.Second);
+                    LastSender.Path.Should().Be(Node(config.First) / "system" / "sharding" / "Entity" / "2" / "2");
+                }, config.Second);
                 EnterBarrier("second-started");
 
                 RunOn(() =>
                 {
-                    Sys.ActorSelection(Node(_config.Second) / "system" / "sharding" / "Entity").Tell(new Identify(null));
+                    Sys.ActorSelection(Node(config.Second) / "system" / "sharding" / "Entity").Tell(new Identify(null));
                     var secondRegion = ExpectMsg<ActorIdentity>().Subject;
                     _allocator.Value.Tell(new UseRegion(secondRegion));
                     ExpectMsg<UseRegionAck>();
-                }, _config.First);
+                }, config.First);
                 EnterBarrier("second-active");
 
                 _region.Value.Tell(3);
@@ -316,24 +251,24 @@ namespace Akka.Cluster.Sharding.Tests
                 RunOn(() =>
                 {
                     LastSender.Path.Should().Be(_region.Value.Path / "3" / "3");
-                }, _config.Second);
+                }, config.Second);
 
                 RunOn(() =>
                 {
-                    LastSender.Path.Should().Be(Node(_config.Second) / "system" / "sharding" / "Entity" / "3" / "3");
-                }, _config.First);
+                    LastSender.Path.Should().Be(Node(config.Second) / "system" / "sharding" / "Entity" / "3" / "3");
+                }, config.First);
 
                 EnterBarrier("after-2");
             });
         }
 
-        public void Cluster_sharding_with_custom_allocation_strategy_should_rebalance_specified_shards()
+        private void Cluster_sharding_with_custom_allocation_strategy_must_rebalance_specified_shards()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
                 RunOn(() =>
                 {
-                    _allocator.Value.Tell(new RebalanceShards(new string[] { "2" }.ToImmutableHashSet()));
+                    _allocator.Value.Tell(new RebalanceShards(ImmutableHashSet.Create("2")));
                     ExpectMsg<RebalanceShardsAck>();
 
                     AwaitAssert(() =>
@@ -342,13 +277,13 @@ namespace Akka.Cluster.Sharding.Tests
                         _region.Value.Tell(2, p.Ref);
                         p.ExpectMsg(2, TimeSpan.FromSeconds(2));
 
-                        p.LastSender.Path.Should().Be(Node(_config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
+                        p.LastSender.Path.Should().Be(Node(config.Second) / "system" / "sharding" / "Entity" / "2" / "2");
                     });
 
                     _region.Value.Tell(1);
                     ExpectMsg(1);
                     LastSender.Path.Should().Be(_region.Value.Path / "1" / "1");
-                }, _config.First);
+                }, config.First);
                 EnterBarrier("after-2");
             });
         }

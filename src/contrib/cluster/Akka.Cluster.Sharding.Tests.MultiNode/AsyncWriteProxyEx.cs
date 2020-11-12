@@ -9,15 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using System.Runtime.Serialization;
-using Akka.Event;
-using Akka.Persistence.Journal;
-using Akka.Persistence;
-using System.Threading;
-using Akka.Util.Internal;
 using Akka.Actor.Internal;
+using Akka.Persistence;
+using Akka.Persistence.Journal;
 
 namespace Akka.Cluster.Sharding.Tests
 {
