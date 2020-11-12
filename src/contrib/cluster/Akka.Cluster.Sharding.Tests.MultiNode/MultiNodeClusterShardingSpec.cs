@@ -161,6 +161,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             this.config = config;
             ClearStorage();
+            EnterBarrier("startup");
 
             settings = new Lazy<ClusterShardingSettings>(() =>
             {
@@ -180,30 +181,17 @@ namespace Akka.Cluster.Sharding.Tests
         protected bool PersistenceIsNeeded => config.Mode == StateStoreMode.Persistence
             || Sys.Settings.Config.GetString("akka.cluster.sharding.remember-entities-store").Equals(RememberEntitiesStore.Eventsourced.ToString(), StringComparison.InvariantCultureIgnoreCase);
 
-        private IEnumerable<string> StorageFiles()
-        {
-            yield return $"journal-{config.GetType().Name}.db";
-            yield return $"snapshots-{config.GetType().Name}.db";
-        }
-
         private void ClearStorage()
         {
-            foreach (var f in StorageFiles())
+            var path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
+            try
             {
-                try
-                {
-                    File.Delete(f);
-                }
-                catch (Exception)
-                {
-                }
+                if (!string.IsNullOrEmpty(path))
+                    Directory.Delete(path, true);
             }
-        }
-
-        protected override void AtStartup()
-        {
-            EnterBarrier("startup");
-            base.AtStartup();
+            catch (Exception)
+            {
+            }
         }
 
         protected override void AfterTermination()
@@ -289,10 +277,10 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Persistence.Persistence.Instance.Apply(sys);
             var probe = CreateTestProbe(sys);
-            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.sqlite").Tell(new Identify(null), probe.Ref);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null), probe.Ref);
             var sharedStore = probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
             sharedStore.Should().NotBeNull();
-            SqliteJournalShared.SetStore(sharedStore, sys);
+            MemoryJournalShared.SetStore(sharedStore, sys);
         }
 
         /// <summary>
@@ -316,7 +304,7 @@ namespace Akka.Cluster.Sharding.Tests
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.sqlite");
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
             }, startOn);
             EnterBarrier("persistence-started");
 

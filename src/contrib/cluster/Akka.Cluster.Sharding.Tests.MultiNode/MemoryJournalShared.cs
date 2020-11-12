@@ -24,19 +24,4 @@ namespace Akka.Cluster.Sharding.Tests
             Persistence.Persistence.Instance.Get(system).JournalFor(null).Tell(new SetStore(store));
         }
     }
-
-    public class SqliteJournalShared : AsyncWriteProxyEx
-    {
-        public override TimeSpan Timeout { get; }
-
-        public SqliteJournalShared()
-        {
-            Timeout = Context.System.Settings.Config.GetTimeSpan("akka.persistence.journal.sqlite-shared.timeout", null);
-        }
-
-        public static void SetStore(IActorRef store, ActorSystem system)
-        {
-            Persistence.Persistence.Instance.Get(system).JournalFor(null).Tell(new SetStore(store));
-        }
-    }
 }

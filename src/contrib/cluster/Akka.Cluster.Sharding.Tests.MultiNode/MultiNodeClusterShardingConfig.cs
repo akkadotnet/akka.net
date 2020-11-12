@@ -8,7 +8,6 @@
 using System;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
-using Akka.Persistence.Sqlite;
 using Akka.Remote.TestKit;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -17,50 +16,21 @@ namespace Akka.Cluster.Sharding.Tests
     {
         protected static Config PersistenceConfig(Type type)
         {
-            NativeLibraryHack.DoHack();
-            //var uid = $"{type.Name}-{Guid.NewGuid():N}";
             return ConfigurationFactory.ParseString($@"
-                #akka.actor {{
-                #    serializers {{
-                #        hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                #    }}
-                #    serialization-bindings {{
-                #        ""System.Object"" = hyperion
-                #    }}
-                #}}
-                #akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-                #akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                #akka.persistence.journal.MemoryJournal {{
-                #    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                #    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                #}}
-                #akka.persistence.journal.memory-journal-shared {{
-                #    class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
-                #    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                #    timeout = 5s
-                #}}
-
-                #akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
-                akka.persistence.journal.sqlite {{
-                    connection-string = ""Datasource=journal-{type.Name}.db;Cache=Shared""
-                    auto-initialize = true
+                akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+                akka.persistence.journal.MemoryJournal {{
+                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
                 }}
-
-                akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite-shared""
-                akka.persistence.journal.sqlite-shared {{
-                    class = ""Akka.Cluster.Sharding.Tests.SqliteJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                akka.persistence.journal.memory-journal-shared {{
+                    class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
                     timeout = 5s
                 }}
 
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sqlite""
-                akka.persistence.snapshot-store.sqlite {{
-                    connection-string = ""Datasource=snapshots-{type.Name}.db;Cache=Shared""
-                    auto-initialize = true
-                }}
-                ")
-                .WithFallback(SqlitePersistence.DefaultConfiguration());
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
+                akka.persistence.snapshot-store.local.dir = ""snapshots-{type.Name}""
+                ");
         }
 
         /// <summary>

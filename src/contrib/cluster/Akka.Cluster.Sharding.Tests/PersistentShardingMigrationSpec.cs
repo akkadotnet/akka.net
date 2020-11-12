@@ -11,7 +11,6 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Persistence;
-using Akka.Persistence.Sqlite;
 using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
@@ -81,22 +80,26 @@ namespace Akka.Cluster.Sharding.Tests
         {
             get
             {
-                var uid = Guid.NewGuid().ToString("N");
-                return ConfigurationFactory.ParseString(@"
+                return ConfigurationFactory.ParseString($@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
-                akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
-                akka.persistence.journal.sqlite {
-                    connection-string = ""Datasource=journal-PersistentShardingMigrationSpec-" + uid + @".db;Cache=Shared""
-                    auto-initialize = true
-                }
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.sqlite""
-                akka.persistence.snapshot-store.sqlite {
-                    connection-string = ""Datasource=snapshots-PersistentShardingMigrationSpec-" + uid + @".db;Cache=Shared""
-                    auto-initialize = true
-                }
+
+                akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
+                akka.persistence.journal.MemoryJournal {{
+                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                }}
+                akka.persistence.journal.memory-journal-shared {{
+                    class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    timeout = 5s
+                }}
+
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
+                akka.persistence.snapshot-store.local.dir = ""PersistentShardingMigrationSpec-{Guid.NewGuid():N}""
+
                 akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding {
+                akka.cluster.sharding {{
                     remember-entities = on
                     remember-entities-store = ""eventsourced""
                     state-store-mode = ""persistence""
@@ -109,12 +112,11 @@ namespace Akka.Cluster.Sharding.Tests
 
                     # Lots of sharding setup, make it quicker
                     retry-interval = 500ms
-                }
+                }}
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                 akka.cluster.sharding.verbose-debug-logging = on")
-                    .WithFallback(ClusterSingletonManager.DefaultConfig()
-                    .WithFallback(ClusterSharding.DefaultConfig())
-                    .WithFallback(SqlitePersistence.DefaultConfiguration()));
+                    .WithFallback(ClusterSingletonManager.DefaultConfig())
+                    .WithFallback(ClusterSharding.DefaultConfig());
             }
         }
 
@@ -142,10 +144,20 @@ namespace Akka.Cluster.Sharding.Tests
 
         public PersistentShardingMigrationSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
         {
-            NativeLibraryHack.DoHack();
-
             configForNewMode = ConfigForNewMode.WithFallback(Sys.Settings.Config);
         }
+
+        protected override void AtStartup()
+        {
+            StorageHelpers.ClearLocalSnapshotStore(Sys);
+            this.StartPersistence(Sys);
+        }
+
+        protected override void AfterTermination()
+        {
+            StorageHelpers.ClearLocalSnapshotStore(Sys);
+        }
+
 
         [Fact]
         public void Migration_should_allow_migration_of_remembered_shards_and_not_allow_going_back()
@@ -210,6 +222,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var system = ActorSystem.Create(systemName, config);
             InitializeLogger(system, $"[{systemName}]");
+            this.SetStore(system, Sys);
             var cluster = Cluster.Get(system);
             cluster.Join(cluster.SelfAddress);
             AwaitAssert(() =>
