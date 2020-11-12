@@ -6,10 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Globalization;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
@@ -18,52 +15,28 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
-using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using static Akka.Cluster.Sharding.ShardRegion;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingLeaseSpec : AkkaSpec
     {
-
-        public static Config GetConfig()
-        {
-            return ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
-                akka.loggers = [Akka.Event.DefaultLogger]
-                akka.actor.provider = ""cluster""
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding {
-                    use-lease = ""test-lease""
-                    lease-retry-interval = 200ms
-                    distributed-data.durable {
-                        keys = []
-                    }
-                }
-                ")
-                .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
-                .WithFallback(TestLease.Configuration);
-        }
-
-        public static readonly ExtractEntityId ExtractEntityId = message =>
+        private static readonly ExtractEntityId extractEntityId = message =>
         {
             if (message is int i)
                 return (i.ToString(), i);
             return Option<(string, object)>.None;
         };
 
-        public static readonly ExtractShardId ExtractShardId = message =>
+        private static readonly ExtractShardId extractShardId = message =>
         {
             switch (message)
             {
                 case int i:
                     return (i % 10).ToString();
-                case StartEntity se:
-                    return (int.Parse(se.EntityId) % 10).ToString();
+                    //case StartEntity se:
+                    //    return (int.Parse(se.EntityId) % 10).ToString();
             }
             return null;
         };
@@ -85,7 +58,26 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        bool rememberEntities;
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"
+                akka.loglevel = DEBUG
+                akka.loggers = [Akka.Event.DefaultLogger]
+                akka.actor.provider = ""cluster""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.cluster.sharding {
+                    use-lease = ""test-lease""
+                    lease-retry-interval = 200ms
+                    distributed-data.durable {
+                        keys = []
+                    }
+                    verbose-debug-logging = on
+                    fail-on-invalid-entity-state-transition = on
+                }
+                ")
+                .WithFallback(ClusterSharding.DefaultConfig())
+                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(TestLease.Configuration);
+
         TimeSpan shortDuration = TimeSpan.FromMilliseconds(200);
         Cluster cluster;
         string leaseOwner;
@@ -99,10 +91,8 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         protected ClusterShardingLeaseSpec(Config config, bool rememberEntities, ITestOutputHelper helper)
-            : base(config?.WithFallback(GetConfig()) ?? GetConfig(), helper)
+            : base(config?.WithFallback(SpecConfig) ?? SpecConfig, helper)
         {
-            this.rememberEntities = rememberEntities;
-
             cluster = Cluster.Get(Sys);
             leaseOwner = cluster.SelfMember.Address.HostPort();
             testLeaseExt = TestLeaseExt.Get(Sys);
@@ -114,10 +104,10 @@ namespace Akka.Cluster.Sharding.Tests
             });
             ClusterSharding.Get(Sys).Start(
               typeName: typeName,
-              entityProps: EchoActor.Props(this),
+              entityProps: SimpleEchoActor.Props(),
               settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities),
-              extractEntityId: ExtractEntityId,
-              extractShardId: ExtractShardId);
+              extractEntityId: extractEntityId,
+              extractShardId: extractShardId);
 
             region = ClusterSharding.Get(Sys).ShardRegion(typeName);
         }
@@ -181,8 +171,8 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() =>
             {
                 region.Tell(4);
-                ExpectMsg(4, TimeSpan.FromSeconds(1));
-            }, TimeSpan.FromSeconds(5));
+                ExpectMsg(4);
+            }, TimeSpan.FromSeconds(10));
         }
 
         [Fact]
@@ -195,7 +185,7 @@ namespace Akka.Cluster.Sharding.Tests
             testLease.Probe.ExpectMsg(new TestLease.AcquireReq(leaseOwner));
             ExpectMsg(5);
 
-            region.Tell(new PersistentShardCoordinator.HandOff("5"));
+            region.Tell(new ShardCoordinator.HandOff("5"));
             testLease.Probe.ExpectMsg(new TestLease.ReleaseReq(leaseOwner));
         }
     }
@@ -206,8 +196,8 @@ namespace Akka.Cluster.Sharding.Tests
             : base(ConfigurationFactory.ParseString(@"
                 akka.cluster.sharding {
                     state-store-mode = persistence
+                    journal-plugin-id = ""akka.persistence.journal.inmem""
                 }
-                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 "), true, helper)
         {
         }

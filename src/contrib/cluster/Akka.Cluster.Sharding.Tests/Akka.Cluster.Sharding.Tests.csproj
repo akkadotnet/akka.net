@@ -6,8 +6,9 @@
     <AssemblyTitle>Akka.Cluster.Sharding.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
- 
+
   <ItemGroup>
+    <ProjectReference Include="..\..\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\..\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
@@ -17,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.0.2" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />

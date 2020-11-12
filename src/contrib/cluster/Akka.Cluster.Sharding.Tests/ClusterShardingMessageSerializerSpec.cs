@@ -8,14 +8,16 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Sharding.Serialization;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using Xunit;
 using FluentAssertions;
+using Google.Protobuf;
+using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -28,12 +30,8 @@ namespace Akka.Cluster.Sharding.Tests
         private IActorRef regionProxy1;
         private IActorRef regionProxy2;
 
-        private static readonly Config SpecConfig;
-
-        static ClusterShardingMessageSerializerSpec()
-        {
-            SpecConfig = ClusterSingletonManager.DefaultConfig().WithFallback(ClusterSharding.DefaultConfig());
-        }
+        private static Config SpecConfig =>
+            ClusterSingletonManager.DefaultConfig().WithFallback(ClusterSharding.DefaultConfig());
 
         public ClusterShardingMessageSerializerSpec() : base(SpecConfig)
         {
@@ -69,7 +67,7 @@ namespace Akka.Cluster.Sharding.Tests
                 .AddAndReturn(region3, ImmutableArray<string>.Empty)
                 .ToImmutableDictionary();
 
-            var state = new PersistentShardCoordinator.State(
+            var state = new ShardCoordinator.CoordinatorState(
                 shards: shards,
                 regions: regions,
                 regionProxies: ImmutableHashSet.Create(regionProxy1, regionProxy2),
@@ -81,56 +79,87 @@ namespace Akka.Cluster.Sharding.Tests
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardCoordinator_domain_events()
         {
-            CheckSerialization(new PersistentShardCoordinator.ShardRegionRegistered(region1));
-            CheckSerialization(new PersistentShardCoordinator.ShardRegionProxyRegistered(regionProxy1));
-            CheckSerialization(new PersistentShardCoordinator.ShardRegionTerminated(region1));
-            CheckSerialization(new PersistentShardCoordinator.ShardRegionProxyTerminated(regionProxy1));
-            CheckSerialization(new PersistentShardCoordinator.ShardHomeAllocated("a", region1));
-            CheckSerialization(new PersistentShardCoordinator.ShardHomeDeallocated("a"));
+            CheckSerialization(new ShardCoordinator.ShardRegionRegistered(region1));
+            CheckSerialization(new ShardCoordinator.ShardRegionProxyRegistered(regionProxy1));
+            CheckSerialization(new ShardCoordinator.ShardRegionTerminated(region1));
+            CheckSerialization(new ShardCoordinator.ShardRegionProxyTerminated(regionProxy1));
+            CheckSerialization(new ShardCoordinator.ShardHomeAllocated("a", region1));
+            CheckSerialization(new ShardCoordinator.ShardHomeDeallocated("a"));
         }
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardCoordinator_remote_messages()
         {
-            CheckSerialization(new PersistentShardCoordinator.Register(region1));
-            CheckSerialization(new PersistentShardCoordinator.RegisterProxy(regionProxy1));
-            CheckSerialization(new PersistentShardCoordinator.RegisterAck(region1));
-            CheckSerialization(new PersistentShardCoordinator.GetShardHome("a"));
-            CheckSerialization(new PersistentShardCoordinator.ShardHome("a", region1));
-            CheckSerialization(new PersistentShardCoordinator.HostShard("a"));
-            CheckSerialization(new PersistentShardCoordinator.ShardStarted("a"));
-            CheckSerialization(new PersistentShardCoordinator.BeginHandOff("a"));
-            CheckSerialization(new PersistentShardCoordinator.BeginHandOffAck("a"));
-            CheckSerialization(new PersistentShardCoordinator.HandOff("a"));
-            CheckSerialization(new PersistentShardCoordinator.ShardStopped("a"));
-            CheckSerialization(new PersistentShardCoordinator.GracefulShutdownRequest(region1));
+            CheckSerialization(new ShardCoordinator.Register(region1));
+            CheckSerialization(new ShardCoordinator.RegisterProxy(regionProxy1));
+            CheckSerialization(new ShardCoordinator.RegisterAck(region1));
+            CheckSerialization(new ShardCoordinator.GetShardHome("a"));
+            CheckSerialization(new ShardCoordinator.ShardHome("a", region1));
+            CheckSerialization(new ShardCoordinator.HostShard("a"));
+            CheckSerialization(new ShardCoordinator.ShardStarted("a"));
+            CheckSerialization(new ShardCoordinator.BeginHandOff("a"));
+            CheckSerialization(new ShardCoordinator.BeginHandOffAck("a"));
+            CheckSerialization(new ShardCoordinator.HandOff("a"));
+            CheckSerialization(new ShardCoordinator.ShardStopped("a"));
+            CheckSerialization(new ShardCoordinator.GracefulShutdownRequest(region1));
         }
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_PersistentShard_snapshot_state()
         {
-            CheckSerialization(new Shard.ShardState(ImmutableHashSet.Create("e1", "e2", "e3")));
+            CheckSerialization(new EventSourcedRememberEntitiesShardStore.State(ImmutableHashSet.Create("e1", "e2", "e3")));
         }
+
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_PersistentShard_domain_events()
         {
-            CheckSerialization(new Shard.EntityStarted("e1"));
-            CheckSerialization(new Shard.EntityStopped("e1"));
+            CheckSerialization(new EventSourcedRememberEntitiesShardStore.EntitiesStarted(ImmutableHashSet.Create("e1", "e2")));
+            CheckSerialization(new EventSourcedRememberEntitiesShardStore.EntitiesStopped(ImmutableHashSet.Create("e1", "e2")));
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_be_able_to_deserialize_old_entity_started_event_into_entities_started()
+        {
+            var message1 = new Serialization.Proto.Msg.EntityStarted();
+            message1.EntityId = "e1";
+            var blob = message1.ToByteArray();
+
+            var reference = serializer.FromBinary(blob, "CB");
+            reference.Should().Be(new EventSourcedRememberEntitiesShardStore.EntitiesStarted(ImmutableHashSet.Create("e1")));
+
+
+            var message2 = new Serialization.Proto.Msg.EntityStopped();
+            message1.EntityId = "e1";
+            blob = message1.ToByteArray();
+
+            reference = serializer.FromBinary(blob, "CD");
+            reference.Should().Be(new EventSourcedRememberEntitiesShardStore.EntitiesStopped(ImmutableHashSet.Create("e1")));
         }
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_GetShardStats()
         {
             CheckSerialization(Shard.GetShardStats.Instance);
-            CheckSerialization(GetShardRegionStats.Instance);
         }
 
         [Fact]
         public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardStats()
         {
             CheckSerialization(new Shard.ShardStats("a", 23));
-            CheckSerialization(new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)));
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_be_able_to_serializable_GetShardRegionStats()
+        {
+            CheckSerialization(GetShardRegionStats.Instance);
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_be_able_to_serializable_ShardRegionStats()
+        {
+            CheckSerialization(new ShardRegionStats(ImmutableDictionary<string, int>.Empty, ImmutableHashSet<string>.Empty));
+            CheckSerialization(new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("a", 23), ImmutableHashSet.Create("b")));
         }
 
         [Fact]
@@ -141,11 +170,23 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
+        public void ClusterShardingMessageSerializer_must_be_able_to_serialize_GetCurrentRegions()
+        {
+            CheckSerialization(GetCurrentRegions.Instance);
+            CheckSerialization(new CurrentRegions(ImmutableHashSet.Create(new Address("akka", "sys", "a", 2552), new Address("akka", "sys", "b", 2552))));
+        }
+
+        [Fact]
         public void ClusterShardingMessageSerializer_must_serialize_ClusterShardingStats()
         {
-            CheckSerialization(new GetClusterShardingStats(TimeSpan.FromMilliseconds(500)));
-            CheckSerialization(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty.Add(new Address("akka.tcp", "foo", "localhost", 9110), 
-                new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("f", 12)))));
+            CheckSerialization(new GetClusterShardingStats(TimeSpan.FromSeconds(3)));
+
+            CheckSerialization(new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty
+                .Add(new Address("akka.tcp", "sys", "a", 2552), new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("a", 23), ImmutableHashSet.Create("b")))
+                .Add(new Address("akka.tcp", "sys", "b", 2552), new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("a", 23), ImmutableHashSet.Create("b")))
+                ));
         }
     }
 }
+
+
