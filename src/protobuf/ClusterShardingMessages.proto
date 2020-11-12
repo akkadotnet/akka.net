@@ -13,11 +13,11 @@ message CoordinatorState {
     string shardId = 1;
     string regionRef = 2;
   }
-  
+
   repeated ShardEntry shards = 1;
   repeated string regions = 2;
   repeated string regionProxies = 3;
-  repeated string unallocatedShards = 4; 
+  repeated string unallocatedShards = 4;
 }
 
 message ActorRefMessage {
@@ -42,12 +42,22 @@ message EntityState {
   repeated string entities = 1;
 }
 
+// not written anymore but kept for backwards compatibility
 message EntityStarted {
   string entityId = 1;
 }
 
+message EntitiesStarted {
+    repeated string entityId = 1;
+}
+
+// not written anymore but kept for backwards compatibility
 message EntityStopped {
   string entityId = 1;
+}
+
+message EntitiesStopped {
+  repeated string entityId = 1;
 }
 
 message ShardStats {
@@ -57,26 +67,50 @@ message ShardStats {
 
 message ShardRegionStats {
   map<string, int32> stats = 1;
-}
-
-message StartEntity {
-    string entityId = 1;
-}
-
-message StartEntityAck {
-    string entityId = 1;
-    string shardId = 2;
+  repeated string failed = 2;
 }
 
 message GetClusterShardingStats{
-  google.protobuf.Duration timeout = 1;  
+  google.protobuf.Duration timeout = 1;
 }
 
-message ClusterShardingStats{ 
-  repeated ShardRegionWithAddress regions = 1;
+message ClusterShardingStats{
+  repeated ClusterShardingStatsEntry stats = 1;
 }
 
-message ShardRegionWithAddress{
-    Akka.Remote.Serialization.Proto.Msg.AddressData nodeAddress = 1;
+message ClusterShardingStatsEntry{
+    Akka.Remote.Serialization.Proto.Msg.AddressData address = 1;
     ShardRegionStats stats = 2;
+}
+message CurrentRegions {
+  repeated Akka.Remote.Serialization.Proto.Msg.AddressData regions = 1;
+}
+
+message StartEntity {
+  string entityId = 1;
+}
+
+message StartEntityAck {
+  string entityId = 1;
+  string shardId = 2;
+}
+
+message CurrentShardState {
+  string shardId = 1;
+  repeated string entityIds = 2;
+}
+
+message ShardState {
+  string shardId = 1;
+  repeated string entityIds = 2;
+}
+
+message CurrentShardRegionState {
+  repeated ShardState shards = 1;
+  repeated string failed = 2;
+}
+
+message RememberedShardState {
+    repeated string shardId = 1;
+    optional bool marker = 2;
 }

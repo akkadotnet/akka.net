@@ -138,7 +138,7 @@ namespace Akka.Cluster.Sharding
             var numberOfShards = numberOfInstances;
             var entityIds = Enumerable.Range(0, numberOfInstances).Select(i => i.ToString()).ToArray();
 
-            // Defaults in `akka.cluster.sharding` but allow overrides specifically for sharded-daemon-process 
+            // Defaults in `akka.cluster.sharding` but allow overrides specifically for sharded-daemon-process
             var shardingBaseSettings = settings.ShardingSettings;
             if (shardingBaseSettings == null)
             {
@@ -154,6 +154,7 @@ namespace Akka.Cluster.Sharding
                 "",
                 TimeSpan.Zero, // passivation disabled
                 StateStoreMode.DData,
+                RememberEntitiesStore.DData,
                 shardingBaseSettings.TuningParameters,
                 shardingBaseSettings.CoordinatorSingletonSettings);
 

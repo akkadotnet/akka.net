@@ -7,356 +7,655 @@
 
 using System;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.DistributedData;
 using Akka.Event;
+using Akka.Pattern;
 
 namespace Akka.Cluster.Sharding
 {
-    internal sealed class DDataShardCoordinator : ActorBase, IShardCoordinator, IWithUnboundedStash
+    using static Akka.Cluster.Sharding.ShardCoordinator;
+    using ShardId = String;
+
+    /// <summary>
+    /// Singleton coordinator (with state based on ddata) that decides where to allocate shards.
+    /// </summary>
+    internal sealed class DDataShardCoordinator : ActorBase, IWithTimers, IWithUnboundedStash
     {
-        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities) =>
-            Actor.Props.Create(() => new DDataShardCoordinator(typeName, settings, allocationStrategy, replicator, majorityMinCap, rememberEntities)).WithDeploy(Deploy.Local);
 
-        public PersistentShardCoordinator.State CurrentState { get; set; }
-        public ClusterShardingSettings Settings { get; }
-        public IShardAllocationStrategy AllocationStrategy { get; }
-        public ICancelable RebalanceTask { get; }
-        public Cluster Cluster { get; }
-        IActorContext IShardCoordinator.Context => Context;
-        IActorRef IShardCoordinator.Self => Self;
-        IActorRef IShardCoordinator.Sender => Sender;
-        IActorRef IShardCoordinator.IgnoreRef => Context.System.IgnoreRef;
-        public ILoggingAdapter Log { get; }
-        public ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; } = ImmutableDictionary<string, ICancelable>.Empty;
-        public ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; } = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
-        public ImmutableHashSet<IActorRef> RebalanceWorkers { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableHashSet<IActorRef> AliveRegions { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableHashSet<IActorRef> RegionTerminationInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public TimeSpan RemovalMargin { get; }
-        public IStash Stash { get; set; }
-        public int MinMembers { get; }
-
-        private readonly IReadConsistency _readConsistency;
-        private readonly IWriteConsistency _writeConsistency;
-        private readonly LWWRegisterKey<PersistentShardCoordinator.State> _coordinatorStateKey;
-        private readonly GSetKey<string> _allShardsKey;
-        private readonly IActorRef _replicator;
-        private readonly bool _rememberEntities;
-
-        private bool _allRegionsRegistered = false;
-        private ImmutableHashSet<IKey<IReplicatedData>> _allKeys;
-        private IImmutableSet<string> _shards = ImmutableHashSet<string>.Empty;
-        private bool _terminating = false;
-
-        public DDataShardCoordinator(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities)
+        private sealed class RememberEntitiesStoreStopped
         {
-            _replicator = replicator;
-            _rememberEntities = rememberEntities;
-            Settings = settings;
-            AllocationStrategy = allocationStrategy;
-            Log = Context.GetLogger();
-            Cluster = Cluster.Get(Context.System);
-            CurrentState = PersistentShardCoordinator.State.Empty.WithRememberEntities(settings.RememberEntities);
-            RemovalMargin = Cluster.DowningProvider.DownRemovalMargin;
-            MinMembers = string.IsNullOrEmpty(settings.Role)
-                ? Cluster.Settings.MinNrOfMembers
-                : Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
-            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
+            public static RememberEntitiesStoreStopped Instance = new RememberEntitiesStoreStopped();
 
-            _readConsistency = new ReadMajority(settings.TuningParameters.WaitingForStateTimeout, majorityMinCap);
-            _writeConsistency = new WriteMajority(settings.TuningParameters.UpdatingStateTimeout, majorityMinCap);
-            _coordinatorStateKey = new LWWRegisterKey<PersistentShardCoordinator.State>(typeName + "CoordinatorState");
-            _allShardsKey = new GSetKey<string>($"shard-{typeName}-all");
-            _allKeys = rememberEntities
-                ? ImmutableHashSet.CreateRange(new IKey<IReplicatedData>[] { _coordinatorStateKey, _allShardsKey })
-                : ImmutableHashSet.Create<IKey<IReplicatedData>>(_coordinatorStateKey);
+            private RememberEntitiesStoreStopped()
+            {
+            }
+        }
 
-            if (rememberEntities)
-                replicator.Tell(Dsl.Subscribe(_allShardsKey, Self));
+        private sealed class RememberEntitiesTimeout
+        {
+            public RememberEntitiesTimeout(ShardId shardId)
+            {
+                ShardId = shardId;
+            }
 
-            Cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, typeof(ClusterEvent.ClusterShuttingDown));
+            public string ShardId { get; }
+        }
+
+        private sealed class RememberEntitiesLoadTimeout
+        {
+            public static readonly RememberEntitiesLoadTimeout Instance = new RememberEntitiesLoadTimeout();
+
+            private RememberEntitiesLoadTimeout()
+            {
+            }
+        }
+
+        internal static Props Props(
+            string typeName,
+            ClusterShardingSettings settings,
+            IShardAllocationStrategy allocationStrategy,
+            IActorRef replicator,
+            int majorityMinCap,
+            IRememberEntitiesProvider rememberEntitiesStoreProvider)
+        {
+            return Actor.Props.Create(() => new DDataShardCoordinator(
+                typeName,
+                settings,
+                allocationStrategy,
+                replicator,
+                majorityMinCap,
+                rememberEntitiesStoreProvider))
+                .WithDeploy(Deploy.Local);
+        }
+
+        private const string RememberEntitiesTimeoutKey = "RememberEntityTimeout";
+
+        private readonly IActorRef replicator;
+        private readonly ShardCoordinator baseImpl;
+        private bool VerboseDebug => baseImpl.VerboseDebug;
+
+        private readonly IReadConsistency stateReadConsistency;
+        private readonly IWriteConsistency stateWriteConsistency;
+        private readonly CoordinatorState initEmptyState;
+        private bool terminating = false;
+        private UniqueAddress selfUniqueAddress;
+        private readonly LWWRegisterKey<ShardCoordinator.CoordinatorState> coordinatorStateKey;
+        private ImmutableHashSet<(IActorRef, GetShardHome)> getShardHomeRequests = ImmutableHashSet<(IActorRef, GetShardHome)>.Empty;
+        private readonly IActorRef rememberEntitiesStore;
+        private bool rememberEntities;
+
+        public ITimerScheduler Timers { get; set; }
+        public IStash Stash { get; set; }
+
+        private string TypeName => baseImpl.TypeName;
+        private ClusterShardingSettings Settings => baseImpl.Settings;
+        private CoordinatorState State { get => baseImpl.State; set => baseImpl.State = value; }
+        private ILoggingAdapter Log => baseImpl.Log;
+
+        public DDataShardCoordinator(
+            string typeName,
+            ClusterShardingSettings settings,
+            IShardAllocationStrategy allocationStrategy,
+            IActorRef replicator,
+            int majorityMinCap,
+            IRememberEntitiesProvider rememberEntitiesStoreProvider)
+        {
+            this.replicator = replicator;
+            var log = Context.GetLogger();
+            var verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
+
+            baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
+                Context, log, verboseDebug, Update, UnstashOneGetShardHomeRequest);
+
+            if (settings.TuningParameters.CoordinatorStateReadMajorityPlus == int.MaxValue)
+                stateReadConsistency = new ReadAll(settings.TuningParameters.WaitingForStateTimeout);
+            else
+                stateReadConsistency = new ReadMajority/*Plus*/(settings.TuningParameters.WaitingForStateTimeout/*, additional*/, majorityMinCap);
+
+            if (settings.TuningParameters.CoordinatorStateWriteMajorityPlus == int.MaxValue)
+                stateWriteConsistency = new WriteAll(settings.TuningParameters.UpdatingStateTimeout);
+            else
+                stateWriteConsistency = new WriteMajority/*Plus*/(settings.TuningParameters.UpdatingStateTimeout/*, additional*/, majorityMinCap);
+
+            Cluster node = Cluster.Get(Context.System);
+            selfUniqueAddress = node.SelfUniqueAddress;
+
+            coordinatorStateKey = new LWWRegisterKey<CoordinatorState>(typeName + "CoordinatorState");
+
+            initEmptyState = CoordinatorState.Empty.WithRememberEntities(settings.RememberEntities);
+
+
+            if (rememberEntitiesStoreProvider != null)
+            {
+                log.Debug("{0}: Starting remember entities store from provider {1}", typeName, rememberEntitiesStoreProvider);
+                rememberEntitiesStore = Context.WatchWith(
+                    Context.ActorOf(rememberEntitiesStoreProvider.CoordinatorStoreProps(), "RememberEntitiesStore"),
+                    RememberEntitiesStoreStopped.Instance);
+            }
+            rememberEntities = rememberEntitiesStore != null;
+            node.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, typeof(ClusterEvent.ClusterShuttingDown));
 
             // get state from ddata replicator, repeat until GetSuccess
             GetCoordinatorState();
-            GetAllShards();
+            if (settings.RememberEntities)
+                GetAllRememberedShards();
 
-            Context.Become(WaitingForState(_allKeys));
+            Context.Become(WaitingForInitialState(ImmutableHashSet<ShardId>.Empty));
         }
 
-        protected override void PreStart()
+
+        protected override bool Receive(object message)
         {
-            switch (AllocationStrategy)
-            {
-                case IStartableAllocationStrategy strategy:
-                    strategy.Start();
-                    break;
-                case IActorSystemDependentAllocationStrategy strategy:
-                    strategy.Start(Context.System);
-                    break;
-            }
+            throw new IllegalStateException("Default receive never expected to actually be used");
         }
 
-        protected override bool Receive(object message) => throw new NotImplementedException(); // should never be called
-
-        public bool HasAllRegionsRegistered()
+        /// <summary>
+        /// This state will drop all other messages since they will be retried
+        /// Note remembered entities initial set of shards can arrive here or later, does not keep us in this state
+        /// </summary>
+        /// <param name="rememberedShards"></param>
+        /// <returns></returns>
+        private Receive WaitingForInitialState(IImmutableSet<ShardId> rememberedShards)
         {
-            // the check is only for startup, i.e. once all have registered we don't check more
-            if (_allRegionsRegistered)
-                return true;
-            else
+            bool Receive(object message)
             {
-                _allRegionsRegistered = AliveRegions.Count >= MinMembers;
-                return _allRegionsRegistered;
-            }
-        }
+                switch (message)
+                {
+                    case GetSuccess g when g.Key.Equals(coordinatorStateKey):
+                        var existingState = g.Get(coordinatorStateKey).Value.WithRememberEntities(Settings.RememberEntities);
+                        if (VerboseDebug)
+                            Log.Debug("{0}: Received initial coordinator state [{1}]", TypeName, existingState);
+                        else
+                            Log.Debug(
+                                "{0}: Received initial coordinator state with [{1}] shards",
+                                TypeName,
+                                existingState.Shards.Count + existingState.UnallocatedShards.Count);
+                        OnInitialState(existingState, rememberedShards);
+                        return true;
 
-        // This state will drop all other messages since they will be retried
-        private Receive WaitingForState(ImmutableHashSet<IKey<IReplicatedData>> remainingKeys) => message =>
-        {
-            switch (message)
-            {
-                case GetSuccess success when _coordinatorStateKey.Equals(success.Key):
-                    {
-                        CurrentState = success.Get(_coordinatorStateKey).Value
-                            .WithRememberEntities(Settings.RememberEntities);
-                        var newRemaining = remainingKeys.Remove(_coordinatorStateKey);
-                        if (newRemaining.IsEmpty)
-                            BecomeWaitingForStateInitialized();
-                        else
-                            Context.Become(WaitingForState(newRemaining));
-                        return true;
-                    }
-                case GetFailure failure when _coordinatorStateKey.Equals(failure.Key):
-                    {
-                        Log.Error("The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {0} (retrying)", _readConsistency.Timeout);
-                        GetCoordinatorState(); // repeat until GetSuccess
-                        return true;
-                    }
-                case NotFound notFound when _coordinatorStateKey.Equals(notFound.Key):
-                    {
-                        var newRemaining = remainingKeys.Remove(_coordinatorStateKey);
-                        if (newRemaining.IsEmpty)
-                            BecomeWaitingForStateInitialized();
-                        else
-                            Context.Become(WaitingForState(newRemaining));
-                        return true;
-                    }
-                case GetSuccess success when _allShardsKey.Equals(success.Key):
-                    {
-                        var shards = success.Get(_allShardsKey).Elements;
-                        var newUnallocatedShards = CurrentState.UnallocatedShards.Union(shards.Except(CurrentState.Shards.Keys));
-                        CurrentState = CurrentState.Copy(unallocatedShards: newUnallocatedShards);
-                        var newRemainingKeys = remainingKeys.Remove(_allShardsKey);
-                        if (newRemainingKeys.IsEmpty)
-                            BecomeWaitingForStateInitialized();
-                        else
-                            Context.Become(WaitingForState(newRemainingKeys));
-                        return true;
-                    }
-                case GetFailure failure when _allShardsKey.Equals(failure.Key):
-                    {
-                        Log.Error("The ShardCoordinator was unable to get all shards state within 'waiting-for-state-timeout': {0} (retrying)", _readConsistency.Timeout);
+                    case GetFailure m when m.Key.Equals(coordinatorStateKey):
+                        Log.Error(
+                            "{0}: The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {1} millis (retrying). Has ClusterSharding been started on all nodes?",
+                            TypeName,
+                            stateReadConsistency.Timeout.TotalMilliseconds);
                         // repeat until GetSuccess
-                        GetAllShards();
+                        GetCoordinatorState();
                         return true;
-                    }
-                case NotFound notFound when _allShardsKey.Equals(notFound.Key):
-                    {
-                        var newRemainingKeys = remainingKeys.Remove(_allShardsKey);
-                        if (newRemainingKeys.IsEmpty)
-                            BecomeWaitingForStateInitialized();
-                        else
-                            Context.Become(WaitingForState(newRemainingKeys));
-                        return true;
-                    }
-                case Terminate _:
-                    Log.Debug("Received termination message while waiting for state");
-                    Context.Stop(Self);
-                    return true;
 
-                default: return this.ReceiveTerminated(message);
+                    case NotFound m when m.Key.Equals(coordinatorStateKey):
+                        Log.Debug("{0}: Initial coordinator is empty.", TypeName);
+                        // this.state is empty initially
+                        OnInitialState(State, rememberedShards);
+                        return true;
+
+                    case RememberEntitiesCoordinatorStore.RememberedShards m:
+                        Log.Debug("{0}: Received [{1}] remembered shard ids (when waitingForInitialState)", TypeName, m.Entities.Count);
+                        Context.Become(WaitingForInitialState(m.Entities));
+                        Timers.Cancel(RememberEntitiesTimeoutKey);
+                        return true;
+
+                    case RememberEntitiesLoadTimeout _:
+                        // repeat until successful
+                        GetAllRememberedShards();
+                        return true;
+
+                    case Terminate _:
+                        Log.Debug("{0}: Received termination message while waiting for state", TypeName);
+                        Context.Stop(Self);
+                        return true;
+
+                    case Register m:
+                        Log.Debug("{0}: ShardRegion tried to register but ShardCoordinator not initialized yet: [{1}]",
+                            TypeName,
+                            m.ShardRegion);
+                        return true;
+
+                    case RegisterProxy m:
+                        Log.Debug("{0}: ShardRegion proxy tried to register but ShardCoordinator not initialized yet: [{1}]",
+                            TypeName,
+                            m.ShardRegionProxy);
+                        return true;
+                }
+                return ReceiveTerminated(message);
             }
-        };
 
-        private void BecomeWaitingForStateInitialized()
+            return Receive;
+        }
+
+        private void OnInitialState(CoordinatorState loadedState, IImmutableSet<ShardId> rememberedShards)
         {
-            if (CurrentState.IsEmpty)
-                Activate(); // empty state, activate immediately
+            if (Settings.RememberEntities && rememberedShards.Count > 0)
+            {
+                // Note that we don't wait for shards from store so they could also arrive later
+                var newUnallocatedShards = State.UnallocatedShards.Union(rememberedShards.Except(State.Shards.Keys));
+                State = loadedState.Copy(unallocatedShards: newUnallocatedShards);
+            }
+            else
+                State = loadedState;
+
+            if (State.IsEmpty)
+            {
+                // empty state, activate immediately
+                Activate();
+            }
             else
             {
                 Context.Become(WaitingForStateInitialized);
                 // note that watchStateActors may call update
-                this.WatchStateActors();
+                baseImpl.WatchStateActors();
             }
         }
 
-        // this state will stash all messages until it receives StateInitialized,
-        // which was scheduled by previous watchStateActors
+        /// <summary>
+        /// this state will stash all messages until it receives StateInitialized,
+        /// which was scheduled by previous watchStateActors
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
         private bool WaitingForStateInitialized(object message)
         {
             switch (message)
             {
-                case PersistentShardCoordinator.StateInitialized _:
+                case StateInitialized _:
+                    UnstashOneGetShardHomeRequest();
                     Stash.UnstashAll();
-                    this.StateInitialized();
+                    baseImpl.ReceiveStateInitialized();
                     Activate();
                     return true;
+
+                case GetShardHome g:
+                    StashGetShardHomeRequest(Sender, g);
+                    return true;
+
                 case Terminate _:
-                    Log.Debug("Received termination message while waiting for state initialized");
+                    Log.Debug("{0}: Received termination message while waiting for state initialized", TypeName);
                     Context.Stop(Self);
                     return true;
-                default:
+
+                case RememberEntitiesCoordinatorStore.RememberedShards m:
+                    Log.Debug("{0}: Received [{1}] remembered shard ids (when waitingForStateInitialized)",
+                        TypeName,
+                        m.Entities.Count);
+                    var newUnallocatedShards = State.UnallocatedShards.Union(m.Entities.Except(State.Shards.Keys));
+                    State = State.Copy(unallocatedShards: newUnallocatedShards);
+                    Timers.Cancel(RememberEntitiesTimeoutKey);
+                    return true;
+
+                case RememberEntitiesLoadTimeout _:
+                    // repeat until successful
+                    GetAllRememberedShards();
+                    return true;
+
+                case RememberEntitiesStoreStopped _:
+                    OnRememberEntitiesStoreStopped();
+                    return true;
+
+                case var _:
                     Stash.Stash();
                     return true;
             }
         }
 
-        private Receive WaitingForUpdate<TEvent>(TEvent e, Action<TEvent> afterUpdateCallback, ImmutableHashSet<IKey<IReplicatedData>> remainingKeys) where TEvent : PersistentShardCoordinator.IDomainEvent => message =>
+        /// <summary>
+        /// this state will stash all messages until it receives UpdateSuccess and a successful remember shard started
+        /// if remember entities is enabled
+        /// </summary>
+        /// <typeparam name="TEvent"></typeparam>
+        /// <param name="evt"></param>
+        /// <param name="shardId"></param>
+        /// <param name="waitingForStateWrite"></param>
+        /// <param name="waitingForRememberShard"></param>
+        /// <param name="afterUpdateCallback"></param>
+        /// <returns></returns>
+        private Receive WaitingForUpdate<TEvent>(
+            TEvent evt,
+            ShardId shardId,
+            bool waitingForStateWrite,
+            bool waitingForRememberShard,
+            Action<TEvent> afterUpdateCallback)
+            where TEvent : IDomainEvent
+        {
+            bool Receive(object message)
             {
                 switch (message)
                 {
-                    case UpdateSuccess success when success.Key.Equals(_coordinatorStateKey) && success.Request.Equals(e):
-                        Log.Debug("The coordinator state was successfully updated with {0}", e);
-                        var newRemainingKeys = remainingKeys.Remove(_coordinatorStateKey);
-                        if (newRemainingKeys.IsEmpty)
-                            UnbecomeAfterUpdate(e, afterUpdateCallback);
+                    case UpdateSuccess m when m.Key.Equals(coordinatorStateKey) && m.Request.Equals(evt):
+                        if (!waitingForRememberShard)
+                        {
+                            Log.Debug("{0}: The coordinator state was successfully updated with {1}", TypeName, evt);
+                            if (shardId != null)
+                                Timers.Cancel(RememberEntitiesTimeoutKey);
+                            UnbecomeAfterUpdate(evt, afterUpdateCallback);
+                        }
                         else
-                            Context.Become(WaitingForUpdate(e, afterUpdateCallback, newRemainingKeys));
+                        {
+                            Log.Debug("{0}: The coordinator state was successfully updated with {1}, waiting for remember shard update",
+                                TypeName,
+                                evt);
+                            Context.Become(
+                                WaitingForUpdate(
+                                    evt,
+                                    shardId,
+                                    waitingForStateWrite = false,
+                                    waitingForRememberShard = true,
+                                    afterUpdateCallback: afterUpdateCallback));
+                        }
                         return true;
 
-                    case UpdateTimeout timeout when timeout.Key.Equals(_coordinatorStateKey) && timeout.Request.Equals(e):
-                        Log.Error("The ShardCoordinator was unable to update a distributed state within 'updating-state-timeout': {0} ({1}), event={2}", _writeConsistency.Timeout, _terminating ? "terminating" : "retrying", e);
-
-                        if (_terminating)
+                    case UpdateTimeout m when m.Key.Equals(coordinatorStateKey) && m.Request.Equals(evt):
+                        Log.Error(
+                            "{0}: The ShardCoordinator was unable to update a distributed state within 'updating-state-timeout': {1} millis ({2}). " +
+                            "Perhaps the ShardRegion has not started on all active nodes yet? event={3}",
+                            TypeName,
+                            stateWriteConsistency.Timeout.TotalMilliseconds,
+                            terminating ? "terminating" : "retrying",
+                            evt);
+                        if (terminating)
                         {
                             Context.Stop(Self);
                         }
                         else
                         {
                             // repeat until UpdateSuccess
-                            SendCoordinatorStateUpdate(e);
+                            SendCoordinatorStateUpdate(evt);
                         }
-
                         return true;
 
-                    case UpdateSuccess success when success.Key.Equals(_allShardsKey) && success.Request is string newShard:
-                        Log.Debug("The coordinator shards state was successfully updated with {0}", newShard);
-                        var newRemaining = remainingKeys.Remove(_allShardsKey);
-                        if (newRemaining.IsEmpty)
-                            UnbecomeAfterUpdate(e, afterUpdateCallback);
-                        else
-                            Context.Become(WaitingForUpdate(e, afterUpdateCallback, newRemaining));
-                        return true;
-
-                    case UpdateTimeout timeout when timeout.Key.Equals(_allShardsKey) && timeout.Request is string newShard:
-                        Log.Error("The ShardCoordinator was unable to update shards distributed state within 'updating-state-timeout': {0} ({1}), event={2}", _writeConsistency.Timeout, _terminating ? "terminating" : "retrying", e);
-
-                        if (_terminating)
+                    case ModifyFailure m:
+                        Log.Error(
+                            m.Cause,
+                            "{0}: The ShardCoordinator was unable to update a distributed state {1} with error {2} and event {3}. {4}",
+                            TypeName,
+                            m.Key,
+                            m.ErrorMessage,
+                            evt,
+                            terminating ? "Coordinator will be terminated due to Terminate message received"
+                            : "Coordinator will be restarted");
+                        if (terminating)
                         {
                             Context.Stop(Self);
                         }
                         else
                         {
-                            // repeat until UpdateSuccess
-                            SendShardsUpdate(newShard);
+                            ExceptionDispatchInfo.Capture(m.Cause).Throw();
                         }
-
                         return true;
 
-                    case ModifyFailure failure:
-                        Log.Error("The ShardCoordinator was unable to update a distributed state {0} with error {1} and event {2}. {3}", failure.Key, failure.Cause, e, _terminating ? "Coordinator will be terminated due to Terminate message received" : "Coordinator will be restarted");
-
-                        if (_terminating)
-                        {
-                            Context.Stop(Self);
-                        }
-                        else
-                        {
-                            ExceptionDispatchInfo.Capture(failure.Cause).Throw();
-                        }
-
-                        return true;
-
-                    case PersistentShardCoordinator.GetShardHome getShardHome:
-                        if (!this.HandleGetShardHome(getShardHome))
-                            Stash.Stash();
+                    case GetShardHome g:
+                        if (!baseImpl.HandleGetShardHome(g.Shard))
+                            StashGetShardHomeRequest(Sender, g); // must wait for update that is in progress
                         return true;
 
                     case Terminate _:
-                        Log.Debug("Received termination message while waiting for update");
-                        _terminating = true;
+                        Log.Debug("{0}: The ShardCoordinator received termination message while waiting for update", TypeName);
+                        terminating = true;
                         Stash.Stash();
                         return true;
 
-                    default:
+                    case RememberEntitiesCoordinatorStore.UpdateDone m:
+                        if (!shardId.Contains(m.ShardId))
+                        {
+                            Log.Warning("{0}: Saw remember entities update complete for shard id [{1}], while waiting for [{2}]",
+                                TypeName,
+                                m.ShardId,
+                                shardId ?? "");
+                        }
+                        else
+                        {
+                            if (!waitingForStateWrite)
+                            {
+                                Log.Debug("{0}: The ShardCoordinator saw remember shard start successfully written {1}", TypeName, evt);
+                                if (shardId != null)
+                                    Timers.Cancel(RememberEntitiesTimeoutKey);
+                                UnbecomeAfterUpdate(evt, afterUpdateCallback);
+                            }
+                            else
+                            {
+                                Log.Debug("{0}: The ShardCoordinator saw remember shard start successfully written {1}, waiting for state update",
+                                    TypeName,
+                                    evt);
+                                Context.Become(
+                                    WaitingForUpdate(
+                                        evt,
+                                        shardId,
+                                        waitingForStateWrite = true,
+                                        waitingForRememberShard = false,
+                                        afterUpdateCallback: afterUpdateCallback));
+                            }
+                        }
+                        return true;
+
+                    case RememberEntitiesCoordinatorStore.UpdateFailed m:
+                        if (shardId.Contains(m.ShardId))
+                        {
+                            OnRememberEntitiesUpdateFailed(m.ShardId);
+                        }
+                        else
+                        {
+                            Log.Warning("{0}: Got an remember entities update failed for [{1}] while waiting for [{2}], ignoring",
+                                TypeName,
+                                m.ShardId,
+                                shardId ?? "");
+                        }
+                        return true;
+
+                    case RememberEntitiesTimeout m:
+                        if (shardId.Contains(m.ShardId))
+                        {
+                            OnRememberEntitiesUpdateFailed(m.ShardId);
+                        }
+                        else
+                        {
+                            Log.Warning("{0}: Got an remember entities update timeout for [{1}] while waiting for [{2}], ignoring",
+                                TypeName,
+                                m.ShardId,
+                                shardId ?? "");
+                        }
+                        return true;
+
+                    case RememberEntitiesStoreStopped _:
+                        OnRememberEntitiesStoreStopped();
+                        return true;
+
+                    case RememberEntitiesCoordinatorStore.RememberedShards _:
+                        Log.Debug("{0}: Late arrival of remembered shards while waiting for update, stashing", TypeName);
+                        Stash.Stash();
+                        return true;
+
+                    case var _:
                         Stash.Stash();
                         return true;
                 }
-            };
+            }
 
-        private void UnbecomeAfterUpdate<TEvent>(TEvent e, Action<TEvent> afterUpdateCallback)
+            return Receive;
+        }
+
+        private void UnbecomeAfterUpdate<TEvent>(TEvent evt, Action<TEvent> afterUpdateCallback) where TEvent : IDomainEvent
         {
             Context.UnbecomeStacked();
-            afterUpdateCallback(e);
+            afterUpdateCallback(evt);
+            if (VerboseDebug)
+                Log.Debug("{0}: New coordinator state after [{1}]: [{2}]", TypeName, evt, State);
+            UnstashOneGetShardHomeRequest();
             Stash.UnstashAll();
+        }
+
+        private void StashGetShardHomeRequest(IActorRef sender, GetShardHome request)
+        {
+            Log.Debug(
+              "{0}: GetShardHome [{1}] request from [{2}] stashed, because waiting for initial state or update of state. " +
+              "It will be handled afterwards.",
+              TypeName,
+              request.Shard,
+              sender);
+            getShardHomeRequests = getShardHomeRequests.Add((sender, request));
+        }
+
+        private void UnstashOneGetShardHomeRequest()
+        {
+            if (getShardHomeRequests.Count > 0)
+            {
+                // unstash one, will continue unstash of next after receive GetShardHome or update completed
+                var requestTuple = getShardHomeRequests.First();
+                var (originalSender, request) = requestTuple;
+                Self.Tell(request, sender: originalSender);
+                getShardHomeRequests = getShardHomeRequests.Remove(requestTuple);
+            }
         }
 
         private void Activate()
         {
-            Context.Become(this.Active);
-            Log.Info("Sharding Coordinator was moved to the active state {0}", CurrentState);
+            Context.Become(msg => baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
+            Log.Info("{0}: ShardCoordinator was moved to the active state with [{1}] shards", TypeName, State.Shards.Count);
+            if (VerboseDebug)
+                Log.Debug("{0}: Full ShardCoordinator initial state {1}", TypeName, State);
         }
 
-        private bool Active(object message)
+        /// <summary>
+        /// only used once the coordinator is initialized
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        private bool ReceiveLateRememberedEntities(object message)
         {
-            if (_rememberEntities && message is Changed changed && changed.Key.Equals(_allShardsKey))
+            switch (message)
             {
-                _shards = changed.Get(_allShardsKey).Elements;
-                return true;
-            }
-            else return ShardCoordinator.Active(this, message);
-        }
-
-        public void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : PersistentShardCoordinator.IDomainEvent
-        {
-            SendCoordinatorStateUpdate(e);
-            switch ((PersistentShardCoordinator.IDomainEvent)e)
-            {
-                case PersistentShardCoordinator.ShardHomeAllocated allocated when _rememberEntities && !_shards.Contains(allocated.Shard):
-                    SendShardsUpdate(allocated.Shard);
-                    Context.BecomeStacked(WaitingForUpdate(e, handler, _allKeys));
+                case RememberEntitiesCoordinatorStore.RememberedShards m:
+                    Log.Debug("{0}: Received [{1}] remembered shard ids (after state initialized)", TypeName, m.Entities.Count);
+                    if (m.Entities.Count > 0)
+                    {
+                        var newUnallocatedShards = State.UnallocatedShards.Union(m.Entities.Except(State.Shards.Keys));
+                        State = State.Copy(unallocatedShards: newUnallocatedShards);
+                        baseImpl.AllocateShardHomesForRememberEntities();
+                    }
+                    Timers.Cancel(RememberEntitiesTimeoutKey);
                     break;
-                default:
+
+                case RememberEntitiesLoadTimeout _:
+                    // repeat until successful
+                    GetAllRememberedShards();
+                    break;
+            }
+            return false;
+        }
+
+        private void Update<TEvent>(TEvent evt, Action<TEvent> handler) where TEvent : IDomainEvent
+        {
+            SendCoordinatorStateUpdate(evt);
+            Receive waitingReceive;
+            switch (evt)
+            {
+                case ShardHomeAllocated s when rememberEntities && !State.Shards.ContainsKey(s.Shard):
+                    RememberShardAllocated(s.Shard);
+                    waitingReceive = WaitingForUpdate(
+                        evt,
+                        shardId: s.Shard,
+                        waitingForStateWrite: true,
+                        waitingForRememberShard: true,
+                        afterUpdateCallback: handler);
+                    break;
+                case var _:
                     // no update of shards, already known
-                    Context.BecomeStacked(WaitingForUpdate(e, handler, ImmutableHashSet.Create<IKey<IReplicatedData>>(_coordinatorStateKey)));
+                    waitingReceive = WaitingForUpdate(
+                        evt,
+                        shardId: null,
+                        waitingForStateWrite: true,
+                        waitingForRememberShard: false,
+                        afterUpdateCallback: handler);
                     break;
+            }
+            Context.BecomeStacked(waitingReceive);
+        }
+
+        private void GetCoordinatorState()
+        {
+            replicator.Tell(Dsl.Get(coordinatorStateKey, stateReadConsistency));
+        }
+
+        private void GetAllRememberedShards()
+        {
+            Timers.StartSingleTimer(
+                RememberEntitiesTimeoutKey,
+                RememberEntitiesLoadTimeout.Instance,
+                Settings.TuningParameters.WaitingForStateTimeout);
+            if (rememberEntitiesStore != null)
+                rememberEntitiesStore.Tell(RememberEntitiesCoordinatorStore.GetShards.Instance);
+        }
+
+        private void SendCoordinatorStateUpdate(IDomainEvent evt)
+        {
+            var s = State.Updated(evt);
+            if (VerboseDebug)
+                Log.Debug("{0}: Storing new coordinator state [{1}]", TypeName, State);
+            replicator.Tell(Dsl.Update(
+                coordinatorStateKey,
+                new LWWRegister<CoordinatorState>(selfUniqueAddress, initEmptyState),
+                stateWriteConsistency,
+                evt,
+                reg => reg.WithValue(selfUniqueAddress, s)));
+        }
+
+        private void RememberShardAllocated(string newShard)
+        {
+            Log.Debug("{0}: Remembering shard allocation [{1}]", TypeName, newShard);
+            if (rememberEntitiesStore != null)
+                rememberEntitiesStore.Tell(new RememberEntitiesCoordinatorStore.AddShard(newShard));
+            Timers.StartSingleTimer(
+                RememberEntitiesTimeoutKey,
+                new RememberEntitiesTimeout(newShard),
+                Settings.TuningParameters.UpdatingStateTimeout);
+        }
+
+        private bool ReceiveTerminated(object message)
+        {
+            if (!baseImpl.ReceiveTerminated(message))
+            {
+                if (message is RememberEntitiesStoreStopped)
+                {
+                    OnRememberEntitiesStoreStopped();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void OnRememberEntitiesUpdateFailed(ShardId shardId)
+        {
+            Log.Error("{0}: The ShardCoordinator was unable to update remembered shard [{1}] within 'updating-state-timeout': {2} millis, {3}",
+              TypeName,
+              shardId,
+              Settings.TuningParameters.UpdatingStateTimeout,
+              terminating ? "terminating" : "retrying");
+            if (terminating)
+                Context.Stop(Self);
+            else
+            {
+                // retry until successful
+                RememberShardAllocated(shardId);
             }
         }
 
-        private void SendShardsUpdate(string newShard)
+        private void OnRememberEntitiesStoreStopped()
         {
-            _replicator.Tell(Dsl.Update(_allShardsKey, GSet<string>.Empty, _writeConsistency, newShard, set => set.Add(newShard)));
+            // rely on backoff supervision of coordinator
+            Log.Error("{0}: The ShardCoordinator stopping because the remember entities store stopped", TypeName);
+            Context.Stop(Self);
         }
 
-        private void SendCoordinatorStateUpdate(PersistentShardCoordinator.IDomainEvent e)
+        protected override void PreStart()
         {
-            var s = CurrentState.Updated(e);
-            _replicator.Tell(Dsl.Update(_coordinatorStateKey,
-                new LWWRegister<PersistentShardCoordinator.State>(Cluster.SelfUniqueAddress, PersistentShardCoordinator.State.Empty),
-                _writeConsistency,
-                e,
-                reg => reg.WithValue(Cluster.SelfUniqueAddress, s)));
+            baseImpl.PreStart();
         }
 
-        private void GetAllShards()
+        protected override void PostStop()
         {
-            if (_rememberEntities)
-                _replicator.Tell(Dsl.Get(_allShardsKey, _readConsistency));
+            base.PostStop();
+            baseImpl.PostStop();
         }
-
-        private void GetCoordinatorState() => _replicator.Tell(Dsl.Get(_coordinatorStateKey, _readConsistency));
     }
 }

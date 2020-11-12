@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.DistributedData;
 using Akka.Pattern;
@@ -90,8 +91,14 @@ namespace Akka.Cluster.Sharding
             /// <exception cref="ArgumentNullException">
             /// This exception is thrown when the specified <paramref name="typeName"/> or <paramref name="entityProps"/> is undefined.
             /// </exception>
-            public Start(string typeName, Func<string, Props> entityProps, ClusterShardingSettings settings,
-                ExtractEntityId extractEntityId, ExtractShardId extractShardId, IShardAllocationStrategy allocationStrategy, object handOffStopMessage)
+            public Start(
+                string typeName,
+                Func<string, Props> entityProps,
+                ClusterShardingSettings settings,
+                ExtractEntityId extractEntityId,
+                ExtractShardId extractShardId,
+                IShardAllocationStrategy allocationStrategy,
+                object handOffStopMessage)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start requires type name to be provided");
                 if (entityProps == null) throw new ArgumentNullException(nameof(entityProps), $"ClusterSharding start requires Props for [{typeName}] to be provided");
@@ -139,7 +146,11 @@ namespace Akka.Cluster.Sharding
             /// <exception cref="ArgumentException">
             /// This exception is thrown when the specified <paramref name="typeName"/> is undefined.
             /// </exception>
-            public StartProxy(string typeName, ClusterShardingSettings settings, ExtractEntityId extractEntityId, ExtractShardId extractShardId)
+            public StartProxy(
+                string typeName,
+                ClusterShardingSettings settings,
+                ExtractEntityId extractEntityId,
+                ExtractShardId extractShardId)
             {
                 if (string.IsNullOrEmpty(typeName)) throw new ArgumentNullException(nameof(typeName), "ClusterSharding start proxy requires type name to be provided");
 
@@ -168,10 +179,34 @@ namespace Akka.Cluster.Sharding
                 try
                 {
                     var settings = start.Settings;
+                    var replicator = Replicator(settings);
+
+                    IRememberEntitiesProvider rememberEntitiesStoreProvider = null;
+                    if (settings.RememberEntities)
+                    {
+                        // with the deprecated persistence state store mode we always use the event sourced provider for shard regions
+                        // and no store for coordinator (the coordinator is a PersistentActor in that case)
+                        RememberEntitiesStore rememberEntitiesProvider =
+                          (settings.StateStoreMode == StateStoreMode.Persistence) ?
+                            RememberEntitiesStore.Eventsourced : settings.RememberEntitiesStore;
+
+                        switch (rememberEntitiesProvider)
+                        {
+                            case RememberEntitiesStore.DData:
+                                rememberEntitiesStoreProvider = new DDataRememberEntitiesProvider(start.TypeName, settings, _majorityMinCap, replicator);
+                                break;
+                            case RememberEntitiesStore.Eventsourced:
+                                rememberEntitiesStoreProvider = new EventSourcedRememberEntitiesProvider(start.TypeName, settings);
+                                break;
+                            case RememberEntitiesStore.Custom:
+                                rememberEntitiesStoreProvider = new CustomStateStoreModeProvider(start.TypeName, Context.System, settings);
+                                break;
+                        }
+                    }
+
                     var encName = Uri.EscapeDataString(start.TypeName);
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
-                    var replicator = Replicator(settings);
 
                     var shardRegion = Context.Child(encName).GetOrElse(() =>
                     {
@@ -181,7 +216,7 @@ namespace Akka.Cluster.Sharding
                             var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
                             var coordinatorProps = settings.StateStoreMode == StateStoreMode.Persistence
                                 ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)
-                                : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, settings.RememberEntities);
+                                : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, rememberEntitiesStoreProvider);
 
                             var singletonProps = BackoffSupervisor.Props(
                                 Backoff.OnStop(
@@ -191,11 +226,11 @@ namespace Akka.Cluster.Sharding
                                     maxBackoff: maxBackoff,
                                     randomFactor: 0.2,
                                     maxNrOfRetries: -1)
-                                .WithFinalStopMessage(m => m is Terminate))
+                                .WithFinalStopMessage(m => m is ShardCoordinator.Terminate))
                                 .WithDeploy(Deploy.Local);
 
                             var singletonSettings = settings.CoordinatorSingletonSettings.WithSingletonName("singleton").WithRole(settings.Role);
-                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, Terminate.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
+                            Context.ActorOf(ClusterSingletonManager.Props(singletonProps, ShardCoordinator.Terminate.Instance, singletonSettings).WithDispatcher(Context.Props.Dispatcher), coordinatorSingletonManagerName);
                         }
                         return Context.ActorOf(ShardRegion.Props(
                             typeName: start.TypeName,
@@ -205,8 +240,8 @@ namespace Akka.Cluster.Sharding
                             extractEntityId: start.ExtractEntityId,
                             extractShardId: start.ExtractShardId,
                             handOffStopMessage: start.HandOffStopMessage,
-                            replicator: replicator,
-                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
+                            rememberEntitiesStoreProvider)
+                            .WithDispatcher(Context.Props.Dispatcher), encName);
                     });
 
                     Sender.Tell(new Started(shardRegion));
@@ -233,9 +268,8 @@ namespace Akka.Cluster.Sharding
                         settings: settings,
                         coordinatorPath: coordinatorPath,
                         extractEntityId: startProxy.ExtractEntityId,
-                        extractShardId: startProxy.ExtractShardId,
-                        replicator: Context.System.DeadLetters,
-                        majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName));
+                        extractShardId: startProxy.ExtractShardId)
+                        .WithDispatcher(Context.Props.Dispatcher), encName));
 
                     Sender.Tell(new Started(shardRegion));
                 }
@@ -261,7 +295,7 @@ namespace Akka.Cluster.Sharding
 
         private IActorRef Replicator(ClusterShardingSettings settings)
         {
-            if (settings.StateStoreMode == StateStoreMode.DData)
+            if (settings.StateStoreMode == StateStoreMode.DData || settings.StateStoreMode == StateStoreMode.Custom)
             {
                 // one replicator per role
                 var role = settings.Role ?? string.Empty;

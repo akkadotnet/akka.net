@@ -8,11 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Sharding.Serialization.Proto.Msg;
 using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
@@ -55,6 +54,8 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string EntityStateManifest = "CA";
         private const string EntityStartedManifest = "CB";
         private const string EntityStoppedManifest = "CD";
+        private const string EntitiesStartedManifest = "CE";
+        private const string EntitiesStoppedManifest = "CF";
 
         private const string StartEntityManifest = "EA";
         private const string StartEntityAckManifest = "EB";
@@ -64,8 +65,19 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string GetShardRegionStatsManifest = "DC";
         private const string ShardRegionStatsManifest = "DD";
 
-        private const string GetClusterShardingStatsManifest = "GS";
-        private const string ClusterShardingStatsManifest = "CS";
+        private const string GetClusterShardingStatsManifest = "GS"; //"DE" in akka
+        private const string ClusterShardingStatsManifest = "CS"; //"DF" in akka
+        private const string GetCurrentRegionsManifest = "DG";
+        private const string CurrentRegionsManifest = "DH";
+
+        private const string GetCurrentShardStateManifest = "FA";
+        private const string CurrentShardStateManifest = "FB";
+        private const string GetShardRegionStateManifest = "FC";
+        private const string ShardStateManifest = "FD";
+        private const string CurrentShardRegionStateManifest = "FE";
+
+        private const string EventSourcedRememberShardsMigrationMarkerManifest = "SM";
+        private const string EventSourcedRememberShardsState = "SS";
 
         #endregion
 
@@ -79,40 +91,56 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             _fromBinaryMap = new Dictionary<string, Func<byte[], object>>
             {
-                {EntityStateManifest, bytes => EntityStateFromBinary(bytes) },
-                {EntityStartedManifest, bytes => EntityStartedFromBinary(bytes) },
-                {EntityStoppedManifest, bytes => EntityStoppedFromBinary(bytes) },
+                { EntityStateManifest, bytes => EntityStateFromBinary(bytes) },
+                { EntityStartedManifest, bytes => EntityStartedFromBinary(bytes) },
+                { EntitiesStartedManifest, bytes => EntitiesStartedFromBinary(bytes) },
+                { EntityStoppedManifest, bytes => EntityStoppedFromBinary(bytes) },
+                { EntitiesStoppedManifest, bytes => EntitiesStoppedFromBinary(bytes) },
 
-                {CoordinatorStateManifest, CoordinatorStateFromBinary},
-                {ShardRegionRegisteredManifest, bytes => new PersistentShardCoordinator.ShardRegionRegistered(ActorRefMessageFromBinary(bytes)) },
-                {ShardRegionProxyRegisteredManifest, bytes => new PersistentShardCoordinator.ShardRegionProxyRegistered(ActorRefMessageFromBinary(bytes)) },
-                {ShardRegionTerminatedManifest, bytes => new PersistentShardCoordinator.ShardRegionTerminated(ActorRefMessageFromBinary(bytes)) },
-                {ShardRegionProxyTerminatedManifest, bytes => new PersistentShardCoordinator.ShardRegionProxyTerminated(ActorRefMessageFromBinary(bytes)) },
-                {ShardHomeAllocatedManifest, ShardHomeAllocatedFromBinary},
-                {ShardHomeDeallocatedManifest, bytes => new PersistentShardCoordinator.ShardHomeDeallocated(ShardIdMessageFromBinary(bytes)) },
+                { CoordinatorStateManifest, CoordinatorStateFromBinary},
+                { ShardRegionRegisteredManifest, bytes => new ShardCoordinator.ShardRegionRegistered(ActorRefMessageFromBinary(bytes)) },
+                { ShardRegionProxyRegisteredManifest, bytes => new ShardCoordinator.ShardRegionProxyRegistered(ActorRefMessageFromBinary(bytes)) },
+                { ShardRegionTerminatedManifest, bytes => new ShardCoordinator.ShardRegionTerminated(ActorRefMessageFromBinary(bytes)) },
+                { ShardRegionProxyTerminatedManifest, bytes => new ShardCoordinator.ShardRegionProxyTerminated(ActorRefMessageFromBinary(bytes)) },
+                { ShardHomeAllocatedManifest, ShardHomeAllocatedFromBinary},
+                { ShardHomeDeallocatedManifest, bytes => new ShardCoordinator.ShardHomeDeallocated(ShardIdMessageFromBinary(bytes)) },
 
-                {RegisterManifest, bytes => new PersistentShardCoordinator.Register(ActorRefMessageFromBinary(bytes)) },
-                {RegisterProxyManifest, bytes => new PersistentShardCoordinator.RegisterProxy(ActorRefMessageFromBinary(bytes)) },
-                {RegisterAckManifest, bytes => new PersistentShardCoordinator.RegisterAck(ActorRefMessageFromBinary(bytes)) },
-                {GetShardHomeManifest, bytes => new PersistentShardCoordinator.GetShardHome(ShardIdMessageFromBinary(bytes)) },
-                {ShardHomeManifest, bytes => ShardHomeFromBinary(bytes) },
-                {HostShardManifest, bytes => new PersistentShardCoordinator.HostShard(ShardIdMessageFromBinary(bytes)) },
-                {ShardStartedManifest, bytes => new PersistentShardCoordinator.ShardStarted(ShardIdMessageFromBinary(bytes)) },
-                {BeginHandOffManifest, bytes => new PersistentShardCoordinator.BeginHandOff(ShardIdMessageFromBinary(bytes)) },
-                {BeginHandOffAckManifest, bytes => new PersistentShardCoordinator.BeginHandOffAck(ShardIdMessageFromBinary(bytes)) },
-                {HandOffManifest, bytes => new PersistentShardCoordinator.HandOff(ShardIdMessageFromBinary(bytes)) },
-                {ShardStoppedManifest, bytes => new PersistentShardCoordinator.ShardStopped(ShardIdMessageFromBinary(bytes)) },
-                {GracefulShutdownReqManifest, bytes => new PersistentShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
+                { RegisterManifest, bytes => new ShardCoordinator.Register(ActorRefMessageFromBinary(bytes)) },
+                { RegisterProxyManifest, bytes => new ShardCoordinator.RegisterProxy(ActorRefMessageFromBinary(bytes)) },
+                { RegisterAckManifest, bytes => new ShardCoordinator.RegisterAck(ActorRefMessageFromBinary(bytes)) },
+                { GetShardHomeManifest, bytes => new ShardCoordinator.GetShardHome(ShardIdMessageFromBinary(bytes)) },
+                { ShardHomeManifest, bytes => ShardHomeFromBinary(bytes) },
+                { HostShardManifest, bytes => new ShardCoordinator.HostShard(ShardIdMessageFromBinary(bytes)) },
+                { ShardStartedManifest, bytes => new ShardCoordinator.ShardStarted(ShardIdMessageFromBinary(bytes)) },
+                { BeginHandOffManifest, bytes => new ShardCoordinator.BeginHandOff(ShardIdMessageFromBinary(bytes)) },
+                { BeginHandOffAckManifest, bytes => new ShardCoordinator.BeginHandOffAck(ShardIdMessageFromBinary(bytes)) },
+                { HandOffManifest, bytes => new ShardCoordinator.HandOff(ShardIdMessageFromBinary(bytes)) },
+                { ShardStoppedManifest, bytes => new ShardCoordinator.ShardStopped(ShardIdMessageFromBinary(bytes)) },
+                { GracefulShutdownReqManifest, bytes => new ShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
 
-                {GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
-                {ShardStatsManifest, bytes => ShardStatsFromBinary(bytes) },
+                { GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
+                { ShardStatsManifest, bytes => ShardStatsFromBinary(bytes) },
                 { GetShardRegionStatsManifest, bytes => GetShardRegionStats.Instance },
                 { ShardRegionStatsManifest, bytes => ShardRegionStatsFromBinary(bytes) },
+
                 { GetClusterShardingStatsManifest, bytes => GetClusterShardingStatsFromBinary(bytes) },
                 { ClusterShardingStatsManifest, bytes => ClusterShardingStatsFromBinary(bytes) },
 
-                {StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
-                {StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) }
+                { GetCurrentRegionsManifest, bytes => GetCurrentRegions.Instance },
+                { CurrentRegionsManifest, bytes => CurrentRegionsFromBinary(bytes) },
+
+                { StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
+                { StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) },
+
+                //{ GetCurrentShardStateManifest, bytes => GetCurrentShardState },
+                //{ CurrentShardStateManifest, bytes => CurrentShardStateFromBinary(bytes) },
+                { GetShardRegionStateManifest, bytes => GetShardRegionState.Instance },
+                { ShardStateManifest, bytes => ShardStateFromBinary(bytes) },
+                { CurrentShardRegionStateManifest, bytes => CurrentShardRegionStateFromBinary(bytes) },
+
+
+                { EventSourcedRememberShardsMigrationMarkerManifest, bytes => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
+                { EventSourcedRememberShardsState, bytes => RememberShardsStateFromBinary(bytes) }
             };
         }
 
@@ -128,36 +156,51 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             switch (obj)
             {
-                case PersistentShardCoordinator.State o: return CoordinatorStateToProto(o).ToByteArray();
-                case PersistentShardCoordinator.ShardRegionRegistered o: return ActorRefMessageToProto(o.Region).ToByteArray();
-                case PersistentShardCoordinator.ShardRegionProxyRegistered o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
-                case PersistentShardCoordinator.ShardRegionTerminated o: return ActorRefMessageToProto(o.Region).ToByteArray();
-                case PersistentShardCoordinator.ShardRegionProxyTerminated o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
-                case PersistentShardCoordinator.ShardHomeAllocated o: return ShardHomeAllocatedToProto(o).ToByteArray();
-                case PersistentShardCoordinator.ShardHomeDeallocated o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.Register o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
-                case PersistentShardCoordinator.RegisterProxy o: return ActorRefMessageToProto(o.ShardRegionProxy).ToByteArray();
-                case PersistentShardCoordinator.RegisterAck o: return ActorRefMessageToProto(o.Coordinator).ToByteArray();
-                case PersistentShardCoordinator.GetShardHome o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.ShardHome o: return ShardHomeToProto(o).ToByteArray();
-                case PersistentShardCoordinator.HostShard o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.ShardStarted o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.BeginHandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.BeginHandOffAck o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.HandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.ShardStopped o: return ShardIdMessageToProto(o.Shard).ToByteArray();
-                case PersistentShardCoordinator.GracefulShutdownRequest o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
-                case Shard.ShardState o: return EntityStateToProto(o).ToByteArray();
-                case Shard.EntityStarted o: return EntityStartedToProto(o).ToByteArray();
-                case Shard.EntityStopped o: return EntityStoppedToProto(o).ToByteArray();
+                case ShardCoordinator.CoordinatorState o: return CoordinatorStateToProto(o).ToByteArray();
+                case ShardCoordinator.ShardRegionRegistered o: return ActorRefMessageToProto(o.Region).ToByteArray();
+                case ShardCoordinator.ShardRegionProxyRegistered o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
+                case ShardCoordinator.ShardRegionTerminated o: return ActorRefMessageToProto(o.Region).ToByteArray();
+                case ShardCoordinator.ShardRegionProxyTerminated o: return ActorRefMessageToProto(o.RegionProxy).ToByteArray();
+                case ShardCoordinator.ShardHomeAllocated o: return ShardHomeAllocatedToProto(o).ToByteArray();
+                case ShardCoordinator.ShardHomeDeallocated o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+
+                case ShardCoordinator.Register o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
+                case ShardCoordinator.RegisterProxy o: return ActorRefMessageToProto(o.ShardRegionProxy).ToByteArray();
+                case ShardCoordinator.RegisterAck o: return ActorRefMessageToProto(o.Coordinator).ToByteArray();
+                case ShardCoordinator.GetShardHome o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.ShardHome o: return ShardHomeToProto(o).ToByteArray();
+                case ShardCoordinator.HostShard o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.ShardStarted o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.BeginHandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.BeginHandOffAck o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.HandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.ShardStopped o: return ShardIdMessageToProto(o.Shard).ToByteArray();
+                case ShardCoordinator.GracefulShutdownRequest o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
+
+                case EventSourcedRememberEntitiesShardStore.State o: return EntityStateToProto(o).ToByteArray();
+                case EventSourcedRememberEntitiesShardStore.EntitiesStarted o: return EntitiesStartedToProto(o).ToByteArray();
+                case EventSourcedRememberEntitiesShardStore.EntitiesStopped o: return EntitiesStoppedToProto(o).ToByteArray();
+
                 case ShardRegion.StartEntity o: return StartEntityToProto(o).ToByteArray();
                 case ShardRegion.StartEntityAck o: return StartEntityAckToProto(o).ToByteArray();
+
                 case Shard.GetShardStats o: return Empty;
                 case Shard.ShardStats o: return ShardStatsToProto(o).ToByteArray();
                 case GetShardRegionStats o: return Empty;
                 case ShardRegionStats o: return ShardRegionStatsToProto(o).ToByteArray();
                 case GetClusterShardingStats o: return GetClusterShardingStatsToProto(o).ToByteArray();
                 case ClusterShardingStats o: return ClusterShardingStatsToProto(o).ToByteArray();
+                case GetCurrentRegions o: return Empty;
+                case CurrentRegions o: return CurrentRegionsToProto(o).ToByteArray();
+
+                //case GetCurrentShardState o: return Empty;
+                //case CurrentShardState o: return CurrentShardStateToProto(o).ToByteArray();
+                case GetShardRegionState o: return Empty;
+                case ShardState o: return ShardStateToProto(o).ToByteArray();
+                case CurrentShardRegionState o: return CurrentShardRegionStateToProto(o).ToByteArray();
+
+                case EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _: return Empty;
+                case EventSourcedRememberEntitiesCoordinatorStore.State o: return RememberShardsStateToProto(o).ToByteArray();
             }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
@@ -194,38 +237,70 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             switch (o)
             {
-                case Shard.ShardState _: return EntityStateManifest;
-                case Shard.EntityStarted _: return EntityStartedManifest;
-                case Shard.EntityStopped _: return EntityStoppedManifest;
-                case PersistentShardCoordinator.State _: return CoordinatorStateManifest;
-                case PersistentShardCoordinator.ShardRegionRegistered _: return ShardRegionRegisteredManifest;
-                case PersistentShardCoordinator.ShardRegionProxyRegistered _: return ShardRegionProxyRegisteredManifest;
-                case PersistentShardCoordinator.ShardRegionTerminated _: return ShardRegionTerminatedManifest;
-                case PersistentShardCoordinator.ShardRegionProxyTerminated _: return ShardRegionProxyTerminatedManifest;
-                case PersistentShardCoordinator.ShardHomeAllocated _: return ShardHomeAllocatedManifest;
-                case PersistentShardCoordinator.ShardHomeDeallocated _: return ShardHomeDeallocatedManifest;
-                case PersistentShardCoordinator.Register _: return RegisterManifest;
-                case PersistentShardCoordinator.RegisterProxy _: return RegisterProxyManifest;
-                case PersistentShardCoordinator.RegisterAck _: return RegisterAckManifest;
-                case PersistentShardCoordinator.GetShardHome _: return GetShardHomeManifest;
-                case PersistentShardCoordinator.ShardHome _: return ShardHomeManifest;
-                case PersistentShardCoordinator.HostShard _: return HostShardManifest;
-                case PersistentShardCoordinator.ShardStarted _: return ShardStartedManifest;
-                case PersistentShardCoordinator.BeginHandOff _: return BeginHandOffManifest;
-                case PersistentShardCoordinator.BeginHandOffAck _: return BeginHandOffAckManifest;
-                case PersistentShardCoordinator.HandOff _: return HandOffManifest;
-                case PersistentShardCoordinator.ShardStopped _: return ShardStoppedManifest;
-                case PersistentShardCoordinator.GracefulShutdownRequest _: return GracefulShutdownReqManifest;
+                case EventSourcedRememberEntitiesShardStore.State _: return EntityStateManifest;
+                case EventSourcedRememberEntitiesShardStore.EntitiesStarted _: return EntitiesStartedManifest;
+                case EventSourcedRememberEntitiesShardStore.EntitiesStopped _: return EntitiesStoppedManifest;
+
+                case ShardCoordinator.CoordinatorState _: return CoordinatorStateManifest;
+                case ShardCoordinator.ShardRegionRegistered _: return ShardRegionRegisteredManifest;
+                case ShardCoordinator.ShardRegionProxyRegistered _: return ShardRegionProxyRegisteredManifest;
+                case ShardCoordinator.ShardRegionTerminated _: return ShardRegionTerminatedManifest;
+                case ShardCoordinator.ShardRegionProxyTerminated _: return ShardRegionProxyTerminatedManifest;
+                case ShardCoordinator.ShardHomeAllocated _: return ShardHomeAllocatedManifest;
+                case ShardCoordinator.ShardHomeDeallocated _: return ShardHomeDeallocatedManifest;
+
+                case ShardCoordinator.Register _: return RegisterManifest;
+                case ShardCoordinator.RegisterProxy _: return RegisterProxyManifest;
+                case ShardCoordinator.RegisterAck _: return RegisterAckManifest;
+                case ShardCoordinator.GetShardHome _: return GetShardHomeManifest;
+                case ShardCoordinator.ShardHome _: return ShardHomeManifest;
+                case ShardCoordinator.HostShard _: return HostShardManifest;
+                case ShardCoordinator.ShardStarted _: return ShardStartedManifest;
+                case ShardCoordinator.BeginHandOff _: return BeginHandOffManifest;
+                case ShardCoordinator.BeginHandOffAck _: return BeginHandOffAckManifest;
+                case ShardCoordinator.HandOff _: return HandOffManifest;
+                case ShardCoordinator.ShardStopped _: return ShardStoppedManifest;
+                case ShardCoordinator.GracefulShutdownRequest _: return GracefulShutdownReqManifest;
+
                 case ShardRegion.StartEntity _: return StartEntityManifest;
                 case ShardRegion.StartEntityAck _: return StartEntityAckManifest;
+
                 case Shard.GetShardStats _: return GetShardStatsManifest;
                 case Shard.ShardStats _: return ShardStatsManifest;
                 case GetShardRegionStats _: return GetShardRegionStatsManifest;
                 case ShardRegionStats _: return ShardRegionStatsManifest;
                 case GetClusterShardingStats _: return GetClusterShardingStatsManifest;
                 case ClusterShardingStats _: return ClusterShardingStatsManifest;
+                case GetCurrentRegions _: return GetCurrentRegionsManifest;
+                case CurrentRegions _: return CurrentRegionsManifest;
+
+                //case GetCurrentShardState _: return GetCurrentShardStateManifest;
+                //case CurrentShardState _: return CurrentShardStateManifest;
+                case GetShardRegionState _: return GetShardRegionStateManifest;
+                case ShardState _: return ShardStateManifest;
+                case CurrentShardRegionState _: return CurrentShardRegionStateManifest;
+
+                case EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _: return EventSourcedRememberShardsMigrationMarkerManifest;
+                case EventSourcedRememberEntitiesCoordinatorStore.State _: return EventSourcedRememberShardsState;
             }
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
+        }
+
+        //
+        // EventSourcedRememberEntitiesCoordinatorStore.State
+        //
+        private static Proto.Msg.RememberedShardState RememberShardsStateToProto(EventSourcedRememberEntitiesCoordinatorStore.State state)
+        {
+            var message = new Proto.Msg.RememberedShardState();
+            message.ShardId.AddRange(state.Shards);
+            message.Marker = state.WrittenMigrationMarker;
+            return message;
+        }
+
+        private static EventSourcedRememberEntitiesCoordinatorStore.State RememberShardsStateFromBinary(byte[] bytes)
+        {
+            var message = Proto.Msg.RememberedShardState.Parser.ParseFrom(bytes);
+            return new EventSourcedRememberEntitiesCoordinatorStore.State(message.ShardId.ToImmutableHashSet(), message.Marker);
         }
 
         //
@@ -281,39 +356,57 @@ namespace Akka.Cluster.Sharding.Serialization
         //
         // EntityStarted
         //
-        private static Proto.Msg.EntityStarted EntityStartedToProto(Shard.EntityStarted entityStarted)
+        private static EventSourcedRememberEntitiesShardStore.EntitiesStarted EntityStartedFromBinary(byte[] bytes)
         {
-            var message = new Proto.Msg.EntityStarted();
-            message.EntityId = entityStarted.EntityId;
+            var message = Proto.Msg.EntityStarted.Parser.ParseFrom(bytes);
+            return new EventSourcedRememberEntitiesShardStore.EntitiesStarted(ImmutableHashSet.Create(message.EntityId));
+        }
+
+        //
+        // EntitiesStarted
+        //
+        private static Proto.Msg.EntitiesStarted EntitiesStartedToProto(EventSourcedRememberEntitiesShardStore.EntitiesStarted entitiesStarted)
+        {
+            var message = new Proto.Msg.EntitiesStarted();
+            message.EntityId.AddRange(entitiesStarted.Entities);
             return message;
         }
 
-        private static Shard.EntityStarted EntityStartedFromBinary(byte[] bytes)
+        private static EventSourcedRememberEntitiesShardStore.EntitiesStarted EntitiesStartedFromBinary(byte[] bytes)
         {
-            var message = Proto.Msg.EntityStarted.Parser.ParseFrom(bytes);
-            return new Shard.EntityStarted(message.EntityId);
+            var message = Proto.Msg.EntitiesStarted.Parser.ParseFrom(bytes);
+            return new EventSourcedRememberEntitiesShardStore.EntitiesStarted(message.EntityId.ToImmutableHashSet());
         }
 
         //
         // EntityStopped
         //
-        private static Proto.Msg.EntityStopped EntityStoppedToProto(Shard.EntityStopped entityStopped)
+        private static EventSourcedRememberEntitiesShardStore.EntitiesStopped EntityStoppedFromBinary(byte[] bytes)
         {
-            var message = new Proto.Msg.EntityStopped();
-            message.EntityId = entityStopped.EntityId;
+            var message = Proto.Msg.EntityStopped.Parser.ParseFrom(bytes);
+            return new EventSourcedRememberEntitiesShardStore.EntitiesStopped(ImmutableHashSet.Create(message.EntityId));
+        }
+
+        //
+        // EntityStopped
+        //
+        private static Proto.Msg.EntitiesStopped EntitiesStoppedToProto(EventSourcedRememberEntitiesShardStore.EntitiesStopped entitiesStopped)
+        {
+            var message = new Proto.Msg.EntitiesStopped();
+            message.EntityId.AddRange(entitiesStopped.Entities);
             return message;
         }
 
-        private static Shard.EntityStopped EntityStoppedFromBinary(byte[] bytes)
+        private static EventSourcedRememberEntitiesShardStore.EntitiesStopped EntitiesStoppedFromBinary(byte[] bytes)
         {
-            var message = Proto.Msg.EntityStopped.Parser.ParseFrom(bytes);
-            return new Shard.EntityStopped(message.EntityId);
+            var message = Proto.Msg.EntitiesStopped.Parser.ParseFrom(bytes);
+            return new EventSourcedRememberEntitiesShardStore.EntitiesStopped(message.EntityId.ToImmutableHashSet());
         }
 
         //
-        // PersistentShardCoordinator.State
+        // ShardCoordinator.State
         //
-        private static Proto.Msg.CoordinatorState CoordinatorStateToProto(PersistentShardCoordinator.State state)
+        private static Proto.Msg.CoordinatorState CoordinatorStateToProto(ShardCoordinator.CoordinatorState state)
         {
             var message = new Proto.Msg.CoordinatorState();
             message.Shards.AddRange(state.Shards.Select(entry =>
@@ -331,7 +424,7 @@ namespace Akka.Cluster.Sharding.Serialization
             return message;
         }
 
-        private PersistentShardCoordinator.State CoordinatorStateFromBinary(byte[] bytes)
+        private ShardCoordinator.CoordinatorState CoordinatorStateFromBinary(byte[] bytes)
         {
             var state = Proto.Msg.CoordinatorState.Parser.ParseFrom(bytes);
             var shards = ImmutableDictionary.CreateRange(state.Shards.Select(entry => new KeyValuePair<string, IActorRef>(entry.ShardId, ResolveActorRef(entry.RegionRef))));
@@ -340,7 +433,7 @@ namespace Akka.Cluster.Sharding.Serialization
             var proxies = state.RegionProxies.Select(ResolveActorRef).ToImmutableHashSet();
             var unallocatedShards = state.UnallocatedShards.ToImmutableHashSet();
 
-            return new PersistentShardCoordinator.State(
+            return new ShardCoordinator.CoordinatorState(
                 shards: shards,
                 regions: regions,
                 regionProxies: proxies,
@@ -348,9 +441,9 @@ namespace Akka.Cluster.Sharding.Serialization
         }
 
         //
-        // PersistentShardCoordinator.ShardHomeAllocated
+        // ShardCoordinator.ShardHomeAllocated
         //
-        private static Proto.Msg.ShardHomeAllocated ShardHomeAllocatedToProto(PersistentShardCoordinator.ShardHomeAllocated shardHomeAllocated)
+        private static Proto.Msg.ShardHomeAllocated ShardHomeAllocatedToProto(ShardCoordinator.ShardHomeAllocated shardHomeAllocated)
         {
             var message = new Proto.Msg.ShardHomeAllocated();
             message.Shard = shardHomeAllocated.Shard;
@@ -358,16 +451,16 @@ namespace Akka.Cluster.Sharding.Serialization
             return message;
         }
 
-        private PersistentShardCoordinator.ShardHomeAllocated ShardHomeAllocatedFromBinary(byte[] bytes)
+        private ShardCoordinator.ShardHomeAllocated ShardHomeAllocatedFromBinary(byte[] bytes)
         {
             var msg = Proto.Msg.ShardHomeAllocated.Parser.ParseFrom(bytes);
-            return new PersistentShardCoordinator.ShardHomeAllocated(msg.Shard, ResolveActorRef(msg.Region));
+            return new ShardCoordinator.ShardHomeAllocated(msg.Shard, ResolveActorRef(msg.Region));
         }
 
         //
-        // PersistentShardCoordinator.ShardHome
+        // ShardCoordinator.ShardHome
         //
-        private static Proto.Msg.ShardHome ShardHomeToProto(PersistentShardCoordinator.ShardHome shardHome)
+        private static Proto.Msg.ShardHome ShardHomeToProto(ShardCoordinator.ShardHome shardHome)
         {
             var message = new Proto.Msg.ShardHome();
             message.Shard = shardHome.Shard;
@@ -375,10 +468,10 @@ namespace Akka.Cluster.Sharding.Serialization
             return message;
         }
 
-        private PersistentShardCoordinator.ShardHome ShardHomeFromBinary(byte[] bytes)
+        private ShardCoordinator.ShardHome ShardHomeFromBinary(byte[] bytes)
         {
             var msg = Proto.Msg.ShardHome.Parser.ParseFrom(bytes);
-            return new PersistentShardCoordinator.ShardHome(msg.Shard, ResolveActorRef(msg.Region));
+            return new ShardCoordinator.ShardHome(msg.Shard, ResolveActorRef(msg.Region));
         }
 
         //
@@ -397,20 +490,19 @@ namespace Akka.Cluster.Sharding.Serialization
         }
 
         //
-        // Shard.ShardState
+        // EventSourcedRememberEntitiesShardStore.State
         //
-
-        private static Proto.Msg.EntityState EntityStateToProto(Shard.ShardState entityState)
+        private static Proto.Msg.EntityState EntityStateToProto(EventSourcedRememberEntitiesShardStore.State entityState)
         {
             var message = new Proto.Msg.EntityState();
-            message.Entities.AddRange(entityState.Entries);
+            message.Entities.AddRange(entityState.Entities);
             return message;
         }
 
-        private static Shard.ShardState EntityStateFromBinary(byte[] bytes)
+        private static EventSourcedRememberEntitiesShardStore.State EntityStateFromBinary(byte[] bytes)
         {
             var msg = Proto.Msg.EntityState.Parser.ParseFrom(bytes);
-            return new Shard.ShardState(msg.Entities.ToImmutableHashSet());
+            return new EventSourcedRememberEntitiesShardStore.State(msg.Entities.ToImmutableHashSet());
         }
 
         //
@@ -427,16 +519,17 @@ namespace Akka.Cluster.Sharding.Serialization
         private static Proto.Msg.ShardRegionStats ShardRegionStatsToProto(ShardRegionStats s)
         {
             var message = new Proto.Msg.ShardRegionStats();
-            message.Stats.Add((IDictionary<string,int>)s.Stats);
+            message.Stats.Add((IDictionary<string, int>)s.Stats);
+            message.Failed.Add(s.Failed);
             return message;
         }
 
         private static ShardRegionStats ShardRegionStatsFromBinary(byte[] b)
         {
             var p = Proto.Msg.ShardRegionStats.Parser.ParseFrom(b);
-            return new ShardRegionStats(p.Stats.ToImmutableDictionary());
+            return new ShardRegionStats(p.Stats.ToImmutableDictionary(), p.Failed.ToImmutableHashSet());
         }
-        
+
         // GetClusterShardingStats
         private static Proto.Msg.GetClusterShardingStats GetClusterShardingStatsToProto(GetClusterShardingStats stats)
         {
@@ -450,14 +543,14 @@ namespace Akka.Cluster.Sharding.Serialization
             var p = Proto.Msg.GetClusterShardingStats.Parser.ParseFrom(b);
             return new GetClusterShardingStats(p.Timeout.ToTimeSpan());
         }
-        
+
         // ClusterShardingStats
         private static Proto.Msg.ClusterShardingStats ClusterShardingStatsToProto(ClusterShardingStats stats)
         {
             var p = new Proto.Msg.ClusterShardingStats();
             foreach (var s in stats.Regions)
             {
-                p.Regions.Add(new ShardRegionWithAddress() { NodeAddress = AddressToProto(s.Key), Stats = ShardRegionStatsToProto(s.Value)});
+                p.Stats.Add(new ClusterShardingStatsEntry() { Address = AddressToProto(s.Key), Stats = ShardRegionStatsToProto(s.Value) });
             }
 
             return p;
@@ -467,13 +560,62 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             var p = Proto.Msg.ClusterShardingStats.Parser.ParseFrom(b);
             var dict = new Dictionary<Address, ShardRegionStats>();
-            foreach (var s in p.Regions)
+            foreach (var s in p.Stats)
             {
-                dict[AddressFrom(s.NodeAddress)] = new ShardRegionStats(s.Stats.Stats.ToImmutableDictionary());
+                dict[AddressFrom(s.Address)] = new ShardRegionStats(s.Stats.Stats.ToImmutableDictionary(), s.Stats.Failed.ToImmutableHashSet());
             }
             return new ClusterShardingStats(dict.ToImmutableDictionary());
         }
-        
+
+        //CurrentRegions
+        private Proto.Msg.CurrentRegions CurrentRegionsToProto(CurrentRegions evt)
+        {
+            var p = new Proto.Msg.CurrentRegions();
+            p.Regions.AddRange(evt.Regions.Select(AddressToProto));
+            return p;
+        }
+
+        private CurrentRegions CurrentRegionsFromBinary(byte[] bytes)
+        {
+            var p = Proto.Msg.CurrentRegions.Parser.ParseFrom(bytes);
+            return new CurrentRegions(p.Regions.Select(AddressFrom).ToImmutableHashSet());
+        }
+
+        //ShardState
+        private Proto.Msg.ShardState ShardStateToProto(ShardState evt)
+        {
+            var p = new Proto.Msg.ShardState();
+            p.ShardId = evt.ShardId;
+            p.EntityIds.AddRange(evt.EntityIds);
+            return p;
+        }
+
+        private ShardState ShardStateFromProto(Proto.Msg.ShardState parsed)
+        {
+            return new ShardState(parsed.ShardId, parsed.EntityIds.ToImmutableHashSet());
+        }
+
+        private ShardState ShardStateFromBinary(byte[] bytes)
+        {
+            var p = Proto.Msg.ShardState.Parser.ParseFrom(bytes);
+            return new ShardState(p.ShardId, p.EntityIds.ToImmutableHashSet());
+        }
+
+        //CurrentShardRegionState
+        private Proto.Msg.CurrentShardRegionState CurrentShardRegionStateToProto(CurrentShardRegionState evt)
+        {
+            var p = new Proto.Msg.CurrentShardRegionState();
+            p.Shards.AddRange(evt.Shards.Select(ShardStateToProto));
+            p.Failed.AddRange(evt.Failed);
+            return p;
+        }
+
+        private CurrentShardRegionState CurrentShardRegionStateFromBinary(byte[] bytes)
+        {
+            var p = Proto.Msg.CurrentShardRegionState.Parser.ParseFrom(bytes);
+            return new CurrentShardRegionState(p.Shards.Select(ShardStateFromProto).ToImmutableHashSet(), p.Failed.ToImmutableHashSet());
+        }
+
         private static AddressData AddressToProto(Address address)
         {
             var message = new AddressData();
@@ -483,7 +625,7 @@ namespace Akka.Cluster.Sharding.Serialization
             message.Protocol = address.Protocol;
             return message;
         }
-        
+
         private static Address AddressFrom(AddressData addressProto)
         {
             return new Address(

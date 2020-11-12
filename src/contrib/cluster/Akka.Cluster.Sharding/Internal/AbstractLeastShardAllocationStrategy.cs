@@ -39,13 +39,12 @@ namespace Akka.Cluster.Sharding.Internal
             public IImmutableList<string> ShardIds { get; }
         }
 
-        internal class ShardSuitabilityOrdering : IComparer<RegionEntry>
+        internal sealed class ShardSuitabilityOrdering : IComparer<RegionEntry>
         {
             public static readonly ShardSuitabilityOrdering Instance = new ShardSuitabilityOrdering();
 
             private ShardSuitabilityOrdering()
             {
-
             }
 
             public int Compare(RegionEntry x, RegionEntry y)

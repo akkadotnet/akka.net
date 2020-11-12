@@ -95,7 +95,7 @@ namespace Akka.Cluster.Sharding
 
     public static class EnumerableExtensions
     {
-        /// <summary> 
+        /// <summary>
         /// Partitions elements in fixed size
         /// Credits to http://stackoverflow.com/a/13731854/465132
         /// </summary>
