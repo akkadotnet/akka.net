@@ -49,6 +49,7 @@
   </ItemGroup>
 
   <ItemGroup>
+      <PackageReference Include="ApprovalTests" Version="5.4.4" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
