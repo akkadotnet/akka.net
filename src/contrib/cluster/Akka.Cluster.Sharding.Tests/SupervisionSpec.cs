@@ -101,7 +101,7 @@ namespace Akka.Cluster.Sharding.Tests
         private static Config SpecConfig =>
             ConfigurationFactory.ParseString(@"
                 akka.actor.provider = cluster
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")

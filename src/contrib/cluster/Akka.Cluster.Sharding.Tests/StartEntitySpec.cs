@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -175,6 +176,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             // the backoff is 10s by default, so plenty time to
             // bypass region and send start entity directly to shard
+            Thread.Sleep(200);
             Sys.ActorSelection(entity.Path.Parent).Tell(new ShardRegion.StartEntity("1"));
             ExpectMsg(new ShardRegion.StartEntityAck("1", "1"));
             AwaitAssert(() =>
