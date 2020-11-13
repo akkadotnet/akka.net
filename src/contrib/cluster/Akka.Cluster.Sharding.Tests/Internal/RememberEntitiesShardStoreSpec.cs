@@ -43,6 +43,7 @@ namespace Akka.Cluster.Sharding.Tests.Internal
                 # no leaks between test runs thank you
                 akka.cluster.sharding.distributed-data.durable.keys = []
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
             ")
             .WithFallback(ClusterSingletonManager.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig())
