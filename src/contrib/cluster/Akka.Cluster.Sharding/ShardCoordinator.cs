@@ -1621,7 +1621,6 @@ namespace Akka.Cluster.Sharding
         }
 
 
-
         internal void PreStart()
         {
             switch (AllocationStrategy)
@@ -1646,7 +1645,6 @@ namespace Akka.Cluster.Sharding
             var regionAddress = region.Path.Address;
             return regionAddress.Equals(context.Self.Path.Address) || cluster.State.IsMemberUp(regionAddress);
         }
-
 
         internal bool Active(object message)
         {

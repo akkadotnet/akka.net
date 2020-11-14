@@ -112,6 +112,9 @@ namespace Akka.Cluster.Sharding.Internal
             TypeName = typeName;
             Settings = settings;
 
+            //should have been this: $"/sharding/{typeName}Coordinator";
+            PersistenceId = $"/system/sharding/{typeName}Coordinator/singleton/coordinator"; //used for backward compatibility
+
             JournalPluginId = settings.JournalPluginId;
             SnapshotPluginId = settings.SnapshotPluginId;
         }
@@ -123,7 +126,7 @@ namespace Akka.Cluster.Sharding.Internal
         /// Uses the same persistence id as the old persistent coordinator so that the old data can be migrated
         /// without any user action
         /// </summary>
-        public override string PersistenceId => $"/sharding/{TypeName}Coordinator";
+        public override string PersistenceId { get; }
 
         private HashSet<ShardId> shards = new HashSet<EntityId>();
         private bool writtenMarker = false;
@@ -171,7 +174,7 @@ namespace Akka.Cluster.Sharding.Internal
                     Sender.Tell(new RememberEntitiesCoordinatorStore.RememberedShards(shards.ToImmutableHashSet()));
                     return true;
 
-                case RememberEntitiesCoordinatorStore.AddShard add://(shardId: ShardId) =>
+                case RememberEntitiesCoordinatorStore.AddShard add:
                     PersistAsync(add.ShardId, shardId =>
                     {
                         shards.Add(shardId);

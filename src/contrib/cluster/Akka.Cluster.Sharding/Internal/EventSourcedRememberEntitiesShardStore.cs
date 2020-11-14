@@ -201,6 +201,8 @@ namespace Akka.Cluster.Sharding.Internal
 
             Log.Debug("Starting up EventSourcedRememberEntitiesStore");
 
+            PersistenceId = $"/sharding/{TypeName}Shard/{ShardId}";
+
             JournalPluginId = settings.JournalPluginId;
             SnapshotPluginId = settings.SnapshotPluginId;
         }
@@ -211,7 +213,7 @@ namespace Akka.Cluster.Sharding.Internal
 
         public ClusterShardingSettings Settings { get; }
 
-        public override string PersistenceId => $"/sharding/{TypeName}Shard/{ShardId}";
+        public override string PersistenceId { get; }
 
         protected override bool ReceiveRecover(object message)
         {
