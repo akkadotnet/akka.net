@@ -1825,6 +1825,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
         public static Akka.Streams.Dsl.Sink<TIn, object> Create<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(System.Action onTerminated = null) { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> FanoutPublisher<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> First<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> FirstOrDefault<TIn>() { }
