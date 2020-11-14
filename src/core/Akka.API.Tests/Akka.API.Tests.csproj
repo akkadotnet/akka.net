@@ -7,30 +7,6 @@
     <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
     <UserSecretsId>93253ee8-0410-4483-9809-9bb2d32860fa</UserSecretsId>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <Content Include="CoreAPISpec.ApproveCluster.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveClusterTools.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveCore.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApprovePersistence.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApprovePersistenceQuery.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveRemote.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveStreams.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
@@ -49,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="ApprovalTests" Version="5.4.4" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
