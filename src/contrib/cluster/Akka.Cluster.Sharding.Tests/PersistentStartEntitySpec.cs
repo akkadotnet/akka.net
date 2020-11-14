@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -118,6 +119,7 @@ namespace Akka.Cluster.Sharding.Tests
             ExpectTerminated(shard);
 
             // trigger shard start by messaging other actor in it
+            Thread.Sleep(200);
             Sys.Log.Info("Starting shard again");
             sharding.Tell(new EntityEnvelope(11, "give-me-shard"));
             var secondShardIncarnation = ExpectMsg<IActorRef>();
