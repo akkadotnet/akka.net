@@ -14,22 +14,22 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public abstract class MultiNodeClusterShardingConfig : MultiNodeConfig
     {
-        protected static Config PersistenceConfig(Type type)
+        protected static Config PersistenceConfig()
         {
-            return ConfigurationFactory.ParseString($@"
+            return ConfigurationFactory.ParseString(@"
                 akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-                akka.persistence.journal.MemoryJournal {{
-                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                }}
-                akka.persistence.journal.memory-journal-shared {{
+                akka.persistence.journal.memory-journal-shared {
                     class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
                     timeout = 5s
-                }}
+                }
 
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""snapshots-{type.Name}""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.memory-snapshot-store-shared""
+                akka.persistence.memory-snapshot-store-shared {
+                    class = ""Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests.MultiNode""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    timeout = 5s
+                }
                 ");
         }
 
@@ -53,7 +53,7 @@ namespace Akka.Cluster.Sharding.Tests
             AdditionalConfig = additionalConfig;
             Loglevel = loglevel;
 
-            Config persistenceConfig = (mode == StateStoreMode.DData && rememberEntitiesStore != RememberEntitiesStore.Eventsourced) ? ConfigurationFactory.Empty : PersistenceConfig(GetType());
+            Config persistenceConfig = (mode == StateStoreMode.DData && rememberEntitiesStore != RememberEntitiesStore.Eventsourced) ? ConfigurationFactory.Empty : PersistenceConfig();
 
             Common =
                 ConfigurationFactory.ParseString($@"

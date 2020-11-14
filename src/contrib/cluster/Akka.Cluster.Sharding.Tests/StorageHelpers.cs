@@ -16,42 +16,52 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public static class StorageHelpers
     {
-        public static void ClearLocalSnapshotStore(ActorSystem sys)
-        {
-            ClearLocalSnapshotStore(sys?.Settings?.Config);
-        }
-
-        public static void ClearLocalSnapshotStore(Config config)
-        {
-            if (config == null)
-                return;
-            var path = config.GetString("akka.persistence.snapshot-store.local.dir");
-            try
-            {
-                if (!string.IsNullOrEmpty(path))
-                    Directory.Delete(path, true);
-            }
-            catch (Exception)
-            {
-            }
-        }
-
         public static void StartPersistence(this TestKitBase test, ActorSystem sys)
         {
-            sys.Log.Info("Setting up setup shared journal.");
-            Persistence.Persistence.Instance.Apply(sys).JournalFor("akka.persistence.journal.MemoryJournal");
+            StartJournalPersistence(test, sys);
+            StartSnapshotPersistence(test, sys);
+
             SetStore(test, sys, sys);
         }
 
         public static void SetStore(this TestKitBase test, ActorSystem startOn, ActorSystem storeOn)
         {
+            SetJournalStore(test, startOn, storeOn);
+            SetSnapshotStore(test, startOn, storeOn);
+        }
+
+        private static void StartJournalPersistence(this TestKitBase test, ActorSystem sys)
+        {
+            sys.Log.Info("Setting up setup shared journal.");
+            Persistence.Persistence.Instance.Apply(sys).JournalFor("akka.persistence.journal.inmem");
+        }
+
+        private static void StartSnapshotPersistence(this TestKitBase test, ActorSystem sys)
+        {
+            sys.Log.Info("Setting up setup shared snapshot store.");
+            Persistence.Persistence.Instance.Apply(sys).SnapshotStoreFor("akka.persistence.snapshot-store.inmem");
+        }
+
+        public static void SetJournalStore(this TestKitBase test, ActorSystem startOn, ActorSystem storeOn)
+        {
             var probe = test.CreateTestProbe(storeOn);
-            storeOn.ActorSelection("system/akka.persistence.journal.MemoryJournal").Tell(new Identify(null), probe.Ref);
+            storeOn.ActorSelection("system/akka.persistence.journal.inmem").Tell(new Identify(null), probe.Ref);
             var sharedStore = probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
             sharedStore.Should().NotBeNull();
 
             Persistence.Persistence.Instance.Apply(startOn);
             MemoryJournalShared.SetStore(sharedStore, startOn);
+        }
+
+        private static void SetSnapshotStore(this TestKitBase test, ActorSystem startOn, ActorSystem storeOn)
+        {
+            var probe = test.CreateTestProbe(storeOn);
+            storeOn.ActorSelection("system/akka.persistence.snapshot-store.inmem").Tell(new Identify(null), probe.Ref);
+            var sharedStore = probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedStore.Should().NotBeNull();
+
+            Persistence.Persistence.Instance.Apply(startOn);
+            MemorySnapshotStoreShared.SetStore(sharedStore, startOn);
         }
     }
 }

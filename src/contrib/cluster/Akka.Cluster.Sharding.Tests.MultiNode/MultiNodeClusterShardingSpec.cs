@@ -276,11 +276,18 @@ namespace Akka.Cluster.Sharding.Tests
         protected void SetStore(ActorSystem sys, RoleName storeOn)
         {
             Persistence.Persistence.Instance.Apply(sys);
-            var probe = CreateTestProbe(sys);
-            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.MemoryJournal").Tell(new Identify(null), probe.Ref);
-            var sharedStore = probe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
-            sharedStore.Should().NotBeNull();
-            MemoryJournalShared.SetStore(sharedStore, sys);
+
+            var journalProbe = CreateTestProbe(sys);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.inmem").Tell(new Identify(null), journalProbe.Ref);
+            var sharedjournalStore = journalProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedjournalStore.Should().NotBeNull();
+            MemoryJournalShared.SetStore(sharedjournalStore, sys);
+
+            var snapshotProbe = CreateTestProbe(sys);
+            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.snapshot-store.inmem").Tell(new Identify(null), snapshotProbe.Ref);
+            var sharedSnapshotStore = snapshotProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sharedSnapshotStore.Should().NotBeNull();
+            MemorySnapshotStoreShared.SetStore(sharedSnapshotStore, sys);
         }
 
         /// <summary>
@@ -299,13 +306,15 @@ namespace Akka.Cluster.Sharding.Tests
         /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
         protected void StartPersistence(RoleName startOn, params RoleName[] setStoreOn)
         {
-            Log.Info("Setting up setup shared journal.");
+            Log.Info("Setting up setup shared journal & snapshot.");
 
             Persistence.Persistence.Instance.Apply(Sys);
             RunOn(() =>
             {
-                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.MemoryJournal");
+                Persistence.Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
+                Persistence.Persistence.Instance.Apply(Sys).SnapshotStoreFor("akka.persistence.snapshot-store.inmem");
             }, startOn);
+
             EnterBarrier("persistence-started");
 
             RunOn(() =>

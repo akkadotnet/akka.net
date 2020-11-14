@@ -80,26 +80,26 @@ namespace Akka.Cluster.Sharding.Tests
         {
             get
             {
-                return ConfigurationFactory.ParseString($@"
+                return ConfigurationFactory.ParseString(@"
                 akka.loglevel = DEBUG
                 akka.actor.provider = cluster
 
                 akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-                akka.persistence.journal.MemoryJournal {{
-                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                    plugin-dispatcher = ""akka.actor.default-dispatcher""
-                }}
-                akka.persistence.journal.memory-journal-shared {{
+                akka.persistence.journal.memory-journal-shared {
                     class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests""
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
                     timeout = 5s
-                }}
+                }
 
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.local""
-                akka.persistence.snapshot-store.local.dir = ""PersistentShardingMigrationSpec-{Guid.NewGuid():N}""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.memory-snapshot-store-shared""
+                akka.persistence.memory-snapshot-store-shared {
+                    class = ""Akka.Cluster.Sharding.Tests.MemorySnapshotStoreShared, Akka.Cluster.Sharding.Tests""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    timeout = 5s
+                }
 
                 akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding {{
+                akka.cluster.sharding {
                     remember-entities = on
                     remember-entities-store = ""eventsourced""
                     state-store-mode = ""persistence""
@@ -112,7 +112,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                     # Lots of sharding setup, make it quicker
                     retry-interval = 500ms
-                }}
+                }
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                 akka.cluster.sharding.verbose-debug-logging = on")
                     .WithFallback(ClusterSingletonManager.DefaultConfig())
@@ -122,14 +122,13 @@ namespace Akka.Cluster.Sharding.Tests
 
         private static Config ConfigForNewMode =>
             ConfigurationFactory.ParseString(@"
-
                 akka.cluster.sharding {
                     remember-entities = on
                     remember-entities-store = ""eventsourced""
                     state-store-mode = ""ddata""
                 }
 
-                akka.persistence.journal.sqlite {
+                akka.persistence.journal.memory-journal-shared {
                     event-adapters {
                         coordinator-migration = ""Akka.Cluster.Sharding.OldCoordinatorStateMigrationEventAdapter, Akka.Cluster.Sharding""
                     }
@@ -149,13 +148,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected override void AtStartup()
         {
-            StorageHelpers.ClearLocalSnapshotStore(Sys);
             this.StartPersistence(Sys);
-        }
-
-        protected override void AfterTermination()
-        {
-            StorageHelpers.ClearLocalSnapshotStore(Sys);
         }
 
 

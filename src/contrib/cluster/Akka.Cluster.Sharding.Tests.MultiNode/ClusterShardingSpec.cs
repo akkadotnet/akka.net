@@ -55,8 +55,6 @@ namespace Akka.Cluster.Sharding.Tests
             // and call `MultiNodeClusterShardingConfig.persistenceConfig` which does not check
             // mode, then leverage the common config and fallbacks after these specific test configs:
             CommonConfig = ConfigurationFactory.ParseString($@"
-                #akka.loglevel = ""DEBUG""
-
                 akka.cluster.sharding.verbose-debug-logging = on
                 #akka.loggers = [""akka.testkit.SilenceAllTestEventListener""]
 
@@ -80,7 +78,7 @@ namespace Akka.Cluster.Sharding.Tests
                     }}
                 }}
                 akka.testconductor.barrier-timeout = 70s
-              ").WithFallback(PersistenceConfig(GetType())).WithFallback(Common);
+              ").WithFallback(PersistenceConfig()).WithFallback(Common);
 
             NodeConfig(new[] { Sixth }, new[] { ConfigurationFactory.ParseString(@"akka.cluster.roles = [""frontend""]") });
         }
