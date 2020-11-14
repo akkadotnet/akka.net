@@ -26,7 +26,7 @@ namespace Akka.Event
     /// Subscribe to this class to be notified about all <see cref="DeadLetter"/> (also the suppressed ones)
     /// and <see cref="Dropped"/>.
     /// </summary>
-    public abstract class AllDeadLetters
+    public abstract class AllDeadLetters: IWrappedMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeadLetter"/> class.

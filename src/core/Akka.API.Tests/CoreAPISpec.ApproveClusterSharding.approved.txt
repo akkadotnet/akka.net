@@ -252,7 +252,7 @@ namespace Akka.Cluster.Sharding
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithRole(string role) { }
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
     }
-    public sealed class ShardingEnvelope
+    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage
     {
         public ShardingEnvelope(string entityId, object message) { }
         public string EntityId { get; }

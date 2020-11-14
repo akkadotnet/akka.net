@@ -353,7 +353,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Publish : IDistributedPubSubMessage, IEquatable<Publish>
+    public sealed class Publish : IDistributedPubSubMessage, IEquatable<Publish>, IWrappedMessage
     {
         /// <summary>
         /// TBD
@@ -420,7 +420,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Send : IDistributedPubSubMessage, IEquatable<Send>
+    public sealed class Send : IDistributedPubSubMessage, IEquatable<Send>, IWrappedMessage
     {
         /// <summary>
         /// TBD
@@ -487,7 +487,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class SendToAll : IDistributedPubSubMessage, IEquatable<SendToAll>
+    public sealed class SendToAll : IDistributedPubSubMessage, IEquatable<SendToAll>, IWrappedMessage
     {
         /// <summary>
         /// TBD

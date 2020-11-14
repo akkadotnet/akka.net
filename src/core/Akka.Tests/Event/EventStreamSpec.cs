@@ -296,6 +296,7 @@ namespace Akka.Tests.Event
                 akka {
                     actor.serialize-messages = off
                     actor.debug.unhandled = on
+                    log-dead-letters = off
                     stdout-loglevel = DEBUG
                     loglevel = DEBUG
                     loggers = [""%logger%""]

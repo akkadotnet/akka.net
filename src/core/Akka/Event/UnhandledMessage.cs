@@ -10,9 +10,9 @@ using Akka.Actor;
 namespace Akka.Event
 {
     /// <summary>
-    /// This class represents a message that was not handled by the recipient.
+    /// This message is published to the EventStream whenever an Actor receives a message it doesn't understand
     /// </summary>
-    public sealed class UnhandledMessage
+    public sealed class UnhandledMessage : AllDeadLetters, IWrappedMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="UnhandledMessage" /> class.
@@ -21,25 +21,8 @@ namespace Akka.Event
         /// <param name="sender">The actor that sent the message.</param>
         /// <param name="recipient">The actor that was to receive the message.</param>
         public UnhandledMessage(object message, IActorRef sender, IActorRef recipient)
+            : base(message, sender, recipient)
         {
-            Message = message;
-            Sender = sender;
-            Recipient = recipient;
         }
-
-        /// <summary>
-        /// The original message that could not be handled.
-        /// </summary>
-        public object Message { get; private set; }
-
-        /// <summary>
-        /// The actor that sent the message.
-        /// </summary>
-        public IActorRef Sender { get; private set; }
-
-        /// <summary>
-        /// The actor that was to receive the message.
-        /// </summary>
-        public IActorRef Recipient { get; private set; }
     }
 }
