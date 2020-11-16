@@ -306,6 +306,90 @@ namespace Akka.Cluster.Sharding
                     double leastShardAllocationRelativeLimit) { }
     }
 }
+namespace Akka.Cluster.Sharding.External
+{
+    public class ClientTimeoutException : System.Exception
+    {
+        public ClientTimeoutException(string message) { }
+        public ClientTimeoutException(string message, System.Exception innerEx) { }
+        protected ClientTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class ExternalShardAllocation : Akka.Actor.IExtension
+    {
+        public ExternalShardAllocation(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Cluster.Sharding.External.IExternalShardAllocationClient ClientFor(string typeName) { }
+        public static Akka.Cluster.Sharding.External.ExternalShardAllocation Get(Akka.Actor.ActorSystem system) { }
+    }
+    public class ExternalShardAllocationExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.External.ExternalShardAllocation>
+    {
+        public ExternalShardAllocationExtensionProvider() { }
+        public override Akka.Cluster.Sharding.External.ExternalShardAllocation CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
+    public class ExternalShardAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IShardAllocationStrategy, Akka.Cluster.Sharding.IStartableAllocationStrategy
+    {
+        public ExternalShardAllocationStrategy(Akka.Actor.ActorSystem system, string typeName) { }
+        protected virtual System.TimeSpan Timeout { get; }
+        public System.Threading.Tasks.Task<Akka.Actor.IActorRef> AllocateShard(Akka.Actor.IActorRef requester, string shardId, System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations) { }
+        protected virtual Akka.Actor.IActorRef CreateShardStateActor() { }
+        public System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableSet<string>> Rebalance(System.Collections.Immutable.IImmutableDictionary<Akka.Actor.IActorRef, System.Collections.Immutable.IImmutableList<string>> currentShardAllocations, System.Collections.Immutable.IImmutableSet<string> rebalanceInProgress) { }
+        public void Start() { }
+        public sealed class GetShardLocation : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocation>
+        {
+            public GetShardLocation(string shard) { }
+            public string Shard { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocation other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class GetShardLocationResponse : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationResponse>
+        {
+            public GetShardLocationResponse(Akka.Actor.Address address) { }
+            public Akka.Actor.Address Address { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationResponse other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class GetShardLocations : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations>
+        {
+            public static readonly Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations Instance;
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class GetShardLocationsResponse : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationsResponse>
+        {
+            public GetShardLocationsResponse(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Address> desiredAllocations) { }
+            public System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Address> DesiredAllocations { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationsResponse other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class ShardLocation : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation>
+        {
+            public ShardLocation(Akka.Actor.Address address) { }
+            public Akka.Actor.Address Address { get; }
+            public override bool Equals(object obj) { }
+            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation other) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+    }
+    public interface IExternalShardAllocationClient
+    {
+        System.Threading.Tasks.Task<Akka.Cluster.Sharding.External.ShardLocations> ShardLocations();
+        System.Threading.Tasks.Task<Akka.Done> UpdateShardLocation(string shard, Akka.Actor.Address location);
+        System.Threading.Tasks.Task<Akka.Done> UpdateShardLocations(System.Collections.Immutable.IImmutableDictionary<string, Akka.Actor.Address> locations);
+    }
+    public sealed class ShardLocations
+    {
+        public ShardLocations(System.Collections.Immutable.IImmutableDictionary<string, Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation> locations) { }
+        public System.Collections.Immutable.IImmutableDictionary<string, Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.ShardLocation> Locations { get; }
+    }
+}
 namespace Akka.Cluster.Sharding.Internal
 {
     public abstract class AbstractLeastShardAllocationStrategy : Akka.Actor.INoSerializationVerificationNeeded, Akka.Cluster.Sharding.IActorSystemDependentAllocationStrategy, Akka.Cluster.Sharding.IShardAllocationStrategy
