@@ -1,10 +1,10 @@
 # Discovery
 
 > [!WARNING]
->This module is currently marked as @ref:[may change](../common/may-change.md)
->This means that API or semantics can change without warning or deprecation period.
+>This module is currently marked as **may change**.
+>This means that API or semantics can change without warning or deprecation period. It's in a beta state.
 
-Akka Discovery provides an interface around various ways of locating services. The built in methods are:
+Akka.NET Discovery provides an interface around various ways of locating services. The built in methods are:
 
 * Configuration
 * DNS
@@ -113,4 +113,5 @@ targets for the given service name then `config` is queried which i configured w
 
 ## Discovery Method: DNS
 
-TODO
+> [!NOTE]
+> Akka.Discovery DNS implementation has not been added yet, but is a work in progress.
