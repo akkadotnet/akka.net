@@ -9,6 +9,14 @@ Akka.NET v1.4.12 is a relatively minor release, but it includes some breaking ch
 
 To see the [full set of fixes in Akka.NET v1.4.12, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/43).
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 333 | 34 | Aaron Stannard |
+| 2 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 5 | 25 | Ebere Abanonu |
+| 1 | 2823 | 384 | zbynek001 |
+| 1 | 1449 | 0 | Ismael Hamed |
+
 #### 1.4.11 November 5 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 
