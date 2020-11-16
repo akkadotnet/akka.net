@@ -3,11 +3,12 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Discovery</AssemblyTitle>
-    <Description>Discovery support for Akka.NET</Description>
+    <Description>Service Discovery for Akka.NET</Description>
     <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>8</LangVersion>
+    <VersionSuffix>beta</VersionSuffix>
   </PropertyGroup>
 
   <ItemGroup>
