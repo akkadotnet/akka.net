@@ -1,4 +1,4 @@
-# Discovery
+# Discovery Overview
 
 > [!WARNING]
 >This module is currently marked as **may change**.
