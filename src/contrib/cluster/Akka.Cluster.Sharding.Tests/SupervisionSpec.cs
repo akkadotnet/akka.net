@@ -7,6 +7,7 @@
 
 using System;
 using System.Globalization;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -177,6 +178,7 @@ namespace Akka.Cluster.Sharding.Tests
             region.Tell(new Msg(10, "passivate"));
             ExpectTerminated(response.Self);
 
+            Thread.Sleep(200);
             region.Tell(new Msg(10, "hello"));
             ExpectMsg<Response>(TimeSpan.FromSeconds(20));
         }
