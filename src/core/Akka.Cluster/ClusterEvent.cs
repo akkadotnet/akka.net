@@ -185,6 +185,9 @@ namespace Akka.Cluster
                 }
             }
 
+            internal bool IsMemberUp(Address address) =>
+                Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up);
+
             /// <summary>
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you
             /// to specify different values for the outgoing objects

@@ -72,6 +72,24 @@ namespace Akka.Util
                 return this;
             }
         }
+
+        /// <summary>
+        /// Applies the given function `f` if this is a `Failure`, otherwise returns this if this is a `Success`.
+        /// </summary>
+        public Try<T> RecoverWith(Func<Exception, Try<T>> failureHandler)
+        {
+            if (!Failure.HasValue)
+                return this;
+
+            try
+            {
+                return failureHandler(Failure.Value);
+            }
+            catch (Exception ex)
+            {
+                return new Try<T>(ex);
+            }
+        }
         
         /// <summary>
         /// Gets <see cref="Try{T}"/> result from function execution

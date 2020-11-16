@@ -67,7 +67,7 @@ namespace Akka.Cluster.Sharding.Tests
                   settings: settingsWithRole,
                   extractEntityId: ExtractEntityId,
                   extractShardId: ExtractShardId,
-                  allocationStrategy: new LeastShardAllocationStrategy(0, 0),
+                  allocationStrategy: ShardAllocationStrategy.LeastShardAllocationStrategy(3, 0.1),
                   handOffStopMessage: PoisonPill.Instance);
 
             var proxy = clusterSharding.StartProxy(
@@ -84,16 +84,17 @@ namespace Akka.Cluster.Sharding.Tests
         public void ClusterSharding_must_stop_entities_from_HandOffStopper_even_if_the_entity_doesnt_handle_handOffStopMessage()
         {
             var probe = CreateTestProbe();
-            var shardName = "test";
+            var typeName = "typeName";
+            var shard = "7";
             var emptyHandlerActor = Sys.ActorOf(Props.Create(() => new EmptyHandlerActor()));
             var handOffStopper = Sys.ActorOf(
-                Props.Create(() => new ShardRegion.HandOffStopper(shardName, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
+                Props.Create(() => new ShardRegion.HandOffStopper(typeName, shard, probe.Ref, new IActorRef[] { emptyHandlerActor }, HandOffStopMessage.Instance, TimeSpan.FromMilliseconds(10)))
               );
 
             Watch(emptyHandlerActor);
             ExpectTerminated(emptyHandlerActor, TimeSpan.FromSeconds(1));
 
-            probe.ExpectMsg(new PersistentShardCoordinator.ShardStopped(shardName), TimeSpan.FromSeconds(1));
+            probe.ExpectMsg(new PersistentShardCoordinator.ShardStopped(shard), TimeSpan.FromSeconds(1));
             probe.LastSender.Should().BeSameAs(handOffStopper);
 
             Watch(handOffStopper);
