@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
     <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
+    <ProjectReference Include="..\Akka.Discovery\Akka.Discovery.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
