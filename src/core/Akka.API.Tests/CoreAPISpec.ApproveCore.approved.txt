@@ -2045,7 +2045,6 @@ namespace Akka.Actor.Internal
 }
 namespace Akka.Actor.Setup
 {
-    [Akka.Annotations.InternalApiAttribute()]
     public sealed class ActorSystemSetup
     {
         public static readonly Akka.Actor.Setup.ActorSystemSetup Empty;
@@ -5000,6 +4999,7 @@ namespace Akka.Util
         public Akka.Util.Try<T> GetOrElse(System.Func<T> fallback) { }
         public Akka.Util.Try<T> OrElse(Akka.Util.Try<T> @default) { }
         public Akka.Util.Try<T> Recover(System.Action<System.Exception> failureHandler) { }
+        public Akka.Util.Try<T> RecoverWith(System.Func<System.Exception, Akka.Util.Try<T>> failureHandler) { }
         public static Akka.Util.Try<T> op_Implicit(T value) { }
     }
     public class static TypeExtensions

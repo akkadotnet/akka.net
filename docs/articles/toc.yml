@@ -186,6 +186,8 @@
   items:
   - name: Multi-Node Testing Distributed Akka.NET Applications
     href: testing/multi-node-testing.md
+- name: Service Discovery
+  href: discovery/toc.yml
 - name: Utilities
   items:
   - name: Event Bus
