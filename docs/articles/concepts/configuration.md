@@ -14,7 +14,7 @@ This article will explain how to use both in the context of your Akka.NET applic
 ## Programmatic Configuration with `Setup`
 As part of the Akka.NET v1.4 release we introduced the [`Setup` class](xref:Akka.Actor.Setup.Setup), which is meant to be an extensible base class that can be used in concert with areas of Akka.NET that support programmatic configuration.
 
-For instance it is now possible to [configure custom serialization bindings in Akka.NET using the `SerializationSetup` class](xref:serialization). Phobos, a propreitary add-on to Akka.NET for application performance monitoring, uses the [`PhobosSetup` class to pass in monitoring and tracing components to an `ActorSystem` at startup](https://phobos.petabridge.com/articles/setup/configuration.html).
+For instance it is now possible to [configure custom serialization bindings in Akka.NET using the `SerializationSetup` class](xref:serialization#configuring-serialization-bindings-programmatically). Phobos, a propreitary add-on to Akka.NET for application performance monitoring, uses the [`PhobosSetup` class to pass in monitoring and tracing components to an `ActorSystem` at startup](https://phobos.petabridge.com/articles/setup/configuration.html).
 
 Other parts of Akka.NET in the future, such as its dependency injection system, will likely expand their use of the `Setup` class to allow a degree of programmatic configuration.
 
