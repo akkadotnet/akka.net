@@ -12,6 +12,24 @@ However, as of Akka.NET v1.4 we now support the [`Setup` class](xref:Akka.Actor.
 This article will explain how to use both in the context of your Akka.NET applications.
 
 ## Programmatic Configuration with `Setup`
+As part of the Akka.NET v1.4 release we introduced the [`Setup` class](xref:Akka.Actor.Setup.Setup), which is meant to be an extensible base class that can be used in concert with areas of Akka.NET that support programmatic configuration.
+
+For instance it is now possible to [configure custom serialization bindings in Akka.NET using the `SerializationSetup` class](xref:serialization). Phobos, a propreitary add-on to Akka.NET for application performance monitoring, uses the [`PhobosSetup` class to pass in monitoring and tracing components to an `ActorSystem` at startup](https://phobos.petabridge.com/articles/setup/configuration.html).
+
+Other parts of Akka.NET in the future, such as its dependency injection system, will likely expand their use of the `Setup` class to allow a degree of programmatic configuration.
+
+### `BootstrapSetup` and `ActorSystemSetup`
+So what if we want to use some built-in `Setup` types in combination with an `ActorSystem`? How do we work with these new types?
+
+First, if we have HOCON that we need to pass into our `ActorSystem` still then we must use the [`BootstrapSetup` class]((xref:Akka.Actor.BootstrapSetup) to store our HOCON `Config`:
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=MergedSetup)]
+
+In addition to our `BootstrapSetup`, we can also merge that class with one or more other `Setup`s and produce a merged `ActorSystemSetup` object - which is what our `ActorSystem` actually needs.
+
+From there, we can create our `ActorSystem`:
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Verification)]
 
 ## HOCON 
 
