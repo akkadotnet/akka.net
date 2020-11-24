@@ -1,7 +1,53 @@
-#### 1.4.11 August 20th 2020 ####
-**Placeholder for nightlies**
+#### 1.4.13 November 16 2020 ####
+**Placeholder for Nightlies**
 
-#### 1.4.10 August 20th 2020 ####
+#### 1.4.12 November 16 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.12 is a relatively minor release, but it includes some breaking changes:
+
+* **BREAKING CHANGE**: [Akka.Cluster.Sharding: batch update](https://github.com/akkadotnet/akka.net/pull/4600) - includes some important updates for rebalancing shards more quickly, handling rolling updates, and using the new `AppVersion` type introduced in Akka.NET v1.4.11 to avoid allocating shards onto nodes that are being replaced during an upgrade. The breaking change: renamed the `Akka.Cluster.Sharding.TunningParameters` to `Akka.Cluster.Sharding.TuningParameters` in order to fix a misspelling. This changes the public API of all of the Akka.Cluster.Sharding settings classes - it shouldn't affect your Akka.NET application directly, but it will affect any plugins built on top of Akka.Cluster.Sharding.
+* [Akka.Streams: Make DistinctRetainingFanOutPublisher a public member](https://github.com/akkadotnet/akka.net/pull/4630) - needed to update Akka.Persistence plugins to implement Akka.Persistence.Query "CurrentPersistenceIds` queries correctly.
+* [Introduce Akka.Discovery Module](https://github.com/akkadotnet/akka.net/pull/4599) - introduces the brand new Akka.Discovery module, which allows Akka.NET services to discover Akka.Cluster seed endpoints, Kafka nodes, and more via a variety of methods. This module is still in beta as of 1.4.12 but it will be developed, documented, and incorporated into more tutorials + modules as it matures. You can read more about Akka.Discovery here: https://getakka.net/articles/discovery/index.html
+
+To see the [full set of fixes in Akka.NET v1.4.12, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/43).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 6 | 333 | 34 | Aaron Stannard |
+| 2 | 2 | 2 | dependabot-preview[bot] |
+| 1 | 5 | 25 | Ebere Abanonu |
+| 1 | 2823 | 384 | zbynek001 |
+| 1 | 1449 | 0 | Ismael Hamed |
+
+#### 1.4.11 November 5 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.11 includes some significant additions to Akka.NET:
+
+* [Akka: How prevent "Scheduled sending of heartbeat was delayed" and occasionally network partitions](https://github.com/akkadotnet/akka.net/issues/4432) - all `/system` actors now run on a dedicated dispatcher. This should significantly improve reliablity for Akka.Cluster, Akka.Persistence, and other built-in Akka.NET systems inside heavily utilized environments.
+* [Akka: Double wildcard implementation for ActorSelection](https://github.com/akkadotnet/akka.net/pull/4375)
+* [Akka.Remote: Null reference exception due to RemoteActorRefProvider.RemoteInternals](https://github.com/akkadotnet/akka.net/issues/4579)
+* [Akka.Persistence: Fix premature reset of the 'writeInProgress' flag in case of persistence failure](https://github.com/akkadotnet/akka.net/pull/4556)
+* [Akka.Cluster: disseminate downing decisions faste](https://github.com/akkadotnet/akka.net/pull/4598)
+* [Cluster - Add app-version to the Member information](https://github.com/akkadotnet/akka.net/pull/4577) - you can now specify which version of your software is running on each node.
+* [Akka.Cluster.Sharding: Bring ShardedDaemonProcess up to date](https://github.com/akkadotnet/akka.net/pull/4571)
+
+To see the [full set of fixes in Akka.NET v1.4.11, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/42).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 1020 | 164 | Gregorius Soedharmo |
+| 7 | 399 | 178 | Ismael Hamed |
+| 4 | 5 | 5 | dependabot-preview[bot] |
+| 4 | 108 | 104 | Aaron Stannard |
+| 2 | 232 | 26 | to11mtm |
+| 2 | 2 | 2 | Pierre Irrmann |
+| 2 | 1969 | 269 | zbynek001 |
+| 2 | 155 | 445 | huysentruitw |
+| 1 | 1 | 1 | Guillaume Caya-Letourneau |
+
+#### 1.4.10 August 20 2020 ####
 **Maintenance Release for Akka.NET 1.4**
 
 Akka.NET v1.4.10 includes some minor bug fixes and some major feature additions to Akka.Persistence.Query:

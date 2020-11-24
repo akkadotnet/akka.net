@@ -53,6 +53,8 @@ namespace Akka.Actor
         /// <summary>Gets the dead letters.</summary>
         IActorRef DeadLetters { get; }
 
+        IActorRef IgnoreRef { get; }
+
         /// <summary>
         /// Gets the root path for all actors within this actor system, not including any remote address information.
         /// </summary>
@@ -199,6 +201,8 @@ namespace Akka.Actor
             if (deadLettersFactory == null)
                 deadLettersFactory = p => new DeadLetterActorRef(this, p, _eventStream);
             _deadLetters = deadLettersFactory(_rootPath / "deadLetters");
+            IgnoreRef = new IgnoreActorRef(this);
+
             _tempNumber = new AtomicCounterLong(1);
             _tempNode = _rootPath / "temp";
 
@@ -210,6 +214,8 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         public IActorRef DeadLetters { get { return _deadLetters; } }
+
+        public IActorRef IgnoreRef { get; }
 
         /// <summary>
         /// TBD
@@ -256,7 +262,7 @@ namespace Akka.Actor
         /// </summary>
         public EventStream EventStream { get { return _eventStream; } }
 
-        private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
+        private MessageDispatcher InternalDispatcher => _system.Dispatchers.InternalDispatcher;
 
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
@@ -296,7 +302,7 @@ namespace Akka.Actor
                 return Directive.Stop;
             });
             var props = Props.Create<GuardianActor>(rootGuardianStrategy);
-            var rootGuardian = new RootGuardianActorRef(system, props, DefaultDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
+            var rootGuardian = new RootGuardianActorRef(system, props, InternalDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
             return rootGuardian;
         }
 
@@ -314,9 +320,30 @@ namespace Akka.Actor
         {
             var cell = rootGuardian.Cell;
             cell.ReserveChild(name);
-            var props = Props.Create<GuardianActor>(UserGuardianSupervisorStrategy);
+            // make user provided guardians not run on internal dispatcher
+            MessageDispatcher dispatcher;
+            if (_system.GuardianProps.IsEmpty)
+            {
+                dispatcher = InternalDispatcher;
+            }
+            else
+            {
+                var props = _system.GuardianProps.Value;
+                var dispatcherId =
+                    props.Deploy.Dispatcher == Deploy.DispatcherSameAsParent
+                        ? Dispatchers.DefaultDispatcherId
+                        : props.Dispatcher;
+                dispatcher = _system.Dispatchers.Lookup(dispatcherId);
+            }
 
-            var userGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            var userGuardian = new LocalActorRef(
+                _system,
+                _system.GuardianProps.GetOrElse(Props.Create<GuardianActor>(UserGuardianSupervisorStrategy)),
+                dispatcher,
+                _defaultMailbox,
+                rootGuardian,
+                RootPath / name);
+
             cell.InitChild(userGuardian);
             userGuardian.Start();
             return userGuardian;
@@ -328,7 +355,7 @@ namespace Akka.Actor
             cell.ReserveChild(name);
             var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
 
-            var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            var systemGuardian = new LocalActorRef(_system, props, InternalDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
             cell.InitChild(systemGuardian);
             systemGuardian.Start();
             return systemGuardian;
@@ -414,7 +441,7 @@ namespace Akka.Actor
             //{
             //    if(actorPath.Elements.Head() == "temp")
             //    {
-            //        //skip ""/"temp", 
+            //        //skip ""/"temp",
             //        string[] parts = actorPath.Elements.Drop(1).ToArray();
             //        return _tempContainer.GetChild(parts);
             //    }

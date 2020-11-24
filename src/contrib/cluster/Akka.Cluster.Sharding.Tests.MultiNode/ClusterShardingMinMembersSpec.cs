@@ -82,7 +82,7 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class PersistentClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
     {
-        public PersistentClusterShardingMinMembersSpec() :this(new PersistentClusterShardingMinMembersSpecConfig()) { }
+        public PersistentClusterShardingMinMembersSpec() : this(new PersistentClusterShardingMinMembersSpecConfig()) { }
         protected PersistentClusterShardingMinMembersSpec(PersistentClusterShardingMinMembersSpecConfig config) : base(config, typeof(PersistentClusterShardingMinMembersSpec)) { }
     }
     public class DDataClusterShardingMinMembersSpec : ClusterShardingMinMembersSpec
@@ -119,7 +119,7 @@ namespace Akka.Cluster.Sharding.Tests
         private Lazy<IActorRef> _region;
 
         private readonly ClusterShardingMinMembersSpecConfig _config;
-        
+
         private readonly List<FileInfo> _storageLocations;
 
         protected ClusterShardingMinMembersSpec(ClusterShardingMinMembersSpecConfig config, Type type)
@@ -138,7 +138,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("startup");
         }
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();
@@ -166,7 +166,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void StartSharding()
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
             ClusterSharding.Get(Sys).Start(
                 typeName: "Entity",
                 entityProps: Props.Create<EchoActor>(),

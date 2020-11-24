@@ -102,7 +102,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             var name = _system.Settings.Config.GetString("akka.cluster.pub-sub.name");
             var dispatcher = _system.Settings.Config.GetString("akka.cluster.pub-sub.use-dispatcher", null);
             if (string.IsNullOrEmpty(dispatcher))
-                dispatcher = Dispatchers.DefaultDispatcherId;
+                dispatcher = Dispatchers.InternalDispatcherId;
 
             return _system.SystemActorOf(
                 Props.Create(() => new DistributedPubSubMediator(_settings))

@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -52,8 +53,70 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// The default implementation of <see cref="Akka.Cluster.Sharding.LeastShardAllocationStrategy"/> allocates new shards
-    /// to the <see cref="ShardRegion"/> with least number of previously allocated shards.
+    /// Shard allocation strategy where start is called by the shard coordinator before any calls to
+    /// rebalance or allocate shard. This can be used if there is any expensive initialization to be done
+    /// that you do not want to to in the constructor as it will happen on every node rather than just
+    /// the node that hosts the ShardCoordinator
+    /// </summary>
+    public interface IStartableAllocationStrategy : IShardAllocationStrategy
+    {
+        /// <summary>
+        /// Called before any calls to allocate/rebalance.
+        /// Do not block. If asynchronous actions are required they can be started here and
+        /// delay the Futures returned by allocate/rebalance.
+        /// </summary>
+        void Start();
+    }
+
+    /// <summary>
+    /// Shard allocation strategy where start is called by the shard coordinator before any calls to
+    /// rebalance or allocate shard. This is much like the [[StartableAllocationStrategy]] but will
+    /// get access to the actor system when started, for example to interact with extensions.
+    /// </summary>
+    public interface IActorSystemDependentAllocationStrategy : IShardAllocationStrategy
+    {
+        /// <summary>
+        /// Called before any calls to allocate/rebalance.
+        /// Do not block. If asynchronous actions are required they can be started here and
+        /// delay the Futures returned by allocate/rebalance.
+        /// </summary>
+        /// <param name="system"></param>
+        void Start(ActorSystem system);
+    }
+
+    public static class ShardAllocationStrategy
+    {
+        /// <summary>
+        /// <see cref="IShardAllocationStrategy"/> that allocates new shards to the <see cref="ShardRegion"/> (node) with least
+        /// number of previously allocated shards.
+        ///
+        /// When a node is added to the cluster the shards on the existing nodes will be rebalanced to the new node.
+        /// The <see cref="LeastShardAllocationStrategy"/> picks shards for rebalancing from the <see cref="ShardRegion"/>s with most number
+        /// of previously allocated shards.They will then be allocated to the <see cref="ShardRegion"/> with least number of
+        /// previously allocated shards, i.e. new members in the cluster.The amount of shards to rebalance in each
+        /// round can be limited to make it progress slower since rebalancing too many shards at the same time could
+        /// result in additional load on the system.For example, causing many Event Sourced entites to be started
+        /// at the same time.
+        ///
+        /// It will not rebalance when there is already an ongoing rebalance in progress.
+        /// </summary>
+        /// <param name="absoluteLimit">The maximum number of shards that will be rebalanced in one rebalance round</param>
+        /// <param name="relativeLimit">Fraction (&lt; 1.0) of total number of (known) shards that will be rebalanced in one rebalance round</param>
+        /// <returns></returns>
+        public static IShardAllocationStrategy LeastShardAllocationStrategy(int absoluteLimit, double relativeLimit)
+        {
+            return new Internal.LeastShardAllocationStrategy(absoluteLimit, relativeLimit);
+        }
+    }
+
+    /// <summary>
+    /// Use <see cref="ShardAllocationStrategy.LeastShardAllocationStrategy(int, double)"/> instead.
+    /// The new rebalance algorithm was included in Akka.Net 1.4.11. It can reach optimal balance in
+    /// less rebalance rounds (typically 1 or 2 rounds). The amount of shards to rebalance in each
+    /// round can still be limited to make it progress slower.
+    ///
+    /// This implementation of <see cref="IShardAllocationStrategy"/>
+    /// allocates new shards to the <see cref="ShardRegion"/> with least number of previously allocated shards.
     ///
     /// When a node is added to the cluster the shards on the existing nodes will be rebalanced to the new node.
     /// evenly spread on the remaining nodes (by picking regions with least shards).
@@ -77,7 +140,7 @@ namespace Akka.Cluster.Sharding
     /// The number of ongoing rebalancing processes can be limited by `maxSimultaneousRebalance`.
     /// </summary>
     [Serializable]
-    public class LeastShardAllocationStrategy : IShardAllocationStrategy
+    public class LeastShardAllocationStrategy : AbstractLeastShardAllocationStrategy
     {
         private readonly int _rebalanceThreshold;
         private readonly int _maxSimultaneousRebalance;
@@ -96,40 +159,32 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="requester">TBD</param>
-        /// <param name="shardId">TBD</param>
-        /// <param name="currentShardAllocations">TBD</param>
-        /// <returns>TBD</returns>
-        public Task<IActorRef> AllocateShard(IActorRef requester, string shardId, IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations)
-        {
-            var min = currentShardAllocations.OrderBy(i => i.Value.Count).FirstOrDefault();
-            return Task.FromResult(min.Key);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         /// <param name="currentShardAllocations">TBD</param>
         /// <param name="rebalanceInProgress">TBD</param>
         /// <returns>TBD</returns>
-        public Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
+        public override Task<IImmutableSet<ShardId>> Rebalance(IImmutableDictionary<IActorRef, IImmutableList<ShardId>> currentShardAllocations, IImmutableSet<ShardId> rebalanceInProgress)
         {
             if (rebalanceInProgress.Count < _maxSimultaneousRebalance)
             {
-                var leastShardsRegion = currentShardAllocations.OrderBy(i => i.Value.Count).FirstOrDefault();
-                var mostShards = currentShardAllocations.Select(kv => kv.Value.Where(s => !rebalanceInProgress.Contains(s))).OrderByDescending(i => i.Count()).FirstOrDefault()?.ToArray();
-
-                var difference = mostShards.Length - leastShardsRegion.Value.Count;
-                if (difference >= _rebalanceThreshold)
+                var sortedRegionEntries = RegionEntriesFor(currentShardAllocations).OrderBy(i => i, ShardSuitabilityOrdering.Instance).ToImmutableList();
+                if (IsAGoodTimeToRebalance(sortedRegionEntries))
                 {
-                    var n = Math.Min(
-                        Math.Min(difference - _rebalanceThreshold, _rebalanceThreshold),
-                        _maxSimultaneousRebalance - rebalanceInProgress.Count);
+                    var suitable = MostSuitableRegion(sortedRegionEntries);
+                    // even if it is to another new node.
+                    //var mostShards = sortedRegionEntries.Select(r => r.ShardIds.RemoveRange(rebalanceInProgress)).OrderByDescending(i => i.Count()).FirstOrDefault()?.ToArray();
+                    var mostShards = sortedRegionEntries.Select(r => r.ShardIds.Where(s => !rebalanceInProgress.Contains(s))).OrderByDescending(i => i.Count()).FirstOrDefault()?.ToArray();
 
-                    return Task.FromResult<IImmutableSet<ShardId>>(mostShards.OrderBy(i => i).Take(n).ToImmutableHashSet());
+                    var difference = mostShards.Length - suitable.Shards.Count;
+                    if (difference >= _rebalanceThreshold)
+                    {
+                        var n = Math.Min(
+                            Math.Min(difference - _rebalanceThreshold, _rebalanceThreshold),
+                            _maxSimultaneousRebalance - rebalanceInProgress.Count);
+
+                        return Task.FromResult<IImmutableSet<ShardId>>(mostShards.OrderBy(i => i).Take(n).ToImmutableHashSet());
+                    }
                 }
             }
-
             return Task.FromResult<IImmutableSet<ShardId>>(ImmutableHashSet<ShardId>.Empty);
         }
     }

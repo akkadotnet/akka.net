@@ -19,6 +19,7 @@ namespace Akka.Streams
     }
     public class static ActorAttributes
     {
+        public static Akka.Streams.ActorAttributes.Dispatcher IODispatcher { get; }
         public static Akka.Streams.Attributes CreateDebugLogging(bool enabled) { }
         public static Akka.Streams.Attributes CreateDispatcher(string dispatcherName) { }
         public static Akka.Streams.Attributes CreateFuzzingMode(bool enabled) { }
@@ -140,12 +141,14 @@ namespace Akka.Streams
         public readonly int SyncProcessingLimit;
         public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Dsl.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
+        public override bool Equals(object obj) { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
         public Akka.Streams.ActorMaterializerSettings WithDispatcher(string dispatcher) { }
         public Akka.Streams.ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode) { }
         public Akka.Streams.ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize) { }
         public Akka.Streams.ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize) { }
+        public Akka.Streams.ActorMaterializerSettings WithOutputBurstLimit(int limit) { }
         public Akka.Streams.ActorMaterializerSettings WithStreamRefSettings(Akka.Streams.Dsl.StreamRefSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSubscriptionTimeoutSettings(Akka.Streams.StreamSubscriptionTimeoutSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSupervisionStrategy(Akka.Streams.Supervision.Decider decider) { }
@@ -1289,7 +1292,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Batch<TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> BatchWeighted<TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Buffer<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> CompletionTimeout<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Concat<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> ConcatMany<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
@@ -1820,6 +1825,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
         public static Akka.Streams.Dsl.Sink<TIn, object> Create<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(System.Action onTerminated = null) { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> FanoutPublisher<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> First<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> FirstOrDefault<TIn>() { }
@@ -1905,7 +1912,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Batch<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> BatchWeighted<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Buffer<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(this Akka.Streams.Dsl.Source<T, TMat1> flow, Akka.Streams.Dsl.Source<T, TMat2> other, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> CompletionTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Concat<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
@@ -3818,7 +3827,9 @@ namespace Akka.Streams.Implementation.Fusing
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class Collect<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
+        [System.ObsoleteAttribute("Deprecated. Please use the .ctor(Func, Func) constructor")]
         public Collect(System.Func<TIn, TOut> func) { }
+        public Collect(System.Func<TIn, bool> isDefined, System.Func<TIn, TOut> collector) { }
         public Akka.Streams.Inlet<TIn> In { get; }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public Akka.Streams.Outlet<TOut> Out { get; }

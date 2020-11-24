@@ -41,7 +41,6 @@ namespace Akka.Actor.Setup
     /// The constructor is internal. Use <see cref="ActorSystemSetup.Create"/> or <see cref="ActorSystemSetup.WithSetup{T}"/>
     /// to create instances.
     /// </remarks>
-    [InternalApi]
     public sealed class ActorSystemSetup
     {
         public static readonly ActorSystemSetup Empty = new ActorSystemSetup(ImmutableDictionary<Type, Setup>.Empty);
