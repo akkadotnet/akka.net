@@ -126,7 +126,7 @@ namespace Akka.Remote.Transport.Streaming
             }
 
             TransportSettings = StreamingTcpTransportSettings.Create(config);
-            _mat = ActorMaterializer.Create(System,
+            _mat = ActorMaterializer.CreateSystemMaterializer((ExtendedActorSystem)System,
                 ActorMaterializerSettings.Create(System).WithDispatcher(TransportSettings.MaterializerDispatcher),
                 namePrefix: "streaming-transport");
             
