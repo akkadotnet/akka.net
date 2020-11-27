@@ -73,6 +73,7 @@ namespace RemotePingPong
 
         private static void Main(params string[] args)
         {
+            ThreadPool.SetMinThreads(12, 12);
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.AboveNormal;
             uint timesToRun;
             if (args.Length == 0 || !uint.TryParse(args[0], out timesToRun))

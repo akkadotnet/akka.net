@@ -31,7 +31,8 @@ namespace Akka.Remote.Transport.Streaming
             int transportReceiveBufferSize, int batchPumpInputMinBufferSize,
             int batchPumpInputMaxBufferSize, int socketStageInputMinBufferSize,int socketStageInputMaxBufferSize,
             int sendStreamQueueSize, int batchGroupMaxCount, int batchGroupMaxBytes,
-            int batchGroupMaxMillis)
+            int batchGroupMaxMillis, string materializerDispatcher,
+            string ioDispatcher)
         {
             EnableSsl = enableSsl;
             ConnectTimeout = connectTimeout;
@@ -56,7 +57,11 @@ namespace Akka.Remote.Transport.Streaming
             BatchGroupMaxCount = batchGroupMaxCount;
             BatchGroupMaxBytes = batchGroupMaxBytes;
             BatchGroupMaxMillis = batchGroupMaxMillis;
+            MaterializerDispatcher = materializerDispatcher;
+            IODispatcher = ioDispatcher;
         }
+
+        public string IODispatcher { get; }
 
         public TimeSpan ConnectTimeout { get; set; }
 
@@ -82,6 +87,7 @@ namespace Akka.Remote.Transport.Streaming
         public int ConnectionBacklog { get; }
         public int? PublicPort { get; }
         public bool DnsUseIpv6 { get; }
+        public string MaterializerDispatcher { get; }
 
         public static StreamingTcpTransportSettings Create(Config config)
         {
@@ -141,7 +147,9 @@ namespace Akka.Remote.Transport.Streaming
                 , sendStreamQueueSize: config.GetInt("send-stream-queue-size", 64),
                 batchGroupMaxCount: config.GetInt("batch-max-count", 128),
                 batchGroupMaxBytes: config.GetInt("batch-max-bytes", 32*1024),
-                batchGroupMaxMillis: config.GetInt("batch-max-delay-ms", 20)
+                batchGroupMaxMillis: config.GetInt("batch-max-delay-ms", 20),
+                materializerDispatcher: config.GetString("materializer-dispatcher","akka.actor.default-remote-dispatcher"),
+                ioDispatcher: config.GetString("io-dispatcher","akka.actor.default-remote-dispatcher")
             );
         }
     }

@@ -109,9 +109,7 @@ namespace Akka.Remote.Transport.Streaming
             AssociationListenerPromise =
                 new TaskCompletionSource<IAssociationEventListener>();
             System = system;
-            _mat = ActorMaterializer.Create(System,
-                ActorMaterializerSettings.Create(System).WithDispatcher("akka.remote.default-remote-dispatcher"),
-                namePrefix: "streaming-transport");
+            
             if (system.Settings.Config.HasPath("akka.remote.dot-netty.tcp"))
             {
                 var dotNettyFallbackConfig =
@@ -128,6 +126,10 @@ namespace Akka.Remote.Transport.Streaming
             }
 
             TransportSettings = StreamingTcpTransportSettings.Create(config);
+            _mat = ActorMaterializer.Create(System,
+                ActorMaterializerSettings.Create(System).WithDispatcher(TransportSettings.MaterializerDispatcher),
+                namePrefix: "streaming-transport");
+            
 
             SocketOptions = ImmutableList.Create<Inet.SocketOption>(
                 new Inet.SO.ReceiveBufferSize(
@@ -135,7 +137,7 @@ namespace Akka.Remote.Transport.Streaming
                 new Inet.SO.SendBufferSize(
                     TransportSettings.SocketSendBufferSize),
                 new Inet.SO.ByteBufferPoolSize(TransportSettings.TransportReceiveBufferSize),
-                new Inet.SO.WorkerDispatcher("akka.remote.default-remote-dispatcher"));
+                new Inet.SO.WorkerDispatcher(TransportSettings.IODispatcher));
         }
 
         private ImmutableList<Inet.SocketOption> SocketOptions { get; }
