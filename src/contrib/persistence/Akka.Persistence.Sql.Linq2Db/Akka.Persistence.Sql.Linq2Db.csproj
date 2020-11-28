@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <LangVersion>8</LangVersion>
+        <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Akka.Persistence" Version="1.4.10" />
+      <PackageReference Include="Akka.Persistence.Query" Version="1.4.10" />
+      <PackageReference Include="Akka.Streams" Version="1.4.10" />
+      <PackageReference Include="LanguageExt.Core" Version="3.4.15" />
+      <PackageReference Include="linq2db" Version="3.1.6" />
+      <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="1.1.1" />
+      <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.0" />
+      <PackageReference Include="System.Linq.Async" Version="4.1.1" />
+      <PackageReference Include="System.Reactive.Linq" Version="4.4.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Journal\Config" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="persistence.conf" />
+        <EmbeddedResource Include="persistence.conf">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </EmbeddedResource>
+    </ItemGroup>
+    <ItemGroup>
+      <None Remove="snapshot.conf" />
+      <EmbeddedResource Include="snapshot.conf">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </EmbeddedResource>
+    </ItemGroup>
+
+</Project>
