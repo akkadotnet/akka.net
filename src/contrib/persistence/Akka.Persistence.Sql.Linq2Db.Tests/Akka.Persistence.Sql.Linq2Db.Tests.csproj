@@ -4,7 +4,7 @@
 
         <IsPackable>false</IsPackable>
 
-        <TargetFrameworks>net48;netcoreapp3.1;net5.0</TargetFrameworks>
+        <TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
