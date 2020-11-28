@@ -4,7 +4,7 @@
 
         <IsPackable>false</IsPackable>
 
-        <TargetFrameworks>netstandard2.0;netstandard2.1;netcoreapp3.1;net5.0</TargetFrameworks>
+        <TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -25,11 +25,5 @@
     <ItemGroup>
       <ProjectReference Include="..\Akka.Persistence.Sql.Linq2Db.Tests\Akka.Persistence.Sql.Linq2Db.Tests.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="linq2db, Version=3.0.0.0, Culture=neutral, PublicKeyToken=e41013125f9e410a">
-        <HintPath>..\..\..\linq2db\Source\LinqToDB\bin\Release\netstandard2.1\linq2db.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-
+    
 </Project>
