@@ -2,6 +2,7 @@ using Akka.Configuration;
 using Akka.Persistence.Sql.Linq2Db;
 using Akka.Persistence.Sql.Linq2Db.Journal;
 using Akka.Persistence.Sql.Linq2Db.Tests;
+using Akka.Persistence.Sql.Linq2Db.Tests.Docker;
 using LinqToDB.Reflection;
 
 namespace Akka.Persistence.Linq2Db.CompatibilityTests
@@ -10,7 +11,7 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
     {
         public static Config InitConfig(string tablename, string metadatatablename)
         {
-            DbUtils.ConnectionString = ConnectionString.Instance;
+            DbUtils.ConnectionString = DockerDbUtils.ConnectionString;
             //need to make sure db is created before the tests start
             //DbUtils.Initialize(connString);
             var specString = $@"

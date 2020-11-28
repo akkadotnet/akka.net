@@ -4,21 +4,32 @@ using Akka.Persistence.Sql.Linq2Db.Config;
 using Akka.Persistence.Sql.Linq2Db.Db;
 using Akka.Persistence.Sql.Linq2Db.Journal;
 using Akka.Persistence.Sql.Linq2Db.Journal.Types;
+using Akka.Persistence.Sql.Linq2Db.Tests.Docker;
 using Akka.Persistence.TCK.Journal;
 using LinqToDB;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Persistence.Sql.Linq2Db.Tests
 {
+    [Collection("SqlServerSpec")]
     public class SQLServerJournalCustomConfigSpec : JournalSpec
     {
 
-        private static readonly Configuration.Config conf =
+        
+        
+        public static Configuration.Config Initialize(SqlServerFixture fixture)
+        {
+            DockerDbUtils.Initialize(fixture.ConnectionString);
+            return conf;
+        }
+
+        private static Configuration.Config conf =>
             Linq2DbJournalDefaultSpecConfig.GetCustomConfig("customspec",
                 "customjournalSpec", "customjournalmetadata",
-                ProviderName.SqlServer2017, ConnectionString.Instance, true);
-        public SQLServerJournalCustomConfigSpec(ITestOutputHelper outputHelper)
-            : base(conf, "SQLServer-custom", outputHelper)
+                ProviderName.SqlServer2017, DockerDbUtils.ConnectionString, true);
+        public SQLServerJournalCustomConfigSpec(ITestOutputHelper outputHelper, SqlServerFixture fixture)
+            : base(Initialize(fixture), "SQLServer-custom", outputHelper)
         {
             var connFactory = new AkkaPersistenceDataConnectionFactory(new JournalConfig(conf.GetConfig("akka.persistence.journal.linq2db.customspec")));
             using (var conn = connFactory.GetConnection())

@@ -71,7 +71,7 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
         public DockerLinq2DbPostgreSQLCompatibilitySpec(ITestOutputHelper output,
             PostgreSQLFixture fixture) : base( output)
         {
-            DebuggingHelpers.SetupTraceDump(output);
+            //DebuggingHelpers.SetupTraceDump(output);
             Config = InitConfig(fixture);
             var connFactory = new AkkaPersistenceDataConnectionFactory(new JournalConfig(Create(DockerDbUtils.ConnectionString).GetConfig("akka.persistence.journal.testspec")));
             using (var conn = connFactory.GetConnection())
