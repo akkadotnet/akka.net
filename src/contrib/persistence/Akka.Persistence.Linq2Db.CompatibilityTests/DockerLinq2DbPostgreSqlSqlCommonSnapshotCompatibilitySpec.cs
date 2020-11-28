@@ -1,10 +1,16 @@
-﻿using System;
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="DockerLinq2DbPostgreSqlSqlCommonSnapshotCompatibilitySpec.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
+
+using System;
 using Akka.Configuration;
+using Akka.Persistence.PostgreSql.Snapshot;
 using Akka.Persistence.Sql.Linq2Db.Config;
 using Akka.Persistence.Sql.Linq2Db.Db;
-using Akka.Persistence.Sql.Linq2Db.Journal;
-using Akka.Persistence.Sql.Linq2Db.Journal.Types;
-using Akka.Persistence.Sql.Linq2Db.Tests;
+using Akka.Persistence.Sql.Linq2Db.Snapshot;
 using Akka.Persistence.Sql.Linq2Db.Tests.Docker;
 using LinqToDB;
 using Xunit;
@@ -13,13 +19,13 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Linq2Db.CompatibilityTests
 {
     [Collection("PostgreSQLSpec")]
-    public class DockerLinq2DbPostgreSQLCompatibilitySpec : CompatibilitySpec
+    public class DockerLinq2DbPostgreSqlSqlCommonSnapshotCompatibilitySpec : SqlCommonSnapshotCompatibilitySpec
     {
-        public static string _journalBaseConfig = @"
+        public static string _snapshotBaseConfig = @"
             akka.persistence {{
                 publish-plugin-commands = on
-                journal {{
-                    plugin = ""akka.persistence.journal.testspec""
+                snapshot-store {{
+                    plugin = ""akka.persistence.snapshot-store.testspec""
                     testspec {{
                         class = ""{0}""
                         #plugin-dispatcher = ""akka.actor.default-dispatcher""
@@ -30,7 +36,7 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
                         provider-name = """ + LinqToDB.ProviderName.PostgreSQL95 + @"""
                         use-clone-connection = true
                         table-compatibility-mode = ""postgres""
-                        tables.journal {{ 
+                        tables.snapshot {{ 
                            auto-init = true
                            table-name = ""{2}"" 
                            schema-name = ""public""
@@ -38,7 +44,7 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
                            }}
                     }}
                     postgresql {{
-                                class = ""Akka.Persistence.PostgreSql.Journal.PostgreSqlJournal, Akka.Persistence.PostgreSql""
+                                class = """+typeof(PostgreSqlSnapshotStore).AssemblyQualifiedName +@"""
                                 #plugin-dispatcher = ""akka.actor.default-dispatcher""
                                 plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
                                 table-name = ""{2}""
@@ -54,31 +60,31 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
         public static Configuration.Config Create(string connString)
         {
             return ConfigurationFactory.ParseString(
-                string.Format(_journalBaseConfig,
-                    typeof(Linq2DbWriteJournal).AssemblyQualifiedName,
-                    connString,"event_journal","metadata"));
+                string.Format(_snapshotBaseConfig,
+                    typeof(Linq2DbSnapshotStore).AssemblyQualifiedName,
+                    connString,"snapshot_compat","metadata"));
         }
 
         protected override Configuration.Config Config { get; }
 
-        protected override string OldJournal =>
-            "akka.persistence.journal.postgresql";
+        protected override string OldSnapshot =>
+            "akka.persistence.snapshot-store.postgresql";
 
-        protected override string NewJournal =>
-            "akka.persistence.journal.testspec";
+        protected override string NewSnapshot =>
+            "akka.persistence.snapshot-store.testspec";
 
 
-        public DockerLinq2DbPostgreSQLCompatibilitySpec(ITestOutputHelper output,
+        public DockerLinq2DbPostgreSqlSqlCommonSnapshotCompatibilitySpec(ITestOutputHelper output,
             PostgreSQLFixture fixture) : base( output)
         {
             //DebuggingHelpers.SetupTraceDump(output);
             Config = InitConfig(fixture);
-            var connFactory = new AkkaPersistenceDataConnectionFactory(new JournalConfig(Create(DockerDbUtils.ConnectionString).GetConfig("akka.persistence.journal.testspec")));
+            var connFactory = new AkkaPersistenceDataConnectionFactory(new SnapshotConfig(Create(DockerDbUtils.ConnectionString).GetConfig("akka.persistence.snapshot-store.testspec")));
             using (var conn = connFactory.GetConnection())
             {
                 try
                 {
-                    conn.GetTable<JournalRow>().Delete();
+                    conn.GetTable<SnapshotRow>().Delete();
                 }
                 catch (Exception e)
                 {

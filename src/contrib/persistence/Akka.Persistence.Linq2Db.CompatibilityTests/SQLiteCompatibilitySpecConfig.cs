@@ -1,31 +1,33 @@
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="SQLiteCompatibilitySpecConfig.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
+
 using Akka.Configuration;
-using Akka.Persistence.Sql.Linq2Db;
 using Akka.Persistence.Sql.Linq2Db.Journal;
 using Akka.Persistence.Sql.Linq2Db.Snapshot;
-using Akka.Persistence.Sql.Linq2Db.Tests;
-using Akka.Persistence.Sql.Linq2Db.Tests.Docker;
-using LinqToDB.Reflection;
 
 namespace Akka.Persistence.Linq2Db.CompatibilityTests
 {
-    public class SqlServerCompatibilitySpecConfig
+    public class SQLiteCompatibilitySpecConfig
     {
-        public static Config InitSnapshotConfig(string tablename)
+        public static Config InitSnapshotConfig(string tablename, string connectionString)
         {
-            DbUtils.ConnectionString = DockerDbUtils.ConnectionString;
             //need to make sure db is created before the tests start
             //DbUtils.Initialize(connString);
             var specString = $@"
                     akka.persistence {{
                         publish-plugin-commands = on
                         snapshot-store {{
-		sql-server {{
+		sqlite {{
 			# qualified type name of the SQL Server persistence journal actor
-			class = ""Akka.Persistence.SqlServer.Snapshot.SqlServerSnapshotStore, Akka.Persistence.SqlServer""
+			class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
 			# dispatcher used to drive journal actor
 			plugin-dispatcher = ""akka.actor.default-dispatcher""
 			# connection string used for database access
-			connection-string = ""{DbUtils.ConnectionString}""
+			connection-string = ""{connectionString}""
 			# default SQL commands timeout
 			connection-timeout = 30s
 			# SQL server schema name to table corresponding with persistent journal
@@ -34,8 +36,6 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
 			table-name = ""{tablename}""
 			# should corresponding journal table be initialized automatically
 			auto-initialize = on
-
-			sequential-access = off
 			
 			# Recommended: change default circuit breaker settings
 			# By uncommenting below and using Connection Timeout + Command Timeout
@@ -46,11 +46,11 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
                         class = ""{typeof(Linq2DbSnapshotStore).AssemblyQualifiedName}""
                         plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
 #plugin-dispatcher = ""akka.actor.default-dispatcher""
-                        connection-string = ""{DbUtils.ConnectionString}""
+                        connection-string = ""{connectionString}""
 #connection-string = ""FullUri=file:test.db&cache=shared""
-                        provider-name = """ + LinqToDB.ProviderName.SqlServer2017 + $@"""
+                        provider-name = """ + LinqToDB.ProviderName.SQLiteMS + $@"""
                         #use-clone-connection = true
-                        table-compatibility-mode = sqlserver
+                        table-compatibility-mode = sqlite
                         tables
                         {{
                         snapshot {{ 
@@ -65,34 +65,33 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
 
             return ConfigurationFactory.ParseString(specString);
         }
-        public static Config InitJournalConfig(string tablename, string metadatatablename)
+        public static Config InitJournalConfig(string tablename, string metadatatablename, string connectionString)
         {
-            DbUtils.ConnectionString = DockerDbUtils.ConnectionString;
             //need to make sure db is created before the tests start
             //DbUtils.Initialize(connString);
             var specString = $@"
                     akka.persistence {{
                         publish-plugin-commands = on
                         journal {{
-                            plugin = ""akka.persistence.journal.sql-server""
-                            sql-server {{
-                                class = ""Akka.Persistence.SqlServer.Journal.SqlServerJournal, Akka.Persistence.SqlServer""
+                            plugin = ""akka.persistence.journal.sqlite""
+                            sqlite {{
+                                class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
                                 plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
                                 table-name = ""{tablename}""
                                 metadata-table-name = ""{metadatatablename}""
                                 schema-name = dbo
                                 auto-initialize = on
-                                connection-string = ""{DbUtils.ConnectionString}""
+                                connection-string = ""{connectionString}""
                             }}
                                testspec {{
                         class = ""{typeof(Linq2DbWriteJournal).AssemblyQualifiedName}""
                         plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
 #plugin-dispatcher = ""akka.actor.default-dispatcher""
-                        connection-string = ""{DbUtils.ConnectionString}""
+                        connection-string = ""{connectionString}""
 #connection-string = ""FullUri=file:test.db&cache=shared""
-                        provider-name = ""{LinqToDB.ProviderName.SqlServer2017}""
+                        provider-name = ""{LinqToDB.ProviderName.SQLiteMS}""
                         parallelism = 3
-                        table-compatibility-mode = ""sqlserver""
+                        table-compatibility-mode = ""sqlite""
                         tables.journal {{ 
                            auto-init = true
                            table-name = ""{tablename}"" 

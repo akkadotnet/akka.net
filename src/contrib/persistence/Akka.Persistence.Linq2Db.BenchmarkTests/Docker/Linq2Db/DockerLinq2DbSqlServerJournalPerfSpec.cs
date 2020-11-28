@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
 using Akka.Configuration;
-using Akka.Persistence.Linq2Db.BenchmarkTests.Local.Linq2Db;
 using Akka.Persistence.Sql.Linq2Db;
 using Akka.Persistence.Sql.Linq2Db.Config;
 using Akka.Persistence.Sql.Linq2Db.Db;
@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Linq2Db.BenchmarkTests.Docker.Linq2Db
 {
+    
     [Collection("SqlServerSpec")]
     public class DockerLinq2DbSqlServerJournalPerfSpec : L2dbJournalPerfSpec
     {

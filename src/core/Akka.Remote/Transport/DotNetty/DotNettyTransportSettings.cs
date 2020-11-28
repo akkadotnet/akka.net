@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
 using DotNetty.Buffers;
+using DotNetty.Transport.Channels;
 
 namespace Akka.Remote.Transport.DotNetty
 {

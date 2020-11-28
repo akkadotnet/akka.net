@@ -5,10 +5,10 @@ using Xunit.Abstractions;
 namespace Akka.Persistence.Linq2Db.CompatibilityTests
 {
     [Collection("SqlServerSpec")]
-    public class SQLServerCompatibilitySpec : CompatibilitySpec
+    public class SqlServerSqlCommonJournalCompatibilitySpec : SqlCommonJournalCompatibilitySpec
     {
         
-        public SQLServerCompatibilitySpec(ITestOutputHelper outputHelper, SqlServerFixture fixture) : base(outputHelper)
+        public SqlServerSqlCommonJournalCompatibilitySpec(ITestOutputHelper outputHelper, SqlServerFixture fixture) : base(outputHelper)
         {
             DockerDbUtils.Initialize(fixture.ConnectionString);
         }
@@ -20,7 +20,7 @@ namespace Akka.Persistence.Linq2Db.CompatibilityTests
             "akka.persistence.journal.testspec";
 
         protected override Configuration.Config Config =>
-            SqlServerCompatibilitySpecConfig.InitConfig("journal_compat",
+            SqlServerCompatibilitySpecConfig.InitJournalConfig("journal_compat",
                 "journal_metadata_compat");
     }
 }

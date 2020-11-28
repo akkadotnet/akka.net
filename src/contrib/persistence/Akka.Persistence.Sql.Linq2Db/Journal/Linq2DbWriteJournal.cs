@@ -94,6 +94,7 @@ namespace Akka.Persistence.Sql.Linq2Db.Journal
             catch (Exception ex)
             {
                 Context.GetLogger().Warning(ex,"Unexpected error initializing journal!");
+                throw;
             }
         }
 

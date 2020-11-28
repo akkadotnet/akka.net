@@ -1,4 +1,5 @@
-﻿using Akka.Configuration;
+﻿using System;
+using Akka.Configuration;
 using Akka.Persistence.Sql.Linq2Db.Snapshot;
 
 namespace Akka.Persistence.Sql.Linq2Db.Config
@@ -21,5 +22,9 @@ namespace Akka.Persistence.Sql.Linq2Db.Config
         public string TableName { get; protected set; }
         public string SchemaName { get; protected set; }
         public bool AutoInitialize { get; protected set; }
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(ColumnNames, TableName, SchemaName);
+        }
     }
 }
