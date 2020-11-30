@@ -10,7 +10,7 @@ using Akka.Persistence.TestKit.Performance;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Redis.Tests.Performance
+namespace Akka.Persistence.Sqlite.Tests.Performance
 {
     public class SqliteJournalPerfSpec : JournalPerfSpec
     {
@@ -21,7 +21,7 @@ namespace Akka.Persistence.Redis.Tests.Performance
         {
         }
 
-        private static Config CreateSpecConfig(string connectionString)
+        private static Config CreateSpecConfig(string connectionString) 
         {
             return ConfigurationFactory.ParseString(@"
                 akka.persistence {
