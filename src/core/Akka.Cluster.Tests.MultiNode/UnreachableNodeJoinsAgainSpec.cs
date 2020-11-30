@@ -37,7 +37,8 @@ namespace Akka.Cluster.Tests.MultiNode
             Third = Role("third");
             Fourth = Role("fourth");
             CommonConfig = ConfigurationFactory.ParseString("akka.remote.log-remote-lifecycle-events = off")
-                .WithFallback(DebugConfig(false)).WithFallback(MultiNodeClusterSpec.ClusterConfig());
+                .WithFallback(DebugConfig(false))
+                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
             TestTransport = true; // need to use the throttler and blackhole
         }
     }

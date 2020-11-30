@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Sixth = Role("sixth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s

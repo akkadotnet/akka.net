@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Fifth = Role("fifth");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off

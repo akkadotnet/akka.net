@@ -26,8 +26,8 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                  akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = INFO
+                  akka.loglevel = WARNING
+                  akka.remote.log-remote-lifecycle-events = WARNING
                 "));
         }
 

@@ -39,7 +39,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             N5 = Role("n5");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = cluster
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off

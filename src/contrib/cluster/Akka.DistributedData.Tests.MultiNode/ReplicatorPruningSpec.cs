@@ -29,7 +29,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
+                akka.loglevel = WARNING
                 akka.actor.provider = cluster
                 # we use 3s as write timeouts in test, make sure we see that
                 # and not time out the expectMsg at the same time

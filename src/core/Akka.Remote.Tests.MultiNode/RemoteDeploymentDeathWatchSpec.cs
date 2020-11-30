@@ -144,7 +144,7 @@ namespace Akka.Remote.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = new Config(DebugConfig(false), ConfigurationFactory.ParseString(
-                @"akka.loglevel = INFO
+                @"akka.loglevel = WARNING
                   akka.remote.log-remote-lifecycle-events = off"
             ));
 

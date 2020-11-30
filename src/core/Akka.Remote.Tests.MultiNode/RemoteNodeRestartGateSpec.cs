@@ -151,8 +151,8 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
-                @"akka.loglevel = INFO
-                   akka.remote.log-remote-lifecycle-events = INFO
+                @"akka.loglevel = WARNING
+                   akka.remote.log-remote-lifecycle-events = WARNING
                    akka.remote.retry-gate-closed-for  = 1d"
             ));
             TestTransport = true;

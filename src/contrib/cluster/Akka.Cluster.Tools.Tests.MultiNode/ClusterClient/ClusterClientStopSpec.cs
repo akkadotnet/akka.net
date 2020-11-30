@@ -31,7 +31,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             Second = Role("second");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.client {

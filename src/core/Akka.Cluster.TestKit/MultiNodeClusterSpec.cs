@@ -54,9 +54,12 @@ namespace Akka.Cluster.TestKit
                     failure-detector.heartbeat-interval = 500 ms
                     run-coordinated-shutdown-when-down = off
                 }
-                akka.loglevel = INFO
+
+                akka.loglevel = WARNING
+                
                 akka.log-dead-letters = off
                 akka.log-dead-letters-during-shutdown = off
+
                 #akka.remote.log-remote-lifecycle-events = off
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off

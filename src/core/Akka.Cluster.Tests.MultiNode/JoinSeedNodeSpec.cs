@@ -39,7 +39,8 @@ namespace Akka.Cluster.Tests.MultiNode
             _ordinary1 = Role("ordinary1");
             _ordinary2 = Role("ordinary2");
 
-            CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
+            CommonConfig = MultiNodeLoggingConfig.LoggingConfig
+                .WithFallback(DebugConfig(true))
                 .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }

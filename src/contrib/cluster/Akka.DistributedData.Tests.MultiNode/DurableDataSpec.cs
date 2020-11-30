@@ -34,7 +34,7 @@ namespace Akka.DistributedData.Tests.MultiNode
             var tempDir = Path.Combine(Path.GetTempPath(), "target", $"DurableDataSpec-{DateTime.UtcNow.Ticks}-ddata");
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString($@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.log-dead-letters-during-shutdown = off
                 akka.cluster.distributed-data.durable.keys = [""durable*""]

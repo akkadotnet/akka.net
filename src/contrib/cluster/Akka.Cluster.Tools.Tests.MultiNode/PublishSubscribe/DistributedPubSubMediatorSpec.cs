@@ -35,7 +35,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.actor.serialize-messages = off
                 akka.remote.log-remote-lifecycle-events = off

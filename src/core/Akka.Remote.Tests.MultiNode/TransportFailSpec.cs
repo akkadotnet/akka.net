@@ -25,8 +25,9 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(true).WithFallback(ConfigurationFactory.ParseString(@"
-              akka.loglevel = INFO
+            CommonConfig = DebugConfig(true)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+              akka.loglevel = WARNING
               akka.remote{
                  transport-failure-detector {
                   implementation-class = """+ typeof(TestFailureDetector).AssemblyQualifiedName + @"""

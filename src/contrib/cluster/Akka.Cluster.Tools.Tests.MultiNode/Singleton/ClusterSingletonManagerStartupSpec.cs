@@ -29,7 +29,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             Third = Role("third");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.retry-gate-closed-for = 1s #fast restart
                 akka.remote.log-remote-lifecycle-events = off

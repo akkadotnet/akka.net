@@ -21,7 +21,8 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(@"
               akka.loglevel = WARNING
               akka.remote.log-remote-lifecycle-events = WARNING
 

@@ -30,7 +30,7 @@ namespace Akka.Cluster.Tests.MultiNode
             Seed3 = Role("seed3");
 
             CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = WARNING
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off

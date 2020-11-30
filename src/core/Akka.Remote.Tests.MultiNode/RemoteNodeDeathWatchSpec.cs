@@ -25,11 +25,12 @@ namespace Akka.Remote.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
 
-            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
-                akka.remote.log-remote-lifecycle-events = off
-                ## Use a tighter setting than the default, otherwise it takes 20s for DeathWatch to trigger
-                akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 3 s
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(@"
+                    akka.loglevel = WARNING
+                    akka.remote.log-remote-lifecycle-events = off
+                    ## Use a tighter setting than the default, otherwise it takes 20s for DeathWatch to trigger
+                    akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 3 s
             "));
 
             TestTransport = true;

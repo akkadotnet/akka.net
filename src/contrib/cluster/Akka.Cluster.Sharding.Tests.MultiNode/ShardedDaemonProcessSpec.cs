@@ -30,7 +30,7 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
 
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.loglevel = INFO
+                    akka.loglevel = WARNING
                     akka.cluster.sharded-daemon-process {{
                       sharding {{
                         # First is likely to be ignored as shard coordinator not ready

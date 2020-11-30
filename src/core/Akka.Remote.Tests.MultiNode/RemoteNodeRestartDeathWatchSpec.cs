@@ -125,11 +125,12 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
-            CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
-                @"akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = off                    
-                   akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-            akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s"
+            CommonConfig = DebugConfig(false)
+                .WithFallback(ConfigurationFactory.ParseString(
+                    @"akka.loglevel = WARNING
+                      akka.remote.log-remote-lifecycle-events = off                    
+                      akka.remote.transport-failure-detector.heartbeat-interval = 1 s
+                      akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s"
             ));
             TestTransport = true;
         }

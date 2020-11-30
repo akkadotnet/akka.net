@@ -47,8 +47,8 @@ namespace Akka.Cluster.Tests.MultiNode
 }",
 
 @"akka : {
-  stdout-loglevel : INFO
-  loglevel : INFO 
+  stdout-loglevel : WARNING
+  loglevel : WARNING
   log-config-on-start : on 
   loggers : [""Akka.Event.DefaultLogger""],
   actor : {
