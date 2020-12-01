@@ -623,7 +623,7 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _oldestChangedReceived = true;
         private bool _selfExited;
 
-        // started when when self member is Up
+        // started when self member is Up
         private IActorRef _oldestChangedBuffer;
         // keep track of previously removed members
         private ImmutableDictionary<UniqueAddress, Deadline> _removed = ImmutableDictionary<UniqueAddress, Deadline>.Empty;
