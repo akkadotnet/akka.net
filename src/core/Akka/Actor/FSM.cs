@@ -1291,10 +1291,10 @@ namespace Akka.Actor
                 var reason = upcomingState.StopReason;
                 //if reason is failure and cause is null, here is the best place to fix it
                 //maybe there is a need to create a custom exception for this kind of situation
-                if (reason is Failure f && f.Cause is null)
+                /*if (reason is Failure f && f.Cause is null)
                 {
                     reason = new Failure(new ArgumentNullException("cause"));
-                }
+                }*/
                 LogTermination(reason);
                 foreach (var t in _timers)
                 {
@@ -1331,6 +1331,7 @@ namespace Akka.Actor
         /// <summary>
         /// By default, <see cref="Failure"/> is logged at error level and other
         /// reason types are not logged. It is possible to override this behavior.
+        /// Should handle the case when Cause is null and don't log. If that is not the desired behavior, LogTermination can always be overridden
         /// </summary>
         /// <param name="reason">TBD</param>
         protected virtual void LogTermination(Reason reason)
@@ -1342,7 +1343,7 @@ namespace Akka.Actor
                 {
                     _log.Error(failure.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
                 }
-                else
+                else if(!(failure.Cause is null))
                 {
                     _log.Error(failure.Cause.ToString());
                 }
