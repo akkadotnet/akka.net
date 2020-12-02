@@ -1337,9 +1337,9 @@ namespace Akka.Actor
                 {
                     _log.Error(failure.Cause.AsInstanceOf<Exception>(), "terminating due to Failure");
                 }
-                else if(!(failure.Cause is null))
+                else
                 {
-                    _log.Error(failure.Cause.ToString());
+                    _log.Error(failure.Cause is null? "null": failure.Cause.ToString());
                 }
             }
         }
