@@ -1289,12 +1289,6 @@ namespace Akka.Actor
             if (_currentState.StopReason == null)
             {
                 var reason = upcomingState.StopReason;
-                //if reason is failure and cause is null, here is the best place to fix it
-                //maybe there is a need to create a custom exception for this kind of situation
-                /*if (reason is Failure f && f.Cause is null)
-                {
-                    reason = new Failure(new ArgumentNullException("cause"));
-                }*/
                 LogTermination(reason);
                 foreach (var t in _timers)
                 {
