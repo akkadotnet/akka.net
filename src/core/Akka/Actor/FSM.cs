@@ -1325,7 +1325,6 @@ namespace Akka.Actor
         /// <summary>
         /// By default, <see cref="Failure"/> is logged at error level and other
         /// reason types are not logged. It is possible to override this behavior.
-        /// Should handle the case when Cause is null and don't log. If that is not the desired behavior, LogTermination can always be overridden
         /// </summary>
         /// <param name="reason">TBD</param>
         protected virtual void LogTermination(Reason reason)
