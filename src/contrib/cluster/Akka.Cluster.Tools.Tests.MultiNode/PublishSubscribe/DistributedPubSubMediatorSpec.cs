@@ -19,6 +19,7 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using System.Collections.Immutable;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 {
@@ -48,7 +49,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
     public class DistributedPubSubMediatorSpec : MultiNodeClusterSpec
     {
-        #region setup 
+        #region setup
 
         [Serializable]
         public sealed class Whisper
@@ -700,9 +701,9 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
 
             RunOn(() =>
             {
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>(), isReplyToStatus: false));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(ImmutableDictionary<Address, long>.Empty, isReplyToStatus: false));
                 var deltaBuckets = ExpectMsg<Delta>().Buckets;
-                deltaBuckets.Length.ShouldBe(3);
+                deltaBuckets.Count.ShouldBe(3);
                 deltaBuckets.First(x => x.Owner == firstAddress).Content.Count.ShouldBe(10);
                 deltaBuckets.First(x => x.Owner == secondAddress).Content.Count.ShouldBe(9);
                 deltaBuckets.First(x => x.Owner == thirdAddress).Content.Count.ShouldBe(2);
@@ -718,15 +719,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                     Mediator.Tell(new Put(CreateChatUser("u" + (1000 + i))));
                 }
 
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(new Dictionary<Address, long>(), isReplyToStatus: false));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(ImmutableDictionary<Address, long>.Empty, isReplyToStatus: false));
                 var deltaBuckets1 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets1.Sum(x => x.Content.Count).ShouldBe(500);
 
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets1.ToDictionary(b => b.Owner, b => b.Version), isReplyToStatus: false));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets1.ToImmutableDictionary(b => b.Owner, b => b.Version), isReplyToStatus: false));
                 var deltaBuckets2 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets2.Sum(x => x.Content.Count).ShouldBe(500);
 
-                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets2.ToDictionary(b => b.Owner, b => b.Version), isReplyToStatus: false));
+                Mediator.Tell(new Tools.PublishSubscribe.Internal.Status(deltaBuckets2.ToImmutableDictionary(b => b.Owner, b => b.Version), isReplyToStatus: false));
                 var deltaBuckets3 = ExpectMsg<Delta>().Buckets;
                 deltaBuckets3.Sum(x => x.Content.Count).ShouldBe(10 + 9 + 2 + many - 500 - 500);
             }, _first);
