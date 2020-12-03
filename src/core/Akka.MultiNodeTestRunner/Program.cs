@@ -125,7 +125,9 @@ namespace Akka.MultiNodeTestRunner
         {
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
             FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
-            TestRunSystem = ActorSystem.Create("TestRunnerLogging");
+            
+            string logLevel = CommandLine.GetPropertyOrDefault("multinode.loglevel", "WARNING");
+            TestRunSystem = ActorSystem.Create("TestRunnerLogging", $"akka.loglevel={logLevel}");
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");

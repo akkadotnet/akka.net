@@ -20,19 +20,20 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
     public class TimelineLogCollectorActor : ReceiveActor
     {
+        private readonly ILoggingAdapter _logger = Context.GetLogger();
         private readonly SortedList<DateTime, HashSet<LogMessageInfo>> _timeline = new SortedList<DateTime, HashSet<LogMessageInfo>>();
-        
         public TimelineLogCollectorActor()
         {
             Receive<LogMessage>(msg =>
             {
                 var parsedInfo = new LogMessageInfo(msg);
+
                 if (_timeline.ContainsKey(parsedInfo.When))
                     _timeline[parsedInfo.When].Add(parsedInfo);
                 else
                     _timeline.Add(parsedInfo.When, new HashSet<LogMessageInfo>() { parsedInfo });
             });
-            
+
             Receive<SendMeAll>(_ => Sender.Tell(_timeline.Values.ToList()));
 
             Receive<GetSpecLog>(_ =>
@@ -46,21 +47,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                         return (NodeIndex: node.Index, NodeRole: node.Role, Logs: nodeMessages.Select(m => m.ToString()).ToList());
                     }).ToList()
                 };
-                
+
                 Sender.Tell(log);
             });
-            
+
             Receive<DumpToFile>(dump =>
             {
                 // Verify that directory exists
                 var dir = new DirectoryInfo(Path.GetDirectoryName(dump.FilePath));
                 if (!dir.Exists)
                     dir.Create();
-                
+
                 File.AppendAllLines(dump.FilePath, _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).Select(m => m.ToString()));
                 Sender.Tell(Done.Instance);
             });
-            
+
             Receive<PrintToConsole>(_ =>
             {
                 var logsPerTest = _timeline
@@ -73,11 +74,18 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     Console.WriteLine($"Detailed logs for {testLogs.Key}\n");
                     foreach (var log in testLogs)
                     {
-                        Console.WriteLine(log);
+                        if (log.LogLevel == LogLevel.DebugLevel)
+                            _logger.Debug(log.OriginalMessage);
+                        if (log.LogLevel == LogLevel.InfoLevel)
+                            _logger.Info(log.OriginalMessage);
+                        if (log.LogLevel == LogLevel.WarningLevel)
+                            _logger.Warning(log.OriginalMessage);
+                        if (log.LogLevel == LogLevel.ErrorLevel)
+                            _logger.Error(log.OriginalMessage);
                     }
                     Console.WriteLine($"\nEnd logs for {testLogs.Key}\n");
                 }
-                
+
                 Sender.Tell(Done.Instance);
             });
         }
@@ -97,16 +105,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 When = DateTime.UtcNow;
                 LogLevel = LogLevel.InfoLevel; // In case if we could not find log level, assume that it is Info
                 Message = OriginalMessage;
-                
+
                 var pieces = Regex.Matches(msg.Message, @"\[([^\]]+)\]");
                 foreach (Match piece in pieces)
                 {
                     Message = Message.Replace(piece.Value, "");
-                    
-                    if (DateTime.TryParse(piece.Value, CultureInfo.CurrentCulture, DateTimeStyles.None, out var when))
+
+                    if (DateTime.TryParse(piece.Groups[1].Value, CultureInfo.CurrentCulture, DateTimeStyles.None, out var when))
                         When = when;
 
-                    if (TryParseLogLevel(piece.Value, out var logLevel))
+                    if (TryParseLogLevel(piece.Groups[1].Value, out var logLevel))
                         LogLevel = logLevel;
                 }
             }
@@ -132,7 +140,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return false;
             }
         }
-        
+
         public class NodeInfo : IEquatable<NodeInfo>
         {
             public NodeInfo(int index, string role, string platform, string testName)
@@ -171,7 +179,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return Index;
             }
         }
-        
+
         public class LogMessage
         {
             public LogMessage(NodeInfo node, string message)
@@ -185,7 +193,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
         public class SendMeAll { }
-        
+
         public class PrintToConsole { }
 
         public class GetSpecLog { }
