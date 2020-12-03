@@ -29,8 +29,8 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
             Third = Role("third");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.loglevel = INFO
+                .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.loglevel = {LogLevel}
                     akka.cluster.sharded-daemon-process {{
                       sharding {{
                         # First is likely to be ignored as shard coordinator not ready

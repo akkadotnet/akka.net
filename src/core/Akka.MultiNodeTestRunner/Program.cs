@@ -138,7 +138,8 @@ namespace Akka.MultiNodeTestRunner
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
             var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "console");
-            
+            var logLevel = CommandLine.GetPropertyOrDefault("multinode.log.level", "INFO");//-Dmultinode.log.level=DEBUG
+
             var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
             if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))
                 Directory.Delete(OutputDirectory, true);
@@ -264,7 +265,8 @@ namespace Akka.MultiNodeTestRunner
                                     .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
                                     .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
                                     .Append($@"-Dmultinode.listen-address={listenAddress} ")
-                                    .Append($@"-Dmultinode.listen-port={listenPort} ");
+                                    .Append($@"-Dmultinode.listen-port={listenPort} ")
+                                    .Append($@"-Dmultinode.log.level={logLevel}");
 
 #if CORECLR
                                 string fileName = null;

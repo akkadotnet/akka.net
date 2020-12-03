@@ -44,7 +44,7 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }}
                     }}
-                    akka.loglevel = DEBUG
+                    akka.loglevel = {LogLevel}
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.sharding.state-store-mode = ""ddata""

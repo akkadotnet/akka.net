@@ -41,7 +41,7 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }}
                     }}
-                    akka.loglevel = INFO
+                    akka.loglevel = {LogLevel}
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""

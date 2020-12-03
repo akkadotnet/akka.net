@@ -36,6 +36,9 @@ namespace Akka.Remote.TestKit
         // it will remain safe by defaut
         Config _commonConf = ConfigurationFactory.Empty;
 
+        //makes log level configurable
+        public string LogLevel = "DEBUG";
+
         ImmutableDictionary<RoleName, Config> _nodeConf = ImmutableDictionary.Create<RoleName, Config>();
         ImmutableList<RoleName> _roles = ImmutableList.Create<RoleName>();
         ImmutableDictionary<RoleName, ImmutableList<string>> _deployments = ImmutableDictionary.Create<RoleName, ImmutableList<string>>();
@@ -117,7 +120,7 @@ namespace Akka.Remote.TestKit
         protected MultiNodeConfig()
         {
             var roleName = CommandLine.GetPropertyOrDefault("multinode.role", null);
-
+            LogLevel = CommandLine.GetPropertyOrDefault("multinode.log.level", "DEBUG");
             if (String.IsNullOrEmpty(roleName))
             {
                 _myself = new Lazy<RoleName>(() =>
