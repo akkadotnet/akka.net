@@ -43,7 +43,7 @@ namespace Akka.Cluster.TestKit
 
         public static Config ClusterConfig()
         {
-            return ConfigurationFactory.ParseString(@"
+           return ConfigurationFactory.ParseString(@"
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.cluster {
                     gossip-interval                     = 200 ms

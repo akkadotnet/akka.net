@@ -40,8 +40,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
             Third = Role("third");
             Fourth = Role("fourth");
 
-            CommonConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
+            CommonConfig = ConfigurationFactory.ParseString($@"
+                akka.loglevel = {LogLevel}
                 akka.testconductor.query-timeout = 1m # we were having timeouts shutting down nodes with 5s default
                 akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
