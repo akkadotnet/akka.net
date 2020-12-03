@@ -15,8 +15,6 @@ using Akka.Event;
 using Akka.Pattern;
 using Akka.Routing;
 using Akka.Util;
-using Akka.Util.Internal;
-using Group = Akka.Cluster.Tools.PublishSubscribe.Internal.Group;
 using Status = Akka.Cluster.Tools.PublishSubscribe.Internal.Status;
 
 namespace Akka.Cluster.Tools.PublishSubscribe
@@ -498,7 +496,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
         private void IgnoreOrSendToDeadLetters(object message)
         {
-            if(_settings.SendToDeadLettersWhenNoSubscribers)
+            if (_settings.SendToDeadLettersWhenNoSubscribers)
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
         }
 
