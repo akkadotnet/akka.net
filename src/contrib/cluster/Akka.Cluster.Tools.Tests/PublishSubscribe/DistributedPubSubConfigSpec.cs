@@ -39,6 +39,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             distributedPubSubSettings.GossipInterval.TotalSeconds.ShouldBe(1);
             distributedPubSubSettings.RemovedTimeToLive.TotalSeconds.ShouldBe(120);
             distributedPubSubSettings.MaxDeltaElements.ShouldBe(3000);
+            distributedPubSubSettings.SendToDeadLettersWhenNoSubscribers.ShouldBeTrue();
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
             Assert.False(config.IsNullOrEmpty());

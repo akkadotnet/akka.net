@@ -192,7 +192,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
                         Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 else
-                    SendToDeadLetters(send.Message);
+                    IgnoreOrSendToDeadLetters(send.Message);
             });
             Receive<SendToAll>(sendToAll =>
             {
@@ -496,9 +496,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
         }
 
-        private void SendToDeadLetters(object message)
+        private void IgnoreOrSendToDeadLetters(object message)
         {
-            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
+            if(_settings.SendToDeadLettersWhenNoSubscribers)
+                Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
         }
 
         private void PublishMessage(string path, object message, bool allButSelf = false)
@@ -526,7 +527,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 counter++;
             }
 
-            if (counter == 0) SendToDeadLetters(message);
+            if (counter == 0) IgnoreOrSendToDeadLetters(message);
         }
 
         private void PublishToEachGroup(string path, object message)
@@ -539,7 +540,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             if (groups.Count == 0)
             {
-                SendToDeadLetters(message);
+                IgnoreOrSendToDeadLetters(message);
             }
             else
             {
