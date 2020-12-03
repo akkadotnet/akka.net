@@ -437,8 +437,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 {
                     var deltaContent = bucket.Content
                         .Where(kv => kv.Value.Version > v)
-                        .Aggregate(ImmutableDictionary<string, ValueHolder>.Empty,
-                            (current, kv) => current.SetItem(kv.Key, kv.Value));
+                        .ToImmutableDictionary(i => i.Key, i => i.Value);
 
                     count += deltaContent.Count;
 
@@ -449,8 +448,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         // exceeded the maxDeltaElements, pick the elements with lowest versions
                         var sortedContent = deltaContent.OrderBy(x => x.Value.Version).ToArray();
                         var chunk = sortedContent.Take(_settings.MaxDeltaElements - (count - sortedContent.Length)).ToList();
-                        var content = chunk.Aggregate(ImmutableDictionary<string, ValueHolder>.Empty,
-                            (current, kv) => current.SetItem(kv.Key, kv.Value));
+                        var content = chunk.ToImmutableDictionary(i => i.Key, i => i.Value);
 
                         yield return new Bucket(bucket.Owner, chunk.Last().Value.Version, content);
                     }
