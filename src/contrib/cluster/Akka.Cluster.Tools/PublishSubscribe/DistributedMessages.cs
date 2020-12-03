@@ -17,7 +17,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Put : IEquatable<Put>
+    public sealed class Put : IDistributedPubSubMessage, IEquatable<Put>
     {
         /// <summary>
         /// TBD
@@ -64,7 +64,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Remove : IEquatable<Remove>
+    public sealed class Remove : IDistributedPubSubMessage, IEquatable<Remove>
     {
         /// <summary>
         /// TBD
@@ -111,7 +111,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Subscribe : IEquatable<Subscribe>
+    public sealed class Subscribe : IDistributedPubSubMessage, IEquatable<Subscribe>
     {
         /// <summary>
         /// TBD
@@ -185,7 +185,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class Unsubscribe : IEquatable<Unsubscribe>
+    public sealed class Unsubscribe : IDistributedPubSubMessage, IEquatable<Unsubscribe>
     {
         /// <summary>
         /// TBD
@@ -259,7 +259,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class SubscribeAck : IEquatable<SubscribeAck>, IDeadLetterSuppression
+    public sealed class SubscribeAck : IDistributedPubSubMessage, IEquatable<SubscribeAck>, IDeadLetterSuppression
     {
         /// <summary>
         /// TBD
@@ -307,7 +307,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class UnsubscribeAck : IEquatable<UnsubscribeAck>
+    public sealed class UnsubscribeAck : IDistributedPubSubMessage, IEquatable<UnsubscribeAck>
     {
         /// <summary>
         /// TBD
