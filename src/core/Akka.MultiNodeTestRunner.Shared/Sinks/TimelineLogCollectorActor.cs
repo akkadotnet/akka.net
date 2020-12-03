@@ -14,16 +14,18 @@ using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
-using Akka.Util.Internal;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
     public class TimelineLogCollectorActor : ReceiveActor
     {
-        private readonly ILoggingAdapter _logger = Context.GetLogger();
         private readonly SortedList<DateTime, HashSet<LogMessageInfo>> _timeline = new SortedList<DateTime, HashSet<LogMessageInfo>>();
-        public TimelineLogCollectorActor()
+        private readonly LogLevel _minimumLogLevel;
+
+        public TimelineLogCollectorActor(string minimumLogLevel)
         {
+            LogMessageInfo.TryParseLogLevel(minimumLogLevel, out _minimumLogLevel);
+
             Receive<LogMessage>(msg =>
             {
                 var parsedInfo = new LogMessageInfo(msg);
@@ -74,14 +76,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     Console.WriteLine($"Detailed logs for {testLogs.Key}\n");
                     foreach (var log in testLogs)
                     {
-                        if (log.LogLevel == LogLevel.DebugLevel)
-                            _logger.Debug(log.OriginalMessage);
-                        if (log.LogLevel == LogLevel.InfoLevel)
-                            _logger.Info(log.OriginalMessage);
-                        if (log.LogLevel == LogLevel.WarningLevel)
-                            _logger.Warning(log.OriginalMessage);
-                        if (log.LogLevel == LogLevel.ErrorLevel)
-                            _logger.Error(log.OriginalMessage);
+                        if(!log.LogLevel.HasValue || log.LogLevel.Value >= _minimumLogLevel)
+                            Console.WriteLine(log);
                     }
                     Console.WriteLine($"\nEnd logs for {testLogs.Key}\n");
                 }
@@ -95,7 +91,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             public NodeInfo Node { get; }
             public string OriginalMessage { get; }
             public DateTime When { get; }
-            public LogLevel LogLevel { get; }
+            public LogLevel? LogLevel { get; }
             public string Message { get; }
 
             public LogMessageInfo(LogMessage msg)
@@ -103,7 +99,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 OriginalMessage = msg.Message;
                 Node = msg.Node;
                 When = DateTime.UtcNow;
-                LogLevel = LogLevel.InfoLevel; // In case if we could not find log level, assume that it is Info
+                LogLevel = null; //some log lines coming from nodes have no level (ex: stack traces) => live the level null and output always
                 Message = OriginalMessage;
 
                 var pieces = Regex.Matches(msg.Message, @"\[([^\]]+)\]");
@@ -124,7 +120,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return $"[Node #{Node.Index}({Node.Role})]{OriginalMessage}";
             }
 
-            private bool TryParseLogLevel(string str, out LogLevel logLevel)
+            public static bool TryParseLogLevel(string str, out LogLevel logLevel)
             {
                 var enumValues = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToList();
                 foreach (var logLevelInfo in Enum.GetNames(typeof(LogLevel)).Select((name, i) => (Name: name, Index: i)))

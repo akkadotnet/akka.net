@@ -24,9 +24,6 @@ using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
-using Akka.Util;
-using JetBrains.TeamCity.ServiceMessages.Write.Special;
-using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
 #if CORECLR
 using System.Runtime.Loader;
@@ -249,7 +246,7 @@ namespace Akka.MultiNodeTestRunner
                             var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
                             var alternateIndex = 0;
 #endif
-                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
+                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor(logLevel)));
                             string testOutputDir = null;
                             string runningSpecName = null;
                             
