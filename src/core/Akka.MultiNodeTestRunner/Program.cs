@@ -138,7 +138,7 @@ namespace Akka.MultiNodeTestRunner
             var specName = CommandLine.GetPropertyOrDefault("multinode.spec", "");
             var platform = CommandLine.GetPropertyOrDefault("multinode.platform", "net");
             var reporter = CommandLine.GetPropertyOrDefault("multinode.reporter", "console");
-            var logLevel = CommandLine.GetPropertyOrDefault("multinode.log.level", "INFO"); //-Dmultinode.log.level=DEBUG
+            var logLevel = CommandLine.GetPropertyOrDefault("multinode.log.level", "DEBUG"); //-Dmultinode.log.level=DEBUG
 
             var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
             if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))

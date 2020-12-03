@@ -69,16 +69,16 @@ namespace Akka.Remote.TestKit
         public Config DebugConfig(bool on)
         {
             if (on)
-                return ConfigurationFactory.ParseString(@"
-                    akka.loglevel = DEBUG
-                    akka.remote {
+                return ConfigurationFactory.ParseString($@"
+                    akka.loglevel = {LogLevel}
+                    akka.remote {{
                         log-received-messages = on
                         log-sent-messages = on
-                    }
-                    akka.actor.debug {
+                    }}
+                    akka.actor.debug {{
                         receive = on
                         fsm = on
-                    }
+                    }}
                     akka.remote.log-remote-lifecycle-events = on
                     akka.log-dead-letters = on
                 ");
