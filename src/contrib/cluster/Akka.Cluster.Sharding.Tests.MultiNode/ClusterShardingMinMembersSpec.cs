@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }}
                     }}
-                    akka.loglevel = {LogLevel}
+                    akka.loglevel = INFO
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.min-nr-of-members = 3
