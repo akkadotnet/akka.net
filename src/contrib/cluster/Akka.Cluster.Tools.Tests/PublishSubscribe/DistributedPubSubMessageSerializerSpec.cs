@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                 {address1, 3},
                 {address2, 17},
                 {address3, 5}
-            }, true);
+            }.ToImmutableDictionary(), true);
 
             AssertEqual(message);
         }
@@ -71,7 +71,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
                     {"/user/u4", new ValueHolder(4, u4)},
                     {"/user/u5", new ValueHolder(5, null)},
                 }.ToImmutableDictionary())
-            }.ToArray());
+            }.ToImmutableList());
 
             AssertEqual(message);
         }
