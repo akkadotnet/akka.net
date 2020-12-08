@@ -131,13 +131,13 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         /// <summary>
         /// TBD
         /// </summary>
-        public IDictionary<Address, long> OwnVersions
+        public IImmutableDictionary<Address, long> OwnVersions
         {
             get
             {
                 return _registry
                     .Select(entry => new KeyValuePair<Address, long>(entry.Key, entry.Value.Version))
-                    .ToDictionary(kv => kv.Key, kv => kv.Value);
+                    .ToImmutableDictionary(kv => kv.Key, kv => kv.Value);
             }
         }
 
@@ -192,7 +192,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                     new Router(_settings.RoutingLogic, routees.ToArray()).Route(
                         Internal.Utils.WrapIfNeeded(send.Message), Sender);
                 else
-                    SendToDeadLetters(send.Message);
+                    IgnoreOrSendToDeadLetters(send.Message);
             });
             Receive<SendToAll>(sendToAll =>
             {
@@ -290,8 +290,8 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 if (_nodes.Contains(Sender.Path.Address) || Sender.Path.Address.HasLocalScope)
                 {
                     // gossip chat starts with a Status message, containing the bucket versions of the other node
-                    var delta = CollectDelta(status.Versions).ToArray();
-                    if (delta.Length != 0)
+                    var delta = CollectDelta(status.Versions).ToImmutableList();
+                    if (delta.Count != 0)
                         Sender.Tell(new Delta(delta));
 
                     if (!status.IsReplyToStatus && OtherHasNewerVersions(status.Versions))
@@ -404,7 +404,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
         }
 
-        private bool OtherHasNewerVersions(IDictionary<Address, long> versions)
+        private bool OtherHasNewerVersions(IImmutableDictionary<Address, long> versions)
         {
             return versions.Any(entry =>
             {
@@ -415,7 +415,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
             });
         }
 
-        private IEnumerable<Bucket> CollectDelta(IDictionary<Address, long> versions)
+        private IEnumerable<Bucket> CollectDelta(IImmutableDictionary<Address, long> versions)
         {
             // missing entries are represented by version 0
             var filledOtherVersions = OwnVersions.ToDictionary(c => c.Key, c => 0L);
@@ -437,8 +437,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 {
                     var deltaContent = bucket.Content
                         .Where(kv => kv.Value.Version > v)
-                        .Aggregate(ImmutableDictionary<string, ValueHolder>.Empty,
-                            (current, kv) => current.SetItem(kv.Key, kv.Value));
+                        .ToImmutableDictionary(i => i.Key, i => i.Value);
 
                     count += deltaContent.Count;
 
@@ -449,8 +448,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                         // exceeded the maxDeltaElements, pick the elements with lowest versions
                         var sortedContent = deltaContent.OrderBy(x => x.Value.Version).ToArray();
                         var chunk = sortedContent.Take(_settings.MaxDeltaElements - (count - sortedContent.Length)).ToList();
-                        var content = chunk.Aggregate(ImmutableDictionary<string, ValueHolder>.Empty,
-                            (current, kv) => current.SetItem(kv.Key, kv.Value));
+                        var content = chunk.ToImmutableDictionary(i => i.Key, i => i.Value);
 
                         yield return new Bucket(bucket.Owner, chunk.Last().Value.Version, content);
                     }
@@ -496,9 +494,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 _registry[_cluster.SelfAddress] = new Bucket(bucket.Owner, v, bucket.Content.SetItem(key, new ValueHolder(v, value)));
         }
 
-        private void SendToDeadLetters(object message)
+        private void IgnoreOrSendToDeadLetters(object message)
         {
-            Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
+            if (_settings.SendToDeadLettersWhenNoSubscribers)
+                Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Context.Self));
         }
 
         private void PublishMessage(string path, object message, bool allButSelf = false)
@@ -526,7 +525,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
                 counter++;
             }
 
-            if (counter == 0) SendToDeadLetters(message);
+            if (counter == 0) IgnoreOrSendToDeadLetters(message);
         }
 
         private void PublishToEachGroup(string path, object message)
@@ -539,7 +538,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
 
             if (groups.Count == 0)
             {
-                SendToDeadLetters(message);
+                IgnoreOrSendToDeadLetters(message);
             }
             else
             {
