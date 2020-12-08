@@ -204,6 +204,9 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     }
     public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        [System.ObsoleteAttribute("Obsolete - please us the full constructor instead. This constructor only exists f" +
+            "or backwards API compatibility.")]
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
         public System.TimeSpan GossipInterval { get; }
         public int MaxDeltaElements { get; }
