@@ -153,14 +153,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         private Internal.Status StatusFrom(byte[] bytes)
         {
             var statusProto = Proto.Msg.Status.Parser.ParseFrom(bytes);
-            var versions = new Dictionary<Address, long>();
+            var versions = ImmutableDictionary.CreateBuilder<Address, long>();
 
             foreach (var protoVersion in statusProto.Versions)
             {
                 versions.Add(AddressFrom(protoVersion.Address), protoVersion.Timestamp);
             }
 
-            return new Internal.Status(versions, statusProto.ReplyToStatus);
+            return new Internal.Status(versions.ToImmutable(), statusProto.ReplyToStatus);
         }
 
         private static byte[] DeltaToProto(Delta delta)
@@ -189,7 +189,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
         private Delta DeltaFrom(byte[] bytes)
         {
             var deltaProto = Proto.Msg.Delta.Parser.ParseFrom(bytes);
-            var buckets = new List<Bucket>();
+            var buckets = ImmutableList.CreateBuilder<Bucket>();
             foreach (var protoBuckets in deltaProto.Buckets)
             {
                 var content = new Dictionary<string, ValueHolder>();
@@ -204,7 +204,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Serialization
                 buckets.Add(bucket);
             }
 
-            return new Delta(buckets.ToArray());
+            return new Delta(buckets.ToImmutable());
         }
 
         private byte[] SendToProto(Send send)
