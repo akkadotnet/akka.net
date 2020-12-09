@@ -61,14 +61,14 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 Sender.Tell(Done.Instance);
             });
 
-            Receive<PrintToConsole>(_ =>
+            Receive<PrintToConsole>(m =>
             {
-                LogMessageInfo.TryParseLogLevel(_.MinimumLogLevel, out var minimumLogLevel);
+                LogMessageInfo.TryParseLogLevel(m.MinimumLogLevel, out var minimumLogLevel);
 
                 var logsPerTest = _timeline
                     .Select(pairs => pairs.Value)
                     .SelectMany(msg => msg)
-                    .GroupBy(m => m.Node.TestName);
+                    .GroupBy(msg => msg.Node.TestName);
 
                 foreach (var testLogs in logsPerTest)
                 {
