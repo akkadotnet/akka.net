@@ -20,12 +20,9 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
     public class TimelineLogCollectorActor : ReceiveActor
     {
         private readonly SortedList<DateTime, HashSet<LogMessageInfo>> _timeline = new SortedList<DateTime, HashSet<LogMessageInfo>>();
-        private readonly LogLevel _minimumLogLevel;
 
-        public TimelineLogCollectorActor(string minimumLogLevel)
+        public TimelineLogCollectorActor()
         {
-            LogMessageInfo.TryParseLogLevel(minimumLogLevel, out _minimumLogLevel);
-
             Receive<LogMessage>(msg =>
             {
                 var parsedInfo = new LogMessageInfo(msg);
@@ -66,6 +63,8 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
             Receive<PrintToConsole>(_ =>
             {
+                LogMessageInfo.TryParseLogLevel(_.MinimumLogLevel, out var minimumLogLevel);
+
                 var logsPerTest = _timeline
                     .Select(pairs => pairs.Value)
                     .SelectMany(msg => msg)
@@ -76,7 +75,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                     Console.WriteLine($"Detailed logs for {testLogs.Key}\n");
                     foreach (var log in testLogs)
                     {
-                        if(!log.LogLevel.HasValue || log.LogLevel.Value >= _minimumLogLevel)
+                        if (!log.LogLevel.HasValue || log.LogLevel.Value >= minimumLogLevel)
                             Console.WriteLine(log);
                     }
                     Console.WriteLine($"\nEnd logs for {testLogs.Key}\n");
@@ -190,7 +189,15 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         public class SendMeAll { }
 
-        public class PrintToConsole { }
+        public class PrintToConsole
+        {
+            public PrintToConsole(string minimumLogLevel)
+            {
+                MinimumLogLevel = minimumLogLevel;
+            }
+
+            public string MinimumLogLevel { get; }
+        }
 
         public class GetSpecLog { }
 

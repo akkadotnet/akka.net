@@ -246,7 +246,7 @@ namespace Akka.MultiNodeTestRunner
                             var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
                             var alternateIndex = 0;
 #endif
-                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor(logLevel)));
+                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
                             string testOutputDir = null;
                             string runningSpecName = null;
                             
@@ -368,7 +368,7 @@ namespace Akka.MultiNodeTestRunner
                                     // Dump aggregated timeline to file for this test
                                     timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
                                     // Print aggregated timeline into the console
-                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole())
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole(logLevel))
                                 };
 
                                 if (specFailed)
