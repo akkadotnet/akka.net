@@ -98,7 +98,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 OriginalMessage = msg.Message;
                 Node = msg.Node;
                 When = DateTime.UtcNow;
-                LogLevel = null; //some log lines coming from nodes have no level (ex: stack traces) => live the level null and output always
+                LogLevel = null; //some log lines coming from nodes have no level (ex: stack traces) => leave the level null and output always
                 Message = OriginalMessage;
 
                 var pieces = Regex.Matches(msg.Message, @"\[([^\]]+)\]");
