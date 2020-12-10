@@ -2111,6 +2111,7 @@ namespace Akka
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.ObsoleteAttribute("Use instead the pattern matching feature introduced in C# 7.0")]
     public class static PatternMatch
     {
         public static Akka.Case Match(this object target) { }
