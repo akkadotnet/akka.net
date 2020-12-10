@@ -12,6 +12,7 @@ namespace Akka
     /// <summary>
     /// Class PatternMatch.
     /// </summary>
+    [Obsolete("Use instead the pattern matching feature introduced in C# 7.0")]
     public static class PatternMatch
     {
         
