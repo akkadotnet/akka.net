@@ -1,5 +1,4 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
@@ -2112,7 +2111,6 @@ namespace Akka
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    [System.ObsoleteAttribute("Use instead the pattern matching feature introduced in C# 7.0")]
     public class static PatternMatch
     {
         public static Akka.Case Match(this object target) { }
@@ -5001,7 +4999,6 @@ namespace Akka.Util
         public Akka.Util.Try<T> GetOrElse(System.Func<T> fallback) { }
         public Akka.Util.Try<T> OrElse(Akka.Util.Try<T> @default) { }
         public Akka.Util.Try<T> Recover(System.Action<System.Exception> failureHandler) { }
-        public Akka.Util.Try<T> RecoverWith(System.Func<System.Exception, Akka.Util.Try<T>> failureHandler) { }
         public static Akka.Util.Try<T> op_Implicit(T value) { }
     }
     public class static TypeExtensions
