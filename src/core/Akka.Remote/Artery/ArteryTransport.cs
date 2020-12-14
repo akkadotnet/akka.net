@@ -178,7 +178,7 @@ namespace Akka.Remote.Artery
     internal class FlushOnShutdown : UntypedActor
     {
         public static Props Props(
-            Task<Done> done,
+            TaskCompletionSource<Done> done,
             TimeSpan timeout,
             IInboundContext inboundContext,
             ImmutableHashSet<Association> associations)
@@ -190,7 +190,7 @@ namespace Akka.Remote.Artery
         public class TimeoutMessage
         { }
 
-        public Task<Done> Done { get; }
+        public TaskCompletionSource<Done> Done { get; }
         public TimeSpan Timeout { get; }
         public IInboundContext InboundContext { get; }
         public ImmutableHashSet<Association> Associations { get; }
@@ -200,7 +200,7 @@ namespace Akka.Remote.Artery
         private ICancelable _timeoutTask;
 
         public FlushOnShutdown(
-            Task<Done> done,
+            TaskCompletionSource<Done> done,
             TimeSpan timeout,
             IInboundContext inboundContext,
             ImmutableHashSet<Association> associations)
@@ -237,8 +237,7 @@ namespace Akka.Remote.Artery
 
                 if (_remaining.Values.Sum() == 0)
                 {
-                    // ARTERY: set done task to success
-                    // done.trySuccess(Done)
+                    Done.TrySetResult(Akka.Done.Instance);
                     Context.Stop(Self);
                 }
             }
@@ -246,8 +245,7 @@ namespace Akka.Remote.Artery
             {
                 if (!e.NonFatal()) throw;
 
-                // ARTERY: set done task exception
-                // done.tryFailure(e)
+                Done.TrySetException(e);
                 throw;
             }
         }
@@ -255,8 +253,7 @@ namespace Akka.Remote.Artery
         protected override void PostStop()
         {
             _timeoutTask.Cancel();
-            // ARTERY: set done task to success
-            // done.trySuccess(Done)
+            Done.TrySetResult(Akka.Done.Instance);
         }
 
         protected override void OnReceive(object message)
@@ -571,7 +568,7 @@ namespace Akka.Remote.Artery
             throw new NotImplementedException();
         }
 
-        public Option<IOutboundContext> Association(long uid)
+        public IOptionVal<IOutboundContext> Association(long uid)
         {
             throw new NotImplementedException();
         }
