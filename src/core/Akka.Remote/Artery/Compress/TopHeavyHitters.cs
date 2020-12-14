@@ -23,6 +23,7 @@ namespace Akka.Remote.Artery.Compress
     internal class TopHeavyHitters<T> where T : class
     {
         private readonly int _max;
+        private readonly int _adjustedMax;
         // Contains the hash value for each entry in the hash map. Used for quicker lookups (equality check can be avoided
         // if hashes don't match)
         private readonly int[] _hashes;
@@ -42,11 +43,13 @@ namespace Akka.Remote.Artery.Compress
 
         public TopHeavyHitters(int max)
         {
-            max.Requiring(m => (m & (m - 1)) == 0,
+            _max = max;
+            _adjustedMax = max == 0 ? 1 : max;
+
+            _adjustedMax.Requiring(m => (m & (m - 1)) == 0,
                 "Maximum numbers of heavy hitters should be in form of 2^k for any natural k");
 
-            _max = max;
-            Capacity = max * 2;
+            Capacity = _adjustedMax * 2;
             Mask = Capacity - 1;
 
             _hashes = new int[Capacity];
@@ -57,7 +60,7 @@ namespace Akka.Remote.Artery.Compress
 
             _weights = new long[Capacity];
 
-            _heap = new int[max];
+            _heap = new int[_adjustedMax];
             _heap.AsSpan().Fill(-1);
         }
 
@@ -295,7 +298,7 @@ namespace Akka.Remote.Artery.Compress
                 var leftIndex = index * 2 + 1;
                 var rightIndex = index * 2 + 2;
                 var currentWeight = _weights[_heap[index]];
-                if (rightIndex < _max)
+                if (rightIndex < _adjustedMax)
                 {
                     var leftValueIndex = _heap[leftIndex];
                     var rightValueIndex = _heap[rightIndex];
@@ -335,7 +338,7 @@ namespace Akka.Remote.Artery.Compress
                         }
                     }
                 }
-                else if (leftIndex < _max)
+                else if (leftIndex < _adjustedMax)
                 {
                     var leftValueIndex = _heap[leftIndex];
                     if (leftValueIndex < 0)
