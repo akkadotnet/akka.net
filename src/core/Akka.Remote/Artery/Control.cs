@@ -70,7 +70,7 @@ namespace Akka.Remote.Artery
         /// </summary>
         internal interface IControlMessageSubject
         {
-            Task<Done> Attach(IControlMessageObserver observer);
+            TaskCompletionSource<Done> Attach(IControlMessageObserver observer);
             void Detach(IControlMessageObserver observer);
         }
 
@@ -170,11 +170,11 @@ namespace Akka.Remote.Artery
             public override void OnPull()
                 => Pull(_in);
 
-            public Task<Done> Attach(IControlMessageObserver observer)
+            public TaskCompletionSource<Done> Attach(IControlMessageObserver observer)
             {
                 var tcs = new TaskCompletionSource<Done>();
                 _callback.Invoke(new Attach(observer, tcs));
-                return tcs.Task;
+                return tcs;
             }
 
             public void Detach(IControlMessageObserver observer)
