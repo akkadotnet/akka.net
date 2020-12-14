@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using Akka.IO;
 
+#nullable enable
 namespace Akka.Remote.Artery.Internal
 {
     internal sealed class ByteBuffer : 
@@ -14,7 +12,7 @@ namespace Akka.Remote.Artery.Internal
         IComparable<ByteBuffer>,
         IDisposable
     {
-        private readonly IMemoryOwner<byte> _memoryOwner;
+        private readonly IMemoryOwner<byte>? _memoryOwner;
         private readonly Memory<byte> _backingBuffer;
         private readonly Memory<byte> _buffer;
         private readonly int _offset;
@@ -22,19 +20,75 @@ namespace Akka.Remote.Artery.Internal
         private bool _bigEndian;
         private bool _nativeByteOrder;
 
-        public static ByteBuffer Allocate(int capacity)
-            => new ByteBuffer(capacity);
+        /// <summary>
+        /// Allocates a new byte buffer using a <see cref="Memory{T}"/> as its backing.
+        ///
+        /// <para>
+        /// The new buffer's position will be zero, its limit will be its
+        /// capacity, its mark will be undefined, each of its elements will be
+        /// initialized to zero, and its byte order will be
+        /// {@link ByteOrder#BIG_ENDIAN BIG_ENDIAN}.
+        /// </para>
+        /// </summary>
+        /// <param name="capacity">The new buffer's capacity, in bytes</param>
+        /// <returns>The new byte buffer</returns>
+        public static ByteBuffer Allocate(int capacity) => new ByteBuffer(capacity);
 
-        public static ByteBuffer Wrap(byte[] array)
-            => new ByteBuffer(array);
+        /// <summary>
+        /// Wraps a byte array into a <see cref="Memory{T}"/> buffer.
+        ///
+        /// <para>
+        /// The new buffer will be backed by the given byte array;
+        /// that is, modifications to the buffer will cause the array to be modified
+        /// and vice versa.  The new buffer's capacity will be
+        /// <paramref name="array.Length"/>, its position will be <paramref name="offset"/>, its limit
+        /// will be  <paramref name="offset"/> + <paramref name="length"/>, its mark will be undefined, and its
+        /// byte order will be big endian.
+        /// Its backing array will be the given array, and
+        /// its array offset will be zero.
+        /// </para>
+        /// </summary>
+        /// <param name="array">
+        ///         The array that will back the new buffer
+        /// </param>
+        /// <param name="offset">
+        ///         The offset of the sub-array to be used; must be non-negative and
+        ///         no larger than <paramref name="array.Length"/>.  The new buffer's position
+        ///         will be set to this value.
+        /// </param>
+        /// <param name="length">
+        ///         The length of the subarray to be used;
+        ///         must be non-negative and no larger than
+        ///         {@code array.length - offset}.
+        ///         The new buffer's limit will be set to {@code offset + length}.
+        /// </param>
+        /// <returns>The new byte buffer</returns>
+        public static ByteBuffer Wrap(byte[] array, int offset, int length) => new ByteBuffer(array, offset, length);
 
-        private ByteBuffer(byte[] array) : this(array.Length)
+        /// <summary>
+        /// Wraps a byte array into a <see cref="Memory{T}"/> buffer.
+        /// <para>
+        /// The new buffer will be backed by the given byte array;
+        /// that is, modifications to the buffer will cause the array to be modified
+        /// and vice versa.  The new buffer's capacity and limit will be
+        /// <see cref="Array.Length"/>, its position will be zero, its mark will be
+        /// undefined, and its byte order will be big endian.
+        /// Its backing array will be the given array, and its
+        /// array offset will be zero.
+        /// </para>
+        /// </summary>
+        /// <param name="array">The array that will back this buffer</param>
+        /// <returns>The new byte buffer</returns>
+        public static ByteBuffer Wrap(byte[] array) => new ByteBuffer(array, 0, array.Length);
+
+        private ByteBuffer(byte[] array, int offset, int length) : base(-1, 0, length, length)
         {
-            // NOTE: this might not be the best solution. Ideally, the array became the actual 
-            // backing array of the byte buffer. Maybe array.AsMemory would be a better implementation?
-            // If we do that, will the array persist when its reference is released outside the ByteBuffer?
-            // What is the life cycle of the array in memory?
-            array.AsSpan().CopyTo(_buffer.Span);
+            _memoryOwner = null;
+            _buffer = _backingBuffer = new Memory<byte>(array, offset, length);
+            _offset = 0;
+
+            _bigEndian = true;
+            _nativeByteOrder = !BitConverter.IsLittleEndian;
         }
 
         private ByteBuffer(int capacity) : base(-1, 0, capacity, capacity)
@@ -50,6 +104,7 @@ namespace Akka.Remote.Artery.Internal
         private ByteBuffer(int mark, int pos, int lim, int cap, Memory<byte> hb, int offset)
             : base(mark, pos, lim, cap)
         {
+            _memoryOwner = null;
             _backingBuffer = hb;
             _offset = offset;
             _buffer = _backingBuffer.Slice(_offset);
@@ -61,6 +116,7 @@ namespace Akka.Remote.Artery.Internal
         private ByteBuffer(Memory<byte> hb, int offset, int capacity)
             : base (-1, 0, capacity, capacity)
         {
+            _memoryOwner = null;
             _backingBuffer = hb;
             _offset = offset;
             _buffer = hb.Slice(offset, capacity);
@@ -663,3 +719,4 @@ namespace Akka.Remote.Artery.Internal
         }
     }
 }
+#nullable restore
