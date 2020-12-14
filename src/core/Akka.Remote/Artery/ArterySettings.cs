@@ -247,7 +247,7 @@ namespace Akka.Remote.Artery
 
         internal enum TransportType
         {
-            AeronUpd,
+            AeronUdp,
             Tcp,
             TlsTcp
         }
@@ -435,10 +435,10 @@ namespace Akka.Remote.Artery
         public static string ToString(this TransportType type)
             => type switch
             {
-                TransportType.AeronUpd => "aeron-udp",
+                TransportType.AeronUdp => "aeron-udp",
                 TransportType.Tcp => "tcp",
                 TransportType.TlsTcp => "tls-tcp",
-                _ => $"Unknown transport [{type}], possible values: {nameof(TransportType.AeronUpd)}, {nameof(TransportType.Tcp)}, or {nameof(TransportType.TlsTcp)}"
+                _ => $"Unknown transport [{type}], possible values: {nameof(TransportType.AeronUdp)}, {nameof(TransportType.Tcp)}, or {nameof(TransportType.TlsTcp)}"
             };
     }
 
