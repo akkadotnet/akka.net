@@ -55,6 +55,7 @@ namespace Akka.Remote.Artery
             public int InboundHubBufferSize { get; }
             public int MaximumLargeFrameSize { get; }
             public int LargeBufferPoolSize { get; }
+            // ARTERY This is a lie, we are not planning on using Aeron in our artery implementation. This will be refactored later.
             public AeronSettings Aeron { get; }
             public TcpSettings Tcp { get; }
 
@@ -142,6 +143,7 @@ namespace Akka.Remote.Artery
             }
         }
 
+        // ARTERY This is a lie, we are not planning on using Aeron in our artery implementation. This will be refactored later.
         internal sealed class AeronSettings
         {
             public Config Config { get; }
