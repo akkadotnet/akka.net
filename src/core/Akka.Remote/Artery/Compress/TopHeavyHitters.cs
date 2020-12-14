@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Akka.Remote.Artery.Internal;
 using Akka.Util;
@@ -20,7 +21,7 @@ namespace Akka.Remote.Artery.Compress
     /// This class is a hybrid data structure containing a hash map and a heap pointing to slots in the hash map. The capacity
     /// of the hash map is twice that of the heap to reduce clumping of entries on collisions.
     /// </summary>
-    internal class TopHeavyHitters<T> where T : class
+    internal class TopHeavyHitters<T> : IEnumerable<T> where T : class
     {
         private readonly int _max;
         private readonly int _adjustedMax;
@@ -113,25 +114,14 @@ namespace Akka.Remote.Artery.Compress
          * 6. Fix the Heap property (since now weight can be larger than one of its heap children nodes). Please note that
          *    we just swap heap entries around here, so no entry will be evicted.
          */
-        
+
         /// <summary>
         /// Iterates over the current heavy hitters, order is not of significance.
         /// Not thread safe, accesses internal heap directly (to avoid copying of data). Access must be synchronized externally.
         /// </summary>
         /// <returns></returns>
-        // ARTERY: This is most probably wrong
-        public IEnumerable<T> GetEnumerator()
-        {
-            var i = 0;
-            var idx = _heap[i];
-
-            while (i < _max && idx >= 0 && _items[idx] != null)
-            {
-                yield return _items[idx];
-                i++;
-                idx = _heap[i];
-            }
-        }
+        public IEnumerator<T> GetEnumerator()
+            => new TopHeavyHitterEnumerator(this);
 
         public string ToDebugString
             => $@"TopHeavyHitters(
@@ -453,6 +443,49 @@ namespace Akka.Remote.Artery.Compress
 
         private int LowestHitterIndex => _heap[0];
 
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
 
+        private class TopHeavyHitterEnumerator : IEnumerator<T>
+        {
+            private readonly TopHeavyHitters<T> _parent;
+            private int _i = 0;
+
+            public TopHeavyHitterEnumerator(TopHeavyHitters<T> parent)
+            {
+                _parent = parent;
+            }
+
+            public bool MoveNext()
+            {
+                // note that this is using max and not adjustedMax so will be empty if disabled (max=0)
+                var idx = _i;
+                while (Value(idx) == null && idx < _parent._max)
+                {
+                    idx++;
+                }
+
+                if (idx >= _parent._max)
+                    return false;
+
+                Current = Value(_i);
+                _i++;
+                return true;
+            }
+
+            public void Reset() => _i = 0;
+
+            private int Index(int i) => _parent._heap[i];
+            private T Value(int i) => Index(i) < 0 ? null : _parent._items[Index(i)];
+
+            public T Current { get; private set; }
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose()
+            { }
+        }
     }
 }
