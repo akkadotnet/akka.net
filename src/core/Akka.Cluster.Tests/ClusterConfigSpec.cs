@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Remote;
 using Akka.TestKit;
@@ -68,6 +69,17 @@ namespace Akka.Cluster.Tests
             settings.VerboseHeartbeatLogging.Should().BeFalse();
             settings.VerboseGossipReceivedLogging.Should().BeFalse();
             settings.RunCoordinatedShutdownWhenDown.Should().BeTrue();
+        }
+
+        /// <summary>
+        /// To verify that overriding AppVersion from HOCON works
+        /// </summary>
+        [Fact]
+        public void Clustering_should_parse_nondefault_AppVersion()
+        {
+            Config config = "akka.cluster.app-version = \"0.0.0\"";
+            var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
+            settings.AppVersion.Should().Be(AppVersion.Zero);
         }
     }
 }
