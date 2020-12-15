@@ -8,7 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using Akka.Configuration;
 using Newtonsoft.Json;
 
 namespace Akka.Util
@@ -32,6 +34,10 @@ namespace Akka.Util
     public class AppVersion : IComparable<AppVersion>, IEquatable<AppVersion>
     {
         public static readonly AppVersion Zero = new AppVersion("0.0.0");
+        public static readonly AppVersion FromAssembly = new AppVersion("N/A");
+
+        // made internal for testing purposes
+        internal const string AssemblyVersionMarker = "assembly-version";
         private const int Undefined = 0;
 
         private int[] _numbers = Array.Empty<int>();
@@ -45,7 +51,34 @@ namespace Akka.Util
 
         public static AppVersion Create(string version)
         {
-            var v = new AppVersion(version);
+            // check to see if we're going to use the assembly-version
+            if (version.Equals(AssemblyVersionMarker, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return AppVersionFromAssemblyVersion();
+            }
+
+            var v2 = new AppVersion(version);
+            return v2.Parse();
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <remarks>
+        /// Internal for testing purposes only.
+        /// </remarks>
+        internal static AppVersion AppVersionFromAssemblyVersion()
+        {
+            // user hasn't specified AppVersion in HOCON
+            // try looking it up via assembly
+            var entryAssembly = Assembly.GetEntryAssembly();
+
+            // if the entryAssembly is null (which can happen when we're called from unmanaged code)
+            // then fall back to the executing assembly for the version number.
+            var targetAssembly = entryAssembly ?? Assembly.GetExecutingAssembly();
+
+            var name = targetAssembly.GetName();
+            var v = new AppVersion($"{name.Version.Major}.{name.Version.Minor}.{name.Version.Build}");
             return v.Parse();
         }
 
