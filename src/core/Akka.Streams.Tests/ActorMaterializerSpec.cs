@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests
             var totalMemoryAfter = GC.GetTotalMemory(true);
 
             Output.WriteLine($"Memory usage. Before: {totalMemoryBefore}, After: {totalMemoryAfter}");
-            totalMemoryAfter.Should(a => a < totalMemoryBefore + 1024 * 40, "Memory after iterations should not grow more than 40Kib");
+            totalMemoryAfter.Should(a => a < totalMemoryBefore + 1024 * 100, "Memory after iterations should not grow more than 100Kib");
         }
 
         [Fact]
