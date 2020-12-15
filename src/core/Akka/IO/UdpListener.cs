@@ -118,7 +118,15 @@ namespace Akka.IO
         {
             try
             {
-                handler.Tell(new Received(ByteString.CopyFrom(e.Buffer, e.Offset, e.BytesTransferred), e.RemoteEndPoint));
+                if (!IsICMPError(e))
+                {
+                    if (e.SocketError != SocketError.Success)
+                        throw new SocketException((int)e.SocketError);
+
+                    handler.Tell(new Received(ByteString.CopyFrom(e.Buffer, e.Offset, e.BytesTransferred),
+                        e.RemoteEndPoint));
+                }
+
                 ReceiveAsync();
             }
             finally
@@ -127,6 +135,21 @@ namespace Akka.IO
                 Udp.SocketEventArgsPool.Release(e);
                 Udp.BufferPool.Release(buffer);
             }
+        }
+
+        /// <summary>
+        /// Checks if the socket event is an ICMP error message.
+        /// </summary>
+        /// <seealso href="https://tools.ietf.org/html/rfc1122#page-78"/>
+        private bool IsICMPError(SocketAsyncEventArgs e)
+        {
+            if (e.SocketError == SocketError.ConnectionReset)
+            {
+                Log.Debug("Ignoring client connection reset.");
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -151,6 +174,7 @@ namespace Akka.IO
         private void ReceiveAsync()
         {
             var e = Udp.SocketEventArgsPool.Acquire(Self);
+            
             var buffer = Udp.BufferPool.Rent();
             e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
             e.RemoteEndPoint = Socket.LocalEndPoint;

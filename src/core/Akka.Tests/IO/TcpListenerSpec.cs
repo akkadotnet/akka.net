@@ -28,7 +28,7 @@ namespace Akka.Tests.IO
         { }
 
         [Fact]
-        public void A_TCP_Listner_must_let_the_bind_commander_know_when_binding_is_complete()
+        public void A_TCP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
         {
             new TestSetup(this, pullMode: false).Run(x =>
             {
@@ -37,7 +37,7 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void A_TCP_Listner_must_continue_to_accept_connections_after_a_previous_accept()
+        public void A_TCP_Listener_must_continue_to_accept_connections_after_a_previous_accept()
         {
             new TestSetup(this, pullMode: false).Run(x =>
             {
@@ -49,17 +49,17 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public void A_TCP_Listner_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
+        public void A_TCP_Listener_must_react_to_unbind_commands_by_replying_with_unbound_and_stopping_itself()
         {
             new TestSetup(this, pullMode:false).Run(x =>
             {
                 x.BindListener();
 
                 var unbindCommander = CreateTestProbe();
-                unbindCommander.Send(x.Listner, Tcp.Unbind.Instance);
+                unbindCommander.Send(x.Listener, Tcp.Unbind.Instance);
 
                 unbindCommander.ExpectMsg(Tcp.Unbound.Instance);
-                x.Parent.ExpectTerminated(x.Listner);
+                x.Parent.ExpectTerminated(x.Listener);
             });    
         }
 
@@ -107,7 +107,7 @@ namespace Akka.Tests.IO
                 new Socket(_endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp).Connect(_endpoint);
             }
 
-            public IActorRef Listner { get { return _parentRef.UnderlyingActor.Listner; } }
+            public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
 
             public TestProbe SelectorRouter
             {
@@ -121,23 +121,23 @@ namespace Akka.Tests.IO
             {
                 private readonly TestSetup _test;
                 private readonly bool _pullMode;
-                private readonly IActorRef _listner;
+                private readonly IActorRef _listener;
 
                 public ListenerParent(TestSetup test, bool pullMode)
                 {
                     _test = test;
                     _pullMode = pullMode;
 
-                    _listner = Context.ActorOf(Props.Create(() =>
+                    _listener = Context.ActorOf(Props.Create(() =>
                         new TcpListener(
                             Tcp.Instance.Apply(Context.System),
                             test._bindCommander.Ref,
                             new Tcp.Bind(_test._handler.Ref, test._endpoint, 100, new Inet.SocketOption[]{}, pullMode)))
                                                               .WithDeploy(Deploy.Local));
-                    _test._parent.Watch(_listner);
+                    _test._parent.Watch(_listener);
                 }
 
-                internal IActorRef Listner { get { return _listner; } }
+                internal IActorRef Listener { get { return _listener; } }
 
                 protected override bool Receive(object message)
                 {
