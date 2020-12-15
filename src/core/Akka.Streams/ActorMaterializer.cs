@@ -74,7 +74,10 @@ namespace Akka.Streams
         {
             var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
-            system.Settings.InjectTopLevelFallback(DefaultConfig());
+
+            if(!system.Settings.Config.HasPath("akka.stream.materializer"))
+                system.Settings.InjectTopLevelFallback(DefaultConfig());
+
             settings = settings ?? ActorMaterializerSettings.Create(system);
 
             return new ActorMaterializerImpl(
@@ -304,7 +307,8 @@ namespace Akka.Streams
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
             // need to make sure the default materializer settings are available
-            system.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+            if(!system.Settings.Config.HasPath("akka.stream.materializer"))
+                system.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.stream.materializer");
 
             // No need to check for Config.IsEmpty because this function expects empty Config.
