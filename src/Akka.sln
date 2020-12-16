@@ -62,7 +62,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"
 	ProjectSection(SolutionItems) = preProject
+		..\build.cmd = ..\build.cmd
 		..\build.fsx = ..\build.fsx
+		..\build.ps1 = ..\build.ps1
+		..\build.sh = ..\build.sh
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Contrib", "Contrib", "{588C1513-FAB6-42C3-B6FC-3485F13620CF}"
@@ -224,6 +227,17 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Discovery", "core\Akka.Discovery\Akka.Discovery.csproj", "{CDDC5842-5A86-4B24-A930-32C78D45AFD0}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Discovery.Tests", "core\Akka.Discovery.Tests\Akka.Discovery.Tests.csproj", "{2E58F31C-F067-4A4E-964E-BEDC85B87EA8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "System", "System", "{D8EBF63A-2197-47EB-A7AD-D8286C65F2EA}"
+	ProjectSection(SolutionItems) = preProject
+		..\build-system\azure-pipeline.mntr-template.yaml = ..\build-system\azure-pipeline.mntr-template.yaml
+		..\build-system\azure-pipeline.template.yaml = ..\build-system\azure-pipeline.template.yaml
+		..\build-system\linux-pr-validation.yaml = ..\build-system\linux-pr-validation.yaml
+		..\build-system\nightly-builds.yaml = ..\build-system\nightly-builds.yaml
+		..\build-system\pr-validation.yaml = ..\build-system\pr-validation.yaml
+		..\build-system\README.md = ..\build-system\README.md
+		..\build-system\windows-release.yaml = ..\build-system\windows-release.yaml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1118,6 +1132,7 @@ Global
 		{8AD2DF54-B79F-490B-B2C6-94EDA397055F} = {52A36134-AC41-4F38-9D47-1124B0C9CDD2}
 		{CDDC5842-5A86-4B24-A930-32C78D45AFD0} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
 		{2E58F31C-F067-4A4E-964E-BEDC85B87EA8} = {01167D3C-49C4-4CDE-9787-C176D139ACDD}
+		{D8EBF63A-2197-47EB-A7AD-D8286C65F2EA} = {10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
