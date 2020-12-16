@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Remote.TestKit.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.MultiNodeTestRunner</AssemblyTitle>
     <Description>Akka.NET Multi-node Test Runner; used for executing tests written with Akka.Remote.TestKit</Description>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
