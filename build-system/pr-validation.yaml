@@ -27,6 +27,11 @@ jobs:
         submodules: recursive  # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
         persistCredentials: true
       - task: UseDotNet@2
+        displayName: 'Use .NET SDK 5.0.101'
+        inputs:
+          packageType: sdk
+          version: 5.0.101
+      - task: UseDotNet@2
         displayName: 'Use .NET Core SDK 3.1.105'
         inputs:
           packageType: sdk
@@ -72,7 +77,7 @@ jobs:
       scriptFileName: build.cmd
       scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
-      artifactName: 'net_core_tests_windows-$(Build.BuildId)'
+      artifactName: 'net_core_tests_windows-$(Build.BuildId)' 
 
   - template: azure-pipeline.template.yaml
     parameters:
@@ -83,6 +88,26 @@ jobs:
       scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
       artifactName: 'net_core_tests_linux-$(Build.BuildId)'
+  
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: 'net_5_tests_windows'
+      displayName: '.NET 5 Unit Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: build.cmd
+      scriptArgs: runTestsNet incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_5_tests_windows-$(Build.BuildId)'
+  
+  - template: azure-pipeline.template.yaml
+    parameters:
+      name: 'net_5_tests_linux'
+      displayName: '.NET 5 Unit Tests (Linux)'
+      vmImage: 'ubuntu-16.04'
+      scriptFileName: './build.sh'
+      scriptArgs: runTestsNet incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_5_tests_linux-$(Build.BuildId)'
 
   - template: azure-pipeline.mntr-template.yaml
     parameters:
@@ -107,6 +132,18 @@ jobs:
       artifactName: 'net_fx_mntr_windows-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: 'net_fx_mntr_FAILED_windows-$(Build.BuildId)'
+
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: 'net_5_mntr_windows'
+      displayName: '.NET 5 Multi-Node Tests (Windows)'
+      vmImage: 'vs2017-win2016'
+      scriptFileName: 'build.cmd'
+      scriptArgs: MultiNodeTestsNet incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_5_mntr_windows-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_5_mntr_FAILED_windows-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:

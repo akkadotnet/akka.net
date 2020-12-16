@@ -36,7 +36,9 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
+    <!--https://github.com/dotnet/sourcelink/issues/659-->  
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!--<RepositoryUrl>https://github.com/akkadotnet/akka.net</RepositoryUrl>-->
     <!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
