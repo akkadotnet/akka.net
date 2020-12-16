@@ -442,17 +442,7 @@ Target "PublishMntr" (fun _ ->
                         Runtime = "win10-x64"
                         Framework = testNetFrameworkVersion
                         VersionSuffix = versionSuffix }))
-
-        // Windows .NET Core
-        executableProjects |> Seq.iter (fun project ->
-            DotNetCli.Publish
-                (fun p ->
-                    { p with
-                        Project = project
-                        Configuration = configuration
-                        Runtime = "win10-x64"
-                        Framework = testNetCoreVersion
-                        VersionSuffix = versionSuffix }))
+       
 
         // Windows .NET 5
         executableProjects |> Seq.iter (fun project ->
