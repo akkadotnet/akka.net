@@ -27,13 +27,6 @@ Please read the documentation carefully. Some features may be specific to use ca
    - Persistence
    - Recovery
    - Snapshots
- 
- Not Yet Implemented:
- 
-  - Full Snapshot Backwards Compatibility with Sql.Common:
-    - In theory SQL Server and SQLite should be compatible, however:
-      - Column Names must be manually set in configuration
-      - Tests have not been created
     
     
 ## Features/Architecture:
@@ -64,13 +57,14 @@ Please read the documentation carefully. Some features may be specific to use ca
      - Classes used in place of ValueTuples in certain areas
      - We don't have separate Query classes at this time. This can definitely be improved in future
      - A couple of places around `WriteMessagesAsync` have had their logic moved to facilitate performance (i.e. use of `await` instead of `ContinueWith`)
+   - Backwards Compatibility mode is implemented, to interoperate with existing journals and snapsho stores. 
  
 ## Currently Implemented:
 
 - Journal
   - With `JournalSpec` and `JournalPerfSpec` passing for MS SQL Server, Microsoft.Data.SQLite, and Postgres
 - Snapshot Store
-  - With `SnapshotStoreSpec' passing for MS SQL Server, Microsoft.Data.SQLite
+  - With `SnapshotStoreSpec` passing for MS SQL Server, Microsoft.Data.SQLite, Postgres
 - Configuration
   - Only Functional tests at this time.
   - Custom provider configurations are supported.
@@ -78,8 +72,6 @@ Please read the documentation carefully. Some features may be specific to use ca
 ## Incomplete:
 
 - Tests for Schema Usage
-- Fine tuning of multirow/bulk numbers for linq2db
-- Full SnapshotStore Backwards Compatibility with Akka.Persistence.Sql.Common
 - Some Akka.NET specfic Journal Queries (those not mentioned above)
 - Cleanup of Configuration classes/fallbacks.
   - Should still be usable in most common scenarios including multiple configuration instances: see `SqlServerCustomConfigSpec` for test and examples.
@@ -97,14 +89,38 @@ Please read the documentation carefully. Some features may be specific to use ca
  
  Compatibility with existing Providers is partially implemented via `table-compatibility-mode` flag. Please note there are not tests for compatibility with Sql.Common Query journals at this time:
  
-  - SQL Server: Basic Persist and Recovery tests pass.
+  - SQL Server: Basic Persist and Recovery tests pass for both Snapshot and Journal.
     - Still needs Delete tests
-  - SQLite: Not tested yet
-  - Postgres: Basic Persist and Recovery tests pass. 
+  - SQLite: Persist and Recovery tests pass for both Snapshot and Journal.
+  - Postgres: Basic Persist and Recovery tests pass for both Snapshot and Journal.
+    - Only Binary payloads are supported at this time.
     - Note that not all possible permutations of table names have been tested.
       - i.e. there may be concerns around casing
-  - MySql: Not Implemented yet  
+  - MySql: Not Implemented yet
 
+# Performance
+
+Tests based on i-7 8750H, 32GB Ram, 2TB SSD, Windows 10 version Version 10.0.19041.630.
+Databases running on Docker WSL2.
+
+All numbers are in msg/sec. 
+
+|Test |SqlServer (normal)       |  SqlServer Batching     | Linq2Db     |vs Normal| vs Batching| 
+|:-------------  |:------------- | :----------: | -----------: | -----------: | -----------: |
+|Persist |  164|427| 235|143.29%|55.04%|
+|PersistAll |  782|875| 5609|717.26%|641.03%|
+|PersistAsync |  630|846| 16099|2555.40%|1902.96%|
+|PersistAllAsync |  2095|902| 15681|748.50%|1738.47%|
+|PersistGroup10 |  590|680| 1069|181.19%|157.21%|
+|PersistGroup100 |  607|965| 5537|912.19%|573.78%|
+|PersistGroup200 |  628|1356| 7966|1268.47%|587.46%|
+|PersistGroup25 |  629|675| 2189|348.01%|324.30%|
+|PersistGroup400 |  612|1011| 7237|1182.52%|715.83%|
+|PersistGroup50 |  612|654| 3867|631.86%|591.28%|
+|Recovering |  41903|38766| 42592|101.64%|109.87%|
+|Recovering8 |  75466|65515| 63960|84.75%|97.63%|
+|RecoveringFour |  59259|51355| 58437|98.61%|113.79%|
+|RecoveringTwo |  41745|35512| 41108|98.47%|115.76%|
 ## Sql.Common Compatibility modes
   
   - Delete Compatibility mode is available.
@@ -295,6 +311,8 @@ akka.persistence {
         connection-string = ""
         provider-name = ""
         use-clone-connection = false
+          
+        #sqlserver, postgres, sqlite  
         table-compatibility-mode = false
         tables.snapshot
           {

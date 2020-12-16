@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+
+        <IsPackable>false</IsPackable>
+
+        <TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+        <DebugType>full</DebugType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Akka.Persistence.Sqlite" Version="1.4.10" />
+        <PackageReference Include="Akka.Persistence.SqlServer" Version="1.4.10" />
+        <PackageReference Include="Akka.Persistence.TCK" Version="1.4.10" />
+        <PackageReference Include="Akka.Persistence.TestKit" Version="1.4.10" />
+        <PackageReference Include="Akka.Serialization.Hyperion" Version="1.4.9" />
+        <PackageReference Include="Docker.DotNet" Version="3.125.4" />
+        <PackageReference Include="Hyperion" Version="0.9.16" />
+        <PackageReference Include="JetBrains.dotMemoryUnit" Version="3.1.20200127.214830" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.7" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
+        <PackageReference Include="Npgsql" Version="4.1.4" />
+        <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
+        <PackageReference Include="System.Data.SQLite.Core" Version="1.0.113.1" />
+        <PackageReference Include="xunit" Version="2.4.1" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3" />
+        <PackageReference Include="coverlet.collector" Version="1.2.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Akka.Persistence.Sql.Linq2Db.Tests\Akka.Persistence.Sql.Linq2Db.Tests.csproj" />
+        <ProjectReference Include="..\Akka.Persistence.Sql.Linq2Db\Akka.Persistence.Sql.Linq2Db.csproj" />
+    </ItemGroup>
+
+</Project>

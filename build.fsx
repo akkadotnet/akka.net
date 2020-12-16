@@ -233,6 +233,8 @@ Target "RunTests" (fun _ ->
         let rawProjects = match (isWindows) with
                             | true -> !! "./src/**/*.Tests.*sproj"
                                       ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                      -- "src/**/*.Tests.Docker.*sproj"
+                                      -- "src/**/*.*Tests.Docker.*sproj"
                             | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
         rawProjects |> Seq.choose filterProjects
 
@@ -259,6 +261,8 @@ Target "RunTestsNetCore" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                          -- "src/**/*.Tests.Docker.*sproj"
+                                          -- "src/**/*.*Tests.Docker.*sproj"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
             rawProjects |> Seq.choose filterProjects
 
