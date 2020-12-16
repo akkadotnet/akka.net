@@ -239,6 +239,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Linq2Db.Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Sql.Linq2Db.Tests.Docker", "contrib\persistence\Akka.Persistence.Sql.Linq2Db.Tests.Docker\Akka.Persistence.Sql.Linq2Db.Tests.Docker.csproj", "{FC2C2E56-66D6-4D81-B826-84CC7DAE2646}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.Linq2Db.Journal.Query.Tests", "contrib\persistence\Akka.Persistence.Linq2Db.Journal.Query.Tests\Akka.Persistence.Linq2Db.Journal.Query.Tests.csproj", "{F7144964-2D25-485D-9647-1331DB6F2E27}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1118,6 +1120,18 @@ Global
 		{FC2C2E56-66D6-4D81-B826-84CC7DAE2646}.Release|x64.Build.0 = Release|Any CPU
 		{FC2C2E56-66D6-4D81-B826-84CC7DAE2646}.Release|x86.ActiveCfg = Release|Any CPU
 		{FC2C2E56-66D6-4D81-B826-84CC7DAE2646}.Release|x86.Build.0 = Release|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Debug|x64.Build.0 = Debug|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Debug|x86.Build.0 = Debug|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Release|x64.ActiveCfg = Release|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Release|x64.Build.0 = Release|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Release|x86.ActiveCfg = Release|Any CPU
+		{F7144964-2D25-485D-9647-1331DB6F2E27}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1223,6 +1237,7 @@ Global
 		{A9F412A4-9EB2-424C-8C7B-0198190539EA} = {264C22A4-CAFC-41F6-B82C-4DDC5C196767}
 		{3441D3B9-7532-4663-ACE9-F86575772620} = {264C22A4-CAFC-41F6-B82C-4DDC5C196767}
 		{FC2C2E56-66D6-4D81-B826-84CC7DAE2646} = {264C22A4-CAFC-41F6-B82C-4DDC5C196767}
+		{F7144964-2D25-485D-9647-1331DB6F2E27} = {264C22A4-CAFC-41F6-B82C-4DDC5C196767}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
