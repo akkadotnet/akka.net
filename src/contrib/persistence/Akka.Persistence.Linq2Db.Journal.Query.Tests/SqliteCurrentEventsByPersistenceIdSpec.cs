@@ -26,7 +26,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         public static Config Config(int id)
         {
             var connString =
-                $"Filename=file:memdb-journal-currenteventsbypersistenceid-{id}.db;Mode=Memory;Cache=Shared";
+                $"Filename=file:memdb-l2db-journal-currenteventsbypersistenceid-{id}.db;Mode=Memory;Cache=Shared";
             ConnectionContext.Remember(connString);
             return ConfigurationFactory.ParseString(
                     $@"
@@ -60,7 +60,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                   linq2db
                   {{
                     provider-name = ""{ProviderName.SQLiteMS}""
-                    connection-string = ""Filename=file:memdb-journal-currenteventsbypersistenceid-{id}.db;Mode=Memory;Cache=Shared""
+                    connection-string = ""Filename=file:memdb-l2db-journal-currenteventsbypersistenceid-{id}.db;Mode=Memory;Cache=Shared""
                     table-name = event_journal
                     metadata-table-name = journal_metadata
                   }}

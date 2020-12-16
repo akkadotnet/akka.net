@@ -22,7 +22,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
         public static readonly AtomicCounter Counter = new AtomicCounter(0);
         public static Config Config(int id)
         {
-            var connectionString = $"Filename=file:memdb-journal-eventsbypersistenceid-{id}.db;Mode=Memory;Cache=Shared";
+            var connectionString = $"Filename=file:memdb-l2db-journal-eventsbypersistenceid-{id}.db;Mode=Memory;Cache=Shared";
             ConnectionContext.Remember(connectionString);
             return ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO

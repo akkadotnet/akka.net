@@ -28,9 +28,9 @@ namespace Akka.Persistence.Sqlite.Tests.Query
             get
             {
                 var journalString =
-                    $"Filename=file:memdb-persistenceids-journal-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
+                    $"Filename=file:memdb-l2db-persistenceids-journal-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
                 var snapshotString =
-                    $"Filename=file:memdb-persistenceids-snapshot-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
+                    $"Filename=file:memdb-l2db-persistenceids-snapshot-{Guid.NewGuid()}.db;Mode=Memory;Cache=Shared";
                 ConnectionContext.Remember(journalString);
                 ConnectionContext.Remember(snapshotString);
                 return ConfigurationFactory.ParseString($@"

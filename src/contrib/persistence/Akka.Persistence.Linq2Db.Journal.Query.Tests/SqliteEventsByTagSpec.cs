@@ -24,7 +24,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
 
         public static Config Config(int id)
         {
-            var connString = $"Filename=file:memdb-journal-eventsbytag-{id}.db;Mode=Memory;Cache=Shared";
+            var connString = $"Filename=file:memdb-l2db-journal-eventsbytag-{id}.db;Mode=Memory;Cache=Shared";
             ConnectionContext.Remember(connString);
             return ConfigurationFactory.ParseString($@"
             akka.loglevel = INFO
