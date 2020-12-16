@@ -35,34 +35,6 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void BugFix_4649_ActorMaterializer_should_not_cause_memory_leak_when_disposed()
-        {
-            const int kib = 500;
-            // Original problem was caused by config fallback being applied to ActorSystem.Settings
-            // every time a new ActorMaterializer is created.
-
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-
-            var totalMemoryBefore = GC.GetTotalMemory(true);
-            for (var i = 0; i < 5000; ++i)
-            {
-                var materializer = Sys.Materializer();
-                materializer.Shutdown();
-                materializer.Dispose();
-            }
-
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
-            var totalMemoryAfter = GC.GetTotalMemory(true);
-
-            Output.WriteLine($"Memory usage. Before: {totalMemoryBefore}, After: {totalMemoryAfter}");
-            totalMemoryAfter.Should(a => a < totalMemoryBefore + 1024 * kib, $"Memory after iterations should not grow more than {kib}Kib. Before: {totalMemoryBefore}, After: {totalMemoryAfter}, Growth: {totalMemoryAfter - totalMemoryBefore}");
-        }
-
-        [Fact]
         public void ActorMaterializer_should_properly_shut_down_actors_associated_with_it()
         {
             var m = Sys.Materializer();
