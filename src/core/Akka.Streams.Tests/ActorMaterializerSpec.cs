@@ -37,6 +37,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void BugFix_4649_ActorMaterializer_should_not_cause_memory_leak_when_disposed()
         {
+            const int kib = 200;
             // Original problem was caused by config fallback being applied to ActorSystem.Settings
             // every time a new ActorMaterializer is created.
 
@@ -58,7 +59,7 @@ namespace Akka.Streams.Tests
             var totalMemoryAfter = GC.GetTotalMemory(true);
 
             Output.WriteLine($"Memory usage. Before: {totalMemoryBefore}, After: {totalMemoryAfter}");
-            totalMemoryAfter.Should(a => a < totalMemoryBefore + 1024 * 100, "Memory after iterations should not grow more than 100Kib");
+            totalMemoryAfter.Should(a => a < totalMemoryBefore + 1024 * kib, $"Memory after iterations should not grow more than {kib}Kib. Before: {totalMemoryBefore}, After: {totalMemoryAfter}, Growth: {totalMemoryAfter - totalMemoryBefore}");
         }
 
         [Fact]
