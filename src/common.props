@@ -6,7 +6,6 @@
     <PackageIconUrl>https://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
-    <RepositoryUrl>https://github.com/akkadotnet/akka.net</RepositoryUrl>
     <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
