@@ -97,7 +97,7 @@ if($FoundDotNetCliVersion -ne $DotNetCoreVersion) {
         mkdir -Force $InstallPath | Out-Null;
     }
     (New-Object System.Net.WebClient).DownloadFile($DotNetInstallerUri, "$InstallPath\dotnet-install.ps1");
-    & $InstallPath\dotnet-install.ps1 -Channel $DotNetChannel -Version $DotCoreNetVersion -InstallDir $InstallPath -Architecture x64;
+    & $InstallPath\dotnet-install.ps1 -Channel $DotNetChannel -Version $DotNetCoreVersion -InstallDir $InstallPath -Architecture x64;
 
     Remove-PathVariable "$InstallPath"
     $env:PATH = "$InstallPath;$env:PATH"
