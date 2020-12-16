@@ -127,7 +127,19 @@ jobs:
       artifactName: 'net_mntr_windows-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: 'net_mntr_FAILED_windows-$(Build.BuildId)'
-
+  
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: 'net_core_mntr_windows'
+      displayName: '.NET Core Multi-Node Tests (Windows)'
+      vmImage: 'windows-2019'
+      scriptFileName: 'build.cmd'
+      scriptArgs: MultiNodeTestsNetCore incremental
+      outputDirectory: 'TestResults'
+      artifactName: 'net_core_mntr_windows-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_core_mntr_FAILED_windows-$(Build.BuildId)'
+      
   - template: azure-pipeline.template.yaml
     parameters:
       name: 'nuget_pack'
