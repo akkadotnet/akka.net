@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void BugFix_4649_ActorMaterializer_should_not_cause_memory_leak_when_disposed()
         {
-            const int kib = 200;
+            const int kib = 500;
             // Original problem was caused by config fallback being applied to ActorSystem.Settings
             // every time a new ActorMaterializer is created.
 
