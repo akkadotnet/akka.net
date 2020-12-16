@@ -1338,7 +1338,7 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    _log.Error(failure.Cause.ToString());
+                    _log.Error(failure.Cause is null? "null": failure.Cause.ToString());
                 }
             }
         }
