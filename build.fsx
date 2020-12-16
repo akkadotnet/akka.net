@@ -54,6 +54,7 @@ let incrementalistReport = output @@ "incrementalist.txt"
 
 // Configuration values for tests
 let testNetFrameworkVersion = "net461"
+let testNetCoreVersion = "netcoreapp3.1"
 let testNetVersion = "net5.0"
 
 Target "Clean" (fun _ ->
@@ -199,11 +200,13 @@ Target "Build" (fun _ ->
 //--------------------------------------------------------------------------------
 type Runtime =
     | Net
+    | NetCore
     | NetFramework
 
 let getTestAssembly runtime project =
     let assemblyPath = match runtime with
                         | Net -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetVersion @@ fileNameWithoutExt project + ".dll")
+                        | NetCore -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ fileNameWithoutExt project + ".dll")
                         | NetFramework -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetFrameworkVersion @@ fileNameWithoutExt project + ".dll")
 
     if Seq.isEmpty assemblyPath then
@@ -279,6 +282,31 @@ Target "RunTestsNet" (fun _ ->
         CreateDir outputTests
         projects |> Seq.iter (runSingleProject)
 )
+Target "RunTestsNetCore" (fun _ ->
+    if not skipBuild.Value then
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.*sproj"
+                                          ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
+
+        let runSingleProject project =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
+
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
+
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
+
+        CreateDir outputTests
+        projects |> Seq.iter (runSingleProject)
+)
 
 Target "MultiNodeTests" (fun _ ->
     if not skipBuild.Value then
@@ -318,7 +346,7 @@ Target "MultiNodeTests" (fun _ ->
 
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win7-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -328,6 +356,47 @@ Target "MultiNodeTestsNet" (fun _ ->
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.Net)
+
+        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+
+        let runMultiNodeSpec assembly =
+            match assembly with
+            | null -> ()
+            | _ ->
+                let spec = getBuildParam "spec"
+
+                let args = StringBuilder()
+                        |> append multiNodeTestPath
+                        |> append assembly
+                        |> append "-Dmultinode.reporter=trx"
+                        |> append "-Dmultinode.enable-filesink=on"
+                        |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
+                        |> append "-Dmultinode.platform=netcore"
+                        |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
+                        |> toText
+
+                let result = ExecProcess(fun info ->
+                    info.FileName <- "dotnet"
+                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+                    info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+                if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+
+        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+)
+
+Target "MultiNodeTestsNetCore" (fun _ ->
+    if not skipBuild.Value then
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
+
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
+
+        let multiNodeTestAssemblies =
+            projects |> Seq.choose (getTestAssembly Runtime.NetCore)
 
         printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -429,7 +498,7 @@ Target "PublishMntr" (fun _ ->
                 (fun p ->
                     { p with
                         Project = project
-                        AdditionalArgs = ["-r win7-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
+                        AdditionalArgs = ["-r win10-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
         )
 
         // Windows .NET 4.5.2
@@ -442,7 +511,17 @@ Target "PublishMntr" (fun _ ->
                         Runtime = "win10-x64"
                         Framework = testNetFrameworkVersion
                         VersionSuffix = versionSuffix }))
-       
+
+        // Windows .NET Core
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "win10-x64"
+                        Framework = testNetCoreVersion
+                        VersionSuffix = versionSuffix }))
 
         // Windows .NET 5
         executableProjects |> Seq.iter (fun project ->
@@ -660,9 +739,11 @@ Target "RunTestsNetCoreFull" DoNothing
 
 // tests dependencies
 "Build" ==> "RunTests"
+"Build" ==> "RunTestsNetCore"
 "Build" ==> "RunTestsNet"
 "Build" ==> "NBench"
 
+"BuildRelease" ==> "MultiNodeTestsNetCore"
 "BuildRelease" ==> "MultiNodeTestsNet"
 "BuildRelease" ==> "MultiNodeTests"
 
@@ -678,6 +759,7 @@ Target "RunTestsNetCoreFull" DoNothing
 "RunTestsNetCore" ==> "All"
 "RunTestsNet" ==> "All"
 "MultiNodeTests" ==> "All"
+"MultiNodeTestsNetCore" ==> "All"
 "MultiNodeTestsNet" ==> "All"
 "NBench" ==> "All"
 
