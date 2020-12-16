@@ -169,7 +169,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>The element at the given key.</returns>
         public HoconValue GetChildObject(string key)
         {
-            return GetObject().GetKey(key);
+            return GetObject()?.GetKey(key);
         }
 
         /// <summary>
@@ -343,9 +343,9 @@ namespace Akka.Configuration.Hocon
         /// <returns>A list of values represented by this <see cref="HoconValue"/>.</returns>
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in Values
-                where arr.IsArray()
-                from e in arr.GetArray()
+            IEnumerable<HoconValue> x = from element in Values
+                where element.IsArray()
+                from e in element.GetArray()
                 select e;
 
             return x.ToList();
@@ -359,7 +359,7 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public bool IsArray()
         {
-            return GetArray() != null;
+            return GetArray().Count != 0;
         }
 
         /// <summary>
