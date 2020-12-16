@@ -9,8 +9,8 @@ TOOLS_DIR=$SCRIPT_DIR/tools
 INCREMENTALIST_DIR=$TOOLS_DIR/incrementalist
 INCREMENTALIST_EXE=$INCREMENTALIST_DIR/Incrementalist.Cmd.exe
 NUGET_EXE=$TOOLS_DIR/nuget.exe
-NUGET_URL=https://dist.nuget.org/win-x86-commandline/v4.3.0/nuget.exe
-FAKE_VERSION=5.20.3
+NUGET_URL=https://dist.nuget.org/win-x86-commandline/v5.8.0/nuget.exe
+FAKE_VERSION=5.16.0
 FAKE_EXE=$TOOLS_DIR/FAKE/tools/FAKE.exe
 DOTNET_EXE=$SCRIPT_DIR/.dotnet/dotnet
 DOTNET_VERSION=5.0.101
@@ -80,7 +80,7 @@ fi
 ###########################################################################
 
 if [ ! -f "$FAKE_EXE" ]; then
-    mono "$NUGET_EXE" install fake-cli -ExcludeVersion -Version $FAKE_VERSION -OutputDirectory "$TOOLS_DIR"
+    mono "$NUGET_EXE" install Fake -ExcludeVersion -Version $FAKE_VERSION -OutputDirectory "$TOOLS_DIR"
     if [ $? -ne 0 ]; then
         echo "An error occured while installing Cake."
         exit 1
