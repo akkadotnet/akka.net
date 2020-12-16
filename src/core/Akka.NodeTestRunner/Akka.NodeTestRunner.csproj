@@ -2,7 +2,7 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.NodeTestRunner</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion);$(NetTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
   </PropertyGroup>
@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="3.1.6" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetTestVersion)' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 
