@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Actor;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
@@ -83,12 +84,14 @@ namespace Akka.Remote.Transport.DotNetty
     internal class BatchWriter : ChannelHandlerAdapter
     {
         public readonly BatchWriterSettings Settings;
+        public readonly IScheduler Scheduler;
 
         internal bool CanSchedule { get; private set; } = true;
 
-        public BatchWriter(BatchWriterSettings settings)
+        public BatchWriter(BatchWriterSettings settings, IScheduler scheduler)
         {
             Settings = settings;
+            Scheduler = scheduler;
         }
 
         private int _currentPendingWrites = 0;
@@ -146,7 +149,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             // Schedule a recurring flush - only fires when there's writable data
             var task = new FlushTask(context, Settings.FlushInterval, this);
-            context.Executor.Schedule(task, Settings.FlushInterval);
+            task.Start();
         }
 
         public void Reset()
@@ -160,12 +163,24 @@ namespace Akka.Remote.Transport.DotNetty
             private readonly IChannelHandlerContext _context;
             private readonly TimeSpan _interval;
             private readonly BatchWriter _writer;
+            private ICancelable _cancellation;
 
             public FlushTask(IChannelHandlerContext context, TimeSpan interval, BatchWriter writer)
             {
                 _context = context;
                 _interval = interval;
                 _writer = writer;
+            }
+
+            public void Start()
+            {
+                _cancellation =
+                    _writer.Scheduler.Advanced.ScheduleRepeatedlyCancelable(_interval, _interval, () => Run());
+            }
+
+            public void Cancel()
+            {
+                _cancellation?.Cancel();
             }
 
             public void Run()
@@ -177,8 +192,8 @@ namespace Akka.Remote.Transport.DotNetty
                     _writer.Reset();
                 }
 
-                if(_writer.CanSchedule)
-                    _context.Executor.Schedule(this, _interval); // reschedule
+                if(!_writer.CanSchedule)
+                   Cancel(); // unschedule
             }
         }
     }
