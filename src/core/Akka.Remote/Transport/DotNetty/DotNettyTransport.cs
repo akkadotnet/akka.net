@@ -125,8 +125,7 @@ namespace Akka.Remote.Transport.DotNetty
         protected volatile Address LocalAddress;
         protected internal volatile IChannel ServerChannel;
 
-        private readonly IEventLoopGroup _serverEventLoopGroup;
-        private readonly IEventLoopGroup _clientEventLoopGroup;
+        private readonly IEventLoopGroup _eventLoopGroup;
 
         protected DotNettyTransport(ActorSystem system, Config config)
         {
@@ -141,8 +140,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             Settings = DotNettyTransportSettings.Create(config);
             Log = Logging.GetLogger(System, GetType());
-            _serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
-            _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
+            _eventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
             ConnectionGroup = new ConcurrentSet<IChannel>();
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
 
@@ -255,8 +253,7 @@ namespace Akka.Remote.Transport.DotNetty
                 // free all of the connection objects we were holding onto
                 ConnectionGroup.Clear();
 #pragma warning disable 4014 // shutting down the worker groups can take up to 10 seconds each. Let that happen asnychronously.
-                _clientEventLoopGroup.ShutdownGracefullyAsync();
-                _serverEventLoopGroup.ShutdownGracefullyAsync();
+                _eventLoopGroup.ShutdownGracefullyAsync();
 #pragma warning restore 4014
             }
         }
@@ -269,7 +266,7 @@ namespace Akka.Remote.Transport.DotNetty
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
             var client = new Bootstrap()
-                .Group(_clientEventLoopGroup)
+                .Group(_eventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
@@ -381,7 +378,7 @@ namespace Akka.Remote.Transport.DotNetty
             var addressFamily = Settings.DnsUseIpv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
 
             var server = new ServerBootstrap()
-                .Group(_serverEventLoopGroup)
+                .Group(_eventLoopGroup)
                 .Option(ChannelOption.SoReuseaddr, Settings.TcpReuseAddr)
                 .Option(ChannelOption.SoKeepalive, Settings.TcpKeepAlive)
                 .Option(ChannelOption.TcpNodelay, Settings.TcpNoDelay)
