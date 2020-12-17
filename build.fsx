@@ -257,7 +257,7 @@ Target "RunTests" (fun _ ->
     projects |> Seq.iter (runSingleProject)
 )
 
-Target "RunTestsNet" (fun _ ->
+Target "RunTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         let projects =
             let rawProjects = match (isWindows) with
@@ -269,8 +269,8 @@ Target "RunTestsNet" (fun _ ->
         let runSingleProject project =
             let arguments =
                 match (hasTeamCity) with
-                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
-                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
 
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
@@ -319,9 +319,9 @@ Target "MultiNodeTests" (fun _ ->
         multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
 
-Target "MultiNodeTestsNet" (fun _ ->
+Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -330,7 +330,7 @@ Target "MultiNodeTestsNet" (fun _ ->
             rawProjects |> Seq.choose filterProjects
 
         let multiNodeTestAssemblies =
-            projects |> Seq.choose (getTestAssembly Runtime.Net)
+            projects |> Seq.choose (getTestAssembly Runtime.NetCore)
 
         printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
