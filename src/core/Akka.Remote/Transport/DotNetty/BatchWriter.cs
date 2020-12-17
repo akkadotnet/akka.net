@@ -7,12 +7,10 @@
 
 using System;
 using System.Threading.Tasks;
-using System.Timers;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
 using Akka.Configuration;
-using Timer = System.Threading.Timer;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -21,7 +19,7 @@ namespace Akka.Remote.Transport.DotNetty
     ///
     /// Configuration object for <see cref="BatchWriter"/>
     /// </summary>
-    public class BatchWriterSettings
+    internal class BatchWriterSettings
     {
         public const int DefaultMaxPendingWrites = 30;
         public const long DefaultMaxPendingBytes = 16 * 1024L;
@@ -97,8 +95,6 @@ namespace Akka.Remote.Transport.DotNetty
         private long _currentPendingBytes;
 
         public bool HasPendingWrites => _currentPendingWrites > 0;
-        private System.Timers.Timer batchTimer;
-        private Timer batchingTimer;
 
         public override void HandlerAdded(IChannelHandlerContext context)
         {
@@ -141,16 +137,6 @@ namespace Akka.Remote.Transport.DotNetty
         public override Task CloseAsync(IChannelHandlerContext context)
         {
             // flush any pending writes first
-            try
-            {
-                batchTimer?.Close();
-                batchingTimer?.Dispose();
-            }
-            catch
-            {
-                // ignored: still want to flush
-            }
-
             context.Flush();
             CanSchedule = false;
             return base.CloseAsync(context);
@@ -158,9 +144,9 @@ namespace Akka.Remote.Transport.DotNetty
 
         private void ScheduleFlush(IChannelHandlerContext context)
         {
-            var batchContext = new FlushTask(context,this);
-            batchingTimer = new System.Threading.Timer((ctx) => ((FlushTask)ctx).DoFlush(),
-                batchContext, Settings.FlushInterval, Settings.FlushInterval);
+            // Schedule a recurring flush - only fires when there's writable data
+            var task = new FlushTask(context, Settings.FlushInterval, this);
+            context.Executor.Schedule(task, Settings.FlushInterval);
         }
 
         public void Reset()
@@ -173,11 +159,12 @@ namespace Akka.Remote.Transport.DotNetty
         {
             private readonly IChannelHandlerContext _context;
             private readonly TimeSpan _interval;
-            internal readonly BatchWriter _writer;
+            private readonly BatchWriter _writer;
 
-            public FlushTask(IChannelHandlerContext context, BatchWriter writer)
+            public FlushTask(IChannelHandlerContext context, TimeSpan interval, BatchWriter writer)
             {
                 _context = context;
+                _interval = interval;
                 _writer = writer;
             }
 
@@ -189,14 +176,9 @@ namespace Akka.Remote.Transport.DotNetty
                     _context.Flush();
                     _writer.Reset();
                 }
-            }
 
-            public void DoFlush()
-            {
-                if (_writer.HasPendingWrites)
-                {
-                    _context.Executor.Execute(this);
-                }
+                if(_writer.CanSchedule)
+                    _context.Executor.Schedule(this, _interval); // reschedule
             }
         }
     }
