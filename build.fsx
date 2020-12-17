@@ -672,14 +672,14 @@ Target "RunTestsNetCoreFull" DoNothing
 "ComputeIncrementalChanges" ==> "Build" // compute incremental changes
 
 // tests dependencies
+// "Build" ==> "RunTestsNet"
 "Build" ==> "RunTests"
 "Build" ==> "RunTestsNetCore"
-"Build" ==> "RunTestsNet"
 "Build" ==> "NBench"
 
 "BuildRelease" ==> "MultiNodeTestsNetCore"
-"BuildRelease" ==> "MultiNodeTestsNet"
 "BuildRelease" ==> "MultiNodeTests"
+//"BuildRelease" ==> "MultiNodeTestsNet"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
@@ -688,13 +688,13 @@ Target "RunTestsNetCoreFull" DoNothing
 "BuildRelease" ==> "Docfx"
 
 // all
+// "RunTestsNet" ==> "All"
+// "MultiNodeTestsNet" ==> "All"
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
 "RunTestsNetCore" ==> "All"
-"RunTestsNet" ==> "All"
 "MultiNodeTests" ==> "All"
 "MultiNodeTestsNetCore" ==> "All"
-"MultiNodeTestsNet" ==> "All"
 "NBench" ==> "All"
 
 RunTargetOrDefault "Help"
