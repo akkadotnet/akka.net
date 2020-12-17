@@ -83,8 +83,15 @@ namespace Akka.Remote.Transport.DotNetty
     /// </summary>
     internal class BatchWriter : ChannelHandlerAdapter
     {
+        private class FlushCmd
+        {
+            public static readonly FlushCmd Instance = new FlushCmd();
+            private FlushCmd() { }
+        }
+
         public readonly BatchWriterSettings Settings;
         public readonly IScheduler Scheduler;
+        private ICancelable _flushSchedule;
 
         internal bool CanSchedule { get; private set; } = true;
 
@@ -137,10 +144,30 @@ namespace Akka.Remote.Transport.DotNetty
             return write;
         }
 
+        public override void Flush(IChannelHandlerContext context)
+        {
+            // reset statistics upon flush
+            Reset();
+            base.Flush(context);
+        }
+
+        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+        {
+            if (evt is FlushCmd)
+            {
+                if (HasPendingWrites)
+                {
+                    context.Flush();
+                    Reset();
+                }
+            }
+        }
+
         public override Task CloseAsync(IChannelHandlerContext context)
         {
             // flush any pending writes first
             context.Flush();
+            _flushSchedule?.Cancel();
             CanSchedule = false;
             return base.CloseAsync(context);
         }
@@ -148,53 +175,19 @@ namespace Akka.Remote.Transport.DotNetty
         private void ScheduleFlush(IChannelHandlerContext context)
         {
             // Schedule a recurring flush - only fires when there's writable data
-            var task = new FlushTask(context, Settings.FlushInterval, this);
-            task.Start();
+            _flushSchedule = Scheduler.Advanced.ScheduleRepeatedlyCancelable(Settings.FlushInterval,
+                Settings.FlushInterval,
+                () =>
+                {
+                    // want to fire this event through the top of the pipeline
+                    context.Channel.Pipeline.FireUserEventTriggered(FlushCmd.Instance);
+                });
         }
 
         public void Reset()
         {
             _currentPendingWrites = 0;
             _currentPendingBytes = 0;
-        }
-
-        class FlushTask : IRunnable
-        {
-            private readonly IChannelHandlerContext _context;
-            private readonly TimeSpan _interval;
-            private readonly BatchWriter _writer;
-            private ICancelable _cancellation;
-
-            public FlushTask(IChannelHandlerContext context, TimeSpan interval, BatchWriter writer)
-            {
-                _context = context;
-                _interval = interval;
-                _writer = writer;
-            }
-
-            public void Start()
-            {
-                _cancellation =
-                    _writer.Scheduler.Advanced.ScheduleRepeatedlyCancelable(_interval, _interval, () => Run());
-            }
-
-            public void Cancel()
-            {
-                _cancellation?.Cancel();
-            }
-
-            public void Run()
-            {
-                if (_writer.HasPendingWrites)
-                {
-                    // execute a flush operation
-                    _context.Flush();
-                    _writer.Reset();
-                }
-
-                if(!_writer.CanSchedule)
-                   Cancel(); // unschedule
-            }
         }
     }
 }
