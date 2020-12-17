@@ -367,10 +367,12 @@ namespace Akka.Remote.Transport
 
         public override IO.ByteString ConstructByteString(ByteString payload)
         {
-            var payloadBytes =
-                ByteStringConverters._getByteArrayUnsafeFunc(payload);
-            return IO.ByteString.FromBytes(protoLengthDelimitedHeader(1, payloadBytes.Length))
-                .Concat(IO.ByteString.FromBytes(payloadBytes));
+            return IO.ByteString.FromBytes(
+                new AkkaProtocolMessage() { Payload = payload }.ToByteArray());
+            //var payloadBytes =
+            //    ByteStringConverters._getByteArrayUnsafeFunc(payload);
+            //return IO.ByteString.FromBytes(protoLengthDelimitedHeader(1, payloadBytes.Length))
+            //    .Concat(IO.ByteString.FromBytes(payloadBytes));
         }
         
         /// <summary>
