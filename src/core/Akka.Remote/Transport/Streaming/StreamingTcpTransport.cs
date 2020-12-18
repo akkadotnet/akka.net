@@ -31,6 +31,7 @@ namespace Akka.Remote.Transport.Streaming
 {
 
     
+    
     class StreamingTcpAssociationHandle : AssociationHandle
     {
         private ISourceQueueWithComplete<IO.ByteString> _queue;
@@ -79,7 +80,7 @@ namespace Akka.Remote.Transport.Streaming
 
         public void Notify(IHandleEvent inboundPayload)
         {
-            _listener.Notify(inboundPayload);
+            _listener?.Notify(inboundPayload);
         }
     }
 
@@ -198,14 +199,22 @@ namespace Akka.Remote.Transport.Streaming
                         DotNettyTransport.MapSocketToAddress(
                             (IPEndPoint)ic.RemoteAddress, "tcp",
                             base.System.Name);
-                    var queuePromise =
-                        new TaskCompletionSource<
-                            ISourceQueueWithComplete<IO.ByteString>>();
+                    
                     var handleAddr = _boundAddressSource.Task.Result;
-
-                    var handle = CreateStreamingTcpAssociationHandle(handleAddr,
-                        remoteAddress, queuePromise);
-                    var outQueue = ic.HandleWith(buildFlow(handle)
+                    var preMatSrc = Source
+                        .Queue<IO.ByteString>(
+                            TransportSettings.SendStreamQueueSize,
+                            OverflowStrategy.DropNew).Recover(
+                            ex =>
+                            {
+                                //handle.Notify(
+                                //    new Disassociated(DisassociateInfo
+                                //        .Unknown));
+                                return IO.ByteString.Empty;
+                            }).PreMaterialize(_mat);
+                    var handle = CreateStreamingTcpAssociationHandlePreMat(handleAddr,
+                        remoteAddress, preMatSrc.Item1);
+                    var outQueue = ic.HandleWith(buildFlowPremat(handle,preMatSrc.Item2)
                         .Recover(
                             ex =>
                             {
@@ -214,7 +223,7 @@ namespace Akka.Remote.Transport.Streaming
                                         .Unknown));
                                 return IO.ByteString.Empty;
                             }), _mat);
-                    queuePromise.SetResult(outQueue);
+                        //queuePromise.SetResult(outQueue);
                     listener.Notify(new InboundAssociation(handle));
                 });
                 return NotUsed.Instance;
@@ -234,8 +243,24 @@ namespace Akka.Remote.Transport.Streaming
         }
 
         private static StreamingTcpAssociationHandle
-            CreateStreamingTcpAssociationHandle(Address handleAddr,
+            CreateStreamingTcpAssociationHandleTCS(Address handleAddr,
                 Address remoteAddress, TaskCompletionSource<ISourceQueueWithComplete<IO.ByteString>> queuePromise)
+        {
+            StreamingTcpAssociationHandle handle;
+            handle = new StreamingTcpAssociationHandle(handleAddr
+                ,
+                remoteAddress,
+                queuePromise);
+            handle.ReadHandlerSource.Task.ContinueWith(s =>
+            {
+                var otherListener = s.Result;
+                handle.RegisterListener(otherListener);
+            }, TaskContinuationOptions.ExecuteSynchronously);
+            return handle;
+        }
+        private static StreamingTcpAssociationHandle
+            CreateStreamingTcpAssociationHandlePreMat(Address handleAddr,
+                Address remoteAddress, ISourceQueueWithComplete<IO.ByteString> queuePromise)
         {
             StreamingTcpAssociationHandle handle;
             handle = new StreamingTcpAssociationHandle(handleAddr
@@ -280,24 +305,70 @@ namespace Akka.Remote.Transport.Streaming
                 localAddress: null,
                 options: SocketOptions
             );
-            var queuePromise =
-                new TaskCompletionSource<
-                    ISourceQueueWithComplete<IO.ByteString>>();
+
+
+            var preMat = Source
+                .Queue<IO.ByteString>(TransportSettings.SendStreamQueueSize,
+                    OverflowStrategy.DropNew).Recover(
+                    ex =>
+                    {
+                        //handle.Notify(
+                        //    new Disassociated(DisassociateInfo
+                        //        .Unknown));
+                        return IO.ByteString.Empty;
+                    }).PreMaterialize(_mat);
             var handle =
-                CreateStreamingTcpAssociationHandle(_addr, remoteAddress,
-                    queuePromise);
-            var run = outConnectionSource.JoinMaterialized(buildFlow(handle).Recover(
+                CreateStreamingTcpAssociationHandlePreMat(_addr, remoteAddress,
+                    preMat.Item1);
+            var run = outConnectionSource.JoinMaterialized(buildFlowPremat(handle,preMat.Item2).Recover(
                 ex =>
                 {
                     handle.Notify(
                         new Disassociated(DisassociateInfo.Unknown));
                     return IO.ByteString.Empty;
                 }), (connectionTask, sendQueue) => (connectionTask, sendQueue)).Run(_mat);
-            queuePromise.SetResult(run.sendQueue);
+            //queuePromise.SetResult(run.sendQueue);
             return handle;
         }
         
+        private Flow<IO.ByteString, IO.ByteString,
+            NotUsed> buildFlowPremat(
+            StreamingTcpAssociationHandle handle, Source<IO.ByteString,NotUsed> writeSource)
+        {
+            return Flow.FromSinkAndSource(receiveFlow(handle).Async(),
+                sendFlowPreMat(writeSource).Async(),(_,sendQueue)=>sendQueue);
+        }
+        private Source<IO.ByteString, NotUsed> sendFlowPreMat(Source<IO.ByteString,NotUsed> preMat)
+        {
+            //TODO: Improve batching voodoo in pipeline.
+            var baseSource =  preMat
+                .Via(
+                    Framing.SimpleFramingProtocolEncoder(TransportSettings.MaxFrameSize));
+            
+            //If batch delay is 0, we don't want our delay stage.
+            if (TransportSettings.BatchGroupMaxMillis > 0)
+            {
+                baseSource = baseSource.GroupedWithin(
+                        TransportSettings.BatchGroupMaxCount,
+                        TimeSpan.FromMilliseconds(TransportSettings
+                            .BatchGroupMaxMillis))
+                    .SelectMany(msg => msg);
+            }
+            else
+            {
+                baseSource = baseSource.Async();
+            }
 
+            return baseSource.BatchWeighted(
+                    TransportSettings.BatchGroupMaxBytes,
+                    msg => msg.Count,
+                    msg => msg,
+                    (oldMsgs, newMsg) => oldMsgs.Concat(newMsg))
+                .AddAttributes(Attributes.CreateInputBuffer(
+                    TransportSettings.BatchPumpInputMinBufferSize,
+                    TransportSettings.BatchPumpInputMaxBufferSize))
+                .Via(bufferedSelectFlow());
+        }
     private Source<IO.ByteString, ISourceQueueWithComplete<IO.ByteString>> sendFlow()
         {
             //TODO: Improve batching voodoo in pipeline.
