@@ -34,7 +34,7 @@ namespace Akka.Remote.Transport.DotNetty
             FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
         }
 
-        public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true, 
+        public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true,
             int maxPendingWrites = DefaultMaxPendingWrites, long maxPendingBytes = DefaultMaxPendingBytes)
         {
             EnableBatching = enableBatching;
@@ -93,8 +93,6 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly IScheduler Scheduler;
         private ICancelable _flushSchedule;
 
-        internal bool CanSchedule { get; private set; } = true;
-
         public BatchWriter(BatchWriterSettings settings, IScheduler scheduler)
         {
             Settings = settings;
@@ -108,8 +106,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override void HandlerAdded(IChannelHandlerContext context)
         {
-            if(Settings.EnableBatching)
-                ScheduleFlush(context); // only schedule flush operations when batching is enabled
+            ScheduleFlush(context); // only schedule flush operations when batching is enabled
             base.HandlerAdded(context);
         }
 
@@ -124,22 +121,15 @@ namespace Akka.Remote.Transport.DotNetty
              * across the network.
              */
             var write = base.WriteAsync(context, message);
-            if (Settings.EnableBatching)
-            {
-                _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
-                _currentPendingWrites++;
-                if (_currentPendingWrites >= Settings.MaxPendingWrites
-                    || _currentPendingBytes >= Settings.MaxPendingBytes)
-                {
-                    context.Flush();
-                    Reset();
-                }
-            }
-            else
+
+            _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
+            _currentPendingWrites++;
+            if (_currentPendingWrites >= Settings.MaxPendingWrites
+                || _currentPendingBytes >= Settings.MaxPendingBytes)
             {
                 context.Flush();
+                Reset();
             }
-           
 
             return write;
         }
@@ -161,6 +151,10 @@ namespace Akka.Remote.Transport.DotNetty
                     Reset();
                 }
             }
+            else
+            {
+                base.UserEventTriggered(context, evt);
+            }
         }
 
         public override Task CloseAsync(IChannelHandlerContext context)
@@ -168,7 +162,6 @@ namespace Akka.Remote.Transport.DotNetty
             // flush any pending writes first
             context.Flush();
             _flushSchedule?.Cancel();
-            CanSchedule = false;
             return base.CloseAsync(context);
         }
 
