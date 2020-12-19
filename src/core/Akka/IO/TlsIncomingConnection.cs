@@ -1,16 +1,16 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TcpIncomingConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="TlsIncomingConnection.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using System.Net.Sockets;
-using Akka.Actor;
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using Akka.IO.Buffers;
+using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
+using Akka.Actor;
 using Akka.Util;
 
 namespace Akka.IO
@@ -18,7 +18,7 @@ namespace Akka.IO
     /// <summary>
     /// An actor handling the connection state machine for an incoming, already connected SocketChannel.
     /// </summary>
-    internal sealed class TcpIncomingConnection : TcpConnection
+    internal sealed class TlsIncomingConnection : TlsConnection
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
@@ -31,20 +31,16 @@ namespace Akka.IO
         /// <param name="bindHandler">TBD</param>
         /// <param name="options">TBD</param>
         /// <param name="readThrottling">TBD</param>
-        public TcpIncomingConnection(TcpExt tcp, 
-                                     Socket socket, 
-                                     IActorRef bindHandler,
-                                     IEnumerable<Inet.SocketOption> options, 
-                                     bool readThrottling)
-            : base(tcp, socket, readThrottling, Option<int>.None)
+        public TlsIncomingConnection(TcpExt tcp, 
+            Socket socket,
+            IActorRef bindHandler,
+            IEnumerable<Inet.SocketOption> options, 
+            bool readThrottling)
+            : base(tcp, socket, (Inet.SO.TlsConnectionOption)options.FirstOrDefault(r=>r is Inet.SO.TlsConnectionOption),readThrottling, Option<int>.None)
         {
             _bindHandler = bindHandler;
             _options = options;
-            var poolOption = _options.OfType<Inet.SO.ByteBufferPoolSize>()
-                .FirstOrDefault();
-            BufferPool = poolOption != null
-                ? new DisabledBufferPool(poolOption.ByteBufferPoolSizeBytes)
-                : Tcp.BufferPool; 
+
             Context.Watch(bindHandler); // sign death pact
         }
 
@@ -53,6 +49,11 @@ namespace Akka.IO
             AcquireSocketAsyncEventArgs();
 
             CompleteConnect(_bindHandler, _options);
+        }
+
+        protected override void Authenticate()
+        {
+            SslStream.AuthenticateAsClient(this.TargetHost);
         }
 
         /// <summary>
@@ -64,7 +65,5 @@ namespace Akka.IO
         {
             throw new NotSupportedException();
         }
-
-        protected override IBufferPool BufferPool { get; }
     }
 }

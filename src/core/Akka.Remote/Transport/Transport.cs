@@ -122,6 +122,19 @@ namespace Akka.Remote.Transport
     /// </summary>
     public sealed class InboundPayload : IHandleEvent
     {
+        public InboundPayload(ArraySegment<byte> payload)
+        {
+            ASPayload = payload;
+        }
+
+        public ArraySegment<byte> ArraySegmentSafe()
+        {
+            return ASPayload ??
+                new ArraySegment<byte>(ByteStringConverters._getByteArrayUnsafeFunc(
+                   Payload));
+        }
+        public ArraySegment<byte>? ASPayload { get; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -139,7 +152,7 @@ namespace Akka.Remote.Transport
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"InboundPayload(size = {Payload.Length} bytes)";
+            return $"InboundPayload(size = {Payload?.Length ?? ArraySegmentSafe().Count } bytes)";
         }
     }
 
@@ -376,6 +389,12 @@ namespace Akka.Remote.Transport
         /// Bool indicating the availability of the association for subsequent writes.
         /// </returns>
         public abstract bool Write(ByteString payload);
+
+        public virtual bool Write(IO.ByteString payload)
+        {
+            var rc = payload.ReadOnlyCompacted();
+            return Write(ByteString.CopyFrom(rc.Array, rc.Offset, rc.Count));
+        }
 
         /// <summary>
         /// Closes the underlying transport link, if needed. Some transports might not need an explicit teardown (UDP) and some

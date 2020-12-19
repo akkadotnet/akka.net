@@ -23,7 +23,7 @@ namespace Akka.Remote.Transport.DotNetty
     ///
     /// Defines the settings for the <see cref="DotNettyTransport"/>.
     /// </summary>
-    internal sealed class DotNettyTransportSettings
+    public sealed class DotNettyTransportSettings
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
@@ -244,7 +244,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly BatchWriterSettings BatchWriterSettings;
 
-        public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
+        internal DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
             int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
             int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder,
@@ -280,13 +280,13 @@ namespace Akka.Remote.Transport.DotNetty
             BatchWriterSettings = batchWriterSettings;
         }
     }
-    internal enum TransportMode
+    public enum TransportMode
     {
         Tcp,
         Udp
     }
 
-    internal sealed class SslSettings
+    public sealed class SslSettings
     {
         public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)

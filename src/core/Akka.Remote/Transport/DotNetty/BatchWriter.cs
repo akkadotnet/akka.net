@@ -20,7 +20,7 @@ namespace Akka.Remote.Transport.DotNetty
     ///
     /// Configuration object for <see cref="BatchWriter"/>
     /// </summary>
-    internal class BatchWriterSettings
+    public class BatchWriterSettings
     {
         public const int DefaultMaxPendingWrites = 30;
         public const long DefaultMaxPendingBytes = 16 * 1024L;

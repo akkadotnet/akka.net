@@ -12,6 +12,7 @@ using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using Akka.Remote.Transport.Streaming;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Transport
@@ -219,6 +220,8 @@ namespace Akka.Remote.Transport
         /// <param name="raw">Encoded raw byte representation of an Akka PDU</param>
         /// <returns>Class representation of a PDU that can be used in a <see cref="PatternMatch"/>.</returns>
         public abstract IAkkaPdu DecodePdu(ByteString raw);
+        
+        public abstract IAkkaPdu DecodePdu(ArraySegment<byte> raw);
 
         /// <summary>
         /// Takes an <see cref="IAkkaPdu"/> representation of an Akka PDU and returns its encoded form
@@ -250,6 +253,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public abstract ByteString ConstructPayload(ByteString payload);
 
+        public abstract IO.ByteString ConstructByteString(ByteString payload);
         /// <summary>
         /// TBD
         /// </summary>
@@ -279,6 +283,8 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public abstract AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress);
 
+        public abstract AckAndMessage DecodeMessage(ArraySegment<byte> raw, IRemoteActorRefProvider provider, Address localAddress);
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -333,6 +339,22 @@ namespace Akka.Remote.Transport
             }
         }
 
+        public override IAkkaPdu DecodePdu(ArraySegment<byte> raw)
+        {
+            try
+            {
+                var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw.Array,raw.Offset,raw.Count);
+                if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
+                else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
+                else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+            }
+            catch (InvalidProtocolBufferException ex)
+            {
+                throw new PduCodecException("Decoding PDU failed", ex);
+            }
+        }
+        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -341,6 +363,60 @@ namespace Akka.Remote.Transport
         public override ByteString ConstructPayload(ByteString payload)
         {
             return new AkkaProtocolMessage() { Payload = payload }.ToByteString();
+        }
+
+        public override IO.ByteString ConstructByteString(ByteString payload)
+        {
+            return IO.ByteString.FromBytes(
+                new AkkaProtocolMessage() { Payload = payload }.ToByteArray());
+            //var payloadBytes =
+            //    ByteStringConverters._getByteArrayUnsafeFunc(payload);
+            //return IO.ByteString.FromBytes(protoLengthDelimitedHeader(1, payloadBytes.Length))
+            //    .Concat(IO.ByteString.FromBytes(payloadBytes));
+        }
+        
+        /// <summary>
+        /// Creates a Protobuf header for a Length delimited field.
+        /// </summary>
+        /// <param name="fieldPosition">the position of field in protobuf contract</param>
+        /// <param name="length">length of data</param>
+        /// <returns>The Headerr</returns>
+        public static ArraySegment<byte> protoLengthDelimitedHeader(int fieldPosition, int length)
+        {
+            byte[] buffer;
+            if (length < (Int32.MaxValue / 8))
+            {
+                //optimal case; Below Int32.MaxValue/8
+                //We will fit full signature (header+payload) in 4 bytes
+                //Won't worry about smaller sizes here b/c
+                //4 bytes is a good alignment for elsewhere.
+                buffer = new byte[4];
+                buffer[0] = (byte)(fieldPosition << 3 | 2);
+                var position = 1;
+                while (length > 127)
+                {
+                    buffer[position++] = (byte)((length & 0x7F) | 0x80);
+                    length >>= 7;
+                }
+                buffer[position] = (byte)(length);
+                return new ArraySegment<byte>(buffer, 0, position + 1);
+            }
+            else
+            {
+                //worst case, just grab 16 bytes.
+                //We could probably get away with as few as  actually...
+                buffer = new byte[16];
+                buffer[0] = (byte)(fieldPosition << 3 | 2);
+                var position = 1;
+                while (length > 127)
+                {
+                    buffer[position++] = (byte)((length & 0x7F) | 0x80);
+                    length >>= 7;
+                }
+                buffer[position] = (byte)(length);
+                return new ArraySegment<byte>(buffer, 0, position + 1);
+            }
+
         }
 
         /// <summary>
@@ -413,11 +489,24 @@ namespace Akka.Remote.Transport
         {
             var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
 
+            return BuildAckAndMessage(provider, localAddress, ackAndEnvelope);
+        }
+        public override AckAndMessage DecodeMessage(ArraySegment<byte> raw, IRemoteActorRefProvider provider, Address localAddress)
+        {
+            var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw.Array,raw.Offset,raw.Count);
+
+            return BuildAckAndMessage(provider, localAddress, ackAndEnvelope);
+        }
+
+        private AckAndMessage BuildAckAndMessage(IRemoteActorRefProvider provider,
+            Address localAddress, AckAndEnvelopeContainer ackAndEnvelope)
+        {
             Ack ackOption = null;
 
             if (ackAndEnvelope.Ack != null)
             {
-                ackOption = new Ack(new SeqNo((long)ackAndEnvelope.Ack.CumulativeAck), ackAndEnvelope.Ack.Nacks.Select(x => new SeqNo((long)x)));
+                ackOption = new Ack(new SeqNo((long)ackAndEnvelope.Ack.CumulativeAck),
+                    ackAndEnvelope.Ack.Nacks.Select(x => new SeqNo((long)x)));
             }
 
             Message messageOption = null;
@@ -427,32 +516,44 @@ namespace Akka.Remote.Transport
                 var envelopeContainer = ackAndEnvelope.Envelope;
                 if (envelopeContainer != null)
                 {
-                    var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
+                    var recipient =
+                        provider.ResolveActorRefWithLocalAddress(
+                            envelopeContainer.Recipient.Path, localAddress);
                     Address recipientAddress;
                     if (AddressCache != null)
                     {
-                        recipientAddress = AddressCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
+                        recipientAddress =
+                            AddressCache.Cache.GetOrCompute(envelopeContainer.Recipient
+                                .Path);
                     }
                     else
                     {
-                        ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
+                        ActorPath.TryParseAddress(envelopeContainer.Recipient.Path,
+                            out recipientAddress);
                     }
-                    
+
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.Sender != null)
                     {
-                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
+                        senderOption =
+                            provider.ResolveActorRefWithLocalAddress(
+                                envelopeContainer.Sender.Path, localAddress);
                     }
+
                     SeqNo seqOption = null;
                     if (envelopeContainer.Seq != SeqUndefined)
                     {
                         unchecked
                         {
-                            seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
+                            seqOption =
+                                new SeqNo((long)envelopeContainer
+                                    .Seq); //proto takes a ulong
                         }
                     }
-                    messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
+
+                    messageOption = new Message(recipient, recipientAddress,
+                        serializedMessage, senderOption, seqOption);
                 }
             }
 

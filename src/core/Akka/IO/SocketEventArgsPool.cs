@@ -135,7 +135,10 @@ namespace Akka.IO
             }
             else
             {
-                args.SetBuffer(null, 0, 0);
+                if (args.Buffer != null)
+                {
+                    args.SetBuffer(null, 0, 0);    
+                }
                 args.BufferList = dataCollection.SelectMany(d => d.Buffers).ToList();
             }
         }

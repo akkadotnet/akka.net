@@ -1,23 +1,22 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="TcpListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// </copyright>
-//-----------------------------------------------------------------------
+﻿// //-----------------------------------------------------------------------
+// // <copyright file="TlsListener.cs" company="Akka.NET Project">
+// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// // </copyright>
+// //-----------------------------------------------------------------------
 
 using System;
-using System.Net;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Akka.IO
 {
-    partial class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    partial class TlsListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly TcpExt _tcp;
         private readonly IActorRef _bindCommander;
@@ -35,7 +34,7 @@ namespace Akka.IO
         /// <param name="tcp">TBD</param>
         /// <param name="bindCommander">TBD</param>
         /// <param name="bind">TBD</param>
-        public TcpListener(TcpExt tcp, IActorRef bindCommander,
+        public TlsListener(TcpExt tcp, IActorRef bindCommander,
             Tcp.Bind bind)
         {
             _tcp = tcp;
@@ -89,7 +88,7 @@ namespace Akka.IO
             {
                 var saea = message as SocketAsyncEventArgs;
                 if (saea.SocketError == SocketError.Success)
-                    Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode).WithDispatcherIfNeeded(_bind.Options));
+                    Context.ActorOf(Props.Create<TlsIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode).WithDispatcherIfNeeded(_bind.Options));
                 saea.AcceptSocket = null;
 
                 if (!_socket.AcceptAsync(saea))
@@ -106,7 +105,7 @@ namespace Akka.IO
             if (message is Tcp.Unbind)
             {
                 _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
-                 _socket.Dispose();
+                _socket.Dispose();
                 Sender.Tell(Tcp.Unbound.Instance);
                 _log.Debug("Unbound endpoint {0}, stopping listener", _bind.LocalAddress);
                 Context.Stop(Self);

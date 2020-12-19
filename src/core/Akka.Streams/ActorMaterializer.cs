@@ -87,6 +87,22 @@ namespace Akka.Streams
                 haveShutDown: haveShutDown,
                 flowNames: EnumerableActorName.Create(namePrefix ?? "Flow"));
         }
+        
+        public static ActorMaterializer CreateSystemMaterializer(ExtendedActorSystem context, ActorMaterializerSettings settings = null, string namePrefix = null)
+        {
+            var haveShutDown = new AtomicBoolean();
+            var system = ActorSystemOf(context);
+            system.Settings.InjectTopLevelFallback(DefaultConfig());
+            settings = settings ?? ActorMaterializerSettings.Create(system);
+
+            return new ActorMaterializerImpl(
+                system: system,
+                settings: settings,
+                dispatchers: system.Dispatchers,
+                supervisor: context.SystemActorOf(StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher), StreamSupervisor.NextName()),
+                haveShutDown: haveShutDown,
+                flowNames: EnumerableActorName.Create(namePrefix ?? "Flow"));
+        }
 
         private static ActorSystem ActorSystemOf(IActorRefFactory context)
         {

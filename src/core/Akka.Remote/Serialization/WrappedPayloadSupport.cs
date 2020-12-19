@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Remote.Transport;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
@@ -49,7 +50,7 @@ namespace Akka.Remote.Serialization
                 : string.Empty;
 
             return _system.Serialization.Deserialize(
-                payload.Message.ToByteArray(),
+                ByteStringConverters._getByteArrayUnsafeFunc(payload.Message),
                 payload.SerializerId,
                 manifest);
         }
