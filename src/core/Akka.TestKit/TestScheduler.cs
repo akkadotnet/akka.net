@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 
 namespace Akka.TestKit
@@ -310,5 +311,26 @@ namespace Akka.TestKit
                 DeliveryCount = 0;
             }
         }
+
+         // don't need these methods - not used during testing
+         public void ScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable)
+         {
+             throw new NotImplementedException();
+         }
+
+         public void ScheduleOnce(TimeSpan delay, IRunnable action)
+         {
+             throw new NotImplementedException();
+         }
+
+         public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable)
+         {
+             throw new NotImplementedException();
+         }
+
+         public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action)
+         {
+             throw new NotImplementedException();
+         }
     }
 }

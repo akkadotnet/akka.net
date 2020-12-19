@@ -888,11 +888,13 @@ namespace Akka.Actor
         protected override System.DateTimeOffset TimeNow { get; }
         public void Dispose() { }
         protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
     }
-    public interface IActionScheduler
+    public interface IActionScheduler : Akka.Actor.IRunnableScheduler
     {
         void ScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable);
         void ScheduleOnce(System.TimeSpan delay, System.Action action);
@@ -967,7 +969,7 @@ namespace Akka.Actor
     {
         Akka.Actor.IStash Stash { get; set; }
     }
-    public interface IAdvancedScheduler : Akka.Actor.IActionScheduler { }
+    public interface IAdvancedScheduler : Akka.Actor.IActionScheduler, Akka.Actor.IRunnableScheduler { }
     public interface IAutoReceivedMessage { }
     public interface ICanTell
     {
@@ -1084,6 +1086,13 @@ namespace Akka.Actor
     public interface IRepointableRef : Akka.Actor.IActorRefScope
     {
         bool IsStarted { get; }
+    }
+    public interface IRunnableScheduler
+    {
+        void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
+        void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action);
+        void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
+        void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action);
     }
     public interface IScheduler : Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
@@ -1534,7 +1543,7 @@ namespace Akka.Actor
         public override void Stop() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
-    public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
+    public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IRunnableScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
         protected readonly Akka.Event.ILoggingAdapter Log;
         protected readonly Akka.Configuration.Config SchedulerConfig;
@@ -1543,9 +1552,15 @@ namespace Akka.Actor
         public abstract System.TimeSpan MonotonicClock { get; }
         protected abstract System.DateTimeOffset TimeNow { get; }
         protected abstract void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable);
+        protected abstract void InternalScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
         protected abstract void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable);
+        protected abstract void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
         protected abstract void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable);
         protected abstract void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable);
+        public void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
+        public void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action) { }
+        public void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
+        public void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action) { }
         protected static void ValidateDelay(System.TimeSpan delay, string parameterName) { }
         protected static void ValidateInterval(System.TimeSpan interval, string parameterName) { }
     }
