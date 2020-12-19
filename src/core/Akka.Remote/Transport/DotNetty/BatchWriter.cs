@@ -15,6 +15,11 @@ using Akka.Configuration;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+    internal class FlushConsolidationHandler : ChannelDuplexHandler
+    {
+
+    }
+
     /// <summary>
     /// INTERNAL API.
     ///
