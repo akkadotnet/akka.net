@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Persistence.g.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -30,31 +30,32 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChFQZXJzaXN0ZW5jZS5wcm90bxIoQWtrYS5QZXJzaXN0ZW5jZS5TZXJpYWxp",
-            "emF0aW9uLlByb3RvLk1zZyLTAQoRUGVyc2lzdGVudE1lc3NhZ2USTAoHcGF5",
+            "emF0aW9uLlByb3RvLk1zZyLmAQoRUGVyc2lzdGVudE1lc3NhZ2USTAoHcGF5",
             "bG9hZBgBIAEoCzI7LkFra2EuUGVyc2lzdGVuY2UuU2VyaWFsaXphdGlvbi5Q",
             "cm90by5Nc2cuUGVyc2lzdGVudFBheWxvYWQSEgoKc2VxdWVuY2VOchgCIAEo",
             "AxIVCg1wZXJzaXN0ZW5jZUlkGAMgASgJEg8KB2RlbGV0ZWQYBCABKAgSDgoG",
             "c2VuZGVyGAsgASgJEhAKCG1hbmlmZXN0GAwgASgJEhIKCndyaXRlckd1aWQY",
-            "DSABKAkiUwoRUGVyc2lzdGVudFBheWxvYWQSFAoMc2VyaWFsaXplcklkGAEg",
-            "ASgFEg8KB3BheWxvYWQYAiABKAwSFwoPcGF5bG9hZE1hbmlmZXN0GAMgASgM",
-            "IlsKC0F0b21pY1dyaXRlEkwKB3BheWxvYWQYASADKAsyOy5Ba2thLlBlcnNp",
-            "c3RlbmNlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlBlcnNpc3RlbnRNZXNz",
-            "YWdlIowBChNVbmNvbmZpcm1lZERlbGl2ZXJ5EhIKCmRlbGl2ZXJ5SWQYASAB",
-            "KAMSEwoLZGVzdGluYXRpb24YAiABKAkSTAoHcGF5bG9hZBgDIAEoCzI7LkFr",
-            "a2EuUGVyc2lzdGVuY2UuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGVyc2lz",
-            "dGVudFBheWxvYWQilgEKG0F0TGVhc3RPbmNlRGVsaXZlcnlTbmFwc2hvdBIZ",
-            "ChFjdXJyZW50RGVsaXZlcnlJZBgBIAEoAxJcChV1bmNvbmZpcm1lZERlbGl2",
-            "ZXJpZXMYAiADKAsyPS5Ba2thLlBlcnNpc3RlbmNlLlNlcmlhbGl6YXRpb24u",
-            "UHJvdG8uTXNnLlVuY29uZmlybWVkRGVsaXZlcnkiTAoaUGVyc2lzdGVudFN0",
-            "YXRlQ2hhbmdlRXZlbnQSFwoPc3RhdGVJZGVudGlmaWVyGAEgASgJEhUKDXRp",
-            "bWVvdXRNaWxsaXMYAiABKAMikgEKFVBlcnNpc3RlbnRGU01TbmFwc2hvdBIX",
-            "Cg9zdGF0ZUlkZW50aWZpZXIYASABKAkSSQoEZGF0YRgCIAEoCzI7LkFra2Eu",
-            "UGVyc2lzdGVuY2UuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuUGVyc2lzdGVu",
-            "dFBheWxvYWQSFQoNdGltZW91dE1pbGxpcxgDIAEoA2IGcHJvdG8z"));
+            "DSABKAkSEQoJdGltZXN0YW1wGA4gASgSIlMKEVBlcnNpc3RlbnRQYXlsb2Fk",
+            "EhQKDHNlcmlhbGl6ZXJJZBgBIAEoBRIPCgdwYXlsb2FkGAIgASgMEhcKD3Bh",
+            "eWxvYWRNYW5pZmVzdBgDIAEoDCJbCgtBdG9taWNXcml0ZRJMCgdwYXlsb2Fk",
+            "GAEgAygLMjsuQWtrYS5QZXJzaXN0ZW5jZS5TZXJpYWxpemF0aW9uLlByb3Rv",
+            "Lk1zZy5QZXJzaXN0ZW50TWVzc2FnZSKMAQoTVW5jb25maXJtZWREZWxpdmVy",
+            "eRISCgpkZWxpdmVyeUlkGAEgASgDEhMKC2Rlc3RpbmF0aW9uGAIgASgJEkwK",
+            "B3BheWxvYWQYAyABKAsyOy5Ba2thLlBlcnNpc3RlbmNlLlNlcmlhbGl6YXRp",
+            "b24uUHJvdG8uTXNnLlBlcnNpc3RlbnRQYXlsb2FkIpYBChtBdExlYXN0T25j",
+            "ZURlbGl2ZXJ5U25hcHNob3QSGQoRY3VycmVudERlbGl2ZXJ5SWQYASABKAMS",
+            "XAoVdW5jb25maXJtZWREZWxpdmVyaWVzGAIgAygLMj0uQWtrYS5QZXJzaXN0",
+            "ZW5jZS5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5VbmNvbmZpcm1lZERlbGl2",
+            "ZXJ5IkwKGlBlcnNpc3RlbnRTdGF0ZUNoYW5nZUV2ZW50EhcKD3N0YXRlSWRl",
+            "bnRpZmllchgBIAEoCRIVCg10aW1lb3V0TWlsbGlzGAIgASgDIpIBChVQZXJz",
+            "aXN0ZW50RlNNU25hcHNob3QSFwoPc3RhdGVJZGVudGlmaWVyGAEgASgJEkkK",
+            "BGRhdGEYAiABKAsyOy5Ba2thLlBlcnNpc3RlbmNlLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlBlcnNpc3RlbnRQYXlsb2FkEhUKDXRpbWVvdXRNaWxsaXMY",
+            "AyABKANiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage), global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage.Parser, new[]{ "Payload", "SequenceNr", "PersistenceId", "Deleted", "Sender", "Manifest", "WriterGuid" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage), global::Akka.Persistence.Serialization.Proto.Msg.PersistentMessage.Parser, new[]{ "Payload", "SequenceNr", "PersistenceId", "Deleted", "Sender", "Manifest", "WriterGuid", "Timestamp" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload), global::Akka.Persistence.Serialization.Proto.Msg.PersistentPayload.Parser, new[]{ "SerializerId", "Payload", "PayloadManifest" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.AtomicWrite), global::Akka.Persistence.Serialization.Proto.Msg.AtomicWrite.Parser, new[]{ "Payload" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery), global::Akka.Persistence.Serialization.Proto.Msg.UnconfirmedDelivery.Parser, new[]{ "DeliveryId", "Destination", "Payload" }, null, null, null),
@@ -98,6 +99,7 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       sender_ = other.sender_;
       manifest_ = other.manifest_;
       writerGuid_ = other.writerGuid_;
+      timestamp_ = other.timestamp_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -188,6 +190,17 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       }
     }
 
+    /// <summary>Field number for the "timestamp" field.</summary>
+    public const int TimestampFieldNumber = 14;
+    private long timestamp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long Timestamp {
+      get { return timestamp_; }
+      set {
+        timestamp_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as PersistentMessage);
@@ -208,6 +221,7 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       if (Sender != other.Sender) return false;
       if (Manifest != other.Manifest) return false;
       if (WriterGuid != other.WriterGuid) return false;
+      if (Timestamp != other.Timestamp) return false;
       return true;
     }
 
@@ -221,6 +235,7 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       if (Sender.Length != 0) hash ^= Sender.GetHashCode();
       if (Manifest.Length != 0) hash ^= Manifest.GetHashCode();
       if (WriterGuid.Length != 0) hash ^= WriterGuid.GetHashCode();
+      if (Timestamp != 0L) hash ^= Timestamp.GetHashCode();
       return hash;
     }
 
@@ -259,6 +274,10 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
         output.WriteRawTag(106);
         output.WriteString(WriterGuid);
       }
+      if (Timestamp != 0L) {
+        output.WriteRawTag(112);
+        output.WriteSInt64(Timestamp);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -284,6 +303,9 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       }
       if (WriterGuid.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(WriterGuid);
+      }
+      if (Timestamp != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt64Size(Timestamp);
       }
       return size;
     }
@@ -316,6 +338,9 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
       }
       if (other.WriterGuid.Length != 0) {
         WriterGuid = other.WriterGuid;
+      }
+      if (other.Timestamp != 0L) {
+        Timestamp = other.Timestamp;
       }
     }
 
@@ -356,6 +381,10 @@ namespace Akka.Persistence.Serialization.Proto.Msg {
           }
           case 106: {
             WriterGuid = input.ReadString();
+            break;
+          }
+          case 112: {
+            Timestamp = input.ReadSInt64();
             break;
           }
         }

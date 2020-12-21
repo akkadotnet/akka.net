@@ -12,19 +12,33 @@ namespace Akka.Persistence.Query
     /// <summary>
     /// Event wrapper adding meta data for the events in the result stream of
     /// <see cref="IEventsByTagQuery"/> query, or similar queries.
+    /// <para>
+    /// The <see cref="Timestamp"/> is the time the event was stored, in ticks. The value of this property
+    /// represents the number of 100-nanosecond intervals that have elapsed since 12:00:00 midnight, January 1, 0001
+    /// in the Gregorian calendar (same as `DateTime.Now.Ticks`).
+    /// </para>
     /// </summary>
     public sealed class EventEnvelope : IEquatable<EventEnvelope>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="EventEnvelope"/> class.
         /// </summary>
+        [Obsolete("For binary compatibility with previous releases")]
         public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event)
+            : this(offset, persistenceId, sequenceNr, @event, 0L)
+        { }
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EventEnvelope"/> class.
+        /// </summary>
+        public EventEnvelope(Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp)
         {
             Offset = offset;
             PersistenceId = persistenceId;
             SequenceNr = sequenceNr;
             Event = @event;
-        }
+            Timestamp = timestamp;
+        }        
 
         public Offset Offset { get; }
 
@@ -33,12 +47,15 @@ namespace Akka.Persistence.Query
         public long SequenceNr { get; }
 
         public object Event { get; }
+        
+        public long Timestamp { get; }
 
         public bool Equals(EventEnvelope other)
         {
             if (ReferenceEquals(this, other)) return true;
             if (ReferenceEquals(other, null)) return false;
 
+            // timestamp not included in Equals for backwards compatibility
             return Offset == other.Offset
                    && PersistenceId == other.PersistenceId
                    && SequenceNr == other.SequenceNr
@@ -59,6 +76,7 @@ namespace Akka.Persistence.Query
             }
         }
 
-        public override string ToString() => $"EventEnvelope(persistenceId:{PersistenceId}, seqNr:{SequenceNr}, offset:{Offset}, event:{Event})";
+        public override string ToString() => 
+            $"EventEnvelope(persistenceId:{PersistenceId}, seqNr:{SequenceNr}, offset:{Offset}, event:{Event}, timestamp:{Timestamp})";
     }
 }
