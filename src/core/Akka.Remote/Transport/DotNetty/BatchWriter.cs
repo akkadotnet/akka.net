@@ -7,6 +7,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Akka.Actor;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
@@ -33,7 +34,7 @@ namespace Akka.Remote.Transport.DotNetty
             FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
         }
 
-        public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true, 
+        public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true,
             int maxPendingWrites = DefaultMaxPendingWrites, long maxPendingBytes = DefaultMaxPendingBytes)
         {
             EnableBatching = enableBatching;
@@ -82,13 +83,20 @@ namespace Akka.Remote.Transport.DotNetty
     /// </summary>
     internal class BatchWriter : ChannelHandlerAdapter
     {
+        private class FlushCmd
+        {
+            public static readonly FlushCmd Instance = new FlushCmd();
+            private FlushCmd() { }
+        }
+
         public readonly BatchWriterSettings Settings;
+        public readonly IScheduler Scheduler;
+        private ICancelable _flushSchedule;
 
-        internal bool CanSchedule { get; private set; } = true;
-
-        public BatchWriter(BatchWriterSettings settings)
+        public BatchWriter(BatchWriterSettings settings, IScheduler scheduler)
         {
             Settings = settings;
+            Scheduler = scheduler;
         }
 
         private int _currentPendingWrites = 0;
@@ -98,8 +106,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override void HandlerAdded(IChannelHandlerContext context)
         {
-            if(Settings.EnableBatching)
-                ScheduleFlush(context); // only schedule flush operations when batching is enabled
+            ScheduleFlush(context); // only schedule flush operations when batching is enabled
             base.HandlerAdded(context);
         }
 
@@ -114,12 +121,31 @@ namespace Akka.Remote.Transport.DotNetty
              * across the network.
              */
             var write = base.WriteAsync(context, message);
-            if (Settings.EnableBatching)
+
+            _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
+            _currentPendingWrites++;
+            if (_currentPendingWrites >= Settings.MaxPendingWrites
+                || _currentPendingBytes >= Settings.MaxPendingBytes)
             {
-                _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
-                _currentPendingWrites++;
-                if (_currentPendingWrites >= Settings.MaxPendingWrites
-                    || _currentPendingBytes >= Settings.MaxPendingBytes)
+                context.Flush();
+                Reset();
+            }
+
+            return write;
+        }
+
+        public override void Flush(IChannelHandlerContext context)
+        {
+            // reset statistics upon flush
+            Reset();
+            base.Flush(context);
+        }
+
+        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+        {
+            if (evt is FlushCmd)
+            {
+                if (HasPendingWrites)
                 {
                     context.Flush();
                     Reset();
@@ -127,59 +153,34 @@ namespace Akka.Remote.Transport.DotNetty
             }
             else
             {
-                context.Flush();
+                base.UserEventTriggered(context, evt);
             }
-           
-
-            return write;
         }
 
         public override Task CloseAsync(IChannelHandlerContext context)
         {
             // flush any pending writes first
             context.Flush();
-            CanSchedule = false;
+            _flushSchedule?.Cancel();
             return base.CloseAsync(context);
         }
 
         private void ScheduleFlush(IChannelHandlerContext context)
         {
             // Schedule a recurring flush - only fires when there's writable data
-            var task = new FlushTask(context, Settings.FlushInterval, this);
-            context.Executor.Schedule(task, Settings.FlushInterval);
+            _flushSchedule = Scheduler.Advanced.ScheduleRepeatedlyCancelable(Settings.FlushInterval,
+                Settings.FlushInterval,
+                () =>
+                {
+                    // want to fire this event through the top of the pipeline
+                    context.Channel.Pipeline.FireUserEventTriggered(FlushCmd.Instance);
+                });
         }
 
         public void Reset()
         {
             _currentPendingWrites = 0;
             _currentPendingBytes = 0;
-        }
-
-        class FlushTask : IRunnable
-        {
-            private readonly IChannelHandlerContext _context;
-            private readonly TimeSpan _interval;
-            private readonly BatchWriter _writer;
-
-            public FlushTask(IChannelHandlerContext context, TimeSpan interval, BatchWriter writer)
-            {
-                _context = context;
-                _interval = interval;
-                _writer = writer;
-            }
-
-            public void Run()
-            {
-                if (_writer.HasPendingWrites)
-                {
-                    // execute a flush operation
-                    _context.Flush();
-                    _writer.Reset();
-                }
-
-                if(_writer.CanSchedule)
-                    _context.Executor.Schedule(this, _interval); // reschedule
-            }
         }
     }
 }
