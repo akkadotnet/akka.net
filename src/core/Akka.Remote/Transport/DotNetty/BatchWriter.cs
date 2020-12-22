@@ -22,12 +22,11 @@ namespace Akka.Remote.Transport.DotNetty
         /// The default number of flushes after which a flush will be forwarded to downstream handlers (whether while in a
         /// read loop, or while batching outside of a read loop).
         /// </summary>
-        public const int DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES = 256;
+        public const int DefaultExplicitFlushAfterFlushes = 256;
 
         public int ExplicitFlushAfterFlushes { get; }
         public bool ConsolidateWhenNoReadInProgress { get; }
 
-        public readonly IScheduler Scheduler;
         private int _flushPendingCount;
         private bool _readInProgress;
         private IChannelHandlerContext _context;
@@ -56,7 +55,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        public FlushConsolidationHandler() : this(DEFAULT_EXPLICIT_FLUSH_AFTER_FLUSHES, true){}
+        public FlushConsolidationHandler() : this(DefaultExplicitFlushAfterFlushes, true){}
 
         public FlushConsolidationHandler(int explicitFlushAfterFlushes, bool consolidateWhenNoReadInProgress)
         {
