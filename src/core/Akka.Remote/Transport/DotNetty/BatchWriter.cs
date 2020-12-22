@@ -8,14 +8,32 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor;
-using DotNetty.Buffers;
-using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
 using Akka.Configuration;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+
+    /* Adapted and Derived from  https://github.com/netty/netty/blob/4.1/handler/src/main/java/io/netty/handler/flush/FlushConsolidationHandler.java */
+    /*
+     * Copyright 2016 The Netty Project
+     *
+     * The Netty Project licenses this file to you under the Apache License,
+     * version 2.0 (the "License"); you may not use this file except in compliance
+     * with the License. You may obtain a copy of the License at:
+     *
+     *   https://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing, software
+     * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+     * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+     * License for the specific language governing permissions and limitations
+     * under the License.
+     */
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal class FlushConsolidationHandler : ChannelDuplexHandler
     {
         /// <summary>
@@ -31,45 +49,34 @@ namespace Akka.Remote.Transport.DotNetty
         private bool _readInProgress;
         private IChannelHandlerContext _context;
         private CancellationTokenSource _nextScheduledFlush;
-        private FlushTask _flushTask;
-        private Func<bool> _flushFunc;
 
-        private class FlushTask : IRunnable
+
+        private static bool TryFlush(FlushConsolidationHandler handler)
         {
-            private readonly FlushConsolidationHandler _handler;
-
-            public FlushTask(FlushConsolidationHandler handler)
+            if (handler._flushPendingCount > 0 && !handler._readInProgress)
             {
-                _handler = handler;
-            }
+                handler._flushPendingCount = 0;
+                handler._nextScheduledFlush?.Dispose();
+                handler._nextScheduledFlush = null;
+                handler._context.Flush();
+                return true;
+            } // else we'll flush when the read completes
 
-            public void Run()
-            {
-                if (_handler._flushPendingCount > 0 && !_handler._readInProgress)
-                {
-                    _handler._flushPendingCount = 0;
-                    _handler._nextScheduledFlush?.Dispose();
-                    _handler._nextScheduledFlush = null;
-                    _handler._context.Flush();
-                } // else we'll flush when the read completes
-            }
+            // didn't flush
+            return false;
         }
 
+        // cache the delegate
+        private static readonly Func<object, bool> FlushOp = obj => TryFlush((FlushConsolidationHandler)obj);
+
         public FlushConsolidationHandler() : this(DefaultExplicitFlushAfterFlushes, true){}
+
+        public FlushConsolidationHandler(int explicitFlushAfterFlushes) : this(explicitFlushAfterFlushes, true) { }
 
         public FlushConsolidationHandler(int explicitFlushAfterFlushes, bool consolidateWhenNoReadInProgress)
         {
             ExplicitFlushAfterFlushes = explicitFlushAfterFlushes;
             ConsolidateWhenNoReadInProgress = consolidateWhenNoReadInProgress;
-            if (consolidateWhenNoReadInProgress)
-            {
-                _flushTask = new FlushTask(this);
-                _flushFunc = () =>
-                {
-                    _flushTask?.Run();
-                    return true;
-                };
-            }
         }
 
         public override void HandlerAdded(IChannelHandlerContext context)
@@ -154,8 +161,6 @@ namespace Akka.Remote.Transport.DotNetty
         public override void HandlerRemoved(IChannelHandlerContext context)
         {
             FlushIfNeeded(context);
-            _flushFunc = null;
-            _flushTask = null;
         }
 
         private void ResetReadAndFlushIfNeeded(IChannelHandlerContext ctx)
@@ -185,7 +190,7 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 // Run as soon as possible, but still yield to give a chance for additional writes to enqueue.
                 _nextScheduledFlush = new CancellationTokenSource();
-                ctx.Channel.EventLoop.SubmitAsync(_flushFunc, _nextScheduledFlush.Token);
+                ctx.Channel.EventLoop.SubmitAsync(FlushOp, this, _nextScheduledFlush.Token);
             }
         }
 
@@ -213,18 +218,14 @@ namespace Akka.Remote.Transport.DotNetty
         public BatchWriterSettings(Config hocon)
         {
             EnableBatching = hocon.GetBoolean("enabled", true);
-            MaxPendingWrites = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
-            MaxPendingBytes = hocon.GetByteSize("max-pending-bytes", null) ?? DefaultMaxPendingBytes;
-            FlushInterval = hocon.GetTimeSpan("flush-interval", DefaultFlushInterval, false);
+            MaxExplicitFlushes = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
         }
 
         public BatchWriterSettings(TimeSpan? maxDuration = null, bool enableBatching = true,
-            int maxPendingWrites = DefaultMaxPendingWrites, long maxPendingBytes = DefaultMaxPendingBytes)
+            int maxExplicitFlushes = DefaultMaxPendingWrites, long maxPendingBytes = DefaultMaxPendingBytes)
         {
             EnableBatching = enableBatching;
-            MaxPendingWrites = maxPendingWrites;
-            FlushInterval = maxDuration ?? DefaultFlushInterval;
-            MaxPendingBytes = maxPendingBytes;
+            MaxExplicitFlushes = maxExplicitFlushes;
         }
 
         /// <summary>
@@ -241,130 +242,6 @@ namespace Akka.Remote.Transport.DotNetty
         /// <remarks>
         /// Defaults to 30.
         /// </remarks>
-        public int MaxPendingWrites { get; }
-
-        /// <summary>
-        /// In the event of low-traffic channels, the maximum amount of time we'll wait before flushing writes.
-        /// </summary>
-        /// <remarks>
-        /// Defaults to 40 milliseconds.
-        /// </remarks>
-        public TimeSpan FlushInterval { get; }
-
-        /// <summary>
-        /// The maximum number of outstanding bytes that can be written prior to a flush.
-        /// </summary>
-        /// <remarks>
-        /// Defaults to 16kb.
-        /// </remarks>
-        public long MaxPendingBytes { get; }
-    }
-
-    /// <summary>
-    /// INTERNAL API.
-    /// 
-    /// Responsible for batching socket writes together into fewer sys calls to the socket.
-    /// </summary>
-    internal class BatchWriter : ChannelHandlerAdapter
-    {
-        private class FlushCmd
-        {
-            public static readonly FlushCmd Instance = new FlushCmd();
-            private FlushCmd() { }
-        }
-
-        public readonly BatchWriterSettings Settings;
-        public readonly IScheduler Scheduler;
-        private ICancelable _flushSchedule;
-
-        public BatchWriter(BatchWriterSettings settings, IScheduler scheduler)
-        {
-            Settings = settings;
-            Scheduler = scheduler;
-        }
-
-        private int _currentPendingWrites = 0;
-        private long _currentPendingBytes;
-
-        public bool HasPendingWrites => _currentPendingWrites > 0;
-
-        public override void HandlerAdded(IChannelHandlerContext context)
-        {
-            ScheduleFlush(context); // only schedule flush operations when batching is enabled
-            base.HandlerAdded(context);
-        }
-
-        public override Task WriteAsync(IChannelHandlerContext context, object message)
-        {
-            /*
-             * Need to add the write to the rest of the pipeline first before we
-             * include it in the formula for determining whether or not we flush
-             * right now. The reason being is that if we did this the other way around,
-             * we could flush first before the write was in the "flushable" buffer and
-             * this can lead to "dangling writes" that never actually get transmitted
-             * across the network.
-             */
-            var write = base.WriteAsync(context, message);
-
-            _currentPendingBytes += ((IByteBuffer)message).ReadableBytes;
-            _currentPendingWrites++;
-            if (_currentPendingWrites >= Settings.MaxPendingWrites
-                || _currentPendingBytes >= Settings.MaxPendingBytes)
-            {
-                context.Flush();
-                Reset();
-            }
-
-            return write;
-        }
-
-        public override void Flush(IChannelHandlerContext context)
-        {
-            // reset statistics upon flush
-            Reset();
-            base.Flush(context);
-        }
-
-        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
-        {
-            if (evt is FlushCmd)
-            {
-                if (HasPendingWrites)
-                {
-                    context.Flush();
-                    Reset();
-                }
-            }
-            else
-            {
-                base.UserEventTriggered(context, evt);
-            }
-        }
-
-        public override Task CloseAsync(IChannelHandlerContext context)
-        {
-            // flush any pending writes first
-            context.Flush();
-            _flushSchedule?.Cancel();
-            return base.CloseAsync(context);
-        }
-
-        private void ScheduleFlush(IChannelHandlerContext context)
-        {
-            // Schedule a recurring flush - only fires when there's writable data
-            _flushSchedule = Scheduler.Advanced.ScheduleRepeatedlyCancelable(Settings.FlushInterval,
-                Settings.FlushInterval,
-                () =>
-                {
-                    // want to fire this event through the top of the pipeline
-                    context.Channel.Pipeline.FireUserEventTriggered(FlushCmd.Instance);
-                });
-        }
-
-        public void Reset()
-        {
-            _currentPendingWrites = 0;
-            _currentPendingBytes = 0;
-        }
+        public int MaxExplicitFlushes { get; }
     }
 }
