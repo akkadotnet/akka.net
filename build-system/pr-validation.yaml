@@ -19,7 +19,7 @@ jobs:
   - job: WindowsBuild
     displayName: Windows Build
     pool:
-      vmImage: vs2017-win2016
+      vmImage: windows-2019
       demands: Cmd
     steps:
       - checkout: self  # self represents the repo where the initial Pipelines YAML file was found
@@ -58,7 +58,7 @@ jobs:
     parameters:
       name: 'netfx_tests_windows'
       displayName: '.NET Framework Unit Tests (Windows)'
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
       scriptFileName: build.cmd
       scriptArgs: runTests incremental
       outputDirectory: 'TestResults'
@@ -68,7 +68,7 @@ jobs:
     parameters:
       name: 'net_core_tests_windows'
       displayName: '.NET Core Unit Tests (Windows)'
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
       scriptFileName: build.cmd
       scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
@@ -88,7 +88,7 @@ jobs:
     parameters:
       name: 'net_core_mntr_windows'
       displayName: '.NET Core Multi-Node Tests (Windows)'
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
       scriptFileName: 'build.cmd'
       scriptArgs: MultiNodeTestsNetCore incremental
       outputDirectory: 'TestResults'
@@ -100,7 +100,7 @@ jobs:
     parameters:
       name: 'net_fx_mntr_windows'
       displayName: '.NET Framework Multi-Node Tests (Windows)'
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
       scriptFileName: 'build.cmd'
       scriptArgs: MultiNodeTests incremental
       outputDirectory: 'TestResults'
@@ -112,7 +112,7 @@ jobs:
     parameters:
       name: 'nuget_pack'
       displayName: 'NuGet Pack'
-      vmImage: 'vs2017-win2016'
+      vmImage: 'windows-2019'
       scriptFileName: build.cmd
       scriptArgs: CreateNuget nugetprerelease=dev incremental
       outputDirectory: 'bin/nuget'
