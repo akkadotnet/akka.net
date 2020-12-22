@@ -78,7 +78,7 @@ jobs:
     parameters:
       name: 'net_core_tests_linux'
       displayName: '.NET Core Unit Tests (Linux)'
-      vmImage: 'ubuntu-16.04'
+      vmImage: 'ubuntu-18.04'
       scriptFileName: './build.sh'
       scriptArgs: runTestsNetCore incremental
       outputDirectory: 'TestResults'
