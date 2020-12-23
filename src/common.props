@@ -67,6 +67,6 @@ To see the [full set of fixes in Akka.NET v1.4.13, please see the milestone on G
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
     <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat> 
   </PropertyGroup>
 </Project>
