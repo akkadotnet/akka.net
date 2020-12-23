@@ -4,7 +4,8 @@
   <PropertyGroup>
     <AssemblyName>Akka.Streams.Tests.TCK</AssemblyName>
     <!-- Reactive.Streams.TCK isn't compatible with .NET Core -->
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <!--UNit.Framework does not yet support .NET 5 - build will fail-->
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
