@@ -27,10 +27,10 @@ steps:
   inputs:
     version: 5.0.101
 - task: UseDotNet@2
-  displayName: 'Use .NET Core Runtime 3.1.105'
+  displayName: 'Use .NET Core Runtime 3.1.10'
   inputs:
     packageType: runtime
-    version: 3.1.105
+    version: 3.1.10
 - task: BatchScript@1
   displayName: 'FAKE Build'
   inputs:
