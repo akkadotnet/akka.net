@@ -16,6 +16,7 @@
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.14.0</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
+    <NetTestVersion>net5.0</NetTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>

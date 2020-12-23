@@ -2,7 +2,7 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.NodeTestRunner</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
   </PropertyGroup>
