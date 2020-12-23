@@ -410,7 +410,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected const int SequenceNrIndex = 1;
 
-        //protected const int TimestampIndex = 2;
+        /// <summary>
+        /// Default index of <see cref="IPersistentRepresentation.Timestamp"/> 
+        /// column get from <see cref="ByPersistenceIdSql"/> query.
+        /// </summary>
+        protected const int TimestampIndex = 2;
 
         /// <summary>
         /// Default index of <see cref="IPersistentRepresentation.IsDeleted"/> 
@@ -1206,7 +1210,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                     persistent = persistent.WithPayload(tagged.Payload);
                                 }
 
-                                WriteEvent(command, persistent, tagBuilder.ToString());
+                                WriteEvent(command, persistent.WithTimestamp(DateTime.UtcNow.Ticks), tagBuilder.ToString());
 
                                 await command.ExecuteNonQueryAsync();
 
@@ -1308,7 +1312,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
                 AddParameter(command, "@PersistenceId", DbType.String, persistent.PersistenceId);
                 AddParameter(command, "@SequenceNr", DbType.Int64, persistent.SequenceNr);
-                AddParameter(command, "@Timestamp", DbType.Int64, 0L);
+                AddParameter(command, "@Timestamp", DbType.Int64, persistent.Timestamp);
                 AddParameter(command, "@IsDeleted", DbType.Boolean, false);
                 AddParameter(command, "@Manifest", DbType.String, manifest);
                 AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -1328,6 +1332,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var persistenceId = reader.GetString(PersistenceIdIndex);
             var sequenceNr = reader.GetInt64(SequenceNrIndex);
+            var timestamp = reader.GetInt64(TimestampIndex);
             var isDeleted = reader.GetBoolean(IsDeletedIndex);
             var manifest = reader.GetString(ManifestIndex);
             var payload = reader[PayloadIndex];
@@ -1346,7 +1351,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 deserialized = _serialization.Deserialize((byte[])payload, serializerId, manifest);
             }
 
-            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
+            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null, timestamp);
         }
 
         /// <summary>

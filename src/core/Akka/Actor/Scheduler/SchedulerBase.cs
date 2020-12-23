@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 
 namespace Akka.Actor
@@ -145,6 +147,15 @@ namespace Akka.Actor
         /// <param name="action">TBD</param>
         /// <param name="cancelable">TBD</param>
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="delay">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <param name="cancelable">TBD</param>
+        protected abstract void InternalScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -153,6 +164,8 @@ namespace Akka.Actor
         /// <param name="action">TBD</param>
         /// <param name="cancelable">TBD</param>
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
+
+        protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable);
 
         /// <summary>
         /// TBD
@@ -176,6 +189,26 @@ namespace Akka.Actor
         {
             if(delay < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(parameterName), $"Delay must be >=0. It was {delay}");
+        }
+
+        public void ScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable)
+        {
+            InternalScheduleOnce(delay, action, cancelable);
+        }
+
+        public void ScheduleOnce(TimeSpan delay, IRunnable action)
+        {
+           ScheduleOnce(delay, action, null);
+        }
+
+        public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable)
+        {
+            InternalScheduleRepeatedly(initialDelay, interval, action, cancelable);
+        }
+
+        public void ScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action)
+        {
+            InternalScheduleRepeatedly(initialDelay, interval, action, null);
         }
     }
 }

@@ -58,6 +58,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Protobuf", "Protobuf", "{98
 		protobuf\SystemMessageFormats.proto = protobuf\SystemMessageFormats.proto
 		protobuf\TestConductorProtocol.proto = protobuf\TestConductorProtocol.proto
 		protobuf\WireFormats.proto = protobuf\WireFormats.proto
+		protobuf\Persistence.proto = protobuf\Persistence.proto
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{10C5B1E8-15B5-4EB3-81AE-1FC054FE1305}"

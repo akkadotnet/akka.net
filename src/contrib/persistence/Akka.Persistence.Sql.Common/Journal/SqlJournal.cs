@@ -149,9 +149,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                     for (int i = 0; i < persistentMessages.Length; i++)
                     {
                         var p = persistentMessages[i];
-                        if (p.Payload is Tagged)
+                        if (p.Payload is Tagged tagged)
                         {
-                            var tagged = (Tagged)p.Payload;
                             persistentMessages[i] = p = p.WithPayload(tagged.Payload);
                             if (tagged.Tags.Count != 0)
                             {
