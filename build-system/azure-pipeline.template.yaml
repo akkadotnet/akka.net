@@ -17,9 +17,13 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
     steps:
       - task: UseDotNet@2
-        displayName: 'Use .NET Core SDK 3.1.105'
+        displayName: 'Use .NET 5 SDK 5.0.101'
         inputs:
-          packageType: sdk
+          version: 5.0.101
+      - task: UseDotNet@2
+        displayName: 'Use .NET Core Runtime 3.1.105'
+        inputs:
+          packageType: runtime
           version: 3.1.105
       - task: Bash@3 
         displayName: Linux / OSX Build
