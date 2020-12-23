@@ -369,7 +369,7 @@ namespace Akka.Persistence
         /// <inheritdoc />
         public IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, IActorRef sender, string writerGuid)
         {
-            return new Persistent(payload: Payload, sequenceNr: sequenceNr, persistenceId: persistenceId, manifest: Manifest, isDeleted: isDeleted, sender: sender, writerGuid: writerGuid, Timestamp);
+            return new Persistent(payload: Payload, sequenceNr: sequenceNr, persistenceId: persistenceId, manifest: Manifest, isDeleted: isDeleted, sender: sender, writerGuid: writerGuid);
         }
 
         /// <inheritdoc/>
