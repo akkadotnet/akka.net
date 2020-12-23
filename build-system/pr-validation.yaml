@@ -39,7 +39,7 @@ jobs:
         displayName: Windows Build
         inputs:
           filename: build.cmd
-          arguments: 'buildRelease incremental' # Run an incremental build
+          arguments: 'buildRelease' # Run an incremental build
         continueOnError: true
         condition: eq( variables['Agent.OS'], 'Windows_NT' )
       - task: CopyFiles@2
@@ -64,7 +64,7 @@ jobs:
       displayName: '.NET Framework Unit Tests (Windows)'
       vmImage: 'windows-2019'
       scriptFileName: build.cmd
-      scriptArgs: runTests incremental
+      scriptArgs: runTests
       outputDirectory: 'TestResults'
       artifactName: 'netfx_tests_windows-$(Build.BuildId)'
 
@@ -74,7 +74,7 @@ jobs:
       displayName: '.NET Core Unit Tests (Windows)'
       vmImage: 'windows-2019'
       scriptFileName: build.cmd
-      scriptArgs: runTestsNetCore incremental
+      scriptArgs: runTestsNetCore
       outputDirectory: 'TestResults'
       artifactName: 'net_core_tests_windows-$(Build.BuildId)'
 
@@ -84,7 +84,7 @@ jobs:
       displayName: '.NET Core Unit Tests (Linux)'
       vmImage: 'ubuntu-18.04'
       scriptFileName: './build.sh'
-      scriptArgs: runTestsNetCore incremental
+      scriptArgs: runTestsNetCore
       outputDirectory: 'TestResults'
       artifactName: 'net_core_tests_linux-$(Build.BuildId)'
 
@@ -94,7 +94,7 @@ jobs:
       displayName: '.NET Core Multi-Node Tests (Windows)'
       vmImage: 'windows-2019'
       scriptFileName: 'build.cmd'
-      scriptArgs: MultiNodeTestsNetCore incremental
+      scriptArgs: MultiNodeTestsNetCore
       outputDirectory: 'TestResults'
       artifactName: 'net_core_mntr_windows-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults\\multinode'
@@ -106,7 +106,7 @@ jobs:
       displayName: '.NET Framework Multi-Node Tests (Windows)'
       vmImage: 'windows-2019'
       scriptFileName: 'build.cmd'
-      scriptArgs: MultiNodeTests incremental
+      scriptArgs: MultiNodeTests
       outputDirectory: 'TestResults'
       artifactName: 'net_fx_mntr_windows-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults\\multinode'
@@ -118,6 +118,6 @@ jobs:
       displayName: 'NuGet Pack'
       vmImage: 'windows-2019'
       scriptFileName: build.cmd
-      scriptArgs: CreateNuget nugetprerelease=dev incremental
+      scriptArgs: CreateNuget nugetprerelease=dev
       outputDirectory: 'bin/nuget'
       artifactName: 'nuget_pack-$(Build.BuildId)'
