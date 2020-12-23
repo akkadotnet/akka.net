@@ -1210,7 +1210,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                                     persistent = persistent.WithPayload(tagged.Payload);
                                 }
 
-                                WriteEvent(command, persistent.WithTimestamp(DateTime.Now.Ticks), tagBuilder.ToString());
+                                WriteEvent(command, persistent.WithTimestamp(DateTime.UtcNow.Ticks), tagBuilder.ToString());
 
                                 await command.ExecuteNonQueryAsync();
 

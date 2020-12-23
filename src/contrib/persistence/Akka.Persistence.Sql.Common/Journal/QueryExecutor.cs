@@ -684,7 +684,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     var evt = entry.Key;
                     var tags = entry.Value;
 
-                    WriteEvent(command, evt.WithTimestamp(DateTime.Now.Ticks), tags);
+                    WriteEvent(command, evt.WithTimestamp(DateTime.UtcNow.Ticks), tags);
                     await command.ExecuteScalarAsync(cancellationToken);
                     command.Parameters.Clear();
                 }
