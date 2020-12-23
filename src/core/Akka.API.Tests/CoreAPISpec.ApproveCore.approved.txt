@@ -2354,6 +2354,7 @@ namespace Akka.Configuration.Hocon
         public bool IsObject() { }
         public bool IsString() { }
         public void NewValue(Akka.Configuration.Hocon.IHoconElement value) { }
+        public Akka.Configuration.Config ToConfig() { }
         public override string ToString() { }
         public virtual string ToString(int indent) { }
     }
