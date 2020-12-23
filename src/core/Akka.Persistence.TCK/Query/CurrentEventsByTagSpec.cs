@@ -11,6 +11,7 @@ using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Persistence.Query.Offset;
@@ -182,6 +183,27 @@ namespace Akka.Persistence.TCK.Query
 
             probe.ExpectComplete();
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+        }
+        
+        [Fact]
+        public void ReadJournal_query_CurrentEventsByTag_should_include_timestamp_in_EventEnvelope()
+        {
+            var queries = ReadJournal as ICurrentEventsByTagQuery;
+            var a = Sys.ActorOf(Query.TestActor.Props("testTimestamp"));
+            
+            a.Tell("a green apple");
+            ExpectMsg("a green apple-done");
+            a.Tell("a black car");
+            ExpectMsg("a black car-done");
+            a.Tell("a green banana");
+            ExpectMsg("a green banana-done");
+
+            var greenSrc = queries.CurrentEventsByTag("green", offset: Sequence(0L));
+            var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(2);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.Cancel();
         }
     }
 }

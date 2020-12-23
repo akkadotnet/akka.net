@@ -31,11 +31,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             if (_buffers.TryGetValue(grouping, out var messages))
             {
-                _buffers[grouping].Add(new KeyValuePair<object, IActorRef>(message, originalSender));
+                messages.Add(new KeyValuePair<object, IActorRef>(message, originalSender));
                 _totalBufferSize += 1;
             }
-            
-            action();
+            else
+                action();
         }
 
         /// <summary>

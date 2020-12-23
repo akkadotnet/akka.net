@@ -24,9 +24,6 @@ using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
-using Akka.Util;
-using JetBrains.TeamCity.ServiceMessages.Write.Special;
-using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
 #if CORECLR
 using System.Runtime.Loader;
@@ -125,7 +122,9 @@ namespace Akka.MultiNodeTestRunner
         {
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
             FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
-            TestRunSystem = ActorSystem.Create("TestRunnerLogging");
+            
+            string logLevel = CommandLine.GetPropertyOrDefault("multinode.loglevel", "WARNING");
+            TestRunSystem = ActorSystem.Create("TestRunnerLogging", $"akka.loglevel={logLevel}");
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");
@@ -369,7 +368,7 @@ namespace Akka.MultiNodeTestRunner
                                     // Dump aggregated timeline to file for this test
                                     timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
                                     // Print aggregated timeline into the console
-                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole())
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole(logLevel))
                                 };
 
                                 if (specFailed)

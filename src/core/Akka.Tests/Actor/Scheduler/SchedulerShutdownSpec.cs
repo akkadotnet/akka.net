@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -53,9 +54,19 @@ namespace Akka.Tests.Actor.Scheduler
                 action();
             }
 
+            protected override void InternalScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable)
+            {
+                action.Run();
+            }
+
             protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
             {
                 action();
+            }
+
+            protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable)
+            {
+                action.Run();
             }
 
             public void Dispose()

@@ -10,7 +10,7 @@ using Akka.Persistence.TestKit.Performance;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
 
-namespace Akka.Persistence.Redis.Tests.Performance
+namespace Akka.Persistence.Sqlite.Tests.Performance
 {
     public class SqliteJournalPerfSpec : JournalPerfSpec
     {

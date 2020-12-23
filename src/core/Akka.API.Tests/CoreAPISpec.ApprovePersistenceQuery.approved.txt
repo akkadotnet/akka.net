@@ -5,11 +5,14 @@ namespace Akka.Persistence.Query
 {
     public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
     {
+        [System.ObsoleteAttribute("For binary compatibility with previous releases")]
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event) { }
+        public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp) { }
         public object Event { get; }
         public Akka.Persistence.Query.Offset Offset { get; }
         public string PersistenceId { get; }
         public long SequenceNr { get; }
+        public long Timestamp { get; }
         public bool Equals(Akka.Persistence.Query.EventEnvelope other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
