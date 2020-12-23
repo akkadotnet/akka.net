@@ -13,7 +13,7 @@ NUGET_URL=https://dist.nuget.org/win-x86-commandline/v5.8.0/nuget.exe
 FAKE_VERSION=4.63.0
 FAKE_EXE=$TOOLS_DIR/FAKE/tools/FAKE.exe
 PROTOBUF_VERSION=3.4.0
-INCREMENTALIST_VERSION=0.2.2
+INCREMENTALIST_VERSION=0.4.0
 
 # Define default arguments.
 TARGET="Default"
