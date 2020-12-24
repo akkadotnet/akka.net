@@ -388,7 +388,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 )
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNeVersion @@ "win10-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
