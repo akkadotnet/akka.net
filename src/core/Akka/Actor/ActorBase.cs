@@ -7,7 +7,7 @@
 
 using System;
 using Akka.Actor.Internal;
-using Akka.Event; 
+using Akka.Event;
 
 namespace Akka.Actor
 {
