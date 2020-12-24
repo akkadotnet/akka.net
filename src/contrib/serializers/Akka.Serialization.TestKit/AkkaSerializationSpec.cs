@@ -384,6 +384,25 @@ my-settings{
         }
 
         [Fact]
+        public void CanSerializeActorPathCollection()
+        {
+            var collection = new []
+            {
+                ActorPath.Parse("akka.tcp://sys@localhost:9100/user1/actor"),
+                ActorPath.Parse("akka.tcp://sys@localhost:9100/user2/actor"),
+                ActorPath.Parse("akka.tcp://sys@localhost:9100/user1/actor")
+            };
+            var serializer = Sys.Serialization.FindSerializerFor(collection);
+            var serialized = serializer.ToBinary(collection);
+            var deserialized = (ActorPath[])serializer.FromBinary(serialized, typeof(ActorPath[]));
+
+            Assert.Equal(collection.Length, deserialized.Length);
+            Assert.Equal(collection[0], deserialized[0]);
+            Assert.Equal(collection[1], deserialized[1]);
+            Assert.Equal(collection[2], deserialized[2]);
+        }
+
+        [Fact]
         public void CanSerializeSingletonMessages()
         {
             var message = PoisonPill.Instance;
