@@ -2,7 +2,7 @@
     <Import Project="..\..\..\common.props" />
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Cluster.Metrics</AssemblyTitle>
+        <AssemblyTitle>Akka.Cluster.Metrics.Tests.MultiNode</AssemblyTitle>
         <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     </PropertyGroup>
 

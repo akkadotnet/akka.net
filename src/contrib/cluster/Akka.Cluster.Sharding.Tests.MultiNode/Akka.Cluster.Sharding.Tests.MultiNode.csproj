@@ -2,7 +2,7 @@
   <Import Project="..\..\..\common.props" />
 
   <PropertyGroup>
-    <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
+    <AssemblyTitle>Akka.Cluster.Sharding.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
