@@ -414,7 +414,7 @@ Target "MultiNodeTestsNet" (fun _ ->
                         |> append "-Dmultinode.enable-filesink=on"
                         |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
                         |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
-                        |> append "-Dmultinode.platform=netcore"
+                        |> append "-Dmultinode.platform=net"
                         |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                         |> toText
 
