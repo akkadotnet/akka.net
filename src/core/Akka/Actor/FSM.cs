@@ -304,7 +304,7 @@ namespace Akka.Actor
             /// <param name="generation">TBD</param>
             /// <param name="owner">TBD</param>
             /// <param name="context">TBD</param>
-            public Timer(string name, object message, bool repeat, int generation, ActorBase owner, IActorContext context)
+            public Timer(string name, object message, bool repeat, long generation, ActorBase owner, IActorContext context)
             {
                 Context = context;
                 Generation = generation;
@@ -334,7 +334,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public int Generation { get; }
+            public long Generation { get; }
 
             /// <summary>
             /// TBD
@@ -1112,8 +1112,12 @@ namespace Akka.Actor
                 }
                 case Timer timer:
                 {
-                    if (!ReferenceEquals(timer.Owner, this) || !_timers.TryGetValue(timer.Name, out var oldTimer) ||
-                        oldTimer.Generation != timer.Generation) return true;
+                    // if we don't own the timer, don't have a reference to it, or
+                    // if it's an older reference - ignore it.
+                    if (!ReferenceEquals(timer.Owner, this)  
+                        || !_timers.TryGetValue(timer.Name, out var oldTimer) 
+                        || oldTimer.Generation != timer.Generation) 
+                        return true;
                     if (_timeoutFuture != null)
                     {
                         _timeoutFuture.Cancel(false);
@@ -1310,8 +1314,7 @@ namespace Akka.Actor
         /// <param name="reason">TBD</param>
         protected virtual void LogTermination(Reason reason)
         {
-            var failure = reason as Failure;
-            if (failure != null)
+            if (reason is Failure failure)
             {
                 if (failure.Cause is Exception)
                 {
