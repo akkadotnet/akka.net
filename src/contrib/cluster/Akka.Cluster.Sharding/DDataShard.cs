@@ -100,11 +100,11 @@ namespace Akka.Cluster.Sharding
             Replicator = replicator;
             MajorityCap = majorityCap;
 
-            RememberedEntitiesRecoveryStrategy = Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+            RememberedEntitiesRecoveryStrategy = Settings.TuningParameters.EntityRecoveryStrategy == "constant"
                 ? EntityRecoveryStrategy.ConstantStrategy(
                     Context.System,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
                 : EntityRecoveryStrategy.AllStrategy;
 
             var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
@@ -112,8 +112,8 @@ namespace Akka.Cluster.Sharding
                 ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
                 : null;
 
-            _readConsistency = new ReadMajority(settings.TunningParameters.WaitingForStateTimeout, majorityCap);
-            _writeConsistency = new WriteMajority(settings.TunningParameters.UpdatingStateTimeout, majorityCap);
+            _readConsistency = new ReadMajority(settings.TuningParameters.WaitingForStateTimeout, majorityCap);
+            _writeConsistency = new WriteMajority(settings.TuningParameters.UpdatingStateTimeout, majorityCap);
             _stateKeys = Enumerable.Range(0, NrOfKeys).Select(i => new ORSetKey<EntryId>($"shard-{typeName}-{shardId}-{i}")).ToImmutableArray();
 
             if (settings.LeaseSettings != null)
@@ -211,7 +211,7 @@ namespace Akka.Cluster.Sharding
                     ReceiveOne(i);
                     break;
                 case GetFailure failure:
-                    Log.Error("The DDataShard was unable to get an initial state within 'waiting-for-state-timeout': {0}", Settings.TunningParameters.WaitingForStateTimeout);
+                    Log.Error("The DDataShard was unable to get an initial state within 'waiting-for-state-timeout': {0}", Settings.TuningParameters.WaitingForStateTimeout);
                     Context.Stop(Self);
                     break;
                 case NotFound notFound:
@@ -277,13 +277,13 @@ namespace Akka.Cluster.Sharding
                     {
                         // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
                         Log.Error("The DDataShard was unable to update state after {0} attempts, within 'updating-state-timeout'={1}, event={2}. " +
-                            "Shard will be restarted after backoff.", MaxUpdateAttempts, Settings.TunningParameters.UpdatingStateTimeout, e);
+                            "Shard will be restarted after backoff.", MaxUpdateAttempts, Settings.TuningParameters.UpdatingStateTimeout, e);
                         Context.Stop(Self);
                     }
                     else
                     {
                         Log.Error("The DDataShard was unable to update state, attempt {0} of {1}, within 'updating-state-timeout'={2}, event={3}",
-                            retryCount, MaxUpdateAttempts, Settings.TunningParameters.UpdatingStateTimeout, e);
+                            retryCount, MaxUpdateAttempts, Settings.TuningParameters.UpdatingStateTimeout, e);
                         SendUpdate(e, retryCount + 1);
                     }
                     break;

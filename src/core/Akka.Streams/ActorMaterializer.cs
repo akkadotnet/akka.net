@@ -74,7 +74,9 @@ namespace Akka.Streams
         {
             var haveShutDown = new AtomicBoolean();
             var system = ActorSystemOf(context);
+
             system.Settings.InjectTopLevelFallback(DefaultConfig());
+
             settings = settings ?? ActorMaterializerSettings.Create(system);
 
             return new ActorMaterializerImpl(

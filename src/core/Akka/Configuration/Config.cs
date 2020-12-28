@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
 
@@ -461,6 +462,9 @@ namespace Akka.Configuration
             if (IsEmpty)
                 return fallback;
 
+            if (Contains(fallback))
+                return this;
+
             var mergedRoot = fallback.Root.GetObject().MergeImmutable(Root.GetObject());
             var newRoot = new HoconValue();
             newRoot.AppendValue(mergedRoot);
@@ -542,6 +546,42 @@ namespace Akka.Configuration
         /// A static "Empty" configuration we can use instead of <c>null</c> in some key areas.
         /// </summary>
         public static readonly Config Empty = ConfigurationFactory.Empty;
+
+        internal bool Contains(Config other)
+            => Contains(other.Root.GetObject().Items, "");
+
+        private bool Contains(Dictionary<string, HoconValue> other, string path)
+        {
+            foreach (var kvp in other)
+            {
+                var currentPath = path == "" ? kvp.Key : $"{path}.\"{kvp.Key}\"";
+                if (!HasPath(currentPath))
+                    return false;
+
+                var value = kvp.Value;
+                if (value.IsObject())
+                {
+                    if (!Contains(value.GetObject().Items, currentPath))
+                        return false;
+                }
+                else if (value.IsArray())
+                {
+                    var list = GetStringList(currentPath);
+                    foreach (var str in value.GetArray().Select(v => v.GetString()))
+                    {
+                        if (!list.Contains(str))
+                            return false;
+                    }
+                }
+                else
+                {
+                    if (value.GetString() != GetString(currentPath))
+                        return false;
+                }
+            }
+
+            return true;
+        }
     }
 
     /// <summary>

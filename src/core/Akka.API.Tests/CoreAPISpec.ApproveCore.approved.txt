@@ -340,6 +340,7 @@ namespace Akka.Actor
         public abstract Akka.Actor.IActorRef DeadLetters { get; }
         public abstract Akka.Dispatch.Dispatchers Dispatchers { get; }
         public abstract Akka.Event.EventStream EventStream { get; }
+        public abstract Akka.Actor.IActorRef IgnoreRef { get; }
         public abstract Akka.Event.ILoggingAdapter Log { get; }
         public abstract Akka.Dispatch.Mailboxes Mailboxes { get; }
         public abstract string Name { get; }
@@ -887,11 +888,13 @@ namespace Akka.Actor
         protected override System.DateTimeOffset TimeNow { get; }
         public void Dispose() { }
         protected override void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable) { }
+        protected override void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
         protected override void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable) { }
     }
-    public interface IActionScheduler
+    public interface IActionScheduler : Akka.Actor.IRunnableScheduler
     {
         void ScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable);
         void ScheduleOnce(System.TimeSpan delay, System.Action action);
@@ -938,6 +941,7 @@ namespace Akka.Actor
         Akka.Actor.Address DefaultAddress { get; }
         Akka.Actor.Deployer Deployer { get; }
         Akka.Actor.LocalActorRef Guardian { get; }
+        Akka.Actor.IActorRef IgnoreRef { get; }
         Akka.Actor.IInternalActorRef RootGuardian { get; }
         Akka.Actor.ActorPath RootPath { get; }
         [Akka.Annotations.InternalApiAttribute()]
@@ -965,7 +969,7 @@ namespace Akka.Actor
     {
         Akka.Actor.IStash Stash { get; set; }
     }
-    public interface IAdvancedScheduler : Akka.Actor.IActionScheduler { }
+    public interface IAdvancedScheduler : Akka.Actor.IActionScheduler, Akka.Actor.IRunnableScheduler { }
     public interface IAutoReceivedMessage { }
     public interface ICanTell
     {
@@ -1082,6 +1086,13 @@ namespace Akka.Actor
     public interface IRepointableRef : Akka.Actor.IActorRefScope
     {
         bool IsStarted { get; }
+    }
+    public interface IRunnableScheduler
+    {
+        void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
+        void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action);
+        void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
+        void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action);
     }
     public interface IScheduler : Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
@@ -1233,6 +1244,7 @@ namespace Akka.Actor
         public Akka.Actor.Deployer Deployer { get; }
         public Akka.Event.EventStream EventStream { get; }
         public Akka.Actor.LocalActorRef Guardian { get; }
+        public Akka.Actor.IActorRef IgnoreRef { get; }
         public Akka.Event.ILoggingAdapter Log { get; }
         public Akka.Actor.IInternalActorRef RootGuardian { get; }
         public Akka.Actor.ActorPath RootPath { get; }
@@ -1531,7 +1543,7 @@ namespace Akka.Actor
         public override void Stop() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
-    public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
+    public abstract class SchedulerBase : Akka.Actor.IActionScheduler, Akka.Actor.IAdvancedScheduler, Akka.Actor.IRunnableScheduler, Akka.Actor.IScheduler, Akka.Actor.ITellScheduler, Akka.Actor.ITimeProvider
     {
         protected readonly Akka.Event.ILoggingAdapter Log;
         protected readonly Akka.Configuration.Config SchedulerConfig;
@@ -1540,9 +1552,15 @@ namespace Akka.Actor
         public abstract System.TimeSpan MonotonicClock { get; }
         protected abstract System.DateTimeOffset TimeNow { get; }
         protected abstract void InternalScheduleOnce(System.TimeSpan delay, System.Action action, Akka.Actor.ICancelable cancelable);
+        protected abstract void InternalScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
         protected abstract void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, System.Action action, Akka.Actor.ICancelable cancelable);
+        protected abstract void InternalScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable);
         protected abstract void InternalScheduleTellOnce(System.TimeSpan delay, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable);
         protected abstract void InternalScheduleTellRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Actor.ICanTell receiver, object message, Akka.Actor.IActorRef sender, Akka.Actor.ICancelable cancelable);
+        public void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
+        public void ScheduleOnce(System.TimeSpan delay, Akka.Dispatch.IRunnable action) { }
+        public void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action, Akka.Actor.ICancelable cancelable) { }
+        public void ScheduleRepeatedly(System.TimeSpan initialDelay, System.TimeSpan interval, Akka.Dispatch.IRunnable action) { }
         protected static void ValidateDelay(System.TimeSpan delay, string parameterName) { }
         protected static void ValidateInterval(System.TimeSpan interval, string parameterName) { }
     }
@@ -1856,6 +1874,7 @@ namespace Akka.Actor.Internal
         public override Akka.Event.EventStream EventStream { get; }
         public override Akka.Actor.IInternalActorRef Guardian { get; }
         public Akka.Util.Option<Akka.Actor.Props> GuardianProps { get; }
+        public override Akka.Actor.IActorRef IgnoreRef { get; }
         public override Akka.Event.ILoggingAdapter Log { get; }
         public override Akka.Actor.IInternalActorRef LookupRoot { get; }
         public override Akka.Dispatch.Mailboxes Mailboxes { get; }
@@ -2041,7 +2060,6 @@ namespace Akka.Actor.Internal
 }
 namespace Akka.Actor.Setup
 {
-    [Akka.Annotations.InternalApiAttribute()]
     public sealed class ActorSystemSetup
     {
         public static readonly Akka.Actor.Setup.ActorSystemSetup Empty;
@@ -2108,6 +2126,7 @@ namespace Akka
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    [System.ObsoleteAttribute("Use instead the pattern matching feature introduced in C# 7.0")]
     public class static PatternMatch
     {
         public static Akka.Case Match(this object target) { }
@@ -4996,6 +5015,7 @@ namespace Akka.Util
         public Akka.Util.Try<T> GetOrElse(System.Func<T> fallback) { }
         public Akka.Util.Try<T> OrElse(Akka.Util.Try<T> @default) { }
         public Akka.Util.Try<T> Recover(System.Action<System.Exception> failureHandler) { }
+        public Akka.Util.Try<T> RecoverWith(System.Func<System.Exception, Akka.Util.Try<T>> failureHandler) { }
         public static Akka.Util.Try<T> op_Implicit(T value) { }
     }
     public class static TypeExtensions

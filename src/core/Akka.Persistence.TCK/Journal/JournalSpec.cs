@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
@@ -145,7 +144,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -153,7 +152,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(3, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 3; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -161,7 +160,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(1, 3, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -169,7 +168,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(1, long.MaxValue, 3, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -177,7 +176,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 3, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 2; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -185,7 +184,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 5, 2, Pid, _receiverProbe.Ref));
             for (int i = 2; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -193,7 +192,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 2, long.MaxValue, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -201,21 +200,21 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 4, 1, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
         public void Journal_should_not_replay_messages_if_count_limit_equals_zero()
         {
             Journal.Tell(new ReplayMessages(2, 4, 0, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
         public void Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound()
         {
             Journal.Tell(new ReplayMessages(3, 2, long.MaxValue, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]

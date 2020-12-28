@@ -154,7 +154,7 @@ namespace Akka.Cluster.Sharding
                 "",
                 TimeSpan.Zero, // passivation disabled
                 StateStoreMode.DData,
-                shardingBaseSettings.TunningParameters,
+                shardingBaseSettings.TuningParameters,
                 shardingBaseSettings.CoordinatorSingletonSettings);
 
             if (string.IsNullOrEmpty(shardingSettings.Role) || Cluster.Get(_system).SelfRoles.Contains(shardingSettings.Role))

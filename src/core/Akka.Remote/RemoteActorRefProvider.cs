@@ -66,7 +66,7 @@ namespace Akka.Remote
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
         /// <param name="path">TBD</param>
@@ -182,6 +182,8 @@ namespace Akka.Remote
 
         /// <inheritdoc/>
         public IActorRef DeadLetters { get { return _local.DeadLetters; } }
+
+        public IActorRef IgnoreRef => _local.IgnoreRef;
 
         /// <inheritdoc/>
         public Deployer Deployer { get; protected set; }
@@ -474,7 +476,7 @@ namespace Akka.Remote
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
         /// <param name="path">TBD</param>
@@ -499,7 +501,7 @@ namespace Akka.Remote
             return InternalDeadLetters;
         }
 
-        
+
         /// <summary>
         /// Used to create <see cref="RemoteActorRef"/> instances upon deserialiation inside the Akka.Remote pipeline.
         /// </summary>
@@ -518,6 +520,9 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
+            if (IgnoreActorRef.IsIgnoreRefPath(path))
+                return IgnoreRef;
+
             // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
@@ -708,8 +713,7 @@ namespace Akka.Remote
             {
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.FsmEvent as Internals;
-                    if (internals != null)
+                    if (@event.FsmEvent is Internals internals)
                     {
                         _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);

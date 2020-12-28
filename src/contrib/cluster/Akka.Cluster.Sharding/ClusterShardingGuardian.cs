@@ -177,7 +177,7 @@ namespace Akka.Cluster.Sharding
                     {
                         if (Equals(Context.Child(coordinatorSingletonManagerName), ActorRefs.Nobody))
                         {
-                            var minBackoff = settings.TunningParameters.CoordinatorFailureBackoff;
+                            var minBackoff = settings.TuningParameters.CoordinatorFailureBackoff;
                             var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
                             var coordinatorProps = settings.StateStoreMode == StateStoreMode.Persistence
                                 ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)

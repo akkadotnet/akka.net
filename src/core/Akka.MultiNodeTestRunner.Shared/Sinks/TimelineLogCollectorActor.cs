@@ -14,25 +14,25 @@ using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
-using Akka.Util.Internal;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
     public class TimelineLogCollectorActor : ReceiveActor
     {
         private readonly SortedList<DateTime, HashSet<LogMessageInfo>> _timeline = new SortedList<DateTime, HashSet<LogMessageInfo>>();
-        
+
         public TimelineLogCollectorActor()
         {
             Receive<LogMessage>(msg =>
             {
                 var parsedInfo = new LogMessageInfo(msg);
+
                 if (_timeline.ContainsKey(parsedInfo.When))
                     _timeline[parsedInfo.When].Add(parsedInfo);
                 else
                     _timeline.Add(parsedInfo.When, new HashSet<LogMessageInfo>() { parsedInfo });
             });
-            
+
             Receive<SendMeAll>(_ => Sender.Tell(_timeline.Values.ToList()));
 
             Receive<GetSpecLog>(_ =>
@@ -46,38 +46,41 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                         return (NodeIndex: node.Index, NodeRole: node.Role, Logs: nodeMessages.Select(m => m.ToString()).ToList());
                     }).ToList()
                 };
-                
+
                 Sender.Tell(log);
             });
-            
+
             Receive<DumpToFile>(dump =>
             {
                 // Verify that directory exists
                 var dir = new DirectoryInfo(Path.GetDirectoryName(dump.FilePath));
                 if (!dir.Exists)
                     dir.Create();
-                
+
                 File.AppendAllLines(dump.FilePath, _timeline.Select(pairs => pairs.Value).SelectMany(msg => msg).Select(m => m.ToString()));
                 Sender.Tell(Done.Instance);
             });
-            
-            Receive<PrintToConsole>(_ =>
+
+            Receive<PrintToConsole>(m =>
             {
+                LogMessageInfo.TryParseLogLevel(m.MinimumLogLevel, out var minimumLogLevel);
+
                 var logsPerTest = _timeline
                     .Select(pairs => pairs.Value)
                     .SelectMany(msg => msg)
-                    .GroupBy(m => m.Node.TestName);
+                    .GroupBy(msg => msg.Node.TestName);
 
                 foreach (var testLogs in logsPerTest)
                 {
                     Console.WriteLine($"Detailed logs for {testLogs.Key}\n");
                     foreach (var log in testLogs)
                     {
-                        Console.WriteLine(log);
+                        if (!log.LogLevel.HasValue || log.LogLevel.Value >= minimumLogLevel)
+                            Console.WriteLine(log);
                     }
                     Console.WriteLine($"\nEnd logs for {testLogs.Key}\n");
                 }
-                
+
                 Sender.Tell(Done.Instance);
             });
         }
@@ -87,7 +90,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             public NodeInfo Node { get; }
             public string OriginalMessage { get; }
             public DateTime When { get; }
-            public LogLevel LogLevel { get; }
+            public LogLevel? LogLevel { get; }
             public string Message { get; }
 
             public LogMessageInfo(LogMessage msg)
@@ -95,18 +98,18 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 OriginalMessage = msg.Message;
                 Node = msg.Node;
                 When = DateTime.UtcNow;
-                LogLevel = LogLevel.InfoLevel; // In case if we could not find log level, assume that it is Info
+                LogLevel = null; //some log lines coming from nodes have no level (ex: stack traces) => leave the level null and output always
                 Message = OriginalMessage;
-                
+
                 var pieces = Regex.Matches(msg.Message, @"\[([^\]]+)\]");
                 foreach (Match piece in pieces)
                 {
                     Message = Message.Replace(piece.Value, "");
-                    
-                    if (DateTime.TryParse(piece.Value, CultureInfo.CurrentCulture, DateTimeStyles.None, out var when))
+
+                    if (DateTime.TryParse(piece.Groups[1].Value, CultureInfo.CurrentCulture, DateTimeStyles.None, out var when))
                         When = when;
 
-                    if (TryParseLogLevel(piece.Value, out var logLevel))
+                    if (TryParseLogLevel(piece.Groups[1].Value, out var logLevel))
                         LogLevel = logLevel;
                 }
             }
@@ -116,7 +119,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return $"[Node #{Node.Index}({Node.Role})]{OriginalMessage}";
             }
 
-            private bool TryParseLogLevel(string str, out LogLevel logLevel)
+            public static bool TryParseLogLevel(string str, out LogLevel logLevel)
             {
                 var enumValues = Enum.GetValues(typeof(LogLevel)).Cast<LogLevel>().ToList();
                 foreach (var logLevelInfo in Enum.GetNames(typeof(LogLevel)).Select((name, i) => (Name: name, Index: i)))
@@ -132,7 +135,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return false;
             }
         }
-        
+
         public class NodeInfo : IEquatable<NodeInfo>
         {
             public NodeInfo(int index, string role, string platform, string testName)
@@ -171,7 +174,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
                 return Index;
             }
         }
-        
+
         public class LogMessage
         {
             public LogMessage(NodeInfo node, string message)
@@ -185,8 +188,16 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         }
 
         public class SendMeAll { }
-        
-        public class PrintToConsole { }
+
+        public class PrintToConsole
+        {
+            public PrintToConsole(string minimumLogLevel)
+            {
+                MinimumLogLevel = minimumLogLevel;
+            }
+
+            public string MinimumLogLevel { get; }
+        }
 
         public class GetSpecLog { }
 

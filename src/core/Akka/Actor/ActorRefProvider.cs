@@ -53,6 +53,8 @@ namespace Akka.Actor
         /// <summary>Gets the dead letters.</summary>
         IActorRef DeadLetters { get; }
 
+        IActorRef IgnoreRef { get; }
+
         /// <summary>
         /// Gets the root path for all actors within this actor system, not including any remote address information.
         /// </summary>
@@ -199,6 +201,8 @@ namespace Akka.Actor
             if (deadLettersFactory == null)
                 deadLettersFactory = p => new DeadLetterActorRef(this, p, _eventStream);
             _deadLetters = deadLettersFactory(_rootPath / "deadLetters");
+            IgnoreRef = new IgnoreActorRef(this);
+
             _tempNumber = new AtomicCounterLong(1);
             _tempNode = _rootPath / "temp";
 
@@ -210,6 +214,8 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         public IActorRef DeadLetters { get { return _deadLetters; } }
+
+        public IActorRef IgnoreRef { get; }
 
         /// <summary>
         /// TBD
@@ -333,9 +339,9 @@ namespace Akka.Actor
             var userGuardian = new LocalActorRef(
                 _system,
                 _system.GuardianProps.GetOrElse(Props.Create<GuardianActor>(UserGuardianSupervisorStrategy)),
-                dispatcher, 
-                _defaultMailbox, 
-                rootGuardian, 
+                dispatcher,
+                _defaultMailbox,
+                rootGuardian,
                 RootPath / name);
 
             cell.InitChild(userGuardian);
@@ -435,7 +441,7 @@ namespace Akka.Actor
             //{
             //    if(actorPath.Elements.Head() == "temp")
             //    {
-            //        //skip ""/"temp", 
+            //        //skip ""/"temp",
             //        string[] parts = actorPath.Elements.Drop(1).ToArray();
             //        return _tempContainer.GetChild(parts);
             //    }

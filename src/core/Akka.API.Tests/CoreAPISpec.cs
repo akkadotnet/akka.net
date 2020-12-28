@@ -134,6 +134,14 @@ namespace Akka.API.Tests
             var publicApi = Filter(GeneratePublicApi(typeof(Coordination.Lease).Assembly));
             Approvals.Verify(publicApi);
         }
+        
+        [Fact]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void ApproveDiscovery()
+        {
+            var publicApi = Filter(GeneratePublicApi(typeof(Discovery.Lookup).Assembly));
+            Approvals.Verify(publicApi);
+        }
 
         static string Filter(string text)
         {

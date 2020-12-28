@@ -183,8 +183,7 @@ namespace Akka.Cluster.Sharding
     /// allocation strategy. The default implementation <see cref="LeastShardAllocationStrategy"/>
     /// picks shards for handoff from the <see cref="Sharding.ShardRegion"/> with most number of previously allocated shards.
     /// They will then be allocated to the <see cref="Sharding.ShardRegion"/> with least number of previously allocated shards,
-    /// i.e. new members in the cluster. There is a configurable threshold of how large the difference
-    /// must be to begin the rebalancing. This strategy can be replaced by an application specific
+    /// i.e. new members in the cluster. This strategy can be replaced by an application specific
     /// implementation.
     /// </para>
     /// <para>
@@ -1113,11 +1112,22 @@ namespace Akka.Cluster.Sharding
 
         public IShardAllocationStrategy DefaultShardAllocationStrategy(ClusterShardingSettings settings)
         {
-            return new LeastShardAllocationStrategy(
-                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
-                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
-        }
 
+            if (settings.TuningParameters.LeastShardAllocationAbsoluteLimit > 0)
+            {
+                // new algorithm
+                var absoluteLimit = settings.TuningParameters.LeastShardAllocationAbsoluteLimit;
+                var relativeLimit = settings.TuningParameters.LeastShardAllocationRelativeLimit;
+                return ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit, relativeLimit);
+            }
+            else
+            {
+                // old algorithm
+                var threshold = settings.TuningParameters.LeastShardAllocationRebalanceThreshold;
+                var maxSimultaneousRebalance = settings.TuningParameters.LeastShardAllocationMaxSimultaneousRebalance;
+                return new LeastShardAllocationStrategy(threshold, maxSimultaneousRebalance);
+            }
+        }
     }
 
     /// <summary>
@@ -1190,7 +1200,7 @@ namespace Akka.Cluster.Sharding
             {
                 if (self.EntityId(msg) != null)
                     return (self.EntityId(msg), self.EntityMessage(msg));
-                
+
                 return Option<(string, object)>.None;
             };
 
@@ -1246,20 +1256,31 @@ namespace Akka.Cluster.Sharding
     /// </summary>
     internal class RebalanceWorker : ActorBase, IWithTimers
     {
+        public class ShardRegionTerminated
+        {
+            public ShardRegionTerminated(IActorRef region)
+            {
+                Region = region;
+            }
+
+            public IActorRef Region { get; }
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
+        /// <param name="shardRegionFrom">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions) => 
-            Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
+        public static Props Props(string shard, IActorRef shardRegionFrom, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, bool isRebalance) =>
+            Actor.Props.Create(() => new RebalanceWorker(shard, shardRegionFrom, handOffTimeout, regions, isRebalance));
 
         private readonly ShardId _shard;
-        private readonly IActorRef _from;
+        private readonly IActorRef _shardRegionFrom;
         private readonly ISet<IActorRef> _remaining;
+        private readonly bool _isRebalance;
         private ILoggingAdapter _log;
 
         private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
@@ -1270,22 +1291,30 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
+        /// <param name="shardRegionFrom">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        /// <param name="isRebalance">TBD</param>
+        public RebalanceWorker(string shard, IActorRef shardRegionFrom, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, bool isRebalance)
         {
             _shard = shard;
-            _from = @from;
+            _shardRegionFrom = shardRegionFrom;
+            _isRebalance = isRebalance;
 
             _remaining = new HashSet<IActorRef>(regions);
             foreach (var region in _remaining)
             {
-                Context.Watch(region);
                 region.Tell(new PersistentShardCoordinator.BeginHandOff(shard));
             }
-            
-            Log.Debug("Rebalance [{0}] from region [{1}]", shard, regions);
+
+            if (isRebalance)
+                Log.Debug("Rebalance [{0}] from [{1}] regions", shard, regions.Count());
+            else
+                Log.Debug(
+                  "Shutting down shard [{0}] from region [{1}]. Asking [{2}] region(s) to hand-off shard",
+                  shard,
+                  shardRegionFrom,
+                  regions.Count());
 
             Timers.StartSingleTimer("hand-off-timeout", ReceiveTimeout.Instance, handOffTimeout);
         }
@@ -1303,12 +1332,18 @@ namespace Akka.Cluster.Sharding
                     Log.Debug("BeginHandOffAck for shard [{0}] received from [{1}].", _shard, Sender);
                     Acked(Sender);
                     return true;
-                case Terminated t:
-                    Log.Debug("ShardRegion [{0}] terminated while waiting for BeginHandOffAck for shard [{1}].", t.ActorRef, _shard);
-                    Acked(t.ActorRef);
+                case ShardRegionTerminated t:
+                    if (_remaining.Contains(t.Region))
+                    {
+                        Log.Debug("ShardRegion [{0}] terminated while waiting for BeginHandOffAck for shard [{1}].", t.Region, _shard);
+                    }
+                    Acked(t.Region);
                     return true;
                 case ReceiveTimeout _:
-                    Log.Debug("Rebalance of [{0}] from [{1}] timed out", _shard, _from);
+                    if (_isRebalance)
+                        Log.Debug("Rebalance of [{0}] from [{1}] timed out", _shard, _shardRegionFrom);
+                    else
+                        Log.Debug("Shutting down [{0}] shard from [{1}] timed out", _shard, _shardRegionFrom);
                     Done(false);
                     return true;
             }
@@ -1317,13 +1352,16 @@ namespace Akka.Cluster.Sharding
 
         private void Acked(IActorRef shardRegion)
         {
-            Context.Unwatch(shardRegion);
-            _remaining.Remove(Sender);
+            _remaining.Remove(shardRegion);
             if (_remaining.Count == 0)
             {
                 Log.Debug("All shard regions acked, handing off shard [{0}].", _shard);
-                _from.Tell(new PersistentShardCoordinator.HandOff(_shard));
+                _shardRegionFrom.Tell(new PersistentShardCoordinator.HandOff(_shard));
                 Context.Become(StoppingShard);
+            }
+            else
+            {
+                Log.Debug("Remaining shard regions: {0}", _remaining.Count);
             }
         }
 
@@ -1336,6 +1374,10 @@ namespace Akka.Cluster.Sharding
                     return true;
                 case ReceiveTimeout _:
                     Done(false);
+                    return true;
+                case ShardRegionTerminated t:
+                    Log.Debug("ShardRegion [{0}] terminated while waiting for ShardStopped for shard [{1}].", t.Region, _shard);
+                    Done(true);
                     return true;
             }
             return false;

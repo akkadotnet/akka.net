@@ -44,6 +44,9 @@ namespace Akka.Actor
         /// <param name="config">TBD</param>
         public void InjectTopLevelFallback(Config config)
         {
+            if (Config.Contains(config)) 
+                return;
+
             _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
             RebuildConfig();
         }
