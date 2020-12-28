@@ -304,7 +304,7 @@ namespace Akka.Actor
             /// <param name="generation">TBD</param>
             /// <param name="owner">TBD</param>
             /// <param name="context">TBD</param>
-            public Timer(string name, object message, bool repeat, long generation, ActorBase owner, IActorContext context)
+            public Timer(string name, object message, bool repeat, int generation, ActorBase owner, IActorContext context)
             {
                 Context = context;
                 Generation = generation;
@@ -334,7 +334,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public long Generation { get; }
+            public int Generation { get; }
 
             /// <summary>
             /// TBD
@@ -353,11 +353,7 @@ namespace Akka.Actor
             /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
-                object timerMsg;
-                if (Message is IAutoReceivedMessage)
-                    timerMsg = Message;
-                else
-                    timerMsg = this;
+                var timerMsg = Message is IAutoReceivedMessage ? Message : this;
 
                 _ref = Repeat
                     ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, timerMsg, Context.Self)
