@@ -22,6 +22,8 @@ namespace Samples.Cluster.AdaptiveGroup
             var cluster = Akka.Cluster.Cluster.Get(system);
             cluster.RegisterOnMemberUp(() =>
             {
+                // Comment out the region below to turn on config-based router creation
+                #region Programatic router creation
                 var paths = new List<string>
                 {
                     "/user/factorialBackend-1",
@@ -41,7 +43,9 @@ namespace Samples.Cluster.AdaptiveGroup
                                 allowLocalRoutees: true,
                                 useRole: "backend"))
                         .Props(), "factorialBackendRouter");
+                #endregion
 
+                // Uncomment the line below to turn on config-based router creation
                 // system.ActorOf(FromConfig.Instance.Props(), name: "factorialBackendRouter");
 
                 system.ActorOf(Props.Create<FactorialBackend>(), "factorialBackend-1");
