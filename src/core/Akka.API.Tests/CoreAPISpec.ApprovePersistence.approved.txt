@@ -293,10 +293,12 @@ namespace Akka.Persistence
         string PersistenceId { get; }
         Akka.Actor.IActorRef Sender { get; }
         long SequenceNr { get; }
+        long Timestamp { get; }
         string WriterGuid { get; }
         Akka.Persistence.IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, Akka.Actor.IActorRef sender, string writerGuid);
         Akka.Persistence.IPersistentRepresentation WithManifest(string manifest);
         Akka.Persistence.IPersistentRepresentation WithPayload(object payload);
+        Akka.Persistence.IPersistentRepresentation WithTimestamp(long timestamp);
     }
     public interface ISnapshotMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage { }
     public interface ISnapshotRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage { }
@@ -413,13 +415,14 @@ namespace Akka.Persistence
     [Akka.Annotations.InternalApiAttribute()]
     public class Persistent : Akka.Persistence.IPersistentRepresentation, Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.IPersistentRepresentation>
     {
-        public Persistent(object payload, long sequenceNr = 0, string persistenceId = null, string manifest = null, bool isDeleted = False, Akka.Actor.IActorRef sender = null, string writerGuid = null) { }
+        public Persistent(object payload, long sequenceNr = 0, string persistenceId = null, string manifest = null, bool isDeleted = False, Akka.Actor.IActorRef sender = null, string writerGuid = null, long timestamp = 0) { }
         public bool IsDeleted { get; }
         public string Manifest { get; }
         public object Payload { get; }
         public string PersistenceId { get; }
         public Akka.Actor.IActorRef Sender { get; }
         public long SequenceNr { get; }
+        public long Timestamp { get; }
         public static string Undefined { get; }
         public string WriterGuid { get; }
         public bool Equals(Akka.Persistence.IPersistentRepresentation other) { }
@@ -430,6 +433,7 @@ namespace Akka.Persistence
         public Akka.Persistence.IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, Akka.Actor.IActorRef sender, string writerGuid) { }
         public Akka.Persistence.IPersistentRepresentation WithManifest(string manifest) { }
         public Akka.Persistence.IPersistentRepresentation WithPayload(object payload) { }
+        public Akka.Persistence.IPersistentRepresentation WithTimestamp(long newTimestamp) { }
     }
     public abstract class PersistentActor : Akka.Persistence.Eventsourced
     {

@@ -168,6 +168,27 @@ namespace Akka.Cluster
             }
 
             /// <summary>
+            /// return `true` if more than one `Version` among the members, which
+            /// indicates that a rolling update is in progress
+            /// </summary>
+            public bool HasMoreThanOneAppVersion
+            {
+                get
+                {
+                    if (Members.IsEmpty)
+                        return false;
+                    else
+                    {
+                        var v = Members.Head().AppVersion;
+                        return Members.Any(i => i.AppVersion != v);
+                    }
+                }
+            }
+
+            internal bool IsMemberUp(Address address) =>
+                Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up);
+
+            /// <summary>
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you
             /// to specify different values for the outgoing objects
             /// </summary>

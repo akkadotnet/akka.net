@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Coordination;
+using Akka.Dispatch;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote;
@@ -604,7 +605,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>TBD</returns>
         public static Props Props(Props singletonProps, object terminationMessage, ClusterSingletonManagerSettings settings)
         {
-            return Actor.Props.Create(() => new ClusterSingletonManager(singletonProps, terminationMessage, settings)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ClusterSingletonManager(singletonProps, terminationMessage, settings))
+                .WithDispatcher(Dispatchers.InternalDispatcherId)
+                .WithDeploy(Deploy.Local);
         }
 
         private readonly Props _singletonProps;
@@ -620,7 +623,7 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _oldestChangedReceived = true;
         private bool _selfExited;
 
-        // started when when self member is Up
+        // started when self member is Up
         private IActorRef _oldestChangedBuffer;
         // keep track of previously removed members
         private ImmutableDictionary<UniqueAddress, Deadline> _removed = ImmutableDictionary<UniqueAddress, Deadline>.Empty;
@@ -741,7 +744,7 @@ namespace Akka.Cluster.Tools.Singleton
             if(_removed.TryGetValue(node, out _))
             {
                 _removed = _removed.SetItem(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
-            } 
+            }
             else
             {
                 _removed = _removed.Add(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
@@ -893,6 +896,9 @@ namespace Akka.Cluster.Tools.Singleton
                                 ? GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(initialOldestState.Oldest.FindAll(u => !u.Equals(_selfUniqueAddress))))
                                 : GoTo(ClusterSingletonState.Younger).Using(new YoungerData(initialOldestState.Oldest.FindAll(u => !u.Equals(_selfUniqueAddress))));
                         }
+                    case HandOverToMe _:
+                        // nothing to hand over in start
+                        return Stay();
                     default:
                         return null;
                 }

@@ -47,6 +47,7 @@ namespace Akka.Persistence.Serialization
             if (persistent.Manifest != null) message.Manifest = persistent.Manifest;
             if (persistent.WriterGuid != null) message.WriterGuid = persistent.WriterGuid;
             if (persistent.Sender != null) message.Sender = Akka.Serialization.Serialization.SerializedActorPath(persistent.Sender);
+            if (persistent.Timestamp > 0L) message.Timestamp = persistent.Timestamp;
 
             message.Payload = GetPersistentPayload(persistent.Payload);
             message.SequenceNr = persistent.SequenceNr;
@@ -168,7 +169,7 @@ namespace Akka.Persistence.Serialization
                 sender = system.Provider.ResolveActorRef(message.Sender);
             }
 
-            return new Persistent(
+            var repr = new Persistent(
                 GetPayload(message.Payload),
                 message.SequenceNr,
                 message.PersistenceId,
@@ -176,6 +177,8 @@ namespace Akka.Persistence.Serialization
                 message.Deleted,
                 sender,
                 message.WriterGuid);
+
+            return message.Timestamp > 0L ? repr.WithTimestamp(message.Timestamp) : repr;
         }
 
         private object GetPayload(PersistentPayload payload)

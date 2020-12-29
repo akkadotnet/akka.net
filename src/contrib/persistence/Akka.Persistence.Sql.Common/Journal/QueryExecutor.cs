@@ -684,7 +684,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     var evt = entry.Key;
                     var tags = entry.Value;
 
-                    WriteEvent(command, evt, tags);
+                    WriteEvent(command, evt.WithTimestamp(DateTime.UtcNow.Ticks), tags);
                     await command.ExecuteScalarAsync(cancellationToken);
                     command.Parameters.Clear();
                 }
@@ -804,7 +804,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             AddParameter(command, "@PersistenceId", DbType.String, e.PersistenceId);
             AddParameter(command, "@SequenceNr", DbType.Int64, e.SequenceNr);
-            AddParameter(command, "@Timestamp", DbType.Int64, TimestampProvider.GenerateTimestamp(e));
+            AddParameter(command, "@Timestamp", DbType.Int64, e.Timestamp);
             AddParameter(command, "@IsDeleted", DbType.Boolean, false);
             AddParameter(command, "@Manifest", DbType.String, manifest);
             AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -853,7 +853,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 deserialized = Serialization.Deserialize((byte[])payload, serializerId, manifest);
             }
 
-            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
+            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null, timestamp);
         }
 
         /// <summary>

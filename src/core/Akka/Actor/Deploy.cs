@@ -29,6 +29,9 @@ namespace Akka.Actor
         /// This deployment does not have a mailbox associated with it.
         /// </summary>
         public static readonly string NoMailboxGiven = string.Empty;
+
+        internal const string DispatcherSameAsParent = "..";
+
         /// <summary>
         /// This deployment has an unspecified scope associated with it.
         /// </summary>

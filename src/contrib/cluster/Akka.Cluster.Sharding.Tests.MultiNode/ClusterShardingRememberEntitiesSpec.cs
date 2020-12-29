@@ -191,7 +191,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void StartSharding(ActorSystem sys, IActorRef probe)
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1);
             ClusterSharding.Get(sys).Start(
                 typeName: "Entity",
                 entityProps: Props.Create(() => new TestEntity(probe)),

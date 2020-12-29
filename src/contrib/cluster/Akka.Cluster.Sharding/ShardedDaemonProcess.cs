@@ -138,7 +138,7 @@ namespace Akka.Cluster.Sharding
             var numberOfShards = numberOfInstances;
             var entityIds = Enumerable.Range(0, numberOfInstances).Select(i => i.ToString()).ToArray();
 
-            // Defaults in `akka.cluster.sharding` but allow overrides specifically for actor-set   
+            // Defaults in `akka.cluster.sharding` but allow overrides specifically for sharded-daemon-process 
             var shardingBaseSettings = settings.ShardingSettings;
             if (shardingBaseSettings == null)
             {
@@ -148,13 +148,13 @@ namespace Akka.Cluster.Sharding
             }
 
             var shardingSettings = new ClusterShardingSettings(
-                shardingBaseSettings.Role,
+                settings.Role ?? shardingBaseSettings.Role,
                 false, // remember entities disabled
                 "",
                 "",
                 TimeSpan.Zero, // passivation disabled
                 StateStoreMode.DData,
-                shardingBaseSettings.TunningParameters,
+                shardingBaseSettings.TuningParameters,
                 shardingBaseSettings.CoordinatorSingletonSettings);
 
             if (string.IsNullOrEmpty(shardingSettings.Role) || Cluster.Get(_system).SelfRoles.Contains(shardingSettings.Role))

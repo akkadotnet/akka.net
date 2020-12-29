@@ -102,15 +102,15 @@ namespace Akka.Actor
 
             #endregion
         }
-        
+
         /// <summary>
         /// INTERNAL API
         /// </summary>
         internal static readonly char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
-        /// <summary> 
+        /// <summary>
         /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
-        /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
+        /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
         /// <param name="s">TBD</param>
@@ -192,10 +192,10 @@ namespace Akka.Actor
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Used in Akka.Remote - when resolving deserialized local actor references
         /// we need to be able to include the UID at the tail end of the elements.
-        /// 
+        ///
         /// It's implemented in this class because we don't have an ActorPathExtractor equivalent.
         /// </summary>
         internal IReadOnlyList<string> ElementsWithUid
@@ -243,7 +243,7 @@ namespace Akka.Actor
 
             ActorPath a = this;
             ActorPath b = other;
-            for (;;)
+            for (; ; )
             {
                 if (ReferenceEquals(a, b))
                     return true;
@@ -378,8 +378,8 @@ namespace Akka.Actor
                     //port may not be specified for these types of paths
                     return false;
                 }
-                //System name is in the "host" position. According to rfc3986 host is case 
-                //insensitive, but should be produced as lowercase, so if we use uri.Host 
+                //System name is in the "host" position. According to rfc3986 host is case
+                //insensitive, but should be produced as lowercase, so if we use uri.Host
                 //we'll get it in lower case.
                 //So we'll extract it ourselves using the original path.
                 //We skip the protocol and "://"
@@ -445,7 +445,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            return ToStringWithAddress();
+            return $"{Address}{Join()}";
         }
 
         /// <summary>
@@ -537,6 +537,11 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToSerializationFormatWithAddress(Address address)
         {
+            if (IgnoreActorRef.IsIgnoreRefPath(this))
+            {
+                // we never change address for IgnoreActorRef
+                return ToString();
+            }
             var withAddress = ToStringWithAddress(address);
             var result = AppendUidFragment(withAddress);
             return result;
@@ -559,6 +564,11 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress(Address address)
         {
+            if (IgnoreActorRef.IsIgnoreRefPath(this))
+            {
+                // we never change address for IgnoreActorRef
+                return ToString();
+            }
             if (Address.Host != null && Address.Port.HasValue)
                 return $"{Address}{Join()}";
 

@@ -151,7 +151,7 @@ namespace Akka.Remote.TestKit
                         : ConfigurationFactory.Empty;
 
                 var builder = ImmutableList.CreateBuilder<Config>();
-                if (_nodeConf.TryGetValue(Myself, out var nodeConfig)) 
+                if (_nodeConf.TryGetValue(Myself, out var nodeConfig))
                     builder.Add(nodeConfig);
                 builder.Add(_commonConf);
                 builder.Add(transportConfig);
@@ -185,7 +185,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDisposable
     {
-        //TODO: Sort out references to Java classes in 
+        //TODO: Sort out references to Java classes in
 
         /// <summary>
         /// Marker used to indicate that <see cref="MaxNodes"/> has not been set yet.
@@ -216,9 +216,9 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Name (or IP address; must be resolvable)
         /// of the host this node is running on
-        /// 
+        ///
         /// <code>-Dmultinode.host=host.example.com</code>
-        /// 
+        ///
         /// InetAddress.getLocalHost.getHostAddress is used if empty or "localhost"
         /// is defined as system property "multinode.host".
         /// </summary>
@@ -246,7 +246,7 @@ namespace Akka.Remote.TestKit
 
         /// <summary>
         /// Port number of this node. Defaults to 0 which means a random port.
-        /// 
+        ///
         /// <code>-Dmultinode.port=0</code>
         /// </summary>
         public static int SelfPort
@@ -268,7 +268,7 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Name (or IP address; must be resolvable using InetAddress.getByName)
         /// of the host that the server node is running on.
-        /// 
+        ///
         /// <code>-Dmultinode.server-host=server.example.com</code>
         /// </summary>
         public static string ServerName
@@ -292,13 +292,13 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Default value for <see cref="ServerPort"/>
         /// </summary>
-        private const int ServerPortDefault = 4711;
+        private const int ServerPortDefault = 47110;
 
         private static int _serverPort = ServerPortUnsetValue;
 
         /// <summary>
         /// Port number of the node that's running the server system. Defaults to 4711.
-        /// 
+        ///
         /// <code>-Dmultinode.server-port=4711</code>
         /// </summary>
         public static int ServerPort
@@ -366,7 +366,7 @@ namespace Akka.Remote.TestKit
                         coordinated-shutdown.terminate-actor-system = off
                         coordinated-shutdown.run-by-actor-system-terminate = off
                         coordinated-shutdown.run-by-clr-shutdown-hook = off
-                        log-dead-letters = off 
+                        log-dead-letters = off
                         log-dead-letters-during-shutdown = on
                         actor {
                           default-dispatcher {
@@ -479,7 +479,7 @@ namespace Akka.Remote.TestKit
 
         /// <summary>
         /// MUST BE DEFINED BY USER.
-        /// 
+        ///
         /// Defines the number of participants required for starting the test. This
         /// might not be equals to the number of nodes available to the test.
         /// </summary>
@@ -511,7 +511,7 @@ namespace Akka.Remote.TestKit
             if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
         }
-        
+
         /// <summary>
         /// Execute the given block of code only on the given nodes (names according
         /// to the `roleMap`).
@@ -542,12 +542,12 @@ namespace Akka.Remote.TestKit
         /// <summary>
         /// Query the controller for the transport address of the given node (by role name) and
         /// return that as an ActorPath for easy composition:
-        /// 
+        ///
         /// <code>var serviceA = Sys.ActorSelection(Node(new RoleName("master")) / "user" / "serviceA");</code>
         /// </summary>
         public ActorPath Node(RoleName role)
         {
-            //TODO: Async stuff here 
+            //TODO: Async stuff here
             return new RootActorPath(TestConductor.GetAddressFor(role).Result);
         }
 
@@ -677,9 +677,9 @@ namespace Akka.Remote.TestKit
 
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a
         /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only
         /// unmanaged resources can be disposed.</param>
         protected void Dispose(bool disposing)
         {

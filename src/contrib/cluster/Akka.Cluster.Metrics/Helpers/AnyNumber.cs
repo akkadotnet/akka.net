@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Annotations;
+using Akka.Util;
 
 namespace Akka.Cluster.Metrics.Helpers
 {
@@ -30,7 +31,12 @@ namespace Akka.Cluster.Metrics.Helpers
         public NumberType Type { get; }
         public long LongValue => Type == NumberType.Int || Type == NumberType.Long ? _innerLong : (long)_innerDouble;
         public double DoubleValue => Type == NumberType.Int || Type == NumberType.Long ? _innerLong : _innerDouble;
-        
+
+        public override string ToString()
+            => Type == NumberType.Int || Type == NumberType.Long 
+                ? _innerLong.ToString() 
+                : _innerDouble.ToString();
+
         public AnyNumber(int n)
         {
             Type = NumberType.Int;

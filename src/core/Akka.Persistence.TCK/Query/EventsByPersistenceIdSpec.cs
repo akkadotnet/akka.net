@@ -13,6 +13,7 @@ using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -89,6 +90,21 @@ namespace Akka.Persistence.TCK.Query
             probe.Request(5)
                 .ExpectNext("e-3")
                 .ExpectNext("e-4");
+        }
+
+        [Fact]
+        public void ReadJournal_live_query_EventsByPersistenceId_should_include_timestamp_in_EventEnvelope()
+        {
+            Setup("n");
+            
+            var queries = ReadJournal.AsInstanceOf<IEventsByPersistenceIdQuery>();
+            var src = queries.EventsByPersistenceId("n", 0L, long.MaxValue);
+
+            var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(5);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.Cancel();
         }
 
         private IActorRef Setup(string persistenceId)

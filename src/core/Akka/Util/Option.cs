@@ -16,7 +16,7 @@ namespace Akka.Util
     /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public struct Option<T>
+    public readonly struct Option<T>
     {
         /// <summary>
         /// None.
@@ -30,13 +30,15 @@ namespace Akka.Util
         public Option(T value)
         {
             Value = value;
-            HasValue = true;
+            HasValue = value != null;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public bool HasValue { get; }
+
+        public bool IsEmpty => !HasValue;
 
         /// <summary>
         /// TBD
@@ -79,16 +81,15 @@ namespace Akka.Util
             return mapper(Value);
         }
 
-        /// <inheritdoc/>
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
+            if (obj is null)
                 return false;
-            return obj is Option<T> && Equals((Option<T>)obj);
+            return obj is Option<T> opt && Equals(opt);
         }
         
         /// <inheritdoc/>
