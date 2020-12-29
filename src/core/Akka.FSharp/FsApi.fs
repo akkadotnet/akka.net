@@ -379,30 +379,28 @@ module Linq =
 
     let (|P|_|) (p: Expression) = match p with | :? ParameterExpression as p -> Some(p.Name, p.Type) | _ -> None
 
-    let toExpression<'Actor>(f : System.Linq.Expressions.Expression): Expression<Func<'Actor>> =
-            match f with
-            | Lambda((Ar [| P(_, paramTy) as p1 |]), (Constant(invokeHelper, helperTy) as constExpr)) when
-                helperTy.Namespace = "FSharp.Quotations.Evaluator" && helperTy.Name.StartsWith "FuncFSharp"
-                && paramTy = typeof<unit> ->
-                // the constant here will be an instance of a type that has an `Invoke` member that can be called with all the parameters.
-                // NOTE: we're assuming that this is being passed all of the necessary parameters in the enclosing Lambda. this _may not_ be the case
-                let invokeMember = invokeHelper.GetType().GetMethods () |> Seq.tryFind (fun meth -> meth.Name = "Invoke" && meth.GetParameters().Length = 1 && meth.GetParameters().[0].ParameterType = typeof<unit>)
-                match invokeMember with
-                | Some meth ->
-                    Expression.Lambda(Expression.Call(constExpr, meth, p1), [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
-                | None ->
-                    failwithf "Couldn't find invoke method"
-            // things that call FSharpConvert.ToFSharpFunc can just be called directly as Expression.Lambdas
-            | Lambda(_, (Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |])))
-            | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) ->
-                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
-            // don't know how to process this kind of expression, give a useful error for reporting
-            | expr -> failwithf "Doesn't match %A" expr
- 
+    let (|UnitVar|_|) (v: Quotations.Var) = if v.Type = typeof<unit> then Some () else None
+
+    let toBCLExpression<'Actor> (f: Quotations.Expr) =
+        let rec inner (e: Quotations.Expr) =
+            match e with
+            | Patterns.Lambda(UnitVar, body) ->
+                let innerExpr = inner body
+                Expression.Lambda(innerExpr, [||]) :> Expression
+            | Patterns.NewObject(ctor, parameters) ->
+                let parameters = parameters |> List.map inner |> Array.ofList
+                Expression.New(ctor, parameters) :> Expression
+            | Patterns.Value(v, ty) ->
+                Expression.Constant v :> Expression
+            | e ->
+                failwithf "Unknown expression %A" e
+
+        inner f :?> Expression<Func<'Actor>>
+
     type Expression = 
         static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = f
         static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = 
-            toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
+            toBCLExpression<'Actor> f
         
 [<RequireQualifiedAccess>]
 module Configuration = 
