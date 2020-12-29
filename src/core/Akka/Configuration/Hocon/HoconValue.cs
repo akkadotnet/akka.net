@@ -73,6 +73,11 @@ namespace Akka.Configuration.Hocon
         /// </summary>
         internal bool AdoptedFromFallback { get; private set; }
 
+        public Config ToConfig()
+        {
+            return new Config(new HoconRoot(this, Enumerable.Empty<HoconSubstitution>()));
+        }
+
         /// <summary>
         /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.
         /// </summary>

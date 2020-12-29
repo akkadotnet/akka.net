@@ -255,6 +255,7 @@ namespace Akka.Cluster.Metrics.Helpers
         public double DoubleValue { get; }
         public long LongValue { get; }
         public Akka.Cluster.Metrics.Helpers.AnyNumber.NumberType Type { get; }
+        public override string ToString() { }
         public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(int n) { }
         public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(long n) { }
         public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(float n) { }
