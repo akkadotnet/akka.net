@@ -363,6 +363,11 @@ module Linq =
         | :? MethodCallExpression as c -> Some(c.Object, c.Method, c.Arguments)
         | _ -> None
     
+    let (|Constant|_|) (e : Expression) = 
+        match e with
+        | :? ConstantExpression as c -> Some(c.Value, c.Type)
+        | _ -> None
+    
     let (|Method|) (e : System.Reflection.MethodInfo) = e.Name
     
     let (|Invoke|_|) = 
@@ -374,9 +379,12 @@ module Linq =
 
     let toExpression<'Actor>(f : System.Linq.Expressions.Expression) = 
             match f with
-            | Lambda(_, (Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
-            | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
-                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
+            | Lambda(_, body) -> 
+                match body with  
+                | :? ConstantExpression as cst -> Some(cst.Value, cst.Type)
+                | _ -> failwith "Doesn't match"
+            //| Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
+            //    Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
             | _ -> failwith "Doesn't match"
  
     type Expression = 
