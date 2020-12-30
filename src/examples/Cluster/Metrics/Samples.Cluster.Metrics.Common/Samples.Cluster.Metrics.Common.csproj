@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\..\..\common.props" />
+
+  <PropertyGroup>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
+  </ItemGroup>
+
+</Project>

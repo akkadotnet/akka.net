@@ -20,22 +20,19 @@ namespace Akka.Routing
         /// TBD
         /// </summary>
         /// <exception cref="ActorInitializationException">TBD</exception>
-        protected RoutedActorCell Cell
-        {
-            get
-            {
-                return Context is RoutedActorCell routedActorCell
-                    ? routedActorCell : throw new ActorInitializationException($"Router actor can only be used in RoutedActorRef, not in {Context.GetType()}");
-            }
-        }
+        protected RoutedActorCell Cell { get; }
 
-        private IActorRef RoutingLogicController
+        private IActorRef RoutingLogicController { get; }
+
+        public RouterActor()
         {
-            get
-            {
-                return Context.ActorOf(Cell.RouterConfig.RoutingLogicController(Cell.Router.RoutingLogic).
-                    WithDispatcher(Context.Props.Dispatcher), "routingLogicController");
-            }
+            Cell = Context is RoutedActorCell routedActorCell
+                ? routedActorCell : throw new ActorInitializationException($"Router actor can only be used in RoutedActorRef, not in {Context.GetType()}");
+
+            var props = Cell.RouterConfig.RoutingLogicController(Cell.Router.RoutingLogic);
+            if (props != null)
+                RoutingLogicController = Context.ActorOf(
+                    props.WithDispatcher(Context.Props.Dispatcher), "routingLogicController");
         }
 
         /// <summary>

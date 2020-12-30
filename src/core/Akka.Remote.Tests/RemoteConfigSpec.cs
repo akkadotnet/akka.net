@@ -174,9 +174,7 @@ namespace Akka.Remote.Tests
             var s = DotNettyTransportSettings.Create(c);
 
             s.BatchWriterSettings.EnableBatching.Should().BeTrue();
-            s.BatchWriterSettings.FlushInterval.Should().Be(BatchWriterSettings.DefaultFlushInterval);
-            s.BatchWriterSettings.MaxPendingBytes.Should().Be(BatchWriterSettings.DefaultMaxPendingBytes);
-            s.BatchWriterSettings.MaxPendingWrites.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
+            s.BatchWriterSettings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
         }
    }
 }
