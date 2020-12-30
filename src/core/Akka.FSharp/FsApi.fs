@@ -381,21 +381,39 @@ module Linq =
 
     let (|UnitVar|_|) (v: Quotations.Var) = if v.Type = typeof<unit> then Some () else None
 
+    type VarEnv = Map<Var, Expression>
+
     let toBCLExpression<'Actor> (f: Quotations.Expr) =
-        let rec inner (e: Quotations.Expr) =
+        let rec inner env (e: Quotations.Expr) =
             match e with
             | Patterns.Lambda(UnitVar, body) ->
-                let innerExpr = inner body
+                let innerExpr = inner env body
                 Expression.Lambda(innerExpr, [||]) :> Expression
             | Patterns.NewObject(ctor, parameters) ->
-                let parameters = parameters |> List.map inner |> Array.ofList
+                let parameters = parameters |> List.map (inner env) |> Array.ofList
                 Expression.New(ctor, parameters) :> Expression
             | Patterns.Value(v, ty) ->
                 Expression.Constant v :> Expression
+            | Patterns.Call(Some instance, meth, args) ->
+                let instance = inner env instance
+                let args = args |> List.map (inner env) |> Array.ofList
+                Expression.Call(instance, meth, args) :> Expression
+            | Patterns.Call(None, meth, args) ->
+                let args = args |> List.map (inner env) |> Array.ofList
+                Expression.Call(meth, args) :> Expression
+            | Patterns.Let(variable, binding, subsequent) ->
+                let thisLetVar = Expression.Variable(variable.Type, variable.Name)
+                let computeThisLetVarValue = inner env binding
+                let assignment = Expression.Assign(thisLetVar, computeThisLetVarValue) :> Expression
+                let env = env |> Map.add variable (thisLetVar :> Expression)
+                let others = inner env subsequent
+                Expression.Block([|thisLetVar|], [|assignment; others|]) :> Expression
+            | Patterns.Var var ->
+                env |> Map.find var
             | e ->
                 failwithf "Unknown expression %A" e
 
-        inner f :?> Expression<Func<'Actor>>
+        inner Map.empty f :?> Expression<Func<'Actor>>
 
     type Expression = 
         static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = f
