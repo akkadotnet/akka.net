@@ -713,8 +713,7 @@ namespace Akka.Remote
             {
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.FsmEvent as Internals;
-                    if (internals != null)
+                    if (@event.FsmEvent is Internals internals)
                     {
                         _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);
