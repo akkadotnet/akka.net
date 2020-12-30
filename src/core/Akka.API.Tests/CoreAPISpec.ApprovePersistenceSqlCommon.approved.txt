@@ -82,6 +82,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int PersistenceIdIndex = 0;
         protected const int SequenceNrIndex = 1;
         protected const int SerializerIdIndex = 6;
+        protected const int TimestampIndex = 2;
         protected BatchingSqlJournal(Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup setup) { }
         protected virtual string AllEventsSql { get; }
         protected virtual string AllPersistenceIdsSql { get; }

@@ -49,5 +49,31 @@ namespace Akka.Streams.Serialization
 
             return SourceRefImpl.Create(type, originRef);
         }
+
+        public static SinkRef ToSinkRef(SinkRefImpl sinkRef)
+        {
+            return new SinkRef()
+            {
+                EventType = TypeToProto(sinkRef.EventType),
+                TargetRef = new ActorRef()
+                {
+                    Path = Akka.Serialization.Serialization.SerializedActorPath(sinkRef.InitialPartnerRef)
+                }
+            };
+        }
+
+        public static ISurrogate ToSurrogate(SinkRefImpl sinkRef)
+        {
+            var snkRef = ToSinkRef(sinkRef);
+            return new SinkRefSurrogate(snkRef.EventType.TypeName, snkRef.TargetRef.Path);
+        }
+
+        public static SinkRefImpl ToSinkRefImpl(ExtendedActorSystem system, string eventType, string originPath)
+        {
+            var type = TypeFromString(eventType);
+            var originRef = system.Provider.ResolveActorRef(originPath);
+
+            return SinkRefImpl.Create(type, originRef);
+        }
     }
 }

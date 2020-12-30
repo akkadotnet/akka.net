@@ -698,7 +698,7 @@ namespace Akka.Streams
     {
         System.Threading.Tasks.Task<Akka.Util.Option<T>> PullAsync();
     }
-    public interface ISinkRef<TIn> : Akka.Util.ISurrogated
+    public interface ISinkRef<TIn>
     {
         Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Sink { get; }
     }
