@@ -1,5 +1,30 @@
-#### 1.4.14 December 16 2020 ####
-**Placeholder for nightlies**
+#### 1.4.14 December 30 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.14 contains some significant bug fixes and improvements. It is a _highly recommended upgrade_ for all Akka.NET users.
+
+
+**Major Reduction in Idle CPU Usage and Latency for Akka.Remote**
+One of the most important fixes introduced in [Akka.NET v1.4.14 is the new self-tuning batching system for Akka.Remote's DotNetty transport](https://getakka.net/articles/remoting/performance.html), which simulatneously reduces idle CPU consumption on low-traffic systems by as much as 55% while improving latency by a factor of 10 for low-traffic systems. 
+
+The batching system no longer needs to be configured - it can scale up and down with workload automatically in order to both maximize throughput with a minimal amount of latency. You can read more about it here: https://getakka.net/articles/remoting/performance.html
+
+Other bug fixes and improvements:
+
+* [Akka: Move RouterActor routing logic controller actor instantiation from OnReceive to constructor](https://github.com/akkadotnet/akka.net/pull/4700)
+* [Akka.Streams: Serializing a `SinkRef` wrapped inside a POCO failed](https://github.com/akkadotnet/akka.net/issues/4421)
+* [Akka.Persistence: Akka.NET Should Allow Separate Read and Write Event Adapter Bindings](https://github.com/akkadotnet/akka.net/issues/4567)
+* [Akka.Persistence.Query: Added Timestamp to `EventEnvelope`](https://github.com/akkadotnet/akka.net/pull/4680) - **breaking API change**; will require all Akka.Persistence plugins to be recompiled and updated.
+* [Akka.Remote: fix NRE inside `RemotingTerminator`](https://github.com/akkadotnet/akka.net/pull/4686)
+
+To see the [full set of fixes in Akka.NET v1.4.14, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/45).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 9 | 533 | 370 | Aaron Stannard |      
+| 4 | 5617 | 44 | Gregorius Soedharmo | 
+| 1 | 61 | 1 | Brian Sain |             
+| 1 | 207 | 54 | Ismael Hamed |         
 
 #### 1.4.13 December 16 2020 ####
 **Maintenance Release for Akka.NET 1.4**
