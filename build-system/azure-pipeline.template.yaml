@@ -8,7 +8,6 @@ parameters:
   scriptArgs: 'all'
   outputDirectory: ''
   timeoutInMinutes: 120
-  NUGET_PACKAGES: $(Pipeline.Workspace)/.nuget/packages
 
 jobs:
   - job: ${{ parameters.name }}
@@ -26,14 +25,6 @@ jobs:
         inputs:
           packageType: runtime
           version: 3.1.10
-      - task: Cache@2
-        inputs:
-          key: 'nuget | "$(Agent.OS)" | **/packages.lock.json,!**/bin/**,!**/obj/**'
-          restoreKeys: |
-             nuget | "$(Agent.OS)"
-          path: $(NUGET_PACKAGES)
-        displayName: Cache NuGet packages
-
       - task: Bash@3 
         displayName: Linux / OSX Build
         inputs:
