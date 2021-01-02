@@ -1855,27 +1855,6 @@ namespace Akka.Cluster.Sharding
 
                         return new ClusterShardingStats(regions);
                     }).PipeTo(context.Sender);
-
-
-                    //Task.WhenAll(
-                    //    aliveRegions.Select(regionActor => regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, m.Timeout).ContinueWith(r => (Region: regionActor, Stats: r.Result)/*, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion*/))
-                    //    ).ContinueWith(allRegionStats =>
-                    //    {
-                    //        if (allRegionStats.IsCanceled)
-                    //            return new ClusterShardingStats(ImmutableDictionary<Address, ShardRegionStats>.Empty);
-
-                    //        if (allRegionStats.IsFaulted)
-                    //            throw allRegionStats.Exception; //TODO check if this is the right way
-
-                    //        var regions = allRegionStats.Result.ToImmutableDictionary(i =>
-                    //        {
-                    //            Address regionAddress = i.Region.Path.Address;
-                    //            Address address = (regionAddress.HasLocalScope && regionAddress.System == cluster.SelfAddress.System) ? cluster.SelfAddress : regionAddress;
-                    //            return address;
-                    //        }, j => j.Stats);
-
-                    //        return new ClusterShardingStats(regions);
-                    //    }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(context.Sender);
                     return true;
 
                 case ClusterEvent.ClusterShuttingDown _:

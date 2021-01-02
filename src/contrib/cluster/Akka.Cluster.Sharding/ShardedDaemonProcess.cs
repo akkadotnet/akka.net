@@ -154,7 +154,6 @@ namespace Akka.Cluster.Sharding
                 "",
                 TimeSpan.Zero, // passivation disabled
                 StateStoreMode.DData,
-                RememberEntitiesStore.DData,
                 shardingBaseSettings.TuningParameters,
                 shardingBaseSettings.CoordinatorSingletonSettings);
 

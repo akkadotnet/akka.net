@@ -54,7 +54,8 @@ namespace Akka.Cluster.Sharding
         public readonly string SnapshotPluginId;
         public readonly Akka.Cluster.Sharding.StateStoreMode StateStoreMode;
         public readonly Akka.Cluster.Sharding.TuningParameters TuningParameters;
-        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.RememberEntitiesStore rememberEntitiesStore, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
+        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings) { }
+        public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public ClusterShardingSettings(string role, bool rememberEntities, string journalPluginId, string snapshotPluginId, System.TimeSpan passivateIdleEntityAfter, Akka.Cluster.Sharding.StateStoreMode stateStoreMode, Akka.Cluster.Sharding.RememberEntitiesStore rememberEntitiesStore, System.TimeSpan shardRegionQueryTimeout, Akka.Cluster.Sharding.TuningParameters tuningParameters, Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings coordinatorSingletonSettings, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Sharding.ClusterShardingSettings Create(Akka.Configuration.Config config, Akka.Configuration.Config singletonConfig) { }
@@ -90,6 +91,8 @@ namespace Akka.Cluster.Sharding
     {
         public readonly System.Collections.Immutable.IImmutableSet<string> Failed;
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> Shards;
+        [System.ObsoleteAttribute()]
+        public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards) { }
         public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards, System.Collections.Immutable.IImmutableSet<string> failed) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.Cluster.Sharding.CurrentShardRegionState other) { }
@@ -210,6 +213,8 @@ namespace Akka.Cluster.Sharding
     {
         public readonly System.Collections.Immutable.IImmutableSet<string> Failed;
         public readonly System.Collections.Immutable.IImmutableDictionary<string, int> Stats;
+        [System.ObsoleteAttribute()]
+        public ShardRegionStats(System.Collections.Immutable.IImmutableDictionary<string, int> stats) { }
         public ShardRegionStats(System.Collections.Immutable.IImmutableDictionary<string, int> stats, System.Collections.Immutable.IImmutableSet<string> failed) { }
         public override bool Equals(object obj) { }
         public bool Equals(Akka.Cluster.Sharding.ShardRegionStats other) { }

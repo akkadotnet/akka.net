@@ -347,7 +347,6 @@ namespace Akka.Cluster.Sharding
         /// <param name="snapshotPluginId">TBD</param>
         /// <param name="passivateIdleEntityAfter">TBD</param>
         /// <param name="stateStoreMode">TBD</param>
-        /// <param name="rememberEntitiesStore">TBD</param>
         /// <param name="tuningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
         public ClusterShardingSettings(
@@ -357,10 +356,35 @@ namespace Akka.Cluster.Sharding
             string snapshotPluginId,
             TimeSpan passivateIdleEntityAfter,
             StateStoreMode stateStoreMode,
-            RememberEntitiesStore rememberEntitiesStore,
             TuningParameters tuningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings)
-            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, rememberEntitiesStore, TimeSpan.FromSeconds(3), tuningParameters, coordinatorSingletonSettings, null)
+            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, RememberEntitiesStore.DData, TimeSpan.FromSeconds(3), tuningParameters, coordinatorSingletonSettings, null)
+        {
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">TBD</param>
+        /// <param name="rememberEntities">TBD</param>
+        /// <param name="journalPluginId">TBD</param>
+        /// <param name="snapshotPluginId">TBD</param>
+        /// <param name="passivateIdleEntityAfter">TBD</param>
+        /// <param name="stateStoreMode">TBD</param>
+        /// <param name="tuningParameters">TBD</param>
+        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <param name="leaseSettings">TBD</param>
+        public ClusterShardingSettings(
+            string role,
+            bool rememberEntities,
+            string journalPluginId,
+            string snapshotPluginId,
+            TimeSpan passivateIdleEntityAfter,
+            StateStoreMode stateStoreMode,
+            TuningParameters tuningParameters,
+            ClusterSingletonManagerSettings coordinatorSingletonSettings,
+            LeaseUsageSettings leaseSettings)
+            : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, RememberEntitiesStore.DData, TimeSpan.FromSeconds(3), tuningParameters, coordinatorSingletonSettings, leaseSettings)
         {
         }
 

@@ -17,7 +17,7 @@ namespace Akka.Util
     /// <summary>
     /// A non thread safe mutable message buffer that can be used to buffer messages inside actors.
     /// </summary>
-    public sealed class MessageBuffer : IEnumerable<(object Message, IActorRef Ref)>, IReadOnlyCollection<(object Message, IActorRef Ref)>
+    internal sealed class MessageBuffer : IEnumerable<(object Message, IActorRef Ref)>, IReadOnlyCollection<(object Message, IActorRef Ref)>
     {
         /// <summary>
         /// Create an empty message buffer.
@@ -92,7 +92,7 @@ namespace Akka.Util
     /// A non thread safe mutable message buffer map that can be used to buffer messages inside actors.
     /// </summary>
     /// <typeparam name="TId">Id type</typeparam>
-    public sealed class MessageBufferMap<TId> : IEnumerable<KeyValuePair<TId, MessageBuffer>>, IReadOnlyCollection<KeyValuePair<TId, MessageBuffer>>
+    internal sealed class MessageBufferMap<TId> : IEnumerable<KeyValuePair<TId, MessageBuffer>>, IReadOnlyCollection<KeyValuePair<TId, MessageBuffer>>
     {
         private readonly Dictionary<TId, MessageBuffer> bufferMap = new Dictionary<TId, MessageBuffer>();
 

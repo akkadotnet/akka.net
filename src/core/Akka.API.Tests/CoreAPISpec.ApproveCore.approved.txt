@@ -4873,35 +4873,6 @@ namespace Akka.Util
         public Akka.Actor.Envelope Peek() { }
         public override string ToString() { }
     }
-    public sealed class MessageBuffer : System.Collections.Generic.IEnumerable<System.ValueTuple<object, Akka.Actor.IActorRef>>, System.Collections.Generic.IReadOnlyCollection<System.ValueTuple<object, Akka.Actor.IActorRef>>, System.Collections.IEnumerable
-    {
-        public int Count { get; }
-        public System.ValueTuple<object, Akka.Actor.IActorRef> Head { get; }
-        public bool IsEmpty { get; }
-        public bool NonEmpty { get; }
-        public Akka.Util.MessageBuffer Append(object message, Akka.Actor.IActorRef @ref) { }
-        public void DropHead() { }
-        public static Akka.Util.MessageBuffer Empty() { }
-        [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
-                "Message",
-                "Ref"})]
-        public System.Collections.Generic.IEnumerator<System.ValueTuple<object, Akka.Actor.IActorRef>> GetEnumerator() { }
-    }
-    public sealed class MessageBufferMap<TId> : System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<TId, Akka.Util.MessageBuffer>>, System.Collections.Generic.IReadOnlyCollection<System.Collections.Generic.KeyValuePair<TId, Akka.Util.MessageBuffer>>, System.Collections.IEnumerable
-    {
-        public MessageBufferMap() { }
-        public int Count { get; }
-        public bool IsEmpty { get; }
-        public bool NonEmpty { get; }
-        public int TotalCount { get; }
-        public void Add(TId id) { }
-        public void Append(TId id, object message, Akka.Actor.IActorRef @ref) { }
-        public bool Contains(TId id) { }
-        public int Drop(TId id, string reason, Akka.Actor.IActorRef deadLetters) { }
-        public System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<TId, Akka.Util.MessageBuffer>> GetEnumerator() { }
-        public Akka.Util.MessageBuffer GetOrEmpty(TId id) { }
-        public void Remove(TId id) { }
-    }
     public class static MurmurHash
     {
         public const uint StartMagicA = 2505324423u;

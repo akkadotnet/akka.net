@@ -410,6 +410,16 @@ namespace Akka.Cluster.Sharding
         /// Creates a new ShardRegionStats instance.
         /// </summary>
         /// <param name="stats">the region stats mapping of `ShardId` to number of entities</param>
+        [Obsolete]
+        public ShardRegionStats(IImmutableDictionary<ShardId, int> stats)
+            : this(stats, ImmutableHashSet<ShardId>.Empty)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new ShardRegionStats instance.
+        /// </summary>
+        /// <param name="stats">the region stats mapping of `ShardId` to number of entities</param>
         /// <param name="failed">set of shards if any failed to respond within the timeout</param>
         public ShardRegionStats(IImmutableDictionary<ShardId, int> stats, IImmutableSet<ShardId> failed)
         {
@@ -514,6 +524,16 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly IImmutableSet<ShardState> Shards;
         public readonly IImmutableSet<string> Failed;
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="shards">TBD</param>
+        [Obsolete]
+        public CurrentShardRegionState(IImmutableSet<ShardState> shards)
+            : this(shards, ImmutableHashSet<ShardId>.Empty)
+        {
+        }
 
         /// <summary>
         /// TBD
