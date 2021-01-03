@@ -59,7 +59,7 @@ namespace Akka.Cluster.Sharding.External
             #endregion
         }
 
-        public sealed class GetShardLocations : INoSerializationVerificationNeeded, IEquatable<GetShardLocations>
+        public sealed class GetShardLocations : INoSerializationVerificationNeeded
         {
             public static readonly GetShardLocations Instance = new GetShardLocations();
 
@@ -67,30 +67,8 @@ namespace Akka.Cluster.Sharding.External
             {
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as GetShardLocations);
-            }
-
-            public bool Equals(GetShardLocations other)
-            {
-                if (other is null) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"GetShardLocations";
-
-            #endregion
         }
 
         public sealed class GetShardLocationsResponse : INoSerializationVerificationNeeded, IEquatable<GetShardLocationsResponse>

@@ -145,7 +145,7 @@ namespace Akka.Cluster.Sharding
     /// the state of the shard regions.
     /// </summary>
     [Serializable]
-    public sealed class GetCurrentRegions : IShardRegionQuery, IClusterShardingSerializable, IEquatable<GetCurrentRegions>
+    public sealed class GetCurrentRegions : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -156,30 +156,8 @@ namespace Akka.Cluster.Sharding
         {
         }
 
-        #region Equals
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as GetCurrentRegions);
-        }
-
-        public bool Equals(GetCurrentRegions other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return 0;
-        }
-
         /// <inheritdoc/>
         public override string ToString() => $"GetCurrentRegions";
-
-        #endregion
     }
 
     /// <summary>
@@ -354,7 +332,7 @@ namespace Akka.Cluster.Sharding
     /// For the statistics for the entire cluster, see <see cref="GetClusterShardingStats"/>.
     /// </summary>
     [Serializable]
-    public sealed class GetShardRegionStats : IShardRegionQuery, IClusterShardingSerializable, IEquatable<GetShardRegionStats>
+    public sealed class GetShardRegionStats : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -365,30 +343,8 @@ namespace Akka.Cluster.Sharding
         {
         }
 
-        #region Equals
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as GetShardRegionStats);
-        }
-
-        public bool Equals(GetShardRegionStats other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return 0;
-        }
-
         /// <inheritdoc/>
         public override string ToString() => $"GetShardRegionStats";
-
-        #endregion
     }
 
     /// <summary>
@@ -474,7 +430,7 @@ namespace Akka.Cluster.Sharding
     /// and what entities are running on each of those shards.
     /// </summary>
     [Serializable]
-    public sealed class GetShardRegionState : IShardRegionQuery, IClusterShardingSerializable, IEquatable<GetShardRegionState>
+    public sealed class GetShardRegionState : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -485,30 +441,8 @@ namespace Akka.Cluster.Sharding
         {
         }
 
-        #region Equals
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            return Equals(obj as GetShardRegionState);
-        }
-
-        public bool Equals(GetShardRegionState other)
-        {
-            if (ReferenceEquals(other, null)) return false;
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return 0;
-        }
-
         /// <inheritdoc/>
         public override string ToString() => $"GetShardRegionState";
-
-        #endregion
     }
 
     /// <summary>

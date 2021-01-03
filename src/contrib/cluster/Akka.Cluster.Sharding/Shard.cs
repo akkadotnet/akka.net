@@ -206,7 +206,7 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class GetShardStats : IShardQuery, IClusterShardingSerializable, IEquatable<GetShardStats>
+        public sealed class GetShardStats : IShardQuery, IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -217,30 +217,8 @@ namespace Akka.Cluster.Sharding
             {
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as GetShardStats);
-            }
-
-            public bool Equals(GetShardStats other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"GetShardStats";
-
-            #endregion
         }
 
         /// <summary>
@@ -476,7 +454,7 @@ namespace Akka.Cluster.Sharding
         /// is never really kept track of but used to verify state transitions
         /// and as return value instead of null
         /// </summary>
-        internal sealed class NoState : EntityState, IEquatable<NoState>
+        internal sealed class NoState : EntityState
         {
             public static readonly NoState Instance = new NoState();
 
@@ -499,30 +477,8 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as NoState);
-            }
-
-            public bool Equals(NoState other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"NoState";
-
-            #endregion
         }
 
         /// <summary>
@@ -530,7 +486,7 @@ namespace Akka.Cluster.Sharding
         /// it hasn't been created yet. E.g. on restart when first getting all the
         /// remembered entity ids.
         /// </summary>
-        internal sealed class RememberedButNotCreated : EntityState, IEquatable<RememberedButNotCreated>
+        internal sealed class RememberedButNotCreated : EntityState
         {
             public static readonly RememberedButNotCreated Instance = new RememberedButNotCreated();
 
@@ -551,30 +507,8 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as RememberedButNotCreated);
-            }
-
-            public bool Equals(RememberedButNotCreated other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"RememberedButNotCreated";
-
-            #endregion
         }
 
         /// <summary>
@@ -665,7 +599,7 @@ namespace Akka.Cluster.Sharding
         /// its stop is being recorded in the remember entities store, or while the stop is queued up
         /// to be stored in the next batch.
         /// </summary>
-        internal sealed class RememberingStop : EntityState, IEquatable<RememberingStop>
+        internal sealed class RememberingStop : EntityState
         {
             public static readonly RememberingStop Instance = new RememberingStop();
 
@@ -684,30 +618,8 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as RememberingStop);
-            }
-
-            public bool Equals(RememberingStop other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"RememberingStop";
-
-            #endregion
         }
 
         internal abstract class WithRef : EntityState, IEquatable<WithRef>
@@ -791,7 +703,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        internal sealed class WaitingForRestart : EntityState, IEquatable<WaitingForRestart>
+        internal sealed class WaitingForRestart : EntityState
         {
             public static readonly WaitingForRestart Instance = new WaitingForRestart();
 
@@ -812,30 +724,8 @@ namespace Akka.Cluster.Sharding
                 }
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as WaitingForRestart);
-            }
-
-            public bool Equals(WaitingForRestart other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"WaitingForRestart";
-
-            #endregion
         }
 
         internal sealed class Entities

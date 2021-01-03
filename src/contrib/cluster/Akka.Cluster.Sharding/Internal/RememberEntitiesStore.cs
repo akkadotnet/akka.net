@@ -152,7 +152,7 @@ namespace Akka.Cluster.Sharding.Internal
             #endregion
         }
 
-        public sealed class GetEntities : ICommand, IEquatable<GetEntities>
+        public sealed class GetEntities : ICommand
         {
             public static readonly GetEntities Instance = new GetEntities();
 
@@ -161,30 +161,8 @@ namespace Akka.Cluster.Sharding.Internal
 
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as GetEntities);
-            }
-
-            public bool Equals(GetEntities other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"GetEntities";
-
-            #endregion
         }
 
         public sealed class RememberedEntities : ICommand, IEquatable<RememberedEntities>
@@ -362,7 +340,7 @@ namespace Akka.Cluster.Sharding.Internal
         /// Sent once when the coordinator starts (but could be retried), should result in a response of
         /// RememberedShards
         /// </summary>
-        public sealed class GetShards : ICommand, IEquatable<GetShards>
+        public sealed class GetShards : ICommand
         {
             public static readonly GetShards Instance = new GetShards();
 
@@ -370,30 +348,8 @@ namespace Akka.Cluster.Sharding.Internal
             {
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as GetShards);
-            }
-
-            public bool Equals(GetShards other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"GetShards";
-
-            #endregion
         }
 
         public sealed class RememberedShards : ICommand, IEquatable<RememberedShards>

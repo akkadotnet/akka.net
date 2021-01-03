@@ -71,7 +71,7 @@ namespace Akka.Cluster.Sharding.Internal
             #endregion
         }
 
-        public sealed class MigrationMarker : IClusterShardingSerializable, IEquatable<MigrationMarker>
+        public sealed class MigrationMarker : IClusterShardingSerializable
         {
             public static readonly MigrationMarker Instance = new MigrationMarker();
 
@@ -79,30 +79,8 @@ namespace Akka.Cluster.Sharding.Internal
             {
             }
 
-            #region Equals
-
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-            {
-                return Equals(obj as MigrationMarker);
-            }
-
-            public bool Equals(MigrationMarker other)
-            {
-                if (ReferenceEquals(other, null)) return false;
-                return true;
-            }
-
-            /// <inheritdoc/>
-            public override int GetHashCode()
-            {
-                return 0;
-            }
-
             /// <inheritdoc/>
             public override string ToString() => $"MigrationMarker";
-
-            #endregion
         }
 
         public EventSourcedRememberEntitiesCoordinatorStore(
