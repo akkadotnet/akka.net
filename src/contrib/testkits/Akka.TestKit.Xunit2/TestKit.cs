@@ -43,16 +43,6 @@ namespace Akka.TestKit.Xunit2
             }
         }
 
-        private void InitializeLogger(ActorSystem system, ITestOutputHelper output)
-        {
-            if (output != null)
-            {
-                var extSystem = (ExtendedActorSystem)system;
-                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(output)), "log-test");
-                logger.Tell(new InitializeLogger(system.EventStream));
-            }
-        }
-
         private bool _isDisposed; //Automatically initialized to false;
 
         /// <summary>
