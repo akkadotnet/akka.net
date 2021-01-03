@@ -138,6 +138,7 @@ namespace Akka.Cluster.Sharding.Tests
 
             region.Tell(new Msg(10, "passivate"));
             ExpectTerminated(response.Self);
+            Thread.Sleep(200);
 
             // This would fail before as sharded actor would be stuck passivating
             region.Tell(new Msg(10, "hello"));
@@ -177,8 +178,8 @@ namespace Akka.Cluster.Sharding.Tests
             // 4. when the supervisor stops the shard should start it anew and deliver the buffered messages
             region.Tell(new Msg(10, "passivate"));
             ExpectTerminated(response.Self);
-
             Thread.Sleep(200);
+
             region.Tell(new Msg(10, "hello"));
             ExpectMsg<Response>(TimeSpan.FromSeconds(20));
         }

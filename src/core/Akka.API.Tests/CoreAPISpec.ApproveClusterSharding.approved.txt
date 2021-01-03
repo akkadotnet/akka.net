@@ -114,28 +114,19 @@ namespace Akka.Cluster.Sharding
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetCurrentRegions>
+    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetCurrentRegions Instance;
-        public override bool Equals(object obj) { }
-        public bool Equals(Akka.Cluster.Sharding.GetCurrentRegions other) { }
-        public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetShardRegionState>
+    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetShardRegionState Instance;
-        public override bool Equals(object obj) { }
-        public bool Equals(Akka.Cluster.Sharding.GetShardRegionState other) { }
-        public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class GetShardRegionStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery, System.IEquatable<Akka.Cluster.Sharding.GetShardRegionStats>
+    public sealed class GetShardRegionStats : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetShardRegionStats Instance;
-        public override bool Equals(object obj) { }
-        public bool Equals(Akka.Cluster.Sharding.GetShardRegionStats other) { }
-        public override int GetHashCode() { }
         public override string ToString() { }
     }
     public sealed class GracefulShutdown : Akka.Cluster.Sharding.IShardRegionCommand
@@ -356,12 +347,9 @@ namespace Akka.Cluster.Sharding.External
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class GetShardLocations : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations>
+        public sealed class GetShardLocations : Akka.Actor.INoSerializationVerificationNeeded
         {
             public static readonly Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations Instance;
-            public override bool Equals(object obj) { }
-            public bool Equals(Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocations other) { }
-            public override int GetHashCode() { }
             public override string ToString() { }
         }
         public sealed class GetShardLocationsResponse : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Cluster.Sharding.External.ExternalShardAllocationStrategy.GetShardLocationsResponse>
