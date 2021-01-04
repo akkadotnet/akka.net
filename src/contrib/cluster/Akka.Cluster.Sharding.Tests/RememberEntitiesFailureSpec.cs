@@ -211,7 +211,6 @@ namespace Akka.Cluster.Sharding.Tests
                 switch (message)
                 {
                     case RememberEntitiesShardStore.GetEntities _:
-                        log.Info("XXX RememberEntitiesShardStore.GetEntities from [{0}] fail [{1}]", Sender, failUpdate);
                         switch (failShardGetEntities.GetValueOrDefault(shardId))
                         {
                             case null:
@@ -232,7 +231,6 @@ namespace Akka.Cluster.Sharding.Tests
                         }
                         return true;
                     case RememberEntitiesShardStore.Update m:
-                        log.Info("XXX RememberEntitiesShardStore.Update [{0}] from [{1}] fail [{2}]", m, Sender, failUpdate);
                         switch (failUpdate)
                         {
                             case null:
@@ -303,16 +301,6 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Context.System.EventStream.Publish(new CoordinatorStoreCreated(Context.Self));
             }
-
-            //protected override void PreStart()
-            //{
-            //    Context.System.EventStream.Publish(new CoordinatorStoreCreated(Context.Self));
-            //    base.PreStart();
-            //}
-
-            //protected override void PostRestart(Exception reason)
-            //{
-            //}
 
             protected override bool Receive(object message)
             {

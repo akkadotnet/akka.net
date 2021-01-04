@@ -235,9 +235,10 @@ namespace Akka.Cluster.Sharding.Tests
             Within(TimeSpan.FromSeconds(20), () =>
             {
                 var firstAddress = GetAddress(config.First);
-                //[akka://PersistentClusterShardCoordinatorDowningSpec/user/shardLocations#1681593872]
                 Sys.ActorSelection(Node(config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
                 var originalLocations = ExpectMsg<Locations>().Locs;
+
+                EnterBarrier("after-3-locations");
 
                 RunOn(() =>
                 {
@@ -253,7 +254,6 @@ namespace Akka.Cluster.Sharding.Tests
                     {
                         Cluster.State.Members.Count.Should().Be(1);
                     });
-                    Sys.Log.Info("XXX 1");
 
                     // start a few more new shards, could be allocated to first but should notice that it's terminated
                     ImmutableDictionary<string, IActorRef> additionalLocations = null;
