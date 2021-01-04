@@ -3,7 +3,7 @@
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.Docs.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <RootNamespace>DocsExamples</RootNamespace>
   </PropertyGroup>
 
