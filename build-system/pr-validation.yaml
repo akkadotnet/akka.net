@@ -153,7 +153,7 @@ jobs:
       scriptArgs: MultiNodeTestsNetCore incremental runtime=ubuntu-18.04-x64
       outputDirectory: 'TestResults'
       artifactName: 'net_core_mntr_linux-$(Build.BuildId)'
-      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresDir: 'TestResults/multinode'
       mntrFailuresArtifactName: 'net_core_mntr_FAILED_linux-$(Build.BuildId)'
       
   - template: azure-pipeline.mntr-template.yaml
@@ -165,7 +165,7 @@ jobs:
       scriptArgs: MultiNodeTestsNet incremental runtime=ubuntu-18.04-x64
       outputDirectory: 'TestResults'
       artifactName: 'net_5_mntr_linux-$(Build.BuildId)'
-      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresDir: 'TestResults/multinode'
       mntrFailuresArtifactName: 'net_5_mntr_FAILED_linux-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
