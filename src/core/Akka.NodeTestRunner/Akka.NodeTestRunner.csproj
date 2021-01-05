@@ -4,7 +4,7 @@
     <AssemblyTitle>Akka.NodeTestRunner</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <RuntimeIdentifiers>win10-x64;ubuntu-18.04-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

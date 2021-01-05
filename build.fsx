@@ -520,11 +520,21 @@ Target "PublishMntr" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        Runtime = mntrRuntime
+                        Runtime = "win10-x64"
                         Framework = testNetVersion
                         VersionSuffix = versionSuffix }))
 
-       
+        // Windows .NET 5 Ubuntu
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "ubuntu.18.04-x64"
+                        Framework = testNetVersion
+                        VersionSuffix = versionSuffix }))
+
         // Windows .NET Core
         executableProjects |> Seq.iter (fun project ->
             DotNetCli.Publish
@@ -532,7 +542,18 @@ Target "PublishMntr" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        Runtime = mntrRuntime
+                        Runtime = "win10-x64"
+                        Framework = testNetCoreVersion
+                        VersionSuffix = versionSuffix }))
+
+        // Windows .NET Core ubuntu
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "ubuntu.18.04-x64"
                         Framework = testNetCoreVersion
                         VersionSuffix = versionSuffix }))
 )
