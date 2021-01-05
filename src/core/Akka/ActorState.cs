@@ -73,7 +73,7 @@ namespace Akka.Actor
         /// Clears the `Behavior` stack
         /// </summary>
         /// <returns>TBD</returns>
-        IActorState ClearBehaviorStack();
+        IActorState ClearBehaviorStack(); 
         /// <summary>
         /// Replaces the current receive behavior with a new behavior
         /// </summary>
