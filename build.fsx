@@ -143,6 +143,8 @@ let filterProjects selectedProject =
     if runIncrementally then
         let affectedProjects = getAffectedProjects.Value
 
+        //need to test this
+        log (sprintf "Searching for %s inside [%s]" selectedProject (String.Join(",", affectedProjects.Value)))
         (*
         if affectedProjects.IsSome then
             log (sprintf "Searching for %s inside [%s]" selectedProject (String.Join(",", affectedProjects.Value)))
@@ -319,6 +321,7 @@ Target "MultiNodeTests" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            
             rawProjects |> Seq.choose filterProjects
 
         let multiNodeTestAssemblies =
@@ -355,7 +358,11 @@ Target "MultiNodeTestsNetCore" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            
+            printfn (sprintf "Found projects [%s]" (String.Join(",", rawProjects)))            
             rawProjects |> Seq.choose filterProjects
+            printfn (sprintf "Filtered projects [%s]" (String.Join(",", rawProjects)))
+            
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.NetCore)
@@ -395,7 +402,9 @@ Target "MultiNodeTestsNet" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            printfn (sprintf "Found projects [%s]" (String.Join(",", rawProjects)))
             rawProjects |> Seq.choose filterProjects
+            printfn (sprintf "Filtered projects [%s]" (String.Join(",", rawProjects)))
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.Net)
