@@ -150,7 +150,7 @@ jobs:
       displayName: '.NET Core Multi-Node Tests (Linux)'
       vmImage: 'ubuntu-18.04'
       scriptFileName: './build.sh'
-      scriptArgs: MultiNodeTestsNetCore incremental runtime=ubuntu-18.04-x64
+      scriptArgs: MultiNodeTestsNetCore incremental runtime=linux-x64
       outputDirectory: 'TestResults'
       artifactName: 'net_core_mntr_linux-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults/multinode'
@@ -162,7 +162,7 @@ jobs:
       displayName: '.NET 5 Multi-Node Tests (Linux)'
       vmImage: 'ubuntu-18.04'
       scriptFileName: './build.sh'
-      scriptArgs: MultiNodeTestsNet incremental runtime=ubuntu-18.04-x64
+      scriptArgs: MultiNodeTestsNet incremental runtime=linux-x64
       outputDirectory: 'TestResults'
       artifactName: 'net_5_mntr_linux-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults/multinode'

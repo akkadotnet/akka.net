@@ -6,7 +6,7 @@
     <Description>Akka.NET Multi-node Test Runner; used for executing tests written with Akka.Remote.TestKit</Description>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win10-x64;linux-x64</RuntimeIdentifiers>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <NuspecFile>Akka.MultiNodeTestRunner.nuspec</NuspecFile>
   </PropertyGroup>
