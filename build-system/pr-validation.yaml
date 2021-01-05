@@ -143,6 +143,30 @@ jobs:
       artifactName: 'net_5_mntr_windows-$(Build.BuildId)'
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: 'net_5_mntr_FAILED_windows-$(Build.BuildId)'
+      
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: 'net_core_mntr_linux'
+      displayName: '.NET Core Multi-Node Tests (Linux)'
+      vmImage: 'ubuntu-18.04'
+      scriptFileName: './build.sh'
+      scriptArgs: MultiNodeTestsNetCore incremental runtime=ubuntu-18.04-x64
+      outputDirectory: 'TestResults'
+      artifactName: 'net_core_mntr_linux-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_core_mntr_FAILED_linux-$(Build.BuildId)'
+      
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: 'net_5_mntr_linux'
+      displayName: '.NET 5 Multi-Node Tests (Linux)'
+      vmImage: 'ubuntu-18.04'
+      scriptFileName: './build.sh'
+      scriptArgs: MultiNodeTestsNet incremental runtime=ubuntu-18.04-x64
+      outputDirectory: 'TestResults'
+      artifactName: 'net_5_mntr_linux-$(Build.BuildId)'
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: 'net_5_mntr_FAILED_linux-$(Build.BuildId)'
 
   - template: azure-pipeline.template.yaml
     parameters:

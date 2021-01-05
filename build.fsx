@@ -56,6 +56,7 @@ let incrementalistReport = output @@ "incrementalist.txt"
 let testNetFrameworkVersion = "net461"
 let testNetCoreVersion = "netcoreapp3.1"
 let testNetVersion = "net5.0"
+let mntrRuntime = getBuildParamOrDefault "runtime" "win10-x64"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -348,7 +349,7 @@ Target "MultiNodeTests" (fun _ ->
 
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -388,7 +389,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 )
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
