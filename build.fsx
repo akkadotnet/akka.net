@@ -351,14 +351,28 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
 
-        let projects =
-            let rawProjects = match (isWindows) with
+        let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-            rawProjects |> Seq.choose filterProjects
+         
+        let foundProjects = rawProjects |> String.concat ", "
+         
+        let projects = rawProjects |> Seq.choose filterProjects
+
+        let filteredProjects = projects |> String.concat ", "
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.NetCore)
+
+
+        let mntr = multiNodeTestAssemblies |> String.concat ", "
+        
+        printfn "Found projects [%s]" foundProjects
+        
+        printfn "Filtered projects [%s]" filteredProjects
+        
+        printfn "Multi Node Test Assemblies [%s]" mntr
+        
 
         printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -391,14 +405,26 @@ Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
 
-        let projects =
-            let rawProjects = match (isWindows) with
+        let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-            rawProjects |> Seq.choose filterProjects
+        
+        let foundProjects = rawProjects |> String.concat ", "
+        
+        let projects = rawProjects |> Seq.choose filterProjects
+
+        let filteredProjects = projects |> String.concat ", "
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.Net)
+
+        let mntr = multiNodeTestAssemblies |> String.concat ", "
+
+        printfn "Found projects [%s]" foundProjects
+
+        printfn "Filtered projects [%s]" filteredProjects
+
+        printfn "Multi Node Test Assemblies [%s]" mntr
 
         printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
