@@ -45,7 +45,11 @@ namespace Akka.Remote.Tests.Serialization
             var message = new ActorSelectionMessage("hello", elements.ToArray());
             var actual = AssertAndReturn(message);
             actual.Message.Should().Be(message.Message);
-            actual.Elements.Should().BeEquivalentTo(elements);
+            for (var i = 0; i < elements.Count; i++)
+            {
+                actual.Elements[i].Should().Be(elements[i]);
+            }
+            
         }
 
         private T AssertAndReturn<T>(T message)
