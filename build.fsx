@@ -351,7 +351,9 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
 
-        let rawProjects = filesInDirMatchingRecursive "*.Tests.MultiNode.csproj"  (directoryInfo (currentDirectory @@ "src/")) 
+        let rawProjects = 
+                let raw = filesInDirMatchingRecursive "*.Tests.MultiNode.csproj"  (directoryInfo (currentDirectory @@ "src/")) 
+                raw |> List.map (fun (path) -> path.FullName) 
                                 //match (isWindows) with
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ ->  !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
@@ -406,7 +408,9 @@ Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
 
-        let rawProjects = filesInDirMatchingRecursive "*.Tests.MultiNode.csproj"  (directoryInfo (currentDirectory @@ "src/")) 
+        let rawProjects = 
+            let raw = filesInDirMatchingRecursive "*.Tests.MultiNode.csproj"  (directoryInfo (currentDirectory @@ "src/")) 
+            raw |> List.map (fun (path) -> path.FullName) 
                                 //match (isWindows) with
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ -> !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
