@@ -296,19 +296,19 @@ namespace Akka.Streams.Tests.Dsl
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { 1, 2, 3 })).Via(((dynamic)zip).Left).To(wrongOut))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { "a", "b", "c" })).To(((dynamic)zip).Left))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { "a", "b", "c" })).To(zip.Out))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     builder.Invoking(
                         b => ((dynamic)b).From(((dynamic)zip).Left).To(((dynamic)zip).Right))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     var source =
                         Source.From(new[]
@@ -318,13 +318,13 @@ namespace Akka.Streams.Tests.Dsl
                         });
                     builder.Invoking(
                         b => ((dynamic)b).From(source).Via(unzip.In).To(whatever))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     return ClosedShape.Instance;
                 }));
             };
 
-            action.ShouldThrow<ArgumentException>();
+            action.Should().Throw<ArgumentException>();
         }
 
         [Fact(Skip = "FIXME Covariance  is not supported")]

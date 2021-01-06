@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var sub = probe.ExpectSubscription();
                 sub.Request(1);
-                probe.ExpectNext().ShouldAllBeEquivalentTo(result);
+                probe.ExpectNext().Should().BeEquivalentTo(result);
                 sub.Cancel();
             }, Materializer);
         }

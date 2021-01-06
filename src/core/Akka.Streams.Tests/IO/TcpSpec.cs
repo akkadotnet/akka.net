@@ -20,6 +20,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Tcp = Akka.Streams.Dsl.Tcp;
@@ -706,7 +707,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 total.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
                 total.Result.Should().Be(100);
 
-                rejected.Invoking(x => x.Wait(5.Seconds())).ShouldThrow<StreamTcpException>();
+                rejected.Invoking(x => x.Wait(5.Seconds())).Should().Throw<StreamTcpException>();
             }, Materializer);
         }
     }

@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.ShouldAllBeEquivalentTo(input);
+            future.Result.Should().BeEquivalentTo(input);
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.ShouldAllBeEquivalentTo(input);
+            future.Result.Should().BeEquivalentTo(input);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
         }
     }
 }

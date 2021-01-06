@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Actor
             Source.From(Enumerable.Range(1, n))
                 .Select(i => new Msg(i, TestActor))
                 .RunWith(Sink.ActorSubscriber<Msg>(Streamer.Props), Sys.Materializer());
-            ReceiveN(n).ShouldAllBeEquivalentTo(Enumerable.Range(1, n).Select(i => new Done(i)));
+            ReceiveN(n).Should().BeEquivalentTo(Enumerable.Range(1, n).Select(i => new Done(i)));
         }
 
     }

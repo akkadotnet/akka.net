@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
             var f = Bidi().Join(Flow.Create<long>().Select(x => ByteString.FromString($"Hello {x}")));
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.ShouldAllBeEquivalentTo(new[] {"Hello 3", "Hello 4", "Hello 5"});
+            result.Result.Should().BeEquivalentTo(new[] {"Hello 3", "Hello 4", "Hello 5"});
         }
 
         [Fact]
@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Limit(10)
                     .RunWith(Sink.Seq<long>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.ShouldAllBeEquivalentTo(new[] {3L, 4L});
+            result.Result.Should().BeEquivalentTo(new[] {3L, 4L});
         }
 
         [Fact]
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
             var f = Bidi().Atop(Inverse()).Join(Flow.Create<int>().Select(x => x.ToString()));
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.ShouldAllBeEquivalentTo(new[] { "5", "6", "7" });
+            result.Result.Should().BeEquivalentTo(new[] { "5", "6", "7" });
         }
 
         [Fact]
@@ -133,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
             var f = Flow.Create<int>().Select(x => x.ToString()).Join(Inverse().Reversed()).Join(Bidi().Reversed());
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.ShouldAllBeEquivalentTo(new[] { "5", "6", "7" });
+            result.Result.Should().BeEquivalentTo(new[] { "5", "6", "7" });
         }
 
         [Fact]
@@ -197,7 +197,7 @@ namespace Akka.Streams.Tests.Dsl
                 Task.WhenAll(l, m, r).Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 l.Result.Should().Be(1);
                 m.Result.Should().Be(42);
-                r.Result.ShouldAllBeEquivalentTo(new [] {3L, 12L});
+                r.Result.Should().BeEquivalentTo(new [] {3L, 12L});
             }, Materializer);
         }
 

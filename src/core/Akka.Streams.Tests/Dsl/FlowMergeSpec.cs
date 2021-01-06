@@ -58,7 +58,7 @@ namespace Akka.Streams.Tests.Dsl
                     collected.Add(probe.ExpectNext());
                 }
 
-                collected.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                collected.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 probe.ExpectComplete();
             }, Materializer);
         }

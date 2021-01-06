@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var expected = list.Where(x => x % n == 0);
 
-                future.AwaitResult().ShouldBeEquivalentTo(expected, o => o.WithStrictOrdering());
+                future.AwaitResult().Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
             }
         }
 
@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(new Sample<int>(next))
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-            future.AwaitResult().ShouldBeEquivalentTo(new[] { 1, 3, 6, 10 }, o => o.WithStrictOrdering());
+            future.AwaitResult().Should().BeEquivalentTo(new[] { 1, 3, 6, 10 }, o => o.WithStrictOrdering());
         }
 
         [Fact]
@@ -56,7 +56,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
             };
 
-            aсtion.ShouldThrow<ArgumentException>();
+            aсtion.Should().Throw<ArgumentException>();
 
             aсtion = () =>
             {
@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
             };
 
-            aсtion.ShouldThrow<ArgumentException>();
+            aсtion.Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Sys.Materializer());
             };
 
-            aсtion.ShouldThrow<ArgumentException>();
+            aсtion.Should().Throw<ArgumentException>();
         }
     }
 }

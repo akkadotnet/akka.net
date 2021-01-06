@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
                 var future = t.Item2;
                 p.SendNext(1);
                 p.SendError(ex);
-                future.Invoking(f => f.Wait()).ShouldThrow<Exception>().WithMessage("Stream failed.");
+                future.Invoking(f => f.Wait()).Should().Throw<Exception>().WithMessage("Stream failed.");
             }, Materializer);
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
             materializer.Shutdown();
 
             Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.ShouldThrow<AbruptTerminationException>();
+            a.Should().Throw<AbruptTerminationException>();
         }
     }
 }

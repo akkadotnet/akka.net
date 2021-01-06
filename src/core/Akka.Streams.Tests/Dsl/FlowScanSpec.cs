@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var random = new Random();
                 var v = Enumerable.Range(1, random.Next(100, 1000)).Select(_ => random.Next()).ToArray();
-                Scan(Source.From(v)).ShouldAllBeEquivalentTo(scan(v));
+                Scan(Source.From(v)).Should().BeEquivalentTo(scan(v));
             }, Materializer);
         }
 
@@ -73,13 +73,13 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var error = new TestException("fail!");
                 Action fail = () => Scan(Source.Failed<int>(error));
-                fail.ShouldThrow<TestException>();
+                fail.Should().Throw<TestException>();
             }, Materializer);
         }
 
         [Fact]
         public void A_Scan_must_Scan_empty() =>
-            this.AssertAllStagesStopped(() => Scan(Source.Empty<int>()).ShouldAllBeEquivalentTo(new[] {0}), Materializer);
+            this.AssertAllStagesStopped(() => Scan(Source.Empty<int>()).Should().BeEquivalentTo(new[] {0}), Materializer);
 
         [Fact]
         public void A_Scan_must_emit_values_promptly()
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(new[] {0, 1});
+            task.Result.Should().BeEquivalentTo(new[] {0, 1});
         }
 
         [Fact]
@@ -109,7 +109,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(scan)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .ToStrict(TimeSpan.FromSeconds(1))
-                .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 0, 5, 12});
+                .Should().BeEquivalentTo(new[] {0, 1, 4, 0, 5, 12});
 
         }
 
@@ -128,7 +128,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(scan)
                 .RunWith(this.SinkProbe<int>(), Materializer)
                 .ToStrict(TimeSpan.FromSeconds(1))
-                .ShouldAllBeEquivalentTo(new[] {0, 1, 4, 9, 16});
+                .Should().BeEquivalentTo(new[] {0, 1, 4, 9, 16});
         }
         
         [Fact]

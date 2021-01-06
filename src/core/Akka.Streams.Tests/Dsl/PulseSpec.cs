@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            task.AwaitResult().ShouldBeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+            task.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
         }
 
         [Fact]
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            task.AwaitResult().ShouldBeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+            task.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
         }
     }
 }

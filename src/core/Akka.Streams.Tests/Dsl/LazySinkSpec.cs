@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
                 sourceSub.ExpectCancellation();
-                taskProbe.Invoking(t => t.Wait()).ShouldThrow<TestException>();
+                taskProbe.Invoking(t => t.Wait()).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -171,7 +171,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
-                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<TestException>();
+                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -236,7 +236,7 @@ namespace Akka.Streams.Tests.Dsl
                         throw Ex;
                     });
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).ShouldThrow<TestException>();
+                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -260,7 +260,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsFaulted.ShouldBe(true);
                 task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
 
             }, Materializer);
         }

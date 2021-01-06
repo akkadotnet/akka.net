@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
             foreach (var interval in intervals)
                 interval.Should().BeGreaterOrEqualTo(minInterval);
 
-            batches.SelectMany(x => x).ShouldBeEquivalentTo(Enumerable.Range(1, numOfElements), o => o.WithStrictOrdering());
+            batches.SelectMany(x => x).Should().BeEquivalentTo(Enumerable.Range(1, numOfElements), o => o.WithStrictOrdering());
             batches.Count.Should().BeOneOf(numOfElements / maxBatchSize, numOfElements / maxBatchSize + 1);
         }
     }

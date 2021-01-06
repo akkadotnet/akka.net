@@ -276,7 +276,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 Flow.Create<int>()
                     .Invoking(f => f.RecoverWithRetries(exception => Source.Empty<int>(), -2))
-                    .ShouldThrow<ArgumentException>();
+                    .Should().Throw<ArgumentException>();
             }, Materializer);
         }
 
@@ -299,7 +299,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsFaulted.ShouldBe(true);
                 task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
 
             }, Materializer);
         }

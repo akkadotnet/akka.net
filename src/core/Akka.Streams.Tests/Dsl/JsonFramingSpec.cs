@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.AwaitResult().ShouldAllBeEquivalentTo(new []
+            result.AwaitResult().Should().BeEquivalentTo(new []
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""Ég get etið gler án þess að meiða mig"" }",
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
 
-            result.AwaitResult().ShouldAllBeEquivalentTo(new[]
+            result.AwaitResult().Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
@@ -120,7 +120,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
 
-            result.AwaitResult().ShouldAllBeEquivalentTo(new[]
+            result.AwaitResult().Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }",
@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
                 .AwaitResult();
 
 
-            result.ShouldAllBeEquivalentTo(new[]
+            result.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
                 @"{ ""name"" : ""jack"" }"
@@ -421,7 +421,7 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             buffer.Offer(ByteString.FromString("}"));
-            buffer.Poll().Value.ShouldAllBeEquivalentTo(ByteString.FromString(@"{ ""name"" : ""john""}"));
+            buffer.Poll().Value.Should().BeEquivalentTo(ByteString.FromString(@"{ ""name"" : ""john""}"));
         }
 
         [Fact]
@@ -429,7 +429,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("THIS IS NOT VALID { \name\": \"john\"}"));
-            buffer.Invoking(b => b.Poll()).ShouldThrow<Framing.FramingException>();
+            buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -438,7 +438,7 @@ namespace Akka.Streams.Tests.Dsl
             var buffer = new JsonObjectParser();
             buffer.Offer(ByteString.FromString("{ \"name\": \"john\"} THIS IS NOT VALID "));
             buffer.Poll(); // first emitting the valid element
-            buffer.Invoking(b => b.Poll()).ShouldThrow<Framing.FramingException>();
+            buffer.Invoking(b => b.Poll()).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -455,7 +455,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]

@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(4, s => s)
                 .RunWith(ToSet, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 40));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(0, 40));
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Take(40)
                 .RunWith(ToSet, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 40));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(0, 40));
         }
 
         [Fact]
@@ -74,8 +74,8 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(ToSeq, Materializer);
             task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
 
-            task.Result.Take(30).ShouldAllBeEquivalentTo(Enumerable.Range(0, 30));
-            task.Result.Drop(30).ShouldAllBeEquivalentTo(Enumerable.Range(30, 10));
+            task.Result.Take(30).Should().BeEquivalentTo(Enumerable.Range(0, 30));
+            task.Result.Drop(30).Should().BeEquivalentTo(Enumerable.Range(30, 10));
         }
 
         [Fact]
@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(1, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                 })
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -126,7 +126,7 @@ namespace Akka.Streams.Tests.Dsl
                 .MergeMany(10, x => x)
                 .RunWith(Sink.First<int>(), Materializer);
 
-            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<TestException>().And.Should().Be(ex);
+            future.Invoking(f => f.Wait(TimeSpan.FromSeconds(1))).Should().Throw<TestException>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -224,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var elems = p.Within(TimeSpan.FromSeconds(1), () => Enumerable.Range(1, noOfSources * 10).Select(_ => p.RequestNext()).ToArray());
             p.ExpectComplete();
-            elems.ShouldAllBeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
+            elems.Should().BeEquivalentTo(Enumerable.Range(0, noOfSources * 10));
         }
 
         private sealed class AttibutesSourceStage : GraphStage<SourceShape<Attributes>>
@@ -308,7 +308,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsFaulted.ShouldBe(true);
                 task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
 
             }, Materializer);
         }

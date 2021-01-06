@@ -22,7 +22,7 @@ namespace Akka.Streams.Tests.Util
             var iteratorAdapter = new IteratorAdapter<object>(new ThrowExceptioEnumerator<object>());
             Action action = () => iteratorAdapter.Next();
 
-            action.ShouldThrow<AggregateException>()
+            action.Should().Throw<AggregateException>()
                 .And.StackTrace
                 .Contains("at Akka.Streams.Tests.Util.IteratorAdapterSpec.ThrowExceptioEnumerator`1.MoveNext()");
         }

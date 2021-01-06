@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Concat(Source.Single<IEnumerable<int>>(new List<int>()))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.AwaitResult().ShouldBeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
+                task.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
             }
         }
 
@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeSorted(Source.From(new[] { 0, 1, 2, 7 }), (l, r) => 2 * l.CompareTo(r))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-            task.AwaitResult().ShouldBeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
+            task.AwaitResult().Should().BeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
         }
     }
 }

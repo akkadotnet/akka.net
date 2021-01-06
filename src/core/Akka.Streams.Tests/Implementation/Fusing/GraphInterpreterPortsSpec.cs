@@ -59,8 +59,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Pull();
 
@@ -70,9 +70,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -82,8 +82,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Push(0);
 
@@ -93,9 +93,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(true);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             inlet.Grab().Should().Be(0);
 
@@ -115,8 +115,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             // Cycle completed
         }
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             inlet.Pull();
 
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -163,7 +163,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -173,9 +173,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -186,9 +186,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -199,9 +199,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -229,7 +229,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -239,9 +239,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -252,9 +252,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -265,9 +265,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -294,7 +294,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -304,9 +304,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -317,9 +317,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -330,9 +330,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -363,7 +363,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             step();
 
@@ -373,9 +373,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(true);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
             inlet.Grab().Should().Be(0);
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             step();
 
@@ -385,9 +385,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -398,9 +398,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -457,9 +457,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -482,9 +482,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -509,8 +509,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -520,9 +520,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -533,9 +533,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -546,9 +546,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -576,8 +576,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -587,9 +587,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -600,9 +600,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -613,9 +613,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -642,8 +642,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -653,9 +653,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -666,9 +666,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -679,9 +679,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -712,7 +712,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -722,9 +722,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -735,9 +735,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -748,9 +748,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -777,9 +777,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -805,8 +805,8 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             stepAll();
             lastEvents().Should().BeEquivalentTo(new Cancel(outlet));
@@ -815,9 +815,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -838,9 +838,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -861,9 +861,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -889,9 +889,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -916,7 +916,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(true);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
             inlet.Grab().Should().Be(0);
 
             inlet.Cancel();
@@ -928,9 +928,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -944,7 +944,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             stepAll();
             outlet.Push(0);
 
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -962,7 +962,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
 
             stepAll();
 
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -987,7 +987,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -997,9 +997,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -1010,9 +1010,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -1023,9 +1023,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1053,7 +1053,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -1063,9 +1063,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -1076,9 +1076,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -1089,9 +1089,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1118,7 +1118,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             stepAll();
 
@@ -1128,9 +1128,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             inlet.Cancel(); // This should have no effect now
             stepAll();
@@ -1141,9 +1141,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -1154,9 +1154,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1187,7 +1187,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(true);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
 
             step();
 
@@ -1197,9 +1197,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(true);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
             inlet.Grab().Should().Be(0);
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             step();
 
@@ -1209,9 +1209,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
 
             outlet.Complete(); // This should have no effect now
             stepAll();
@@ -1222,9 +1222,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1273,9 +1273,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1296,9 +1296,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1319,9 +1319,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1347,9 +1347,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
 
         [Theory]
@@ -1374,7 +1374,7 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(true);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(false);
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
             inlet.Grab().Should().Be(0);
 
             inlet.Cancel();
@@ -1386,9 +1386,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
             inlet.IsAvailable().Should().Be(false);
             inlet.HasBeenPulled().Should().Be(false);
             inlet.IsClosed().Should().Be(true);
-            inlet.Invoking(x => x.Pull()).ShouldThrow<ArgumentException>();
-            outlet.Invoking(x => x.Push(0)).ShouldThrow<ArgumentException>();
-            inlet.Invoking(x => x.Grab()).ShouldThrow<ArgumentException>();
+            inlet.Invoking(x => x.Pull()).Should().Throw<ArgumentException>();
+            outlet.Invoking(x => x.Push(0)).Should().Throw<ArgumentException>();
+            inlet.Invoking(x => x.Grab()).Should().Throw<ArgumentException>();
         }
     }
 }

@@ -136,7 +136,7 @@ namespace Akka.Streams.Tests.Dsl
                         .RunWith(Sink.Seq<ByteString>(), Materializer);
 
                     task.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-                    task.Result.ShouldAllBeEquivalentTo(testSequence);
+                    task.Result.Should().BeEquivalentTo(testSequence);
                 }
             }
         }
@@ -150,21 +150,21 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<string>(), Materializer);
 
             task1.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
-            task1.Result.ShouldAllBeEquivalentTo(new[] {"a", "b", "c", "d"});
+            task1.Result.Should().BeEquivalentTo(new[] {"a", "b", "c", "d"});
 
             var task2 =
                 Source.Single(ByteString.FromString("ab\n"))
                     .Via(SimpleLines("\n", 1))
                     .Limit(100)
                     .RunWith(Sink.Seq<string>(), Materializer);
-            task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
 
             var task3 =
                 Source.Single(ByteString.FromString("aaa"))
                     .Via(SimpleLines("\n", 2))
                     .Limit(100)
                     .RunWith(Sink.Seq<string>(), Materializer);
-            task3.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            task3.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -188,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
 
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -271,7 +271,7 @@ namespace Akka.Streams.Tests.Dsl
                             .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
 
                         task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                        task.Result.ShouldAllBeEquivalentTo(encodedFrames);
+                        task.Result.Should().BeEquivalentTo(encodedFrames);
 
                         _helper.WriteLine($"{counter++} from 80 passed");
                     }
@@ -304,7 +304,7 @@ namespace Akka.Streams.Tests.Dsl
                     list.Add(s);
                     return list;
                 }, Materializer);
-            task1.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            task1.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
 
             var task2 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 49, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 100, 0, ByteOrder.BigEndian))
@@ -313,7 +313,7 @@ namespace Akka.Streams.Tests.Dsl
                     list.Add(s);
                     return list;
                 }, Materializer);
-            task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Framing.FramingException>();
+            task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
         }
 
         [Fact]
@@ -340,7 +340,7 @@ namespace Akka.Streams.Tests.Dsl
                                         .Wait(TimeSpan.FromSeconds(5))
                                         .ShouldBeTrue("Stream should complete withing 5 seconds");
                             };
-                            action.ShouldThrow<Framing.FramingException>();
+                            action.Should().Throw<Framing.FramingException>();
                         }
                     }
                 }
@@ -365,7 +365,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(testMessages);
+            task.Result.Should().BeEquivalentTo(testMessages);
         }
 
         [Fact]
@@ -381,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
             result.Invoking(t => t.AwaitResult())
-                .ShouldThrow<Framing.FramingException>()
+                .Should().Throw<Framing.FramingException>()
                 .WithMessage("Decoded frame header reported negative size -4");
         }
 

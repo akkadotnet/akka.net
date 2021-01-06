@@ -227,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
             var badSink =
                 Sink.ActorRefWithAck<int>(fw, InitMessage, AckMessage, CompleteMessage)
                     .WithAttributes(Attributes.CreateInputBuffer(0, 0));
-            Source.Single(1).Invoking(s => s.RunWith(badSink, Materializer)).ShouldThrow<ArgumentException>();
+            Source.Single(1).Invoking(s => s.RunWith(badSink, Materializer)).Should().Throw<ArgumentException>();
         }
 
         [Fact]

@@ -16,6 +16,7 @@ using FluentAssertions;
 using System;
 using System.Linq;
 using System.Threading;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

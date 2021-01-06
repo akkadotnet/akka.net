@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
             result.Result.Where(i => i > 200 && i <= 300).ShouldOnlyContainInOrder(Enumerable.Range(201, 100));
             result.Result.Where(i => i > 300 && i <= 400).ShouldOnlyContainInOrder(Enumerable.Range(301, 100));
 
-            result.Result.ShouldBeEquivalentTo(Enumerable.Range(1, 400));
+            result.Result.Should().BeEquivalentTo(Enumerable.Range(1, 400));
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                 }));
             };
 
-            action.ShouldThrow<ArgumentException>()
+            action.Should().Throw<ArgumentException>()
                 .And.Message.Should()
                 .Contain("The input port [MergePreferred.preferred] is already connected");
         }

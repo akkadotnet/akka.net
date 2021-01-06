@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(100)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1,10));
             }, Materializer);
         }
 
@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests.Dsl
                     .InitialDelay(TimeSpan.FromSeconds(2))
                     .InitialTimeout(TimeSpan.FromSeconds(1))
                     .RunWith(Sink.Ignore<int>(), Materializer);
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(2))).ShouldThrow<TimeoutException>();
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(2))).Should().Throw<TimeoutException>();
             }, Materializer);
         }
 

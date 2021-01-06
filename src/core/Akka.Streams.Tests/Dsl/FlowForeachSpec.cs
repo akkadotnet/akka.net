@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>()
+                    .Should().Throw<TestException>()
                     .And.Should()
                     .Be(error);
             }, Materializer);
