@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
@@ -142,6 +143,11 @@ namespace Akka.Actor
         {
             return new BootstrapSetup(config, ActorRefProvider);
         }
+
+        public BootstrapSetup WithConfigFallback(Config config)
+            => Config.HasValue
+                ? new BootstrapSetup(Config.Value.SafeWithFallback(config), ActorRefProvider)
+                : WithConfig(config);
     }
 
     /// <summary>
