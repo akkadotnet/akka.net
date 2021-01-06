@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Routing;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Metrics.Tests.MultiNode
 {

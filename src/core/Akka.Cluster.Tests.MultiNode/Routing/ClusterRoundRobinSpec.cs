@@ -17,6 +17,7 @@ using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
@@ -426,8 +427,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
                 routees().ForEach(actorRef =>
                 {
-                    var actorRefRoutee = actorRef as ActorRefRoutee;
-                    if (actorRefRoutee != null)
+                    if (actorRef is ActorRefRoutee actorRefRoutee)
                     {
                         Watch(actorRefRoutee.Actor);
                     }

@@ -41,7 +41,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
                 constuctor.Should().NotBeNull();
             };
 
-            testDelegate.ShouldNotThrow();
+            testDelegate.Should().NotThrow();
         }
 
         [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]

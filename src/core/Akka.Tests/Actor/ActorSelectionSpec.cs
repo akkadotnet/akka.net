@@ -345,7 +345,7 @@ namespace Akka.Tests.Actor
         public void An_ActorSelection_must_resolve_non_existing_with_failure()
         {
             var task = Sys.ActorSelection("user/none").ResolveOne(Dilated(TimeSpan.FromSeconds(1)));
-            task.Invoking(t => t.Wait()).ShouldThrow<ActorNotFoundException>();
+            task.Invoking(t => t.Wait()).Should().Throw<ActorNotFoundException>();
         }
 
         [Fact]

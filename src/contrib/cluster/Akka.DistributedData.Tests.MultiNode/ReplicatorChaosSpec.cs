@@ -119,7 +119,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 20)));
                 _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 20)));
 
-                ReceiveN(3).ToImmutableHashSet().ShouldBeEquivalentTo(new[]
+                ReceiveN(3).ToImmutableHashSet().Should().BeEquivalentTo(new[]
                 {
                     new UpdateSuccess(KeyA, null),
                     new UpdateSuccess(KeyB, null),

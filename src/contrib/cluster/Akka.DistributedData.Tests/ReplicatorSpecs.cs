@@ -17,6 +17,7 @@ using Akka.Cluster;
 using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
@@ -283,7 +284,7 @@ namespace Akka.DistributedData.Tests
 
                     // receive local update
                     var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
-                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> {
+                    entries.Should().BeEquivalentTo(new Dictionary<string, string> {
                         {"a", "A" }
                     });
                 });
@@ -303,7 +304,7 @@ namespace Akka.DistributedData.Tests
 
                     var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
                     // expect replication of update on node 2
-                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> {
+                    entries.Should().BeEquivalentTo(new Dictionary<string, string> {
                         {"a", "A1" }
                     });
                 });
@@ -322,7 +323,7 @@ namespace Akka.DistributedData.Tests
 
                     var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
                     // expect replication of remove on node 2
-                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> ());
+                    entries.Should().BeEquivalentTo(new Dictionary<string, string> ());
                 });
             });
 
@@ -341,7 +342,7 @@ namespace Akka.DistributedData.Tests
 
                     var entries = changedProbe.ExpectMsg<Changed>(g => Equals(g.Key, _keyK)).Get(_keyK).Entries;
                     // expect replication of remove on node 2
-                    entries.ShouldAllBeEquivalentTo(new Dictionary<string, string> {
+                    entries.Should().BeEquivalentTo(new Dictionary<string, string> {
                         { "a", "A" },
                         { "b", "B" },
                     });

@@ -18,13 +18,13 @@ namespace Akka.Persistence.TestKit.Tests
         public void noop_must_do_nothing()
             => SnapshotStoreInterceptors.Noop.Instance
                 .Awaiting(x => x.InterceptAsync(null, null))
-                .ShouldNotThrow();
+                .Should().NotThrow();
 
         [Fact]
         public void failure_must_always_throw_exception()
             => SnapshotStoreInterceptors.Failure.Instance
                 .Awaiting(x => x.InterceptAsync(null, null))
-                .ShouldThrowExactly<TestSnapshotStoreFailureException>();
+                .Should().ThrowExactly<TestSnapshotStoreFailureException>();
 
         [Fact]
         public async Task delay_must_call_next_interceptor_after_specified_delay()

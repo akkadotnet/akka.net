@@ -467,7 +467,7 @@ namespace Akka.Tests.Actor
                 }
             };
 
-            act.Invoking(a => a()).ShouldThrow<ConfigurationException>();
+            act.Invoking(a => a()).Should().Throw<ConfigurationException>();
         }
 
     }

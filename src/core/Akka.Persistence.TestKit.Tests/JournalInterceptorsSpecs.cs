@@ -20,7 +20,7 @@ namespace Akka.Persistence.TestKit.Tests
         {
             JournalInterceptors.Noop.Instance
                 .Awaiting(x => x.InterceptAsync(null))
-                .ShouldNotThrow();
+                .Should().NotThrow();
         }
 
         [Fact]
@@ -28,7 +28,7 @@ namespace Akka.Persistence.TestKit.Tests
         {
             JournalInterceptors.Failure.Instance
                 .Awaiting(x => x.InterceptAsync(null))
-                .ShouldThrowExactly<TestJournalFailureException>();
+                .Should().ThrowExactly<TestJournalFailureException>();
         }
 
         [Fact]
@@ -36,7 +36,7 @@ namespace Akka.Persistence.TestKit.Tests
         {
             JournalInterceptors.Rejection.Instance
                 .Awaiting(x => x.InterceptAsync(null))
-                .ShouldThrowExactly<TestJournalRejectionException>();
+                .Should().ThrowExactly<TestJournalRejectionException>();
         }
 
         [Fact]

@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
         public void The_ActorSystem_must_provide_a_good_error_on_a_dispatcher_alias_loop_in_config()
         {
             Sys.Dispatchers.Invoking(d => d.Lookup("dispatcher-loop-1"))
-                .ShouldThrow<ConfigurationException>()
+                .Should().Throw<ConfigurationException>()
                 .And.Message
                 .StartsWith("Could not find a concrete dispatcher config after following").ShouldBeTrue();
         }

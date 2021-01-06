@@ -7,6 +7,7 @@
 
 using Akka.Configuration;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Discovery.Tests.Config
