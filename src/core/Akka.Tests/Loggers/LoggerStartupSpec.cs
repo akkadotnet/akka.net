@@ -28,8 +28,8 @@ namespace Akka.Tests.Loggers
             var slowLoggerConfig = ConfigurationFactory.ParseString($"akka.loggers = [\"{typeof(SlowLoggerActor).FullName}, {typeof(SlowLoggerActor).Assembly.GetName().Name}\"]");
 
             // Without logger async start, ActorSystem creation will hang
-            this.Invoking(_ => ActorSystem.Create("handing", slowLoggerConfig.WithFallback(loggerAsyncStartDisabledConfig)))
-                .ShouldThrow<Exception>("System can not start - logger timed out");
+            this.Invoking(_ => ActorSystem.Create("handing", slowLoggerConfig.WithFallback(loggerAsyncStartDisabledConfig))).Should()
+                .Throw<Exception>("System can not start - logger timed out");
             
             // With logger async start, ActorSystem is created without issues
              // Created without timeouts

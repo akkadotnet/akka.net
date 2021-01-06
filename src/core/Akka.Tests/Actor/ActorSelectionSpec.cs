@@ -319,7 +319,7 @@ namespace Akka.Tests.Actor
             new ActorSelection(_c21, "../../*").Tell(new GetSender(TestActor), _c1);
             //Three messages because the selection includes the TestActor, GetSender -> TestActor + response from c1 and c2 to TestActor
             var actors = ReceiveWhile(_ => LastSender, msgs: 3).Distinct();
-            actors.ShouldAllBeEquivalentTo(new[] { _c1, _c2 });
+            actors.Should().BeEquivalentTo(new[] { _c1, _c2 });
             ExpectNoMsg(TimeSpan.FromSeconds(1));
         }
 
@@ -423,30 +423,30 @@ namespace Akka.Tests.Actor
             probe.ReceiveN(2)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ShouldAllBeEquivalentTo(new[] { b1, b2 });
+                .Should().BeEquivalentTo(new[] { b1, b2 });
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b1/*").Tell(new Identify(2), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(2, null));
+            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(2, null));
 
             Sys.ActorSelection("/user/a/*/c").Tell(new Identify(3), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(3, c));
+            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(3, c));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b2/*/d").Tell(new Identify(4), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(4, d));
+            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(4, d));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/*/d").Tell(new Identify(5), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(5, d));
+            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(5, d));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/c/*").Tell(new Identify(6), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(6, d));
+            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(6, d));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/b2/*/d/e").Tell(new Identify(7), probe.Ref);
-            probe.ExpectMsg<ActorIdentity>().ShouldBeEquivalentTo(new ActorIdentity(7, null));
+            probe.ExpectMsg<ActorIdentity>().Should().BeEquivalentTo(new ActorIdentity(7, null));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/c/d/e").Tell(new Identify(8), probe.Ref);
@@ -472,7 +472,7 @@ namespace Akka.Tests.Actor
             probe.ReceiveN(6)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ShouldAllBeEquivalentTo(new[] { b1, b2, b3, c1, c2, d });
+                .Should().BeEquivalentTo(new[] { b1, b2, b3, c1, c2, d });
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
 
             // grab everything below /user/a/b2
@@ -480,7 +480,7 @@ namespace Akka.Tests.Actor
             probe.ReceiveN(3)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ShouldAllBeEquivalentTo(new[] { c1, c2, d });
+                .Should().BeEquivalentTo(new[] { c1, c2, d });
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
 
             // nothing under /user/a/b2/c1/d
