@@ -357,25 +357,11 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                                 //match (isWindows) with
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ ->  !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
-                                
-        let foundProjects = rawProjects |> String.concat ", "
-         
+                  
         let projects = rawProjects |> Seq.choose filterProjects
-
-        let filteredProjects = projects |> String.concat ", "
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.NetCore)
-
-
-        let mntr = multiNodeTestAssemblies |> String.concat ", "
-        
-        printfn "Found projects [%s]" foundProjects
-        
-        printfn "Filtered projects [%s]" filteredProjects
-        
-        printfn "Multi Node Test Assemblies [%s]" mntr
-        
 
         printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
@@ -413,24 +399,12 @@ Target "MultiNodeTestsNet" (fun _ ->
                           |> List.map (fun (path) -> path.FullName) 
                                 //match (isWindows) with
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                //| _ -> !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
-        
-        let foundProjects = rawProjects |> String.concat ", "
-        
+                                //| _ -> !! "./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
+                
         let projects = rawProjects |> Seq.choose filterProjects
-
-        let filteredProjects = projects |> String.concat ", "
 
         let multiNodeTestAssemblies =
             projects |> Seq.choose (getTestAssembly Runtime.Net)
-
-        let mntr = multiNodeTestAssemblies |> String.concat ", "
-
-        printfn "Found projects [%s]" foundProjects
-
-        printfn "Filtered projects [%s]" filteredProjects
-
-        printfn "Multi Node Test Assemblies [%s]" mntr
 
         printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
