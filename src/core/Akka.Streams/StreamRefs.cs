@@ -28,7 +28,7 @@ namespace Akka.Streams
     /// For additional configuration see `reference.conf` as well as <see cref="StreamRefAttributes"/>.
     /// </summary>
     /// <seealso cref="ISourceRef{TOut}"/>
-    public interface ISinkRef<TIn>
+    public interface ISinkRef<TIn> : ISurrogated
     {
         Sink<TIn, NotUsed> Sink { get; }
     }

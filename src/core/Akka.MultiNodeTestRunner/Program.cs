@@ -41,7 +41,8 @@ namespace Akka.MultiNodeTestRunner
         private static HashSet<string> _validNetCorePlatform = new HashSet<string>
         {
             "net",
-            "netcore"
+            "netcore",
+            "net5"
         };
         
         protected static ActorSystem TestRunSystem;
@@ -274,6 +275,7 @@ namespace Akka.MultiNodeTestRunner
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         break;
                                     case "netcore":
+                                    case "net5":
                                         fileName = "dotnet";
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         sbArguments.Insert(0, ntrNetCorePath);
@@ -309,7 +311,7 @@ namespace Akka.MultiNodeTestRunner
                                 var nodeRole = nodeTest.Role;
 
 #if CORECLR
-                            if (platform == "netcore")
+                            if (platform == "netcore" || platform == "net5")
                             {
                                 process.StartInfo.FileName = "dotnet";
                                 process.StartInfo.Arguments = ntrNetCorePath + " " + process.StartInfo.Arguments;

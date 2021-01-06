@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
@@ -2354,6 +2355,7 @@ namespace Akka.Configuration.Hocon
         public bool IsObject() { }
         public bool IsString() { }
         public void NewValue(Akka.Configuration.Hocon.IHoconElement value) { }
+        public Akka.Configuration.Config ToConfig() { }
         public override string ToString() { }
         public virtual string ToString(int indent) { }
     }
