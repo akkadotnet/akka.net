@@ -398,7 +398,7 @@ namespace Akka.Actor
             if (newExpression == null)
                 throw new ArgumentException("The create function must be a 'new T (args)' expression");
 
-            object[] args = newExpression.GetArguments().ToArray();
+            object[] args = newExpression.GetArguments();
 
             return new Props(typeof (TActor), supervisorStrategy, args);
         }
