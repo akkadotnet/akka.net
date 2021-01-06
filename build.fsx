@@ -353,8 +353,8 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 
         let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
-         
+                                | _ -> !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
+                                
         let foundProjects = rawProjects |> String.concat ", "
          
         let projects = rawProjects |> Seq.choose filterProjects
@@ -407,7 +407,7 @@ Target "MultiNodeTestsNet" (fun _ ->
 
         let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                | _ -> !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
         
         let foundProjects = rawProjects |> String.concat ", "
         
