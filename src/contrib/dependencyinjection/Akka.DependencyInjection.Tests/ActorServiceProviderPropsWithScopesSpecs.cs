@@ -30,7 +30,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithScopedDependenciesShouldDisposeUponStop()
         {
             var spExtension = ServiceProvider.For(Sys);
-            var props = spExtension.Props(sp => new ScopedActor(sp.CreateScope()));
+            var props = spExtension.Props<ScopedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
@@ -60,7 +60,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithScopedDependenciesShouldDisposeAndRecreateUponRestart()
         {
             var spExtension = ServiceProvider.For(Sys);
-            var props = spExtension.Props(sp => new ScopedActor(sp.CreateScope()));
+            var props = spExtension.Props<ScopedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
@@ -88,7 +88,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithMixedDependenciesShouldDisposeAndRecreateScopedUponRestart()
         {
             var spExtension = ServiceProvider.For(Sys);
-            var props = spExtension.Props(sp => new MixedActor(sp.GetRequiredService<AkkaDiFixture.ISingletonDependency>(), sp.CreateScope()));
+            var props = spExtension.Props<MixedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
@@ -138,9 +138,9 @@ namespace Akka.DependencyInjection.Tests
             private AkkaDiFixture.ITransientDependency _transient;
             private AkkaDiFixture.IScopedDependency _scoped;
 
-            public ScopedActor(IServiceScope scope)
+            public ScopedActor(IServiceProvider sp)
             {
-                _scope = scope;
+                _scope = sp.CreateScope();
 
                 Receive<FetchDependencies>(_ =>
                 {
@@ -169,10 +169,10 @@ namespace Akka.DependencyInjection.Tests
             private AkkaDiFixture.ITransientDependency _transient;
             private AkkaDiFixture.IScopedDependency _scoped;
 
-            public MixedActor(AkkaDiFixture.ISingletonDependency singleton, IServiceScope scope)
+            public MixedActor(AkkaDiFixture.ISingletonDependency singleton, IServiceProvider sp)
             {
                 _singleton = singleton;
-                _scope = scope;
+                _scope = sp.CreateScope();
 
                 Receive<FetchDependencies>(_ =>
                 {
