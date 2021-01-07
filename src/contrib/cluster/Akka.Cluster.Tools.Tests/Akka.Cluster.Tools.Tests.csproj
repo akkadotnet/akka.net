@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Tools.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

@@ -16,6 +16,7 @@
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.14.0</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
+    <NetTestVersion>net5.0</NetTestVersion>
     <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
@@ -35,11 +36,12 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!--<PublishRepositoryUrl>true</PublishRepositoryUrl>-->
+    <RepositoryUrl>https://github.com/akkadotnet/akka.net</RepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
     <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat> 
   </PropertyGroup>
 </Project>

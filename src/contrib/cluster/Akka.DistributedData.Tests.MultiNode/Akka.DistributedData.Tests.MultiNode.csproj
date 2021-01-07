@@ -3,7 +3,7 @@
   
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests.MultiNode</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>
