@@ -351,7 +351,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     
     let dDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
     
-    let lmdbDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "linux" )
+    let lmdbDir = (currentDirectory @@ "lmdb" @@ "libraries" @@ "liblmdb" )
 
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" dDir
@@ -404,7 +404,7 @@ Target "MultiNodeTestsNet" (fun _ ->
     
     let dDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
 
-    let lmdbDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "linux" )
+    let lmdbDir = (currentDirectory @@ "lmdb" @@ "libraries" @@ "liblmdb" )
 
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" dDir

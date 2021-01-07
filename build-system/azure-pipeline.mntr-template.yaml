@@ -16,6 +16,16 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
     steps:
+      - name: Checkout lmdb
+        with:
+          repository: LMDB/lmdb
+          ref: mdb.master
+          path: lmdb
+        condition: in( variables['Agent.OS'], 'Linux', 'Darwin' )
+      - name: Build lmdb native lib
+        working-directory: $(build.sourcesDirectory)/lmdb/libraries/liblmdb/
+        run: make
+        condition: in( variables['Agent.OS'], 'Linux', 'Darwin' )
       - task: UseDotNet@2
         displayName: 'Use .NET 5 SDK 5.0.101'
         inputs:
