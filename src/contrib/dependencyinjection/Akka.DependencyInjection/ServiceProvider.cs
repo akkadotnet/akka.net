@@ -52,15 +52,14 @@ namespace Akka.DependencyInjection
         /// and others are not.
         /// </summary>
         /// <remarks>
-        /// This method is designed to work with actors who are not registered directly with DI containers themselves. It will not manage the lifetime scope
-        /// of the actor instance itself. End-users need to do that themselves.
+        /// YOU ARE RESPONSIBLE FOR MANAGING THE LIFECYCLE OF YOUR OWN DEPENDENCIES. AKKA.NET WILL NOT ATTEMPT TO DO IT FOR YOU.
         /// </remarks>
         /// <typeparam name="T">The type of actor to instantiate.</typeparam>
-        /// <param name="args"></param>
+        /// <param name="producer">The delegate used to create a new instance of your actor type.</param>
         /// <returns>A new <see cref="Props"/> instance which uses DI internally.</returns>
-        public Props Props<T>(params object[] args) where T : ActorBase
+        public Props Props<T>(Func<IServiceProvider, T> producer) where T : ActorBase
         {
-            return new ServiceProviderProps<T>(Provider, args);
+            return new ServiceProviderProps<T>(producer, Provider);
         }
     }
 
@@ -93,16 +92,18 @@ namespace Akka.DependencyInjection
     /// <typeparam name="TActor">The type of the actor to create.</typeparam>
     internal class ServiceProviderProps<TActor> : Props where TActor : ActorBase
     {
+        private readonly Func<IServiceProvider, TActor> _invoker;
         private readonly IServiceProvider _provider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceProviderProps{TActor}" /> class.
         /// </summary>
-        /// <param name="args">The option set of constructor arguments..</param>
+        /// <param name="invoker">The factory method used to create an actor.</param>
         /// <param name="provider">The <see cref="IServiceProvider"/> used to power this class</param>
-        public ServiceProviderProps(IServiceProvider provider, params object[] args)
-            : base(typeof(TActor), args)
+        public ServiceProviderProps(Func<IServiceProvider, TActor> invoker, IServiceProvider provider)
+            : base(typeof(TActor))
         {
+            _invoker = invoker;
             _provider = provider;
         }
 
@@ -112,19 +113,17 @@ namespace Akka.DependencyInjection
         /// <returns>The actor created using the factory method.</returns>
         public override ActorBase NewActor()
         {
-            try
-            {
-                var a = ActivatorUtilities.CreateInstance<TActor>(_provider, Arguments);
-                return a;
-            }
-            catch (Exception ex)
-            {
-                var e = ex;
-                throw;
-            }
+            return _invoker.Invoke(_provider);
         }
 
         #region Copy methods
+
+        private ServiceProviderProps(Props copy, Func<IServiceProvider, TActor> invoker, IServiceProvider provider)
+            : base(copy)
+        {
+            _invoker = invoker;
+            _provider = provider;
+        }
 
         /// <summary>
         /// Creates a copy of the current instance.
@@ -132,7 +131,11 @@ namespace Akka.DependencyInjection
         /// <returns>The newly created <see cref="Akka.Actor.Props"/></returns>
         protected override Props Copy()
         {
-         return new ServiceProviderProps<TActor>(_provider, Arguments);
+            var initialCopy = base.Copy();
+
+            var invokerCopy = (Func<IServiceProvider, TActor>)_invoker.Clone();
+
+            return new ServiceProviderProps<TActor>(initialCopy, invokerCopy, _provider);
         }
 
         #endregion

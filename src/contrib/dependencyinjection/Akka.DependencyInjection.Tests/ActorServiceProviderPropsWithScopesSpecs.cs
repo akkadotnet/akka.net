@@ -23,15 +23,14 @@ namespace Akka.DependencyInjection.Tests
         public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(ServiceProviderSetup.Create(fixture.Provider)
             .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), output)
         {
-            fixture.Services.AddScoped<ScopedActor>();
-            fixture.Services.AddTransient<MixedActor>();
+
         }
 
         [Fact(DisplayName = "DI: actors who receive an IServiceScope through Props should dispose of their dependencies upon termination")]
         public void ActorsWithScopedDependenciesShouldDisposeUponStop()
         {
             var spExtension = ServiceProvider.For(Sys);
-            var props = spExtension.Props<ScopedActor>();
+            var props = spExtension.Props(sp => new ScopedActor(sp.CreateScope()));
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
@@ -61,7 +60,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithScopedDependenciesShouldDisposeAndRecreateUponRestart()
         {
             var spExtension = ServiceProvider.For(Sys);
-            var props = spExtension.Props<ScopedActor>();
+            var props = spExtension.Props(sp => new ScopedActor(sp.CreateScope()));
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
@@ -89,7 +88,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithMixedDependenciesShouldDisposeAndRecreateScopedUponRestart()
         {
             var spExtension = ServiceProvider.For(Sys);
-            var props = spExtension.Props<MixedActor>();
+            var props = spExtension.Props(sp => new MixedActor(sp.GetRequiredService<AkkaDiFixture.ISingletonDependency>(), sp.CreateScope()));
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
@@ -139,9 +138,9 @@ namespace Akka.DependencyInjection.Tests
             private AkkaDiFixture.ITransientDependency _transient;
             private AkkaDiFixture.IScopedDependency _scoped;
 
-            public ScopedActor(IServiceProvider sp)
+            public ScopedActor(IServiceScope scope)
             {
-                _scope = sp.CreateScope();
+                _scope = scope;
 
                 Receive<FetchDependencies>(_ =>
                 {
@@ -163,18 +162,17 @@ namespace Akka.DependencyInjection.Tests
             }
         }
 
-        public class MixedActor : ReceiveActor, IDisposable
+        public class MixedActor : ReceiveActor
         {
             private readonly AkkaDiFixture.ISingletonDependency _singleton;
             private readonly IServiceScope _scope;
             private AkkaDiFixture.ITransientDependency _transient;
             private AkkaDiFixture.IScopedDependency _scoped;
 
-            public MixedActor(AkkaDiFixture.ISingletonDependency singleton, AkkaDiFixture.ITransientDependency transient, AkkaDiFixture.IScopedDependency iscoped)
+            public MixedActor(AkkaDiFixture.ISingletonDependency singleton, IServiceScope scope)
             {
                 _singleton = singleton;
-                _transient = transient;
-                _scoped = iscoped;
+                _scope = scope;
 
                 Receive<FetchDependencies>(_ =>
                 {
@@ -186,20 +184,13 @@ namespace Akka.DependencyInjection.Tests
 
             protected override void PreStart()
             {
-                //_scoped = _scope.ServiceProvider.GetService<AkkaDiFixture.IScopedDependency>();
-                //_transient = _scope.ServiceProvider.GetRequiredService<AkkaDiFixture.ITransientDependency>();
+                _scoped = _scope.ServiceProvider.GetService<AkkaDiFixture.IScopedDependency>();
+                _transient = _scope.ServiceProvider.GetRequiredService<AkkaDiFixture.ITransientDependency>();
             }
 
             protected override void PostStop()
             {
-                //_scope.Dispose();
-            }
-
-            public void Dispose()
-            {
-                _scope?.Dispose();
-                _transient?.Dispose();
-                _scoped?.Dispose();
+                _scope.Dispose();
             }
         }
     }
