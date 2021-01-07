@@ -348,8 +348,11 @@ Target "MultiNodeTests" (fun _ ->
 )
 
 Target "MultiNodeTestsNetCore" (fun _ ->
+    
+    let dDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
+    
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" dDir
 
         let rawProjects = filesInDirMatchingRecursive "*.Tests.MultiNode.csproj"  (directoryInfo (currentDirectory @@ "src/")) 
                           |> Array.toList 
@@ -357,7 +360,12 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                                 //match (isWindows) with
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ ->  !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
-                  
+        
+        let dotnet = if (mntrRuntime = "linux-x64") then (dDir @@ "linux" @@":$LD_LIBRARY_PATH dotnet")
+                     else "dotnet"
+        
+        printfn "LD_PATH: %s" dotnet
+
         let projects = rawProjects |> Seq.choose filterProjects
 
         let multiNodeTestAssemblies =
@@ -383,7 +391,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                         |> toText
 
                 let result = ExecProcess(fun info ->
-                    info.FileName <- "dotnet"
+                    info.FileName <- dotnet
                     info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
                     info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
                 if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
@@ -391,8 +399,11 @@ Target "MultiNodeTestsNetCore" (fun _ ->
         multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
 Target "MultiNodeTestsNet" (fun _ ->
+    
+    let dDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
+
     if not skipBuild.Value then
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" dDir
 
         let rawProjects = filesInDirMatchingRecursive "*.Tests.MultiNode.csproj"  (directoryInfo (currentDirectory @@ "src/")) 
                           |> Array.toList 
@@ -400,7 +411,12 @@ Target "MultiNodeTestsNet" (fun _ ->
                                 //match (isWindows) with
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ -> !! "./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
-                
+        
+        let dotnet = if (mntrRuntime = "linux-x64") then (dDir @@ "linux" @@":$LD_LIBRARY_PATH dotnet")
+                     else "dotnet"
+        
+        printfn "LD_LIBRARY_PATH: %s" dotnet
+        
         let projects = rawProjects |> Seq.choose filterProjects
 
         let multiNodeTestAssemblies =
@@ -426,7 +442,7 @@ Target "MultiNodeTestsNet" (fun _ ->
                         |> toText
 
                 let result = ExecProcess(fun info ->
-                    info.FileName <- "dotnet"
+                    info.FileName <- dotnet
                     info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
                     info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
                 if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
