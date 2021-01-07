@@ -118,6 +118,48 @@ namespace Akka.DependencyInjection.Tests
             deps1Single.Should().Be(deps2Single);
         }
 
+        [Fact(DisplayName =
+            "DI: actors who receive a non-DI'd dependencies should be started correctly")]
+        public void ActorsWithNonDiDependenciesShouldStart()
+        {
+            var spExtension = ServiceProvider.For(Sys);
+            var arg1 = "foo";
+            var arg2 = "bar";
+            var props = spExtension.Props<NonDiArgsActor>(arg1, arg2);
+
+            // create a scoped actor using the props from Akka.DependencyInjection
+            var scoped1 = Sys.ActorOf(props, "scoped1");
+            scoped1.Tell(new FetchDependencies());
+            var deps1 = ExpectMsg<CurrentDependencies>();
+            deps1.Dependencies.All(x => x.Disposed).Should().BeFalse();
+
+            // validate that non-DI'd arguments were passed to actor constructor arguments correctly
+            scoped1.Tell("fetch");
+            ExpectMsg<string>().Should().Be(arg1);
+            ExpectMsg<string>().Should().Be(arg2);
+
+            // crash + restart it
+            EventFilter.Exception<ApplicationException>().ExpectOne(() =>
+            {
+                scoped1.Tell(new Crash());
+            });
+
+            // all previous SCOPED dependencies should be disposed
+            deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+
+            // singletons should not be disposed
+            deps1.Dependencies.Where(x => (x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeFalse();
+
+            // actor should restart with totally new dependencies (minus the singleton)
+            scoped1.Tell(new FetchDependencies());
+            var deps2 = ExpectMsg<CurrentDependencies>();
+            deps2.Dependencies.All(x => x.Disposed).Should().BeFalse();
+            var deps1Single = deps1.Dependencies.Single(x => (x is AkkaDiFixture.ISingletonDependency));
+            var deps2Single = deps2.Dependencies.Single(x => (x is AkkaDiFixture.ISingletonDependency));
+
+            deps1Single.Should().Be(deps2Single);
+        }
+
         public class Crash { }
 
         public class FetchDependencies { }
@@ -177,6 +219,48 @@ namespace Akka.DependencyInjection.Tests
                 Receive<FetchDependencies>(_ =>
                 {
                     Sender.Tell(new CurrentDependencies(new AkkaDiFixture.IDependency[] { _transient, _scoped, _singleton }));
+                });
+
+                Receive<Crash>(_ => throw new ApplicationException("crash"));
+            }
+
+            protected override void PreStart()
+            {
+                _scoped = _scope.ServiceProvider.GetService<AkkaDiFixture.IScopedDependency>();
+                _transient = _scope.ServiceProvider.GetRequiredService<AkkaDiFixture.ITransientDependency>();
+            }
+
+            protected override void PostStop()
+            {
+                _scope.Dispose();
+            }
+        }
+
+        public class NonDiArgsActor : ReceiveActor
+        {
+            private readonly AkkaDiFixture.ISingletonDependency _singleton;
+            private readonly IServiceScope _scope;
+            private AkkaDiFixture.ITransientDependency _transient;
+            private AkkaDiFixture.IScopedDependency _scoped;
+            private string _arg1;
+            private string _arg2;
+
+            public NonDiArgsActor(AkkaDiFixture.ISingletonDependency singleton, IServiceProvider sp, string arg1, string arg2)
+            {
+                _singleton = singleton;
+                _scope = sp.CreateScope();
+                _arg1 = arg1;
+                _arg2 = arg2;
+
+                Receive<FetchDependencies>(_ =>
+                {
+                    Sender.Tell(new CurrentDependencies(new AkkaDiFixture.IDependency[] { _transient, _scoped, _singleton }));
+                });
+
+                Receive<string>(str =>
+                {
+                    Sender.Tell(_arg1);
+                    Sender.Tell(_arg2);
                 });
 
                 Receive<Crash>(_ => throw new ApplicationException("crash"));
