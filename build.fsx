@@ -351,6 +351,8 @@ Target "MultiNodeTestsNetCore" (fun _ ->
     
     let dDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ mntrRuntime @@ "publish")
     
+    let lmdbDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "linux" )
+
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" dDir
 
@@ -361,7 +363,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ ->  !! (currentDirectory @@ "src" @@ "**" @@ "*.Tests.MulitNode.csproj") //"./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
         
-        let dotnet = if (mntrRuntime = "linux-x64") then "LD_LIBRARY_PATH=" + (dDir @@ "linux" @@":$LD_LIBRARY_PATH dotnet")
+        let dotnet = if (mntrRuntime = "linux-x64") then "LD_LIBRARY_PATH=" + (lmdbDir @@":$LD_LIBRARY_PATH dotnet")
                      else "dotnet"
         
         printfn "LD_PATH: %s" dotnet
@@ -402,6 +404,8 @@ Target "MultiNodeTestsNet" (fun _ ->
     
     let dDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime @@ "publish")
 
+    let lmdbDir = (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "linux" )
+
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" dDir
 
@@ -412,7 +416,7 @@ Target "MultiNodeTestsNet" (fun _ ->
                                 //| true -> !! "./src/**/*.Tests.MultiNode.csproj"
                                 //| _ -> !! "./src/**/*.Tests.MulitNode.csproj" if you need to filter specs for Linux vs. Windows, do it here
         
-        let dotnet = if (mntrRuntime = "linux-x64") then "LD_LIBRARY_PATH=" + (dDir @@ "linux" @@":$LD_LIBRARY_PATH dotnet")
+        let dotnet = if (mntrRuntime = "linux-x64") then "LD_LIBRARY_PATH=" + (lmdbDir @@":$LD_LIBRARY_PATH dotnet")
                      else "dotnet"
         
         printfn "LD_LIBRARY_PATH: %s" dotnet
