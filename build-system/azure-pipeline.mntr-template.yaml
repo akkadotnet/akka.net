@@ -25,10 +25,10 @@ jobs:
         inputs:
           packageType: runtime
           version: 3.1.10
-      - script: make --directory=$(build.sourcesDirectory)/lmdb/libraries/liblmdb/
+      - script: make --directory=$(build.sourcesDirectory)/tools/lmdb/libraries/liblmdb/
         displayName: 'Build lmdb native lib'
         condition: in( variables['Agent.OS'], 'Linux', 'Darwin' )
-      - script: echo '##vso[task.setvariable variable=LD_LIBRARY_PATH]$(build.sourcesDirectory)/lmdb/libraries/liblmdb/'
+      - script: echo '##vso[task.setvariable variable=LD_LIBRARY_PATH]$(build.sourcesDirectory)/tools/lmdb/libraries/liblmdb/'
         displayName: Set LMDB Env Variable
         condition: in( variables['Agent.OS'], 'Linux', 'Darwin' )
       - task: Bash@3 
