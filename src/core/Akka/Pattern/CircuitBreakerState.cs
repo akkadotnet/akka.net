@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CircuitBreakerState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Tasks;
 using Akka.Util;
@@ -29,54 +30,81 @@ namespace Akka.Pattern
         {
             _breaker = breaker;
         }
+        
+        /// <summary>
+        /// Calculate remaining duration until reset to inform the caller in case a backoff algorithm is useful
+        /// </summary>
+        /// <returns>Duration to when the breaker will attempt a reset by transitioning to half-open</returns>
+        private TimeSpan RemainingDuration()
+        {
+            var fromOpened = DateTime.UtcNow.Ticks - Current;
+            var diff = _breaker.CurrentResetTimeout.Ticks - fromOpened;
+            return diff <= 0L ? TimeSpan.Zero : TimeSpan.FromTicks(diff);
+        }
 
         /// <summary>
         /// N/A
         /// </summary>
         /// <typeparam name="T">N/A</typeparam>
-        /// <param name="body">N/A</param>
+        /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
         public override Task<T> Invoke<T>(Func<Task<T>> body)
         {
-            throw new OpenCircuitException();
+            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
         }
 
         /// <summary>
         /// N/A
         /// </summary>
-        /// <param name="body">N/A</param>
+        /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
         /// <returns>N/A</returns>
         public override Task Invoke(Func<Task> body)
         {
-            throw new OpenCircuitException();
+            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
         }
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected override void CallFails()
+        protected internal override void CallFails(Exception cause)
         {
-            //throw new NotImplementedException();
+            // This is a no-op, but CallFails() can be called from CircuitBreaker
+            // (The function summary is a lie)
+            Debug.WriteLine($"Ignoring calls to [CallFails()] because {nameof(CircuitBreaker)} is in open state. Exception cause was: {cause}");
         }
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
         /// </summary>
-        protected override void CallSucceeds()
+        protected internal override void CallSucceeds()
         {
-            //throw new NotImplementedException();
+            // This is a no-op, but CallSucceeds() can be called from CircuitBreaker
+            // (The function summary is a lie)
+            Debug.WriteLine($"Ignoring calls to [CallSucceeds()] because {nameof(CircuitBreaker)} is in open state.");
         }
 
         /// <summary>
-        /// On entering this state, schedule an attempted reset and store the entry time to
+        /// On entering this state, schedule an attempted reset via <see cref="Actor.IScheduler"/> and store the entry time to
         /// calculate remaining time before attempted reset.
         /// </summary>
         protected override void EnterInternal()
         {
-            Task.Delay(_breaker.ResetTimeout).ContinueWith(task => _breaker.AttemptReset());
+            GetAndSet(DateTime.UtcNow.Ticks);
+            _breaker.Scheduler.Advanced.ScheduleOnce(_breaker.CurrentResetTimeout, () => _breaker.AttemptReset());
+
+            var nextResetTimeout = TimeSpan.FromTicks(_breaker.CurrentResetTimeout.Ticks * (long)_breaker.ExponentialBackoffFactor);
+            if (nextResetTimeout < _breaker.MaxResetTimeout)
+            {
+                _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, nextResetTimeout);
+            }
         }
+
+        /// <summary>
+        /// Override for more descriptive toString
+        /// </summary>
+        public override string ToString() => "Open";
     }
 
     /// <summary>
@@ -106,13 +134,13 @@ namespace Akka.Pattern
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
+        public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
             if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException();
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
             }
-            return CallThrough(body);
+            return await CallThrough(body);
         }
 
         /// <summary>
@@ -122,28 +150,30 @@ namespace Akka.Pattern
         /// <param name="body">Implementation of the call that needs protected</param>
         /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
-        public override Task Invoke(Func<Task> body)
+        public override async Task Invoke(Func<Task> body)
         {
             if (!_lock.CompareAndSet(true, false))
             {
-                throw new OpenCircuitException();
+                throw new OpenCircuitException("Circuit breaker is half open, only one call is allowed; this call is failing fast.", _breaker.LastCaughtException, TimeSpan.Zero);
             }
-            return CallThrough(body);
+            await CallThrough(body);
         }
 
         /// <summary>
         /// Reopen breaker on failed call.
         /// </summary>
-        protected override void CallFails()
+        protected internal override void CallFails(Exception cause)
         {
+            _breaker.OnFail(cause);
             _breaker.TripBreaker(this);
         }
 
         /// <summary>
         /// Reset breaker on successful call.
         /// </summary>
-        protected override void CallSucceeds()
+        protected internal override void CallSucceeds()
         {
+            _breaker.OnSuccess();
             _breaker.ResetBreaker();
         }
 
@@ -207,8 +237,9 @@ namespace Akka.Pattern
         /// On failed call, the failure count is incremented.  The count is checked against the configured maxFailures, and
         /// the breaker is tripped if we have reached maxFailures.
         /// </summary>
-        protected override void CallFails()
+        protected internal override void CallFails(Exception cause)
         {
+            _breaker.OnFail(cause);
             if (IncrementAndGet() == _breaker.MaxFailures)
             {
                 _breaker.TripBreaker(this);
@@ -218,8 +249,9 @@ namespace Akka.Pattern
         /// <summary>
         /// On successful call, the failure count is reset to 0
         /// </summary>
-        protected override void CallSucceeds()
+        protected internal override void CallSucceeds()
         {
+            _breaker.OnSuccess();
             Reset();
         }
 
@@ -229,6 +261,7 @@ namespace Akka.Pattern
         protected override void EnterInternal()
         {
             Reset();
+            _breaker.SwapStateResetTimeout(_breaker.CurrentResetTimeout, _breaker.ResetTimeout);
         }
 
         /// <summary>

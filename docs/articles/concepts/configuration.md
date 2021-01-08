@@ -5,17 +5,47 @@ title: Configuration
 
 # Akka.NET Configuration
 
+Akka.NET relies on [HOCON](xref:hocon) configuration to configure its various knobs and dials. 
+
+However, as of Akka.NET v1.4 we now support the [`Setup` class](xref:Akka.Actor.Setup.Setup) and the [`BootstrapSetup` constructs](xref:Akka.Actor.BootstrapSetup), which allow developers to configure various parts of Akka.NET using programmatic configuration in addition to HOCON.
+
+This article will explain how to use both in the context of your Akka.NET applications.
+
+## Programmatic Configuration with `Setup`
+As part of the Akka.NET v1.4 release we introduced the [`Setup` class](xref:Akka.Actor.Setup.Setup), which is meant to be an extensible base class that can be used in concert with areas of Akka.NET that support programmatic configuration.
+
+For instance it is now possible to [configure custom serialization bindings in Akka.NET using the `SerializationSetup` class](xref:serialization#configuring-serialization-bindings-programmatically). Phobos, a propreitary add-on to Akka.NET for application performance monitoring, uses the [`PhobosSetup` class to pass in monitoring and tracing components to an `ActorSystem` at startup](https://phobos.petabridge.com/articles/setup/configuration.html).
+
+Other parts of Akka.NET in the future, such as its dependency injection system, will likely expand their use of the `Setup` class to allow a degree of programmatic configuration.
+
+### `BootstrapSetup` and `ActorSystemSetup`
+So what if we want to use some built-in `Setup` types in combination with an `ActorSystem`? How do we work with these new types?
+
+First, if we have HOCON that we need to pass into our `ActorSystem` still then we must use the [`BootstrapSetup` class]((xref:Akka.Actor.BootstrapSetup) to store our HOCON `Config`:
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=MergedSetup)]
+
+In addition to our `BootstrapSetup`, we can also merge that class with one or more other `Setup`s and produce a merged `ActorSystemSetup` object - which is what our `ActorSystem` actually needs.
+
+From there, we can create our `ActorSystem`:
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Verification)]
+
+## HOCON 
+
 *Quoted from [Akka.NET Bootcamp: Unit 2, Lesson 1 - "Using HOCON Configuration to Configure Akka.NET"](https://github.com/petabridge/akka-bootcamp/tree/master/src/Unit-2/lesson1 "Using HOCON Configuration to Configure Akka.NET")*
 
 Akka.NET leverages a configuration format, called HOCON, to allow you to configure your Akka.NET applications with whatever level of granularity you want.
 
 #### What is HOCON?
-HOCON (Human-Optimized Config Object Notation) is a flexible and extensible configuration format. It will allow you to configure everything from Akka.NET's `IActorRefProvider` implementation, logging, network transports, and more commonly - how individual actors are deployed.
+HOCON (Human-Optimized Config Object Notation) is a flexible and extensible configuration format.
+It allows you to configure everything from Akka.NET's `IActorRefProvider` implementation: logging, network transports, and (more commonly) how individual actors are deployed.
 
-Values returned by HOCON are strongly typed (i.e. you can fetch out an `int`, a `Timespan`, etc).
+Values returned by HOCON are strongly typed, which means you can fetch out an `int`, a `Timespan`, etc.
 
 #### What can I do with HOCON?
-HOCON allows you to embed easily-readable configuration inside of the otherwise hard-to-read XML in App.config and Web.config.  HOCON also lets you query configs by their section paths, and those sections are exposed strongly typed and parsed values you can use inside your applications.
+HOCON allows you to embed easy-to-read configuration inside of the otherwise hard-to-read XML in App.config and Web.config.
+HOCON also lets you query configs by their section paths, and those sections are exposed strongly typed and parsed values you can use inside your applications.
 
 HOCON also lets you nest and/or chain sections of configuration, creating layers of granularity and providing you a semantically namespaced config.
 
@@ -43,7 +73,7 @@ Deployment is a vague concept, but it's closely tied to HOCON. An actor is "depl
 
 When an actor is instantiated within the `ActorSystem` it can be deployed in one of two places: inside the local process or in another process (this is what `Akka.Remote` does.)
 
-When an actor is deployed by the `ActorSystem`, it has a range of configuration settings. These settings control a wide range of behavior options for the actor, such as: is this actor going to be a router? What `Dispatcher` will it use? What type of mailbox will it have? (More on these concepts in later lessons.)
+When an actor is deployed by the `ActorSystem`, it has a range of configuration settings. These settings control a wide range of behavior options for the actor such as: is this actor going to be a router? What `Dispatcher` will it use? What type of mailbox will it have? (More on these concepts in later lessons.)
 
 We haven't gone over what all these options mean, but *the key thing to know for now is that the settings used by the `ActorSystem` to deploy an actor into service can be set within HOCON. *
 

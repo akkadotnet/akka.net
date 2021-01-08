@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Routing;
 using Akka.Configuration;
@@ -19,13 +20,23 @@ using Akka.Routing;
 namespace Akka.Cluster
 {
     /// <summary>
+    /// INTERNAL API.
+    /// 
+    /// Marker interface for signifying that this <see cref="IActorRefProvider"/> can be used in combination with the
+    /// <see cref="Cluster"/> ActorSystem extension.
+    /// </summary>
+    [InternalApi]
+    public interface IClusterActorRefProvider : IRemoteActorRefProvider { }
+
+    /// <summary>
     /// INTERNAL API
     /// 
     /// The `ClusterActorRefProvider` will load the <see cref="Cluster"/>
     /// extension, i.e. the cluster will automatically be started when
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
-    internal class ClusterActorRefProvider : RemoteActorRefProvider
+    [InternalApi]
+    public class ClusterActorRefProvider : RemoteActorRefProvider, IClusterActorRefProvider
     {
         /// <summary>
         /// TBD
@@ -147,12 +158,12 @@ namespace Akka.Cluster
         {
             Config config2 = config;
             if (config.HasPath("cluster.enabled")
-                && config.GetBoolean("cluster.enabled")
+                && config.GetBoolean("cluster.enabled", false)
                 && !config.HasPath("nr-of-instances"))
             {
                 var maxTotalNrOfInstances = config
                     .WithFallback(Default)
-                    .GetInt("cluster.max-total-nr-of-instances");
+                    .GetInt("cluster.max-total-nr-of-instances", 0);
                 config2 = ConfigurationFactory.ParseString("nr-of-instances=" + maxTotalNrOfInstances)
                     .WithFallback(config);
             }
@@ -160,7 +171,7 @@ namespace Akka.Cluster
             var deploy = base.ParseConfig(key, config2);
             if (deploy != null)
             {
-                if (deploy.Config.GetBoolean("cluster.enabled"))
+                if (deploy.Config.GetBoolean("cluster.enabled", false))
                 {
                     if (deploy.Scope != Deploy.NoScopeGiven)
                         throw new ConfigurationException($"Cluster deployment can't be combined with scope [{deploy.Scope}]");

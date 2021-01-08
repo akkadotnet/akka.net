@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FsApi.fs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ namespace Akka.FSharp
 open Akka.Actor
 open System
 open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Linq.QuotationEvaluation
+open FSharp.Quotations.Evaluator
 
 module Serialization = 
     open MBrace.FsPickler
@@ -29,7 +29,7 @@ module Serialization =
     type ExprSerializer(system) = 
         inherit Serializer(system)
         let fsp = FsPickler.CreateBinarySerializer()
-        override __.Identifier = 9
+        override __.Identifier = 99
         override __.IncludeManifest = true        
         override __.ToBinary(o) = serializeToBinary fsp o        
         override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
@@ -37,7 +37,7 @@ module Serialization =
                         
     let internal exprSerializationSupport (system: ActorSystem) =
         let serializer = ExprSerializer(system :?> ExtendedActorSystem)
-        system.Serialization.AddSerializer(serializer)
+        system.Serialization.AddSerializer("Expr serializer", serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)
 
 [<AutoOpen>]
@@ -277,6 +277,7 @@ module Actors =
                         member __.ActorSelection(path : string) = context.ActorSelection(path)
                         member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
                         member __.Watch(aref:IActorRef) = context.Watch aref
+                        member __.WatchWith(aref:IActorRef, msg) = context.WatchWith (aref, msg)
                         member __.Unwatch(aref:IActorRef) = context.Unwatch aref
                         member __.Log = lazy (Akka.Event.Logging.GetLogger(context))
                         member __.Defer fn = deferables <- fn::deferables 
@@ -284,7 +285,7 @@ module Actors =
                         member __.Unstash() = (this :> IWithUnboundedStash).Stash.Unstash()
                         member __.UnstashAll() = (this :> IWithUnboundedStash).Stash.UnstashAll() }
         
-        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(actor.Compile () ())
+        new(actor : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) = FunActor(QuotationEvaluator.Evaluate actor)
         member __.Sender() : IActorRef = base.Sender
         member __.Unhandled msg = base.Unhandled msg
         override x.OnReceive msg = 
@@ -362,6 +363,11 @@ module Linq =
         | :? MethodCallExpression as c -> Some(c.Object, c.Method, c.Arguments)
         | _ -> None
     
+    let (|Constant|_|) (e : Expression) = 
+        match e with
+        | :? ConstantExpression as c -> Some(c.Value, c.Type)
+        | _ -> None
+    
     let (|Method|) (e : System.Reflection.MethodInfo) = e.Name
     
     let (|Invoke|_|) = 
@@ -369,18 +375,50 @@ module Linq =
         | Call(o, Method("Invoke"), _) -> Some o
         | _ -> None
     
-    let (|Ar|) (p : System.Collections.ObjectModel.ReadOnlyCollection<Expression>) = Array.ofSeq p
+    let (|Ar|) (p : System.Collections.ObjectModel.ReadOnlyCollection<'t>) = Array.ofSeq p
 
-    let toExpression<'Actor>(f : System.Linq.Expressions.Expression) = 
-            match f with
-            | Lambda(_, Invoke(Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]))) 
-            | Call(null, Method "ToFSharpFunc", Ar [| Lambda(_, p) |]) -> 
-                Expression.Lambda(p, [||]) :?> System.Linq.Expressions.Expression<System.Func<'Actor>>
-            | _ -> failwith "Doesn't match"
- 
+    let (|P|_|) (p: Expression) = match p with | :? ParameterExpression as p -> Some(p.Name, p.Type) | _ -> None
+
+    let (|UnitVar|_|) (v: Quotations.Var) = if v.Type = typeof<unit> then Some () else None
+
+    type VarEnv = Map<Var, Expression>
+
+    let toBCLExpression<'Actor> (f: Quotations.Expr) =
+        let rec inner env (e: Quotations.Expr) =
+            match e with
+            | Patterns.Lambda(UnitVar, body) ->
+                let innerExpr = inner env body
+                Expression.Lambda(innerExpr, [||]) :> Expression
+            | Patterns.NewObject(ctor, parameters) ->
+                let parameters = parameters |> List.map (inner env) |> Array.ofList
+                Expression.New(ctor, parameters) :> Expression
+            | Patterns.Value(v, ty) ->
+                Expression.Constant v :> Expression
+            | Patterns.Call(Some instance, meth, args) ->
+                let instance = inner env instance
+                let args = args |> List.map (inner env) |> Array.ofList
+                Expression.Call(instance, meth, args) :> Expression
+            | Patterns.Call(None, meth, args) ->
+                let args = args |> List.map (inner env) |> Array.ofList
+                Expression.Call(meth, args) :> Expression
+            | Patterns.Let(variable, binding, subsequent) ->
+                let thisLetVar = Expression.Variable(variable.Type, variable.Name)
+                let computeThisLetVarValue = inner env binding
+                let assignment = Expression.Assign(thisLetVar, computeThisLetVarValue) :> Expression
+                let env = env |> Map.add variable (thisLetVar :> Expression)
+                let others = inner env subsequent
+                Expression.Block([|thisLetVar|], [|assignment; others|]) :> Expression
+            | Patterns.Var var ->
+                env |> Map.find var
+            | e ->
+                failwithf "Unknown expression %A" e
+
+        inner Map.empty f :?> Expression<Func<'Actor>>
+
     type Expression = 
-        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = toExpression<FunActor<'Message, 'v>> f
-        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = toExpression<'Actor> (QuotationEvaluator.ToLinqExpression f)  
+        static member ToExpression(f : System.Linq.Expressions.Expression<System.Func<FunActor<'Message, 'v>>>) = f
+        static member ToExpression<'Actor>(f : Quotations.Expr<(unit -> 'Actor)>) = 
+            toBCLExpression<'Actor> f
         
 [<RequireQualifiedAccess>]
 module Configuration = 
@@ -411,7 +449,7 @@ type ExprDeciderSurrogate(serializedExpr: byte array) =
 
 and ExprDecider (expr: Expr<(exn->Directive)>) =
     member __.Expr = expr
-    member private this.Compiled = lazy this.Expr.Compile()()
+    member private this.Compiled = lazy (QuotationEvaluator.Evaluate this.Expr)
     interface IDecider with
         member this.Decide (e: exn): Directive = this.Compiled.Value (e)
     interface ISurrogated with

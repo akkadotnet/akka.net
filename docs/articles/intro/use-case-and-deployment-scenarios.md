@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: use-case-and-deployment-scenarios
 title: Use-case and Deployment Scenarios
 ---
 # Use-case and Deployment Scenarios
@@ -67,9 +67,9 @@ public class MvcApplication : System.Web.HttpApplication
 As you can see the main point here is keeping a static reference to your `ActorSystem` . This ensures it won't be accidentally garbage collected and gets disposed and created with the start and stop events of your web application. 
 
 > [!WARNING]
-> Although hosting inside an ASP.NET Application is easy. A **word of caution**: When you are hosting inside of `IIS` the applicationpool your app lives in could be stopped and started at the whim of `IIS`. This in turn means your `ActorSystem` could be stopped at any given time.
+> When you are hosting inside of `IIS`, the application pool your app lives in could be stopped and started at the whim of `IIS`. This means your `ActorSystem` could be stopped at any given time.
 
-Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a seperate Windows Service via Akka.Remote / Akka.Cluster
+Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a separate Windows Service via Akka.Remote / Akka.Cluster.
 
 ### Interaction between Controllers and Akka.NET
 In the sample below, we use an Web API Controller:
@@ -89,19 +89,16 @@ public class SomeController  : ApiController
 
 ## Windows Service
 
-For windows service deployment its recommended to use
-[TopShelf](http://topshelf.readthedocs.org/en/latest/index.html)
+For windows service deployment it is recommended to use [TopShelf](http://topshelf.readthedocs.org/en/latest/index.html)
 to build your Windows Services. It radically simplifies hosting Windows Services.
 
-The quickest way to get started with TopShelf is by creating a Console
-Application. Which would look like this:
+The quickest way to get started with TopShelf is by creating a Console Application. Which would look like this:
 
 #### Program.cs
 ```csharp
 using Akka.Actor;
 using Topshelf;
-```
-```csharp
+
 class Program
 {
     static void Main(string[] args)
@@ -143,32 +140,28 @@ public class MyActorService
 }
 ```
 
-The above example is the simplest way imaginable. However there are also other
-styles of integration with TopShelf that give you more control.
+The above example is the simplest way imaginable, but there are other styles of integration with TopShelf that give you more control.
 
-Installing with Topshelf is as easy as calling `myConsoleApp.exe install` on
-the command line.
+Installing with Topshelf is as easy as calling `myConsoleApp.exe install` on the command line.
 
-For all the options and settings check out their
-[docs](http://topshelf.readthedocs.org/en/latest/index.html).
+For all the options and settings check out their [docs](http://topshelf.readthedocs.org/en/latest/index.html).
 
 ## Azure PaaS Worker Role
 
-The following sample assumes that you have created a new Azure Paas Cloud Service that contains a single
+The following sample assumes that you have created a new Azure PaaS Cloud Service that contains a single
 empty Worker Role. The Cloud Service project templates are added to Visual Studio by installing the 
 [Azure .Net SDK](http://azure.microsoft.com/en-gb/downloads/).
 
 The Worker Role implementation can be tested locally using the Azure Compute Emulator before deploying to the cloud. The MSDN Azure article ["Using Emulator Express to Run and Debug a Cloud Service Locally"](https://msdn.microsoft.com/en-us/library/azure/dn339018.aspx) describes this in more detail.
 
-The Azure PaaS Worker Role implementation is very similar to the [Akka.Net Windows Service Sample](use-case-and-deployment-scenarios.md#windows-service). 
+The Azure PaaS Worker Role implementation is very similar to the [Windows Service](#windows-service). 
 The quickest way to get started with Akka.Net is to create a simple Worker Role which invokes the top-level
 user-actor in the RunAsync() method, as follows:
 
 #### WorkerRole.cs
 ```csharp
 using Akka.Actor;
-```
-```csharp
+
 namespace MyActorWorkerRole
 {
     public class WorkerRole : RoleEntryPoint
@@ -219,7 +212,7 @@ namespace MyActorWorkerRole
 
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, cancellationToken);
             }
         }
     }

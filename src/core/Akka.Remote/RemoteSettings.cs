@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,52 +25,61 @@ namespace Akka.Remote
         public RemoteSettings(Config config)
         {
             //TODO: need to add value validation for each field
-            Config = config;
-            LogReceive = config.GetBoolean("akka.remote.log-received-messages");
-            LogSend = config.GetBoolean("akka.remote.log-sent-messages");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<RemoteSettings>();
 
+            Config = config;
+            LogReceive = config.GetBoolean("akka.remote.log-received-messages", false);
+            LogSend = config.GetBoolean("akka.remote.log-sent-messages", false);
+
+            // TODO: what is the default value if the key wasn't found?
             var bufferSizeLogKey = "akka.remote.log-buffer-size-exceeding";
-            if (config.GetString(bufferSizeLogKey).ToLowerInvariant().Equals("off") ||
-                config.GetString(bufferSizeLogKey).ToLowerInvariant().Equals("false"))
+            var useBufferSizeLog = config.GetString(bufferSizeLogKey, string.Empty).ToLowerInvariant();
+            if (useBufferSizeLog.Equals("off") ||
+                useBufferSizeLog.Equals("false") ||
+                useBufferSizeLog.Equals("no"))
             {
                 LogBufferSizeExceeding = Int32.MaxValue;
             }
             else
             {
-                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey);
+                LogBufferSizeExceeding = config.GetInt(bufferSizeLogKey, 0);
             }
 
-            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode");
-            TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths"));
-            RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events") ?? "DEBUG";
-            Dispatcher = config.GetString("akka.remote.use-dispatcher");
-            if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase)) RemoteLifecycleEventsLogLevel = "DEBUG";
-            FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown");
-            ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout");
-            TransportNames = config.GetStringList("akka.remote.enabled-transports");
+            UntrustedMode = config.GetBoolean("akka.remote.untrusted-mode", false);
+            TrustedSelectionPaths = new HashSet<string>(config.GetStringList("akka.remote.trusted-selection-paths", new string[] { }));
+            RemoteLifecycleEventsLogLevel = config.GetString("akka.remote.log-remote-lifecycle-events", "DEBUG");
+            if (RemoteLifecycleEventsLogLevel.Equals("on", StringComparison.OrdinalIgnoreCase) ||
+                RemoteLifecycleEventsLogLevel.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                RemoteLifecycleEventsLogLevel.Equals("true", StringComparison.OrdinalIgnoreCase)
+                ) RemoteLifecycleEventsLogLevel = "DEBUG";
+            Dispatcher = config.GetString("akka.remote.use-dispatcher", null);
+            FlushWait = config.GetTimeSpan("akka.remote.flush-wait-on-shutdown", null);
+            ShutdownTimeout = config.GetTimeSpan("akka.remote.shutdown-timeout", null);
+            TransportNames = config.GetStringList("akka.remote.enabled-transports", new string[] { });
             Transports = (from transportName in TransportNames
                 let transportConfig = TransportConfigFor(transportName)
                 select new TransportSettings(transportConfig)).ToArray();
             Adapters = ConfigToMap(config.GetConfig("akka.remote.adapters"));
-            BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval");
+            BackoffPeriod = config.GetTimeSpan("akka.remote.backoff-interval", null);
             RetryGateClosedFor = config.GetTimeSpan("akka.remote.retry-gate-closed-for", TimeSpan.Zero);
-            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections");
-            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size");
-            SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval");
-            SysResendLimit = config.GetInt("akka.remote.resend-limit");
-            InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout");
-            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence");
-            SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout");
-            QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after");
+            UsePassiveConnections = config.GetBoolean("akka.remote.use-passive-connections", false);
+            SysMsgBufferSize = config.GetInt("akka.remote.system-message-buffer-size", 0);
+            SysResendTimeout = config.GetTimeSpan("akka.remote.resend-interval", null);
+            SysResendLimit = config.GetInt("akka.remote.resend-limit", 0);
+            InitialSysMsgDeliveryTimeout = config.GetTimeSpan("akka.remote.initial-system-message-delivery-timeout", null);
+            QuarantineSilentSystemTimeout = config.GetTimeSpan("akka.remote.quarantine-after-silence", null);
+            SysMsgAckTimeout = config.GetTimeSpan("akka.remote.system-message-ack-piggyback-timeout", null);
+            QuarantineDuration = config.GetTimeSpan("akka.remote.prune-quarantine-marker-after", null);
 
-            StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout");
-            CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout");
+            StartupTimeout = config.GetTimeSpan("akka.remote.startup-timeout", null);
+            CommandAckTimeout = config.GetTimeSpan("akka.remote.command-ack-timeout", null);
 
             WatchFailureDetectorConfig = config.GetConfig("akka.remote.watch-failure-detector");
-            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class");
-            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval");
-            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval");
-            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after");
+            WatchFailureDetectorImplementationClass = WatchFailureDetectorConfig.GetString("implementation-class", null);
+            WatchHeartBeatInterval = WatchFailureDetectorConfig.GetTimeSpan("heartbeat-interval", null);
+            WatchUnreachableReaperInterval = WatchFailureDetectorConfig.GetTimeSpan("unreachable-nodes-reaper-interval", null);
+            WatchHeartbeatExpectedResponseAfter = WatchFailureDetectorConfig.GetTimeSpan("expected-response-after", null);
         }
 
         /// <summary>
@@ -240,8 +249,11 @@ namespace Akka.Remote
             /// <param name="config">TBD</param>
             public TransportSettings(Config config)
             {
-                TransportClass = config.GetString("transport-class");
-                Adapters = config.GetStringList("applied-adapters").Reverse().ToList();
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<TransportSettings>();
+
+                TransportClass = config.GetString("transport-class", null);
+                Adapters = config.GetStringList("applied-adapters", new string[] { }).Reverse().ToList();
                 Config = config;
             }
 
@@ -263,9 +275,10 @@ namespace Akka.Remote
 
         private static IDictionary<string, string> ConfigToMap(Config cfg)
         {
-            if(cfg.IsEmpty) return new Dictionary<string, string>();
+            // adjusted API to match stand-alone HOCON per https://github.com/akkadotnet/HOCON/pull/191#issuecomment-577455865
+            if (cfg.IsEmpty) return new Dictionary<string, string>();
             var unwrapped = cfg.Root.GetObject().Unwrapped;
-            return unwrapped.ToDictionary(k => k.Key, v => v.Value != null? v.Value.ToString():null);
+            return unwrapped.ToDictionary(k => k.Key, v => v.Value != null ? v.Value.ToString() : null);
         }
     }
 }

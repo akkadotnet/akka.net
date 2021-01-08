@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TestSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -73,10 +73,12 @@ namespace Akka.Streams.TestKit
         /// </summary>
         public class ManualProbe<T> : ISubscriber<T>
         {
+            private readonly TestKitBase _testKit;
             private readonly TestProbe _probe;
 
             internal ManualProbe(TestKitBase testKit)
             {
+                _testKit = testKit;
                 _probe = testKit.CreateTestProbe();
             }
 
@@ -123,20 +125,32 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public T ExpectNext()
             {
-                var t = _probe.RemainingOrDilated(null);
-                var message = _probe.ReceiveOne(t);
-                if (message is OnNext<T>)
-                    return ((OnNext<T>) message).Element;
+                return ExpectNext(_testKit.Dilated(_probe.TestKitSettings.SingleExpectDefault));
+            }
 
-                throw new Exception("expected OnNext, found " + message);
+            /// <summary>
+            /// Expect and return a stream element during specified time or timeout.
+            /// </summary>
+            public T ExpectNext(TimeSpan timeout)
+            {
+                var t = _probe.RemainingOrDilated(timeout);
+                switch (_probe.ReceiveOne(t))
+                {
+                    case null:
+                        throw new Exception($"Expected OnNext(_), yet no element signaled during {timeout}");
+                    case OnNext<T> message:
+                        return message.Element;
+                    case var other:
+                        throw new Exception($"expected OnNext, found {other}");
+                }
             }
 
             /// <summary>
             /// Fluent DSL. Expect a stream element.
             /// </summary>
-            public ManualProbe<T> ExpectNext(T element)
+            public ManualProbe<T> ExpectNext(T element, TimeSpan? timeout = null)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element));
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -145,7 +159,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(TimeSpan timeout, T element)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -154,7 +168,7 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNext(T element, TimeSpan timeout)
             {
-                _probe.ExpectMsg<OnNext<T>>(x => Equals(x.Element, element), timeout);
+                _probe.ExpectMsg<OnNext<T>>(x => AssertEquals(x.Element, element, "Expected '{0}', but got '{1}'", element, x.Element), timeout);
                 return this;
             }
 
@@ -162,9 +176,12 @@ namespace Akka.Streams.TestKit
             /// Fluent DSL. Expect multiple stream elements.
             /// </summary>
             public ManualProbe<T> ExpectNext(T e1, T e2, params T[] elems)
+                => ExpectNext(null, e1, e2, elems);
+
+            public ManualProbe<T> ExpectNext(TimeSpan? timeout, T e1, T e2, params T[] elems)
             {
                 var len = elems.Length + 2;
-                var e = ExpectNextN(len).ToArray();
+                var e = ExpectNextN(len, timeout).ToArray();
                 AssertEquals(e.Length, len, "expected to get {0} events, but got {1}", len, e.Length);
                 AssertEquals(e[0], e1, "expected [0] element to be {0} but found {1}", e1, e[0]);
                 AssertEquals(e[1], e2, "expected [1] element to be {0} but found {1}", e2, e[1]);
@@ -182,26 +199,41 @@ namespace Akka.Streams.TestKit
             /// </summary>
             public ManualProbe<T> ExpectNextUnordered(T e1, T e2, params T[] elems)
             {
+                return ExpectNextUnordered(null, e1, e2, elems);
+            }
+
+            public ManualProbe<T> ExpectNextUnordered(TimeSpan? timeout, T e1, T e2, params T[] elems)
+            {
                 var len = elems.Length + 2;
-                var e = ExpectNextN(len).ToArray();
+                var e = ExpectNextN(len, timeout).ToArray();
                 AssertEquals(e.Length, len, "expected to get {0} events, but got {1}", len, e.Length);
 
-                var expectedSet = new HashSet<T>(elems) {e1, e2};
+                var expectedSet = new HashSet<T>(elems) { e1, e2 };
                 expectedSet.ExceptWith(e);
 
                 Assert(expectedSet.Count == 0, "unexpected elements [{0}] found in the result", string.Join(", ", expectedSet));
                 return this;
             }
 
+            public ManualProbe<T> ExpectNextWithinSet(List<T> elems)
+            {
+                var next = _probe.ExpectMsg<OnNext<T>>();
+                if(!elems.Contains(next.Element))
+                    Assert(false, "unexpected elements [{0}] found in the result", next.Element);
+                elems.Remove(next.Element);
+                _probe.Log.Info($"Received '{next.Element}' within OnNext().");
+                return this;
+            }
+
             /// <summary>
             /// Expect and return the next <paramref name="n"/> stream elements.
             /// </summary>
-            public IEnumerable<T> ExpectNextN(long n)
+            public IEnumerable<T> ExpectNextN(long n, TimeSpan? timeout = null)
             {
                 var res = new List<T>((int)n);
                 for (int i = 0; i < n; i++)
                 {
-                    var next = _probe.ExpectMsg<OnNext<T>>();
+                    var next = _probe.ExpectMsg<OnNext<T>>(timeout);
                     res.Add(next.Element);
                 }
                 return res;
@@ -210,10 +242,10 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Fluent DSL. Expect the given elements to be signalled in order.
             /// </summary>
-            public ManualProbe<T> ExpectNextN(IEnumerable<T> all)
+            public ManualProbe<T> ExpectNextN(IEnumerable<T> all, TimeSpan? timeout = null)
             {
                 foreach (var x in all)
-                    _probe.ExpectMsg<OnNext<T>>(y => Equals(y.Element, x));
+                    _probe.ExpectMsg<OnNext<T>>(y => AssertEquals(y.Element, x, "Expected one of ({0}), but got '{1}'", string.Join(", ", all), y.Element), timeout);
 
                 return this;
             }
@@ -221,12 +253,12 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Fluent DSL. Expect the given elements to be signalled in any order.
             /// </summary>
-            public ManualProbe<T> ExpectNextUnorderedN(IEnumerable<T> all)
+            public ManualProbe<T> ExpectNextUnorderedN(IEnumerable<T> all, TimeSpan? timeout = null)
             {
                 var collection = new HashSet<T>(all);
                 while (collection.Count > 0)
                 {
-                    var next = ExpectNext();
+                    var next = timeout.HasValue ? ExpectNext(timeout.Value) : ExpectNext();
                     Assert(collection.Contains(next), $"expected one of (${string.Join(", ", collection)}), but received {next}");
                     collection.Remove(next);
                 }
@@ -240,6 +272,15 @@ namespace Akka.Streams.TestKit
             public ManualProbe<T> ExpectComplete()
             {
                 _probe.ExpectMsg<OnComplete>();
+                return this;
+            }
+
+            /// <summary>
+            /// Fluent DSL. Expect completion with a timeout.
+            /// </summary>
+            public ManualProbe<T> ExpectComplete(TimeSpan timeout)
+            {
+                _probe.ExpectMsg<OnComplete>(timeout);
                 return this;
             }
 
@@ -457,6 +498,11 @@ namespace Akka.Streams.TestKit
                 if (!predicate) throw new Exception(string.Format(format, args));
             }
 
+            private void Assert(Func<bool> predicate, string format, params object[] args)
+            {
+                if (!predicate()) throw new Exception(string.Format(format, args));
+            }
+
             private void AssertEquals<T1, T2>(T1 x, T2 y, string format, params object[] args)
             {
                 if (!Equals(x, y)) throw new Exception(string.Format(format, args));
@@ -503,10 +549,22 @@ namespace Akka.Streams.TestKit
                 return this;
             }
 
+            /// <summary>
+            /// Request and expect a stream element.
+            /// </summary>
             public T RequestNext()
             {
                 _subscription.Value.Request(1);
                 return ExpectNext();
+            }
+
+            /// <summary>
+            /// Request and expect a stream element during the specified time or timeout.
+            /// </summary>
+            public T RequestNext(TimeSpan timeout)
+            {
+                _subscription.Value.Request(1);
+                return ExpectNext(timeout);
             }
         }
 

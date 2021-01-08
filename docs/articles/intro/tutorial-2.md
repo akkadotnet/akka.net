@@ -18,12 +18,12 @@ tasks of this actor will be rather simple:
 When working with objects we usually design our API as _interfaces_, which are basically a collection of abstract
 methods to be filled out by the actual implementation. In the world of actors, the counterpart of interfaces is
 protocols. While it is not possible to formalize general protocols in the programming language, we can formalize
-its most basic elements: the messages.
+its most basic elements: The messages.
 
 ## The Query Protocol
 
-Just because a device have been started it does not mean that it has immediately a temperature measurement. Hence, we
-need to account for the case where a temperature is not present in our protocol. This, fortunately, means that we
+Just because a device has been started it does not mean that it immediately has a temperature measurement. Hence, we
+need to account in our protocol for the case in which a temperature is not present. This, fortunately, means that we
 can test the query part of the actor without the write part present, as it can simply report an empty result.
 
 The protocol for obtaining the current temperature from the device actor is rather simple:
@@ -34,7 +34,7 @@ The protocol for obtaining the current temperature from the device actor is rath
 
 We need two messages, one for the request, and one for the reply. A first attempt could look like this:
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceInProgress.cs?name=read-protocol-1)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceInProgress.cs?name=read-protocol-1)]
 
 This is a fine approach, but it limits the flexibility of the protocol. To understand why we need to talk
 about message ordering and message delivery guarantees in general.
@@ -49,7 +49,7 @@ more steps involved which means that more can go wrong. Another aspect is that a
 reference to the message inside the same CLR, without any restrictions on the underlying object which is sent,
 whereas a remote transport will place a limit on the message size.
 
-It is also important to keep in mind, that while sending inside the same CLR is significantly more reliable, if an
+It is also important to keep in mind that while sending inside the same CLR is significantly more reliable, if an
 actor fails due to a programmer error while processing the message, the effect is basically the same as if a remote,
 network request fails due to the remote host crashing while processing the message. Even though in both cases the
 service is recovered after a while (the actor is restarted by its supervisor, the host is restarted by an operator
@@ -81,7 +81,7 @@ duplicate deliveries.
 
 ### Why No Guaranteed Delivery?
 
-At the core of the problem lies the question what exactly this guarantee shall mean, i.e. at which point does
+At the core of the problem lies the question what exactly this guarantee shall mean, i.e. at which point is
 the delivery considered to be guaranteed:
 
  1. When the message is sent out on the network?
@@ -92,7 +92,7 @@ the delivery considered to be guaranteed:
 
 Most frameworks/protocols claiming guaranteed delivery actually provide something similar to point 4 and 5. While this
 sounds fair, **is this actually useful?** To understand the implications, consider a simple, practical example:
-a user attempts to place an order and we only want to claim that it has successfully processed once it is actually on
+A user attempts to place an order and we only want to claim that it has successfully processed once it is actually on
 disk in the database containing orders.
 
 If we rely on the guarantees of such system it will report success as soon as the order has been submitted to the
@@ -144,20 +144,20 @@ can be helpful to put an additional query ID field in the message which helps us
 
 Hence, we add one more field to our messages, so that an ID can be provided by the requester:
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceInProgress.cs?name=read-protocol-2)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceInProgress.cs?name=read-protocol-2)]
 
 Our device actor has the responsibility to use the same ID for the response of a given query. Now we can sketch
 our device actor:
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceInProgress.cs?name=device-with-read)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceInProgress.cs?name=device-with-read)]
 
 We maintain the current temperature, initially set to `null`, and we simply report it back if queried. We also
 added fields for the ID of the device and the group it belongs to, which we will use later.
 
-We can already write a simple test for this functionality @scala[(we use ScalaTest but any other test framework can be
-used with the Akka.NET Testkit)]:
+We can already write a simple test for this functionality (we are using xUnit but any other test framework can be
+used with the Akka.NET Testkit):
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceSpec.cs?name=device-read-test)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceSpec.cs?name=device-read-test)]
 
 ## The Write Protocol
 
@@ -167,7 +167,7 @@ As a first attempt, we could model recording the current temperature in the devi
 
 Such a message could possibly look like this:
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceInProgress.cs?name=write-protocol-1)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceInProgress.cs?name=write-protocol-1)]
 
 The problem with this approach is that the sender of the record temperature message can never be sure if the message
 was processed or not. We have seen that Akka.NET does not guarantee delivery of these messages and leaves it to the
@@ -177,12 +177,12 @@ Just like in the case of temperature queries and responses, it is a good idea to
 
 Putting read and write protocol together, the device actor will look like this:
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/Device.cs?name=full-device)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/Device.cs?name=full-device)]
 
 We are also responsible for writing a new test case now, exercising both the read/query and write/record functionality
 together:
 
-[!code-csharp[Main](../../examples/Tutorials/Tutorial2/DeviceSpec.cs?name=device-write-read-test)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceSpec.cs?name=device-write-read-test)]
 
 ## What is Next?
 

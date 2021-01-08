@@ -1,14 +1,18 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSplitAfterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -260,6 +264,68 @@ namespace Akka.Streams.Tests.Dsl
                         masterSubscriber.ExpectComplete();
                     });
             }, Materializer);
+        }
+
+        [Fact]
+        public void SplitAfter_should_work_when_last_element_is_split_by() => this.AssertAllStagesStopped(() =>
+        {
+            WithSubstreamsSupport(splitAfter: 3, elementCount: 3,
+                run: (masterSubscriber, masterSubscription, expectSubFlow) =>
+                {
+                    var s1 = new StreamPuppet(expectSubFlow()
+                        .RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                    masterSubscriber.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+
+                    s1.Request(3);
+                    s1.ExpectNext(1);
+                    s1.ExpectNext(2);
+                    s1.ExpectNext(3);
+                    s1.ExpectComplete();
+
+                    masterSubscription.Request(1);
+                    masterSubscriber.ExpectComplete();
+                });
+        }, Materializer);
+
+        [Fact]
+        public void SplitAfter_should_fail_stream_if_substream_not_materialized_in_time() => this.AssertAllStagesStopped(() =>
+        {
+            var timeout = new StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.CancelTermination, TimeSpan.FromMilliseconds(500));
+            var settings = ActorMaterializerSettings.Create(Sys).WithSubscriptionTimeoutSettings(timeout);
+            var tightTimeoutMaterializer = ActorMaterializer.Create(Sys, settings);
+
+            var testSource = Source.Single(1).ConcatMaterialized(Source.Maybe<int>(), Keep.Left).SplitAfter(_ => true);
+
+            Action a = () =>
+            {
+                testSource.Lift().Delay(TimeSpan.FromSeconds(1)).ConcatMany(x => x)
+                    .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer)
+                    .Wait(TimeSpan.FromSeconds(3));
+            };
+            a.ShouldThrow<SubscriptionTimeoutException>();
+        }, Materializer);
+
+        // Probably covert by SplitAfter_should_work_when_last_element_is_split_by
+        // but we received a specific example which we want to cover too,
+        // see https://github.com/akkadotnet/akka.net/issues/3222
+        [Fact]
+        public void SplitAfter_should_not_create_a_subflow_when_no_element_is_left()
+        {
+            var result = new ConcurrentQueue<ImmutableList<(bool, int)>>();
+            Source.From(new[]
+                {
+                    (true, 1), (true, 2), (false, 0),
+                    (true, 3), (true, 4), (false, 0),
+                    (true, 5), (false, 0)
+                })
+                .SplitAfter(t => !t.Item1)
+                .Where(t => t.Item1)
+                .Aggregate(ImmutableList.Create<(bool, int)>(), (list, b) => list.Add(b))
+                .To(Sink.ForEach<ImmutableList<(bool, int)>>(list => result.Enqueue(list)))
+                .Run(Materializer);
+
+            Thread.Sleep(500);
+            result.All(l => l.Count > 0).Should().BeTrue();
         }
     }
 }

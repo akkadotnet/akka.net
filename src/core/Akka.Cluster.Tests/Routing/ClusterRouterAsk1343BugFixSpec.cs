@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRouterAsk1343BugFixSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -96,14 +96,7 @@ namespace Akka.Cluster.Tests.Routing
             var router = Sys.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "router3");
             Assert.IsType<RoutedActorRef>(router);
 
-            try
-            {
-                var result = await router.Ask<string>("foo");
-            }
-            catch (Exception ex)
-            {
-                Assert.IsType<TaskCanceledException>(ex);
-            }
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await router.Ask<int>("foo"));
         }
     }
 }

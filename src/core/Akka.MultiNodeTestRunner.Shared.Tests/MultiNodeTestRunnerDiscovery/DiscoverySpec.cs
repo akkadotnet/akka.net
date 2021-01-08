@@ -1,14 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DiscoverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Akka.TestKit;
 using Xunit;
+using FluentAssertions;
 
 namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 {
@@ -25,16 +28,29 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
         public void Deeply_inherited_are_ok()
         {
             var discoveredSpecs = DiscoverSpecs();
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role, "DeeplyInheritedChildRole");
+            Assert.Equal("DeeplyInheritedChildRole", discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role);
+        }
+
+        [Fact(DisplayName = "Child test class with default constructors are ok")]
+        public void Child_class_with_default_constructor_are_ok()
+        {
+            Action testDelegate = () =>
+            {
+                var testCase = typeof(DiscoveryCases.DefaultConstructorOnDerivedClassSpec);
+                var constuctor = Discovery.FindConfigConstructor(testCase);
+                constuctor.Should().NotBeNull();
+            };
+
+            testDelegate.ShouldNotThrow();
         }
 
         [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]
         public void Discovered_count_equals_number_of_roles_mult_specs()
         {
             var discoveredSpecs = DiscoverSpecs();
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec1))].Count, 5);
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec2))].Count, 5);
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count, 5);
+            Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec1))].Count);
+            Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec2))].Count);
+            Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count);
         }
 
         [Fact(DisplayName = "Only public props and fields are considered when looking for RoleNames")]

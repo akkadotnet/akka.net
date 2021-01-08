@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffOnRestartSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,6 +43,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public TestActor(IActorRef probe)
             {
                 _probe = probe;
@@ -63,13 +64,14 @@ namespace Akka.Tests.Pattern
                     return;
                 });
 
-                Receive<Tuple<string, string>>(str => str.Item1.Equals("TO_PARENT"), msg =>
+                Receive<(string, string)>(str => str.Item1.Equals("TO_PARENT"), msg =>
                 {
                     Context.Parent.Tell(msg.Item2);
                 });
 
                 ReceiveAny(other => _probe.Tell(other));
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
@@ -99,6 +101,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly TestLatch _latch;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public SlowlyFailingActor(TestLatch latch)
             {
                 _latch = latch;
@@ -115,6 +118,7 @@ namespace Akka.Tests.Pattern
                     Sender.Tell("PONG");
                 });
             }
+#pragma warning restore CS0162
 
             protected override void PostStop()
             {
@@ -129,16 +133,10 @@ namespace Akka.Tests.Pattern
 
         private Props SupervisorProps(IActorRef probeRef)
         {
-            var options = Backoff.OnFailure(TestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0)
-                .WithSupervisorStrategy(new OneForOneStrategy(4, TimeSpan.FromSeconds(30), ex =>
-                {
-                    if (ex is StoppingException)
-                    {
-                        return Directive.Stop;
-                    }
-
-                    return SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
-                }));
+            var options = Backoff.OnFailure(TestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
+                .WithSupervisorStrategy(new OneForOneStrategy(4, TimeSpan.FromSeconds(30), ex => ex is StoppingException 
+                    ? Directive.Stop 
+                    : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));
 
             return BackoffSupervisor.Props(options);
         }
@@ -216,7 +214,7 @@ namespace Akka.Tests.Pattern
             probe.ExpectMsg("STARTED");
             var child = probe.LastSender;
 
-            child.Tell(Tuple.Create("TO_PARENT", "TEST_MESSAGE"));
+            child.Tell(("TO_PARENT", "TEST_MESSAGE"));
             probe.ExpectMsg("TEST_MESSAGE");
         }
 
@@ -224,16 +222,10 @@ namespace Akka.Tests.Pattern
         public void BackoffOnRestartSupervisor_must_accept_commands_while_child_is_terminating()
         {
             var postStopLatch = CreateTestLatch(1);
-            var options = Backoff.OnFailure(SlowlyFailingActor.Props(postStopLatch), "someChildName", 1.Ticks(), 1.Ticks(), 0.0)
-                .WithSupervisorStrategy(new OneForOneStrategy(ex =>
-                {
-                    if (ex is StoppingException)
-                    {
-                        return Directive.Stop;
-                    }
-
-                    return SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
-                }));
+            var options = Backoff.OnFailure(SlowlyFailingActor.Props(postStopLatch), "someChildName", 1.Ticks(), 1.Ticks(), 0.0, -1)
+                .WithSupervisorStrategy(new OneForOneStrategy(ex => ex is StoppingException 
+                    ? Directive.Stop 
+                    : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
@@ -298,16 +290,10 @@ namespace Akka.Tests.Pattern
             // withinTimeRange indicates the time range in which maxNrOfRetries will cause the child to
             // stop. IE: If we restart more than maxNrOfRetries in a time range longer than withinTimeRange
             // that is acceptable.
-            var options = Backoff.OnFailure(TestActor.Props(probe.Ref), "someChildName", 300.Milliseconds(), 10.Seconds(), 0.0)
-                .WithSupervisorStrategy(new OneForOneStrategy(3, 1.Seconds(), ex =>
-                {
-                    if (ex is StoppingException)
-                    {
-                        return Directive.Stop;
-                    }
-
-                    return SupervisorStrategy.DefaultStrategy.Decider.Decide(ex);
-                }));
+            var options = Backoff.OnFailure(TestActor.Props(probe.Ref), "someChildName", 300.Milliseconds(), 10.Seconds(), 0.0, -1)
+                .WithSupervisorStrategy(new OneForOneStrategy(3, 1.Seconds(), ex => ex is StoppingException 
+                    ? Directive.Stop 
+                    : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);

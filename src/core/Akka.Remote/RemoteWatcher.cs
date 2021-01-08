@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteWatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,11 +10,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util.Internal;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -278,7 +278,7 @@ namespace Akka.Remote
 
             readonly int _watching;
             readonly int _watchingNodes;
-            readonly ImmutableHashSet<Tuple<IActorRef, IActorRef>> _watchingRefs;
+            readonly ImmutableHashSet<(IActorRef, IActorRef)> _watchingRefs;
             readonly ImmutableHashSet<Address> _watchingAddresses;
 
             /// <summary>
@@ -287,7 +287,7 @@ namespace Akka.Remote
             /// <param name="watching">TBD</param>
             /// <param name="watchingNodes">TBD</param>
             public Stats(int watching, int watchingNodes) : this(watching, watchingNodes, 
-                ImmutableHashSet<Tuple<IActorRef, IActorRef>>.Empty, ImmutableHashSet<Address>.Empty) { }
+                ImmutableHashSet<(IActorRef, IActorRef)>.Empty, ImmutableHashSet<Address>.Empty) { }
 
             /// <summary>
             /// TBD
@@ -296,7 +296,7 @@ namespace Akka.Remote
             /// <param name="watchingNodes">TBD</param>
             /// <param name="watchingRefs">TBD</param>
             /// <param name="watchingAddresses">TBD</param>
-            public Stats(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
+            public Stats(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs, ImmutableHashSet<Address> watchingAddresses)
             {
                 _watching = watching;
                 _watchingNodes = watchingNodes;
@@ -317,7 +317,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public ImmutableHashSet<Tuple<IActorRef, IActorRef>> WatchingRefs => _watchingRefs;
+            public ImmutableHashSet<(IActorRef, IActorRef)> WatchingRefs => _watchingRefs;
 
             /// <summary>
             /// TBD
@@ -350,7 +350,7 @@ namespace Akka.Remote
             /// <param name="watchingRefs">TBD</param>
             /// <param name="watchingAddresses">TBD</param>
             /// <returns>TBD</returns>
-            public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<Tuple<IActorRef, IActorRef>> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
+            public Stats Copy(int watching, int watchingNodes, ImmutableHashSet<(IActorRef, IActorRef)> watchingRefs = null, ImmutableHashSet<Address> watchingAddresses = null)
             {
                 return new Stats(watching, watchingNodes, watchingRefs ?? WatchingRefs, watchingAddresses ?? WatchingAddresses);
             }
@@ -375,7 +375,7 @@ namespace Akka.Remote
         {
             _failureDetector = failureDetector;
             _heartbeatExpectedResponseAfter = heartbeatExpectedResponseAfter;
-            var systemProvider = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider as RemoteActorRefProvider;
+            var systemProvider = Context.System.AsInstanceOf<ExtendedActorSystem>().Provider as IRemoteActorRefProvider;
             if (systemProvider != null) _remoteProvider = systemProvider;
             else throw new ConfigurationException(
                 $"ActorSystem {Context.System} needs to have a 'RemoteActorRefProvider' enabled in the configuration, current uses {Context.System.AsInstanceOf<ExtendedActorSystem>().Provider.GetType().FullName}");
@@ -384,11 +384,11 @@ namespace Akka.Remote
             _failureDetectorReaperCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(unreachableReaperInterval, unreachableReaperInterval, Self, ReapUnreachableTick.Instance, Self);
         }
 
-        readonly IFailureDetectorRegistry<Address> _failureDetector;
-        readonly TimeSpan _heartbeatExpectedResponseAfter;
-        readonly IScheduler _scheduler = Context.System.Scheduler;
-        readonly RemoteActorRefProvider _remoteProvider;
-        readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
+        private readonly IFailureDetectorRegistry<Address> _failureDetector;
+        private readonly TimeSpan _heartbeatExpectedResponseAfter;
+        private readonly IScheduler _scheduler = Context.System.Scheduler;
+        private readonly IRemoteActorRefProvider _remoteProvider;
+        private readonly HeartbeatRsp _selfHeartbeatRspMsg = new HeartbeatRsp(AddressUidExtension.Uid(Context.System));
        
         /// <summary>
         ///  Actors that this node is watching, map of watchee --> Set(watchers)
@@ -409,10 +409,10 @@ namespace Akka.Remote
         /// </summary>
         protected HashSet<Address> Unreachable { get; } = new HashSet<Address>();
 
-        readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
+        private readonly Dictionary<Address, int> _addressUids = new Dictionary<Address, int>();
 
-        readonly ICancelable _heartbeatCancelable;
-        readonly ICancelable _failureDetectorReaperCancelable;
+        private readonly ICancelable _heartbeatCancelable;
+        private readonly ICancelable _failureDetectorReaperCancelable;
 
         /// <summary>
         /// TBD
@@ -455,9 +455,9 @@ namespace Akka.Remote
             {
                 var watchSet = ImmutableHashSet.Create(Watching.SelectMany(pair =>
                 {
-                    var list = new List<Tuple<IActorRef, IActorRef>>(pair.Value.Count);
+                    var list = new List<(IActorRef, IActorRef)>(pair.Value.Count);
                     var wee = pair.Key;
-                    list.AddRange(pair.Value.Select(wer => Tuple.Create<IActorRef, IActorRef>(wee, wer)));
+                    list.AddRange(pair.Value.Select(wer => ((IActorRef)wee, (IActorRef)wer)));
                     return list;
                 }).ToArray());
                 Sender.Tell(new Stats(watchSet.Count(), WatchingNodes.Count, watchSet,
@@ -642,10 +642,13 @@ namespace Akka.Remote
 
             if (!addressTerminated)
             {
-                foreach (var watcher in Watching[watchee])
+                if (Watching.TryGetValue(watchee, out var watchers))
                 {
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    watcher.SendSystemMessage(new DeathWatchNotification(watchee, existenceConfirmed, addressTerminated));
+                    foreach (var watcher in watchers)
+                    {
+                        // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                        watcher.SendSystemMessage(new DeathWatchNotification(watchee, existenceConfirmed, addressTerminated));
+                    }
                 }
             }
 

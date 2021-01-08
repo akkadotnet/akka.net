@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowJoinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,33 +127,33 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var source = Source.From(new[] {"traveler1", "traveler2"})
-                    .MapMaterializedValue<TestSubscriber.Probe<Tuple<string, string>>>(_ => null);
+                    .MapMaterializedValue<TestSubscriber.Probe<(string, string)>>(_ => null);
 
-                var flow = Flow.FromGraph(GraphDsl.Create(this.SinkProbe<Tuple<string,string>>(), (b, sink) =>
+                var flow = Flow.FromGraph(GraphDsl.Create(this.SinkProbe<(string,string)>(), (b, sink) =>
                 {
                     var zip = b.Add(new Zip<string, string>());
-                    var broadcast = b.Add(new Broadcast<Tuple<string, string>>(2));
+                    var broadcast = b.Add(new Broadcast<(string, string)>(2));
 
                     b.From(source).To(zip.In0);
                     b.From(zip.Out).To(broadcast.In);
                     b.From(broadcast.Out(0)).To(sink);
-                    return new FlowShape<string, Tuple<string, string>>(zip.In1, broadcast.Out(1));
+                    return new FlowShape<string, (string, string)>(zip.In1, broadcast.Out(1));
                 }));
 
                 var feedback = Flow.FromGraph(GraphDsl.Create(Source.Single("ignition"), (b, ignition) =>
                 {
-                    var f = b.Add(Flow.Create<Tuple<string, string>>().Select(t => t.Item1));
+                    var f = b.Add(Flow.Create<(string, string)>().Select(t => t.Item1));
                     var merge = b.Add(new Merge<string>(2));
 
                     b.From(ignition).To(merge.In(0));
                     b.From(f).To(merge.In(1));
 
-                    return new FlowShape<Tuple<string, string>, string>(f.Inlet, merge.Out);
+                    return new FlowShape<(string, string), string>(f.Inlet, merge.Out);
                 }));
 
                 var probe = flow.Join(feedback).Run(Materializer);
-                probe.RequestNext(Tuple.Create("traveler1", "ignition"));
-                probe.RequestNext(Tuple.Create("traveler2", "traveler1"));
+                probe.RequestNext(("traveler1", "ignition"));
+                probe.RequestNext(("traveler2", "traveler1"));
             }, Materializer);
         }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PatternSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ namespace Akka.Tests.Actor
             var latch = new TestLatch();
 
             //act
-            target.Tell(Tuple.Create(latch, TimeSpan.FromSeconds(2)));
+            target.Tell((latch, TimeSpan.FromSeconds(2)));
 
             //assert
             XAssert.Throws<TaskCanceledException>(() =>
@@ -98,7 +98,7 @@ namespace Akka.Tests.Actor
             protected override void OnReceive(object message)
             {
                 PatternMatch.Match(message)
-                    .With<Tuple<TestLatch, TimeSpan>>(t => t.Item1.Ready(t.Item2));
+                    .With<(TestLatch, TimeSpan)>(t => t.Item1.Ready(t.Item2));
             }
         }
 

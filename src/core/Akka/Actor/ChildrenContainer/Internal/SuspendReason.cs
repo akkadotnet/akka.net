@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SuspendReason.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,7 +40,6 @@ namespace Akka.Actor.Internal
         /// </summary>
         public class Recreation : SuspendReason, IWaitingForChildren
         {
-            private readonly Exception _cause;
 
             /// <summary>
             /// TBD
@@ -48,13 +47,13 @@ namespace Akka.Actor.Internal
             /// <param name="cause">TBD</param>
             public Recreation(Exception cause)
             {
-                _cause = cause;
+                Cause = cause;
             }
 
             /// <summary>
             /// TBD
             /// </summary>
-            public Exception Cause { get { return _cause; } }
+            public Exception Cause { get; }
         }
 
         /// <summary>
@@ -63,12 +62,11 @@ namespace Akka.Actor.Internal
         /// </summary>
         public class Termination : SuspendReason
         {
-            private static readonly Termination _instance = new Termination();
             private Termination() { }
             /// <summary>
             /// TBD
             /// </summary>
-            public static Termination Instance { get { return _instance; } }
+            public static Termination Instance { get; } = new Termination();
         }
 
         /// <summary>
@@ -77,12 +75,11 @@ namespace Akka.Actor.Internal
         /// </summary>
         public class UserRequest : SuspendReason
         {
-            private static readonly UserRequest _instance = new UserRequest();
             private UserRequest() { }
             /// <summary>
             /// TBD
             /// </summary>
-            public static UserRequest Instance { get { return _instance; } }
+            public static UserRequest Instance { get; } = new UserRequest();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ISystemMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -258,11 +258,12 @@ namespace Akka.Dispatch.SysMsg
     /// Stash this <see cref="ISystemMessage"/> when the actor is in a failed state.
     /// </summary>
     internal interface IStashWhenFailed { }
-    /**
- * public API
- */
+
+    // public API
+
     //@SerialVersionUID(1L)
     //private[akka] case class Create(failure: Option[ActorInitializationException]) extends ISystemMessage // sent to self from Dispatcher.register
+
     /// <summary>
     ///     Class ISystemMessage.
     /// </summary>
@@ -601,8 +602,8 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="message">TBD</param>
         public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
-            _scheduler = scheduler;
-            _task = task;
+            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+            _task = task ?? throw new ArgumentNullException(nameof(task));
             Message = message;
         }
 
@@ -613,18 +614,18 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="message">The message causing the exception</param>
         public ActorTaskSchedulerMessage(Exception exception, object message)
         {
-            Exception = exception;
+            Exception = exception ?? throw new ArgumentNullException(nameof(exception));
             Message = message;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Exception Exception { get; private set; }
+        public Exception Exception { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public object Message { get; private set; }
+        public object Message { get; }
 
         /// <summary>
         /// TBD

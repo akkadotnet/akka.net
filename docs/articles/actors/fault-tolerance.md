@@ -58,15 +58,12 @@ currently failed child (available as the `Sender` of the failure message).
 
 ### Default Supervisor Strategy
 
-`Escalate` is used if the defined strategy doesn't cover the exception that was thrown.
-
 When the supervisor strategy is not defined for an actor the following
 exceptions are handled by default:
 
-* `ActorInitializationException` will stop the failing child actor
-* `ActorKilledException` will stop the failing child actor
-* `Exception` will restart the failing child actor
-* Other types of `Exception` will be escalated to parent actor
+* `ActorInitializationException` will stop the failing child actor;
+* `ActorKilledException` will stop the failing child actor; and
+* Any other type of `Exception` will restart the failing child actor.
 
 If the exception escalate all the way up to the root guardian it will handle it
 in the same way as the default strategy defined above.
@@ -118,7 +115,7 @@ by overriding the `logFailure` method.
 ## Supervision of Top-Level Actors
 
 Top-level actors means those which are created using `system.ActorOf()`, and
-they are children of the [User Guardian](User guardian). There are no
+they are children of the [User Guardian](xref:supervision#user-the-guardian-actor). There are no
 special rules applied in this case, the guardian simply applies the configured
 strategy.
 
@@ -155,7 +152,8 @@ public class Supervisor : UntypedActor
     {
         if (message is Props p)
         {
-            Sender.Tell(p);
+            var child = Context.ActorOf(p); // create child
+            Sender.Tell(child); // send back reference to child actor
         }
     }
 }
@@ -194,7 +192,7 @@ Let us create actors:
 var supervisor = system.ActorOf<Supervisor>("supervisor");
 
 supervisor.Tell(Props.Create<Child>());
-var child = ExpectMsg<IActorRef>(); // retrieve answer from TestKit’s testActor
+var child = ExpectMsg<IActorRef>(); // retrieve answer from TestKit’s TestActor
 ```
 
 The first test shall demonstrate the `Resume` directive, so we try it out by
@@ -210,7 +208,7 @@ child.Tell("get");
 ExpectMsg(42);
 ```
 
-As you can see the value 42 survives the fault handling directive. Now, if we
+As you can see the value 42 survives the fault handling directive because we're using the `Resume` directive, which does not cause the actor to restart. Now, if we
 change the failure to a more serious `NullReferenceException`, that will no
 longer be the case:
 
@@ -219,6 +217,8 @@ child.Tell(new NullReferenceException());
 child.Tell("get");
 ExpectMsg(0);
 ```
+
+This is because the actor has restarted and the original `Child` actor instance that was processing messages will be destroyed and replaced by a brand-new instance defined using the original `Props` passed to its parent.
 
 And finally in case of the fatal `IllegalArgumentException` the child will be
 terminated by the supervisor:
@@ -288,7 +288,8 @@ public class Supervisor2 : UntypedActor
     {
         if (message is Props p)
         {
-            Sender.Tell(p);
+            var child = Context.ActorOf(p); // create child
+            Sender.Tell(child); // send back reference to child actor
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,6 +20,7 @@ namespace Akka.TestKit.Internal
         private readonly ITestActorQueue<MessageEnvelope> _queue;
         private TestKit.TestActor.Ignore _ignore;
         private AutoPilot _autoPilot;
+        private DelegatingSupervisorStrategy _supervisorStrategy = new DelegatingSupervisorStrategy();
 
         /// <summary>
         /// TBD
@@ -60,6 +61,18 @@ namespace Akka.TestKit.Internal
             if(setAutoPilot != null)
             {
                 _autoPilot = setAutoPilot.AutoPilot;
+                return true;
+            }
+            
+            var spawn = message as TestKit.TestActor.Spawn;
+            if (spawn != null)
+            {
+                var actor = spawn.Apply(Context);
+                if (spawn._supervisorStrategy.HasValue)
+                {
+                    _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
+                }
+                _queue.Enqueue(new RealMessageEnvelope(actor, Self));
                 return true;
             }
 

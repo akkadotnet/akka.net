@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GSet.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,18 +16,15 @@ using Akka.Util.Internal;
 namespace Akka.DistributedData
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     internal interface IGSet
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        IImmutableSet<object> Elements { get; }
+        Type SetType { get; }
     }
 
     /// <summary>
-    /// TBD
+    /// GSet helper methods.
     /// </summary>
     public static class GSet
     {
@@ -148,8 +145,6 @@ namespace Akka.DistributedData
             return AssignAncestor(new GSet<T>(Elements.Add(element), newDelta));
         }
 
-        IImmutableSet<object> IGSet.Elements => Elements.Cast<object>().ToImmutableHashSet();
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -208,19 +203,24 @@ namespace Akka.DistributedData
 
         public GSet<T> ResetDelta() => Delta == null ? this : AssignAncestor(new GSet<T>(Elements));
         IDeltaReplicatedData IReplicatedDelta.Zero => Empty;
+        public Type SetType { get; } = typeof(T);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Marker interface for serialization.
+    /// </summary>
+    internal interface IGSetKey
+    {
+        Type SetType { get; }
     }
 
     /// <summary>
     /// TBD
     /// </summary>
-    internal interface IGSetKey
-    { }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class GSetKey<T> : Key<GSet<T>>, IKeyWithGenericType, IGSetKey, IReplicatedDataSerialization
+    public sealed class GSetKey<T> : Key<GSet<T>>, IGSetKey, IReplicatedDataSerialization
     {
         /// <summary>
         /// TBD
@@ -229,12 +229,9 @@ namespace Akka.DistributedData
         public GSetKey(string id)
             : base(id)
         {
-            Type = typeof(T);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Type Type { get; }
+
+        public Type SetType { get; } = typeof(T);
     }
 }

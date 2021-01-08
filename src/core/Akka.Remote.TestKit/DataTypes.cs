@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DataTypes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,34 +13,25 @@ using Address = Akka.Actor.Address;
 
 namespace Akka.Remote.TestKit
 {
-    public sealed class RoleName
+    public sealed class RoleName : IEquatable<RoleName>
     {
-        readonly string _name;
-
         public RoleName(string name)
         {
-            _name = name;
+            Name = name;
         }
 
-        bool Equals(RoleName other)
+        public bool Equals(RoleName other)
         {
-            return string.Equals(_name, other._name);
-        }
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((RoleName)obj);
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return string.Equals(Name, other.Name);
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return (_name != null ? _name.GetHashCode() : 0);
-        }
+        public override bool Equals(object obj) => obj is RoleName role && Equals(role);
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => (Name != null ? Name.GetHashCode() : 0);
 
         /// <summary>
         /// Compares two specified <see cref="RoleName"/> for equality.
@@ -48,10 +39,7 @@ namespace Akka.Remote.TestKit
         /// <param name="left">The first <see cref="RoleName"/> used for comparison</param>
         /// <param name="right">The second <see cref="RoleName"/> used for comparison</param>
         /// <returns><c>true</c> if both <see cref="RoleName"/> are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(RoleName left, RoleName right)
-        {
-            return Equals(left, right);
-        }
+        public static bool operator ==(RoleName left, RoleName right) => Equals(left, right);
 
         /// <summary>
         /// Compares two specified <see cref="RoleName"/> for inequality.
@@ -59,21 +47,12 @@ namespace Akka.Remote.TestKit
         /// <param name="left">The first <see cref="RoleName"/> used for comparison</param>
         /// <param name="right">The second <see cref="RoleName"/> used for comparison</param>
         /// <returns><c>true</c> if both <see cref="RoleName"/> are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(RoleName left, RoleName right)
-        {
-            return !Equals(left, right);
-        }
+        public static bool operator !=(RoleName left, RoleName right) => !Equals(left, right);
 
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name { get; }
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            return $"RoleName({_name})";
-        }
+        public override string ToString() => $"RoleName({Name})";
     }
 
     //TODO: This is messy, better way to do this?

@@ -49,7 +49,7 @@ The non-exhaustive list of adequate solutions to the "blocking problem" includes
 The first possibility is especially well-suited for resources which are single-threaded in nature, like database handles which traditionally can only execute one outstanding query at a time and use internal synchronization to ensure this. A common pattern is to create a router for N actors, each of which wraps a single DB connection and handles queries as sent to the router. The number N must then be tuned for maximum throughput, which will vary depending on which DBMS is deployed on what hardware.
 
 > [!NOTE]
->Configuring thread pools is a task best delegated to Akka.NET, simply configure in the application.conf and instantiate through an ActorSystem.
+> Configuring thread pools is a task best delegated to Akka.NET, simply configure in the application.conf and instantiate through an ActorSystem.
 
 ## What you should not concern yourself with
 An actor system manages the resources it is configured to use in order to run the actors which it contains. There may be millions of actors within one such system, after all the mantra is to view them as abundant and they weigh in at an overhead of only roughly 300 bytes per instance. Naturally, the exact order in which messages are processed in large systems is not controllable by the application author, but this is also not intended. Take a step back and relax while Akka.NET does the heavy lifting under the hood.

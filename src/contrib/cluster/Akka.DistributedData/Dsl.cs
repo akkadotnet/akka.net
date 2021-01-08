@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Dsl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// Gets a <see cref="IWriteConsistency"/> setup, which will acknowledge success of an
-        /// <see cref="Update"/> or <see cref="Delete"/> operation immediately as soon, as 
+        /// <see cref="Update{T}(IKey{T}, T, IWriteConsistency)">Update</see> or <see cref="Delete"/> operation immediately as soon, as 
         /// result will be confirmed by the local replica only.
         /// </summary>
         public static WriteLocal WriteLocal => Akka.DistributedData.WriteLocal.Instance;

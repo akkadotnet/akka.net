@@ -2,8 +2,8 @@
   items:
   - name: What is Akka.NET?
     href: intro/what-is-akka.md
-  - name: What are actors?
-    href: intro/what-are-actors.md
+  - name: What problems does the actor model solve?
+    href: intro/what-problems-does-actor-model-solve.md
   - name: Akka.NET Libraries and Modules
     href: intro/modules.md
   - name: Part 1. Top-level Architecture
@@ -48,6 +48,8 @@
     href: actors/dispatchers.md
   - name: Mailboxes
     href: actors/mailboxes.md
+  - name: Scheduling Future and Recurring Messages
+    href: actors/schedulers.md
   - name: Inbox
     href: actors/inbox.md
   - name: Finite State Machines
@@ -56,10 +58,16 @@
     href: actors/fault-tolerance.md
   - name: Dependency Injection
     href: actors/dependency-injection.md
+  - name: Dependency Injection Core
+    href: actors/di-core.md
   - name: Testing Actor Systems
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
     href: actors/coordinated-shutdown.md
+- name: HOCON
+  items:
+  - name: HOCON Syntax and Practices in Akka.NET
+    href: hocon/index.md
 - name: Persistence
   items: 
   - name: Architecture
@@ -82,11 +90,13 @@
     href: persistence/custom-serialization.md
   - name: Persistence Query
     href: persistence/persistence-query.md
+  - name: Persistence Testing
+    href: persistence/persistence-testing.md
 - name: Streams
   items: 
   - name: Introduction
     href: streams/introduction.md
-  - name: Quick Start Guide
+  - name: Streams Quickstart Guide
     href: streams/quickstart.md
   - name: Reactive Tweets
     href: streams/reactivetweets.md
@@ -100,14 +110,18 @@
     href: streams/modularitycomposition.md
   - name: Buffers and working with rate
     href: streams/buffersandworkingwithrate.md
+  - name: Dynamic stream handling
+    href: streams/stream-dynamic.md
   - name: Custom stream processing
     href: streams/custom-stream-processing.md
   - name: Integration
     href: streams/integration.md
-  - name: Error Handling
+  - name: Error Handling in Streams
     href: streams/error-handling.md
   - name: Working with streaming IO
     href: streams/workingwithstreamingio.md
+  - name: StreamRefs - Reactive Streams over the network
+    href: streams/streamrefs.md
   - name: Pipelining and Parallelism
     href: streams/pipeliningandparallelism.md
   - name: Testing streams
@@ -117,7 +131,7 @@
   - name: Streams Cookbook
     href: streams/cookbook.md
   - name: Configuration
-    href: streams/configuration.md
+    href: configuration/akka.streams.md
 - name: Networking
   items:
   - name: I/O
@@ -140,6 +154,8 @@
     href: remoting/deathwatch.md
   - name: Network Security
     href: remoting/security.md
+  - name: Performance Optimization
+    href: remoting/performance.md
 - name: Clustering
   items:
   - name: Overview
@@ -158,15 +174,31 @@
     href: clustering/cluster-client.md
   - name: Cluster Sharding
     href: clustering/cluster-sharding.md
+  - name: Sharded Daemon Process
+    href: clustering/cluster-sharded-daemon-process.md
+  - name: Cluster Metrics
+    href: clustering/cluster-metrics.md
   - name: Distributed Data
     href: clustering/distributed-data.md
+  - name: Split Brain Resolver
+    href: clustering/split-brain-resolver.md
+- name: Testing
+  items:
+  - name: Multi-Node Testing Distributed Akka.NET Applications
+    href: testing/multi-node-testing.md
+- name: Service Discovery
+  href: discovery/toc.yml
 - name: Utilities
   items:
   - name: Event Bus
     href: utilities/event-bus.md
   - name: Logging
     href: utilities/logging.md
+  - name: Serilog
+    href: utilities/serilog.md
   - name: Scheduler
     href: utilities/scheduler.md
   - name: Circuit Breaker
     href: utilities/circuit-breaker.md
+- name: Configurations
+  href: configuration/toc.yml

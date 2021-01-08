@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FileSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -202,6 +202,31 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public void FileSource_should_open_file_in_shared_mode_for_reading_multiple_times()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var testFile = TestFile();
+                var p1 = FileIO.FromFile(testFile).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
+                var p2 = FileIO.FromFile(testFile).RunWith(Sink.AsPublisher<ByteString>(false), _materializer);
+                
+                var c1 = this.CreateManualSubscriberProbe<ByteString>();
+                var c2 = this.CreateManualSubscriberProbe<ByteString>();
+                p1.Subscribe(c1);
+                p2.Subscribe(c2);
+                var s1 = c1.ExpectSubscription();
+                var s2 = c2.ExpectSubscription();
+
+                s1.Request(5000);
+                s2.Request(5000);
+
+                c1.ExpectNext();
+                c2.ExpectNext();
+
+            }, _materializer);
+        }
+
+        [Fact]
         public void FileSource_should_onError_with_failure_and_return_a_failed_IOResult_when_trying_to_read_from_file_which_does_not_exist()
         {
             this.AssertAllStagesStopped(() =>
@@ -255,7 +280,7 @@ namespace Akka.Streams.Tests.IO
                     var actorRef = ExpectMsg<StreamSupervisor.Children>().Refs.First(r => r.Path.ToString().Contains("fileSource"));
                     try
                     {
-                        Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                        Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                     }
                     finally
                     {

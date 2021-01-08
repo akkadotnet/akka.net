@@ -30,7 +30,7 @@ Challenges that actors solve include:
 ### Remoting
 
 Remoting enables actors that are remote, living on different computers, to seamlessly exchange messages.
-Remoting could be enabled mostly with configuration, it has only a few APIs. Thanks to the actor model,
+Remoting can be enabled mostly with configuration; it has only a few APIs. Thanks to the actor model,
 a remote and local message send looks exactly the same. The patterns that you use on local systems translate
 directly to remote systems. You will rarely need to use Remoting directly, but it provides the foundation on
 which the Cluster subsystem is built.
@@ -57,22 +57,22 @@ The challenges the Cluster module solves, among others, are:
 * How to maintain a set of actor systems (a cluster) that can communicate with each other and consider each other as part of the cluster.
 * How to introduce a new system safely to the set of already existing members.
 * How to reliably detect systems that are temporarily unreachable.
-* How to remove failed hosts/systems (or scale down the system) so that all remaining members agree on the remaining subset of the cluster?
+* How to remove failed hosts/systems (or scale down the system) so that all remaining members agree on the remaining subset of the cluster.
 * How to distribute computations among the current set of members.
-* How do I designate members of the cluster to a certain role, in other words, to provide certain services and not others.
+* How to designate members of the cluster to a certain role; in other words, to provide certain services and not others.
 
 ### Cluster Sharding
 
 Sharding helps to solve the problem of distributing a set of actors among members of an Akka.NET cluster.
-Sharding is a pattern that mostly used together with Persistence to balance a large set of persistent entities
+Sharding is a pattern that is mostly used together with Persistence to balance a large set of persistent entities
 (backed by actors) to members of a cluster and also migrate them to other nodes when members crash or leave.
 
 The challenge space that Sharding targets:
 
 * How to model and scale out a large set of stateful entities on a set of systems.
 * How to ensure that entities in the cluster are distributed properly so that load is properly balanced across the machines.
-* How to ensure migrating entities from a crashed system without losing the state.
-* How to ensure that an entity does not exist on multiple systems at the same time and hence kept consistent.
+* How to migrate entities from a crashed system without losing their state.
+* How to ensure that an entity does not exist on multiple systems at the same time and is hence kept consistent.
 
 ### Cluster Singleton
 
@@ -152,11 +152,11 @@ Streams solve the following challenges:
 
 The above is an incomplete list of all the available modules, but it gives a nice overview of the landscape of modules
 and the level of sophistication you can reach when you start building systems on top of Akka. All these modules
-integrate with together seamlessly. For example, take a large set of stateful business objects
+integrate together seamlessly. For example, take a large set of stateful business objects
 (a document, a shopping cart, etc) that is accessed by on-line users of your website. Model these as sharded
 entities using Sharding and Persistence to keep them balanced across a cluster that you can scale out on-demand
 (for example during an advertising campaign before holidays) and keep them available even if some systems crash.
 Take the real-time stream of domain events of your business objects with Persistence Query and use Streams to pipe
 it into a streaming BigData engine.
 
-Hope this have gotten you interested? Keep on reading to learn more.
+Has this made you interested? Keep on reading to learn more.

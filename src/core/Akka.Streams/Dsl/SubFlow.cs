@@ -1,19 +1,18 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SubFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.Streams.Implementation.Stages;
 using Reactive.Streams;
 
 namespace Akka.Streams.Dsl
 {
     /// <summary>
     /// A "stream of streams" sub-flow of data elements, e.g. produced by <see cref="Akka.Streams.Implementation.Fusing.GroupBy{T,TKey}"/>.
-    /// SubFlows cannot contribute to the super-flow’s materialized value since they
+    /// SubFlows cannot contribute to the super-flowâ€™s materialized value since they
     /// are materialized later, during the runtime of the flow graph processing.
     /// </summary>
     /// <typeparam name="TOut">TBD</typeparam>
@@ -94,7 +93,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by concatenating them.
         /// This is usually a bad idea when combined with <see cref="Akka.Streams.Implementation.Fusing.GroupBy{TIn,TKey}"/>
-        /// since it can easily lead to deadlock—the concatenation does not consume from the second
+        /// since it can easily lead to deadlockâ€”the concatenation does not consume from the second
         /// substream until the first has finished and the <see cref="Akka.Streams.Implementation.Fusing.GroupBy{TIn,TKey}"/>
         /// stage will get back-pressure from the second stream.
         /// </summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,9 +38,10 @@ namespace Akka.Persistence.Snapshot
             _publish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = CircuitBreaker.Create(
-                config.GetInt("circuit-breaker.max-failures"),
-                config.GetTimeSpan("circuit-breaker.call-timeout"),
-                config.GetTimeSpan("circuit-breaker.reset-timeout"));
+                Context.System.Scheduler,
+                config.GetInt("circuit-breaker.max-failures", 10),
+                config.GetTimeSpan("circuit-breaker.call-timeout", TimeSpan.FromSeconds(10)),
+                config.GetTimeSpan("circuit-breaker.reset-timeout", TimeSpan.FromSeconds(30)));
         }
 
         /// <inheritdoc/>
@@ -56,14 +57,21 @@ namespace Akka.Persistence.Snapshot
 
             if (message is LoadSnapshot loadSnapshot)
             {
-                _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
-                    .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
-                        ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
-                        : new LoadSnapshotFailed(t.IsFaulted
-                                ? TryUnwrapException(t.Exception)
-                                : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")), 
-						_continuationOptions)
-                    .PipeTo(senderPersistentActor);
+                if (loadSnapshot.Criteria == SnapshotSelectionCriteria.None)
+                {
+                    senderPersistentActor.Tell(new LoadSnapshotResult(null, loadSnapshot.ToSequenceNr));
+                }
+                else
+                {
+                    _breaker.WithCircuitBreaker(() => LoadAsync(loadSnapshot.PersistenceId, loadSnapshot.Criteria.Limit(loadSnapshot.ToSequenceNr)))
+                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                            ? new LoadSnapshotResult(t.Result, loadSnapshot.ToSequenceNr) as ISnapshotResponse
+                            : new LoadSnapshotFailed(t.IsFaulted
+                                    ? TryUnwrapException(t.Exception)
+                                    : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")),
+                            _continuationOptions)
+                        .PipeTo(senderPersistentActor);
+                }
             }
             else if (message is SaveSnapshot saveSnapshot)
             {

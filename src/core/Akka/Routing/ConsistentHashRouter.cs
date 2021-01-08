@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHashRouter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ namespace Akka.Routing
 
         private readonly AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>> _consistentHashRef =
             new AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>>(
-                Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null));
+                (Tuple.Create<Routee[], ConsistentHash<ConsistentRoutee>>(null, null)));
 
         private readonly Address _selfAddress;
         private readonly int _vnodes;
@@ -292,7 +292,7 @@ namespace Akka.Routing
                 case ActorRefRoutee actorRef:
                     return ToStringWithFullAddress(actorRef.Actor.Path);
                 case ActorSelectionRoutee selection:
-                    return ToStringWithFullAddress(selection.Selection.Anchor.Path) +
+                    return ToStringWithFullAddress(selection.Selection.Anchor.Path).TrimEnd('/') +
                             selection.Selection.PathString;
                 default:
                     return Routee.ToString();
@@ -336,6 +336,7 @@ namespace Akka.Routing
             Dispatchers.DefaultDispatcherId,
             false) { }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingPool"/> class.
         /// 
@@ -346,13 +347,13 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public ConsistentHashingPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
                   usePoolDispatcher: config.HasPath("pool-dispatcher"))
         {
-            VirtualNodesFactor = config.GetInt("virtual-nodes-factor");
+            VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
         }
 
         /// <summary>
@@ -606,6 +607,7 @@ namespace Akka.Routing
     {
         private readonly ConsistentHashMapping _hashMapping;
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashingGroup"/> class.
         /// </summary>
@@ -618,7 +620,7 @@ namespace Akka.Routing
         /// </note>
         /// </param>
         public ConsistentHashingGroup(Config config)
-            : this(config.GetStringList("routees.paths"))
+            : this(config.GetStringList("routees.paths", new string[] { }))
         {
             VirtualNodesFactor = config.GetInt("virtual-nodes-factor", 0);
         }
@@ -696,7 +698,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -722,7 +724,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public ConsistentHashingGroup WithDispatcher(string dispatcher)
         {
-            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, _hashMapping, dispatcher);
+            return new ConsistentHashingGroup(InternalPaths, VirtualNodesFactor, _hashMapping, dispatcher);
         }
 
         /// <summary>
@@ -736,7 +738,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="vnodes" />.</returns>
         public ConsistentHashingGroup WithVirtualNodesFactor(int vnodes)
         {
-            return new ConsistentHashingGroup(Paths, vnodes, _hashMapping, RouterDispatcher);
+            return new ConsistentHashingGroup(InternalPaths, vnodes, _hashMapping, RouterDispatcher);
         }
 
         /// <summary>
@@ -750,7 +752,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided <paramref name="mapping"/>.</returns>
         public ConsistentHashingGroup WithHashMapping(ConsistentHashMapping mapping)
         {
-            return new ConsistentHashingGroup(Paths, VirtualNodesFactor, mapping, RouterDispatcher);
+            return new ConsistentHashingGroup(InternalPaths, VirtualNodesFactor, mapping, RouterDispatcher);
         }
 
         /// <summary>
@@ -786,7 +788,7 @@ namespace Akka.Routing
         {
             return new ConsistentHashingGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 RouterDispatcher = RouterDispatcher
             };
         }

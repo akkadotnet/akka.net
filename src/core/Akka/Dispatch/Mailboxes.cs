@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailboxes.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,6 @@ using Akka.Configuration;
 using Akka.Util.Reflection;
 using Akka.Dispatch.MessageQueues;
 using Akka.Event;
-using ConfigurationException = Akka.Configuration.ConfigurationException;
 
 namespace Akka.Dispatch
 {
@@ -54,6 +53,9 @@ namespace Akka.Dispatch
             _system = system;
             _deadLetterMailbox = new DeadLetterMailbox(system.DeadLetters);
             var mailboxConfig = system.Settings.Config.GetConfig("akka.actor.mailbox");
+            if (mailboxConfig.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<Mailboxes>("akka.actor.mailbox");
+
             var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
             _mailboxBindings = new Dictionary<Type, string>();
             foreach (var kvp in requirements)
@@ -164,7 +166,7 @@ namespace Akka.Dispatch
                     if (!Settings.Config.HasPath(id)) throw new ConfigurationException($"Mailbox Type [{id}] not configured");
                     var conf = Config(id);
 
-                    var mailboxTypeName = conf.GetString("mailbox-type");
+                    var mailboxTypeName = conf.GetString("mailbox-type", null);
                     if (string.IsNullOrEmpty(mailboxTypeName))
                         throw new ConfigurationException($"The setting mailbox-type defined in [{id}] is empty");
                     var type = Type.GetType(mailboxTypeName);
@@ -243,7 +245,7 @@ namespace Akka.Dispatch
 
         private Type GetMailboxRequirement(Config config)
         {
-            var mailboxRequirement = config.GetString("mailbox-requirement");
+            var mailboxRequirement = config.GetString("mailbox-requirement", null);
             return mailboxRequirement == null || mailboxRequirement.Equals(NoMailboxRequirement) ? typeof (IMessageQueue) : Type.GetType(mailboxRequirement, true);
         }
 
@@ -260,7 +262,7 @@ namespace Akka.Dispatch
         {
             if (dispatcherConfig == null)
                 dispatcherConfig = ConfigurationFactory.Empty;
-            var id = dispatcherConfig.GetString("id");
+            var id = dispatcherConfig.GetString("id", null);
             var deploy = props.Deploy;
             var actorType = props.Type;
             var actorRequirement = new Lazy<Type>(() => GetRequiredType(actorType));
@@ -269,7 +271,7 @@ namespace Akka.Dispatch
             var hasMailboxRequirement = mailboxRequirement != typeof(IMessageQueue);
 
             var hasMailboxType = dispatcherConfig.HasPath("mailbox-type") &&
-                                 dispatcherConfig.GetString("mailbox-type") != Deploy.NoMailboxGiven;
+                                 dispatcherConfig.GetString("mailbox-type", null) != Deploy.NoMailboxGiven;
 
             if (!hasMailboxType && !_mailboxSizeWarningIssued && dispatcherConfig.HasPath("mailbox-size"))
             {
@@ -283,21 +285,21 @@ namespace Akka.Dispatch
                 if (hasMailboxRequirement && !mailboxRequirement.IsAssignableFrom(mqType.Value))
                     throw new ArgumentException($"produced message queue type [{mqType.Value}] does not fulfill requirement for dispatcher [{id}]." + $"Must be a subclass of [{mailboxRequirement}]");
                 if (HasRequiredType(actorType) && !actorRequirement.Value.IsAssignableFrom(mqType.Value))
-                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." + $"Must be a subclass of [{mqType.Value}]");
+                    throw new ArgumentException($"produced message queue type of [{mqType.Value}] does not fulfill requirement for actor class [{actorType}]." + $"Must be a subclass of [{actorRequirement.Value}]");
                 return mailboxType;
             }
 
             if (!deploy.Mailbox.Equals(Deploy.NoMailboxGiven))
                 return VerifyRequirements(Lookup(deploy.Mailbox));
             if (!deploy.Dispatcher.Equals(Deploy.NoDispatcherGiven) && hasMailboxType)
-                return VerifyRequirements(Lookup(dispatcherConfig.GetString("id")));
+                return VerifyRequirements(Lookup(dispatcherConfig.GetString("id", null)));
             if (actorRequirement.Value != null)
             {
                 try
                 {
                     return VerifyRequirements(LookupByQueueType(actorRequirement.Value));
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (hasMailboxRequirement)
                         return VerifyRequirements(LookupByQueueType(mailboxRequirement));
@@ -323,7 +325,10 @@ namespace Akka.Dispatch
             }
 
             var config = _system.Settings.Config.GetConfig(path);
-            var type = config.GetString("mailbox-type");
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve mailbox type from config: {path} configuration node not found");
+
+            var type = config.GetString("mailbox-type", null);
 
             var mailboxType = TypeCache.GetType(type);
             return mailboxType;

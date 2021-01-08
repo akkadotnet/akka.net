@@ -99,6 +99,7 @@ A multi-node spec gives us the ability to do the following:
 4. Create barriers that are used to synchronize nodes at specific points within a test; and
 5. Test assertions across one or more nodes.
 
+> [!NOTE]
 > Everything that's available in the default `Akka.TestKit` is also available inside the `Akka.Remote.TestKit`, but it's worth bearing in mind that `Akka.Remote.TestKit` only works with the `Akka.MultiNodeTestRunner` and uses Xunit 2.0 internally.
 
 #### Step 1 - Subclass `MultiNodeConfig`

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteString.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,12 +11,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Akka.IO.Buffers;
-using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.IO
 {
@@ -447,6 +443,9 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         public byte[] ToArray()
         {
+            if (_count == 0)
+                return Array.Empty<byte>();
+
             var copy = new byte[_count];
             this.CopyTo(copy, 0, _count);
             return copy;
@@ -580,13 +579,12 @@ namespace Akka.IO
 
         public string ToString(Encoding encoding)
         {
-            var builder = new StringBuilder(_count);
-            foreach (var buffer in _buffers)
-            {
-                var part = encoding.GetString(buffer.Array, buffer.Offset, buffer.Count);
-                builder.Append(part);
-            }
-            return builder.ToString();
+            if (IsCompact)
+                return encoding.GetString(_buffers[0].Array, _buffers[0].Offset, _buffers[0].Count);
+
+            byte[] buffer = ToArray();
+
+            return encoding.GetString(buffer);
         }
 
         public static bool operator ==(ByteString x, ByteString y) => Equals(x, y);
@@ -594,27 +592,10 @@ namespace Akka.IO
         public static bool operator !=(ByteString x, ByteString y) => !Equals(x, y);
 
         public static explicit operator ByteString(byte[] bytes) => ByteString.CopyFrom(bytes);
+        
         public static explicit operator byte[] (ByteString byteString) => byteString.ToArray();
+        
         public static ByteString operator +(ByteString x, ByteString y) => x.Concat(y);
-
-        #region Obsoleted
-
-        [Obsolete("Use ByteString.CopyFrom instead if you want to copy byte array or ByteString.FromBytes otherwise.")]
-        public static ByteString Create(byte[] array) => CopyFrom(array);
-
-        [Obsolete("Use ToString() method instead.")]
-        public string DecodeString() => ToString();
-
-        [Obsolete("Use ToString(Encoding) method instead.")]
-        public string DecodeString(Encoding encoding) => ToString(encoding);
-
-        [Obsolete("Use Slice(0, n) method instead.")]
-        public ByteString Take(int n) => Slice(0, n);
-
-        [Obsolete("Use Slice(n) method instead.")]
-        public ByteString Drop(int n) => Slice(n);
-
-        #endregion
     }
     
     public enum ByteOrder

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,7 +10,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Util;
 using Akka.Util.Internal;
+using Newtonsoft.Json;
 
 namespace Akka.Cluster
 {
@@ -18,7 +20,7 @@ namespace Akka.Cluster
     /// Represents the address, current status, and roles of a cluster member node.
     /// </summary>
     /// <remarks>
-    /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>, 
+    /// NOTE: <see cref="GetHashCode"/> and <see cref="Equals"/> are solely based on the underlying <see cref="Address"/>,
     /// not its <see cref="MemberStatus"/> and roles.
     /// </remarks>
     public class Member : IComparable<Member>, IComparable
@@ -28,10 +30,11 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="uniqueAddress">TBD</param>
         /// <param name="roles">TBD</param>
+        /// <param name="appVersion">Application version</param>
         /// <returns>TBD</returns>
-        internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles)
+        internal static Member Create(UniqueAddress uniqueAddress, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
-            return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles);
+            return new Member(uniqueAddress, int.MaxValue, MemberStatus.Joining, roles, appVersion);
         }
 
         /// <summary>
@@ -41,7 +44,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         internal static Member Removed(UniqueAddress node)
         {
-            return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>());
+            return new Member(node, int.MaxValue, MemberStatus.Removed, ImmutableHashSet.Create<string>(), Util.AppVersion.Zero);
         }
 
         /// <summary>
@@ -65,16 +68,22 @@ namespace Akka.Cluster
         public ImmutableHashSet<string> Roles { get; }
 
         /// <summary>
+        /// Application version
+        /// </summary>
+        public AppVersion AppVersion { get; }
+
+        /// <summary>
         /// Creates a new <see cref="Member"/>.
         /// </summary>
         /// <param name="uniqueAddress">The address of the member.</param>
         /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
         /// <param name="status">The status of this member.</param>
         /// <param name="roles">The roles for this member. Can be empty.</param>
+        /// <param name="appVersion">Application version</param>
         /// <returns>A new member instance.</returns>
-        internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        internal static Member Create(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
-            return new Member(uniqueAddress, upNumber, status, roles);
+            return new Member(uniqueAddress, upNumber, status, roles, appVersion);
         }
 
         /// <summary>
@@ -84,12 +93,29 @@ namespace Akka.Cluster
         /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
         /// <param name="status">The status of this member.</param>
         /// <param name="roles">The roles for this member. Can be empty.</param>
-        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles)
+        /// <param name="appVersion">Application version</param>
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             UniqueAddress = uniqueAddress;
             UpNumber = upNumber;
             Status = status;
             Roles = roles;
+            AppVersion = appVersion ?? AppVersion.Zero;
+        }
+
+        /// <summary>
+        /// Used when `akka.actor.serialize-messages = on`.
+        /// </summary>
+        /// <param name="uniqueAddress">The address of the member.</param>
+        /// <param name="upNumber">The upNumber of the member, as assigned by the leader at the time the node joined the cluster.</param>
+        /// <param name="status">The status of this member.</param>
+        /// <param name="roles">The roles for this member. Can be empty.</param>
+        /// <param name="appVersion">Application version</param>
+        [JsonConstructor]
+        internal Member(UniqueAddress uniqueAddress, int upNumber, MemberStatus status, IEnumerable<string> roles, AppVersion appVersion)
+         : this(uniqueAddress, upNumber, status, roles.ToImmutableHashSet(), appVersion)
+        {
+
         }
 
         /// <summary>
@@ -124,7 +150,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="object.ToString"/>
         public override string ToString()
         {
-            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber})";
+            return $"Member(address = {Address}, Uid={UniqueAddress.Uid} status = {Status}, role=[{string.Join(",", Roles)}], upNumber={UpNumber}, version={AppVersion})";
         }
 
         /// <summary>
@@ -169,8 +195,8 @@ namespace Akka.Cluster
             //TODO: Akka exception?
             if (!AllowedTransitions[oldStatus].Contains(status))
                 throw new InvalidOperationException($"Invalid member status transition {Status} -> {status}");
-            
-            return new Member(UniqueAddress, UpNumber, status, Roles);
+
+            return new Member(UniqueAddress, UpNumber, status, Roles, AppVersion);
         }
 
         /// <summary>
@@ -180,7 +206,7 @@ namespace Akka.Cluster
         /// <returns>A new copy of this member with the provided upNumber.</returns>
         public Member CopyUp(int upNumber)
         {
-            return new Member(UniqueAddress, upNumber, Status, Roles).Copy(status: MemberStatus.Up);
+            return new Member(UniqueAddress, upNumber, Status, Roles, AppVersion).Copy(status: MemberStatus.Up);
         }
 
         /// <summary>
@@ -209,7 +235,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Compares members by their upNumber to determine which is oldest / youngest.
         /// </summary>
-        internal static readonly AgeComparer AgeOrdering = new AgeComparer();
+        public static readonly IComparer<Member> AgeOrdering = new AgeComparer();
 
         /// <summary>
         ///  INTERNAL API
@@ -248,6 +274,8 @@ namespace Akka.Cluster
                 if (@bs == MemberStatus.Exiting) return -1;
                 if (@as == MemberStatus.Joining) return 1;
                 if (@bs == MemberStatus.Joining) return -1;
+                if (@as == MemberStatus.WeaklyUp) return 1;
+                if (@bs == MemberStatus.WeaklyUp) return -1;
                 return Ordering.Compare(a, b);
             }
         }
@@ -303,7 +331,7 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="a">First member instance.</param>
         /// <param name="b">Second member instance.</param>
-        /// <returns>If a and b are different members, this method will return <c>null</c>. 
+        /// <returns>If a and b are different members, this method will return <c>null</c>.
         /// Otherwise, will return a or b depending on which one is a valid transition of the other.
         /// If neither are a valid transition, we return <c>null</c></returns>
         public static Member PickNextTransition(Member a, Member b)
@@ -317,7 +345,7 @@ namespace Akka.Cluster
 
             if (Member.AllowedTransitions[a.Status].Contains(b.Status))
                 return b;
-            if(Member.AllowedTransitions[b.Status].Contains(a.Status))
+            if (Member.AllowedTransitions[b.Status].Contains(a.Status))
                 return a;
 
             return null; // illegal transition
@@ -373,6 +401,8 @@ namespace Akka.Cluster
             if (m2Status == MemberStatus.Leaving) return m2;
             if (m1Status == MemberStatus.Joining) return m2;
             if (m2Status == MemberStatus.Joining) return m1;
+            if (m1Status == MemberStatus.WeaklyUp) return m2;
+            if (m2Status == MemberStatus.WeaklyUp) return m1;
             return m1;
         }
 
@@ -382,7 +412,8 @@ namespace Akka.Cluster
         internal static readonly ImmutableDictionary<MemberStatus, ImmutableHashSet<MemberStatus>> AllowedTransitions =
             new Dictionary<MemberStatus, ImmutableHashSet<MemberStatus>>
             {
-                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.Joining, ImmutableHashSet.Create(MemberStatus.WeaklyUp, MemberStatus.Up,MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
+                {MemberStatus.WeaklyUp, ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed) },
                 {MemberStatus.Up, ImmutableHashSet.Create(MemberStatus.Leaving, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Leaving, ImmutableHashSet.Create(MemberStatus.Exiting, MemberStatus.Down, MemberStatus.Removed)},
                 {MemberStatus.Down, ImmutableHashSet.Create(MemberStatus.Removed)},
@@ -391,38 +422,42 @@ namespace Akka.Cluster
             }.ToImmutableDictionary();
     }
 
-
     /// <summary>
     /// Defines the current status of a cluster member node
-    /// 
-    /// Can be one of: Joining, Up, Leaving, Exiting and Down.
+    ///
+    /// Can be one of: Joining, Up, WeaklyUp, Leaving, Exiting and Down.
     /// </summary>
     public enum MemberStatus
     {
         /// <summary>
         /// Indicates that a new node is joining the cluster.
         /// </summary>
-        Joining,
+        Joining = 0,
         /// <summary>
         /// Indicates that a node is a current member of the cluster.
         /// </summary>
-        Up,
+        Up = 1,
         /// <summary>
         /// Indicates that a node is beginning to leave the cluster.
         /// </summary>
-        Leaving,
+        Leaving = 2,
         /// <summary>
         /// Indicates that all nodes are aware that this node is leaving the cluster.
         /// </summary>
-        Exiting,
+        Exiting = 3,
         /// <summary>
         /// Node was forcefully removed from the cluster by means of <see cref="Cluster.Down"/>
         /// </summary>
-        Down,
+        Down = 4,
         /// <summary>
         /// Node was removed as a member from the cluster.
         /// </summary>
-        Removed
+        Removed = 5,
+        /// <summary>
+        /// Indicates that new node has already joined, but it cannot be set to <see cref="Up"/>
+        /// because cluster convergence cannot be reached i.e. because of unreachable nodes.
+        /// </summary>
+        WeaklyUp = 6,
     }
 
     /// <summary>
@@ -467,7 +502,7 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="object.Equals(object)"/>
-        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress) obj);
+        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress)obj);
 
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()

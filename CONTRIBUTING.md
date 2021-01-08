@@ -155,7 +155,7 @@ git push origin --delete my-new-branch-123
 
 ## Code guidelines
 
-See our [Contributor Guidelines](http://getakka.net/docs/Contributor%20guidelines) for more information on following the project's conventions.
+See our [Contributor Guidelines](http://getakka.net/community/contributor-guidelines.html) for more information on following the project's conventions.
 
 ---
 Props to [NancyFX](https://github.com/NancyFx/Nancy) from which we've "borrowed" some of this text.

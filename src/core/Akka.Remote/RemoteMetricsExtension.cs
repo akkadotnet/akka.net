@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteMetricsExtension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,13 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override IRemoteMetrics CreateExtension(ExtendedActorSystem system)
         {
-            if (system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding").ToLowerInvariant() == "off")
+            // TODO: Need to assert that config key exists. 
+            var useLogFrameSize = 
+                system.Settings.Config.GetString("akka.remote.log-frame-size-exceeding", string.Empty)
+                .ToLowerInvariant();
+            if (useLogFrameSize.Equals("off") ||
+                useLogFrameSize.Equals("false") ||
+                useLogFrameSize.Equals("no"))
             {
                 return new RemoteMetricsOff();
             }
@@ -60,7 +66,8 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         public RemoteMetricsOn(ExtendedActorSystem system)
         {
-            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding");
+            // TODO: Need to assert that config key exists
+            _logFrameSizeExceeding = system.Settings.Config.GetByteSize("akka.remote.log-frame-size-exceeding", null);
             _log = Logging.GetLogger(system, this);
         }
 
@@ -74,13 +81,13 @@ namespace Akka.Remote
             if (payloadBytes >= _logFrameSizeExceeding)
             {
                 Type type;
-                if (msg is ActorSelectionMessage)
+                if (msg is ActorSelectionMessage message)
                 {
-                    type = ((ActorSelectionMessage) msg).Message.GetType();
+                    type = message.Message.GetType();
                 }
-                else if (msg is RouterEnvelope)
+                else if (msg is RouterEnvelope envelope)
                 {
-                    type = ((RouterEnvelope) msg).Message.GetType();
+                    type = envelope.Message.GetType();
                 }
                 else
                 {

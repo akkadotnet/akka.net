@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotDirectoryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -48,7 +48,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        FileInfo file = new FileInfo(InUseSnapshotPath);
+        private readonly FileInfo _file = new FileInfo(InUseSnapshotPath);
 
         public SnapshotDirectoryFailureSpec() : base(Configuration("SnapshotDirectoryFailureSpec",
             extraConfig: "akka.persistence.snapshot-store.local.dir = \"" + InUseSnapshotPath + "\""))
@@ -58,12 +58,17 @@ namespace Akka.Persistence.Tests
         protected override void AtStartup()
         {
             base.AtStartup();
-            using (file.Create()) {}
+            try // try to create the directory first.d
+            {
+                _file.Directory.Create();
+            }
+            catch { }
+            using (_file.Create()) {}
         }
 
         protected override void AfterTermination()
         {
-            file.Delete();
+            _file.Delete();
             base.AfterTermination();
         }
 

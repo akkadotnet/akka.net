@@ -30,14 +30,12 @@ Param(
 )
 
 $FakeVersion = "4.63.0"
-$NBenchVersion = "1.0.1"
-$DotNetChannel = "preview";
-$DotNetVersion = "2.0.0";
-$DotNetInstallerUri = "https://raw.githubusercontent.com/dotnet/cli/v$DotNetVersion/scripts/obtain/dotnet-install.ps1";
-$NugetVersion = "4.3.0";
+$NugetVersion = "5.8.0";
 $NugetUrl = "https://dist.nuget.org/win-x86-commandline/v$NugetVersion/nuget.exe"
-$ProtobufVersion = "3.4.0"
-$DocfxVersion = "2.21.1"
+$ProtobufVersion = "3.13.0"
+$DocfxVersion = "2.48.1"
+
+$IncrementalistVersion = "0.4.0";
 
 # Make sure tools folder exists
 $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
@@ -45,49 +43,6 @@ $ToolPath = Join-Path $PSScriptRoot "tools"
 if (!(Test-Path $ToolPath)) {
     Write-Verbose "Creating tools directory..."
     New-Item -Path $ToolPath -Type directory | out-null
-}
-
-###########################################################################
-# INSTALL .NET CORE CLI
-###########################################################################
-
-Function Remove-PathVariable([string]$VariableToRemove)
-{
-    $path = [Environment]::GetEnvironmentVariable("PATH", "User")
-    if ($path -ne $null)
-    {
-        $newItems = $path.Split(';', [StringSplitOptions]::RemoveEmptyEntries) | Where-Object { "$($_)" -inotlike $VariableToRemove }
-        [Environment]::SetEnvironmentVariable("PATH", [System.String]::Join(';', $newItems), "User")
-    }
-
-    $path = [Environment]::GetEnvironmentVariable("PATH", "Process")
-    if ($path -ne $null)
-    {
-        $newItems = $path.Split(';', [StringSplitOptions]::RemoveEmptyEntries) | Where-Object { "$($_)" -inotlike $VariableToRemove }
-        [Environment]::SetEnvironmentVariable("PATH", [System.String]::Join(';', $newItems), "Process")
-    }
-}
-
-# Get .NET Core CLI path if installed.
-$FoundDotNetCliVersion = $null;
-if (Get-Command dotnet -ErrorAction SilentlyContinue) {
-    $FoundDotNetCliVersion = dotnet --version;
-    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-    $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
-}
-
-if($FoundDotNetCliVersion -ne $DotNetVersion) {
-    $InstallPath = Join-Path $PSScriptRoot ".dotnet"
-    if (!(Test-Path $InstallPath)) {
-        mkdir -Force $InstallPath | Out-Null;
-    }
-    (New-Object System.Net.WebClient).DownloadFile($DotNetInstallerUri, "$InstallPath\dotnet-install.ps1");
-    & $InstallPath\dotnet-install.ps1 -Channel $DotNetChannel -Version $DotNetVersion -InstallDir $InstallPath -Architecture x64;
-
-    Remove-PathVariable "$InstallPath"
-    $env:PATH = "$InstallPath;$env:PATH"
-    $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-    $env:DOTNET_CLI_TELEMETRY_OPTOUT=1
 }
 
 ###########################################################################
@@ -112,20 +67,6 @@ if (!(Test-Path $FakeExePath)) {
     Invoke-Expression "&`"$NugetPath`" install Fake -ExcludeVersion -Version $FakeVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
     if ($LASTEXITCODE -ne 0) {
         Throw "An error occured while restoring Fake from NuGet."
-    }
-}
-
-###########################################################################
-# INSTALL NBench Runner
-###########################################################################
-
-# Make sure NBench Runner has been installed.
-$NBenchDllPath = Join-Path $ToolPath "NBench.Runner/lib/net45/NBench.Runner.exe"
-if (!(Test-Path $NBenchDllPath)) {
-    Write-Host "Installing NBench..."
-    Invoke-Expression "&`"$NugetPath`" install NBench.Runner -ExcludeVersion -Version $NBenchVersion -OutputDirectory `"$ToolPath`"" | Out-Null;
-    if ($LASTEXITCODE -ne 0) {
-        Throw "An error occured while restoring NBench.Runner from NuGet."
     }
 }
 
@@ -158,6 +99,20 @@ if (!(Test-Path $DocfxExePath)) {
 }
 
 ###########################################################################
+# Incrementalist
+###########################################################################
+
+# Make sure the Incrementalist has been installed
+if (Get-Command incrementalist -ErrorAction SilentlyContinue) {
+    Write-Host "Found Incrementalist. Skipping install."
+}
+else{
+    $IncrementalistFolder = Join-Path $ToolPath "incrementalist"
+    Write-Host "Incrementalist not found. Installing to ... $IncrementalistFolder"
+    dotnet tool install Incrementalist.Cmd --version $IncrementalistVersion --tool-path "$IncrementalistFolder"
+}
+
+###########################################################################
 # RUN BUILD SCRIPT
 ###########################################################################
 
@@ -171,6 +126,6 @@ $Arguments = @{
 
 # Start Fake
 Write-Host "Running build script..."
-Invoke-Expression "$FakeExePath `"build.fsx`" $ScriptArgs $Arguments"
-
+Invoke-Expression "& `"$FakeExePath`" `"build.fsx`" $ScriptArgs $Arguments"
+ 
 exit $LASTEXITCODE

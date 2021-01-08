@@ -1,12 +1,13 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Sources.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -16,6 +17,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation
 {
@@ -122,7 +124,7 @@ namespace Akka.Streams.Implementation
                     if (_pendingOffer != null)
                     {
                         Push(_stage.Out, _pendingOffer.Element);
-                        _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                        _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
                         _pendingOffer = null;
                         if (_terminating)
                         {
@@ -152,7 +154,7 @@ namespace Akka.Streams.Implementation
             {
                 if (_pendingOffer != null)
                 {
-                    _pendingOffer.CompletionSource.SetResult(QueueOfferResult.QueueClosed.Instance);
+                    _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.QueueClosed.Instance);
                     _pendingOffer = null;
                 }
                 _completion.SetResult(new object());
@@ -174,7 +176,7 @@ namespace Akka.Streams.Implementation
                     if (offer != null)
                     {
                         var promise = offer.CompletionSource;
-                        promise.SetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
+                        promise.NonBlockingTrySetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
                     }
                 });
             }
@@ -182,7 +184,7 @@ namespace Akka.Streams.Implementation
             private void EnqueueAndSuccess(Offer<TOut> offer)
             {
                 _buffer.Enqueue(offer.Element);
-                offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
             }
 
             private void BufferElement(Offer<TOut> offer)
@@ -206,18 +208,18 @@ namespace Akka.Streams.Implementation
                             EnqueueAndSuccess(offer);
                             break;
                         case OverflowStrategy.DropNew:
-                            offer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                            offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
                             break;
                         case OverflowStrategy.Fail:
                             var bufferOverflowException =
                                 new BufferOverflowException($"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
-                            offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                            offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
                             _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
                             break;
                         case OverflowStrategy.Backpressure:
                             if (_pendingOffer != null)
-                                offer.CompletionSource.SetException(
+                                offer.CompletionSource.NonBlockingTrySetException(
                                     new IllegalStateException(
                                         "You have to wait for previous offer to be resolved to send another request."));
                             else
@@ -244,7 +246,7 @@ namespace Akka.Streams.Implementation
                             else if (IsAvailable(_stage.Out))
                             {
                                 Push(_stage.Out, offer.Element);
-                                offer.CompletionSource.SetResult(QueueOfferResult.Enqueued.Instance);
+                                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
                             }
                             else if (_pendingOffer == null)
                                 _pendingOffer = offer;
@@ -254,15 +256,15 @@ namespace Akka.Streams.Implementation
                                 {
                                     case OverflowStrategy.DropHead:
                                     case OverflowStrategy.DropBuffer:
-                                        _pendingOffer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                                        _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
                                         _pendingOffer = offer;
                                         break;
                                     case OverflowStrategy.DropTail:
                                     case OverflowStrategy.DropNew:
-                                        offer.CompletionSource.SetResult(QueueOfferResult.Dropped.Instance);
+                                        offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
                                         break;
                                     case OverflowStrategy.Backpressure:
-                                        offer.CompletionSource.SetException(
+                                        offer.CompletionSource.NonBlockingTrySetException(
                                             new IllegalStateException(
                                                 "You have to wait for previous offer to be resolved to send another request"));
                                         break;
@@ -270,7 +272,7 @@ namespace Akka.Streams.Implementation
                                         var bufferOverflowException =
                                             new BufferOverflowException(
                                                 $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
-                                        offer.CompletionSource.SetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
                                         _completion.SetException(bufferOverflowException);
                                         FailStage(bufferOverflowException);
                                         break;
@@ -330,7 +332,7 @@ namespace Akka.Streams.Implementation
             /// <returns>TBD</returns>
             public Task<IQueueOfferResult> OfferAsync(TOut element)
             {
-                var promise = new TaskCompletionSource<IQueueOfferResult>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<IQueueOfferResult>(); // new TaskCompletionSource<IQueueOfferResult>();
                 _invokeLogic(new Offer<TOut>(element, promise));
                 return promise.Task;
             }
@@ -394,8 +396,6 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TOut">TBD</typeparam>
-    /// <typeparam name="TSource">TBD</typeparam>
     [InternalApi]
     public sealed class UnfoldResourceSource<TOut, TSource> : GraphStage<SourceShape<TOut>>
     {
@@ -406,6 +406,7 @@ namespace Akka.Streams.Implementation
             private readonly UnfoldResourceSource<TOut, TSource> _stage;
             private readonly Lazy<Decider> _decider;
             private TSource _blockingStream;
+            private bool _open;
 
             public Logic(UnfoldResourceSource<TOut, TSource> stage, Attributes inheritedAttributes) : base(stage.Shape)
             {
@@ -457,13 +458,18 @@ namespace Akka.Streams.Implementation
             }
 
             public override void OnDownstreamFinish() => CloseStage();
-
-            public override void PreStart() => _blockingStream = _stage._create();
+            
+            public override void PreStart()
+            {
+                _blockingStream = _stage._create();
+                _open = true;
+            }
 
             private void RestartState()
             {
                 _stage._close(_blockingStream);
                 _blockingStream = _stage._create();
+                _open = true;
             }
 
             private void CloseStage()
@@ -471,12 +477,19 @@ namespace Akka.Streams.Implementation
                 try
                 {
                     _stage._close(_blockingStream);
+                    _open = false;
                     CompleteStage();
                 }
                 catch (Exception ex)
                 {
                     FailStage(ex);
                 }
+            }
+
+            public override void PostStop()
+            {
+                if (_open)
+                    _stage._close(_blockingStream);
             }
         }
 
@@ -546,42 +559,49 @@ namespace Akka.Streams.Implementation
             private readonly UnfoldResourceSourceAsync<TOut, TSource> _source;
             private readonly Lazy<Decider> _decider;
             private TaskCompletionSource<TSource> _resource;
-            private Action<Either<Option<TOut>, Exception>> _callback;
-            private Action<Tuple<Action, Task>> _closeCallback;
-            private Action<Tuple<TSource, Action<TSource>>> _onResourceReadyCallback;
+            private Action<Either<Option<TOut>, Exception>> _createdCallback;
+            private Action<(Action, Task)> _closeCallback;
+            private bool _open;
 
             public Logic(UnfoldResourceSourceAsync<TOut, TSource> source, Attributes inheritedAttributes) : base(source.Shape)
             {
                 _source = source;
                 _resource = new TaskCompletionSource<TSource>();
-                _decider = new Lazy<Decider>(() =>
+
+                Decider CreateDecider()
                 {
                     var strategy = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
-                });
+                }
+
+                _decider = new Lazy<Decider>(CreateDecider);
 
                 SetHandler(source.Out, this);
             }
 
             public override void OnPull()
             {
-                OnResourceReady(source =>
+                void Ready(TSource source)
                 {
                     try
                     {
-                        _source._readData(source).ContinueWith(t =>
+                        void Continune(Task<Option<TOut>> t)
                         {
-                            if (t.IsCompleted && !t.IsCanceled)
-                                _callback(new Left<Option<TOut>, Exception>(t.Result));
+                            if (!t.IsFaulted && !t.IsCanceled)
+                                _createdCallback(new Left<Option<TOut>, Exception>(t.Result));
                             else
-                                _callback(new Right<Option<TOut>, Exception>(t.Exception));
-                        });
+                                _createdCallback(new Right<Option<TOut>, Exception>(t.Exception));
+                        }
+
+                        _source._readData(source).ContinueWith(Continune);
                     }
                     catch (Exception ex)
                     {
                         ErrorHandler(ex);
                     }
-                });
+                }
+
+                OnResourceReady(Ready);
             }
 
             public override void OnDownstreamFinish() => CloseStage();
@@ -589,7 +609,8 @@ namespace Akka.Streams.Implementation
             public override void PreStart()
             {
                 CreateStream(false);
-                _callback = GetAsyncCallback<Either<Option<TOut>, Exception>>(either =>
+
+                void CreatedHandler(Either<Option<TOut>, Exception> either)
                 {
                     if (either.IsLeft)
                     {
@@ -601,42 +622,56 @@ namespace Akka.Streams.Implementation
                     }
                     else
                         ErrorHandler(either.ToRight().Value);
-                });
+                }
 
-                _closeCallback = GetAsyncCallback<Tuple<Action, Task>>(t =>
+                _createdCallback = GetAsyncCallback<Either<Option<TOut>, Exception>>(CreatedHandler);
+
+                void CloseHandler((Action, Task) t)
                 {
                     if (t.Item2.IsCompleted && !t.Item2.IsFaulted)
+                    {
+                        _open = false;
                         t.Item1();
+                    }
                     else
+                    {
+                        _open = false;
                         FailStage(t.Item2.Exception);
-                });
+                    }
+                }
 
-                _onResourceReadyCallback = GetAsyncCallback<Tuple<TSource, Action<TSource>>>(t => t.Item2(t.Item1));
+                _closeCallback = GetAsyncCallback<(Action, Task)>(CloseHandler);
             }
 
             private void CreateStream(bool withPull)
             {
-                var cb = GetAsyncCallback<Either<TSource, Exception>>(either =>
+                void Handler(Either<TSource, Exception> either)
                 {
                     if (either.IsLeft)
                     {
+                        _open = true;
                         _resource.SetResult(either.ToLeft().Value);
                         if (withPull)
                             OnPull();
                     }
                     else
                         FailStage(either.ToRight().Value);
-                });
+                }
+
+                var cb = GetAsyncCallback<Either<TSource, Exception>>(Handler);
 
                 try
                 {
-                    _source._create().ContinueWith(t =>
+                    void Continue(Task<TSource> t)
                     {
-                        if (t.IsCompleted && !t.IsFaulted && t.Result != null)
-                            cb(new Left<TSource, Exception>(t.Result));
-                        else
+
+                        if (t.IsCanceled || t.IsFaulted)
                             cb(new Right<TSource, Exception>(t.Exception));
-                    });
+                        else
+                            cb(new Left<TSource, Exception>(t.Result));
+                    }
+
+                    _source._create().ContinueWith(Continue);
                 }
                 catch (Exception ex)
                 {
@@ -644,14 +679,11 @@ namespace Akka.Streams.Implementation
                 }
             }
 
-            private void OnResourceReady(Action<TSource> action)
+            private void OnResourceReady(Action<TSource> action) => _resource.Task.ContinueWith(t =>
             {
-                _resource.Task.ContinueWith(t =>
-                {
-                    if (t.IsCompleted && !t.IsFaulted && t.Result != null)
-                        _onResourceReadyCallback(Tuple.Create(t.Result, action));
-                });
-            }
+                if (!t.IsFaulted && !t.IsCanceled)
+                    action(t.Result);
+            });
 
             private void ErrorHandler(Exception ex)
             {
@@ -676,29 +708,45 @@ namespace Akka.Streams.Implementation
             private void CloseAndThen(Action action)
             {
                 SetKeepGoing(true);
-                OnResourceReady(source =>
+
+                void Ready(TSource source)
                 {
                     try
                     {
-                        _source._close(source).ContinueWith(t => _closeCallback(Tuple.Create(action, t)));
+                        _source._close(source).ContinueWith(t => _closeCallback((action, t)));
                     }
                     catch (Exception ex)
                     {
-                        FailStage(ex);
+                        var fail = GetAsyncCallback(() => FailStage(ex));
+                        fail();
                     }
-                });
+                    finally
+                    {
+                        _open = false;
+                    }
+                }
+
+                OnResourceReady(Ready);
             }
 
             private void RestartState()
             {
-                CloseAndThen(() =>
+                void Restart()
                 {
                     _resource = new TaskCompletionSource<TSource>();
                     CreateStream(true);
-                });
+                }
+
+                CloseAndThen(Restart);
             }
 
             private void CloseStage() => CloseAndThen(CompleteStage);
+
+            public override void PostStop()
+            {
+                if (_open)
+                    CloseStage();
+            }
         }
 
         #endregion
@@ -874,33 +922,111 @@ namespace Akka.Streams.Implementation
 
     /// <summary>
     /// INTERNAL API
-    /// 
-    /// A graph stage that can be used to integrate Akka.Streams with .NET events.
     /// </summary>
-    /// <typeparam name="TEventArgs"></typeparam>
-    /// <typeparam name="TDelegate">Delegate</typeparam>
-    [InternalApi]
-    public sealed class EventSourceStage<TDelegate, TEventArgs> : GraphStage<SourceShape<TEventArgs>>
+    public sealed class EmptySource<TOut> : GraphStage<SourceShape<TOut>>
     {
-        #region logic
-
-        private class Logic : OutGraphStageLogic
+        private sealed class Logic : OutGraphStageLogic
         {
-            private readonly EventSourceStage<TDelegate, TEventArgs> _stage;
-            private readonly LinkedList<TEventArgs> _buffer;
-            private readonly TDelegate _handler;
-            private readonly Action<TEventArgs> _onOverflow;
+            public Logic(EmptySource<TOut> stage) : base(stage.Shape) => SetHandler(stage.Out, this);
 
-            public Logic(EventSourceStage<TDelegate, TEventArgs> stage) : base(stage.Shape)
+            public override void OnPull() => CompleteStage();
+
+            public override void PreStart() => CompleteStage();
+        }
+
+        public EmptySource()
+        {
+            Shape = new SourceShape<TOut>(Out);
+        }
+
+        public Outlet<TOut> Out { get; } = new Outlet<TOut>("EmptySource.out");
+
+        public override SourceShape<TOut> Shape { get; }
+
+        protected override Attributes InitialAttributes => DefaultAttributes.LazySource;
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
+
+        public override string ToString() => "EmptySource";
+    }
+    
+    internal sealed class EventWrapper<TDelegate, TEventArgs> : IObservable<TEventArgs>
+    {
+        #region disposer
+
+        private class Disposer : IDisposable
+        {
+            private readonly EventWrapper<TDelegate, TEventArgs> _observable;
+            private readonly TDelegate _handler;
+
+            public Disposer(EventWrapper<TDelegate, TEventArgs> observable, TDelegate handler)
+            {
+                _observable = observable;
+                _handler = handler;
+            }
+
+            public void Dispose()
+            {
+                _observable._removeHandler(_handler);
+            }
+        }
+
+        #endregion
+
+        private readonly Action<TDelegate> _addHandler;
+        private readonly Action<TDelegate> _removeHandler;
+        private readonly Func<Action<TEventArgs>, TDelegate> _conversion;
+
+        /// <summary>
+        /// Creates a new instance of EventWrapper - an object wrapping C# events with an observable object.
+        /// </summary>
+        /// <param name="conversion">Function used to convert given event handler to delegate compatible with underlying .NET event.</param>
+        /// <param name="addHandler">Action which attaches given event handler to the underlying .NET event.</param>
+        /// <param name="removeHandler">Action which detaches given event handler to the underlying .NET event.</param>
+        public EventWrapper(Action<TDelegate> addHandler, Action<TDelegate> removeHandler, Func<Action<TEventArgs>, TDelegate> conversion)
+        {
+            _addHandler = addHandler;
+            _removeHandler = removeHandler;
+            _conversion = conversion;
+        }
+
+        public IDisposable Subscribe(IObserver<TEventArgs> observer)
+        {
+            var handler = _conversion(observer.OnNext);
+            _addHandler(handler);
+            return new Disposer(this, handler);
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal sealed class ObservableSourceStage<T> : GraphStage<SourceShape<T>>
+    {
+        #region internal classes
+        
+        private sealed class Logic : GraphStageLogic, IObserver<T>
+        {
+            private readonly ObservableSourceStage<T> _stage;
+            private readonly LinkedList<T> _buffer;
+            private readonly Action<T> _onOverflow;
+            private readonly Action<T> _onEvent;
+            private readonly Action<Exception> _onError;
+            private readonly Action _onCompleted;
+
+            private IDisposable _disposable;
+
+            public Logic(ObservableSourceStage<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _buffer = new LinkedList<TEventArgs>();
-                var bufferCapacity = stage._maxBuffer;
-                var onEvent = GetAsyncCallback<TEventArgs>(e =>
+                _buffer = new LinkedList<T>();
+                var bufferCapacity = stage._maxBufferCapacity;
+                _onEvent = GetAsyncCallback<T>(e =>
                 {
-                    if (IsAvailable(_stage.Out))
+                    if (IsAvailable(_stage.Outlet))
                     {
-                        Push(_stage.Out, e);
+                        Push(_stage.Outlet, e);
                     }
                     else
                     {
@@ -908,44 +1034,47 @@ namespace Akka.Streams.Implementation
                         else Enqueue(e);
                     }
                 });
-
-                _handler = _stage._conversion(onEvent);
+                _onError = GetAsyncCallback<Exception>(e => Fail(_stage.Outlet, e));
+                _onCompleted = GetAsyncCallback(() => Complete(_stage.Outlet));
                 _onOverflow = SetupOverflowStrategy(stage._overflowStrategy);
-                SetHandler(stage.Out, this);
-            }
-            private void Enqueue(TEventArgs e) => _buffer.AddLast(e);
 
-            private TEventArgs Dequeue()
+                SetHandler(stage.Outlet, onPull: () =>
+                {
+                    if (_buffer.Count > 0)
+                    {
+                        var element = Dequeue();
+                        Push(_stage.Outlet, element);
+                    }
+                }, onDownstreamFinish: OnCompleted);
+            }
+
+            public void OnNext(T value) => _onEvent(value);
+            public void OnError(Exception error) => _onError(error);
+            public void OnCompleted() => _onCompleted();
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                _disposable = _stage._observable.Subscribe(this);
+            }
+
+            public override void PostStop()
+            {
+                _disposable?.Dispose();
+                _buffer.Clear();
+                base.PostStop();
+            }
+
+            private void Enqueue(T e) => _buffer.AddLast(e);
+
+            private T Dequeue()
             {
                 var element = _buffer.First.Value;
                 _buffer.RemoveFirst();
                 return element;
             }
 
-            public override void OnPull()
-            {
-                if (_buffer.Count > 0)
-                {
-                    var element = Dequeue();
-                    Push(_stage.Out, element);
-                }
-            }
-
-            public override void PreStart()
-            {
-                base.PreStart();
-                _stage._addHandler(_handler);
-            }
-
-            public override void PostStop()
-            {
-                _stage._removeHandler(_handler);
-                _buffer.Clear();
-                base.PostStop();
-            }
-
-
-            private Action<TEventArgs> SetupOverflowStrategy(OverflowStrategy overflowStrategy)
+            private Action<T> SetupOverflowStrategy(OverflowStrategy overflowStrategy)
             {
                 switch (overflowStrategy)
                 {
@@ -962,25 +1091,17 @@ namespace Akka.Streams.Implementation
                             Enqueue(message);
                         };
                     case OverflowStrategy.DropNew:
+                        return message => { /* do nothing */ };
+                    case OverflowStrategy.DropBuffer:
                         return message =>
                         {
-                            // do nothing
-                        };
-                    case OverflowStrategy.DropBuffer:
-                        return message => {
                             _buffer.Clear();
                             Enqueue(message);
                         };
                     case OverflowStrategy.Fail:
-                        return message =>
-                        {
-                            FailStage(new BufferOverflowException($"{_stage.Out} buffer has been overflown"));
-                        };
+                        return message => FailStage(new BufferOverflowException($"{_stage.Outlet} buffer has been overflown"));
                     case OverflowStrategy.Backpressure:
-                        return message =>
-                        {
-                            throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
-                        };
+                        return message => throw new NotSupportedException("OverflowStrategy.Backpressure is not supported");
                     default: throw new NotSupportedException($"Unknown option: {overflowStrategy}");
                 }
             }
@@ -988,34 +1109,21 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
-        private readonly Func<Action<TEventArgs>, TDelegate> _conversion;
-        private readonly Action<TDelegate> _addHandler;
-        private readonly Action<TDelegate> _removeHandler;
-        private readonly int _maxBuffer;
+        private readonly IObservable<T> _observable;
+        private readonly int _maxBufferCapacity;
         private readonly OverflowStrategy _overflowStrategy;
 
-        public Outlet<TEventArgs> Out { get; } = new Outlet<TEventArgs>("event.out");
-
-        /// <summary>
-        /// Creates a new instance of event source class.
-        /// </summary>
-        /// <param name="conversion">Function used to convert given event handler to delegate compatible with underlying .NET event.</param>
-        /// <param name="addHandler">Action which attaches given event handler to the underlying .NET event.</param>
-        /// <param name="removeHandler">Action which detaches given event handler to the underlying .NET event.</param>
-        /// <param name="maxBuffer">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
-        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBuffer"/>) has been overflown.</param>
-        public EventSourceStage(Action<TDelegate> addHandler, Action<TDelegate> removeHandler, Func<Action<TEventArgs>, TDelegate> conversion, int maxBuffer, OverflowStrategy overflowStrategy)
+        public ObservableSourceStage(IObservable<T> observable, int maxBufferCapacity, OverflowStrategy overflowStrategy)
         {
-            _conversion = conversion ?? throw new ArgumentNullException(nameof(conversion));
-            _addHandler = addHandler ?? throw new ArgumentNullException(nameof(addHandler));
-            _removeHandler = removeHandler ?? throw new ArgumentNullException(nameof(removeHandler));
-            _maxBuffer = maxBuffer;
+            _observable = observable;
+            _maxBufferCapacity = maxBufferCapacity;
             _overflowStrategy = overflowStrategy;
-            Shape = new SourceShape<TEventArgs>(Out);
+
+            Shape = new SourceShape<T>(Outlet);
         }
 
-        public override SourceShape<TEventArgs> Shape { get; }
+        public Outlet<T> Outlet { get; } = new Outlet<T>("observable.out");
+        public override SourceShape<T> Shape { get; }
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
-
 }

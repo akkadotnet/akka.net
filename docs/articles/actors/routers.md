@@ -576,9 +576,9 @@ When an actor received `PoisonPill` message, that actor will be stopped. (see [P
 
 For a router, which normally passes on messages to routees, the `PoisonPill` messages are processed __by the router only__. `PoisonPill` messages sent to a router will __not__ be sent on to its routees.
 
-However, a `PisonPill` message sent to a router may still affect its routees, as it will stop the router whhich in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
+However, a `PoisonPill` message sent to a router may still affect its routees, as it will stop the router which in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
 
-If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailbxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
+If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
 
 > [!NOTE]
 > The above method will stop all routees, even if they are not created by the router. E.g. routees programatically provided to the router.
@@ -605,6 +605,15 @@ With the code shown above, each routee will receive a `PoisonPill` message. Each
 As with the `PoisonPill` messasge, there is a distinction between killing a router, which indirectly kills its children (who happen to be routees), and killing routees directly (some of whom may not be children.) To kill routees directly the router should be sent a Kill message wrapped in a `Broadcast` message.
 
 See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) for more details on how `Kill` message works.
+
+### Management Messages 
+
+Sending one of the following messages to a router can be used to manage its routees.
+
+- `Akka.Routing.GetRoutees` The router actor will respond with a `Akka.Routing.Routees` message, which contains a list of currently used routees.
+- `Akka.Routing.AddRoutee` The router actor will add the provided to its collection of routees.
+- `Akka.Routing.RemoveRoutee` The router actor will remove the provided routee to its collection of routees.
+- `Akka.Routing.AdjustPoolSize` The pool router actor will add or remove that number of routees to its collection of routees.
 
 ## Advanced
 

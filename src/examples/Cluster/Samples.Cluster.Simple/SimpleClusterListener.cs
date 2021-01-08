@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SimpleClusterListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ namespace Samples.Cluster.Simple
         /// </summary>
         protected override void PreStart()
         {
-            Cluster.Subscribe(Self, ClusterEvent.InitialStateAsEvents, new []{ typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.UnreachableMember) });
+            Cluster.Subscribe(Self, ClusterEvent.InitialStateAsEvents, new[] { typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.UnreachableMember) });
         }
 
         /// <summary>
@@ -34,32 +34,28 @@ namespace Samples.Cluster.Simple
 
         protected override void OnReceive(object message)
         {
-            var up = message as ClusterEvent.MemberUp;
-            if (up != null)
+            switch (message)
             {
-                var mem = up;
-                Log.Info("Member is Up: {0}", mem.Member);
-            } else if(message is ClusterEvent.UnreachableMember)
-            {
-                var unreachable = (ClusterEvent.UnreachableMember) message;
-                Log.Info("Member detected as unreachable: {0}", unreachable.Member);
-            }
-            else if (message is ClusterEvent.MemberRemoved)
-            {
-                var removed = (ClusterEvent.MemberRemoved) message;
-                Log.Info("Member is Removed: {0}", removed.Member);
-            }
-            else if (message is ClusterEvent.IMemberEvent)
-            {
-                //IGNORE                
-            }
-            else if (message is ClusterEvent.CurrentClusterState)
-            {
-                
-            }
-            else
-            {
-                Unhandled(message);
+                case ClusterEvent.MemberUp up:
+                {
+                    var mem = up;
+                    Log.Info("Member is Up: {0}", mem.Member);
+                    break;
+                }
+                case ClusterEvent.UnreachableMember unreachable:
+                    Log.Info("Member detected as unreachable: {0}", unreachable.Member);
+                    break;
+                case ClusterEvent.MemberRemoved removed:
+                    Log.Info("Member is Removed: {0}", removed.Member);
+                    break;
+                case ClusterEvent.IMemberEvent _:
+                    //IGNORE                
+                    break;
+                case ClusterEvent.CurrentClusterState _:
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
             }
         }
     }

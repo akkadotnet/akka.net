@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphZipSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class GraphZipSpec : TwoStreamsSetup<Tuple<int, int>>
+    public class GraphZipSpec : TwoStreamsSetup<(int, int)>
     {
         public GraphZipSpec(ITestOutputHelper helper) : base(helper)
         {
@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
 
             public override Inlet<int> Right { get; }
 
-            public override Outlet<Tuple<int, int>> Out { get; }
+            public override Outlet<(int, int)> Out { get; }
         }
         
         [Fact]
@@ -48,7 +48,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = this.CreateManualSubscriberProbe<Tuple<int, string>>();
+                var probe = this.CreateManualSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(b =>
                 {
@@ -66,12 +66,12 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(2);
-                probe.ExpectNext(Tuple.Create(1, "A"));
-                probe.ExpectNext(Tuple.Create(2, "B"));
+                probe.ExpectNext((1, "A"));
+                probe.ExpectNext((2, "B"));
                 subscription.Request(1);
-                probe.ExpectNext(Tuple.Create(3, "C"));
+                probe.ExpectNext((3, "C"));
                 subscription.Request(1);
-                probe.ExpectNext(Tuple.Create(4, "D"));
+                probe.ExpectNext((4, "D"));
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
 
-                var completed = RunnableGraph.FromGraph(GraphDsl.Create(Sink.Ignore<Tuple<int, string>>(), (b, sink) =>
+                var completed = RunnableGraph.FromGraph(GraphDsl.Create(Sink.Ignore<(int, string)>(), (b, sink) =>
                 {
                     var zip = b.Add(new Zip<int, string>());
                     var source1 = Source.FromPublisher(upstream1).MapMaterializedValue<Task>(_ => null);
@@ -114,7 +114,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
-                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
+                var downstream = this.CreateSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -133,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 upstream1.SendNext(1);
                 upstream2.SendNext("A");
-                downstream.ExpectNext(Tuple.Create(1, "A"));
+                downstream.ExpectNext((1, "A"));
 
                 upstream2.SendComplete();
                 downstream.ExpectComplete();
@@ -148,7 +148,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
-                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
+                var downstream = this.CreateSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -169,7 +169,7 @@ namespace Akka.Streams.Tests.Dsl
                 upstream1.SendComplete();
                 upstream2.SendComplete();
 
-                downstream.RequestNext(Tuple.Create(1, "A"));
+                downstream.RequestNext((1, "A"));
                 downstream.ExpectComplete();
             }, Materializer);
         }
@@ -181,7 +181,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
-                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
+                var downstream = this.CreateSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -203,7 +203,7 @@ namespace Akka.Streams.Tests.Dsl
                 upstream1.SendComplete();
                 upstream2.SendComplete();
 
-                downstream.RequestNext(Tuple.Create(1, "A"));
+                downstream.RequestNext((1, "A"));
                 downstream.ExpectComplete();
             }, Materializer);
         }
@@ -215,7 +215,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var upstream1 = this.CreatePublisherProbe<int>();
                 var upstream2 = this.CreatePublisherProbe<string>();
-                var downstream = this.CreateSubscriberProbe<Tuple<int, string>>();
+                var downstream = this.CreateSubscriberProbe<(int, string)>();
 
                 RunnableGraph.FromGraph(GraphDsl.Create(Sink.FromSubscriber(downstream), (b, sink) =>
                 {
@@ -239,7 +239,7 @@ namespace Akka.Streams.Tests.Dsl
                 upstream2.SendNext("A");
                 upstream2.SendComplete();
 
-                downstream.RequestNext(Tuple.Create(1, "A"));
+                downstream.RequestNext((1, "A"));
                 downstream.ExpectComplete();
             }, Materializer);
         }

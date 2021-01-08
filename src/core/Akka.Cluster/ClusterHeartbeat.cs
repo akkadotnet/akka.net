@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartbeat.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,12 +51,17 @@ namespace Akka.Cluster
         private ClusterHeartbeatSenderState _state;
         private readonly ICancelable _heartbeatTask;
 
+        // used for logging warning if actual tick interval is unexpected (e.g. due to starvation)
+        private DateTime _tickTimestamp;
+
         /// <summary>
         /// TBD
         /// </summary>
         public ClusterHeartbeatSender()
         {
             _cluster = Cluster.Get(Context.System);
+            var tickInitialDelay = _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval);
+            _tickTimestamp = DateTime.UtcNow + tickInitialDelay;
 
             // the failureDetector is only updated by this actor, but read from other places
             _failureDetector = _cluster.FailureDetector;
@@ -74,7 +79,7 @@ namespace Akka.Cluster
 
             // start periodic heartbeat to other nodes in cluster
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-                _cluster.Settings.PeriodicTasksInitialDelay.Max(_cluster.Settings.HeartbeatInterval),
+                tickInitialDelay,
                 _cluster.Settings.HeartbeatInterval,
                 Self,
                 new HeartbeatTick(),
@@ -119,7 +124,10 @@ namespace Akka.Cluster
                 Init(state);
                 Become(Active);
             });
-            Receive<HeartbeatTick>(tick => { }); //do nothing
+            Receive<HeartbeatTick>(tick =>
+            {
+                _tickTimestamp = DateTime.UtcNow; // start checks when active
+            }); //do nothing
         }
 
         private void Active()
@@ -198,6 +206,25 @@ namespace Akka.Cluster
                 }
                 HeartbeatReceiver(to.Address).Tell(_selfHeartbeat);
             }
+
+            CheckTickInterval();
+        }
+
+        private void CheckTickInterval()
+        {
+            var now = DateTime.UtcNow;
+            var doubleHeartbeatInterval = _cluster.Settings.HeartbeatInterval + _cluster.Settings.HeartbeatInterval;
+            if (now - _tickTimestamp >= doubleHeartbeatInterval)
+            {
+                _log.Warning(
+                    "Cluster Node [{0}] - Scheduled sending of heartbeat was delayed. " +
+                    "Previous heartbeat was sent [{1}] ms ago, expected interval is [{2}] ms. This may cause failure detection " +
+                    "to mark members as unreachable. The reason can be thread starvation, e.g. by running blocking tasks on the " +
+                    "default dispatcher, CPU overload, or GC.",
+                    _cluster.SelfAddress, (now - _tickTimestamp).TotalMilliseconds, _cluster.Settings.HeartbeatInterval.TotalMilliseconds);
+            }
+            
+            _tickTimestamp = DateTime.UtcNow;
         }
 
         private void DoHeartbeatRsp(UniqueAddress from)
@@ -575,12 +602,12 @@ namespace Akka.Cluster
                 // The reason for not limiting it to strictly monitoredByNrOfMembers is that the leader must
                 // be able to continue its duties (e.g. removal of downed nodes) when many nodes are shutdown
                 // at the same time and nobody in the remaining cluster is monitoring some of the shutdown nodes.
-                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, Tuple<int, ImmutableSortedSet<UniqueAddress>>> take = null;
+                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, (int, ImmutableSortedSet<UniqueAddress>)> take = null;
                 take = (n, iter, acc) =>
                 {
                     if (iter.MoveNext() == false || n == 0)
                     {
-                        return Tuple.Create(n, acc);
+                        return (n, acc);
                     }
                     else
                     {

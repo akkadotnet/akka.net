@@ -1,0 +1,35 @@
+# Release task for PbLib projects
+# See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
+
+pool:
+  vmImage: windows-2019
+  demands: Cmd
+
+trigger: none
+pr: none
+
+schedules:
+- cron: "0 0 * * *"
+  displayName: Daily midnight build
+  branches:
+    include:
+    - dev
+
+variables:
+  - group: nugetKeys #create this group with SECRET variables `nugetKey`
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Use .NET 5 SDK 5.0.101'
+  inputs:
+    version: 5.0.101
+- task: UseDotNet@2
+  displayName: 'Use .NET Core Runtime 3.1.10'
+  inputs:
+    packageType: runtime
+    version: 3.1.10
+- task: BatchScript@1
+  displayName: 'FAKE Build'
+  inputs:
+    filename: build.cmd
+    arguments: 'Nuget nugetprerelease=dev nugetpublishurl=$(nightlyUrl) nugetkey=$(nightlyKey)'

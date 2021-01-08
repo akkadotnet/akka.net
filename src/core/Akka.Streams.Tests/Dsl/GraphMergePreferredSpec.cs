@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMergePreferredSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -68,27 +69,33 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void PreferredMerge_must_eventually_pas_through_all_elements()
+        public void PreferredMerge_must_eventually_pass_through_all_elements_without_corrupting_the_ordering()
         {
-            Func<int, int, Source<int, Task<IEnumerable<int>>>> source = (from, count) =>
-                    Source.From(Enumerable.Range(from, count))
-                        .MapMaterializedValue<Task<IEnumerable<int>>>(_ => null);
+            Source<int, Task<IEnumerable<int>>> Source(int from, int count) => Streams.Dsl.Source
+                .From(Enumerable.Range(from, count))
+                .MapMaterializedValue<Task<IEnumerable<int>>>(_ => null);
 
             var result = RunnableGraph.FromGraph(GraphDsl.Create(Sink.First<IEnumerable<int>>(), (b, sink) =>
             {
                 var merge = b.Add(new MergePreferred<int>(3));
 
-                b.From(source(1,100)).To(merge.Preferred);
+                b.From(Source(1,100)).To(merge.Preferred);
                 b.From(merge.Out).Via(Flow.Create<int>().Grouped(500)).To(sink.Inlet);
-                b.From(source(101, 100)).To(merge.In(0));
-                b.From(source(201, 100)).To(merge.In(1));
-                b.From(source(301, 100)).To(merge.In(2));
+                b.From(Source(101, 100)).To(merge.In(0));
+                b.From(Source(201, 100)).To(merge.In(1));
+                b.From(Source(301, 100)).To(merge.In(2));
 
                 return ClosedShape.Instance;
             })).Run(Materializer);
 
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 400));
+
+            result.Result.Where(i => i <= 100).ShouldOnlyContainInOrder(Enumerable.Range(1, 100));
+            result.Result.Where(i => i > 100 && i <= 200).ShouldOnlyContainInOrder(Enumerable.Range(101, 100));
+            result.Result.Where(i => i > 200 && i <= 300).ShouldOnlyContainInOrder(Enumerable.Range(201, 100));
+            result.Result.Where(i => i > 300 && i <= 400).ShouldOnlyContainInOrder(Enumerable.Range(301, 100));
+
+            result.Result.ShouldBeEquivalentTo(Enumerable.Range(1, 400));
         }
 
         [Fact]

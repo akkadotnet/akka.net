@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteMessageLocalDeliverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ namespace Akka.Remote.Tests
         public void RemoteActorRefProvider_default_address_must_include_adapter_schemes()
         {
             var localAddress = RARP.For(Sys).Provider.DefaultAddress;
-            Assert.True(localAddress.ToString().StartsWith("akka.trttl.gremlin.tcp://"));
+            Assert.StartsWith("akka.trttl.gremlin.tcp://", localAddress.ToString());
         }
 
         [Fact]

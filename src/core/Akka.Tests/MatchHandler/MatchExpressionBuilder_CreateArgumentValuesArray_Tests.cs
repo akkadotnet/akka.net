@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MatchExpressionBuilder_CreateArgumentValuesArray_Tests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,7 +26,7 @@ namespace Akka.Tests.MatchHandler
 
             var result = builder.CreateArgumentValuesArray(emptyArguments);
             Assert.NotNull(result);
-            Assert.Equal(0, result.Length);
+            Assert.Empty(result);
         }
 
 
@@ -39,7 +39,7 @@ namespace Akka.Tests.MatchHandler
 
             var result = builder.CreateArgumentValuesArray(arguments);
             Assert.NotNull(result);
-            Assert.Equal(1, result.Length);
+            Assert.Single(result);
             Assert.Same(argument.Value, result[0]);
         }
 

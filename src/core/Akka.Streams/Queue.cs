@@ -1,13 +1,14 @@
-//-----------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------
 // <copyright file="Queue.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams
 {
@@ -36,8 +37,8 @@ namespace Akka.Streams
         Task<IQueueOfferResult> OfferAsync(T element);
 
         /// <summary>
-        /// Method returns task that completes when stream is completed and fails
-        /// when stream failed.
+        /// Method returns <see cref="Task"/> that will be completed if the stream completes,
+        /// or will be failed when the stage faces an internal failure.
         /// </summary>
         /// <returns>TBD</returns>
         Task WatchCompletionAsync();
@@ -50,15 +51,22 @@ namespace Akka.Streams
     public interface ISourceQueueWithComplete<in T> : ISourceQueue<T>
     {
         /// <summary>
-        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operationâ€™s success.
         /// </summary>
         void Complete();
 
         /// <summary>
-        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operationâ€™s success.
         /// </summary>
         /// <param name="ex">TBD</param>
         void Fail(Exception ex);
+
+        /// <summary>
+        /// Method returns <see cref="Task"/> that will be completed if the stream completes,
+        /// or will be failed when the stage faces an internal failure or the the <see cref="Fail"/> method is invoked.
+        /// </summary>
+        /// <returns>Task</returns>
+        new Task WatchCompletionAsync();
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Ops.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,8 +47,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -477,13 +476,36 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPush()
             {
-                var result = WithSupervision(() => _stage._func(Grab(_stage.In)));
+                Option<object> result;
+                if (_stage._isDefinedFunc is null)
+                {
+                    // Old faulty behaviour, depends on the collector function
+                    // to return null to signal no processing happened.
+                    // Wrap the function to check for null
+                    result = WithSupervision(() =>
+                    {
+                        var r = _stage._func(Grab(_stage.In));
+                        return r != null ? r : (object)NotApplied.Instance;
+                    });
+                }
+                else
+                {
+                    var input = Grab(_stage.In);
+                    result = WithSupervision(() =>
+                        _stage._isDefinedFunc(input) ? _stage._func(input) : (object)NotApplied.Instance);
+                }
+
                 if (result.HasValue)
                 {
-                    if (result.Value.IsDefaultForType())
-                        Pull(_stage.In);
-                    else
-                        Push(_stage.Out, result.Value);
+                    switch (result.Value)
+                    {
+                        case NotApplied _:
+                            Pull(_stage.In);
+                            break;
+                        case TOut r:
+                            Push(_stage.Out, r);
+                            break;
+                    }
                 }
             }
 
@@ -500,19 +522,31 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!HasBeenPulled(_stage.In))
                     Pull(_stage.In);
             }
+
+            private class NotApplied
+            {
+                public static readonly NotApplied Instance = new NotApplied();
+                private NotApplied() {}
+            }
         }
 
         #endregion
 
+        private readonly Func<TIn, bool> _isDefinedFunc = null;
         private readonly Func<TIn, TOut> _func;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="func">TBD</param>
-        public Collect(Func<TIn, TOut> func)
+        [Obsolete("Deprecated. Please use the .ctor(Func, Func) constructor")]
+        public Collect(Func<TIn, TOut> func) : this(null, func)
+        { }
+
+        public Collect(Func<TIn, bool> isDefined, Func<TIn, TOut> collector)
         {
-            _func = func;
+            _func = collector;
+            _isDefinedFunc = isDefined;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
@@ -571,8 +605,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _stage = stage;
 
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -665,8 +698,7 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(SelectError<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush() => Push(_stage.Outlet, Grab(_stage.Inlet));
@@ -713,8 +745,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._count;
 
-                SetHandler(stage.Outlet, this);
-                SetHandler(stage.Inlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush()
@@ -792,8 +823,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _left = stage._count;
 
-                SetHandler(stage.Inlet, this);
-                SetHandler(stage.Outlet, this);
+                SetHandler(stage.Inlet, stage.Outlet, this);
             }
 
             public override void OnPush()
@@ -895,8 +925,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                 };
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1185,8 +1214,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1354,8 +1382,7 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                 });
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1597,8 +1624,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _buffer = new List<T>(stage._count);
                 _left = stage._count;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -1807,8 +1833,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _buffer = ImmutableList<T>.Empty;
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -2069,55 +2094,67 @@ namespace Akka.Streams.Implementation.Fusing
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    /// <typeparam name="TIn">TBD</typeparam>
-    /// <typeparam name="TOut">TBD</typeparam>
     [InternalApi]
-    public sealed class OnCompleted<TIn, TOut> : PushStage<TIn, TOut>
+    public sealed class OnCompleted<T> : GraphStage<FlowShape<T, NotUsed>>
     {
+        #region Logic
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly OnCompleted<T> _stage;
+            private bool _completionSignalled;
+
+            public Logic(OnCompleted<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                SetHandler(stage.In, stage.Out, this);
+            }
+
+            public override void OnPush() => Pull(_stage.In);
+
+            public override void OnPull() => Pull(_stage.In);
+
+            public override void OnUpstreamFinish()
+            {
+                _stage._success();
+                _completionSignalled = true;
+                CompleteStage();
+            }
+
+            public override void OnUpstreamFailure(Exception e)
+            {
+                _stage._failure(e);
+                _completionSignalled = true;
+                FailStage(e);
+            }
+
+            public override void PostStop()
+            {
+                if(!_completionSignalled)
+                    _stage._failure(new AbruptStageTerminationException(this));
+            }
+        }
+
+        #endregion
+
         private readonly Action _success;
         private readonly Action<Exception> _failure;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="success">TBD</param>
-        /// <param name="failure">TBD</param>
         public OnCompleted(Action success, Action<Exception> failure)
         {
             _success = success;
             _failure = failure;
+
+            Shape = new FlowShape<T, NotUsed>(In, Out);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="element">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ISyncDirective OnPush(TIn element, IContext<TOut> context) => context.Pull();
+        public Inlet<T> In { get;  } = new Inlet<T>("OnCompleted.in");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="cause">TBD</param>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ITerminationDirective OnUpstreamFailure(Exception cause, IContext<TOut> context)
-        {
-            _failure(cause);
-            return context.Fail(cause);
-        }
+        public Outlet<NotUsed> Out { get; } = new Outlet<NotUsed>("OnCompleted.out");
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="context">TBD</param>
-        /// <returns>TBD</returns>
-        public override ITerminationDirective OnUpstreamFinish(IContext<TOut> context)
-        {
-            _success();
-            return context.Finish();
-        }
+        public override FlowShape<T, NotUsed> Shape { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
     }
 
     /// <summary>
@@ -2147,8 +2184,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
                 _left = stage._max;
 
-                SetHandler(_shape.Inlet, this);
-                SetHandler(_shape.Outlet, this);
+                SetHandler(_shape.Inlet, _shape.Outlet, this);
             }
 
             public override void OnPush()
@@ -2367,8 +2403,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _stage = stage;
                 _iterator = new IteratorAdapter<TOut>(Enumerable.Empty<TOut>().GetEnumerator());
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -2530,8 +2565,7 @@ namespace Akka.Streams.Implementation.Fusing
 
                 _taskCallback = GetAsyncCallback<Holder<TOut>>(HolderCompleted);
 
-                SetHandler(stage.In, this);
-                SetHandler(stage.Out, this);
+                SetHandler(stage.In, stage.Out, this);
             }
 
             public override void OnPush()
@@ -3021,6 +3055,14 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnUpstreamFinish()
             {
                 _finished = true;
+
+                // Fix for issue #4514
+                // Force check if we have a dangling last element because:
+                // OnTimer may close the group just before OnUpstreamFinish is called
+                // (race condition), dropping the last element in the stream.
+                if (IsAvailable(_stage._in))
+                    NextElement(Grab(_stage._in));
+
                 if (_groupEmitted)
                     CompleteStage();
                 else
@@ -3053,8 +3095,11 @@ namespace Akka.Streams.Implementation.Fusing
                     ScheduleRepeatedly(GroupedWithinTimer, _stage._timeout);
                     CloseGroup();
                 }
-                else
+                // Do not pull if we're finished.
+                else if (!_finished)
+                {
                     Pull(_stage._in);
+                }
             }
 
             private void CloseGroup()
@@ -3068,7 +3113,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _groupEmitted = true;
                 Push(_stage._out, _buffer);
-                _buffer = new List<T>();
+                _buffer = new List<T>(_stage._count);
                 if (!_finished)
                     StartNewGroup();
                 else
@@ -3142,7 +3187,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
-            private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
+            private IBuffer<(long, T)> _buffer; // buffer has pairs timestamp with upstream element
             private readonly int _size;
             private readonly Action _onPushWhenBufferFull;
 
@@ -3191,7 +3236,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private long NextElementWaitTime => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
 
-            public override void PreStart() => _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
+            public override void PreStart() => _buffer = Buffer.Create<(long, T)>(_size, Materializer);
 
             private void CompleteIfReady()
             {
@@ -3219,7 +3264,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void GrabAndPull()
             {
-                _buffer.Enqueue(new Tuple<long, T>(DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
+                _buffer.Enqueue((DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
                 if (PullCondition)
                     Pull(_stage.Inlet);
             }
@@ -3681,8 +3726,7 @@ namespace Akka.Streams.Implementation.Fusing
                 _decider = inheritedAttributes.GetAttribute(new ActorAttributes.SupervisionStrategy(Deciders.StoppingDecider)).Decider;
                 _plainConcat = stage._concatFactory();
 
-                SetHandler(stage._in, this);
-                SetHandler(stage._out, this);
+                SetHandler(stage._in, stage._out, this);
             }
 
             public override void OnPush()

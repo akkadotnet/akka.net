@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PhiAccrualFailureDetector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,11 +81,14 @@ namespace Akka.Remote
         public PhiAccrualFailureDetector(Config config, EventStream ev)
             : this(DefaultClock)
         {
-            _threshold = config.GetDouble("threshold");
-            _maxSampleSize = config.GetInt("max-sample-size");
-            _minStdDeviation = config.GetTimeSpan("min-std-deviation");
-            _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause");
-            _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<PhiAccrualFailureDetector>();
+
+            _threshold = config.GetDouble("threshold", 0);
+            _maxSampleSize = config.GetInt("max-sample-size", 0);
+            _minStdDeviation = config.GetTimeSpan("min-std-deviation", null);
+            _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause", null);
+            _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval", null);
             state = new State(FirstHeartBeat, null);
         }
 

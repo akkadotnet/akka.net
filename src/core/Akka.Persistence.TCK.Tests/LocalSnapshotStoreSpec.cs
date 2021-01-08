@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,11 +24,13 @@ namespace Akka.Persistence.TCK.Tests
                   akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + Guid.NewGuid() + @""""), 
             "LocalSnapshotStoreSpec", output)
         {
-            _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir");
+            _path = Sys.Settings.Config.GetString("akka.persistence.snapshot-store.local.dir", null);
             Sys.CreateStorageLocations(_path);
 
             Initialize();
         }
+
+        protected override bool SupportsSerialization => true;
 
         protected override void Dispose(bool disposing)
         {

@@ -1,12 +1,14 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Sinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -203,16 +205,21 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="TIn">TBD</typeparam>
-    internal sealed class FanoutPublisherSink<TIn> : SinkModule<TIn, IPublisher<TIn>>
+    /// <typeparam name="TStreamBuffer">TBD</typeparam>
+    internal sealed class FanoutPublisherSink<TIn, TStreamBuffer> : SinkModule<TIn, IPublisher<TIn>> where TStreamBuffer : IStreamBuffer<TIn>
     {
+        private readonly Action _onTerminated;
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
-        public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape) : base(shape)
+        /// <param name="onTerminated">TBD</param>
+        public FanoutPublisherSink(Attributes attributes, SinkShape<TIn> shape, Action onTerminated = null) : base(shape)
         {
             Attributes = attributes;
+            _onTerminated = onTerminated;
         }
 
         /// <summary>
@@ -226,7 +233,7 @@ namespace Akka.Streams.Implementation
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
-            => new FanoutPublisherSink<TIn>(attributes, AmendShape(attributes));
+            => new FanoutPublisherSink<TIn, TStreamBuffer>(attributes, AmendShape(attributes), _onTerminated);
 
         /// <summary>
         /// TBD
@@ -234,7 +241,7 @@ namespace Akka.Streams.Implementation
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
         protected override SinkModule<TIn, IPublisher<TIn>> NewInstance(SinkShape<TIn> shape)
-            => new FanoutPublisherSink<TIn>(Attributes, shape);
+            => new FanoutPublisherSink<TIn, TStreamBuffer>(Attributes, shape, _onTerminated);
 
         /// <summary>
         /// TBD
@@ -246,7 +253,7 @@ namespace Akka.Streams.Implementation
         {
             var actorMaterializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = actorMaterializer.EffectiveSettings(Attributes);
-            var impl = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn>.Props(settings));
+            var impl = actorMaterializer.ActorOf(context, FanoutProcessorImpl<TIn, TStreamBuffer>.Props(settings, _onTerminated));
             var fanoutProcessor = new ActorProcessor<TIn, TIn>(impl);
             impl.Tell(new ExposedPublisher(fanoutProcessor));
             // Resolve cyclic dependency with actor. This MUST be the first message no matter what.
@@ -585,6 +592,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly TaskCompletionSource<T> _promise;
             private readonly FirstOrDefaultStage<T> _stage;
+            private bool _completionSignalled;
 
             public Logic(TaskCompletionSource<T> promise, FirstOrDefaultStage<T> stage) : base(stage.Shape)
             {
@@ -596,22 +604,30 @@ namespace Akka.Streams.Implementation
             public override void OnPush()
             {
                 _promise.TrySetResult(Grab(_stage.In));
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFinish()
             {
                 _promise.TrySetResult(default(T));
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _promise.TrySetException(e);
+                _completionSignalled = true;
                 FailStage(e);
             }
 
-
+            public override void PostStop()
+            {
+                if(!_completionSignalled)
+                    _promise.TrySetException(new AbruptStageTerminationException(this));
+            }
+            
             public override void PreStart() => Pull(_stage.In);
         }
 
@@ -662,6 +678,7 @@ namespace Akka.Streams.Implementation
             private readonly SeqStage<T> _stage;
             private readonly TaskCompletionSource<IImmutableList<T>> _promise;
             private IImmutableList<T> _buf = ImmutableList<T>.Empty;
+            private bool _completionSignalled;
 
             public Logic(SeqStage<T> stage, TaskCompletionSource<IImmutableList<T>> promise) : base(stage.Shape)
             {
@@ -680,13 +697,21 @@ namespace Akka.Streams.Implementation
             public override void OnUpstreamFinish()
             {
                 _promise.TrySetResult(_buf);
+                _completionSignalled = true;
                 CompleteStage();
             }
 
             public override void OnUpstreamFailure(Exception e)
             {
                 _promise.TrySetException(e);
+                _completionSignalled = true;
                 FailStage(e);
+            }
+
+            public override void PostStop()
+            {
+                if (!_completionSignalled)
+                    _promise.TrySetException(new AbruptStageTerminationException(this));
             }
 
             public override void PreStart() => Pull(_stage.In);
@@ -1117,5 +1142,98 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <returns>TBD</returns>
         public override string ToString() => "LazySink";
+    }
+
+    internal sealed class ObservableSinkStage<T> : GraphStageWithMaterializedValue<SinkShape<T>, IObservable<T>>
+    {
+        #region internal classes
+
+        private sealed class ObserverDisposable : IDisposable
+        {
+            private readonly ObservableLogic _logic;
+            private readonly IObserver<T> _observer;
+            private readonly AtomicBoolean _disposed = new AtomicBoolean(false);
+
+            public ObserverDisposable(ObservableLogic logic, IObserver<T> observer)
+            {
+                _logic = logic;
+                _observer = observer;
+            }
+
+            public void Dispose() => Dispose(unregister: true);
+
+            public void Dispose(bool unregister)
+            {
+                if (_disposed.CompareAndSet(false, true))
+                {
+                    if (unregister) _logic.Remove(_observer);
+
+                    _observer.OnCompleted();
+                }
+                else
+                {
+                    throw new ObjectDisposedException("ObservableSink subscription has been already disposed.");
+                }
+            }
+        }
+        
+        private sealed class ObservableLogic : GraphStageLogic, IObservable<T>
+        {
+            private readonly ObservableSinkStage<T> _stage;
+            private ImmutableDictionary<IObserver<T>, ObserverDisposable> _observers = ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty;
+
+            public ObservableLogic(ObservableSinkStage<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                SetHandler(stage.Inlet,
+                    onPush: () =>
+                    {
+                        var element = Grab(stage.Inlet);
+                        foreach (var observer in _observers.Keys) observer.OnNext(element);
+
+                        Pull(stage.Inlet);
+                    },
+                    onUpstreamFinish: () =>
+                    {
+                        var old = Interlocked.Exchange(ref _observers, ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty);
+                        foreach (var disposer in old.Values) disposer.Dispose(unregister: false);
+                    },
+                    onUpstreamFailure: e =>
+                    {
+                        foreach (var observer in _observers.Keys) observer.OnError(e);
+                        _observers = ImmutableDictionary<IObserver<T>, ObserverDisposable>.Empty;
+                    });
+            }
+
+            public override void PreStart()
+            {
+                base.PreStart();
+                Pull(_stage.Inlet);
+            }
+
+            public void Remove(IObserver<T> observer)
+            {
+                ImmutableInterlocked.TryRemove(ref _observers, observer, out var _);
+            }
+
+            public IDisposable Subscribe(IObserver<T> observer) => 
+                ImmutableInterlocked.GetOrAdd(ref _observers, observer, new ObserverDisposable(this, observer));
+        }
+
+        #endregion
+        
+
+        public ObservableSinkStage()
+        {
+            Shape = new SinkShape<T>(Inlet);
+        }
+
+        public Inlet<T> Inlet { get; } = new Inlet<T>("observable.in");
+        public override SinkShape<T> Shape { get; }
+        public override ILogicAndMaterializedValue<IObservable<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var observable = new ObservableLogic(this);
+            return new LogicAndMaterializedValue<IObservable<T>>(observable, observable);
+        }
     }
 }

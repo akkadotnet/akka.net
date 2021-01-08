@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.FaultHandling.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,38 +50,38 @@ namespace Akka.Actor
             {
                 _systemImpl.EventStream.Publish(new Error(null, _self.Path.ToString(), GetType(), "Changing Recreate into Create after " + cause));
                 FaultCreate();
-                return;
-            }
-            if (IsNormal)
+            } 
+            else if (IsNormal)
             {
                 var failedActor = _actor;
 
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(_self.Path.ToString(), failedActor.GetType(), "Restarting"));
 
-                var optionalMessage = CurrentMessage;
-
-                try
+                if(!(failedActor is null))
                 {
-                    // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
-                    
-                    failedActor.AroundPreRestart(cause, optionalMessage);
-
-                    // run actor pre-incarnation plugin pipeline
-                    var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
-                    pipeline.BeforeActorIncarnated(failedActor, this);
-                }
-                catch (Exception e)
-                {
-                    HandleNonFatalOrInterruptedException(() =>
+                    var optionalMessage = CurrentMessage;
+                    try
                     {
-                        var ex = new PreRestartException(_self, e, cause, optionalMessage);
-                        Publish(new Error(ex, _self.Path.ToString(), failedActor.GetType(), e.Message));
-                    });
-                }
-                finally
-                {
-                    ClearActor(_actor);
+                        // if the actor fails in preRestart, we can do nothing but log it: it’s best-effort
+                        failedActor.AroundPreRestart(cause, optionalMessage);
+
+                        // run actor pre-incarnation plugin pipeline
+                        var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(failedActor.GetType());
+                        pipeline.BeforeActorIncarnated(failedActor, this);
+                    }
+                    catch (Exception e)
+                    {
+                        HandleNonFatalOrInterruptedException(() =>
+                        {
+                            var ex = new PreRestartException(_self, e, cause, optionalMessage);
+                            Publish(new Error(ex, _self.Path.ToString(), failedActor.GetType(), e.Message));
+                        });
+                    }
+                    finally
+                    {
+                        ClearActor(_actor);
+                    }
                 }
 
                 global::System.Diagnostics.Debug.Assert(Mailbox.IsSuspended(), "Mailbox must be suspended during restart, status=" + Mailbox.CurrentStatus());
@@ -240,9 +240,10 @@ namespace Akka.Actor
                     {
                         SetFailed(_self);
                     }
-                    SuspendChildren(childrenNotToSuspend == null ? null : childrenNotToSuspend.ToList());
+                    SuspendChildren(childrenNotToSuspend?.ToList());
 
                     //Tell supervisor
+                    // ➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅
                     Parent.SendSystemMessage(new Failed(_self, cause, _self.Path.Uid));
                 }
                 catch (Exception e)
@@ -298,26 +299,30 @@ namespace Akka.Actor
             }
             finally
             {
-                try{ Dispatcher.Detach(this); }
+                try { Dispatcher.Detach(this); }
                 finally
                 {
                     try { Parent.SendSystemMessage(new DeathWatchNotification(_self, existenceConfirmed: true, addressTerminated: false)); }
                     finally
                     {
-                        try { TellWatchersWeDied(); }
+                        try { StopFunctionRefs(); }
                         finally
                         {
-                            try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
+                            try { TellWatchersWeDied(); }
                             finally
                             {
-                                if (System.Settings.DebugLifecycle)
-                                    Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
+                                try { UnwatchWatchedActors(a); } // stay here as we expect an emergency stop from HandleInvokeFailure
+                                finally
+                                {
+                                    if (System.Settings.DebugLifecycle)
+                                        Publish(new Debug(_self.Path.ToString(), ActorType, "Stopped"));
 
-                                ClearActor(a);
-                                ClearActorCell();
+                                    ClearActor(a);
+                                    ClearActorCell();
 
-                                _actor = null;
+                                    _actor = null;
 
+                                }
                             }
                         }
                     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentEventsByTagSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 using static Akka.Persistence.Query.Offset;
@@ -24,7 +25,7 @@ namespace Akka.Persistence.TCK.Query
         protected IReadJournal ReadJournal { get; set; }
 
         protected CurrentEventsByTagSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config, actorSystemName, output)
+            : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -95,6 +96,7 @@ namespace Akka.Persistence.TCK.Query
             probe.Request(2).ExpectComplete();
         }
 
+        // Unit test failed because of time-out but passed when the delays were raised to 300
         [Fact]
         public virtual void ReadJournal_query_CurrentEventsByTag_should_not_see_new_events_after_complete()
         {
@@ -156,6 +158,52 @@ namespace Akka.Persistence.TCK.Query
             // note that banana is not included, since exclusive offset
             probe2.ExpectNext<EventEnvelope>(p => p.PersistenceId == "b" && p.SequenceNr == 2L && p.Event.Equals("a green leaf"));
             probe2.Cancel();
+        }
+
+        [Fact]
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_see_all_150_events()
+        {
+            var queries = ReadJournal as ICurrentEventsByTagQuery;
+            var a = Sys.ActorOf(Query.TestActor.Props("a"));
+
+            for (int i = 0; i < 150; ++i) 
+            {
+                a.Tell("a green apple");
+                ExpectMsg("a green apple-done");
+            }
+
+            var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
+            var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(150);
+            for (int i = 0; i < 150; ++i)
+            {
+                probe.ExpectNext<EventEnvelope>(p => 
+                    p.PersistenceId == "a" && p.SequenceNr == (i + 1) && p.Event.Equals("a green apple"));
+            }
+
+            probe.ExpectComplete();
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+        }
+        
+        [Fact]
+        public void ReadJournal_query_CurrentEventsByTag_should_include_timestamp_in_EventEnvelope()
+        {
+            var queries = ReadJournal as ICurrentEventsByTagQuery;
+            var a = Sys.ActorOf(Query.TestActor.Props("testTimestamp"));
+            
+            a.Tell("a green apple");
+            ExpectMsg("a green apple-done");
+            a.Tell("a black car");
+            ExpectMsg("a black car-done");
+            a.Tell("a green banana");
+            ExpectMsg("a green banana-done");
+
+            var greenSrc = queries.CurrentEventsByTag("green", offset: Sequence(0L));
+            var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(2);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.Cancel();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InterlockedSpinTests.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,12 +88,12 @@ namespace Akka.Tests.Util.Internal
             //  Test that sharedVariable="updated"												 
             //  Test that updateWhenSignaled was called twice
 
-            Func<string, Tuple<bool, string, string>> updateWhenSignaled = i =>
+            Func<string, (bool, string, string)> updateWhenSignaled = i =>
             {
                 numberOfCallsToUpdateWhenSignaled++;
                 hasEnteredUpdateMethod.Set();	//Signal THREAD 1 to update sharedVariable
                 okToContinue.WaitOne(TimeSpan.FromSeconds(2));	//Wait for THREAD 1
-                return Tuple.Create(true, "updated", "returnValue");
+                return (true, "updated", "returnValue");
             };
             string result;
             var task = Task.Run(() => { result= InterlockedSpin.ConditionallySwap(ref sharedVariable, updateWhenSignaled); });
@@ -136,13 +136,13 @@ namespace Akka.Tests.Util.Internal
             //  Test that updateWhenSignaled was called twice
             //  Test that return from updateWhenSignaled is "break"
 
-            Func<string, Tuple<bool, string, string>> updateWhenSignaled = s =>
+            Func<string, (bool, string, string)> updateWhenSignaled = s =>
             {
                 numberOfCallsToUpdateWhenSignaled++;
                 hasEnteredUpdateMethod.Set();	//Signal to start-thread that we have entered the update method (it will chang
                 okToContinue.WaitOne(TimeSpan.FromSeconds(2));	//Wait to be signalled
                 var shouldUpdate = s == "";
-                return Tuple.Create(shouldUpdate, "updated", shouldUpdate ? "update" : "break");
+                return (shouldUpdate, "updated", shouldUpdate ? "update" : "break");
             };
             string result = "";
             var task = Task.Run(() => { result = InterlockedSpin.ConditionallySwap(ref sharedVariable, updateWhenSignaled); });

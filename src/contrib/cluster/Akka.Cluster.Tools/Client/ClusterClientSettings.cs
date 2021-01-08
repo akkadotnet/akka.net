@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,8 +31,8 @@ namespace Akka.Cluster.Tools.Client
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client");
-            if (config == null)
-                throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterClientSettings>("akka.cluster.client");//($"Failed to create {nameof(ClusterClientSettings)}: Actor system [{system.Name}] doesn't have `akka.cluster.client` config set up");
 
             return Create(config);
         }
@@ -44,11 +44,18 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         public static ClusterClientSettings Create(Config config)
         {
-            var initialContacts = config.GetStringList("initial-contacts").Select(ActorPath.Parse).ToImmutableSortedSet();
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterClientSettings>();
 
-            TimeSpan? reconnectTimeout = config.GetString("reconnect-timeout").Equals("off")
-                ? null
-                : (TimeSpan?)config.GetTimeSpan("reconnect-timeout");
+            var initialContacts = config.GetStringList("initial-contacts", new string[] { }).Select(ActorPath.Parse).ToImmutableSortedSet();
+
+            var useReconnect = config.GetString("reconnect-timeout", "").ToLowerInvariant();
+            TimeSpan? reconnectTimeout = 
+                useReconnect.Equals("off") ||
+                useReconnect.Equals("false") ||
+                useReconnect.Equals("no") ? 
+                    null : 
+                    (TimeSpan?)config.GetTimeSpan("reconnect-timeout");
 
             return new ClusterClientSettings(initialContacts,
                 config.GetTimeSpan("establishing-get-contacts-interval"),
@@ -211,7 +218,7 @@ namespace Akka.Cluster.Tools.Client
             TimeSpan? reconnectTimeout = null)
         {
             return new ClusterClientSettings(
-                initialContacts,
+                initialContacts ?? InitialContacts,
                 establishingGetContactsInterval ?? EstablishingGetContactsInterval,
                 refreshContactsInterval ?? RefreshContactsInterval,
                 heartbeatInterval ?? HeartbeatInterval,

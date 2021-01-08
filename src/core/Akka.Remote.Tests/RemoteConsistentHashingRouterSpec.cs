@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteConsistentHashingRouterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,6 @@ using Xunit;
 
 namespace Akka.Remote.Tests
 {
-
     public class RemoteConsistentHashingRouterSpec : AkkaSpec
     {
 
@@ -45,6 +44,44 @@ namespace Akka.Remote.Tests
             var result2 = keys.Select(k => consistentHash2.NodeFor(k).Routee);
             Assert.Equal(result2,result1);
         }
+
+        /// <summary>
+        /// This test creates two nodes each with a local routee to themselves and a remote routee to the other node.
+        /// When using ToString on ConsistentRoutee the local and remote routees are treated differently.
+        /// This test ensures the two are hashed the same.
+        /// </summary>
+        [Fact]
+        public void ConsistentHashingGroup_must_use_same_hash_ring_independent_of_local_and_remote_nodes()
+        {
+            var a1 = new Address("akka.tcp", "RemoteConsistentHashingRouterSpec-1", "client1", 2552);
+            var a2 = new Address("akka.tcp", "RemoteConsistentHashingRouterSpec-1", "client2", 2552);
+            var localActor = Sys.ActorOf(Props.Empty, "a");
+
+            var s1 = new ActorRefRoutee(localActor);
+            var s2 = new ActorSelectionRoutee(Sys.ActorSelection("akka.tcp://RemoteConsistentHashingRouterSpec-1@client2:2552/user/a"));
+            var nodes1 = new List<ConsistentRoutee>(new[] { new ConsistentRoutee(s1, a1), new ConsistentRoutee(s2, a1) });
+
+            var s4 = new ActorSelectionRoutee(Sys.ActorSelection("akka.tcp://RemoteConsistentHashingRouterSpec-1@client1:2552/user/a"));
+            var s5 = new ActorRefRoutee(localActor);
+
+            var nodes2 = new List<ConsistentRoutee>(new[] { new ConsistentRoutee(s5, a2), new ConsistentRoutee(s4, a2) });
+
+            var consistentHash1 = ConsistentHash.Create(nodes1, 10);
+            var consistentHash2 = ConsistentHash.Create(nodes2, 10);
+            var keys = new List<string>(new[] { "A", "B", "C", "D", "E", "F", "G" });
+
+            var result1 = keys
+                .Select(k => consistentHash1.NodeFor(k))
+                .Select(routee => routee.ToString())
+                .ToArray();
+
+            var result2 = keys
+                .Select(k => consistentHash2.NodeFor(k))
+                .Select(routee => routee.ToString())
+                .ToArray();
+
+            result1
+                .ShouldOnlyContainInOrder(result2);
+        }
     }
 }
-

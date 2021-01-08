@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -17,6 +18,8 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
+using Akka.Util;
+using Akka.Util.Extensions;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
 
@@ -161,6 +164,49 @@ namespace Akka.Streams.Dsl
         public Source<TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         /// <summary>
+        /// Use the `ask` pattern to send a request-reply message to the target <paramref name="actorRef"/>.
+        /// If any of the asks times out it will fail the stream with a <see cref="AskTimeoutException"/>.
+        /// 
+        /// Parallelism limits the number of how many asks can be "in flight" at the same time.
+        /// Please note that the elements emitted by this operator are in-order with regards to the asks being issued
+        /// (i.e. same behaviour as <see cref="SourceOperations.SelectAsync{TIn,TOut,TMat}"/>).
+        /// 
+        /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated,
+        /// or with an <see cref="TimeoutException"/> in case the ask exceeds the timeout passed in.
+        /// 
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// 
+        /// '''Emits when''' the futures (in submission order) created by the ask pattern internally are completed. 
+        /// '''Backpressures when''' the number of futures reaches the configured parallelism and the downstream backpressures. 
+        /// '''Completes when''' upstream completes and all futures have been completed and all elements have been emitted. 
+        /// '''Fails when''' the passed in actor terminates, or a timeout is exceeded in any of the asks performed. 
+        /// '''Cancels when''' downstream cancels.
+        /// </summary>
+        public Source<TOut2, TMat> Ask<TOut2>(IActorRef actorRef, TimeSpan timeout, int parallelism = 2)
+        {
+            // I know this is not a place for it, but since Ask<T> generic param must be supplied, it's better
+            // if it remain alone in generic params list (no need to provide types that will be infered)
+            var askFlow = Flow.Create<TOut>()
+                .Watch(actorRef)
+                .SelectAsync(parallelism, async e => {
+                    var reply = await actorRef.Ask(e, timeout: timeout);
+                    switch (reply)
+                    {
+                        case TOut2 a: return a;
+                        case Status.Success s when s.Status is TOut2 a: return a;
+                        case Status.Failure f:
+                            ExceptionDispatchInfo.Capture(f.Cause).Throw();
+                            return default(TOut2);
+                        default:
+                            throw new InvalidOperationException($"Expected to receive response of type {nameof(TOut2)}, but got: {reply}");
+                    }
+                })
+                .Named("ask");
+
+            return ViaMaterialized(askFlow, Keep.Left);
+        }
+
+        /// <summary>
         /// Transform this <see cref="IFlow{T,TMat}"/> by appending the given processing steps.
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
@@ -233,6 +279,18 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Source<TOut, TMat2> MapMaterializedValue<TMat2>(Func<TMat, TMat2> mapFunc)
             => new Source<TOut, TMat2>(Module.TransformMaterializedValue(mapFunc));
+
+        /// <summary>
+        ///  Materializes this Source immediately.
+        /// </summary>
+        /// <param name="materializer">The materializer.</param>
+        /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
+        ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
+        public (TMat, Source<TOut, NotUsed>) PreMaterialize(IMaterializer materializer)
+        {
+            var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
+            return (tup.Item1, Source.FromPublisher(tup.Item2));
+        }
 
         /// <summary>
         /// Connect this <see cref="Source{TOut,TMat}"/> to a <see cref="Sink{TIn,TMat}"/> and run it. The returned value is the materialized value
@@ -399,7 +457,7 @@ namespace Akka.Streams.Dsl
         /// 
         /// Start a new <see cref="Source{TOut,TMat}"/> from the given function that produces an <see cref="IEnumerable{T}"/>.
         /// The produced stream of elements will continue until the enumerator runs empty
-        /// or fails during evaluation of the <see cref="IEnumerator{T}.MoveNext"/> method.
+        /// or fails during evaluation of the <see cref="System.Collections.IEnumerator.MoveNext">IEnumerator&lt;T&gt;.MoveNext</see> method.
         /// Elements are pulled out of the enumerator in accordance with the demand coming
         /// from the downstream transformation steps.
         /// </summary>
@@ -493,8 +551,8 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> Repeat<T>(T element)
         {
-            var next = new Tuple<T, T>(element, element);
-            return Unfold(element, _ => next).WithAttributes(DefaultAttributes.Repeat);
+            var next = (element, element);
+            return Unfold(element, _ => next.AsOption()).WithAttributes(DefaultAttributes.Repeat);
         }
 
         /// <summary>
@@ -515,7 +573,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Option<(TState, TElem)>> unfold)
             => FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
 
         /// <summary>
@@ -538,7 +596,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfoldAsync">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Option<(TState, TElem)>>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
         /// <summary>
@@ -557,25 +615,16 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TElem">TBD</typeparam>
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
-        /// <exception cref="NotImplementedException">TBD</exception>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
-        {
-            throw new NotImplementedException();
-        }
+        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, (TState, TElem)> unfold)
+            => FromGraph(new UnfoldInfinite<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.UnfoldInf);
 
         /// <summary>
         /// A <see cref="Source{TOut,TMat}"/> with no elements, i.e. an empty stream that is completed immediately for every connected <see cref="Sink{TIn,TMat}"/>.
         /// </summary> 
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> Empty<T>()
-        {
-            return new Source<T, NotUsed>(new PublisherSource<T>(
-                EmptyPublisher<T>.Instance,
-                DefaultAttributes.EmptySource,
-                Shape<T>("EmptySource")));
-        }
+        public static Source<T, NotUsed> Empty<T>() => FromGraph(new EmptySource<T>());
 
         /// <summary>
         /// Create a <see cref="Source{TOut,TMat}"/> which materializes a <see cref="TaskCompletionSource{TResult}"/> which controls what element
@@ -719,6 +768,29 @@ namespace Akka.Streams.Dsl
                 return new SourceShape<TOut2>(c.Out);
             }));
 
+        /// <summary>
+        /// Combines two sources with fan-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/> with a materialized value.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat1">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMatOut">TBD</typeparam>
+        /// <param name="first">TBD</param>
+        /// <param name="second">TBD</param>
+        /// <param name="strategy">TBD</param>
+        /// <param name="combineMaterializers">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(Source<T, TMat1> first, Source<T, TMat2> second, Func<int, IGraph<UniformFanInShape<T, TOut2>, NotUsed>> strategy, Func<TMat1, TMat2, TMatOut> combineMaterializers)
+        {
+            var secondPartiallyCombined = GraphDsl.Create(second, (b, secondShape) =>
+            {
+                var c = b.Add(strategy(2));
+                b.From(secondShape).To(c.In(1));
+                return new FlowShape<T, TOut2>(c.In(0), c.Out);
+            });
+            return first.ViaMaterialized(secondPartiallyCombined, combineMaterializers);
+        }
 
         /// <summary>
         /// Combines the elements of multiple streams into a stream of lists.
@@ -762,13 +834,13 @@ namespace Akka.Streams.Dsl
         /// there is no space available in the buffer.
         /// 
         /// Acknowledgement mechanism is available.
-        /// <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> returns <see cref="Task"/>
+        /// <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> returns <see cref="Task"/>
         /// which completes with <see cref="QueueOfferResult.Enqueued"/> if element was added to buffer or sent downstream.
         /// It completes with <see cref="QueueOfferResult.Dropped"/> if element was dropped.
         /// Can also complete with <see cref="QueueOfferResult.Failure"/> - when stream failed
         /// or <see cref="QueueOfferResult.QueueClosed"/> when downstream is completed.
         /// 
-        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueueWithComplete{T}.OfferAsync"/> until buffer is full.
+        /// The strategy <see cref="OverflowStrategy.Backpressure"/> will not complete <see cref="ISourceQueue{T}.OfferAsync">ISourceQueueWithComplete&lt;T&gt;.OfferAsync</see> when buffer is full.
         /// 
         /// The buffer can be disabled by using <paramref name="bufferSize"/> of 0 and then received messages will wait
         /// for downstream demand unless there is another message waiting for downstream demand, in that case
@@ -791,7 +863,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
         /// Interaction with resource happens in a blocking way.
-        ///
+        /// <para>
         /// Example:
         /// {{{
         /// Source.unfoldResource(
@@ -799,15 +871,22 @@ namespace Akka.Streams.Dsl
         ///   reader => Option(reader.readLine()),
         ///   reader => reader.close())
         /// }}}
-        ///
+        /// </para>
+        /// <para>
         /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function. All exceptions thrown by <paramref name="create"/>
         /// or <paramref name="close"/> will fail the stream.
-        ///
+        /// </para>
+        /// <para>
         /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create blocking IO again. Default strategy is <see cref="Supervision.Directive.Stop"/> which means
         /// that stream will be terminated on error in `read` function by default.
-        ///
+        /// </para>
+        /// <para>
         /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
         /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TSource">TBD</typeparam>
@@ -823,17 +902,25 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// <para>
         /// Start a new <see cref="Source{TOut,TMat}"/> from some resource which can be opened, read and closed.
         /// It's similar to <see cref="UnfoldResource{T,TSource}"/> but takes functions that return <see cref="Task"/>s instead of plain values.
-        ///
+        /// </para>
+        /// <para>
         /// You can use the supervision strategy to handle exceptions for <paramref name="read"/> function or failures of produced <see cref="Task"/>s.
         /// All exceptions thrown by <paramref name="create"/> or <paramref name="close"/> as well as fails of returned futures will fail the stream.
-        ///
+        /// </para>
+        /// <para>
         /// <see cref="Supervision.Directive.Restart"/> supervision strategy will close and create resource .Default strategy is <see cref="Supervision.Directive.Stop"/> which means
         /// that stream will be terminated on error in <paramref name="read"/> function (or task) by default.
-        ///
+        /// </para>
+        /// <para>
         /// You can configure the default dispatcher for this Source by changing the `akka.stream.blocking-io-dispatcher` or
         /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
+        /// </para>
+        /// <para>
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// </para>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <typeparam name="TSource">TBD</typeparam>
@@ -849,7 +936,9 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event. In case when event will be triggered faster, than a downstream is able 
+        /// to consume incoming events, a buffering will occur. It can be configured via optional <paramref name="maxBufferCapacity"/> and 
+        /// <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="TDelegate">Delegate type used to attach current source.</typeparam>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
@@ -866,11 +955,14 @@ namespace Akka.Streams.Dsl
             int maxBufferCapacity = 128,
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
-            return FromGraph(new EventSourceStage<TDelegate, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            var wrapper = new EventWrapper<TDelegate, T>(addHandler, removeHandler, conversion);
+            return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
         }
 
         /// <summary>
-        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event.
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to a .NET event. In case when event will be triggered faster, than a downstream is able 
+        /// to consume incoming events, a buffering will occur. It can be configured via optional <paramref name="maxBufferCapacity"/> and 
+        /// <paramref name="overflowStrategy"/> parameters.
         /// </summary>
         /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
         /// <param name="addHandler">Action used to attach the given event handler to the underlying .NET event.</param>
@@ -885,7 +977,26 @@ namespace Akka.Streams.Dsl
             OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
         {
             Func<Action<T>, EventHandler<T>> conversion = onEvent => (sender, e) => onEvent(e);
-            return FromGraph(new EventSourceStage<EventHandler<T>, T>(addHandler, removeHandler, conversion, maxBufferCapacity, overflowStrategy));
+            var wrapper = new EventWrapper<EventHandler<T>, T>(addHandler, removeHandler, conversion);
+            return FromGraph(new ObservableSourceStage<T>(wrapper, maxBufferCapacity, overflowStrategy));
+        }
+
+        /// <summary>
+        /// Start a new <see cref="Source{TOut,TMat}"/> attached to an existing <see cref="IObservable{T}"/>. In case when upstream (an <paramref name="observable"/>)
+        /// is producing events in a faster pace, than downstream is able to consume them, a buffering will occur. It can be configured via optional 
+        /// <paramref name="maxBufferCapacity"/> and <paramref name="overflowStrategy"/> parameters.
+        /// </summary>
+        /// <typeparam name="T">Type of the event args produced as source events.</typeparam>
+        /// <param name="observable">An <see cref="IObservable{T}"/> to which current source will be subscribed.</param>
+        /// <param name="maxBufferCapacity">Maximum size of the buffer, used in situation when amount of emitted events is higher than current processing capabilities of the downstream.</param>
+        /// <param name="overflowStrategy">Overflow strategy used, when buffer (size specified by <paramref name="maxBufferCapacity"/>) has been overflown.</param>
+        /// <returns></returns>
+        public static Source<T, NotUsed> FromObservable<T>(
+            IObservable<T> observable,
+            int maxBufferCapacity = 128,
+            OverflowStrategy overflowStrategy = OverflowStrategy.DropHead)
+        {
+            return FromGraph(new ObservableSourceStage<T>(observable, maxBufferCapacity, overflowStrategy));
         }
     }
 }

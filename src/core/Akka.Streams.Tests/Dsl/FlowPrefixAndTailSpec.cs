@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowPrefixAndTailSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,8 +35,8 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly TestException TestException = new TestException("test");
 
         private static
-            Sink<Tuple<IImmutableList<int>, Source<int, NotUsed>>, Task<Tuple<IImmutableList<int>, Source<int, NotUsed>>>>
-            NewHeadSink => Sink.First<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
+            Sink<(IImmutableList<int>, Source<int, NotUsed>), Task<(IImmutableList<int>, Source<int, NotUsed>)>>
+            NewHeadSink => Sink.First<(IImmutableList<int>, Source<int, NotUsed>)>();
 
 
         [Fact]
@@ -237,7 +237,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
-                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
+                var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
@@ -263,7 +263,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
-                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
+                var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
@@ -297,7 +297,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
-                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
+                var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(3)
@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var publisher = this.CreateManualPublisherProbe<int>();
-                var subscriber = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
+                var subscriber = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
                 Source.FromPublisher(publisher)
                     .PrefixAndTail(1)
@@ -357,7 +357,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var up = this.CreateManualPublisherProbe<int>();
-                var down = this.CreateManualSubscriberProbe<Tuple<IImmutableList<int>, Source<int, NotUsed>>>();
+                var down = this.CreateManualSubscriberProbe<(IImmutableList<int>, Source<int, NotUsed>)>();
 
                 var flowSubscriber = Source.AsSubscriber<int>()
                     .PrefixAndTail(1)
@@ -381,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
             var f =
                 Source.FromPublisher(pub)
                     .PrefixAndTail(1)
-                    .RunWith(Sink.First<Tuple<IImmutableList<int>, Source<int, NotUsed>>>(), Materializer);
+                    .RunWith(Sink.First<(IImmutableList<int>, Source<int, NotUsed>)>(), Materializer);
             var s = pub.ExpectSubscription();
             s.SendNext(0);
 

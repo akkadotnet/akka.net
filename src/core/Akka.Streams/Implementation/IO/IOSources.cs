@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="IOSources.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -160,7 +160,12 @@ namespace Akka.Streams.Implementation.IO
             {
                 // can throw, i.e. FileNotFound
                 var inputStream = _createInputStream();
-                var props = InputStreamPublisher.Props(inputStream, ioResultPromise, _chunkSize);
+                var props = InputStreamPublisher
+                    .Props(inputStream, ioResultPromise, _chunkSize)
+                    .WithDispatcher(context
+                        .EffectiveAttributes
+                        .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
+                        .Name);
                 var actorRef = materializer.ActorOf(context, props);
                 pub = new ActorPublisherImpl<ByteString>(actorRef);
             }

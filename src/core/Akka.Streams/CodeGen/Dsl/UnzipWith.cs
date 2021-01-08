@@ -1,10 +1,10 @@
-﻿// --- auto generated: 1/12/2017 4:27:43 AM --- //
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="UnzipWith.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using Akka.Streams.Stage;
 
@@ -32,14 +32,14 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TIn">TBD</typeparam>
     /// <typeparam name="TOut0">TBD</typeparam>
     /// <typeparam name="TOut1">TBD</typeparam>
-    public abstract class UnzipWithCreator<TIn, TOut0, TOut1> : IUnzipWithCreator<TIn, Tuple<TOut0, TOut1>, UnzipWith<TIn, TOut0, TOut1>>
+    public abstract class UnzipWithCreator<TIn, TOut0, TOut1> : IUnzipWithCreator<TIn, (TOut0, TOut1), UnzipWith<TIn, TOut0, TOut1>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, TOut0, TOut1> Create(Func<TIn, Tuple<TOut0, TOut1>> unzipper)
+        public virtual UnzipWith<TIn, TOut0, TOut1> Create(Func<TIn, (TOut0, TOut1)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1>(unzipper);
         }
@@ -51,14 +51,14 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TOut0">TBD</typeparam>
     /// <typeparam name="TOut1">TBD</typeparam>
     /// <typeparam name="TOut2">TBD</typeparam>
-    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2> : IUnzipWithCreator<TIn, Tuple<TOut0, TOut1, TOut2>, UnzipWith<TIn, TOut0, TOut1, TOut2>>
+    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2), UnzipWith<TIn, TOut0, TOut1, TOut2>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2> Create(Func<TIn, Tuple<TOut0, TOut1, TOut2>> unzipper)
+        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2> Create(Func<TIn, (TOut0, TOut1, TOut2)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2>(unzipper);
         }
@@ -71,14 +71,14 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TOut1">TBD</typeparam>
     /// <typeparam name="TOut2">TBD</typeparam>
     /// <typeparam name="TOut3">TBD</typeparam>
-    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3> : IUnzipWithCreator<TIn, Tuple<TOut0, TOut1, TOut2, TOut3>, UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3>>
+    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3> Create(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3>> unzipper)
+        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3>(unzipper);
         }
@@ -92,14 +92,14 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TOut2">TBD</typeparam>
     /// <typeparam name="TOut3">TBD</typeparam>
     /// <typeparam name="TOut4">TBD</typeparam>
-    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> : IUnzipWithCreator<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4>, UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>>
+    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> Create(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4>> unzipper)
+        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>(unzipper);
         }
@@ -114,14 +114,14 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TOut3">TBD</typeparam>
     /// <typeparam name="TOut4">TBD</typeparam>
     /// <typeparam name="TOut5">TBD</typeparam>
-    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> : IUnzipWithCreator<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>, UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>>
+    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> Create(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>> unzipper)
+        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>(unzipper);
         }
@@ -137,14 +137,14 @@ namespace Akka.Streams.Dsl
     /// <typeparam name="TOut4">TBD</typeparam>
     /// <typeparam name="TOut5">TBD</typeparam>
     /// <typeparam name="TOut6">TBD</typeparam>
-    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> : IUnzipWithCreator<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>, UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>>
+    public abstract class UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> : IUnzipWithCreator<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6), UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>>
     {
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
         /// <returns>TBD</returns>
-        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Create(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>> unzipper)
+        public virtual UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Create(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6)> unzipper)
         {
             return new UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>(unzipper);
         }
@@ -164,7 +164,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, TOut0, TOut1> Apply<TIn, TOut0, TOut1>(Func<TIn, Tuple<TOut0, TOut1>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1> creator)
+        public static UnzipWith<TIn, TOut0, TOut1> Apply<TIn, TOut0, TOut1>(Func<TIn, (TOut0, TOut1)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -178,7 +178,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, TOut0, TOut1, TOut2> Apply<TIn, TOut0, TOut1, TOut2>(Func<TIn, Tuple<TOut0, TOut1, TOut2>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2> creator)
+        public static UnzipWith<TIn, TOut0, TOut1, TOut2> Apply<TIn, TOut0, TOut1, TOut2>(Func<TIn, (TOut0, TOut1, TOut2)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -193,7 +193,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3> Apply<TIn, TOut0, TOut1, TOut2, TOut3>(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3> creator)
+        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3> Apply<TIn, TOut0, TOut1, TOut2, TOut3>(Func<TIn, (TOut0, TOut1, TOut2, TOut3)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -209,7 +209,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> creator)
+        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4>(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -226,7 +226,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> creator)
+        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5>(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -244,7 +244,7 @@ namespace Akka.Streams.Dsl
         /// <param name="unzipper">TBD</param>
         /// <param name="creator">TBD</param>
         /// <returns>TBD</returns>
-        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>(Func<TIn, Tuple<TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> creator)
+        public static UnzipWith<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> Apply<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6>(Func<TIn, (TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6)> unzipper, UnzipWithCreator<TIn, TOut0, TOut1, TOut2, TOut3, TOut4, TOut5, TOut6> creator)
         {
             return creator.Create(unzipper);
         }	
@@ -323,12 +323,12 @@ namespace Akka.Streams.Dsl
             }
         }		
 
-        private readonly Func<TIn, Tuple<T0, T1>> _unzipper;
+        private readonly Func<TIn, (T0, T1)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<T0, T1>> unzipper)
+        public UnzipWith(Func<TIn, (T0, T1)> unzipper)
         {
             _unzipper = unzipper;
 
@@ -467,12 +467,12 @@ namespace Akka.Streams.Dsl
             }
         }		
 
-        private readonly Func<TIn, Tuple<T0, T1, T2>> _unzipper;
+        private readonly Func<TIn, (T0, T1, T2)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<T0, T1, T2>> unzipper)
+        public UnzipWith(Func<TIn, (T0, T1, T2)> unzipper)
         {
             _unzipper = unzipper;
 
@@ -638,12 +638,12 @@ namespace Akka.Streams.Dsl
             }
         }		
 
-        private readonly Func<TIn, Tuple<T0, T1, T2, T3>> _unzipper;
+        private readonly Func<TIn, (T0, T1, T2, T3)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<T0, T1, T2, T3>> unzipper)
+        public UnzipWith(Func<TIn, (T0, T1, T2, T3)> unzipper)
         {
             _unzipper = unzipper;
 
@@ -836,12 +836,12 @@ namespace Akka.Streams.Dsl
             }
         }		
 
-        private readonly Func<TIn, Tuple<T0, T1, T2, T3, T4>> _unzipper;
+        private readonly Func<TIn, (T0, T1, T2, T3, T4)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<T0, T1, T2, T3, T4>> unzipper)
+        public UnzipWith(Func<TIn, (T0, T1, T2, T3, T4)> unzipper)
         {
             _unzipper = unzipper;
 
@@ -1061,12 +1061,12 @@ namespace Akka.Streams.Dsl
             }
         }		
 
-        private readonly Func<TIn, Tuple<T0, T1, T2, T3, T4, T5>> _unzipper;
+        private readonly Func<TIn, (T0, T1, T2, T3, T4, T5)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<T0, T1, T2, T3, T4, T5>> unzipper)
+        public UnzipWith(Func<TIn, (T0, T1, T2, T3, T4, T5)> unzipper)
         {
             _unzipper = unzipper;
 
@@ -1313,12 +1313,12 @@ namespace Akka.Streams.Dsl
             }
         }		
 
-        private readonly Func<TIn, Tuple<T0, T1, T2, T3, T4, T5, T6>> _unzipper;
+        private readonly Func<TIn, (T0, T1, T2, T3, T4, T5, T6)> _unzipper;
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="unzipper">TBD</param>
-        public UnzipWith(Func<TIn, Tuple<T0, T1, T2, T3, T4, T5, T6>> unzipper)
+        public UnzipWith(Func<TIn, (T0, T1, T2, T3, T4, T5, T6)> unzipper)
         {
             _unzipper = unzipper;
 

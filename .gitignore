@@ -10,6 +10,10 @@
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
+# Approval test outputs
+*.received.txt
+*.txt.bak
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -206,3 +210,17 @@ build/
 /src/core/Akka.API.Tests/CoreAPISpec.ApproveStreams.received.txt
 launchSettings.json
 .idea/
+
+# GhostDoc is a C# XML comment helper
+*.[Gg]host[Dd]oc.xml
+*.[Gg]host[Dd]oc.user.dic
+
+# CodeRush
+.cr/
+
+# Visual Studio Code
+.vscode/
+
+# NDepend
+*.ndproj
+/[Nn][Dd]epend[Oo]ut

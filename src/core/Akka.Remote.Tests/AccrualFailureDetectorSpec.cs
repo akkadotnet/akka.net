@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AccrualFailureDetectorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace Akka.Remote.Tests
 
     public class AccrualFailureDetectorSpec : AkkaSpec
     {
-        public static IEnumerable<Tuple<T, T>> Slide<T>(IEnumerable<T> values)
+        public static IEnumerable<(T, T)> Slide<T>(IEnumerable<T> values)
         {
             using (var iterator = values.GetEnumerator())
             {
@@ -25,7 +25,7 @@ namespace Akka.Remote.Tests
                 {
                     var first = iterator.Current;
                     var second = iterator.MoveNext() ? iterator.Current : default(T);
-                    yield return Tuple.Create(first, second);
+                    yield return (first, second);
                 }
             }
         }
@@ -76,8 +76,8 @@ namespace Akka.Remote.Tests
         public void AccrualFailureDetector_must_return_phi_value_of_zero_on_startup_for_each_address_when_no_heartbeats()
         {
             var fd = FailureDetectorSpecHelpers.CreateFailureDetector();
-            Assert.Equal(fd.CurrentPhi, 0.0);
-            Assert.Equal(fd.CurrentPhi, 0.0);
+            Assert.Equal(0.0, fd.CurrentPhi);
+            Assert.Equal(0.0, fd.CurrentPhi);
         }
 
         [Fact]

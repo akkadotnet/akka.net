@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupedWithinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -171,7 +171,7 @@ namespace Akka.Streams.Tests.Dsl
             var c = this.CreateManualSubscriberProbe<IEnumerable<int>>();
 
             Source.FromPublisher(p)
-                .GroupedWithin(1000, TimeSpan.FromMilliseconds(500))
+                .GroupedWithin(1000, TimeSpan.FromMilliseconds(50))
                 .To(Sink.FromSubscriber(c))
                 .Run(Materializer);
 
@@ -180,12 +180,10 @@ namespace Akka.Streams.Tests.Dsl
 
             cSub.Request(1);
             pSub.ExpectRequest();
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
             pSub.SendComplete();
             c.ExpectComplete();
-            c.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
-
+        
         [Fact]
         public void A_GroupedWithin_must_reset_time_window_when_max_elements_reached()
         {
@@ -231,8 +229,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {x, y, z},
-                        new[] {new[] {x, y, z}});
+                    return ((ICollection<int>)new[] {x, y, z}, (ICollection<IEnumerable<int>>)new[] {new[] {x, y, z}});
                 }).ToArray());
 
             RandomTestRange(Sys)
@@ -246,7 +243,7 @@ namespace Akka.Streams.Tests.Dsl
             Func<Script<int, IEnumerable<int>>> script = () =>
             {
                 var i = random.Next();
-                var rest = Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] {i}, new[] {new[] {i}});
+                var rest = (new[] {i}, new[] {new[] {i}});
 
                 return Script.Create(RandomTestRange(Sys).Select(_ =>
                 {
@@ -254,8 +251,7 @@ namespace Akka.Streams.Tests.Dsl
                     var y = random.Next();
                     var z = random.Next();
 
-                    return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(new[] { x, y, z },
-                        new[] { new[] { x, y, z }});
+                    return ((ICollection<int>)new[] { x, y, z }, (ICollection<IEnumerable<int>>)new[] { new[] { x, y, z }});
                 }).Concat(rest).ToArray());
             };
 

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMergeSortedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ namespace Akka.Streams.Tests.Dsl
             foreach (var picks in gen)
             {
                 var n = picks.Count;
-                var group = picks.Select((b, i) => Tuple.Create(b, i)).GroupBy(t => t.Item1).ToList();
+                var group = picks.Select((b, i) => (b, i)).GroupBy(t => t.Item1).ToList();
                 var left = group[0].ToList();
                 var right = group[1].ToList();
                 var task = Source.From(left.Select(t => t.Item2))
@@ -60,9 +60,18 @@ namespace Akka.Streams.Tests.Dsl
                     .Concat(Source.Single<IEnumerable<int>>(new List<int>()))
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-                task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, n));
+                task.AwaitResult().ShouldBeEquivalentTo(Enumerable.Range(0, n), o => o.WithStrictOrdering());
             }
+        }
+
+        [Fact]
+        public void MergeSorted_must_work_with_custom_comparer()
+        {
+            var task = Source.From(new[] { 1, 5 })
+                    .MergeSorted(Source.From(new[] { 0, 1, 2, 7 }), (l, r) => 2 * l.CompareTo(r))
+                    .RunWith(Sink.Seq<int>(), Materializer);
+
+            task.AwaitResult().ShouldBeEquivalentTo(new[] { 0, 1, 1, 2, 5, 7 }, o => o.WithStrictOrdering());
         }
     }
 }

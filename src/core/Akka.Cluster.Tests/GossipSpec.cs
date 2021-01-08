@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GossipSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -142,7 +142,7 @@ namespace Akka.Cluster.Tests
             var merged1 = g1.Merge(g2);
             merged1.Overview.Reachability.AllUnreachable.Should()
                 .BeEquivalentTo(ImmutableHashSet.Create(a1.UniqueAddress, c1.UniqueAddress, d1.UniqueAddress));
-            
+
             var merged2 = g2.Merge(g1);
             merged2.Overview.Reachability.AllUnreachable.Should()
                 .BeEquivalentTo(merged1.Overview.Reachability.AllUnreachable);
@@ -222,6 +222,40 @@ namespace Akka.Cluster.Tests
             g2.YoungestMember.Should().Be(b1);
             var g3 = new Gossip(ImmutableSortedSet.Create(a2, b1.CopyUp(3), e2.CopyUp(4)));
             g3.YoungestMember.Should().Be(e2);
+        }
+
+        [Fact]
+        public void A_gossip_must_find_two_oldest_as_targets_for_Exiting_change()
+        {
+            Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a4", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 1);
+            Member a2 = TestMember.Create(new Address("akka.tcp", "sys", "a3", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 2);
+            Member a3 = TestMember.Create(new Address("akka.tcp", "sys", "a2", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 3);
+            Member a4 = TestMember.Create(new Address("akka.tcp", "sys", "a1", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 4);
+
+            var a1Exiting = a1.Copy(MemberStatus.Leaving).Copy(MemberStatus.Exiting);
+            var gossip = new Gossip(ImmutableSortedSet.Create(a1Exiting, a2, a3, a4));
+            var r = ClusterCoreDaemon.GossipTargetsForExitingMembers(gossip, new Member[] { a1Exiting });
+            r.Should().BeEquivalentTo(new[] { a1Exiting, a2 });
+        }
+
+        [Fact]
+        public void A_gossip_must_find_two_oldest_per_role_as_targets_for_Exiting_change()
+        {
+            Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a4", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 1);
+            Member a2 = TestMember.Create(new Address("akka.tcp", "sys", "a3", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 2);
+            Member a3 = TestMember.Create(new Address("akka.tcp", "sys", "a2", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 3);
+            Member a4 = TestMember.Create(new Address("akka.tcp", "sys", "a1", 2552), MemberStatus.Up, ImmutableHashSet<string>.Empty, upNumber: 4);
+            Member a5 = TestMember.Create(new Address("akka.tcp", "sys", "a5", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role1").Add("role2"), upNumber: 5);
+            Member a6 = TestMember.Create(new Address("akka.tcp", "sys", "a6", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role1").Add("role3"), upNumber: 6);
+            Member a7 = TestMember.Create(new Address("akka.tcp", "sys", "a7", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role1"), upNumber: 7);
+            Member a8 = TestMember.Create(new Address("akka.tcp", "sys", "a8", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role1"), upNumber: 8);
+            Member a9 = TestMember.Create(new Address("akka.tcp", "sys", "a9", 2552), MemberStatus.Exiting, ImmutableHashSet<string>.Empty.Add("role2"), upNumber: 9);
+
+            IEnumerable<Member> theExiting = new Member[] { a5, a6 };
+            var gossip = new Gossip(ImmutableSortedSet.Create(a1, a2, a3, a4, a5, a6, a7, a8, a9));
+
+            var r = ClusterCoreDaemon.GossipTargetsForExitingMembers(gossip, theExiting);
+            r.Should().BeEquivalentTo(new[] { a1, a2, a5, a6, a9 });
         }
     }
 }

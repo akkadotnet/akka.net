@@ -1,20 +1,19 @@
-﻿#I @"tools/FAKE/tools"
+#I @"tools/FAKE/tools"
 #r "FakeLib.dll"
-#load "./buildIncremental.fsx"
 
 open System
 open System.IO
 open System.Text
-open System.Diagnostics
+
 
 open Fake
 open Fake.DotNetCli
 open Fake.DocFxHelper
-open Fake.Git
+open Fake.NuGet.Install
 
 // Variables
 let configuration = "Release"
-let solution = "./src/Akka.sln"
+let solution = System.IO.Path.GetFullPath(string "./src/Akka.sln")
 
 // Directories
 let toolsDir = __SOURCE_DIRECTORY__ @@ "tools"
@@ -24,19 +23,39 @@ let outputPerfTests = __SOURCE_DIRECTORY__ @@ "PerfResults"
 let outputBinaries = output @@ "binaries"
 let outputNuGet = output @@ "nuget"
 let outputMultiNode = outputTests @@ "multinode"
+let outputFailedMultiNode = outputTests @@ "multinode" @@ "FAILED_SPECS_LOGS"
 let outputBinariesNet45 = outputBinaries @@ "net45"
-let outputBinariesNetStandard = outputBinaries @@ "netstandard1.6"
+let outputBinariesNetStandard = outputBinaries @@ "netstandard2.0"
+let outputBinariesNet = outputBinaries @@ "net5.0"
 
 let buildNumber = environVarOrDefault "BUILD_NUMBER" "0"
-let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else "")
-let versionSuffix = 
-    match (getBuildParam "nugetprerelease") with
-    | "dev" -> preReleaseVersionSuffix
-    | _ -> ""
+let hasTeamCity = (not (buildNumber = "0")) // check if we have the TeamCity environment variable for build # set
+let preReleaseVersionSuffix = "beta" + (if (not (buildNumber = "0")) then (buildNumber) else DateTime.UtcNow.Ticks.ToString())
 
 let releaseNotes =
-    File.ReadLines "./RELEASE_NOTES.md"
+    File.ReadLines (__SOURCE_DIRECTORY__ @@ "RELEASE_NOTES.md")
     |> ReleaseNotesHelper.parseReleaseNotes
+
+let versionFromReleaseNotes =
+    match releaseNotes.SemVer.PreRelease with
+    | Some r -> r.Origin
+    | None -> ""
+
+let versionSuffix =
+    match (getBuildParam "nugetprerelease") with
+    | "dev" -> preReleaseVersionSuffix
+    | "" -> versionFromReleaseNotes
+    | str -> str
+
+
+// Incremental builds
+let runIncrementally = hasBuildParam "incremental"
+let incrementalistReport = output @@ "incrementalist.txt"
+
+// Configuration values for tests
+let testNetFrameworkVersion = "net471"
+let testNetCoreVersion = "netcoreapp3.1"
+let testNetVersion = "net5.0"
 
 Target "Clean" (fun _ ->
     ActivateFinalTarget "KillCreatedProcesses"
@@ -49,42 +68,152 @@ Target "Clean" (fun _ ->
     CleanDir outputMultiNode
     CleanDir outputBinariesNet45
     CleanDir outputBinariesNetStandard
+    CleanDir outputBinariesNet
     CleanDir "docs/_site"
 
     CleanDirs !! "./**/bin"
     CleanDirs !! "./**/obj"
 )
 
+
+//--------------------------------------------------------------------------------
+// Incrementalist targets
+//--------------------------------------------------------------------------------
+// Pulls the set of all affected projects detected by Incrementalist from the cached file
+let getAffectedProjectsTopology =
+    lazy(
+        log (sprintf "Checking inside %s for changes" incrementalistReport)
+
+        let incrementalistFoundChanges = File.Exists incrementalistReport
+
+        log (sprintf "Found changes via Incrementalist? %b - searched inside %s" incrementalistFoundChanges incrementalistReport)
+        if not incrementalistFoundChanges then None
+        else
+            let sortedItems = (File.ReadAllLines incrementalistReport) |> Seq.map (fun x -> (x.Split ','))
+                              |> Seq.map (fun items -> (items.[0], items))
+            let d = dict sortedItems
+            Some(d)
+    )
+
+let getAffectedProjects =
+    lazy(
+        let finalProjects = getAffectedProjectsTopology.Value
+        match finalProjects with
+        | None -> None
+        | Some p -> Some (p.Values |> Seq.concat)
+    )
+
+Target "ComputeIncrementalChanges" (fun _ ->
+    if runIncrementally then
+        let targetBranch = match getBuildParam "targetBranch" with
+                            | "" -> "dev"
+                            | null -> "dev"
+                            | b -> b
+        let incrementalistPath =
+                let incrementalistDir = toolsDir @@ "incrementalist"
+                let globalTool = tryFindFileOnPath "incrementalist.exe"
+                match globalTool with
+                    | Some t -> t
+                    | None -> if isWindows then findToolInSubPath "incrementalist.exe" incrementalistDir
+                              elif isMacOS then incrementalistDir @@ "incrementalist"
+                              else incrementalistDir @@ "incrementalist"
+
+
+        let args = StringBuilder()
+                |> append "-b"
+                |> append targetBranch
+                |> append "-s"
+                |> append solution
+                |> append "-f"
+                |> append incrementalistReport
+                |> toText
+
+        let result = ExecProcess(fun info ->
+            info.FileName <- incrementalistPath
+            info.WorkingDirectory <- __SOURCE_DIRECTORY__
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 5.0) (* Reasonably long-running task. *)
+
+        if result <> 0 then failwithf "Incrementalist failed. %s" args
+    else
+        log "Skipping Incrementalist - not enabled for this build"
+)
+
+let filterProjects selectedProject =
+    if runIncrementally then
+        let affectedProjects = getAffectedProjects.Value
+
+        (*
+        if affectedProjects.IsSome then
+            log (sprintf "Searching for %s inside [%s]" selectedProject (String.Join(",", affectedProjects.Value)))
+        else
+            log "No affected projects found"
+        *)
+
+        match affectedProjects with
+        | None -> None
+        | Some x when x |> Seq.exists (fun n -> n.Contains (System.IO.Path.GetFileName(string selectedProject))) -> Some selectedProject
+        | _ -> None
+    else
+        log "Not running incrementally"
+        Some selectedProject
+
+//--------------------------------------------------------------------------------
+// Build targets
+//--------------------------------------------------------------------------------
+let skipBuild =
+    lazy(
+        match getAffectedProjects.Value with
+        | None when runIncrementally -> true
+        | _ -> false
+    )
+
+let headProjects =
+    lazy(
+        match getAffectedProjectsTopology.Value with
+        | None when runIncrementally -> [||]
+        | None -> [|solution|]
+        | Some p -> p.Keys |> Seq.toArray
+    )
+
 Target "AssemblyInfo" (fun _ ->
-    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion    
+    XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/VersionPrefix" releaseNotes.AssemblyVersion
     XmlPokeInnerText "./src/common.props" "//Project/PropertyGroup/PackageReleaseNotes" (releaseNotes.Notes |> String.concat "\n")
 )
 
-Target "RestorePackages" (fun _ ->
-    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
+Target "Build" (fun _ ->
+    if not skipBuild.Value then
+        let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []
+        let buildProject proj =
+            DotNetCli.Build
+                (fun p ->
+                    { p with
+                        Project = proj
+                        Configuration = configuration
+                        AdditionalArgs = additionalArgs })
 
-    DotNetCli.Restore
-        (fun p -> 
-            { p with
-                Project = solution
-                NoCache = false
-                AdditionalArgs = additionalArgs })
-)
-
-Target "Build" (fun _ ->   
-    let additionalArgs = if versionSuffix.Length > 0 then [sprintf "/p:VersionSuffix=%s" versionSuffix] else []  
-
-    DotNetCli.Build
-        (fun p -> 
-            { p with
-                Project = solution
-                Configuration = configuration
-                AdditionalArgs = additionalArgs })
+        match getAffectedProjects.Value with
+        | Some p -> p |> Seq.iter buildProject
+        | None -> buildProject solution // build the entire solution if incrementalist is disabled
 )
 
 //--------------------------------------------------------------------------------
-// Tests targets 
+// Tests targets
 //--------------------------------------------------------------------------------
+type Runtime =
+    | NetCore
+    | Net
+    | NetFramework
+
+let getTestAssembly runtime project =
+    let assemblyPath = match runtime with
+                        | NetCore -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ fileNameWithoutExt project + ".dll")
+                        | NetFramework -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetFrameworkVersion @@ fileNameWithoutExt project + ".dll")
+                        | Net -> !! ("src" @@ "**" @@ "bin" @@ "Release" @@ testNetVersion @@ fileNameWithoutExt project + ".dll")
+
+    if Seq.isEmpty assemblyPath then
+        None
+    else
+        Some (assemblyPath |> Seq.head)
 
 module internal ResultHandling =
     let (|OK|Failure|) = function
@@ -104,302 +233,335 @@ module internal ResultHandling =
         buildErrorMessage
         >> Option.iter (failBuildWithMessage errorLevel)
 
-open BuildIncremental.IncrementalTests
-
-Target "RunTests" (fun _ ->    
-    ActivateFinalTarget "KillCreatedProcesses"
+Target "RunTests" (fun _ ->
     let projects =
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
-        | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
-    
+        let rawProjects = match (isWindows) with
+                            | true -> !! "./src/**/*.Tests.*sproj"
+                                      ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                            | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+        rawProjects |> Seq.choose filterProjects
+
     let runSingleProject project =
+        let arguments =
+            match (hasTeamCity) with
+            | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetFrameworkVersion outputTests)
+            | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetFrameworkVersion outputTests)
+
         let result = ExecProcess(fun info ->
             info.FileName <- "dotnet"
             info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -f net452 -c Release -nobuild -parallel none -teamcity -xml %s_xunit.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
-        
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
 
-        // dotnet process will be killed by ExecProcess (or throw if can't) '
-        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not
-        killProcess "xunit.console"
-        killProcess "dotnet"
+        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
     CreateDir outputTests
     projects |> Seq.iter (runSingleProject)
 )
 
 Target "RunTestsNetCore" (fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
-    let projects =
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalUnitTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalUnitTests() |> Seq.iter log
-                            getUnitTestProjects()
-        | _ -> log "All test projects will be run..."
-               getUnitTestProjects()
-     
-    let runSingleProject project =
-        let result = ExecProcess(fun info ->
-            info.FileName <- "dotnet"
-            info.WorkingDirectory <- (Directory.GetParent project).FullName
-            info.Arguments <- (sprintf "xunit -f netcoreapp1.1 -c Release -parallel none -teamcity -xml %s_xunit_netcore.xml" (outputTests @@ fileNameWithoutExt project))) (TimeSpan.FromMinutes 30.)
-        
-        ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+    if not skipBuild.Value then
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.*sproj"
+                                          ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
 
-        // dotnet process will be killed by FAKE.ExecProcess (or throw if can't)
-        // but per https://github.com/xunit/xunit/issues/1338 xunit.console may not be killed
-        killProcess "xunit.console"
-        killProcess "dotnet"
+        let runSingleProject project =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetCoreVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetCoreVersion outputTests)
 
-    CreateDir outputTests
-    projects |> Seq.iter (runSingleProject)
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
+
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
+
+        CreateDir outputTests
+        projects |> Seq.iter (runSingleProject)
+)
+
+Target "RunTestsNet" (fun _ ->
+    if not skipBuild.Value then
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.*sproj"
+                                          ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
+
+        let runSingleProject project =
+            let arguments =
+                match (hasTeamCity) with
+                | true -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none -teamcity" testNetVersion outputTests)
+                | false -> (sprintf "test -c Release --no-build --logger:trx --logger:\"console;verbosity=normal\" --framework %s --results-directory \"%s\" -- -parallel none" testNetVersion outputTests)
+
+            let result = ExecProcess(fun info ->
+                info.FileName <- "dotnet"
+                info.WorkingDirectory <- (Directory.GetParent project).FullName
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
+
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
+
+        CreateDir outputTests
+        projects |> Seq.iter (runSingleProject)
 )
 
 Target "MultiNodeTests" (fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "net452")
+    if not skipBuild.Value then
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetFrameworkVersion)
 
-    let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalMNTRTests() |> Seq.iter log
-                            getAllMntrTestAssemblies()
-        | _ -> log "All test projects will be run"
-               getAllMntrTestAssemblies()
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
 
-    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+        let multiNodeTestAssemblies =
+            projects |> Seq.choose (getTestAssembly Runtime.NetFramework)
 
-    let runMultiNodeSpec assembly =
-        let spec = getBuildParam "spec"
+        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
-        let args = StringBuilder()
-                |> append assembly
-                |> append "-Dmultinode.teamcity=true"
-                |> append "-Dmultinode.enable-filesink=on"
-                |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
-                |> toText
-
-        let result = ExecProcess(fun info -> 
-            info.FileName <- multiNodeTestPath
-            info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
-        if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-    
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
-)
-
-Target "MultiNodeTestsNetCore" (fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"
-    let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ "netcoreapp1.1" @@ "win7-x64" @@ "publish")
-
-    let multiNodeTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalNetCoreMNTRTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following MNTR specs would be run under Incremental Test config..."
-                            getIncrementalNetCoreMNTRTests() |> Seq.iter log
-                            getAllMntrTestNetCoreAssemblies()
-        | _ -> log "All test projects will be run"
-               getAllMntrTestNetCoreAssemblies()
-
-    printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
-
-    let runMultiNodeSpec assembly =
-        match assembly with
-        | null -> ()
-        | _ ->
+        let runMultiNodeSpec assembly =
             let spec = getBuildParam "spec"
 
             let args = StringBuilder()
-                    |> append multiNodeTestPath
                     |> append assembly
-                    |> append "-Dmultinode.teamcity=true"
+                    |> append (sprintf "-Dmultinode.reporter=%s" (if hasTeamCity then "teamcity" else "trx"))
                     |> append "-Dmultinode.enable-filesink=on"
                     |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
-                    |> append "-Dmultinode.platform=netcore"
+                    |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
                     |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
                     |> toText
 
-            let result = ExecProcess(fun info -> 
-                info.FileName <- "dotnet"
+            let result = ExecProcess(fun info ->
+                info.FileName <- multiNodeTestPath
                 info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
                 info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
             if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
-    
-    multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+
+        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
 )
 
-Target "NBench" <| fun _ ->
-    ActivateFinalTarget "KillCreatedProcesses"   
-    CleanDir outputPerfTests
+Target "MultiNodeTestsNetCore" (fun _ ->
+    if not skipBuild.Value then
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
 
-    let nbenchTestPath = findToolInSubPath "NBench.Runner.exe" (toolsDir @@ "NBench.Runner*")
-    printfn "Using NBench.Runner: %s" nbenchTestPath
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
 
-    let nbenchTestAssemblies = 
-        match getBuildParamOrDefault "incremental" "" with
-        | "true" -> log "The following test projects would be run under Incremental Test config..."
-                    getIncrementalPerfTests() |> Seq.map (fun x -> printfn "\t%s" x; x)
-        | "experimental" -> log "The following test projects would be run under Incremental Test config..."
-                            getIncrementalPerfTests() |> Seq.iter log
-                            getAllPerfTestAssemblies()
-        | _ -> getAllPerfTestAssemblies()
+        let multiNodeTestAssemblies =
+            projects |> Seq.choose (getTestAssembly Runtime.NetCore)
 
-    let runNBench assembly =
-        let includes = getBuildParam "include"
-        let excludes = getBuildParam "exclude"
-        let teamcityStr = (getBuildParam "teamcity")
-        let enableTeamCity = 
-            match teamcityStr with
-            | null -> false
-            | "" -> false
-            | _ -> bool.Parse teamcityStr
+        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
 
-        let args = StringBuilder()
-                |> append assembly
-                |> append (sprintf "output-directory=\"%s\"" outputPerfTests)
-                |> append (sprintf "concurrent=\"%b\"" true)
-                |> append (sprintf "trace=\"%b\"" true)
-                |> append (sprintf "teamcity=\"%b\"" enableTeamCity)
-                |> appendIfNotNullOrEmpty includes "include="
-                |> appendIfNotNullOrEmpty excludes "include="
+        let runMultiNodeSpec assembly =
+            match assembly with
+            | null -> ()
+            | _ ->
+                let spec = getBuildParam "spec"
+
+                let args = StringBuilder()
+                        |> append multiNodeTestPath
+                        |> append assembly
+                        |> append "-Dmultinode.reporter=trx"
+                        |> append "-Dmultinode.enable-filesink=on"
+                        |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
+                        |> append "-Dmultinode.platform=netcore"
+                        |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
+                        |> toText
+
+                let result = ExecProcess(fun info ->
+                    info.FileName <- "dotnet"
+                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+                    info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+                if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+
+        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+)
+Target "MultiNodeTestsNet" (fun _ ->
+    if not skipBuild.Value then
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
+
+        let projects =
+            let rawProjects = match (isWindows) with
+                                | true -> !! "./src/**/*.Tests.MultiNode.csproj"
+                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+            rawProjects |> Seq.choose filterProjects
+
+        let multiNodeTestAssemblies =
+            projects |> Seq.choose (getTestAssembly Runtime.Net)
+
+        printfn "Using MultiNodeTestRunner: %s" multiNodeTestPath
+
+        let runMultiNodeSpec assembly =
+            match assembly with
+            | null -> ()
+            | _ ->
+                let spec = getBuildParam "spec"
+
+                let args = StringBuilder()
+                        |> append multiNodeTestPath
+                        |> append assembly
+                        |> append "-Dmultinode.reporter=trx"
+                        |> append "-Dmultinode.enable-filesink=on"
+                        |> append (sprintf "-Dmultinode.output-directory=\"%s\"" outputMultiNode)
+                        |> append (sprintf "-Dmultinode.failed-specs-directory=\"%s\"" outputFailedMultiNode)
+                        |> append "-Dmultinode.platform=net5"
+                        |> appendIfNotNullOrEmpty spec "-Dmultinode.spec="
+                        |> toText
+
+                let result = ExecProcess(fun info ->
+                    info.FileName <- "dotnet"
+                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName multiNodeTestPath))
+                    info.Arguments <- args) (System.TimeSpan.FromMinutes 60.0) (* This is a VERY long running task. *)
+                if result <> 0 then failwithf "MultiNodeTestRunner failed. %s %s" multiNodeTestPath args
+
+        multiNodeTestAssemblies |> Seq.iter (runMultiNodeSpec)
+)
+Target "NBench" (fun _ ->
+    ensureDirectory outputPerfTests
+    let projects =
+        let rawProjects = match (isWindows) with
+                            | true -> !! "./src/**/*Tests.Performance.csproj"
+                            | _ -> !! "./src/**/*Tests.Performance.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+        rawProjects |> Seq.choose filterProjects
+
+    projects |> Seq.iter(fun project ->
+        let args = new StringBuilder()
+                |> append "run"
+                |> append "--no-build"
+                |> append "-c"
+                |> append configuration
+                |> append " -- "
+                |> append "--output"
+                |> append outputPerfTests
+                |> append "--concurrent"
+                |> append "true"
+                |> append "--trace"
+                |> append "true"
+                |> append "--diagnostic"
                 |> toText
 
-        let result = ExecProcess(fun info -> 
-            info.FileName <- nbenchTestPath
-            info.WorkingDirectory <- (Path.GetDirectoryName (FullName nbenchTestPath))
-            info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
-        if result <> 0 then failwithf "NBench.Runner failed. %s %s" nbenchTestPath args
-    
-    nbenchTestAssemblies |> Seq.iter runNBench
-
-//--------------------------------------------------------------------------------
-// Nuget targets 
-//--------------------------------------------------------------------------------
-
-let overrideVersionSuffix (project:string) =
-    match project with
-    | p when p.Contains("Akka.Serialization.Wire") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.Serialization.Hyperion") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.Cluster.Sharding") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.DistributedData") -> preReleaseVersionSuffix
-    | p when p.Contains("Akka.DistributedData.LightningDB") -> preReleaseVersionSuffix
-    | _ -> versionSuffix
-
-Target "CreateNuget" (fun _ ->    
-    let projects = !! "src/**/Akka.csproj"
-                   ++ "src/**/Akka.Cluster.csproj"
-                   ++ "src/**/Akka.Cluster.TestKit.csproj"
-                   ++ "src/**/Akka.Cluster.Tools.csproj"
-                   ++ "src/**/Akka.Cluster.Sharding.csproj"
-                   ++ "src/**/Akka.DistributedData.csproj"
-                   ++ "src/**/Akka.DistributedData.LightningDB.csproj"
-                   ++ "src/**/Akka.Persistence.csproj"
-                   ++ "src/**/Akka.Persistence.Query.csproj"
-                   ++ "src/**/Akka.Persistence.TCK.csproj"
-                   ++ "src/**/Akka.Persistence.Query.Sql.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.Common.csproj"
-                   ++ "src/**/Akka.Persistence.Sql.TestKit.csproj"
-                   ++ "src/**/Akka.Persistence.Sqlite.csproj"
-                   ++ "src/**/Akka.Remote.csproj"
-                   ++ "src/**/Akka.Remote.TestKit.csproj"
-                   ++ "src/**/Akka.Streams.csproj"
-                   ++ "src/**/Akka.Streams.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit.csproj"
-                   ++ "src/**/Akka.TestKit.Xunit2.csproj"
-                   ++ "src/**/Akka.DI.Core.csproj"
-                   ++ "src/**/Akka.DI.TestKit.csproj"
-                   ++ "src/**/Akka.Serialization.Hyperion.csproj"
-                   ++ "src/**/Akka.Serialization.TestKit.csproj"
-                   ++ "src/**/Akka.Remote.Transport.Helios.csproj"
-
-    let runSingleProject project =
-        DotNetCli.Pack
-            (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = overrideVersionSuffix project
-                    OutputPath = outputNuGet })
-
-    projects |> Seq.iter (runSingleProject)
+        let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- (Directory.GetParent project).FullName
+            info.Arguments <- args) (System.TimeSpan.FromMinutes 15.0) (* Reasonably long-running task. *)
+        if result <> 0 then failwithf "NBench.Runner failed. %s %s" "dotnet" args
+    )
 )
-open Fake.TemplateHelper
+
+//--------------------------------------------------------------------------------
+// Nuget targets
+//--------------------------------------------------------------------------------
+
+Target "CreateNuget" (fun _ ->
+    CreateDir outputNuGet // need this to stop Azure pipelines copy stage from error-ing out
+    if not skipBuild.Value then
+        let projects =
+            let rawProjects = !! "src/**/*.*sproj"
+                            -- "src/**/*.Tests*.*sproj"
+                            -- "src/benchmark/**/*.*sproj"
+                            -- "src/examples/**/*.*sproj"
+                            -- "src/**/*.MultiNodeTestRunner.csproj"
+                            -- "src/**/*.MultiNodeTestRunner.Shared.csproj"
+                            -- "src/**/*.NodeTestRunner.csproj"
+            rawProjects |> Seq.choose filterProjects
+
+        let runSingleProject project =
+            DotNetCli.Pack
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        AdditionalArgs = ["--include-symbols"]
+                        VersionSuffix = versionSuffix
+                        OutputPath = "\"" + outputNuGet + "\"" })
+
+        projects |> Seq.iter (runSingleProject)
+)
+
 Target "PublishMntr" (fun _ ->
-    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+    if not skipBuild.Value then
+        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
 
-    // Windows .NET 4.5.2
-    executableProjects |> Seq.iter (fun project ->
-        DotNetCli.Restore
-            (fun p -> 
-                { p with
-                    Project = project                  
-                    AdditionalArgs = ["-r win7-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
-    )
+        // Windows .NET 4.5.2
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Restore
+                (fun p ->
+                    { p with
+                        Project = project
+                        AdditionalArgs = ["-r win10-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
+        )
 
-    // Windows .NET 4.5.2
-    executableProjects |> Seq.iter (fun project ->  
-        DotNetCli.Publish
-            (fun p ->
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    Runtime = "win7-x64"
-                    Framework = "net452"
-                    VersionSuffix = versionSuffix }))
+        // Windows .NET 4.5.2
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "win10-x64"
+                        Framework = testNetFrameworkVersion
+                        VersionSuffix = versionSuffix }))
 
-    // Windows .NET Core
-    executableProjects |> Seq.iter (fun project ->  
-        DotNetCli.Publish
-            (fun p ->
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    Runtime = "win7-x64"
-                    Framework = "netcoreapp1.1"
-                    VersionSuffix = versionSuffix }))
+        // Windows .NET 5
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "win10-x64"
+                        Framework = testNetVersion
+                        VersionSuffix = versionSuffix }))
+
+        // Windows .NET Core
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Publish
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        Runtime = "win10-x64"
+                        Framework = testNetCoreVersion
+                        VersionSuffix = versionSuffix }))
 )
 
-Target "CreateMntrNuget" (fun _ -> 
-    // uses the template file to create a temporary .nuspec file with the correct version
-    CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
-    let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
-    let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
-    TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
+Target "CreateMntrNuget" (fun _ ->
+    if not skipBuild.Value then
+        // uses the template file to create a temporary .nuspec file with the correct version
+        CopyFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec.template"
+        let commonPropsVersionPrefix = XMLRead true "./src/common.props" "" "" "//Project/PropertyGroup/VersionPrefix" |> Seq.head
+        let versionReplacement = List.ofSeq [ "@version@", commonPropsVersionPrefix + (if (not (versionSuffix = "")) then ("-" + versionSuffix) else "") ]
+        TemplateHelper.processTemplates versionReplacement [ "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec" ]
 
-    let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
-    
-    executableProjects |> Seq.iter (fun project ->  
-        DotNetCli.Pack
-            (fun p -> 
-                { p with
-                    Project = project
-                    Configuration = configuration
-                    AdditionalArgs = ["--include-symbols"]
-                    VersionSuffix = overrideVersionSuffix project
-                    OutputPath = outputNuGet } )
-    )
+        let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
 
-    DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
+        executableProjects |> Seq.iter (fun project ->
+            DotNetCli.Pack
+                (fun p ->
+                    { p with
+                        Project = project
+                        Configuration = configuration
+                        AdditionalArgs = ["--include-symbols"]
+                        VersionSuffix = versionSuffix
+                        OutputPath = "\"" + outputNuGet + "\"" } )
+        )
+
+        DeleteFile "./src/core/Akka.MultiNodeTestRunner/Akka.MultiNodeTestRunner.nuspec"
 )
 
 Target "PublishNuget" (fun _ ->
     let nugetExe = FullName @"./tools/nuget.exe"
-    let rec publishPackage url accessKey trialsLeft packageFile =
+    let rec publishPackage url apiKey trialsLeft packageFile =
         let tracing = enableProcessTracing
         enableProcessTracing <- false
         let args p =
@@ -408,36 +570,24 @@ Target "PublishNuget" (fun _ ->
             | (pack, key, url) -> sprintf "push \"%s\" %s -source %s" pack key url
 
         tracefn "Pushing %s Attempts left: %d" (FullName packageFile) trialsLeft
-        try 
-            let result = ExecProcess (fun info -> 
-                    info.FileName <- nugetExe
-                    info.WorkingDirectory <- (Path.GetDirectoryName (FullName packageFile))
-                    info.Arguments <- args (packageFile, accessKey,url)) (System.TimeSpan.FromMinutes 1.0)
-            enableProcessTracing <- tracing
-            if result <> 0 then failwithf "Error during NuGet symbol push. %s %s" nugetExe (args (packageFile, "key omitted",url))
-        with exn -> 
-            if (trialsLeft > 0) then (publishPackage url accessKey (trialsLeft-1) packageFile)
+        try
+            DotNetCli.RunCommand
+                (fun p ->
+                    { p with
+                        TimeOut = TimeSpan.FromMinutes 10. })
+                (sprintf "nuget push %s --api-key %s --source %s" packageFile apiKey url)
+        with exn ->
+            if (trialsLeft > 0) then (publishPackage url apiKey (trialsLeft-1) packageFile)
             else raise exn
     let shouldPushNugetPackages = hasBuildParam "nugetkey"
-    let shouldPushSymbolsPackages = (hasBuildParam "symbolspublishurl") && (hasBuildParam "symbolskey")
-    
-    if (shouldPushNugetPackages || shouldPushSymbolsPackages) then
+
+    if (shouldPushNugetPackages) then
         printfn "Pushing nuget packages"
         if shouldPushNugetPackages then
-            let normalPackages= 
-                !! (outputNuGet @@ "*.nupkg") 
-                -- (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
+            let normalPackages= !! (outputNuGet @@ "*.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
             for package in normalPackages do
                 try
-                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "") (getBuildParam "nugetkey") 3 package
-                with exn ->
-                    printfn "%s" exn.Message
-
-        if shouldPushSymbolsPackages then
-            let symbolPackages= !! (outputNuGet @@ "*.symbols.nupkg") |> Seq.sortBy(fun x -> x.ToLower())
-            for package in symbolPackages do
-                try
-                    publishPackage (getBuildParam "symbolspublishurl") (getBuildParam "symbolskey") 3 package
+                    publishPackage (getBuildParamOrDefault "nugetpublishurl" "https://api.nuget.org/v3/index.json") (getBuildParam "nugetkey") 3 package
                 with exn ->
                     printfn "%s" exn.Message
 )
@@ -448,9 +598,9 @@ Target "PublishNuget" (fun _ ->
 Target "Protobuf" <| fun _ ->
 
     let protocPath =
-        if isWindows then findToolInSubPath "protoc.exe" "src/packages/Google.Protobuf.Tools/tools/windows_x64"
-        elif isMacOS then findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/macosx_x64"
-        else findToolInSubPath "protoc" "src/packages/Google.Protobuf.Tools/tools/linux_x64"
+        if isWindows then findToolInSubPath "protoc.exe" "tools/Google.Protobuf.Tools/tools/windows_x64"
+        elif isMacOS then findToolInSubPath "protoc" "tools/Google.Protobuf.Tools/tools/macosx_x64"
+        else findToolInSubPath "protoc" "tools/Google.Protobuf.Tools/tools/linux_x64"
 
     let protoFiles = [
         ("WireFormats.proto", "/src/core/Akka.Remote/Serialization/Proto/");
@@ -462,7 +612,10 @@ Target "Protobuf" <| fun _ ->
         ("DistributedPubSubMessages.proto", "/src/contrib/cluster/Akka.Cluster.Tools/PublishSubscribe/Serialization/Proto/");
         ("ClusterShardingMessages.proto", "/src/contrib/cluster/Akka.Cluster.Sharding/Serialization/Proto/");
         ("TestConductorProtocol.proto", "/src/core/Akka.Remote.TestKit/Proto/");
-        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/") ]
+        ("Persistence.proto", "/src/core/Akka.Persistence/Serialization/Proto/");
+        ("StreamRefMessages.proto", "/src/core/Akka.Streams/Serialization/Proto/");
+        ("ReplicatorMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/");
+        ("ReplicatedDataMessages.proto", "/src/contrib/cluster/Akka.DistributedData/Serialization/Proto/"); ]
 
     printfn "Using proto.exe: %s" protocPath
 
@@ -473,47 +626,56 @@ Target "Protobuf" <| fun _ ->
                 |> append (sprintf "-I=%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
                 |> append (sprintf "--csharp_out=internal_access:%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
+                |> append "--experimental_allow_proto3_optional"
                 |> append (__SOURCE_DIRECTORY__ @@ "/src/protobuf" @@ protoName)
                 |> toText
 
-        let result = ExecProcess(fun info -> 
+        let result = ExecProcess(fun info ->
             info.FileName <- protocPath
             info.WorkingDirectory <- (Path.GetDirectoryName (FullName protocPath))
             info.Arguments <- args) (System.TimeSpan.FromMinutes 45.0) (* Reasonably long-running task. *)
         if result <> 0 then failwithf "protoc failed. %s %s" protocPath args
-    
+
     protoFiles |> Seq.iter (runProtobuf)
 
 //--------------------------------------------------------------------------------
-// Documentation 
-//--------------------------------------------------------------------------------  
+// Documentation
+//--------------------------------------------------------------------------------
 Target "DocFx" (fun _ ->
-    let docsExamplesSolution = "./docs/examples/DocsExamples.sln"
-    DotNetCli.Restore (fun p -> { p with Project = docsExamplesSolution })
-    DotNetCli.Build (fun p -> { p with Project = docsExamplesSolution; Configuration = configuration })
+    // build the projects with samples
+    let docsTestsProject = "./src/core/Akka.Docs.Tests/Akka.Docs.Tests.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTestsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTestsProject; Configuration = configuration })
+    let docsTutorialsProject = "./src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj"
+    DotNetCli.Restore (fun p -> { p with Project = docsTutorialsProject })
+    DotNetCli.Build (fun p -> { p with Project = docsTutorialsProject; Configuration = configuration })
+
+    // install MSDN references
+    NugetInstall (fun p ->
+            { p with
+                ExcludeVersion = true
+                Version = "0.1.0-alpha-1611021200"
+                OutputDirectory = currentDirectory @@ "tools" }) "msdn.4.5.2"
 
     let docsPath = "./docs"
-
-    DocFx (fun p -> 
-                { p with 
-                    Timeout = TimeSpan.FromMinutes 30.0; 
-                    WorkingDirectory  = docsPath; 
+    DocFx (fun p ->
+                { p with
+                    Timeout = TimeSpan.FromMinutes 30.0;
+                    WorkingDirectory  = docsPath;
                     DocFxJson = docsPath @@ "docfx.json" })
 )
 
 FinalTarget "KillCreatedProcesses" (fun _ ->
-    log "Killing processes started by FAKE:"
-    startedProcesses |> Seq.iter (fun (pid, _) -> logfn "%i" pid)
-    killAllCreatedProcesses()
-    log "Killing any remaining dotnet and xunit.console.exe processes:"
-    getProcessesByName "dotnet" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
-    killProcess "dotnet"
-    getProcessesByName "xunit.console" |> Seq.iter (fun p -> logfn "pid: %i; name: %s" p.Id p.ProcessName)
-    killProcess "xunit.console"
+    log "Shutting down dotnet build-server"
+    let result = ExecProcess(fun info ->
+            info.FileName <- "dotnet"
+            info.WorkingDirectory <- __SOURCE_DIRECTORY__
+            info.Arguments <- "build-server shutdown") (System.TimeSpan.FromMinutes 2.0)
+    if result <> 0 then failwithf "dotnet build-server shutdown failed"
 )
 
 //--------------------------------------------------------------------------------
-// Help 
+// Help
 //--------------------------------------------------------------------------------
 
 Target "Help" <| fun _ ->
@@ -528,20 +690,19 @@ Target "Help" <| fun _ ->
       " * All        Builds, run tests, creates and optionally publish nuget packages"
       ""
       " Other Targets"
-      " * Help       Display this help" 
+      " * Help       Display this help"
       ""]
 
 Target "HelpNuget" <| fun _ ->
     List.iter printfn [
       "usage: "
-      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] "
-      "            [symbolspublishurl=<url>] "
+      "build Nuget [nugetkey=<key> [nugetpublishurl=<url>]] [symbolskey=<key> symbolspublishurl=<url>]"
       ""
       "In order to publish a nuget package, keys must be specified."
       "If a key is not specified the nuget packages will only be created on disk"
       "After a build you can find them in build/nuget"
       ""
-      "For pushing nuget packages to nuget.org and symbols to symbolsource.org"
+      "For pushing nuget packages and symbols to nuget.org"
       "you need to specify nugetkey=<key>"
       "   build Nuget nugetKey=<key for nuget.org>"
       ""
@@ -568,17 +729,26 @@ Target "HelpNuget" <| fun _ ->
 Target "BuildRelease" DoNothing
 Target "All" DoNothing
 Target "Nuget" DoNothing
+Target "RunTestsFull" DoNothing
+Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
-"Clean" ==> "RestorePackages" ==> "AssemblyInfo" ==> "Build" ==> "PublishMntr" ==> "BuildRelease"
+"Clean" ==> "AssemblyInfo" ==> "Build"
+"Build" ==> "PublishMntr" ==> "BuildRelease"
+"ComputeIncrementalChanges" ==> "Build" // compute incremental changes
 
 // tests dependencies
-// "RunTests" step doesn't require Clean ==> "RestorePackages" step
-"Clean" ==> "RestorePackages" ==> "RunTestsNetCore"
+"Build" ==> "RunTests"
+"Build" ==> "RunTestsNetCore"
+"Build" ==> "RunTestsNet"
+"Build" ==> "NBench"
+
+"BuildRelease" ==> "MultiNodeTestsNetCore"
+"BuildRelease" ==> "MultiNodeTestsNet"
+"BuildRelease" ==> "MultiNodeTests"
 
 // nuget dependencies
-"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget"
-"CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"
@@ -587,7 +757,10 @@ Target "Nuget" DoNothing
 "BuildRelease" ==> "All"
 "RunTests" ==> "All"
 "RunTestsNetCore" ==> "All"
+"RunTestsNet" ==> "All"
 "MultiNodeTests" ==> "All"
+"MultiNodeTestsNetCore" ==> "All"
+"MultiNodeTestsNet" ==> "All"
 "NBench" ==> "All"
 
 RunTargetOrDefault "Help"

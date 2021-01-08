@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphOpsIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -136,15 +136,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void GraphDSLs_must_support_wikipedia_Topological_sorting_2()
         {
-            Func<int, Source<int, Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>>>> source =
+            Func<int, Source<int, (Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)>> source =
                 i =>
                     Source.From(new[] {i})
-                        .MapMaterializedValue<Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>>>(
-                            _ => null);
+                          .MapMaterializedValue(_ => default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
 
             // see https://en.wikipedia.org/wiki/Topological_sorting#mediaviewer/File:Directed_acyclic_graph.png
             var seqSink = Sink.First<IEnumerable<int>>();
-            var t = RunnableGraph.FromGraph(GraphDsl.Create(seqSink, seqSink, seqSink, Tuple.Create, (b, sink2,sink9,sink10) =>
+            var t = RunnableGraph.FromGraph(GraphDsl.Create(seqSink, seqSink, seqSink, ValueTuple.Create, (b, sink2,sink9,sink10) =>
             {
                 var b3 = b.Add(new Broadcast<int>(2));
                 var b7 = b.Add(new Broadcast<int>(2));
@@ -234,15 +233,15 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void GraphDSLs_must_be_possible_to_use_as_lego_bricks()
         {
-            Func<int, Source<int, Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>> source =
+            Func<int, Source<int, (NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)>> source =
                 i =>
                     Source.From(Enumerable.Range(i, 3))
-                        .MapMaterializedValue<Tuple<NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>>>(_ => null);
+                        .MapMaterializedValue(_ => default((NotUsed, NotUsed, NotUsed, Task<IEnumerable<int>>)));
             var shuffler = Shuffle.Create(Flow.Create<int>().Select(x => x + 1));
 
             var task =
                 RunnableGraph.FromGraph(GraphDsl.Create(shuffler, shuffler, shuffler, Sink.First<IEnumerable<int>>(),
-                    Tuple.Create,
+                    ValueTuple.Create,
                     (b, s1, s2, s3, sink) =>
                     {
                         var merge = b.Add(new Merge<int>(2));

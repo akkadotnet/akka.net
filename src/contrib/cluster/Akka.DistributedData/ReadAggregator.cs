@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReadAggregator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ namespace Akka.DistributedData
 
                 Remaining = Remaining.Remove(Sender.Path.Address);
                 var done = DoneWhenRemainingSize;
-                Log.Debug("remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
+                Log.Debug("read acks remaining: {0}, done when: {1}, current state: {2}", Remaining.Count, done, _result);
                 if (Remaining.Count == done) Reply(true);
             })
             .With<SendToSecondary>(x =>

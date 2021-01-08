@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThrottleModeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,18 +22,18 @@ namespace Akka.Remote.Tests.Transport
         public void ThrottleMode_must_allow_consumption_of_infinite_amount_of_tokens_when_unthrottled()
         {
             var bucket = Unthrottled.Instance;
-            bucket.TryConsumeTokens(0, 100).ShouldBe(Tuple.Create<ThrottleMode,bool>(Unthrottled.Instance, true));
-            bucket.TryConsumeTokens(100000, 1000).ShouldBe(Tuple.Create<ThrottleMode, bool>(Unthrottled.Instance, true));
-            bucket.TryConsumeTokens(1000000, 10000).ShouldBe(Tuple.Create<ThrottleMode, bool>(Unthrottled.Instance, true));
+            bucket.TryConsumeTokens(0, 100).ShouldBe((Unthrottled.Instance, true));
+            bucket.TryConsumeTokens(100000, 1000).ShouldBe((Unthrottled.Instance, true));
+            bucket.TryConsumeTokens(1000000, 10000).ShouldBe((Unthrottled.Instance, true));
         }
 
         [Fact]
         public void ThrottleMode_must_deny_consumption_of_any_amount_of_tokens_when_blackhole()
         {
             var bucket = Blackhole.Instance;
-            bucket.TryConsumeTokens(0, 100).ShouldBe(Tuple.Create<ThrottleMode, bool>(Blackhole.Instance, false));
-            bucket.TryConsumeTokens(100000, 1000).ShouldBe(Tuple.Create<ThrottleMode, bool>(Blackhole.Instance, false));
-            bucket.TryConsumeTokens(1000000, 10000).ShouldBe(Tuple.Create<ThrottleMode, bool>(Blackhole.Instance, false));
+            bucket.TryConsumeTokens(0, 100).ShouldBe((Blackhole.Instance, false));
+            bucket.TryConsumeTokens(100000, 1000).ShouldBe((Blackhole.Instance, false));
+            bucket.TryConsumeTokens(1000000, 10000).ShouldBe((Blackhole.Instance, false));
         }
 
         [Fact]

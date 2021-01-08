@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Keep.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ namespace Akka.Streams.Dsl
         /// <param name="left">TBD</param>
         /// <param name="right">TBD</param>
         /// <returns>TBD</returns>
-        public static Tuple<TLeft, TRight> Both<TLeft, TRight>(TLeft left, TRight right) => Tuple.Create(left, right);
+        public static (TLeft, TRight) Both<TLeft, TRight>(TLeft left, TRight right) => (left, right);
 
         /// <summary>
         /// TBD

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AlreadyCanceledCancelable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,37 +13,28 @@ namespace Akka.Actor
     /// <summary>
     /// A <see cref="ICancelable"/> that is already canceled.
     /// </summary>
-    public class AlreadyCanceledCancelable : ICancelable
+    internal sealed class AlreadyCanceledCancelable : ICancelable
     {
         private static readonly AlreadyCanceledCancelable _instance = new AlreadyCanceledCancelable();
 
         private AlreadyCanceledCancelable() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Cancel()
         {
             //Intentionally left blank
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool IsCancellationRequested { get { return true; } }
+        /// <inheritdoc/>
+        public bool IsCancellationRequested => true;
 
         /// <summary>
-        /// TBD
+        /// Gets an instance of an already canceled <see cref="ICancelable"/>.
         /// </summary>
-        public static ICancelable Instance { get { return _instance; } }
+        public static ICancelable Instance => _instance;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public CancellationToken Token
-        {
-            get { return new CancellationToken(true); }
-        }
+        /// <inheritdoc/>
+        public CancellationToken Token => new CancellationToken(true);
 
         void ICancelable.CancelAfter(TimeSpan delay)
         {
@@ -55,11 +46,7 @@ namespace Akka.Actor
             //Intentionally left blank            
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="throwOnFirstException">TBD</param>
-        public void Cancel(bool throwOnFirstException)
+        void ICancelable.Cancel(bool throwOnFirstException)
         {
             //Intentionally left blank
         }

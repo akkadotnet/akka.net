@@ -1,9 +1,16 @@
 ---
-layout: docs.hbs
+uid: streams-quickstart
 title: Quickstart
 ---
 
-# Quick Start Guide
+# Streams Quickstart Guide
+
+To use Akka Streams, an additional module is required, so we first make sure ```Akka.Streams``` is added to our project:
+
+```
+Install-Package Akka.Streams
+```
+
 A stream usually begins at a source, so this is also how we start an Akka Stream. Before we create one, we import the full complement of streaming tools:
 
 ```csharp
@@ -31,7 +38,7 @@ using (var materializer = system.Materializer())
 ```
 There are other ways to create a materializer, e.g. from an `ActorContext` when using streams from within Actors. The `Materializer` is a factory for stream execution engines, it is the thing that makes streams run --you don't need to worry about any of the details just now apart from that you need one for calling any of the run methods on a `Source`. 
 
-The nice thing about Akka Streams is that the `Source` is just a description of what you want to run, and like an architect�s blueprint it can be reused, incorporated into a larger design. We may choose to transform the source of integers and write it to a file instead:
+The nice thing about Akka Streams is that the `Source` is just a description of what you want to run, and like an architect's blueprint it can be reused, incorporated into a larger design. We may choose to transform the source of integers and write it to a file instead:
 ```csharp
   var factorials = source.Scan(new BigInteger(1), (acc, next) => acc * next);
   var result =
@@ -70,4 +77,4 @@ All operations so far have been time-independent and could have been performed i
 
 If you run this program you will see one line printed per second. One aspect that is not immediately visible deserves mention, though: if you try and set the streams to produce a billion numbers each then you will notice that your environment does not crash with an OutOfMemoryError, even though you will also notice that running the streams happens in the background, asynchronously (this is the reason for the auxiliary information to be provided as a `Task`). The secret that makes this work is that Akka Streams implicitly implement pervasive flow control, all combinators respect back-pressure. This allows the throttle combinator to signal to all its upstream sources of data that it can only accept elements at a certain rate--when the incoming rate is higher than one per second the throttle combinator will assert back-pressure upstream.
 
-This is basically all there is to Akka Streams in a nutshell--glossing over the fact that there are dozens of sources and sinks and many more stream transformation combinators to choose from, see also [Overview of built-in stages and their semantics](builtinstages.md).
+This is basically all there is to Akka Streams in a nutshell--glossing over the fact that there are dozens of sources and sinks and many more stream transformation combinators to choose from, see also [Overview of built-in stages and their semantics](xref:streams-builtin-stages).

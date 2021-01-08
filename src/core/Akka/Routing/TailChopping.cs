@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TailChopping.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -155,11 +155,11 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public TailChoppingPool(Config config)
             : this(
-                  config.GetInt("nr-of-instances"),
+                  config.GetInt("nr-of-instances", 0),
                   Resizer.FromConfig(config),
                   Pool.DefaultSupervisorStrategy,
                   Dispatchers.DefaultDispatcherId,
-                  config.GetTimeSpan("within"), config.GetTimeSpan("tail-chopping-router.interval"), config.HasPath("pool-dispatcher"))
+                  config.GetTimeSpan("within", null), config.GetTimeSpan("tail-chopping-router.interval", null), config.HasPath("pool-dispatcher"))
         {
         }
 
@@ -390,9 +390,9 @@ namespace Akka.Routing
         /// </param>
         public TailChoppingGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
-                  config.GetTimeSpan("within"),
-                  config.GetTimeSpan("tail-chopping-router.interval"),
+                  config.GetStringList("routees.paths", new string[] { }),
+                  config.GetTimeSpan("within", null),
+                  config.GetTimeSpan("tail-chopping-router.interval", null),
                   Dispatchers.DefaultDispatcherId)
         {
         }
@@ -456,7 +456,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -469,7 +469,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public TailChoppingGroup WithDispatcher(string dispatcher)
         {
-            return new TailChoppingGroup(Paths, Within, Interval, dispatcher);
+            return new TailChoppingGroup(InternalPaths, Within, Interval, dispatcher);
         }
 
         /// <summary>
@@ -481,7 +481,7 @@ namespace Akka.Routing
         {
             return new TailChoppingGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 Within = Within,
                 Interval = Interval,
                 RouterDispatcher = RouterDispatcher

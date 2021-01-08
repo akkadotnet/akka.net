@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowZipSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,15 +17,15 @@ using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class FlowZipSpec : BaseTwoStreamsSetup<Tuple<int, int>>
+    public class FlowZipSpec : BaseTwoStreamsSetup<(int, int)>
     {
         public FlowZipSpec(ITestOutputHelper output = null) : base(output)
         {
         }
 
-        protected override TestSubscriber.Probe<Tuple<int, int>> Setup(IPublisher<int> p1, IPublisher<int> p2)
+        protected override TestSubscriber.Probe<(int, int)> Setup(IPublisher<int> p1, IPublisher<int> p2)
         {
-            var subscriber = this.CreateSubscriberProbe<Tuple<int, int>>();
+            var subscriber = this.CreateSubscriberProbe<(int, int)>();
             Source.FromPublisher(p1)
                 .Zip(Source.FromPublisher(p2))
                 .RunWith(Sink.FromSubscriber(subscriber), Materializer);
@@ -37,20 +37,20 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var probe = this.CreateManualSubscriberProbe<Tuple<int, string>>();
+                var probe = this.CreateManualSubscriberProbe<(int, string)>();
                 Source.From(Enumerable.Range(1, 4))
                     .Zip(Source.From(new[] {"A", "B", "C", "D", "E", "F"}))
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(2);
-                probe.ExpectNext(Tuple.Create(1, "A"));
-                probe.ExpectNext(Tuple.Create(2, "B"));
+                probe.ExpectNext((1, "A"));
+                probe.ExpectNext((2, "B"));
 
                 subscription.Request(1);
-                probe.ExpectNext(Tuple.Create(3, "C"));
+                probe.ExpectNext((3, "C"));
                 subscription.Request(1);
-                probe.ExpectNext(Tuple.Create(4, "D"));
+                probe.ExpectNext((4, "D"));
 
                 probe.ExpectComplete();
             }, Materializer);

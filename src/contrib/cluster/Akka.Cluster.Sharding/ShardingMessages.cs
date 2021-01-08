@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using Akka.Actor;
 using System.Collections.Immutable;
+using System.Linq;
+using Akka.Event;
 
 namespace Akka.Cluster.Sharding
 {
@@ -22,6 +24,18 @@ namespace Akka.Cluster.Sharding
     public interface IShardRegionQuery { }
 
     /// <summary>
+    /// Used as a special termination message for <see cref="ShardCoordinator"/> singleton actor
+    /// </summary>
+    internal sealed class Terminate : IDeadLetterSuppression
+    {
+        public static readonly Terminate Instance = new Terminate();
+
+        private Terminate()
+        {
+        }
+    }
+
+    /// <summary>
     /// If the state of the entries are persistent you may stop entries that are not used to
     /// reduce memory consumption. This is done by the application specific implementation of
     /// the entity actors for example by defining receive timeout (<see cref="IActorContext.SetReceiveTimeout"/>).
@@ -32,7 +46,7 @@ namespace Akka.Cluster.Sharding
     /// then supposed to stop itself. Incoming messages will be buffered by the `ShardRegion`
     /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
     /// are thereafter delivered to a new incarnation of the entity.
-    /// 
+    ///
     /// <see cref="PoisonPill"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
     [Serializable]
@@ -71,12 +85,26 @@ namespace Akka.Cluster.Sharding
         }
     }
 
+    [Serializable]
+    internal sealed class GracefulShutdownTimeout : IShardRegionCommand
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly GracefulShutdownTimeout Instance = new GracefulShutdownTimeout();
+
+        private GracefulShutdownTimeout()
+        {
+        }
+    }
+
+
     /// <summary>
     /// We must be sure that a shard is initialized before to start send messages to it.
     /// Shard could be terminated during initialization.
     /// </summary>
     [Serializable]
-    public sealed class ShardInitialized
+    public sealed class ShardInitialized : IEquatable<ShardInitialized>
     {
         /// <summary>
         /// TBD
@@ -91,6 +119,20 @@ namespace Akka.Cluster.Sharding
         {
             ShardId = shardId;
         }
+
+        public bool Equals(ShardInitialized other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(ShardId, other.ShardId);
+        }
+
+        public override bool Equals(object obj) => obj is ShardInitialized si && Equals(si);
+
+        public override int GetHashCode() => ShardId.GetHashCode();
+
+        public override string ToString() => $"ShardInitialized({ShardId})";
     }
 
     /// <summary>
@@ -136,25 +178,40 @@ namespace Akka.Cluster.Sharding
     /// which contains statistics about the currently running sharded entities in the
     /// entire cluster. If the `timeout` is reached without answers from all shard regions
     /// the reply will contain an empty map of regions.
-    /// 
+    ///
     /// Intended for testing purpose to see when cluster sharding is "ready" or to monitor
     /// the state of the shard regions.
     /// </summary>
     [Serializable]
-    public sealed class GetClusterShardingStats : IShardRegionQuery
+    public sealed class GetClusterShardingStats : IShardRegionQuery, IClusterShardingSerializable, IEquatable<GetClusterShardingStats>
     {
         /// <summary>
-        /// TBD
+        /// The timeout for this operation.
         /// </summary>
         public readonly TimeSpan Timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a new GetClusterShardingStats message instance.
         /// </summary>
-        /// <param name="timeout">TBD</param>
+        /// <param name="timeout">The amount of time to allow this operation to run.</param>
         public GetClusterShardingStats(TimeSpan timeout)
         {
             Timeout = timeout;
+        }
+
+        public bool Equals(GetClusterShardingStats other)
+        {
+            return other != null && Timeout.Equals(other.Timeout);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is GetClusterShardingStats other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Timeout.GetHashCode();
         }
     }
 
@@ -162,20 +219,36 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetClusterShardingStats"/>, contains statistics about all the sharding regions in the cluster.
     /// </summary>
     [Serializable]
-    public sealed class ClusterShardingStats
+    public sealed class ClusterShardingStats : IClusterShardingSerializable, IEquatable<ClusterShardingStats>
     {
         /// <summary>
-        /// TBD
+        /// All of the statistics for a specific shard region organized per-node.
         /// </summary>
         public readonly IImmutableDictionary<Address, ShardRegionStats> Regions;
 
         /// <summary>
-        /// TBD
+        /// Creates a new ClusterShardingStats message.
         /// </summary>
-        /// <param name="regions">TBD</param>
+        /// <param name="regions">The set of sharding statistics per-node.</param>
         public ClusterShardingStats(IImmutableDictionary<Address, ShardRegionStats> regions)
         {
             Regions = regions;
+        }
+
+        public bool Equals(ClusterShardingStats other)
+        {
+            return other != null && (Regions.Keys.SequenceEqual(other.Regions.Keys) &&
+                                     Regions.Values.SequenceEqual(other.Regions.Values));
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is ClusterShardingStats other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Regions.GetHashCode();
         }
     }
 
@@ -185,11 +258,11 @@ namespace Akka.Cluster.Sharding
     /// entire region.
     /// Intended for testing purpose to see when cluster sharding is "ready" or to monitor
     /// the state of the shard regions.
-    /// 
+    ///
     /// For the statistics for the entire cluster, see <see cref="GetClusterShardingStats"/>.
     /// </summary>
     [Serializable]
-    public sealed class GetShardRegionStats : IShardRegionQuery
+    public sealed class GetShardRegionStats : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -242,23 +315,39 @@ namespace Akka.Cluster.Sharding
     }
 
     /// <summary>
-    /// TBD
+    /// Entity allocation statistics for a specific shard region.
     /// </summary>
     [Serializable]
-    public sealed class ShardRegionStats
+    public sealed class ShardRegionStats : IClusterShardingSerializable, IEquatable<ShardRegionStats>
     {
         /// <summary>
-        /// TBD
+        /// The set of shardId / entity count pairs
         /// </summary>
         public readonly IImmutableDictionary<string, int> Stats;
 
         /// <summary>
-        /// TBD
+        /// Creates a new ShardRegionStats instance.
         /// </summary>
-        /// <param name="stats">TBD</param>
+        /// <param name="stats">The set of shardId / entity count pairs</param>
         public ShardRegionStats(IImmutableDictionary<string, int> stats)
         {
             Stats = stats;
+        }
+
+        public bool Equals(ShardRegionStats other)
+        {
+            return other != null && (Stats.Keys.SequenceEqual(other.Stats.Keys)
+                                     && Stats.Values.SequenceEqual(other.Stats.Values));
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is ShardRegionStats other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return (Stats != null ? Stats.GetHashCode() : 0);
         }
     }
 

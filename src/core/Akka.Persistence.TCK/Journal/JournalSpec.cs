@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JournalSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,9 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +21,15 @@ namespace Akka.Persistence.TCK.Journal
     public abstract class JournalSpec : PluginSpec
     {
         protected static readonly Config Config =
-            ConfigurationFactory.ParseString("akka.persistence.publish-plugin-commands = on");
+            ConfigurationFactory.ParseString(@"akka.persistence.publish-plugin-commands = on
+            akka.actor{
+                serializers{
+                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
+                }
+                serialization-bindings {
+                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
+                }
+            }");
 
         private static readonly string _specConfigTemplate = @"
             akka.persistence {{
@@ -43,6 +51,8 @@ namespace Akka.Persistence.TCK.Journal
             : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", output)
         {
         }
+
+        protected override bool SupportsSerialization => true;
 
         /// <summary>
         /// Initializes a journal with set o predefined messages.
@@ -134,7 +144,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(1, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -142,7 +152,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(3, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 3; i <= 5; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -150,7 +160,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(1, 3, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -158,7 +168,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(1, long.MaxValue, 3, Pid, _receiverProbe.Ref));
             for (int i = 1; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -166,7 +176,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 3, long.MaxValue, Pid, _receiverProbe.Ref));
             for (int i = 2; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -174,7 +184,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 5, 2, Pid, _receiverProbe.Ref));
             for (int i = 2; i <= 3; i++) _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, i));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -182,7 +192,7 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 2, long.MaxValue, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -190,21 +200,21 @@ namespace Akka.Persistence.TCK.Journal
         {
             Journal.Tell(new ReplayMessages(2, 4, 1, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<ReplayedMessage>(m => IsReplayedMessage(m, 2));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
         public void Journal_should_not_replay_messages_if_count_limit_equals_zero()
         {
             Journal.Tell(new ReplayMessages(2, 4, 0, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
         public void Journal_should_not_replay_messages_if_lower_sequence_number_bound_is_greater_than_upper_sequence_number_bound()
         {
             Journal.Tell(new ReplayMessages(3, 2, long.MaxValue, Pid, _receiverProbe.Ref));
-            _receiverProbe.ExpectMsg<RecoverySuccess>();
+            _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
         }
 
         [Fact]
@@ -260,6 +270,45 @@ namespace Akka.Persistence.TCK.Journal
 
             Journal.Tell(new ReplayMessages(0, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
             _receiverProbe.ExpectMsg<RecoverySuccess>(m => m.HighestSequenceNr == 5L);
+        }
+
+        [Fact]
+        public void Journal_should_serialize_events()
+        {
+            if (!SupportsSerialization) return;
+
+            var probe = CreateTestProbe();
+            var @event = new TestPayload(probe.Ref);
+
+            var aw = new AtomicWrite(
+                new Persistent(@event, 6L, Pid, sender: ActorRefs.NoSender, writerGuid: WriterGuid));
+
+            Journal.Tell(new WriteMessages(new []{ aw }, probe.Ref, ActorInstanceId));
+
+            probe.ExpectMsg<WriteMessagesSuccessful>();
+            var pid = Pid;
+            var writerGuid = WriterGuid;
+            probe.ExpectMsg<WriteMessageSuccess>(o =>
+            {
+                Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
+                Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
+                Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
+                Assertions.AssertTrue(o.Persistent.Sender == ActorRefs.NoSender || o.Persistent.Sender.Equals(Sys.DeadLetters), $"Expected WriteMessagesSuccess.Persistent.Sender to be null or {Sys.DeadLetters}, but found {o.Persistent.Sender}");
+                Assertions.AssertEqual(@event, o.Persistent.Payload);
+            });
+
+            Journal.Tell(new ReplayMessages(6L, long.MaxValue, long.MaxValue, Pid, _receiverProbe.Ref));
+
+            _receiverProbe.ExpectMsg<ReplayedMessage>(o =>
+            {
+                Assertions.AssertEqual(writerGuid, o.Persistent.WriterGuid);
+                Assertions.AssertEqual(pid, o.Persistent.PersistenceId);
+                Assertions.AssertEqual(6L, o.Persistent.SequenceNr);
+                Assertions.AssertTrue(o.Persistent.Sender == ActorRefs.NoSender || o.Persistent.Sender.Equals(Sys.DeadLetters), $"Expected WriteMessagesSuccess.Persistent.Sender to be null or {Sys.DeadLetters}, but found {o.Persistent.Sender}");
+                Assertions.AssertEqual(@event, o.Persistent.Payload);
+            });
+
+            Assertions.AssertEqual(_receiverProbe.ExpectMsg<RecoverySuccess>().HighestSequenceNr, 6L);
         }
 
 #if !CORECLR

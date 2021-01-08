@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NewtonSoftJsonSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,8 +47,8 @@ namespace Akka.Serialization
         /// <exception cref="ArgumentException">Raised when types defined in `converters` list didn't inherit <see cref="JsonConverter"/>.</exception>
         public static NewtonSoftJsonSerializerSettings Create(Config config)
         {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config), $"{nameof(NewtonSoftJsonSerializerSettings)} config was not provided");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<NewtonSoftJsonSerializerSettings>();
 
             return new NewtonSoftJsonSerializerSettings(
                 encodeTypeNames: config.GetBoolean("encode-type-names", true),
@@ -58,7 +58,7 @@ namespace Akka.Serialization
 
         private static IEnumerable<Type> GetConverterTypes(Config config)
         {
-            var converterNames = config.GetStringList("converters");
+            var converterNames = config.GetStringList("converters", new string[] { });
 
             if (converterNames != null)
                 foreach (var converterName in converterNames)

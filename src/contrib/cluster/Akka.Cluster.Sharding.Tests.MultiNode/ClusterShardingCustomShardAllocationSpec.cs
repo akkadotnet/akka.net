@@ -1,34 +1,26 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingCustomShardAllocationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
-using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Akka.Remote.Transport;
-using Xunit;
-using Akka.Event;
-using Akka.TestKit.TestActors;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingCustomShardAllocationSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
-
-        public RoleName Second { get; private set; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
         public ClusterShardingCustomShardAllocationSpecConfig()
         {
@@ -190,7 +182,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
 
         internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,18 +75,34 @@ namespace Akka.Actor
         public ActorSelection(IActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
-            
-            Path = elements
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select<string, SelectionPathElement>(e =>
+
+            var list = new List<SelectionPathElement>();
+            var iter = elements.Iterator();
+            while(!iter.IsEmpty())
+            {
+                var s = iter.Next();
+                switch(s)
                 {
-                    if (e.Contains("?") || e.Contains("*"))
-                        return new SelectChildPattern(e);
-                    if (e == "..")
-                        return new SelectParent();
-                    return new SelectChildName(e);
-                })
-                .ToArray();
+                    case null:
+                    case "":
+                        break;
+                    case "**":
+                        if(!iter.IsEmpty())
+                            throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
+                        list.Add(new SelectChildRecursive());
+                        break;
+                    case string e when e.Contains("?") || e.Contains("*"):
+                        list.Add(new SelectChildPattern(e));
+                        break;
+                    case string e when e == "..":
+                        list.Add(new SelectParent());
+                        break;
+                    default:
+                        list.Add(new SelectChildName(s));
+                        break;
+                }
+            }
+            Path = list.ToArray();
         }
 
         /// <summary>
@@ -213,6 +229,18 @@ namespace Akka.Actor
                                 }
 
                                 break;
+                            case SelectChildRecursive _:
+                                var allChildren = refWithCell.Children.ToList();
+                                if (allChildren.Count == 0)
+                                    return;
+
+                                var msg = new ActorSelectionMessage(sel.Message, new[] { new SelectChildRecursive() }, true);
+                                foreach (var c in allChildren)
+                                {
+                                    c.Tell(sel.Message, sender);
+                                    DeliverSelection(c as IInternalActorRef, sender, msg);
+                                }
+                                break;
                             case SelectChildPattern pattern:
                                 // fan-out when there is a wildcard
                                 var matchingChildren = refWithCell.Children
@@ -296,7 +324,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Class ActorSelectionMessage.
+    /// Used to deliver messages via <see cref="ActorSelection"/>.
     /// </summary>
     public class ActorSelectionMessage : IAutoReceivedMessage, IPossiblyHarmful
     {
@@ -324,7 +352,7 @@ namespace Akka.Actor
         public SelectionPathElement[] Elements { get; }
 
         /// <summary>
-        /// TBD
+        /// When <c>true</c>, indicates that this <see cref="ActorSelection"/> includes wildcards.
         /// </summary>
         public bool WildCardFanOut { get; }
 
@@ -333,6 +361,19 @@ namespace Akka.Actor
         {
             var elements = string.Join<SelectionPathElement>("/", Elements);
             return $"ActorSelectionMessage - Message: {Message} - WildCartFanOut: {WildCardFanOut} - Elements: {elements}";
+        }
+
+        /// <summary>
+        /// Creates a deep copy of the <see cref="ActorSelectionMessage"/> with the provided properties.
+        /// </summary>
+        /// <param name="message">Optional. The new message to deliver.</param>
+        /// <param name="elements">Optional. The new elements on the actor selection.</param>
+        /// <param name="wildCardFanOut">Optional. Indicates whether or not we're delivering a wildcard <see cref="ActorSelection"/>.</param>
+        /// <returns>A new <see cref="ActorSelectionMessage"/>.</returns>
+        public ActorSelectionMessage Copy(object message = null, SelectionPathElement[] elements = null,
+            bool? wildCardFanOut = null)
+        {
+            return new ActorSelectionMessage(message ?? Message, elements ?? Elements, wildCardFanOut ?? WildCardFanOut);
         }
     }
 
@@ -422,6 +463,24 @@ namespace Akka.Actor
         public override string ToString() => PatternStr;
     }
 
+    public class SelectChildRecursive : SelectionPathElement
+    {
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if(!(obj is SelectChildRecursive)) return false;
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => "**".GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => "**";
+
+    }
 
     /// <summary>
     /// Class SelectParent.

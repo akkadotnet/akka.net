@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FileSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,13 +12,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
-using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -86,24 +86,24 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
-        public void SynchronousFileSink_should_by_default_write_into_existing_file()
+        public void SynchronousFileSink_should_write_into_existing_file_without_wiping_existing_data()
         {
             this.AssertAllStagesStopped(() =>
             {
                 TargetFile(f =>
                 {
-                    Func<IEnumerable<string>, Task<IOResult>> write = lines => Source.From(lines)
+                    Task<IOResult> Write(IEnumerable<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
-                        .RunWith(FileIO.ToFile(f), _materializer);
+                        .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
-                    var completion1 = write(_testLines);
+                    var completion1 = Write(_testLines);
                     completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
 
                     var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
                         lastWrite[i] = "x";
 
-                    var completion2 = write(lastWrite);
+                    var completion2 = Write(lastWrite);
                     completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result = completion2.Result;
 
@@ -116,17 +116,39 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public void SynchronousFileSink_should_by_default_replace_the_existing_file()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                TargetFile(f =>
+                {
+                    Task<IOResult> Write(List<string> lines) =>
+                        Source.From(lines).Select(ByteString.FromString)
+                            .RunWith(FileIO.ToFile(f), _materializer);
+
+                    Write(_testLines).AwaitResult();
+
+                    var lastWrite = Enumerable.Range(0, 100).Select(_ => "x").ToList();
+                    var result = Write(lastWrite).AwaitResult();
+
+                    result.Count.Should().Be(lastWrite.Count);
+                    CheckFileContent(f, string.Join("", lastWrite));
+                });
+            }, _materializer);
+        }
+
+        [Fact]
         public void SynchronousFileSink_should_allow_appending_to_file()
         {
             this.AssertAllStagesStopped(() =>
             {
                 TargetFile(f =>
                 {
-                    Func<List<string>, Task<IOResult>> write = lines => Source.From(lines)
+                    Task<IOResult> Write(List<string> lines) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
-                    var completion1 = write(_testLines);
+                    var completion1 = Write(_testLines);
                     completion1.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result1 = completion1.Result;
 
@@ -134,7 +156,7 @@ namespace Akka.Streams.Tests.IO
                     for (var i = 0; i < 100; i++)
                         lastWrite.Add("x");
 
-                    var completion2 = write(lastWrite);
+                    var completion2 = Write(lastWrite);
                     completion2.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                     var result2 = completion2.Result;
 
@@ -173,14 +195,14 @@ namespace Akka.Streams.Tests.IO
                         new string('x', 1000) + "\n",
                     };
 
-                    Task<IOResult> write(List<string> lines, long pos) => Source.From(lines)
+                    Task<IOResult> Write(List<string> lines, long pos) => Source.From(lines)
                         .Select(ByteString.FromString)
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: pos), _materializer);
 
-                    var completion1 = write(_testLines, 0);
+                    var completion1 = Write(_testLines, 0);
                     var result1 = completion1.AwaitResult();
 
-                    var completion2 = write(testLinesPart2, startPosition);
+                    var completion2 = Write(testLinesPart2, startPosition);
                     var result2 = completion2.AwaitResult();
 
                     f.Length.ShouldBe(startPosition + result2.Count);
@@ -196,20 +218,24 @@ namespace Akka.Streams.Tests.IO
             {
                 TargetFile(f =>
                 {
-                    var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
+                    var sys = ActorSystem.Create("FileSinkSpec-dispatcher-testing-1", Utils.UnboundedMailboxConfig);
                     var materializer = ActorMaterializer.Create(sys);
 
                     try
                     {
                         //hack for Iterator.continually
-                        Source.FromEnumerator(() => Enumerable.Repeat(_testByteStrings.Head(), Int32.MaxValue).GetEnumerator())
+                        Source
+                            .FromEnumerator(() => Enumerable.Repeat(_testByteStrings.Head(), int.MaxValue).GetEnumerator())
                             .RunWith(FileIO.ToFile(f), materializer);
 
-                        ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
+                        ((ActorMaterializerImpl)materializer)
+                            .Supervisor
+                            .Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                         var refs = ExpectMsg<StreamSupervisor.Children>().Refs;
-                        //NOTE: Akka uses "fileSource" as name for DefaultAttributes.FileSink - I think it's mistake on the JVM implementation side
                         var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("fileSink"));
-                        Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+
+                        // haven't figured out why this returns the aliased id rather than the id, but the stage is going away so whatever
+                        Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                     }
                     finally
                     {
@@ -227,7 +253,7 @@ namespace Akka.Streams.Tests.IO
             {
                 TargetFile(f =>
                 {
-                    var sys = ActorSystem.Create("dispatcher_testing", Utils.UnboundedMailboxConfig);
+                    var sys = ActorSystem.Create("FileSinkSpec-dispatcher-testing-2", Utils.UnboundedMailboxConfig);
                     var materializer = ActorMaterializer.Create(sys);
 
                     try

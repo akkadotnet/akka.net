@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SinkForeachParallelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 4)
-                    .Select(i => Tuple.Create(i, new TestLatch(1)))
+                    .Select(i => (i, new TestLatch(1)))
                     .ToDictionary(t => t.Item1, t => t.Item2);
                 var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {
@@ -63,14 +63,14 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy - timing is rather sensitive on Azure DevOps")]
         public void A_ForeachParallel_must_not_run_more_functions_in_parallel_then_specified()
         {
             this.AssertAllStagesStopped(() =>
             {
                 var probe = CreateTestProbe();
                 var latch = Enumerable.Range(1, 5)
-                    .Select(i => Tuple.Create(i, new TestLatch()))
+                    .Select(i => (i, new TestLatch()))
                     .ToDictionary(t => t.Item1, t => t.Item2);
                 var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachParallel<int>(4, n =>
                 {

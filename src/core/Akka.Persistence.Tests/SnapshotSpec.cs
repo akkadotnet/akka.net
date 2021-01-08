@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -111,6 +111,51 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        internal class IgnoringSnapshotTestPersistentActor : NamedPersistentActor
+        {
+            private readonly Recovery _recovery;
+            private readonly IActorRef _probe;
+
+            public IgnoringSnapshotTestPersistentActor(string name, Recovery recovery, IActorRef probe)
+                : base(name)
+            {
+                _probe = probe;
+                _recovery = recovery;
+            }
+
+            protected override bool ReceiveRecover(object message)
+            {
+                switch(message)
+                {
+                   case string payload:
+                        _probe.Tell($"{payload}-{LastSequenceNr}");
+                        return true;
+                    case object other when !(other is SnapshotOffer):
+                        _probe.Tell(other);
+                        return true;
+                }
+                return false;
+            }
+
+            protected override bool ReceiveCommand(object message)
+            {
+                switch(message)
+                {
+                    case string payload when payload == "done":
+                        _probe.Tell("done");
+                        return true;
+                    case string payload:
+                        Persist(payload, _ => _probe.Tell($"{payload}-{LastSequenceNr}"));
+                        return true;
+                    default:
+                        _probe.Tell(message);
+                        return true;
+                }
+            }
+
+            public override Recovery Recovery => _recovery; 
+        }
+
         public sealed class DeleteOne
         {
             public DeleteOne(SnapshotMetadata metadata)
@@ -180,6 +225,21 @@ namespace Akka.Persistence.Tests
             (offer.Snapshot as IEnumerable<string>).Reverse().ShouldOnlyContainInOrder("a-1", "b-2", "c-3", "d-4");
             (offer.Metadata.Timestamp > DateTime.MinValue).ShouldBeTrue();
 
+            ExpectMsg("e-5");
+            ExpectMsg("f-6");
+            ExpectMsg<RecoveryCompleted>();
+        }
+
+        [Fact]
+        public void PersistentActor_should_recover_completely_if_snapshot_is_not_handled()
+        {
+            var pref = ActorOf(() => new IgnoringSnapshotTestPersistentActor(Name, new Recovery(), TestActor));
+            var persistenceId = Name;
+
+            ExpectMsg("a-1");
+            ExpectMsg("b-2");
+            ExpectMsg("c-3");
+            ExpectMsg("d-4");
             ExpectMsg("e-5");
             ExpectMsg("f-6");
             ExpectMsg<RecoveryCompleted>();

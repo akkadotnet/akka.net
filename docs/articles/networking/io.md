@@ -20,9 +20,10 @@ var system = ActorSystem.Create("example");
 var manager = system.Tcp();
 ```
 
-### TCP Driver
+## TCP Driver
 
-#### Client Connection
+### Client Connection
+
 To create a connection an actor sends a `Tcp.Connect` message to the TCP Manager.
 Once the connection is established the connection actor sends a `Tcp.Connected` message to the `commander`, which registers the `connection handler` by replying with a `Tcp.Register` message.
 
@@ -34,9 +35,10 @@ The following diagram illustrate the actors involved in establishing and handlin
 
 The following example shows a simple Telnet client. The client send lines entered in the console to the TCP connection, and write data received from the network to the console.
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/TelnetClient.cs?range=10-63)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/TelnetClient.cs?name=telnet-client)]
 
-#### Server Connection
+### Server Connection
+
 To accept connections, an actor sends an `Tcp.Bind` message to the TCP manager, passing the `bind handler` in the message.
 The `bind commander` will receive a `Tcp.Bound` message when the connection is listening.
 
@@ -48,6 +50,6 @@ The following diagram illustrate the actor and messages.
 
 The following code example shows a simple server that echo's data received from the network.
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoServer.cs?range=8-29)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echo-server)]
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/IO/EchoConnection.cs?range=6-27)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoConnection.cs?name=echo-connection)]

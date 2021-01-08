@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlSnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Persistence.Snapshot;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Sql.Common.Snapshot
 {
@@ -39,12 +40,15 @@ namespace Akka.Persistence.Sql.Common.Snapshot
 
         private readonly SnapshotStoreSettings _settings;
 
+        private readonly ExtendedActorSystem _actorSystem;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SqlSnapshotStore"/> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the snapshot store.</param>
         protected SqlSnapshotStore(Config config)
         {
+            _actorSystem = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _settings = new SnapshotStoreSettings(config);
             _pendingRequestsCancellation = new CancellationTokenSource();
         }
@@ -110,9 +114,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             try
             {
                 using (var connection = CreateDbConnection())
+                using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
                 {
-                    await connection.OpenAsync(_pendingRequestsCancellation.Token);
-                    await QueryExecutor.CreateTableAsync(connection, _pendingRequestsCancellation.Token);
+                    await connection.OpenAsync(nestedCancellationTokenSource.Token);
+                    await QueryExecutor.CreateTableAsync(connection, nestedCancellationTokenSource.Token);
                     return Initialized.Instance;
                 }
             }
@@ -163,9 +168,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override async Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
-                await connection.OpenAsync(_pendingRequestsCancellation.Token);
-                return await QueryExecutor.SelectSnapshotAsync(connection, _pendingRequestsCancellation.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
+                await connection.OpenAsync(nestedCancellationTokenSource.Token);
+                return await QueryExecutor.SelectSnapshotAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
 
@@ -178,9 +184,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override async Task SaveAsync(SnapshotMetadata metadata, object snapshot)
         {
             using (var connection = CreateDbConnection())
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
-                await connection.OpenAsync();
-                await QueryExecutor.InsertAsync(connection, _pendingRequestsCancellation.Token, snapshot, metadata);
+                await connection.OpenAsync(nestedCancellationTokenSource.Token);
+                await QueryExecutor.InsertAsync(connection, nestedCancellationTokenSource.Token, snapshot, metadata);
             }
         }
 
@@ -192,10 +199,11 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override async Task DeleteAsync(SnapshotMetadata metadata)
         {
             using (var connection = CreateDbConnection())
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))    
             {
-                await connection.OpenAsync();
+                await connection.OpenAsync(nestedCancellationTokenSource.Token);
                 DateTime? timestamp = metadata.Timestamp != DateTime.MinValue ? metadata.Timestamp : default(DateTime?);
-                await QueryExecutor.DeleteAsync(connection, _pendingRequestsCancellation.Token, metadata.PersistenceId, metadata.SequenceNr, timestamp);
+                await QueryExecutor.DeleteAsync(connection, nestedCancellationTokenSource.Token, metadata.PersistenceId, metadata.SequenceNr, timestamp);
             }
         }
 
@@ -208,9 +216,10 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected override async Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria)
         {
             using (var connection = CreateDbConnection())
+            using (var nestedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_pendingRequestsCancellation.Token))
             {
-                await connection.OpenAsync();
-                await QueryExecutor.DeleteBatchAsync(connection, _pendingRequestsCancellation.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
+                await connection.OpenAsync(nestedCancellationTokenSource.Token);
+                await QueryExecutor.DeleteBatchAsync(connection, nestedCancellationTokenSource.Token, persistenceId, criteria.MaxSequenceNr, criteria.MaxTimeStamp);
             }
         }
         
@@ -219,7 +228,9 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             var snapshotType = snapshot.GetType();
             var serializer = Context.System.Serialization.FindSerializerForType(snapshotType, _settings.DefaultSerializer);
 
-            var binary = serializer.ToBinary(snapshot);
+            var binary  = Akka.Serialization.Serialization.WithTransport(_actorSystem,
+                () => serializer.ToBinary(snapshot));
+            
 
             return new SnapshotEntry(
                 persistenceId: metadata.PersistenceId,

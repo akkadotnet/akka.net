@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,8 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
 
         public static Config GetConfig()
         {
-            return ConfigurationFactory.ParseString("akka.actor.provider = \"Akka.Cluster.ClusterActorRefProvider, Akka.Cluster\"");
+            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                      akka.remote.dot-netty.tcp.port = 0");
         }
 
         [Fact]
@@ -60,6 +61,17 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             exception.Message.Should().Be("InitialContacts must be defined");
         }
 
+        /// <summary>
+        /// Addresses the bug discussed here: https://github.com/akkadotnet/akka.net/issues/3417#issuecomment-397443227
+        /// </summary>
+        [Fact]
+        public void ClusterClientSettings_must_copy_initial_contacts_via_fluent_interface()
+        {
+            var initialContacts = ImmutableHashSet<ActorPath>.Empty.Add(new RootActorPath(Address.AllSystems) / "user" / "foo");
+            var clusterClientSettings = ClusterClientSettings.Create(Sys).WithInitialContacts(initialContacts).WithBufferSize(2000);
+            clusterClientSettings.InitialContacts.Should().BeEquivalentTo(initialContacts);
+        }
+
         [Fact]
         public void ClusterReceptionistSettings_must_have_default_config()
         {
@@ -73,6 +85,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             clusterReceptionistSettings.FailureDetectionInterval.Should().Be(2.Seconds());
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.client.receptionist");
+            Assert.False(config.IsNullOrEmpty());
             config.GetString("name").Should().Be("receptionist");
             config.GetString("use-dispatcher").Should().Be(string.Empty);
         }

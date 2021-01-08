@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotProtocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,7 +27,7 @@ namespace Akka.Persistence
     public interface ISnapshotResponse : ISnapshotMessage { }
 
     /// <summary>
-    /// TBD
+    /// Metadata for all persisted snapshot records.
     /// </summary>
     [Serializable]
     public sealed class SnapshotMetadata : IEquatable<SnapshotMetadata>
@@ -64,7 +64,7 @@ namespace Akka.Persistence
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="persistenceId">The id of the persistent actor fro which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
         public SnapshotMetadata(string persistenceId, long sequenceNr)
             : this(persistenceId, sequenceNr, TimestampNotSpecified)

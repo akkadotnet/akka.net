@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -329,7 +329,12 @@ akka.actor {
         [Fact]
         public void CanSerializeConfig()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.ParseString(@"
+my-settings{
+    a: 1
+    b: 2
+    c: 3
+}");
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));
@@ -403,7 +408,7 @@ akka.actor {
             var aref = ActorOf<BlackHoleActor>();
             var surrogate = aref.ToSurrogate(Sys) as ActorRefBase.Surrogate;
             var uid = aref.Path.Uid;
-            Assert.True(surrogate.Path.Contains("#" + uid));
+            Assert.Contains("#" + uid, surrogate.Path);
         }
 
         [Fact]

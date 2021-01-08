@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolStressTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,7 +110,7 @@ namespace Akka.Remote.Tests.Transport
 
                         if (seq > Limit*0.5)
                         {
-                            _controller.Tell(Tuple.Create(MaxSeq, Losses));
+                            _controller.Tell((MaxSeq, Losses));
                             Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), Self,
                                 ResendFinal.Instance, Self);
                             Context.Become(Done);
@@ -128,7 +128,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 if (message is ResendFinal)
                 {
-                    _controller.Tell(Tuple.Create(MaxSeq, Losses));
+                    _controller.Tell((MaxSeq, Losses));
                 }
             }
         }
@@ -178,7 +178,7 @@ namespace Akka.Remote.Tests.Transport
 
         #region Tests
 
-        [Fact(Skip="Racy - likely due to issue with Gremlin (FailureInjector) adapter")]
+        [Fact(Skip = "Extremely racy")]
         public void AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
         {
             //todo mute both systems for deadletters for any type of message
@@ -195,7 +195,7 @@ namespace Akka.Remote.Tests.Transport
             var tester = Sys.ActorOf(Props.Create(() => new SequenceVerifier(here, TestActor)));
             tester.Tell("start");
 
-            ExpectMsg<Tuple<int,int>>(TimeSpan.FromSeconds(60));
+            ExpectMsg<(int,int)>(TimeSpan.FromSeconds(60));
         }
 
         #endregion

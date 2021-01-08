@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Error.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,31 +30,12 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// The exception that caused the log event.
-        /// </summary>
-        public Exception Cause { get; private set; }
-
-        /// <summary>
         /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
         /// </summary>
         /// <returns>The <see cref="Akka.Event.LogLevel" /> used to classify this event.</returns>
         public override LogLevel LogLevel()
         {
             return Event.LogLevel.ErrorLevel;
-        }
-
-        /// <summary>
-        /// Returns a <see cref="System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
-        public override string ToString()
-        {
-            var cause = Cause;
-            var causeStr = cause == null ? "Unknown" : cause.ToString();
-            var errorStr = string.Format("[{0}][{1}][Thread {2}][{3}] {4}{5}Cause: {6}",
-                LogLevel().ToString().Replace("Level", "").ToUpperInvariant(), Timestamp,
-                Thread.ManagedThreadId.ToString().PadLeft(4, '0'), LogSource, Message, Environment.NewLine, causeStr);
-            return errorStr;
         }
     }
 }

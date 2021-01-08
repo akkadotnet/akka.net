@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Inbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,8 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Configuration;
+using Akka.Configuration;
 
 namespace Akka.Actor
 {
@@ -415,8 +417,11 @@ namespace Akka.Actor
         public static Inbox Create(ActorSystem system)
         {
             var config = system.Settings.Config.GetConfig("akka.actor.inbox");
-            var inboxSize = config.GetInt("inbox-size");
-            var timeout = config.GetTimeSpan("default-timeout");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<Inbox>("akka.actor.inbox");
+
+            var inboxSize = config.GetInt("inbox-size", 0);
+            var timeout = config.GetTimeSpan("default-timeout", null);
 
             var receiver = ((ActorSystemImpl)system).SystemActorOf(Props.Create(() => new InboxActor(inboxSize)), "inbox-" + Interlocked.Increment(ref _inboxNr));
 

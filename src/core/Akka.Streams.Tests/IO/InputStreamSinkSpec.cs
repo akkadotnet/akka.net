@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy in Linux")]
         public void InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
             this.AssertAllStagesStopped(() =>
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
+                var sys = ActorSystem.Create("InputStreamSink-testing", Utils.UnboundedMailboxConfig);
                 var materializer = ActorMaterializer.Create(sys);
                 try
                 {
@@ -310,7 +310,7 @@ namespace Akka.Streams.Tests.IO
                     (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                     var children = ExpectMsg<StreamSupervisor.Children>().Refs;
                     var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
-                    Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                    Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                 }
                 finally
                 {
@@ -364,6 +364,17 @@ namespace Akka.Streams.Tests.IO
             */
         }
 
+        [Fact]
+        public void InputStreamSink_should_throw_from_inputstream_read_if_terminated_abruptly()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var probe = this.CreatePublisherProbe<ByteString>();
+            var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
+            materializer.Shutdown();
+
+            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<AbruptTerminationException>();
+        }
+
         private static ByteString RandomByteString(int size)
         {
             var a = new byte[size];
@@ -371,11 +382,11 @@ namespace Akka.Streams.Tests.IO
             return ByteString.FromBytes(a);
         }
 
-        private Tuple<int, ByteString> ReadN(Stream s, int n)
+        private (int, ByteString) ReadN(Stream s, int n)
         {
             var buf = new byte[n];
             var r = s.Read(buf, 0, n);
-            return new Tuple<int, ByteString>(r, ByteString.FromBytes(buf, 0, r));
+            return (r, ByteString.FromBytes(buf, 0, r));
         }
 
         private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)

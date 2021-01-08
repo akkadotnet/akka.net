@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteRouterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -40,10 +41,10 @@ namespace Akka.Remote.Tests
         {
             protected override void OnReceive(object message)
             {
-                var tuple = message as Tuple<Props, string>;
+                var tuple = message as (Props, string)?;
                 if (tuple != null)
                 {
-                    Sender.Tell(Context.ActorOf(tuple.Item1, tuple.Item2));
+                    Sender.Tell(Context.ActorOf(tuple.Value.Item1, tuple.Value.Item2));
                 }
             }
         }
@@ -303,7 +304,7 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
-        public void RemoteRouter_must_set_supplied_SupervisorStrategy()
+        public async Task RemoteRouter_must_set_supplied_SupervisorStrategy()
         {
             var probe = CreateTestProbe(masterSystem);
             var escalator = new OneForOneStrategy(ex =>
@@ -320,9 +321,9 @@ namespace Akka.Remote.Tests
 
             // Need to be able to bind EventFilter to additional actor system (masterActorSystem in this case) before this code works
             // EventFilter.Exception<ActorKilledException>().ExpectOne(() => 
-            probe.ExpectMsg<Routees>().Members.Head().Send(Kill.Instance, TestActor);
+            probe.ExpectMsg<Routees>(TimeSpan.FromSeconds(10)).Members.Head().Send(Kill.Instance, TestActor);
             //);
-            probe.ExpectMsg<ActorKilledException>();
+            probe.ExpectMsg<ActorKilledException>(TimeSpan.FromSeconds(10));
         }
 
         [Fact(Skip = "Remote actor's DCN is currently not supported")]
@@ -343,7 +344,7 @@ namespace Akka.Remote.Tests
             // it's used for the pool of the SimpleDnsManager "/IO-DNS/inet-address"
             var probe = CreateTestProbe(masterSystem);
             var parent = ((ExtendedActorSystem)masterSystem).SystemActorOf(FromConfig.Instance.Props(Props.Create<Parent>()), "sys-parent");
-            parent.Tell(Tuple.Create(FromConfig.Instance.Props(EchoActorProps), "round"), probe);
+            parent.Tell((FromConfig.Instance.Props(EchoActorProps), "round"), probe);
             var router = probe.ExpectMsg<IActorRef>();
             var replies = CollectRouteePaths(probe, router, 10);
             var children = new HashSet<ActorPath>(replies);

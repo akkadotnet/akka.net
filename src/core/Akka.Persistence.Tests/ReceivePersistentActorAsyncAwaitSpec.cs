@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceivePersistentActorAsyncAwaitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -373,7 +373,7 @@ namespace Akka.Persistence.Tests
         {
             var actor = Sys.ActorOf(Props.Create(() => new PersistentAsyncAwaitActor("pid")), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new PersistentAsker("pid", actor)), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start");
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -394,7 +394,7 @@ namespace Akka.Persistence.Tests
         {
             var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor("pid")), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new Asker("pid", actor)), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start");
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -405,7 +405,7 @@ namespace Akka.Persistence.Tests
         {
             var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor("pid")).WithDispatcher("akka.actor.task-dispatcher"), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new BlockingAsker("pid", actor)).WithDispatcher("akka.actor.task-dispatcher"), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start");
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -415,7 +415,7 @@ namespace Akka.Persistence.Tests
         public async Task Actors_should_be_able_to_block_ask_self_message_loop()
         {
             var asker = Sys.ActorOf(Props.Create(() => new BlockingAskSelf("pid")), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start");
             var res = await task;
             Assert.Equal("done", res);
         }
@@ -432,7 +432,7 @@ namespace Akka.Persistence.Tests
         public async Task Actors_should_be_able_to_use_ContinueWith()
         {
             var asker = Sys.ActorOf(Props.Create(() => new AsyncTplActor("pid")));
-            var res = await asker.Ask("start", TimeSpan.FromSeconds(5));
+            var res = await asker.Ask("start");
             Assert.Equal("done", res);
         }
 
@@ -449,7 +449,7 @@ namespace Akka.Persistence.Tests
         public async Task Actors_should_be_able_to_suspend_reentrancy()
         {
             var asker = Sys.ActorOf(Props.Create(() => new SuspendActor("pid")));
-            var res = await asker.Ask<int>("start", TimeSpan.FromSeconds(5));
+            var res = await asker.Ask<int>("start");
             res.ShouldBe(0);
         }
 
@@ -574,13 +574,15 @@ namespace Akka.Persistence.Tests
 
                 CommandAsync<string>(async msg =>
                 {
+                    var sender = Sender;
+                    var self = Self;
                     Task.Run(() =>
                     {
                         Thread.Sleep(10);
                         return msg;
-                    }).PipeTo(Sender, Self); //LogicalContext is lost?!?
+                    }).PipeTo(sender, self); 
 
-                    Thread.Sleep(3000);
+                    await Task.Delay(3000);
                 });
             }
         }

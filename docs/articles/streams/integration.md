@@ -1,16 +1,18 @@
 ---
-layout: docs.hbs
+uid: streams-integration
 title: Integration
 ---
 
-# Integrating with Actors
+# Integration
+
+## Integrating with Actors
 For piping the elements of a stream as messages to an ordinary actor you can use ``Ask`` in a 
 ``SelectAsync`` or use ``Sink.ActorRefWithAck``.
 
 Messages can be sent to a stream with ``Source.Queue`` or via the ``IActorRef`` that is 
 materialized by ``Source.ActorRef``.
 
-#### SelectAsync + Ask
+### SelectAsync + Ask
 A nice way to delegate some processing of elements in a stream to an actor is to use ``Ask`` 
 in ``SelectAsync``. The back-pressure of the stream is maintained by the ``Task`` of the ``Ask``
 and the mailbox of the actor will not be filled with more messages than the given 
@@ -56,11 +58,11 @@ If that is not desired outcome you can use `Recover` on the `Ask` `CompletionSta
 If you don't care about the replies you can use `Sink.Ignore` after the `SelectAsync` stage 
 and then actor is effectively a sink of the stream.
 
-The same pattern can be used with [Actor routers](../actors/routers.md#Routers). Then you can use 
+The same pattern can be used with [Actor routers](xref:routers). Then you can use 
 `SelectAsyncUnordered` for better efficiency if you don't care about the order of the emitted 
 downstream elements (the replies).
 
-#### Sink.ActorRefWithAck
+### Sink.ActorRefWithAck
 The sink sends the elements of the stream to the given `IActorRef` that sends back back-pressure signal.
 First element is always `OnInitMessage`, then stream is waiting for the given acknowledgement message 
 from the given actor which means that it is ready to process elements. 
@@ -70,14 +72,14 @@ If the target actor terminates the stream will be cancelled. When the stream is 
 the  given `OnCompleteMessage` will be sent to the destination actor. When the stream 
 is completed with failure a `Akka.Actor.Status.Failure` message will be sent to the destination actor.
 
->**Note**<br/>
+> [!NOTE]
 >Using `Sink.ActorRef` or ordinary `Tell` from a `Select` or `ForEach` stage means that there is 
 >no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages 
 >fast enough the mailbox of the actor will grow, unless you use a bounded mailbox with zero 
 >`mailbox-push-timeout-time` or use a rate limiting stage in front. 
 >It's often better to use `Sink.ActorRefWithAck` or `Ask` in `SelectAsync`, though. 
 
-#### Source.Queue
+### Source.Queue
 `Source.Queue` can be used for emitting elements to a stream from an actor (or from anything running 
 outside the stream). The elements will be buffered until the stream can process them. You can `Offer`
 elements to  the queue and they will be emitted to the stream if there is demand from downstream, 
@@ -95,7 +97,7 @@ when downstream is completed.
 When used from an actor you typically `pipe` the result of the `Task` back to the actor 
 to continue processing.
 
-#### Source.ActorRef
+### Source.ActorRef
 Messages sent to the actor that is materialized by ``Source.ActorRef`` will be emitted to the
 stream if there is demand from downstream, otherwise they will be buffered until request for
 demand is received.
@@ -115,7 +117,7 @@ actor reference.
 The actor will be stopped when the stream is completed, failed or cancelled from downstream,
 i.e. you can watch it to get notified when that happens.
 
-# Integrating with External Services
+## Integrating with External Services
 Stream transformations and side effects involving external non-stream based services can be
 performed with ``SelectAsync`` or ``SelectAsyncUnordered``.
 
@@ -218,7 +220,7 @@ Note that if the ``Ask`` is not completed within the given timeout the stream is
 If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
 
 
-#### Illustrating ordering and parallelism
+### Illustrating ordering and parallelism
 Let us look at another example to get a better understanding of the ordering
 and parallelism characteristics of ``SelectAsync`` and ``SelectAsyncUnordered``.
 
@@ -404,7 +406,56 @@ The numbers in parenthesis illustrates how many calls that are in progress at
 the same time. Here the downstream demand and thereby the number of concurrent
 calls are limited by the buffer size (4) of the `ActorMaterializerSettings`.
 
-#### Integrating with Reactive Streams
+### Integrating with Observables
+
+Starting from version 1.3.2, Akka.Streams offers integration with observables - both as possible sources and sinks for incoming events. In order to expose Akka.Streams runnable graph as an observable, use `Sink.AsObservable<T>` method. Example:
+
+```csharp
+IObservable<int> observable = Source.From(new []{ 1, 2, 3 })
+    .RunWith(Sink.AsObservable<int>(), materializer);
+```
+
+In order to use an observable as an input source to Akka graph, you may want to use `Source.FromObservable<T>` method. Example:
+
+```csharp
+await Source.FromObservable(observable, maxBufferCapacity: 128, overflowStrategy: OverflowStrategy.DropHead)
+    .RunForEach(Console.WriteLine, materializer);
+```
+
+You may notice two extra parameters here. One of the advantages of Akka.Streams (and reactive streams in general) over Reactive Extensions is notion of backpressure - absent in Rx.NET. This puts a constraint of rate limiting the events incoming form upstream. If an observable will be producing events faster, than downstream is able to consume them, source stage will start to buffer them up to a provided `maxBufferCapacity` limit. Once that limit is reached, an overflow strategy will be applied. There are several different overflow strategies to choose from:
+
+- `OverflowStrategy.DropHead` (default) will drop the oldest element. In this mode source works in circular buffer fashion.
+- `OverflowStrategy.DropTail` will cause a current element to replace a one set previously in a buffer.
+- `OverflowStrategy.DropNew` will cause current event to be dropped. This effectively will cause dropping any new incoming events until a buffer will get some free space.
+- `OverflowStrategy.Fail` will cause a `BufferOverflowException` to be send as an error signal.
+- `OverflowStrategy.DropBuffer` will cause a whole buffer to be cleared once it's limit has been reached.
+
+Any other `OverflowStrategy` option is not supported by `Source.FromObservable` stage.
+
+### Integrating with event handlers
+
+C# events can also be used as a potential source of an Akka.NET stream. It's possible using `Source.FromEvent` methods. Example:
+
+```csharp
+Source.FromEvent<RoutedEventArgs>(
+    addHandler: h => button.Click += h, 
+    removeHandler: h => button.Click -= h,
+    maxBufferCapacity: 128,
+    overflowStrategy: OverflowStrategy.DropHead)
+    .RunForEach(e => Console.WriteLine($"Captured click from {e.Source}"), materializer);
+
+// using custom delegate adapter
+Source.FromEvent<EventHandler<RoutedEventArgs>, RoutedEventArgs>(
+    conversion: onNext => (sender, eventArgs) => onNext(eventArgs),
+    addHandler: h => button.Click += h, 
+    removeHandler: h => button.Click -= h)
+    .RunForEach(e => Console.WriteLine($"Captured click from {e.Source}"), materializer);
+```
+
+Just like in case of `Source.FromObservable`, `Source.FromEvents` can take optional parameters used to configure buffering strategy applied for incoming events.
+
+
+### Integrating with Reactive Streams
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
@@ -514,7 +565,7 @@ var flow = Flow.FromProcessor(()=> createProcessor(materializer));
 
 Please note that a factory is necessary to achieve reusability of the resulting `Flow`.
 
-#### Implementing Reactive Streams Publisher or Subscriber
+### Implementing Reactive Streams Publisher or Subscriber
 
 As described above any Akka Streams ``Source`` can be exposed as a Reactive Streams ``Publisher`` 
 and any ``Sink`` can be exposed as a Reactive Streams ``Subscriber``. Therefore we recommend that you 
@@ -526,16 +577,16 @@ an `Actor` class.
 
 These can be consumed by other Reactive Stream libraries or used as an Akka Streams `Source` class or `Sink` class.
 
->**Warning**<br/>
->`ActorPublisher` class and `ActorSubscriber` class will probably be deprecated in 
->future versions of Akka.
+> [!WARNING]
+> `ActorPublisher` class and `ActorSubscriber` class will probably be deprecated in 
+> future versions of Akka.
 
->**Warning**<br/>
->`ActorPublisher` class and `ActorSubscriber` class cannot be used with remote actors,
->because if signals of the Reactive Streams protocol (e.g. ``Request``) are lost the
->the stream may deadlock.
+> [!WARNING]
+> `ActorPublisher` class and `ActorSubscriber` class cannot be used with remote actors,
+> because if signals of the Reactive Streams protocol (e.g. ``Request``) are lost the
+> the stream may deadlock.
 
-#### ActorPublisher
+### ActorPublisher
 Extend `Akka.Streams.Actor.ActorPublisher` to implement a stream publisher that keeps track of the subscription life cycle and requested elements.
 
 Here is an example of such an actor. It dispatches incoming jobs to the attached subscriber:
@@ -674,7 +725,7 @@ actorRef.Tell(new Job("c"));
 
 You can only attach one subscriber to this publisher. Use a ``Broadcast``-element or attach a ``Sink.AsPublisher(true)`` to enable multiple subscribers.
 
-#### ActorSubscriber
+### ActorSubscriber
 Extend `Akka.Streams.Actor.ActorSubscriber` to make your class a stream subscriber with full control of stream back pressure. It will receive `OnNext`, `OnComplete` and `OnError` messages from the stream. It can also receive other, non-stream messages, in the same way as any actor.
 
 Here is an example of such an actor. It dispatches incoming jobs to child worker actors:

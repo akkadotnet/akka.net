@@ -1,11 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AddressTerminatedTopic.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Util;
 
@@ -35,7 +37,7 @@ namespace Akka.Event
     /// </summary>
     internal sealed class AddressTerminatedTopic : IExtension
     {
-        private readonly AtomicReference<HashSet<IActorRef>> _subscribers = new AtomicReference<HashSet<IActorRef>>(new HashSet<IActorRef>());
+        private readonly HashSet<IActorRef> _subscribers = new HashSet<IActorRef>();
 
         /// <summary>
         /// Retrieves the extension from the specified actor system.
@@ -53,13 +55,8 @@ namespace Akka.Event
         /// <param name="subscriber">The actor that is registering for notifications.</param>
         public void Subscribe(IActorRef subscriber)
         {
-            while (true)
-            {
-                var current = _subscribers;
-                if (!_subscribers.CompareAndSet(current, new HashSet<IActorRef>(current.Value) {subscriber}))
-                    continue;
-                break;
-            }
+            lock (_subscribers)
+                _subscribers.Add(subscriber);
         }
 
         /// <summary>
@@ -68,15 +65,8 @@ namespace Akka.Event
         /// <param name="subscriber">The actor that is unregistering for notifications.</param>
         public void Unsubscribe(IActorRef subscriber)
         {
-            while (true)
-            {
-                var current = _subscribers;
-                var newSet = new HashSet<IActorRef>(_subscribers.Value);
-                newSet.Remove(subscriber);
-                if (!_subscribers.CompareAndSet(current, newSet))
-                    continue;
-                break;
-            }
+            lock (_subscribers)
+                _subscribers.Remove(subscriber);
         }
 
         /// <summary>
@@ -85,7 +75,11 @@ namespace Akka.Event
         /// <param name="msg">The message that is sent to all subscribers.</param>
         public void Publish(AddressTerminated msg)
         {
-            foreach (var subscriber in _subscribers.Value)
+            List<IActorRef> subscribers;
+            lock(_subscribers)
+                subscribers = _subscribers.ToList();
+
+            foreach (var subscriber in subscribers)
             {
                 subscriber.Tell(msg, ActorRefs.NoSender);
             }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestProbe.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -165,6 +165,74 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props"></param>
+        /// <param name="name"></param>
+        /// <param name="supervisorStrategy"></param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, String name, SupervisorStrategy supervisorStrategy)
+        {
+            return ((TestKitBase)this).ChildActorOf(props, name, supervisorStrategy);
+        }
+        
+        public IActorRef ChildActorOf<T>(String name, SupervisorStrategy supervisorStrategy)
+            where T : ActorBase
+        {
+            return ((TestKitBase)this).ChildActorOf(Props.Create<T>(), name, supervisorStrategy);
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props"></param>
+        /// <param name="supervisorStrategy"></param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, SupervisorStrategy supervisorStrategy)
+        {
+            return ((TestKitBase)this).ChildActorOf(props, supervisorStrategy);
+        }
+        
+        public IActorRef ChildActorOf<T>(SupervisorStrategy supervisorStrategy)
+            where T : ActorBase
+        {
+            return ((TestKitBase)this).ChildActorOf(Props.Create<T>(), supervisorStrategy);
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props"></param>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, String name)
+        {
+            return ((TestKitBase)this).ChildActorOf(props, name);
+        }
+        
+        public IActorRef ChildActorOf<T>(String name)
+            where T : ActorBase
+        {
+            return ((TestKitBase)this).ChildActorOf(Props.Create<T>(), name);
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props"></param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props)
+        {
+            return ((TestKitBase)this).ChildActorOf(props);
+        }
+        
+        public IActorRef ChildActorOf<T>()
+            where T : ActorBase
+        {
+            return ((TestKitBase)this).ChildActorOf(Props.Create<T>());
+        }
+        
+        /// <summary>
         /// Sends a system message to the test probe
         /// </summary>
         /// <param name="message">The message to send</param>
@@ -189,6 +257,12 @@ namespace Akka.TestKit
         public override int GetHashCode()
         {
             return TestActor.GetHashCode();
+        }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return $"TestProbe({TestActor})";
         }
     }
 }

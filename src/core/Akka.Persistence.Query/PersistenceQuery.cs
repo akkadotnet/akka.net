@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceQuery.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Persistence.Query
                 throw new ArgumentException("HOCON config is missing persistence read journal plugin config path: " + configPath);
 
             var pluginConfig = _system.Settings.Config.GetConfig(configPath);
-            var pluginTypeName = pluginConfig.GetString("class");
+            var pluginTypeName = pluginConfig.GetString("class", null);
             var pluginType = Type.GetType(pluginTypeName, true);
 
             return CreateType(pluginType, new object[] { _system, pluginConfig });

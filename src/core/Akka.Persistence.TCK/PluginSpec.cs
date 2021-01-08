@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PluginSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,10 +29,15 @@ namespace Akka.Persistence.TCK
 
         protected static Config FromConfig(Config config = null)
         {
-            return config == null
+            return config.IsNullOrEmpty()
                 ? Persistence.DefaultConfig()
                 : config.WithFallback(Persistence.DefaultConfig());
         }
+
+        /// <summary>
+        /// When enabled, allows serialization specs to run.
+        /// </summary>
+        protected virtual bool SupportsSerialization { get; } = false;
 
         public PersistenceExtension Extension { get; }
         public string Pid { get; }

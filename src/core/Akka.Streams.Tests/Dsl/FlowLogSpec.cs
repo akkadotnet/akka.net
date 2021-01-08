@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowLogSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -82,9 +82,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_Log_on_source_must_allow_extracting_value_to_be_logged()
         {
-            Source.Single(Tuple.Create(1, "42"))
+            Source.Single((1, "42"))
                 .Log("flow-s3", t => t.Item2)
-                .RunWith(Sink.Ignore<Tuple<int, string>>(), Materializer);
+                .RunWith(Sink.Ignore<(int, string)>(), Materializer);
 
             var msgs = LogMessages(2);
             msgs[0].Should().Be("[flow-s3] Element: 42");

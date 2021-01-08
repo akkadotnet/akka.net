@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphPartitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,14 +37,12 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var s = Sink.Seq<int>();
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, Tuple.Create, (b, sink1, sink2, sink3) =>
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, ValueTuple.Create, (b, sink1, sink2, sink3) =>
                 {
                     var partition = b.Add(new Partition<int>(3, i => i > 3 ? 0 : (i < 3 ? 1 : 2)));
                     var source =
                         Source.From(Enumerable.Range(1, 5))
-                            .MapMaterializedValue
-                            <Tuple<Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>>>(
-                                _ => null);
+                            .MapMaterializedValue(_ => default((Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>)));
 
                     b.From(source).To(partition.In);
                     b.From(partition.Out(0)).To(sink1.Inlet);

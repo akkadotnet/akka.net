@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReceptionistSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -27,8 +27,8 @@ namespace Akka.Cluster.Tools.Client
             system.Settings.InjectTopLevelFallback(ClusterClientReceptionist.DefaultConfig());
 
             var config = system.Settings.Config.GetConfig("akka.cluster.client.receptionist");
-            if (config == null)
-                throw new ArgumentException($"Actor system [{system.Name}] doesn't have `akka.cluster.client.receptionist` config set up");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterReceptionistSettings>("akka.cluster.client.receptionist");
 
             return Create(config);
         }
@@ -40,7 +40,10 @@ namespace Akka.Cluster.Tools.Client
         /// <returns>TBD</returns>
         public static ClusterReceptionistSettings Create(Config config)
         {
-            var role = config.GetString("role");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<ClusterReceptionistSettings>();
+
+            var role = config.GetString("role", null);
             if (string.IsNullOrEmpty(role)) role = null;
 
             return new ClusterReceptionistSettings(

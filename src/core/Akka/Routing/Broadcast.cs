@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Broadcast.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,13 +54,14 @@ namespace Akka.Routing
             Dispatchers.DefaultDispatcherId,
             false) { }
 
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastPool"/> class.
         /// </summary>
         /// <param name="config">The configuration used to configure the pool.</param>
         public BroadcastPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
@@ -239,6 +240,7 @@ namespace Akka.Routing
     /// </summary>
     public sealed class BroadcastGroup : Group
     {
+        // TODO: do we need to check for null or empty config here?
         /// <summary>
         /// Initializes a new instance of the <see cref="BroadcastGroup"/> class.
         /// <note>
@@ -248,7 +250,7 @@ namespace Akka.Routing
         /// <param name="config">The configuration to use to lookup paths used by the group router.</param>
         public BroadcastGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
+                  config.GetStringList("routees.paths", new string[] { }),
                   Dispatchers.DefaultDispatcherId)
         {
         }
@@ -301,7 +303,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -325,7 +327,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public Group WithDispatcher(string dispatcher)
         {
-            return new BroadcastGroup(Paths, dispatcher);
+            return new BroadcastGroup(InternalPaths, dispatcher);
         }
 
         /// <summary>
@@ -337,7 +339,7 @@ namespace Akka.Routing
         {
             return new BroadcastGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 RouterDispatcher = RouterDispatcher
             };
         }

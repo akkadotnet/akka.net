@@ -1,6 +1,7 @@
-﻿// <copyright file="ClusterSingletonRestart2Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterSingletonRestart2Spec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,6 +30,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
               akka.actor.provider = ""cluster""
               akka.cluster.roles = [singleton]
               akka.cluster.auto-down-unreachable-after = 2s
+              akka.cluster.singleton.min-number-of-hand-over-retries = 5
               akka.remote {
                 dot-netty.tcp {
                   hostname = ""127.0.0.1""
@@ -106,7 +108,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
             // let it stabilize
             Task.Delay(TimeSpan.FromSeconds(5)).Wait();
-                
+
             Within(TimeSpan.FromSeconds(10), () =>
             {
                 AwaitAssert(() =>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,13 +13,14 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.Util.Internal;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -27,7 +28,84 @@ namespace Akka.Remote
     /// INTERNAL API
     /// </summary>
     [InternalApi]
-    public class RemoteActorRefProvider : IActorRefProvider
+    public interface IRemoteActorRefProvider : IActorRefProvider
+    {
+        /// <summary>
+        /// Remoting system daemon responsible for powering remote deployment capabilities.
+        /// </summary>
+        IInternalActorRef RemoteDaemon { get; }
+
+        /// <summary>
+        /// The remote death watcher.
+        /// </summary>
+        IActorRef RemoteWatcher { get; }
+
+        /// <summary>
+        /// The remote transport. Wraps all of the underlying physical network transports.
+        /// </summary>
+        RemoteTransport Transport { get; }
+
+        /// <summary>
+        /// The remoting settings
+        /// </summary>
+        RemoteSettings RemoteSettings { get; }
+
+        /// <summary>
+        /// Looks up local overrides for remote deployments
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
+        Deploy LookUpRemotes(IEnumerable<string> p);
+
+        /// <summary>
+        /// Determines if a particular network address is assigned to any of this <see cref="ActorSystem"/>'s transports.
+        /// </summary>
+        /// <param name="address">The address to check.</param>
+        /// <returns><c>true</c> if the address is assigned to any bound transports; false otherwise.</returns>
+        bool HasAddress(Address address);
+
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Called in deserialization of incoming remote messages where the correct local address is known.
+        /// </summary>
+        /// <param name="path">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <returns>TBD</returns>
+        IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress);
+
+        /// <summary>
+        /// INTERNAL API: this is used by the <see cref="ActorRefResolveCache"/> via the public
+        /// <see cref="IActorRefProvider.ResolveActorRef(string)"/> method.
+        /// </summary>
+        /// <param name="path">The path of the actor we intend to resolve.</param>
+        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
+        IActorRef InternalResolveActorRef(string path);
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="actor">TBD</param>
+        /// <param name="props">TBD</param>
+        /// <param name="deploy">TBD</param>
+        /// <param name="supervisor">TBD</param>
+        void UseActorOnNode(RemoteActorRef actor, Props props, Deploy deploy, IInternalActorRef supervisor);
+
+        /// <summary>
+        /// Marks a remote system as out of sync and prevents reconnects until the quarantine timeout elapses.
+        /// </summary>
+        /// <param name="address">Address of the remote system to be quarantined</param>
+        /// <param name="uid">UID of the remote system, if the uid is not defined it will not be a strong quarantine but
+        /// the current endpoint writer will be stopped (dropping system messages) and the address will be gated
+        /// </param>
+        void Quarantine(Address address, int? uid);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
+    public class RemoteActorRefProvider : IRemoteActorRefProvider
     {
         private readonly ILoggingAdapter _log;
 
@@ -80,7 +158,7 @@ namespace Akka.Remote
         /// <summary>
         /// The remoting settings
         /// </summary>
-        internal RemoteSettings RemoteSettings { get; private set; }
+        public RemoteSettings RemoteSettings { get; private set; }
 
         /* these are only available after Init() is called */
 
@@ -105,11 +183,31 @@ namespace Akka.Remote
         /// <inheritdoc/>
         public IActorRef DeadLetters { get { return _local.DeadLetters; } }
 
+        public IActorRef IgnoreRef => _local.IgnoreRef;
+
         /// <inheritdoc/>
         public Deployer Deployer { get; protected set; }
 
         /// <inheritdoc/>
         public Address DefaultAddress { get { return Transport.DefaultAddress; } }
+
+        private Information _serializationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
+
+                if (Transport == null || Transport.DefaultAddress == null)
+                    return _local.SerializationInformation; // address not know yet, access before complete init and binding
+
+                var info = new Information(Transport.DefaultAddress, Transport.System);
+                _serializationInformationCache = info;
+                return info;
+            }
+        }
 
         /// <inheritdoc/>
         public Settings Settings { get { return _local.Settings; } }
@@ -146,7 +244,7 @@ namespace Akka.Remote
         /// <summary>
         /// The remote death watcher.
         /// </summary>
-        internal IActorRef RemoteWatcher => _remoteWatcher;
+        public IActorRef RemoteWatcher => _remoteWatcher;
         private volatile IActorRef _remoteDeploymentWatcher;
 
         /// <inheritdoc/>
@@ -328,7 +426,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="p"></param>
         /// <returns></returns>
-        private Deploy LookUpRemotes(IEnumerable<string> p)
+        public Deploy LookUpRemotes(IEnumerable<string> p)
         {
             if (p == null || !p.Any()) return Deploy.None;
             if (p.Head().Equals("remote")) return LookUpRemotes(p.Drop(3));
@@ -336,7 +434,7 @@ namespace Akka.Remote
             return Deploy.None;
         }
 
-        private bool HasAddress(Address address)
+        public bool HasAddress(Address address)
         {
             return address == _local.RootPath.Address || address == RootPath.Address || Transport.Addresses.Any(a => a == address);
         }
@@ -352,13 +450,7 @@ namespace Akka.Remote
             {
                 return RootGuardian;
             }
-            return new RemoteActorRef(
-                Transport,
-                Transport.LocalAddressForRemote(address),
-                new RootActorPath(address),
-                ActorRefs.Nobody,
-                Props.None,
-                Deploy.None);
+            return CreateRemoteRef(new RootActorPath(address), Transport.LocalAddressForRemote(address));
         }
 
         private IInternalActorRef LocalActorOf(ActorSystemImpl system, Props props, IInternalActorRef supervisor,
@@ -384,16 +476,15 @@ namespace Akka.Remote
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
         /// <param name="path">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        internal IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
+        public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
-            ActorPath actorPath;
-            if (TryParseCachedPath(path, out actorPath))
+            if (TryParseCachedPath(path, out var actorPath))
             {
                 //the actor's local address was already included in the ActorPath
                 if (HasAddress(actorPath.Address))
@@ -403,11 +494,23 @@ namespace Akka.Remote
                         return RootGuardian;
                     return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
                 }
-                    
-                return new RemoteActorRef(Transport, localAddress, new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, ActorRefs.Nobody, Props.None, Deploy.None);
+
+                return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
             }
             _log.Debug("resolve of unknown path [{0}] failed", path);
             return InternalDeadLetters;
+        }
+
+
+        /// <summary>
+        /// Used to create <see cref="RemoteActorRef"/> instances upon deserialiation inside the Akka.Remote pipeline.
+        /// </summary>
+        /// <param name="actorPath">The remote path of the actor on its physical location on the network.</param>
+        /// <param name="localAddress">The local path of the actor.</param>
+        /// <returns>An <see cref="IInternalActorRef"/> instance.</returns>
+        protected virtual IInternalActorRef CreateRemoteRef(ActorPath actorPath, Address localAddress)
+        {
+            return new RemoteActorRef(Transport, localAddress, actorPath, ActorRefs.Nobody, Props.None, Deploy.None);
         }
 
         /// <summary>
@@ -417,7 +520,10 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
-            // using thread local LRU cache, which will call InternalRresolveActorRef
+            if (IgnoreActorRef.IsIgnoreRefPath(path))
+                return IgnoreRef;
+
+            // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
             {
@@ -432,13 +538,12 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="path">The path of the actor we intend to resolve.</param>
         /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
-        internal IActorRef InternalResolveActorRef(string path)
+        public IActorRef InternalResolveActorRef(string path)
         {
             if (path == String.Empty)
                 return ActorRefs.NoSender;
 
-            ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath))
+            if (ActorPath.TryParse(path, out var actorPath))
                 return ResolveActorRef(actorPath);
 
             _log.Debug("resolve of unknown path [{0}] failed", path);
@@ -459,12 +564,7 @@ namespace Akka.Remote
             }
             try
             {
-                return new RemoteActorRef(Transport,
-                    Transport.LocalAddressForRemote(actorPath.Address),
-                    actorPath, 
-                    ActorRefs.Nobody,
-                    Props.None,
-                    Deploy.None);
+                return CreateRemoteRef(actorPath, Transport.LocalAddressForRemote(actorPath.Address));
             }
             catch (Exception ex)
             {
@@ -603,7 +703,9 @@ namespace Akka.Remote
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
-                _log = Context.GetLogger();
+
+                // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
+                _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
                 InitFSM();
             }
 
@@ -611,8 +713,7 @@ namespace Akka.Remote
             {
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.FsmEvent as Internals;
-                    if (internals != null)
+                    if (@event.FsmEvent is Internals internals)
                     {
                         _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubMediatorRouterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -197,9 +197,10 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             {
                 var config =
                     DistributedPubSubMediatorRouterConfig.GetConfig("random")
+                        .WithFallback(DistributedPubSub.DefaultConfig())
                         .WithFallback(Sys.Settings.Config)
                         .GetConfig("akka.cluster.pub-sub");
-
+                Assert.False(config.IsNullOrEmpty());
                 DistributedPubSubSettings.Create(config).WithRoutingLogic(new ConsistentHashingRoutingLogic(Sys));
             });
         }
@@ -211,8 +212,8 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
         {
             return ConfigurationFactory.ParseString($@"
                 akka.loglevel = INFO
-                akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-                akka.remote.netty.tcp.port = 0
+                akka.actor.provider = cluster
+                akka.remote.dot-netty.tcp.port = 0
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.pub-sub.routing-logic = {routingLogic}
             ");

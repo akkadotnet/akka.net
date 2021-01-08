@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SmallestMailboxSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Tests.Routing
             protected override void OnReceive(object message)
             {
                 message.Match()
-                    .With<Tuple<TestLatch, TestLatch>>(t =>
+                    .With<(TestLatch, TestLatch)>(t =>
                     {
                         TestLatch busy = t.Item1, receivedLatch = t.Item2;
                         usedActors.TryAdd(0, Self.Path.ToString());
@@ -37,7 +37,7 @@ namespace Akka.Tests.Routing
                         receivedLatch.CountDown();
                         busy.Ready(TestLatch.DefaultTimeout);
                     })
-                    .With<Tuple<int, TestLatch>>(t =>
+                    .With<(int, TestLatch)>(t =>
                     {
                         var msg = t.Item1; var receivedLatch = t.Item2;
                         usedActors.TryAdd(msg, Self.Path.ToString());
@@ -55,19 +55,19 @@ namespace Akka.Tests.Routing
 
             var busy = new TestLatch(1);
             var received0 = new TestLatch(1);
-            router.Tell(Tuple.Create(busy, received0));
+            router.Tell((busy, received0));
             received0.Ready(TestKitSettings.DefaultTimeout);
 
             var received1 = new TestLatch(1);
-            router.Tell(Tuple.Create(1, received1));
+            router.Tell((1, received1));
             received1.Ready(TestKitSettings.DefaultTimeout);
 
             var received2 = new TestLatch(1);
-            router.Tell(Tuple.Create(2, received2));
+            router.Tell((2, received2));
             received2.Ready(TestKitSettings.DefaultTimeout);
 
             var received3 = new TestLatch(1);
-            router.Tell(Tuple.Create(3, received3));
+            router.Tell((3, received3));
             received3.Ready(TestKitSettings.DefaultTimeout);
 
             busy.CountDown();

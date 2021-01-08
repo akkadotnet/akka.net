@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageSink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.MultiNodeTestRunner.Shared.Reporting;
 
 namespace Akka.MultiNodeTestRunner.Shared.Sinks
 {
@@ -222,10 +223,10 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             MessageSinkActorRef.Tell(new BeginNewSpec(className, methodName, nodes));
         }
 
-        public void EndTest(string className, string methodName)
+        public void EndTest(string className, string methodName, SpecLog log)
         {
             //end the current spec
-            MessageSinkActorRef.Tell(new EndSpec(className, methodName));
+            MessageSinkActorRef.Tell(new EndSpec(className, methodName, log));
         }
         
         public void Success(int nodeIndex, string nodeRole, string message)

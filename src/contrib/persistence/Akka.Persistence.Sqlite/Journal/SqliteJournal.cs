@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,6 +22,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// TBD
         /// </summary>
         public static readonly SqlitePersistence Extension = SqlitePersistence.Get(Context.System);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -31,8 +32,8 @@ namespace Akka.Persistence.Sqlite.Journal
             var config = journalConfig.WithFallback(Extension.DefaultJournalConfig);
             QueryExecutor = new SqliteQueryExecutor(new QueryConfiguration(
                 schemaName: null,
-                journalEventsTableName: config.GetString("table-name"),
-                metaTableName: config.GetString("metadata-table-name"),
+                journalEventsTableName: config.GetString("table-name", null),
+                metaTableName: config.GetString("metadata-table-name", null),
                 persistenceIdColumnName: "persistence_id",
                 sequenceNrColumnName: "sequence_nr",
                 payloadColumnName: "payload",
@@ -42,10 +43,11 @@ namespace Akka.Persistence.Sqlite.Journal
                 tagsColumnName: "tags",
                 orderingColumnName: "ordering",
                 serializerIdColumnName: "serializer_id",
-                timeout: config.GetTimeSpan("connection-timeout"),
-                defaultSerializer: config.GetString("serializer")), 
+                timeout: config.GetTimeSpan("connection-timeout", null),
+                defaultSerializer: config.GetString("serializer", null),
+                useSequentialAccess: config.GetBoolean("use-sequential-access", false)), 
                     Context.System.Serialization, 
-                    GetTimestampProvider(config.GetString("timestamp-provider")));
+                    GetTimestampProvider(config.GetString("timestamp-provider", null)));
         }
 
         /// <summary>
@@ -56,7 +58,7 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        protected override string JournalConfigPath => SqliteJournalSettings.ConfigPath;
+        protected override string JournalConfigPath => SqlitePersistence.JournalConfigPath;
 
         /// <summary>
         /// TBD

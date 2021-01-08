@@ -1,68 +1,90 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGracefulShutdownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
-using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
-using Akka.Persistence.Journal;
 using Akka.Remote.TestKit;
-using Xunit;
 using System.Collections.Immutable;
+using System.IO;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingGracefulShutdownSpecConfig : MultiNodeConfig
+    public abstract class ClusterShardingGracefulShutdownSpecConfig : MultiNodeConfig
     {
-        public RoleName First { get; private set; }
+        public string Mode { get; }
+        public RoleName First { get; }
+        public RoleName Second { get; }
 
-        public RoleName Second { get; private set; }
-
-        public ClusterShardingGracefulShutdownSpecConfig()
+        protected ClusterShardingGracefulShutdownSpecConfig(string mode)
         {
+            Mode = mode;
             First = Role("first");
             Second = Role("second");
 
             CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"
-                    akka.actor {
-                        serializers {
+                .WithFallback(ConfigurationFactory.ParseString($@"
+                    akka.actor {{
+                        serializers {{
                             hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
-                        }
-                        serialization-bindings {
+                        }}
+                        serialization-bindings {{
                             ""System.Object"" = hyperion
-                        }
-                    }
-
+                        }}
+                    }}
+                    akka.loglevel = INFO
+                    akka.actor.provider = cluster
+                    akka.remote.log-remote-lifecycle-events = off
                     akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
                     akka.persistence.journal.plugin = ""akka.persistence.journal.memory-journal-shared""
-
-                    akka.persistence.journal.MemoryJournal {
+                    akka.persistence.journal.MemoryJournal {{
                         class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
-                    }
-
-                    akka.persistence.journal.memory-journal-shared {
+                    }}
+                    akka.persistence.journal.memory-journal-shared {{
                         class = ""Akka.Cluster.Sharding.Tests.MemoryJournalShared, Akka.Cluster.Sharding.Tests.MultiNode""
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
-                    }
-                "))
+                    }}
+                    akka.cluster.sharding.state-store-mode = ""{mode}""
+                    akka.cluster.sharding.distributed-data.durable.lmdb {{
+                      dir = ""target/ClusterShardingGracefulShutdownSpec/sharding-ddata""
+                      map-size = 10000000
+                    }}"))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                 .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }
+    public class PersistentClusterShardingGracefulShutdownSpecConfig : ClusterShardingGracefulShutdownSpecConfig
+    {
+        public PersistentClusterShardingGracefulShutdownSpecConfig() : base("persistence") { }
+    }
+    public class DDataClusterShardingGracefulShutdownSpecConfig : ClusterShardingGracefulShutdownSpecConfig
+    {
+        public DDataClusterShardingGracefulShutdownSpecConfig() : base("ddata") { }
+    }
 
-    public class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
+    public class PersistentClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
+    {
+        public PersistentClusterShardingGracefulShutdownSpec() : this(new PersistentClusterShardingGracefulShutdownSpecConfig()) { }
+        protected PersistentClusterShardingGracefulShutdownSpec(PersistentClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
+    }
+    public class DDataClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
+    {
+        public DDataClusterShardingGracefulShutdownSpec() : this(new DDataClusterShardingGracefulShutdownSpecConfig()) { }
+        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(DDataClusterShardingGracefulShutdownSpec)) { }
+    }
+    public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -85,7 +107,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal ExtractEntityId extractEntityId = message => message is int ? Tuple.Create(message.ToString(), message) : null;
+        internal ExtractEntityId extractEntityId = message => message is int ? (message.ToString(), message) : Option<(string, object)>.None;
 
         internal ExtractShardId extractShardId = message => message is int ? message.ToString() : null;
 
@@ -93,17 +115,36 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly ClusterShardingGracefulShutdownSpecConfig _config;
 
-        public ClusterShardingGracefulShutdownSpec()
-            : this(new ClusterShardingGracefulShutdownSpecConfig())
-        {
-        }
+        private readonly List<FileInfo> _storageLocations;
 
-        protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config)
-            : base(config, typeof(ClusterShardingGracefulShutdownSpec))
+        protected ClusterShardingGracefulShutdownSpec(ClusterShardingGracefulShutdownSpecConfig config, Type type)
+            : base(config, type)
         {
             _config = config;
-
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
+            _storageLocations = new List<FileInfo>
+            {
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
+            };
+
+            IsDDataMode = config.Mode == "ddata";
+            DeleteStorageLocations();
+            EnterBarrier("startup");
+        }
+        protected bool IsDDataMode { get; }
+
+        protected override void AfterTermination()
+        {
+            base.AfterTermination();
+            DeleteStorageLocations();
+        }
+
+        private void DeleteStorageLocations()
+        {
+            foreach (var fileInfo in _storageLocations)
+            {
+                if (fileInfo.Exists) fileInfo.Delete();
+            }
         }
 
         #endregion
@@ -113,16 +154,16 @@ namespace Akka.Cluster.Sharding.Tests
             RunOn(() =>
             {
                 Cluster.Join(GetAddress(to));
-                StartSharding();
+                StartSharding("Entity");
             }, from);
             EnterBarrier(from.Name + "-joined");
         }
 
-        private void StartSharding()
+        private IActorRef StartSharding(string typeName)
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
-            ClusterSharding.Get(Sys).Start(
-                typeName: "Entity",
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
+            return ClusterSharding.Get(Sys).Start(
+                typeName: typeName,
                 entityProps: Props.Create<Entity>(),
                 settings: ClusterShardingSettings.Create(Sys),
                 extractEntityId: extractEntityId,
@@ -134,7 +175,10 @@ namespace Akka.Cluster.Sharding.Tests
         [MultiNodeFact]
         public void ClusterShardingGracefulShutdownSpecs()
         {
-            ClusterSharding_should_setup_shared_journal();
+            if (!IsDDataMode)
+            {
+                ClusterSharding_should_setup_shared_journal();
+            }
             ClusterSharding_should_start_some_shards_in_both_regions();
             ClusterSharding_should_gracefully_shutdown_a_region();
             ClusterSharding_should_gracefully_shutdown_empty_region();
@@ -236,15 +280,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 RunOn(() =>
                 {
-                    var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
-                    var regionEmpty = ClusterSharding.Get(Sys).Start(
-                        typeName: "EntityEmpty",
-                        entityProps: Props.Create<Entity>(),
-                        settings: ClusterShardingSettings.Create(Sys),
-                        extractEntityId: extractEntityId,
-                        extractShardId: extractShardId,
-                        allocationStrategy: allocationStrategy,
-                        handOffStopMessage: StopEntity.Instance);
+                    var regionEmpty = StartSharding(typeName: "EntityEmpty");
 
                     Watch(regionEmpty);
                     regionEmpty.Tell(GracefulShutdown.Instance);

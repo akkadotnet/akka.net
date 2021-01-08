@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Graph.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerComplete;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Merge{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
@@ -201,7 +201,7 @@ namespace Akka.Streams.Dsl
     public sealed class Merge<T> : Merge<T, T>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Merge{T}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <param name="eagerComplete">TBD</param>
@@ -261,10 +261,7 @@ namespace Akka.Streams.Dsl
             /// </summary>
             /// <param name="init">TBD</param>
             /// <returns>TBD</returns>
-            protected override FanInShape<T> Construct(IInit init)
-            {
-                return new MergePreferredShape(_secondaryPorts, init);
-            }
+            protected override FanInShape<T> Construct(IInit init) => new MergePreferredShape(_secondaryPorts, init);
 
             /// <summary>
             /// TBD
@@ -372,7 +369,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerClose;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MergePreferred{T}"/> class.
         /// </summary>
         /// <param name="secondaryPorts">TBD</param>
         /// <param name="eagerClose">TBD</param>
@@ -421,6 +418,171 @@ namespace Akka.Streams.Dsl
         /// <param name="inheritedAttributes">TBD</param>
         /// <returns>TBD</returns>
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(Shape, this);
+    }
+
+    /// <summary>
+    /// Merge several streams, taking elements as they arrive from input streams
+    /// (picking from prioritized once when several have elements ready).
+    /// A <see cref="MergePrioritized{T}" /> has one <see cref="MergePrioritized{T}.Out" /> port, one or more input port with their priorities.
+    /// <para>
+    /// Emits when one of the inputs has an element available, preferring
+    /// a input based on its priority if multiple have elements available
+    /// </para>
+    /// Backpressures when downstream backpressures
+    /// <para>
+    /// Completes when all upstreams complete (eagerComplete=false) or one upstream completes (eagerComplete=true), default value is `false`
+    /// </para>
+    /// Cancels when downstream cancels
+    /// </summary>
+    public sealed class MergePrioritized<T> : GraphStage<UniformFanInShape<T, T>>
+    {
+        internal IList<int> Priorities { get; }
+        internal bool EagerComplete { get; }
+        internal int InputPorts { get; }
+
+        #region internal classes
+        internal sealed class MergePrioritizedLogic : OutGraphStageLogic
+        {
+            private readonly MergePrioritized<T> _stage;
+            private readonly List<FixedSizeBuffer<Inlet<T>>> _allBuffers;
+            private int _runningUpstreams;
+            private readonly Random _randomGen = new Random();
+
+            public MergePrioritizedLogic(MergePrioritized<T> stage) : base(stage.Shape)
+            {
+                _stage = stage;
+                _allBuffers = new List<FixedSizeBuffer<Inlet<T>>>(stage.Priorities.Count);
+
+                foreach (int priority in stage.Priorities)
+                    _allBuffers.Add(FixedSizeBuffer.Create<Inlet<T>>(priority));
+
+                _runningUpstreams = stage.InputPorts;
+
+                for (int i = 0; i < stage.In.Count; i++)
+                {
+                    var inlet = stage.In[i];
+                    var buffer = _allBuffers[i];
+
+                    SetHandler(inlet, onPush: () =>
+                    {
+                        if (IsAvailable(_stage.Out) && !HasPending)
+                        {
+                            Push(_stage.Out, Grab(inlet));
+                            TryPull(inlet);
+                        }
+                        else
+                            buffer.Enqueue(inlet);
+                    }, onUpstreamFinish: () =>
+                    {
+                        if (_stage.EagerComplete)
+                        {
+                            _stage.In.ForEach(Cancel);
+                            _runningUpstreams = 0;
+                            if (!HasPending) CompleteStage();
+                        }
+                        else
+                        {
+                            _runningUpstreams -= 1;
+                            if (UpstreamsClosed && !HasPending) CompleteStage();
+                        }
+                    });
+                }
+
+                SetHandler(_stage.Out, this);
+            }
+
+            public override void PreStart() => _stage.In.ForEach(TryPull);
+
+            public override void OnPull()
+            {
+                if (HasPending)
+                    DequeueAndDispatch();
+            }
+
+            public bool HasPending => _allBuffers.Any(c => c.NonEmpty);
+
+            public bool UpstreamsClosed => _runningUpstreams == 0;
+
+            private void DequeueAndDispatch()
+            {
+                var input = SelectNextElement();
+                Push(_stage.Out, Grab(input));
+                if (UpstreamsClosed && !HasPending)
+                    CompleteStage();
+                else
+                    TryPull(input);
+            }
+
+            private Inlet<T> SelectNextElement()
+            {
+                var tp = 0;
+                var ix = 0;
+
+                while (ix < _stage.In.Count)
+                {
+                    if (_allBuffers[ix].NonEmpty)
+                        tp += _stage.Priorities[ix];
+                    ix += 1;
+                }
+
+                int r = _randomGen.Next(tp);
+                Inlet<T> next = null;
+                ix = 0;
+
+                while (ix < _stage.In.Count && next == null)
+                {
+                    if (_allBuffers[ix].NonEmpty)
+                    {
+                        r -= _stage.Priorities[ix];
+                        if (r < 0)
+                            next = _allBuffers[ix].Dequeue();
+                    }
+                    ix += 1;
+                }
+
+                return next;
+            }
+
+            public override string ToString() => "MergePrioritized";
+        }
+        #endregion
+
+        /// <summary>
+        /// Create a new <see cref="MergePrioritized{T}" /> with specified number of input ports.
+        /// </summary>
+        /// <param name="priorities">Priorities of the input ports</param>
+        /// <param name="eagerComplete">If true, the merge will complete as soon as one of its inputs completes</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="priorities"/> is less or equal zero.
+        /// </exception>
+        public MergePrioritized(IEnumerable<int> priorities, bool eagerComplete = false)
+        {
+            Priorities = priorities.ToList();
+            EagerComplete = eagerComplete;
+            InputPorts = Priorities.Count;
+            if (InputPorts <= 0)
+                throw new ArgumentException("A Merge must have one or more input ports");
+            if (!Priorities.All(x => x > 0))
+                throw new ArgumentException("Priorities should be positive integers");
+
+            var input = new List<Inlet<T>>();
+            for (int i = 1; i <= InputPorts; i++)
+                input.Add(new Inlet<T>("MergePrioritized.in" + i));
+            In = input;
+
+            Out = new Outlet<T>("MergePrioritized.out");
+            Shape = new UniformFanInShape<T, T>(Out, In.ToArray());
+        }
+
+        protected override Attributes InitialAttributes { get; } = Attributes.CreateName("MergePrioritized");
+
+        public override UniformFanInShape<T, T> Shape { get; }
+
+        public IReadOnlyList<Inlet<T>> In { get; }
+
+        public Outlet<T> Out { get; }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new MergePrioritizedLogic(this);
     }
 
     /// <summary>
@@ -628,30 +790,30 @@ namespace Akka.Streams.Dsl
             private readonly MergeSorted<T> _stage;
             private T _other;
 
-            private readonly Action<T> _dispatchRight;
-            private readonly Action<T> _dispatchLeft;
-            private readonly Action _passRight;
-            private readonly Action _passLeft;
             private readonly Action _readRight;
             private readonly Action _readLeft;
 
             public Logic(MergeSorted<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _dispatchRight = right => Dispatch(_other, right);
-                _dispatchLeft = left => Dispatch(left, _other);
-                _passRight = () => Emit(_stage.Out, _other, () =>
+
+                void DispatchRight(T right) => Dispatch(_other, right);
+                void DispatchLeft(T left) => Dispatch(left, _other);
+
+                void PassRight() => Emit(_stage.Out, _other, () =>
                 {
                     NullOut();
                     PassAlong(_stage.Right, _stage.Out, doPull: true);
                 });
-                _passLeft = () => Emit(_stage.Out, _other, () =>
+
+                void PassLeft() => Emit(_stage.Out, _other, () =>
                 {
                     NullOut();
                     PassAlong(_stage.Left, _stage.Out, doPull: true);
                 });
-                _readRight = () => Read(_stage.Right, _dispatchRight, _passLeft);
-                _readLeft = () => Read(_stage.Left, _dispatchLeft, _passRight);
+
+                _readRight = () => Read(_stage.Right, DispatchRight, PassLeft);
+                _readLeft = () => Read(_stage.Left, DispatchLeft, PassRight);
 
                 SetHandler(_stage.Left, IgnoreTerminateInput);
                 SetHandler(_stage.Right, IgnoreTerminateInput);
@@ -670,14 +832,11 @@ namespace Akka.Streams.Dsl
                 () => PassAlong(_stage.Right, _stage.Out));
             }
 
-            private void NullOut()
-            {
-                _other = default(T);
-            }
+            private void NullOut() => _other = default(T);
 
             private void Dispatch(T left, T right)
             {
-                if (_stage._compare(left, right) == -1)
+                if (_stage._compare(left, right) < 0)
                 {
                     _other = right;
                     Emit(_stage.Out, left, _readLeft);
@@ -695,7 +854,7 @@ namespace Akka.Streams.Dsl
         private readonly Func<T, T, int> _compare;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="MergeSorted{T}"/> class.
         /// </summary>
         /// <param name="compare">TBD</param>
         public MergeSorted(Func<T, T, int> compare)
@@ -826,7 +985,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _eagerCancel;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Broadcast{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="eagerCancel">TBD</param>
@@ -904,18 +1063,17 @@ namespace Akka.Streams.Dsl
             private readonly Partition<T> _stage;
             private object _outPendingElement;
             private int _outPendingIndex;
-            private int _downstreamRunning;
 
             public Logic(Partition<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _downstreamRunning = stage._outputPorts;
+                var downstreamRunning = stage._outputPorts;
 
                 SetHandler(stage.In, this);
 
                 for (var i = 0; i < stage._outputPorts; i++)
                 {
-                    var output = stage.Shape.Outlets[i];
+                    var output = stage.Out(i);
                     var index = i;
 
                     SetHandler(output, onPull: () =>
@@ -940,8 +1098,8 @@ namespace Akka.Streams.Dsl
                             Pull(stage.In);
                     }, onDownstreamFinish: () =>
                     {
-                        _downstreamRunning--;
-                        if(_downstreamRunning == 0)
+                        downstreamRunning--;
+                        if(downstreamRunning == 0)
                             CompleteStage();
                         else if (_outPendingElement != null)
                         {
@@ -969,7 +1127,7 @@ namespace Akka.Streams.Dsl
                     if (IsAvailable(_stage.Out(index)))
                     {
                         Push(_stage.Out(index), element);
-                        if (_stage.Shape.Outlets.Any(IsAvailable))
+                        if (_stage._outlets.Any(IsAvailable))
                             Pull(_stage.In);
                     }
                     else
@@ -978,7 +1136,7 @@ namespace Akka.Streams.Dsl
                         _outPendingIndex = index;
                     }
                 }
-                else if (_stage.Shape.Outlets.Any(IsAvailable))
+                else if (_stage._outlets.Any(IsAvailable))
                     Pull(_stage.In);
             }
 
@@ -993,9 +1151,10 @@ namespace Akka.Streams.Dsl
 
         private readonly int _outputPorts;
         private readonly Func<T, int> _partitioner;
+        private readonly Outlet<T>[] _outlets;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Partition{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="partitioner">TBD</param>
@@ -1003,8 +1162,8 @@ namespace Akka.Streams.Dsl
         {
             _outputPorts = outputPorts;
             _partitioner = partitioner;
-            var outlets = Enumerable.Range(0, outputPorts).Select(i => new Outlet<T>("Partition.out" + i)).ToArray();
-            Shape = new UniformFanOutShape<T, T>(In, outlets);
+            _outlets = Enumerable.Range(0, outputPorts).Select(i => new Outlet<T>("Partition.out" + i)).ToArray();
+            Shape = new UniformFanOutShape<T, T>(In, _outlets);
         }
 
         /// <summary>
@@ -1017,7 +1176,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="id">TBD</param>
         /// <returns>TBD</returns>
-        public Outlet Out(int id) => Shape.Out(id);
+        public Outlet<T> Out(int id) => Shape.Out(id);
 
         /// <summary>
         /// TBD
@@ -1077,15 +1236,14 @@ namespace Akka.Streams.Dsl
         {
             private readonly Balance<T> _stage;
             private readonly FixedSizeBuffer<Outlet<T>> _pendingQueue;
-            private int _needDownstreamPulls;
-            private int _downstreamsRunning;
+
             public Logic(Shape shape, Balance<T> stage) : base(shape)
             {
                 _stage = stage;
                 _pendingQueue = FixedSizeBuffer.Create<Outlet<T>>(_stage._outputPorts);
-                _downstreamsRunning = _stage._outputPorts;
+                var downstreamsRunning = _stage._outputPorts;
 
-                _needDownstreamPulls = _stage._waitForAllDownstreams ? _stage._outputPorts : 0;
+                var needDownstreamPulls = _stage._waitForAllDownstreams ? _stage._outputPorts : 0;
 
                 SetHandler(_stage.In, this);
 
@@ -1097,10 +1255,10 @@ namespace Akka.Streams.Dsl
                         if (!hasPulled)
                         {
                             hasPulled = true;
-                            if (_needDownstreamPulls > 0) _needDownstreamPulls--;
+                            if (needDownstreamPulls > 0) needDownstreamPulls--;
                         }
 
-                        if (_needDownstreamPulls == 0)
+                        if (needDownstreamPulls == 0)
                         {
                             if (IsAvailable(_stage.In))
                             {
@@ -1116,12 +1274,12 @@ namespace Akka.Streams.Dsl
                     },
                     onDownstreamFinish: () =>
                     {
-                        _downstreamsRunning--;
-                        if (_downstreamsRunning == 0) CompleteStage();
-                        else if (!hasPulled && _needDownstreamPulls > 0)
+                        downstreamsRunning--;
+                        if (downstreamsRunning == 0) CompleteStage();
+                        else if (!hasPulled && needDownstreamPulls > 0)
                         {
-                            _needDownstreamPulls--;
-                            if (_needDownstreamPulls == 0 && !HasBeenPulled(_stage.In)) Pull(_stage.In);
+                            needDownstreamPulls--;
+                            if (needDownstreamPulls == 0 && !HasBeenPulled(_stage.In)) Pull(_stage.In);
                         }
                     });
                 }
@@ -1159,7 +1317,7 @@ namespace Akka.Streams.Dsl
         private readonly bool _waitForAllDownstreams;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Balance{T}"/> class.
         /// </summary>
         /// <param name="outputPorts">TBD</param>
         /// <param name="waitForAllDownstreams">TBD</param>
@@ -1230,12 +1388,12 @@ namespace Akka.Streams.Dsl
     /// </summary>
     /// <typeparam name="T1">TBD</typeparam>
     /// <typeparam name="T2">TBD</typeparam>
-    public sealed class Zip<T1, T2> : ZipWith<T1, T2, Tuple<T1, T2>>
+    public sealed class Zip<T1, T2> : ZipWith<T1, T2, (T1, T2)>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Zip{T1,T2}"/> class.
         /// </summary>
-        public Zip() : base((a, b) => new Tuple<T1, T2>(a, b)) { }
+        public Zip() : base((a, b) => (a, b)) { }
 
         /// <summary>
         /// TBD
@@ -1258,7 +1416,7 @@ namespace Akka.Streams.Dsl
     public sealed partial class ZipWith
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="ZipWith"/>.
         /// </summary>
         public static readonly ZipWith Instance = new ZipWith();
         private ZipWith() { }
@@ -1271,7 +1429,7 @@ namespace Akka.Streams.Dsl
     /// <para>
     /// Emits when all of the outputs stops backpressuring and there is an input element available
     /// </para>
-    /// Backpressures when any of the outputs backpressures
+    /// Backpressures when any of the outputs backpressure
     /// <para>
     /// Completes when upstream completes
     /// </para>
@@ -1282,9 +1440,9 @@ namespace Akka.Streams.Dsl
     public sealed class UnZip<T1, T2> : UnzipWith<KeyValuePair<T1, T2>, T1, T2>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UnZip{T1,T2}"/> class.
         /// </summary>
-        public UnZip() : base(kv => Tuple.Create(kv.Key, kv.Value)) { }
+        public UnZip() : base(kv => (kv.Key, kv.Value)) { }
 
         /// <summary>
         /// TBD
@@ -1307,7 +1465,7 @@ namespace Akka.Streams.Dsl
     public partial class UnzipWith
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of <see cref="UnzipWith"/>.
         /// </summary>
         public static readonly UnzipWith Instance = new UnzipWith();
         private UnzipWith() { }
@@ -1344,7 +1502,7 @@ namespace Akka.Streams.Dsl
     public sealed class ZipN<T> : ZipWithN<T, IImmutableList<T>>
     {
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ZipN{T}"/> class.
         /// </summary>
         /// <param name="n">TBD</param>
         public ZipN(int n) : base(x => x, n)
@@ -1453,7 +1611,7 @@ namespace Akka.Streams.Dsl
         private readonly int _n;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="ZipWithN{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="zipper">TBD</param>
         /// <param name="n">TBD</param>
@@ -1547,7 +1705,7 @@ namespace Akka.Streams.Dsl
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly Concat<TIn, TOut> _stage;
-            private int _activeStream = 0;
+            private int _activeStream;
 
             public Logic(Concat<TIn, TOut> stage) : base(stage.Shape)
             {
@@ -1585,7 +1743,7 @@ namespace Akka.Streams.Dsl
         private readonly int _inputPorts;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="Concat{TIn, TOut}"/> class.
         /// </summary>
         /// <param name="inputPorts">TBD</param>
         /// <exception cref="ArgumentException">
@@ -1725,12 +1883,9 @@ namespace Akka.Streams.Dsl
         #endregion
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="OrElse{T}"/> class.
         /// </summary>
-        public OrElse()
-        {
-            Shape = new UniformFanInShape<T, T>(Out, Primary, Secondary);
-        }
+        public OrElse() => Shape = new UniformFanInShape<T, T>(Out, Primary, Secondary);
 
         /// <summary>
         /// TBD

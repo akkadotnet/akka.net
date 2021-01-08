@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowStatefulSelectManySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,10 +37,10 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var phases = new[]
                 {
-                    new Tuple<ICollection<int>, ICollection<int>>(new[] {2}, new int[0]),
-                    new Tuple<ICollection<int>, ICollection<int>>(new[] {1}, new[] {1, 1}),
-                    new Tuple<ICollection<int>, ICollection<int>>(new[] {3}, new[] {3}),
-                    new Tuple<ICollection<int>, ICollection<int>>(new[] {6}, new[] {6, 6, 6})
+                    ((ICollection<int>)new[] {2}, (ICollection<int>)new int[0]),
+                    ((ICollection<int>)new[] {1}, (ICollection<int>)new[] {1, 1}),
+                    ((ICollection<int>)new[] {3}, (ICollection<int>)new[] {3}),
+                    ((ICollection<int>)new[] {6}, (ICollection<int>)new[] {6, 6, 6})
                 };
                 return Script.Create(phases);
             };

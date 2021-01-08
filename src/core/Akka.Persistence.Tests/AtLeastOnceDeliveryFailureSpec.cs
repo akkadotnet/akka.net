@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -135,18 +136,20 @@ namespace Akka.Persistence.Tests
 
             public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); }}
 
-            public ChaosSender(IActorRef destination, IActorRef probe)
+            public ChaosSender(IActorRef destination, IActorRef probe) 
+                : base(x => x.WithRedeliverInterval(TimeSpan.FromMilliseconds(500)))
             {
                 _destination = destination;
                 Probe = probe;
                 State = new List<int>();
 
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.sender.chaos");
-                _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate");
-                _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate");
-            }
+                if (_config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<ChaosSender>("akka.persistence.sender.chaos");
 
-            public override TimeSpan RedeliverInterval { get { return TimeSpan.FromMilliseconds(500); } }
+                _liveProcessingFailureRate = _config.GetDouble("live-processing-failure-rate", 0);
+                _replayProcessingFailureRate = _config.GetDouble("replay-processing-failure-rate", 0);
+            }
 
             public override string PersistenceId { get { return "chaosSender"; } }
 
@@ -242,7 +245,7 @@ namespace Akka.Persistence.Tests
                 Probe = probe;
                 State = new List<int>();
                 _config = Context.System.Settings.Config.GetConfig("akka.persistence.destination.chaos");
-                _confirmFailureRate = _config.GetDouble("confirm-failure-rate");
+                _confirmFailureRate = _config.GetDouble("confirm-failure-rate", 0);
 
                 Receive<Msg>(m =>
                 {
@@ -331,8 +334,8 @@ namespace Akka.Persistence.Tests
 
         internal const int NumberOfMessages = 10;
 
-        public AtLeastOnceDeliveryFailureSpec()
-            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()))
+        public AtLeastOnceDeliveryFailureSpec(ITestOutputHelper output)
+            : base(FailureSpecConfig.WithFallback(Persistence.DefaultConfig()), output)
         {
         }
 

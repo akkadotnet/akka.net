@@ -1,12 +1,14 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SeqSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -40,6 +42,18 @@ namespace Akka.Streams.Tests.Dsl
             var future = Source.FromEnumerator(() => input.GetEnumerator()).RunWith(Sink.Seq<int>(), Materializer);
             future.Wait(RemainingOrDefault).Should().BeTrue();
             future.Result.ShouldAllBeEquivalentTo(input);
+        }
+
+
+        [Fact]
+        public void Sink_ToSeq_must_fail_the_task_on_abrupt_termination()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var probe = this.CreatePublisherProbe<int>();
+            var task = Source.FromPublisher(probe).RunWith(Sink.Seq<int>(), materializer);
+            materializer.Shutdown();
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

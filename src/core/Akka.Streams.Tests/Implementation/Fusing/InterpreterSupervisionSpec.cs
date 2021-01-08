@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="InterpreterSupervisionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -269,7 +269,9 @@ namespace Akka.Streams.Tests.Implementation.Fusing
                     lastEvents().Should().BeEmpty();
 
                     downstream.RequestOne();
-                    lastEvents().Should().BeEquivalentTo(new OnError(TE()), new Cancel());
+                    var events = lastEvents();
+                    events.OfType<OnError>().Select(x => x.Cause.InnerException).Should().BeEquivalentTo(TE());
+                    events.OfType<Cancel>().Should().BeEquivalentTo(new Cancel());
                 });
         }
 

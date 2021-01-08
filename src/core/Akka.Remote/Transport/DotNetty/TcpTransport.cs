@@ -1,15 +1,14 @@
-﻿#region copyright
-// -----------------------------------------------------------------------
-//  <copyright file="TcpTransport.cs" company="Akka.NET project">
-//      Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2017 Akka.NET project <https://github.com/akkadotnet>
-//  </copyright>
-// -----------------------------------------------------------------------
-#endregion
+﻿//-----------------------------------------------------------------------
+// <copyright file="TcpTransport.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -36,12 +35,12 @@ namespace Akka.Remote.Transport.DotNetty
         
         protected override void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress)
         {
-            this._listener = listener;
+            _listener = listener;
         }
         
         protected override AssociationHandle CreateHandle(IChannel channel, Address localAddress, Address remoteAddress)
         {
-            return new TcpAssociationHandle(localAddress, remoteAddress, Transport, channel);
+           return new TcpAssociationHandle(localAddress, remoteAddress, Transport, channel);
         }
         
         public override void ChannelInactive(IChannelHandlerContext context)
@@ -73,7 +72,7 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var se = exception as SocketException;
 
-            if (se?.SocketErrorCode == SocketError.OperationAborted)
+            if (se?.SocketErrorCode == SocketError.OperationAborted || se?.SocketErrorCode == SocketError.ConnectionAborted)
             {
                 Log.Info("Socket read operation aborted. Connection is about to be closed. Channel [{0}->{1}](Id={2})",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
@@ -104,7 +103,7 @@ namespace Akka.Remote.Transport.DotNetty
         public TcpServerHandler(DotNettyTransport transport, ILoggingAdapter log, Task<IAssociationEventListener> associationEventListener) 
             : base(transport, log)
         {
-            this._associationEventListener = associationEventListener;
+            _associationEventListener = associationEventListener;
         }
         
         public override void ChannelActive(IChannelHandlerContext context)
@@ -125,8 +124,7 @@ namespace Akka.Remote.Transport.DotNetty
                     socketAddress: socketAddress, 
                     schemeIdentifier: Transport.SchemeIdentifier,
                     systemName: Transport.System.Name);
-                AssociationHandle handle;
-                Init(channel, socketAddress, remoteAddress, msg, out handle);
+                Init(channel, socketAddress, remoteAddress, msg, out var handle);
                 listener.Notify(new InboundAssociation(handle));
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
@@ -149,12 +147,12 @@ namespace Akka.Remote.Transport.DotNetty
         {
             InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
             base.ChannelActive(context);
+
         }
 
         private void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
         {
-            AssociationHandle handle;
-            Init(channel, socketAddress, _remoteAddress, msg, out handle);
+            Init(channel, socketAddress, _remoteAddress, msg, out var handle);
             _statusPromise.TrySetResult(handle);
         }
     }
@@ -171,19 +169,18 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override bool Write(ByteString payload)
         {
-            if (_channel.Open && _channel.IsWritable)
+            if (_channel.Open)
             {
-                var data = ToByteBuffer(payload);
+                var data = ToByteBuffer(_channel, payload);
                 _channel.WriteAndFlushAsync(data);
                 return true;
             }
             return false;
         }
 
-        private IByteBuffer ToByteBuffer(ByteString payload)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IByteBuffer ToByteBuffer(IChannel channel, ByteString payload)
         {
-            //TODO: optimize DotNetty byte buffer usage 
-            // (maybe custom IByteBuffer working directly on ByteString?)
             var buffer = Unpooled.WrappedBuffer(payload.ToByteArray());
             return buffer;
         }
@@ -193,7 +190,7 @@ namespace Akka.Remote.Transport.DotNetty
             _channel.CloseAsync();
         }
     }
-    
+
     internal sealed class TcpTransport : DotNettyTransport
     {
         public TcpTransport(ActorSystem system, Config config) : base(system, config)
@@ -211,32 +208,41 @@ namespace Akka.Remote.Transport.DotNetty
                 var handler = (TcpClientHandler)associate.Pipeline.Last();
                 return await handler.StatusFuture.ConfigureAwait(false);
             }
-            catch (AggregateException e) when (e.InnerException is ConnectException)
+            catch (ConnectException c)
             {
-                var cause = (ConnectException)e.InnerException;
-                var socketException = cause?.InnerException as SocketException;
-
-                if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
-                {
-                    throw new InvalidAssociationException(socketException.Message + " " + remoteAddress);
-                }
-
-                throw new InvalidAssociationException("Failed to associate with " + remoteAddress, e);
+                throw HandleConnectException(remoteAddress, c, null);
             }
-            catch (AggregateException e) when (e.InnerException is ConnectTimeoutException)
+            catch (AggregateException e) when (e.InnerException is ConnectException cause)
             {
-                var cause = (ConnectTimeoutException)e.InnerException;
-
+                throw HandleConnectException(remoteAddress, cause, e);
+            }
+            catch (ConnectTimeoutException t)
+            {
+                throw new InvalidAssociationException(t.Message);
+            }
+            catch (AggregateException e) when (e.InnerException is ConnectTimeoutException cause)
+            {
                 throw new InvalidAssociationException(cause.Message);
             }
+        }
+
+        private static Exception HandleConnectException(Address remoteAddress, ConnectException cause, AggregateException e)
+        {
+            var socketException = cause?.InnerException as SocketException;
+
+            if (socketException?.SocketErrorCode == SocketError.ConnectionRefused)
+            {
+                return new InvalidAssociationException(socketException.Message + " " + remoteAddress);
+            }
+
+            return new InvalidAssociationException("Failed to associate with " + remoteAddress, e ?? (Exception)cause);
         }
 
         private async Task<IPEndPoint> MapEndpointAsync(EndPoint socketAddress)
         {
             IPEndPoint ipEndPoint;
 
-            var dns = socketAddress as DnsEndPoint;
-            if (dns != null)
+            if (socketAddress is DnsEndPoint dns)
                 ipEndPoint = await DnsToIPEndpoint(dns).ConfigureAwait(false);
             else
                 ipEndPoint = (IPEndPoint) socketAddress;

@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -309,7 +309,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From<IFruit>(Apples()).SplitWhen(_ => true);
             SubFlow<IFruit, NotUsed, IRunnableGraph<NotUsed>> f3 =
                 Source.From<IFruit>(Apples()).GroupBy(2, _ => true);
-            Source<Tuple<IImmutableList<IFruit>, Source<IFruit, NotUsed>>, NotUsed> f4 =
+            Source<(IImmutableList<IFruit>, Source<IFruit, NotUsed>), NotUsed> f4 =
                 Source.From<IFruit>(Apples()).PrefixAndTail(1);
             SubFlow<IFruit, NotUsed, Sink<string, NotUsed>> d1 =
                 Flow.Create<string>()
@@ -319,7 +319,7 @@ namespace Akka.Streams.Tests.Dsl
                 Flow.Create<string>()
                     .Select<string, string, IFruit, NotUsed>(_ => new Apple())
                     .GroupBy(-1,_ => 2);
-            Flow<string, Tuple<IImmutableList<IFruit>, Source<IFruit, NotUsed>>, NotUsed> d3 =
+            Flow<string, (IImmutableList<IFruit>, Source<IFruit, NotUsed>), NotUsed> d3 =
                 Flow.Create<string>().Select<string, string, IFruit, NotUsed>(_ => new Apple()).PrefixAndTail(1);
         }
 
@@ -658,10 +658,22 @@ namespace Akka.Streams.Tests.Dsl
         public void A_broken_Flow_must_suitably_override_attribute_handling_methods()
         {
             var f = Flow.Create<int>().Select(x => x + 1).Async().AddAttributes(Attributes.None).Named("name");
-            f.Module.Attributes.GetFirstAttribute<Attributes.Name>().Value.Should().Be("name");
-            f.Module.Attributes.GetFirstAttribute<Attributes.AsyncBoundary>()
+            f.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");
+            f.Module.Attributes.GetAttribute<Attributes.AsyncBoundary>()
                 .Should()
                 .Be(Attributes.AsyncBoundary.Instance);
+        }
+
+        [Fact]
+        public void A_broken_Flow_must_work_without_fusing()
+        {
+            var settings = ActorMaterializerSettings.Create(Sys).WithAutoFusing(false).WithInputBuffer(1, 1);
+            var noFusingMaterializer = ActorMaterializer.Create(Sys, settings);
+
+            // The map followed by a filter is to ensure that it is a CompositeModule passed in to Flow[Int].via(...)
+            var sink = Flow.Create<int>().Via(Flow.Create<int>().Select(i => i + 1).Where(_ => true))
+                .ToMaterialized(Sink.First<int>(), Keep.Right);
+            Source.Single(4711).RunWith(sink, noFusingMaterializer).AwaitResult().ShouldBe(4712);
         }
 
         private static Flow<TIn, TOut, TMat> Identity<TIn, TOut, TMat>(Flow<TIn, TOut, TMat> flow) => flow.Select(e => e);
@@ -676,7 +688,7 @@ namespace Akka.Streams.Tests.Dsl
                 _brokenMessage = brokenMessage;
             }
 
-            protected override bool AroundReceive(Receive receive, object message)
+            protected internal override bool AroundReceive(Receive receive, object message)
             {
                 var next = message as OnNext?;
                 if (next.HasValue && next.Value.Id == 0 && next.Value.Event == _brokenMessage)
@@ -741,7 +753,7 @@ namespace Akka.Streams.Tests.Dsl
                     Sink.AsPublisher<TOut>(true).WithAttributes(Attributes.CreateInputBuffer(elasticity, elasticity)),
                     materializer);
 
-        private static Tuple<ISubscriber<TIn>, IPublisher<TOut>> MaterializeIntoSubscriberAndPublisher<TIn, TOut, TMat>(
+        private static (ISubscriber<TIn>, IPublisher<TOut>) MaterializeIntoSubscriberAndPublisher<TIn, TOut, TMat>(
             Flow<TIn, TOut, TMat> flow, ActorMaterializer materializer)
             => flow.RunWith(Source.AsSubscriber<TIn>(), Sink.AsPublisher<TOut>(false), materializer);
     }

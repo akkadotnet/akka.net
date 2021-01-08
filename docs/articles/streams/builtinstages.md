@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: streams-builtin-stages
 title: Overview of built-in stages and their semantics
 ---
 
@@ -147,6 +147,12 @@ elements or failing the stream, the strategy is chosen by the user.
 **emits** when there is demand and there are messages in the buffer or a message is sent to the actorref
 
 **completes** when the actorref is sent ``Akka.Actor.Status.Success`` or ``PoisonPill``
+
+#### PreMaterialize
+
+Materializes this Source, immediately returning (1) its materialized value, and (2) a new Source that can consume elements 'into' the pre-materialized one.
+
+Useful for when you need a materialized value of a Source when handing it out to someone to materialize it for you.
 
 #### Combine
 
@@ -359,7 +365,13 @@ to provide back pressure onto the sink.
 
 **cancels** when the actor terminates
 
-**backpressures** when the actor acknowledgement has not arrived
+**backpressures** when the actor acknowledgment has not arrived.
+
+#### PreMaterialize
+
+Materializes this Sink, immediately returning (1) its materialized value, and (2) a new Sink that can consume elements 'into' the pre-materialized one.
+
+Useful for when you need a materialized value of a Sink when handing it out to someone to materialize it for you.
 
 
 #### ActorSubscriber
@@ -474,6 +486,16 @@ single input (e.g. `ConcatMany`) or consume multiple elements before emitting on
 However, these rate transformations are data-driven, i.e. it is the incoming elements that define how the
 rate is affected. This is in contrast with [Backpressure aware stages](#backpressure-aware-stages) which can change their processing behavior
 depending on being backpressured by downstream or not.
+
+#### AlsoTo
+
+Attaches the given `Sink` to this `Flow`, meaning that elements that passes through will also be sent to the `Sink`.
+
+**emits** when an element is available and demand exists both from the Sink and the downstream
+
+**backpressures** when downstream or Sink backpressures
+
+**completes** when upstream completes
 
 #### Select
 
@@ -658,7 +680,7 @@ Throwing an exception inside `RecoverWith` _will_ be logged on ERROR level autom
 
 **emits** the element is available from the upstream or upstream is failed and pf returns alternative Source
 
-**backpressures** downstream backpressures, after failure happened it backprssures to alternative Source
+**backpressures** downstream backpressures, after failure happened it backpressures to alternative Source
 
 **completes** upstream completes or upstream failed with exception pf can handle
 
@@ -687,7 +709,7 @@ would log the `e2` error.
 Since the underlying failure signal OnError arrives out-of-band, it might jump over existing elements.
 This stage can recover the failure signal, but not the skipped elements, which will be dropped.
 
-Similarily to `Recover` throwing an exception inside `SelectError` _will_ be logged on ERROR level automatically.
+Similarly to `Recover` throwing an exception inside `SelectError` _will_ be logged on ERROR level automatically.
 
 **emits**  when element is available from the upstream or upstream is failed and function returns an element
 
@@ -1102,6 +1124,27 @@ smallest element.
 
 **completes** when all upstreams complete
 
+#### MergePreferred
+
+Merge multiple sources. Prefer one source if all sources has elements ready.
+
+**emits** when one of the inputs has an element available, preferring a defined input if multiple have elements available
+
+**backpressures** when downstream backpressures
+
+**completes** when all upstreams complete (This behavior is changeable to completing when any upstream completes by setting `eagerComplete=true`.)
+
+#### MergePrioritized
+
+Merge multiple sources. Prefer sources depending on priorities if all sources has elements ready. If a subset of all
+sources has elements ready the relative priorities for those sources are used to prioritise.
+
+**emits** when one of the inputs has an element available, preferring inputs based on their priorities if multiple have elements available
+
+**backpressures** when downstream backpressures
+
+**completes** when all upstreams complete (This behavior is changeable to completing when any upstream completes by setting `eagerComplete=true`.)
+
 #### Zip
 
 Combines elements from each of multiple sources into tuples and passes the tuples downstream.
@@ -1228,6 +1271,20 @@ Fan-out the stream to several streams. Each upstream element is emitted to the f
 **backpressures** when all of the outputs backpressure
 
 **completes** when upstream completes
+
+
+#### Partition
+
+Fan-out the stream to several streams. emitting an incoming upstream element to one downstream consumer according
+to the partitioner function applied to the element
+
+**emits** when an element is available from the input and the chosen output has demand
+
+**backpressures** when the currently chosen output back-pressures
+
+**completes** when upstream completes and no output is pending
+
+**cancels** when when all downstreams cancel
 
 
 # Watching status stages

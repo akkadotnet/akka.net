@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="HeadSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -126,6 +126,21 @@ namespace Akka.Streams.Tests.Dsl
                 task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
                 task.Result.Should().Be(0);
             }, Materializer);
+        }
+
+        [Fact]
+        public void A_FLow_with_a_Sink_HeadOption_must_fail_on_abrupt_termination()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var source = this.CreatePublisherProbe<int>();
+            var task = Source.FromPublisher(source).RunWith(Sink.FirstOrDefault<int>(), materializer);
+
+            materializer.Shutdown();
+
+            // this one always fails with the AbruptTerminationException rather than the
+            // AbruptStageTerminationException for some reason
+            Action a = () => task.Wait(TimeSpan.FromSeconds(3));
+            a.ShouldThrow<AbruptTerminationException>();
         }
     }
 }

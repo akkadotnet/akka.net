@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="GraphPartialSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,12 +43,12 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             var task =
-                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), Tuple.Create,
+                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), ValueTuple.Create,
                     (b, d1, d2, sink) =>
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<Tuple<NotUsed, NotUsed, Task<IEnumerable<int>>>>(_ => null);
+                                .MapMaterializedValue(_ => default((NotUsed, NotUsed, Task<IEnumerable<int>>)));
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);
@@ -77,12 +77,12 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             var t =
-                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), Tuple.Create,
+                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), ValueTuple.Create,
                     (b, d1, d2, sink) =>
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<Tuple<Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>>>(_ => null);
+                                .MapMaterializedValue(_ => default((Task<IEnumerable<int>>, Task<IEnumerable<int>>, Task<IEnumerable<int>>)));
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);
@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var summer = Sink.Aggregate<int, int>(0, (i, i1) => i + i1);
 
-            var doubler = GraphDsl.Create(summer, summer, Tuple.Create, (b, s1,s2) =>
+            var doubler = GraphDsl.Create(summer, summer, ValueTuple.Create, (b, s1,s2) =>
             {
                 var broadcast = b.Add(new Broadcast<int>(3));
                 var broadcast2 = b.Add(new Broadcast<int>(2));
@@ -120,12 +120,12 @@ namespace Akka.Streams.Tests.Dsl
             });
 
             var t =
-                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), Tuple.Create,
+                RunnableGraph.FromGraph(GraphDsl.Create(doubler, doubler, Sink.First<IEnumerable<int>>(), ValueTuple.Create,
                     (b, d1, d2, sink) =>
                     {
                         var source =
                             Source.From(Enumerable.Range(1, 3))
-                                .MapMaterializedValue<Tuple<Tuple<Task<int>, Task<int>>, Tuple<Task<int>, Task<int>>, Task<IEnumerable<int>>>>(_ => null);
+                                .MapMaterializedValue(_ => default(((Task<int>, Task<int>), (Task<int>, Task<int>), Task<IEnumerable<int>>)));
 
                         b.From(source).To(d1.Inlet);
                         b.From(d1.Outlet).To(d2.Inlet);

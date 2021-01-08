@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,10 +29,10 @@ namespace Akka.Streams.Tests.Dsl
         private static readonly Random Random = new Random();
         private static ICollection<int> RandomSeq(int n) => Enumerable.Range(1, n).Select(_ => Random.Next()).ToList();
 
-        private static Tuple<ICollection<int>, ICollection<IEnumerable<int>>> RandomTest(int n)
+        private static (ICollection<int>, ICollection<IEnumerable<int>>) RandomTest(int n)
         {
             var s = RandomSeq(n);
-            return Tuple.Create<ICollection<int>, ICollection<IEnumerable<int>>>(s, new[] {s});
+            return (s, new[] {s});
         }
 
         [Fact]

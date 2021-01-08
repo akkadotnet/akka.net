@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LoggingBus.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,6 +91,7 @@ namespace Akka.Event
             var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
             var loggerTypes = system.Settings.Loggers;
             var timeout = system.Settings.LoggerStartTimeout;
+            var asyncStart = system.Settings.LoggerAsyncStart;
             var shouldRemoveStandardOutLogger = true;
 
             foreach (var strLoggerType in loggerTypes)
@@ -106,14 +107,29 @@ namespace Akka.Event
                     shouldRemoveStandardOutLogger = false;
                     continue;
                 }
-                
-                try
+
+                if (asyncStart)
                 {
-                    AddLogger(system, loggerType, logLevel, logName, timeout);
+                    // Not awaiting for result, and not depending on current thread context
+                    Task.Run(() => AddLogger(system, loggerType, logLevel, logName, timeout))
+                        .ContinueWith(t =>
+                        {
+                            if (t.Exception != null)
+                            {
+                                Console.WriteLine($"Logger [{strLoggerType}] specified in config cannot be loaded: {t.Exception}");
+                            }
+                        });
                 }
-                catch (Exception e)
+                else
                 {
-                    throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {e}", e);
+                    try
+                    {
+                        AddLogger(system, loggerType, logLevel, logName, timeout);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {ex}", ex);
+                    }
                 }
             }
 
@@ -174,7 +190,7 @@ namespace Akka.Event
             {
                 response = askTask.Result;
             }
-            catch (TaskCanceledException)
+            catch (Exception ex) when (ex is TaskCanceledException || ex is AskTimeoutException)
             {
                 Publish(new Warning(loggingBusName, GetType(),
                      string.Format("Logger {0} [{2}] did not respond within {1} to InitializeLogger(bus)", loggerName, timeout, loggerType.FullName)));
@@ -247,8 +263,7 @@ namespace Akka.Event
         {
             protected override bool Receive(object message)
             {
-                var msg = message as UnhandledMessage;
-                if (msg == null) 
+                if (!(message is UnhandledMessage msg)) 
                     return false;
 
                 Context.System.EventStream.Publish(ToDebug(msg));
@@ -257,9 +272,12 @@ namespace Akka.Event
 
             private static Debug ToDebug(UnhandledMessage message)
             {
+                // avoid NREs when we have ActorRefs.NoSender
+                var sender = Equals(message.Sender, ActorRefs.NoSender) ? "NoSender" : message.Sender.Path.ToString();
+
                 var msg = string.Format(
                     CultureInfo.InvariantCulture, "Unhandled message from {0} : {1}",
-                    message.Sender.Path,
+                    sender,
                     message.Message
                     );
 

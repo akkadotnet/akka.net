@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PerGroupingBuffer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,11 +31,11 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         {
             if (_buffers.TryGetValue(grouping, out var messages))
             {
-                _buffers[grouping].Add(new KeyValuePair<object, IActorRef>(message, originalSender));
+                messages.Add(new KeyValuePair<object, IActorRef>(message, originalSender));
                 _totalBufferSize += 1;
             }
-            
-            action();
+            else
+                action();
         }
 
         /// <summary>

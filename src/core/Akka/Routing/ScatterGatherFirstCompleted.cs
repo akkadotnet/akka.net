@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ScatterGatherFirstCompleted.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ namespace Akka.Routing
         /// <returns>A <see cref="ScatterGatherFirstCompletedRoutees" /> that receives the <paramref name="message" />.</returns>
         public override Routee Select(object message, Routee[] routees)
         {
-            return new ScatterGatherFirstCompletedRoutees(routees,_within);
+            return new ScatterGatherFirstCompletedRoutees(routees, _within);
         }
     }
 
@@ -77,38 +77,31 @@ namespace Akka.Routing
         /// <param name="sender">The actor sending the message.</param>
         public override void Send(object message, IActorRef sender)
         {
-            var tcs = new TaskCompletionSource<object>();
+            SendMessage(message).PipeTo(sender);
+        }
 
+        private async Task<object> SendMessage(object message)
+        {
             if (_routees.IsNullOrEmpty())
             {
-                tcs.SetResult(new Status.Failure(new AskTimeoutException("Timeout due to no routees")));
+                return new Status.Failure(new AskTimeoutException("Timeout due to no routees"));
             }
-            else
+
+            try
             {
+
                 var tasks = _routees
                     .Select(routee => routee.Ask(message, _within))
                     .ToList();
 
-                Task
-                    .WhenAny(tasks)
-                    .ContinueWith(task =>
-                    {
-                        if (task.Result.IsCanceled)
-                        {
-                            tcs.SetResult(new Status.Failure(new AskTimeoutException($"Timeout after {_within.TotalSeconds} seconds")));
-                        }
-                        else if (task.Result.IsFaulted)
-                        {
-                            tcs.SetResult(new Status.Failure(task.Result.Exception));
-                        }
-                        else
-                        {
-                            tcs.SetResult(task.Result.Result);
-                        }
-                    });
-            }
+                var firstFinishedTask = await Task.WhenAny(tasks);
 
-            tcs.Task.PipeTo(sender);
+                return await firstFinishedTask;
+            }
+            catch (Exception e)
+            {
+                return new Status.Failure(e);
+            }
         }
     }
 
@@ -132,9 +125,9 @@ namespace Akka.Routing
         /// </param>
         public ScatterGatherFirstCompletedPool(Config config)
             : this(
-                  nrOfInstances: config.GetInt("nr-of-instances"),
+                  nrOfInstances: config.GetInt("nr-of-instances", 0),
                   resizer: Resizer.FromConfig(config),
-                  within: config.GetTimeSpan("within"),
+                  within: config.GetTimeSpan("within", null),
                   supervisorStrategy: Pool.DefaultSupervisorStrategy,
                   routerDispatcher: Dispatchers.DefaultDispatcherId,
                   usePoolDispatcher: config.HasPath("pool-dispatcher"))
@@ -373,8 +366,8 @@ namespace Akka.Routing
         /// </param>
         public ScatterGatherFirstCompletedGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
-                  config.GetTimeSpan("within"),
+                  config.GetStringList("routees.paths", new string[] { }),
+                  config.GetTimeSpan("within", null),
                   Dispatchers.DefaultDispatcherId)
         {
         }
@@ -448,7 +441,7 @@ namespace Akka.Routing
         /// <returns>An enumeration of actor paths used during routee selection</returns>
         public override IEnumerable<string> GetPaths(ActorSystem system)
         {
-            return Paths;
+            return InternalPaths;
         }
 
         /// <summary>
@@ -461,7 +454,7 @@ namespace Akka.Routing
         /// <returns>A new router with the provided dispatcher id.</returns>
         public ScatterGatherFirstCompletedGroup WithDispatcher(string dispatcher)
         {
-            return new ScatterGatherFirstCompletedGroup(Paths, Within, RouterDispatcher);
+            return new ScatterGatherFirstCompletedGroup(InternalPaths, Within, RouterDispatcher);
         }
 
         #region Surrogate
@@ -474,7 +467,7 @@ namespace Akka.Routing
         {
             return new ScatterGatherFirstCompletedGroupSurrogate
             {
-                Paths = Paths,
+                Paths = InternalPaths,
                 Within = Within,
                 RouterDispatcher = RouterDispatcher
             };

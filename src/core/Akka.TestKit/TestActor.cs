@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.TestKit
 {
@@ -117,6 +118,37 @@ namespace Akka.TestKit
             /// TBD
             /// </summary>
             public AutoPilot AutoPilot { get { return _autoPilot; } }
+        }
+
+        /// <summary>
+        /// Message which is intended to allow TestKit to spawn a child actor
+        /// </summary>
+        public class Spawn : INoSerializationVerificationNeeded
+        {
+            public readonly Props _props;
+
+            public readonly Option<string> _name;
+
+            public readonly Option<SupervisorStrategy> _supervisorStrategy;
+
+            public Spawn(Props props, Option<string> name, Option<SupervisorStrategy> supervisorStrategy)
+            {
+                _props = props;
+                _name = name;
+                _supervisorStrategy = supervisorStrategy;
+            }
+
+            /// <summary>
+            /// Using the given context, create an actor of the given _props, and optionally naming it with _name
+            /// </summary>
+            public IActorRef Apply(IActorRefFactory context)
+            {
+                if (_name.HasValue)
+                {
+                    return context.ActorOf(_props, _name.Value);
+                }
+                return context.ActorOf(_props);
+            }
         }
     }
 }

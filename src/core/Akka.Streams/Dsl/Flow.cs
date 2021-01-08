@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="FLow.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+// <copyright file="Flow.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
@@ -96,25 +98,18 @@ namespace Akka.Streams.Dsl
                 if (Keep.IsLeft(combine))
                 {
                     if (IgnorableMaterializedValueComposites.Apply(m))
-                    {
                         materializedValueNode = StreamLayout.Ignore.Instance;
-                    }
                     else
-                    {
                         materializedValueNode = new StreamLayout.Transform(_ => NotUsed.Instance,
                             new StreamLayout.Atomic(m));
-                    }
                 }
                 else
-                {
-                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat) o, (TMat2) o1),
+                    materializedValueNode = new StreamLayout.Combine((o, o1) => combine((TMat)o, (TMat2)o1),
                         StreamLayout.Ignore.Instance, new StreamLayout.Atomic(m));
-                }
 
                 return
                     new Flow<TIn, TOut2, TMat3>(new CompositeModule(ImmutableArray<IModule>.Empty.Add(m), m.Shape,
-                        ImmutableDictionary<OutPort, InPort>.Empty, ImmutableDictionary<InPort, OutPort>.Empty,
-                        materializedValueNode, Attributes.None));
+                        m.Downstreams, m.Upstreams, materializedValueNode, m.Attributes));
             }
 
             var copy = flow.Module.CarbonCopy();
@@ -187,6 +182,49 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <returns>TBD</returns>
         public Flow<TIn, TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
+
+        /// <summary>
+        /// Use the `ask` pattern to send a request-reply message to the target <paramref name="actorRef"/>.
+        /// If any of the asks times out it will fail the stream with a <see cref="AskTimeoutException"/>.
+        /// 
+        /// Parallelism limits the number of how many asks can be "in flight" at the same time.
+        /// Please note that the elements emitted by this operator are in-order with regards to the asks being issued
+        /// (i.e. same behaviour as <see cref="SourceOperations.SelectAsync{TIn,TOut,TMat}"/>).
+        /// 
+        /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated,
+        /// or with an <see cref="TimeoutException"/> in case the ask exceeds the timeout passed in.
+        /// 
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// 
+        /// '''Emits when''' the futures (in submission order) created by the ask pattern internally are completed. 
+        /// '''Backpressures when''' the number of futures reaches the configured parallelism and the downstream backpressures. 
+        /// '''Completes when''' upstream completes and all futures have been completed and all elements have been emitted. 
+        /// '''Fails when''' the passed in actor terminates, or a timeout is exceeded in any of the asks performed. 
+        /// '''Cancels when''' downstream cancels.
+        /// </summary>
+        public Flow<TIn, TOut2, TMat> Ask<TOut2>(IActorRef actorRef, TimeSpan timeout, int parallelism = 2)
+        {
+            // I know this is not a place for it, but since Ask<T> generic param must be supplied, it's better
+            // if it remain alone in generic params list (no need to provide types that will be infered)
+            var askFlow = Flow.Create<TOut>()
+                .Watch(actorRef)
+                .SelectAsync(parallelism, async e => {
+                    var reply = await actorRef.Ask(e, timeout: timeout);
+                    switch (reply)
+                    {
+                        case TOut2 a: return a;
+                        case Status.Success s when s.Status is TOut2 a: return a;
+                        case Status.Failure f:
+                            ExceptionDispatchInfo.Capture(f.Cause).Throw();
+                            return default(TOut2);
+                        default:
+                            throw new InvalidOperationException($"Expected to receive response of type {nameof(TOut2)}, but got: {reply}");
+                    }
+                })
+                .Named("ask");
+
+            return ViaMaterialized(askFlow, Keep.Left);
+        }
 
         /// <summary>
         /// Transform the materialized value of this Flow, leaving all other properties as they were.
@@ -338,7 +376,7 @@ namespace Akka.Streams.Dsl
         /// <param name="sink">TBD</param>
         /// <param name="materializer">TBD</param>
         /// <returns>TBD</returns>
-        public Tuple<TMat1, TMat2> RunWith<TMat1, TMat2>(IGraph<SourceShape<TIn>, TMat1> source, IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
+        public (TMat1, TMat2) RunWith<TMat1, TMat2>(IGraph<SourceShape<TIn>, TMat1> source, IGraph<SinkShape<TOut>, TMat2> sink, IMaterializer materializer)
             => Source.FromGraph(source).Via(this).ToMaterialized(sink, Keep.Both).Run(materializer);
 
         /// <summary>
@@ -388,7 +426,7 @@ namespace Akka.Streams.Dsl
         /// <param name="factory">TBD</param>
         /// <returns>TBD</returns>
         public static Flow<TIn, TOut, NotUsed> FromProcessor<TIn, TOut>(Func<IProcessor<TIn, TOut>> factory)
-            => FromProcessorMaterialized(() => Tuple.Create(factory(), NotUsed.Instance));
+            => FromProcessorMaterialized(() => (factory(), NotUsed.Instance));
 
         /// <summary>
         /// Creates a Flow from a Reactive Streams <see cref="IProcessor{T1,T2}"/> and returns a materialized value.
@@ -398,7 +436,7 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="factory">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<Tuple<IProcessor<TIn, TOut>, TMat>> factory) 
+        public static Flow<TIn, TOut, TMat> FromProcessorMaterialized<TIn, TOut, TMat>(Func<(IProcessor<TIn, TOut>, TMat)> factory) 
             => new Flow<TIn, TOut, TMat>(new ProcessorModule<TIn, TOut, TMat>(factory));
 
         /// <summary>

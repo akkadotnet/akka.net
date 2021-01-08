@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,10 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.Streams.Util;
 using Akka.TestKit;
+using Akka.Util;
+using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -269,6 +272,41 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task Composite_Source_must_combine_from_two_inputs_with_CombineMaterialized_and_take_a_materialized_value()
+        {
+            var queueSource = Source.Queue<int>(1, OverflowStrategy.DropBuffer);
+            var intSequenceSource = Source.From(new[] { 1, 2, 3 });
+
+            var combined1 = Source.CombineMaterialized(queueSource, intSequenceSource,
+                i => new Concat<int, int>(i), Keep.Left); // Keep.left (i.e. preserve queueSource's materialized value)
+            var materialized1 = combined1.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Materializer);
+            var queue1 = materialized1.Item1;
+            var sinkProbe1 = materialized1.Item2;
+
+            sinkProbe1.Request(6);
+            await queue1.OfferAsync(10);
+            await queue1.OfferAsync(20);
+            await queue1.OfferAsync(30);
+            queue1.Complete(); // complete queueSource so that combined1 with `Concat` then pulls elements from intSequenceSource
+            sinkProbe1.ExpectNextN(new[] { 10, 20, 30, 1, 2, 3 });
+
+            // queueSource to be the second of combined source
+            var combined2 = Source.CombineMaterialized(intSequenceSource, queueSource,
+                i => new Concat<int, int>(i), Keep.Right); // Keep.right (i.e. preserve queueSource's materialized value)
+            var materialized2 = combined2.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Materializer);
+            var queue2 = materialized2.Item1;
+            var sinkProbe2 = materialized2.Item2;
+
+            sinkProbe2.Request(6);
+            await queue2.OfferAsync(10);
+            await queue2.OfferAsync(20);
+            await queue2.OfferAsync(30);
+            queue2.Complete();
+            sinkProbe2.ExpectNextN(new[] { 1, 2, 3 }); //as intSequenceSource is the first in combined source, elements from intSequenceSource come first
+            sinkProbe2.ExpectNextN(new[] { 10, 20, 30 }); // after intSequenceSource run out elements, queueSource elements come
+        }
+
+        [Fact]
         public void Repeat_Source_must_repeat_as_long_as_it_takes()
         {
             var f = Source.Repeat(42).Grouped(1000).RunWith(Sink.First<IEnumerable<int>>(), Materializer);
@@ -283,13 +321,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_finite_fibonacci_sequence()
         {
-            Source.Unfold(Tuple.Create(0, 1), tuple =>
+            Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return null;
-                return Tuple.Create(Tuple.Create(b, a + b), a);
+                    return Option<((int, int), int)>.None;
+                
+                return ((b, a + b), a);
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -302,13 +341,14 @@ namespace Akka.Streams.Tests.Dsl
         {
             EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
-                var task = Source.Unfold(Tuple.Create(0, 1), tuple =>
+                var task = Source.Unfold((0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
                         throw new Exception("expected");
-                    return Tuple.Create(Tuple.Create(b, a + b), a);
+                    
+                    return ((b, a + b), a).AsOption();
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);
@@ -323,13 +363,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_finite_fibonacci_sequence_asynchronously()
         {
-            Source.UnfoldAsync(Tuple.Create(0, 1), tuple =>
+            Source.UnfoldAsync((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return Task.FromResult<Tuple<Tuple<int, int>, int>>(null);
-                return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a));
+                    return Task.FromResult(Option<((int, int), int)>.None);
+                
+                return Task.FromResult(((b, a + b), a).AsOption());
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -340,11 +381,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_unboundeed_fibonacci_sequence()
         {
-            Source.Unfold(Tuple.Create(0, 1), tuple =>
+            Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
-                return Tuple.Create(Tuple.Create(b, a + b), a);
+                return((b, a + b), a).AsOption();
             })
             .Take(36)
             .RunAggregate(new LinkedList<int>(), (ints, i) =>
@@ -441,6 +482,85 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Materializer)
                 .AwaitResult()
                 .ShouldAllBeEquivalentTo(new[] {111, 222, 333});
+        }
+
+        [Fact]
+        public void Source_prematerialization_must_materialize_the_source_and_connect_it_to_a_publisher()
+        {
+            var matValPoweredSource = Source.Maybe<int>();
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe = src.RunWith(this.SinkProbe<int>(), Sys.Materializer());
+            probe.Request(1);
+            mat.TrySetResult(42).Should().BeTrue();
+            probe.ExpectNext(42);
+            probe.ExpectComplete();
+        }
+
+        [Fact]
+        public async Task Source_prematerialization_must_allow_for_multiple_downstream_materialized_sources()
+        {
+            var matValPoweredSource = Source.Queue<string>(int.MaxValue, OverflowStrategy.Fail);
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe1 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            var probe2 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+
+            probe1.Request(1);
+            probe2.Request(2);
+            await mat.OfferAsync("One");
+            probe1.ExpectNext("One");
+            probe2.ExpectNext("One");
+        }
+
+        [Fact]
+        public async Task Source_prematerialization_must_survive_cancellation_of_downstream_materialized_sources()
+        {
+            var matValPoweredSource = Source.Queue<string>(Int32.MaxValue, OverflowStrategy.Fail);
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe1 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            src.RunWith(Sink.Cancelled<string>(), Sys.Materializer());
+
+            probe1.Request(1);
+            await mat.OfferAsync("One");
+            probe1.ExpectNext("One");
+        }
+
+        [Fact]
+        public void Source_prematerialization_must_propagate_failures_to_downstream_materialized_sources()
+        {
+            var matValPoweredSource = Source.Queue<string>(Int32.MaxValue, OverflowStrategy.Fail);
+            var matted = matValPoweredSource.PreMaterialize(Sys.Materializer());
+            var mat = matted.Item1;
+            var src = matted.Item2;
+
+            var probe1 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            var probe2 = src.RunWith(this.SinkProbe<string>(), Sys.Materializer());
+
+            mat.Fail(new InvalidOperationException("boom"));
+
+            probe1.ExpectSubscription();
+            probe2.ExpectSubscription();
+
+            probe1.ExpectError().Message.Should().Be("boom");
+            probe2.ExpectError().Message.Should().Be("boom");
+        }
+
+        [Fact]
+        public void Source_prematerialization_must_propagate_materialization_failures()
+        {
+            var matValPoweredSource =
+                Source.Empty<int>().MapMaterializedValue<int>(_ => throw new InvalidOperationException("boom"));
+
+            Action thrower = () => matValPoweredSource.PreMaterialize(Sys.Materializer());
+            thrower.ShouldThrow<InvalidOperationException>();
         }
     }
 }

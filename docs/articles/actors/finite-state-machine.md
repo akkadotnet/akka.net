@@ -16,15 +16,16 @@ using Akka.Event;
 
 The contract of our `Buncher` actor is that it accepts or produces the following messages:
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/FiniteStateMachine.Messages.cs#L11-L43)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/FiniteStateMachine.Messages.cs?name=FSMEvents)]
 
 `SetTarget` is needed for starting it up, setting the destination for the Batches to be passed on; `Queue` will add to the internal queue while `Flush` will mark the end of a burst.
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/FiniteStateMachine.Messages.cs#L46-L78)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/FiniteStateMachine.Messages.cs?name=FSMData)]
 
 The actor can be in two states: no message queued (aka `Idle`) or some message queued (aka `Active`). It will stay in the active state as long as messages keep arriving and no flush is requested. The internal state data of the actor is made up of the target actor reference to send the batches to and the actual queue of messages.
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/ExampleFSMActor.cs?range=8-35,64-67)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=FSMActorStart)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=FSMActorEnd)]
 
 The basic strategy is to declare the actor, inherit from `FSM` class and specifying the possible states and data values as type parameters. Within the body of the actor a DSL is used for declaring the state machine:
 
@@ -34,19 +35,19 @@ The basic strategy is to declare the actor, inherit from `FSM` class and specify
 
 In this case, we start out in the `Idle` and `Uninitialized` state, where only the `SetTarget()` message is handled; stay prepares to end this event’s processing for not leaving the current state, while the using modifier makes the `FSM` replace the internal state (which is `Uninitialized` at this point) with a fresh `Todo()` object containing the target actor reference. The `Active` state has a state timeout declared, which means that if no message is received for 1 second, a `FSM.StateTimeout` message will be generated. This has the same effect as receiving the `Flush` command in this case, namely to transition back into the Idle state and resetting the internal queue to the empty vector. But how do messages get queued? Since this shall work identically in both states, we make use of the fact that any event which is not handled by the `When()` block is passed to the `WhenUnhandled()` block:
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/ExampleFSMActor.cs?range=37-48)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=UnhandledHandler)]
 
 The first case handled here is adding `Queue()` requests to the internal queue and going to the `Active` state (this does the obvious thing of staying in the `Active` state if already there), but only if the `FSM` data are not `Uninitialized` when the `Queue()` event is received. Otherwise—and in all other non-handled cases—the second case just logs a warning and does not change the internal state.
 
 The only missing piece is where the `Batches` are actually sent to the target, for which we use the `OnTransition` mechanism: you can declare multiple such blocks and all of them will be tried for matching behavior in case a state transition occurs (i.e. only when the state actually changes).
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/ExampleFSMActor.cs?range=50-63)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=TransitionHandler)]
 
 The transition callback is a function which takes as input a pair of states—the current and the next state. The `FSM` class includes a convenience extractor for these in form of an arrow operator, which conveniently reminds you of the direction of the state change which is being matched. During the state change, the old state data is available via `StateData` as shown, and the new state data would be available as `NextStateData`.
 
 To verify that this buncher actually works, it is quite easy to write a test using the `Testing Actor Systems`.
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/ExampleFSMActorTests.cs?range=9-33)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActorTests.cs?name=FSMTest)]
 
 ## Reference
 
@@ -86,7 +87,7 @@ If the `timeout` parameter is given, then all transitions into this state, inclu
 
 The `stateFunction` argument is a `delegate State<TState, TData> StateFunction(Event<TData> fsmEvent)`.
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/FiniteStateMachine/ExampleFSMActor.cs?range=16-35)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=FSMHandlers)]
 
 ### Defining the Initial State
 Each `FSM` needs a starting point, which is declared using

@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LWWDictionarySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
@@ -13,6 +14,7 @@ using Akka.Cluster;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using Akka.DistributedData.Internal;
 
 namespace Akka.DistributedData.Tests
 {
@@ -32,8 +34,8 @@ namespace Akka.DistributedData.Tests
         public void LWWDictionary_must_be_able_to_set_entries()
         {
             var m = LWWDictionary.Create(
-                Tuple.Create(_node1, "a", 1),
-                Tuple.Create(_node2, "b", 2));
+                (_node1, "a", 1),
+                (_node2, "b", 2));
 
             Assert.Equal(m.Entries, ImmutableDictionary.CreateRange(new[]
             {
@@ -46,8 +48,8 @@ namespace Akka.DistributedData.Tests
         public void LWWDictionary_must_be_able_to_have_its_entries_correctly_merged_with_another_LWWMap_with_other_entries()
         {
             var m1 = LWWDictionary.Create(
-                Tuple.Create(_node1, "a", 1),
-                Tuple.Create(_node1, "b", 2));
+                (_node1, "a", 1),
+                (_node1, "b", 2));
             var m2 = LWWDictionary.Create(_node2, "c", 3);
 
             var expected = ImmutableDictionary.CreateRange(new[]
@@ -66,8 +68,8 @@ namespace Akka.DistributedData.Tests
         public void LWWDictionary_must_be_able_to_remove_entry()
         {
             var m1 = LWWDictionary.Create(
-                Tuple.Create(_node1, "a", 1),
-                Tuple.Create(_node2, "b", 2));
+                (_node1, "a", 1),
+                (_node2, "b", 2));
             var m2 = LWWDictionary.Create(_node2, "c", 3);
 
             var merged1 = m1.Merge(m2);
@@ -124,6 +126,40 @@ namespace Akka.DistributedData.Tests
                 {"b", 22},
                 {"c", 3}
             });
+        }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/4400
+        /// </summary>
+        [Fact]
+        public async Task Bugfix_4400_LWWDictionary_Deltas_must_merge_other_LWWDictionary()
+        {
+            var m1 = LWWDictionary<string, string>.Empty
+                .SetItem(_node1, "a", "A")
+                .SetItem(_node1, "b", "B1");
+
+            await Task.Delay(200);
+
+            var m2 = LWWDictionary<string, string>.Empty
+                .SetItem(_node2, "c", "C")
+                .SetItem(_node2, "b", "B2");
+
+            // This is how deltas really get merged inside the replicator
+            var dataEnvelope = new DataEnvelope(m1.Delta);
+            if (dataEnvelope.Data is IReplicatedDelta withDelta)
+            {
+                dataEnvelope = dataEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
+            }
+
+            // Bug: this is was an ORDictionary<string, ORSet<string>> under #4302
+            var storedData = dataEnvelope.Data;
+
+            // simulate merging an update
+            var merged1 = (LWWDictionary<string, string>)m2.Merge(storedData);
+
+            merged1.Entries["a"].Should().BeEquivalentTo("A");
+            merged1.Entries["b"].Should().BeEquivalentTo("B2");
+            merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
     }
 }

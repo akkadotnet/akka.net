@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeFact.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,11 @@ namespace Akka.Remote.TestKit
 {
     public class MultiNodeFactAttribute : FactAttribute
     {
+        /// <summary>
+        /// Set by MultiNodeTestRunner when running multi-node tests
+        /// </summary>
+        public const string MultiNodeTestEnvironmentName = "__AKKA_MULTI_NODE_ENVIRONMENT";
+        
         public static Lazy<bool> ExecutedByMultiNodeRunner =
             new Lazy<bool>(() =>
             {
@@ -19,7 +24,8 @@ namespace Akka.Remote.TestKit
                 if (args.Length == 0) return false;
                 var firstArg = args[0];
                 return firstArg.Contains("Akka.MultiNodeTestRunner") 
-                    || firstArg.Contains("Akka.NodeTestRunner");
+                    || firstArg.Contains("Akka.NodeTestRunner")
+                    || Environment.GetEnvironmentVariable(MultiNodeTestEnvironmentName) != null;
             });
 
         public override string Skip

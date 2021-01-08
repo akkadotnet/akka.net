@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManagerLeaveSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
@@ -77,6 +78,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         private readonly ClusterSingletonManagerLeaveSpecConfig _config;
         private readonly Lazy<IActorRef> _echoProxy;
 
+        private TestProbe EchoProxyTerminatedProbe { get; }
+
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
         public ClusterSingletonManagerLeaveSpec() : this(new ClusterSingletonManagerLeaveSpecConfig())
@@ -86,8 +89,8 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         protected ClusterSingletonManagerLeaveSpec(ClusterSingletonManagerLeaveSpecConfig config) : base(config, typeof(ClusterSingletonManagerLeaveSpec))
         {
             _config = config;
-
-            _echoProxy = new Lazy<IActorRef>(() => Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
+            EchoProxyTerminatedProbe = CreateTestProbe();
+            _echoProxy = new Lazy<IActorRef>(() => EchoProxyTerminatedProbe.Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
                 singletonManagerPath: "/user/echo",
                 settings: ClusterSingletonProxySettings.Create(Sys)),
                 name: "echoProxy")));
@@ -195,7 +198,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 ExpectMsg("stop", 15.Seconds());
                 ExpectMsg("postStop");
                 ExpectMsg("MemberRemoved");
-                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
+                EchoProxyTerminatedProbe.ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
             }, _config.Second);
             EnterBarrier("second-stopped");
 
@@ -213,7 +216,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 ExpectMsg("stop", 10.Seconds());
                 ExpectMsg("postStop");
                 ExpectMsg("MemberRemoved");
-                ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
+                EchoProxyTerminatedProbe.ExpectTerminated(_echoProxy.Value, TimeSpan.FromSeconds(10));
             }, _config.Third);
             EnterBarrier("third-stopped");
         }

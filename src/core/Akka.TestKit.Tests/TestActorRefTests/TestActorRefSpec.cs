@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestActorRefSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         private static Config GetConfig()
         {
-            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName);
+            return (@"test-dispatcher1.type=""" + typeof(PinnedDispatcherConfigurator).FullName) + @"""";
             //return (@"test-dispatcher1.type=""" + typeof(TaskDispatcher).FullName) + FullDebugConfig;
         }
 
@@ -53,7 +53,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
             //creates a StringBuilder and adds adds $. Hence, 2 $$
             var testActorRef = new TestActorRef<ReplyActor>(Sys, Props.Create<ReplyActor>());
 
-            Assert.Equal(testActorRef.Path.Name.Substring(0, 2), "$$");
+            Assert.Equal("$$", testActorRef.Path.Name.Substring(0, 2));
         }
 
         [Fact]

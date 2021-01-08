@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorModelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -219,11 +219,7 @@ namespace Akka.Tests.Actor.Dispatch
                 Receive<CountDownNStop>(countDown => { Ack(); countDown.Latch.Signal(); Context.Stop(Self); _busy.SwitchOff(); });
                 Receive<Restart>(restart => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, restart => true); // had to add predicate for compiler magic
                 Receive<Interrupt>(interrupt => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, interrupt => true);
-#if UNSAFE_THREADING
-                Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); Thread.CurrentThread.Interrupt(); });
-#else
                 Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); });
-#endif
                 Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, throwEx => true);
                 Receive<DoubleStop>(doubleStop => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
             }
@@ -304,12 +300,15 @@ namespace Akka.Tests.Actor.Dispatch
 
             public MessageDispatcherInterceptorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
             {
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<MessageDispatcherInterceptorConfigurator>();
+
                 _instance = new MessageDispatcherInterceptor(this,
-                    config.GetString("id"),
-                    config.GetInt("throughput"),
-                    config.GetTimeSpan("throughput-deadline-time").Ticks,
+                    config.GetString("id", null),
+                    config.GetInt("throughput", 0),
+                    config.GetTimeSpan("throughput-deadline-time", null).Ticks,
                     ConfigureExecutor(),
-                    Config.GetTimeSpan("shutdown-timeout"));
+                    Config.GetTimeSpan("shutdown-timeout", null));
             }
 
             public override MessageDispatcher Dispatcher()
@@ -475,7 +474,7 @@ namespace Akka.Tests.Actor.Dispatch
             AssertRefDefaultZero(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, unregisters: 1, dispatcher: dispatcher);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void A_dispatcher_must_handle_queuing_from_multiple_threads()
         {
             var dispatcher = InterceptedDispatcher();

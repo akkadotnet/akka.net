@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="StreamConverters.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,15 +22,18 @@ namespace Akka.Streams.Dsl
     {
         /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> from an <see cref="Stream"/> created by the given function.
-        /// Emitted elements are <paramref name="chunkSize"/> sized <see cref="ByteString"/> elements,
-        /// except the final element, which will be up to <paramref name="chunkSize"/> in size.
-        /// 
+        /// Emitted elements are <paramref name="chunkSize"/> sized <see cref="ByteString"/> elements.
+        /// The actual size of emitted elements depends how much data the underlying
+        /// <see cref="Stream"/> returns on each read invocation. Such chunks will
+        /// never be larger than chunkSize though.
+        /// <para>
         /// You can configure the default dispatcher for this Source by changing the "akka.stream.blocking-io-dispatcher" or
         /// set it for a given Source by using <see cref="ActorAttributes.CreateDispatcher"/>.
-        /// 
+        /// </para>
+        /// <para>
         /// It materializes a <see cref="Task{TResult}"/> of <see cref="IOResult"/> containing the number of bytes read from the source file upon completion,
         /// and a possible exception if IO operation was not completed successfully.
-        /// 
+        /// </para>
         /// The created <see cref="Stream"/> will be closed when the <see cref="Source{TOut,TMat}"/> is cancelled.
         /// </summary>
         /// <param name="createInputStream">A function which creates the <see cref="Stream"/> to read from</param>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,8 +21,14 @@ namespace Akka.IO
         /// and fills it with values parsed from `akka.io.tcp` HOCON
         /// path found in actor system.
         /// </summary>
-        public static TcpSettings Create(ActorSystem system) => 
-            Create(system.Settings.Config.GetConfig("akka.io.tcp"));
+        public static TcpSettings Create(ActorSystem system)
+        {
+            var config = system.Settings.Config.GetConfig("akka.io.tcp");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<TcpSettings>("akka.io.tcp");//($"Failed to create {typeof(TcpSettings)}: akka.io.tcp configuration node not found");
+
+            return Create(config);
+        }
 
         /// <summary>
         /// Creates a new instance of <see cref="TcpSettings"/> class 
@@ -31,8 +37,9 @@ namespace Akka.IO
         /// <param name="config">TBD</param>
         public static TcpSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config));
-            
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<TcpSettings>();
+
             return new TcpSettings(
                 bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.direct-buffer-pool"),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
@@ -41,16 +48,29 @@ namespace Akka.IO
                 registerTimeout: config.GetTimeSpan("register-timeout", TimeSpan.FromSeconds(5)),
                 receivedMessageSizeLimit: config.GetString("max-received-message-size", "unlimited") == "unlimited"
                     ? int.MaxValue
-                    : config.GetInt("max-received-message-size"),
+                    : config.GetInt("max-received-message-size", 0),
                 managementDispatcher: config.GetString("management-dispatcher", "akka.actor.default-dispatcher"),
                 fileIoDispatcher: config.GetString("file-io-dispatcher", "akka.actor.default-dispatcher"),
-                transferToLimit: config.GetString("file-io-transferTo-limit") == "unlimited"
+                transferToLimit: config.GetString("file-io-transferTo-limit", null) == "unlimited"
                     ? int.MaxValue
                     : config.GetInt("file-io-transferTo-limit", 512 * 1024),
-                finishConnectRetries: config.GetInt("finish-connect-retries", 5));
+                finishConnectRetries: config.GetInt("finish-connect-retries", 5),
+                outgoingSocketForceIpv4: config.GetBoolean("outgoing-socket-force-ipv4", false),
+                writeCommandsQueueMaxSize: config.GetInt("write-commands-queue-max-size", -1));
         }
 
-        public TcpSettings(string bufferPoolConfigPath, int initialSocketAsyncEventArgs, bool traceLogging, int batchAcceptLimit, TimeSpan? registerTimeout, int receivedMessageSizeLimit, string managementDispatcher, string fileIoDispatcher, int transferToLimit, int finishConnectRetries)
+        public TcpSettings( string    bufferPoolConfigPath,
+                            int       initialSocketAsyncEventArgs,
+                            bool      traceLogging,
+                            int       batchAcceptLimit,
+                            TimeSpan? registerTimeout,
+                            int       receivedMessageSizeLimit,
+                            string    managementDispatcher,
+                            string    fileIoDispatcher,
+                            int       transferToLimit,
+                            int       finishConnectRetries,
+                            bool      outgoingSocketForceIpv4,
+                            int       writeCommandsQueueMaxSize)
         {
             BufferPoolConfigPath = bufferPoolConfigPath;
             InitialSocketAsyncEventArgs = initialSocketAsyncEventArgs;
@@ -62,6 +82,8 @@ namespace Akka.IO
             FileIODispatcher = fileIoDispatcher;
             TransferToLimit = transferToLimit;
             FinishConnectRetries = finishConnectRetries;
+            OutgoingSocketForceIpv4 = outgoingSocketForceIpv4;
+            WriteCommandsQueueMaxSize = writeCommandsQueueMaxSize;
         }
 
         /// <summary>
@@ -135,5 +157,20 @@ namespace Akka.IO
         /// `finishConnect` will succeed, which is the case on Android.
         /// </summary>
         public int FinishConnectRetries { get; }
+
+        /// <summary>
+        /// Enforce outgoing socket connection to use IPv4 address family. Required in
+        /// scenario when IPv6 is not available, for example in Azure Web App sandbox.
+        /// When set to true it is required to set akka.io.dns.inet-address.use-ipv6 to false
+        /// in cases when DnsEndPoint is used to describe the remote address
+        /// </summary>
+        public bool OutgoingSocketForceIpv4 { get; }
+        
+        /// <summary>
+        /// Limits maximum size of internal queue, used in <see cref="TcpIncomingConnection"/> connection actor
+        /// to store pending write commands.
+        /// To allow unlimited size, set to -1.
+        /// </summary>
+        public int WriteCommandsQueueMaxSize { get; }
     }
 }

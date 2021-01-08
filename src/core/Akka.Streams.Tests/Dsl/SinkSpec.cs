@@ -1,10 +1,11 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2015-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -189,6 +190,68 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(Sink.Seq<int>().ContraMap<int>(i => i + 1), Keep.Right)
                 .Run(Materializer)
                 .Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 9));
+        }
+
+        [Fact]
+        public void Sink_prematerialization_must_materialize_the_sink_and_wrap_its_exposed_publisher_in_a_Source()
+        {
+            var publisherSink = Sink.AsPublisher<string>(false);
+            var tup = publisherSink.PreMaterialize(Sys.Materializer());
+            var matPub = tup.Item1;
+            var sink = tup.Item2;
+
+            var probe = Source.FromPublisher(matPub).RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+
+            Source.Single("hello").RunWith(sink, Sys.Materializer());
+
+            probe.EnsureSubscription();
+            probe.RequestNext("hello");
+            probe.ExpectComplete();
+        }
+
+        [Fact]
+        public void Sink_prematerialization_must_materialize_the_sink_and_wrap_its_exposed_fanout_publisher_in_a_Source_twice()
+        {
+            var publisherSink = Sink.AsPublisher<string>(true);
+            var tup = publisherSink.PreMaterialize(Sys.Materializer());
+            var matPub = tup.Item1;
+            var sink = tup.Item2;
+
+            var probe1 = Source.FromPublisher(matPub).RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            var probe2 = Source.FromPublisher(matPub).RunWith(this.SinkProbe<string>(), Sys.Materializer());
+
+            Source.Single("hello").RunWith(sink, Sys.Materializer());
+
+            probe1.EnsureSubscription();
+            probe1.RequestNext("hello");
+            probe1.ExpectComplete();
+
+            probe2.EnsureSubscription();
+            probe2.RequestNext("hello");
+            probe2.ExpectComplete();
+        }
+
+        [Fact]
+        public void
+            Sink_prematerialization_must_materialize_the_sink_and_wrap_its_exposed_nonfanout_publisher_and_fail_the_second_materialization()
+        {
+            var publisherSink = Sink.AsPublisher<string>(false);
+            var tup = publisherSink.PreMaterialize(Sys.Materializer());
+            var matPub = tup.Item1;
+            var sink = tup.Item2;
+
+            var probe1 = Source.FromPublisher(matPub).RunWith(this.SinkProbe<string>(), Sys.Materializer());
+            var probe2 = Source.FromPublisher(matPub).RunWith(this.SinkProbe<string>(), Sys.Materializer());
+
+            Source.Single("hello").RunWith(sink, Sys.Materializer());
+
+            probe1.EnsureSubscription();
+            probe1.RequestNext("hello");
+            probe1.ExpectComplete();
+
+            probe2.EnsureSubscription();
+            probe2.ExpectError().Message.Should().Contain("only supports one subscriber");
         }
     }
 }

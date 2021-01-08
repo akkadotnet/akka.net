@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPath.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,8 +59,7 @@ namespace Akka.Actor
             /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                ActorPath path;
-                if (TryParse(Path, out path))
+                if (TryParse(Path, out var path))
                 {
                     return path;
                 }
@@ -103,15 +102,15 @@ namespace Akka.Actor
 
             #endregion
         }
-        
+
         /// <summary>
         /// INTERNAL API
         /// </summary>
-        internal static char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
+        internal static readonly char[] ValidSymbols = @"""-_.*$+:@&=,!~';""()".ToCharArray();
 
-        /// <summary> 
+        /// <summary>
         /// Method that checks if actor name conforms to RFC 2396, http://www.ietf.org/rfc/rfc2396.txt
-        /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and 
+        /// Note that AKKA JVM does not allow parenthesis ( ) but, according to RFC 2396 those are allowed, and
         /// since we use URL Encode to create valid actor names, we must allow them.
         /// </summary>
         /// <param name="s">TBD</param>
@@ -122,7 +121,7 @@ namespace Akka.Actor
             {
                 return false;
             }
-            return !s.StartsWith("$") && Validate(s.ToCharArray(), s.Length);
+            return !s.StartsWith("$") && Validate(s);
         }
 
         private static bool IsValidChar(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
@@ -131,8 +130,9 @@ namespace Akka.Actor
         private static bool IsHexChar(char c) => (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') ||
                                                  (c >= '0' && c <= '9');
 
-        private static bool Validate(IReadOnlyList<char> chars, int len)
+        private static bool Validate(string chars)
         {
+            int len = chars.Length;
             var pos = 0;
             while (pos < len)
             {
@@ -183,8 +183,6 @@ namespace Akka.Actor
         public long Uid { get; }
 
         internal static readonly string[] EmptyElements = { };
-        internal static readonly string[] SystemElements = { "system" };
-        internal static readonly string[] UserElements = { "user" };
 
         /// <summary>
         /// Gets the elements.
@@ -194,10 +192,10 @@ namespace Akka.Actor
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Used in Akka.Remote - when resolving deserialized local actor references
         /// we need to be able to include the UID at the tail end of the elements.
-        /// 
+        ///
         /// It's implemented in this class because we don't have an ActorPathExtractor equivalent.
         /// </summary>
         internal IReadOnlyList<string> ElementsWithUid
@@ -240,7 +238,23 @@ namespace Akka.Actor
             if (other == null)
                 return false;
 
-            return Address.Equals(other.Address) && Elements.SequenceEqual(other.Elements);
+            if (!Address.Equals(other.Address))
+                return false;
+
+            ActorPath a = this;
+            ActorPath b = other;
+            for (; ; )
+            {
+                if (ReferenceEquals(a, b))
+                    return true;
+                else if (a == null || b == null)
+                    return false;
+                else if (a.Name != b.Name)
+                    return false;
+
+                a = a.Parent;
+                b = b.Parent;
+            }
         }
 
         /// <inheritdoc/>
@@ -364,8 +378,8 @@ namespace Akka.Actor
                     //port may not be specified for these types of paths
                     return false;
                 }
-                //System name is in the "host" position. According to rfc3986 host is case 
-                //insensitive, but should be produced as lowercase, so if we use uri.Host 
+                //System name is in the "host" position. According to rfc3986 host is case
+                //insensitive, but should be produced as lowercase, so if we use uri.Host
                 //we'll get it in lower case.
                 //So we'll extract it ourselves using the original path.
                 //We skip the protocol and "://"
@@ -390,8 +404,31 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         private string Join()
         {
-            var joined = String.Join("/", Elements);
-            return "/" + joined;
+            if (this is RootActorPath)
+                return "/";
+
+            // Resolve length of final string
+            int totalLength = 0;
+            ActorPath p = this;
+            while (!(p is RootActorPath))
+            {
+                totalLength += p.Name.Length + 1;
+                p = p.Parent;
+            }
+
+            // Concatenate segments (in reverse order) into buffer with '/' prefixes
+            char[] buffer = new char[totalLength];
+            int offset = buffer.Length;
+            p = this;
+            while (!(p is RootActorPath))
+            {
+                offset -= p.Name.Length + 1;
+                buffer[offset] = '/';
+                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+                p = p.Parent;
+            }
+
+            return new string(buffer);
         }
 
         /// <summary>
@@ -408,7 +445,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            return ToStringWithAddress();
+            return $"{Address}{Join()}";
         }
 
         /// <summary>
@@ -500,6 +537,11 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToSerializationFormatWithAddress(Address address)
         {
+            if (IgnoreActorRef.IsIgnoreRefPath(this))
+            {
+                // we never change address for IgnoreActorRef
+                return ToString();
+            }
             var withAddress = ToStringWithAddress(address);
             var result = AppendUidFragment(withAddress);
             return result;
@@ -522,6 +564,11 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress(Address address)
         {
+            if (IgnoreActorRef.IsIgnoreRefPath(this))
+            {
+                // we never change address for IgnoreActorRef
+                return ToString();
+            }
             if (Address.Host != null && Address.Port.HasValue)
                 return $"{Address}{Join()}";
 
@@ -635,9 +682,9 @@ namespace Akka.Actor
             get
             {
                 var current = _parent;
-                while (current is ChildActorPath)
+                while (current is ChildActorPath child)
                 {
-                    current = ((ChildActorPath)current)._parent;
+                    current = child._parent;
                 }
                 return current.Root;
             }
@@ -653,6 +700,19 @@ namespace Akka.Actor
             if (uid == Uid)
                 return this;
             return new ChildActorPath(_parent, _name, uid);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = 17;
+                hash = (hash * 23) ^ Address.GetHashCode();
+                for (ActorPath p = this; p != null; p = p.Parent)
+                    hash = (hash * 23) ^ p.Name.GetHashCode();
+                return hash;
+            }
         }
 
         /// <inheritdoc/>

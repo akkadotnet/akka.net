@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClient.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -190,7 +190,7 @@ namespace Akka.Cluster.Tools.Client
         private ImmutableList<IActorRef> _subscribers;
         private readonly ICancelable _heartbeatTask;
         private ICancelable _refreshContactsCancelable;
-        private readonly Queue<Tuple<object, IActorRef>> _buffer;
+        private readonly Queue<(object, IActorRef)> _buffer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterClient" /> class.
@@ -215,7 +215,7 @@ namespace Akka.Cluster.Tools.Client
 
             SendGetContacts();
 
-            _contactPathsPublished = ImmutableHashSet<ActorPath>.Empty;
+            _contactPathsPublished = _contactPaths;
             _subscribers = ImmutableList<IActorRef>.Empty;
 
             _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
@@ -229,7 +229,7 @@ namespace Akka.Cluster.Tools.Client
             ScheduleRefreshContactsTick(settings.EstablishingGetContactsInterval);
             Self.Tell(RefreshContactsTick.Instance);
 
-            _buffer = new Queue<Tuple<object, IActorRef>>();
+            _buffer = new Queue<(object, IActorRef)>();
         }
 
         private void ScheduleRefreshContactsTick(TimeSpan interval)
@@ -285,10 +285,8 @@ namespace Akka.Cluster.Tools.Client
                     Self);
             }
 
-            if (message is ClusterReceptionist.Contacts)
+            if (message is ClusterReceptionist.Contacts contacts)
             {
-                var contacts = (ClusterReceptionist.Contacts)message;
-
                 if (contacts.ContactPoints.Count > 0)
                 {
                     _contactPaths = contacts.ContactPoints.Select(ActorPath.Parse).ToImmutableHashSet();
@@ -298,9 +296,8 @@ namespace Akka.Cluster.Tools.Client
 
                 PublishContactPoints();
             }
-            else if (message is ActorIdentity)
+            else if (message is ActorIdentity actorIdentify)
             {
-                var actorIdentify = (ActorIdentity)message;
                 var receptionist = actorIdentify.Subject;
 
                 if (receptionist != null)
@@ -311,6 +308,7 @@ namespace Akka.Cluster.Tools.Client
                     Context.Become(Active(receptionist));
                     connectTimerCancelable?.Cancel();
                     _failureDetector.HeartBeat();
+                    Self.Tell(HeartbeatTick.Instance); // will register us as active client of the selected receptionist
                 }
                 else
                 {
@@ -325,25 +323,26 @@ namespace Akka.Cluster.Tools.Client
             {
                 SendGetContacts();
             }
-            else if (message is Send)
+            else if (message is Send send)
             {
-                var send = (Send)message;
                 Buffer(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
             }
-            else if (message is SendToAll)
+            else if (message is SendToAll sendToAll)
             {
-                var sendToAll = (SendToAll)message;
                 Buffer(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
             }
-            else if (message is Publish)
+            else if (message is Publish publish)
             {
-                var publish = (Publish)message;
                 Buffer(new PublishSubscribe.Publish(publish.Topic, publish.Message));
             }
             else if (message is ReconnectTimeout)
             {
                 _log.Warning("Receptionist reconnect not successful within {0} stopping cluster client", _settings.ReconnectTimeout);
                 Context.Stop(Self);
+            }
+            else if(message is ClusterReceptionist.ReceptionistShutdown)
+            {
+                // ok, haven't chosen a receptionist yet
             }
             else
             {
@@ -357,19 +356,16 @@ namespace Akka.Cluster.Tools.Client
         {
             return message =>
             {
-                if (message is Send)
+                if (message is Send send)
                 {
-                    var send = (Send)message;
                     receptionist.Forward(new PublishSubscribe.Send(send.Path, send.Message, send.LocalAffinity));
                 }
-                else if (message is SendToAll)
+                else if (message is SendToAll sendToAll)
                 {
-                    var sendToAll = (SendToAll)message;
                     receptionist.Forward(new PublishSubscribe.SendToAll(sendToAll.Path, sendToAll.Message));
                 }
-                else if (message is Publish)
+                else if (message is Publish publish)
                 {
-                    var publish = (Publish)message;
                     receptionist.Forward(new PublishSubscribe.Publish(publish.Topic, publish.Message));
                 }
                 else if (message is HeartbeatTick)
@@ -377,10 +373,7 @@ namespace Akka.Cluster.Tools.Client
                     if (!_failureDetector.IsAvailable)
                     {
                         _log.Info("Lost contact with [{0}], reestablishing connection", receptionist);
-                        SendGetContacts();
-                        ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
-                        Context.Become(Establishing);
-                        _failureDetector.HeartBeat();
+                        Reestablish();
                     }
                     else
                     {
@@ -395,10 +388,8 @@ namespace Akka.Cluster.Tools.Client
                 {
                     receptionist.Tell(ClusterReceptionist.GetContacts.Instance);
                 }
-                else if (message is ClusterReceptionist.Contacts)
+                else if (message is ClusterReceptionist.Contacts contacts)
                 {
-                    var contacts = (ClusterReceptionist.Contacts)message;
-
                     // refresh of contacts
                     if (contacts.ContactPoints.Count > 0)
                     {
@@ -411,6 +402,14 @@ namespace Akka.Cluster.Tools.Client
                 {
                     // ok, from previous establish, already handled
                 }
+                else if (message is ClusterReceptionist.ReceptionistShutdown)
+                {
+                    if (receptionist.Equals(Sender))
+                    {
+                        _log.Info("Receptionist [{0}] is shutting down, reestablishing connection", receptionist);
+                        Reestablish();
+                    }
+                }
                 else
                 {
                     return ContactPointMessages(message);
@@ -418,6 +417,14 @@ namespace Akka.Cluster.Tools.Client
 
                 return true;
             };
+        }
+
+        private void Reestablish()
+        {
+            SendGetContacts();
+            ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
+            Context.Become(Establishing);
+            _failureDetector.HeartBeat();
         }
 
         private bool ContactPointMessages(object message)
@@ -434,9 +441,8 @@ namespace Akka.Cluster.Tools.Client
                 var subscriber = Sender;
                 _subscribers = _subscribers.Where(c => !c.Equals(subscriber)).ToImmutableList();
             }
-            else if (message is Terminated)
+            else if (message is Terminated terminated)
             {
-                var terminated = (Terminated)message;
                 Self.Tell(UnsubscribeContactPoints.Instance, terminated.ActorRef);
             }
             else if (message is GetContactPoints)
@@ -468,18 +474,19 @@ namespace Akka.Cluster.Tools.Client
         {
             if (_settings.BufferSize == 0)
             {
-                _log.Debug("Receptionist not available and buffering is disabled, dropping message [{0}]", message.GetType().Name);
+                _log.Warning("Receptionist not available and buffering is disabled, dropping message [{0}]", message.GetType().Name);
             }
             else if (_buffer.Count == _settings.BufferSize)
             {
                 var m = _buffer.Dequeue();
-                _log.Debug("Receptionist not available, buffer is full, dropping first message [{0}]", m.Item1.GetType().Name);
-                _buffer.Enqueue(Tuple.Create(message, Sender));
+                _log.Warning("Receptionist not available, buffer is full, dropping first message [{0}]", m.Item1.GetType().Name);
+                _buffer.Enqueue((message, Sender));
             }
             else
             {
-                _log.Debug("Receptionist not available, buffering message type [{0}]", message.GetType().Name);
-                _buffer.Enqueue(Tuple.Create(message, Sender));
+                if(_log.IsDebugEnabled) // don't invoke reflection call on message type if we don't have to
+                    _log.Debug("Receptionist not available, buffering message type [{0}]", message.GetType().Name);
+                _buffer.Enqueue((message, Sender));
             }
         }
 
@@ -628,7 +635,7 @@ namespace Akka.Cluster.Tools.Client
     public sealed class GetContactPoints : IGetContactPoints
     {
         /// <summary>
-        /// TBD
+        /// The singleton instance of this message.
         /// </summary>
         public static readonly GetContactPoints Instance = new GetContactPoints();
         private GetContactPoints() { }
@@ -649,7 +656,7 @@ namespace Akka.Cluster.Tools.Client
         }
 
         /// <summary>
-        /// TBD
+        /// The set of actor paths contacted by this <see cref="ClusterClient"/>.
         /// </summary>
         public IImmutableSet<ActorPath> ContactPointsList { get; }
     }

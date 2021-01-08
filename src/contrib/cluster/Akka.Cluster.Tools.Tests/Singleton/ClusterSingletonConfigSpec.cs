@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         public static Config GetConfig()
         {
-            return ConfigurationFactory.ParseString("akka.actor.provider = \"Akka.Cluster.ClusterActorRefProvider, Akka.Cluster\"");
+            return ConfigurationFactory.ParseString(@"akka.actor.provider = cluster
+                                                      akka.remote.dot-netty.tcp.port = 0");
         }
 
         [Fact]
@@ -36,7 +37,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             clusterSingletonManagerSettings.RemovalMargin.TotalSeconds.ShouldBe(0);
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.singleton");
-            config.GetInt("min-number-of-hand-over-retries").ShouldBe(10);
+            Assert.False(config.IsNullOrEmpty());
+            config.GetInt("min-number-of-hand-over-retries", 0).ShouldBe(15);
         }
 
         [Fact]

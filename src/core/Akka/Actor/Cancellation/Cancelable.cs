@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cancelable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,7 +21,8 @@ namespace Akka.Actor
         private readonly CancellationTokenSource _source;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after the specified amount of time.
+        /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after 
+        /// the specified amount of time.
         /// </summary>
         /// <param name="scheduler">The scheduler.</param>
         /// <param name="delay">The delay before the cancelable is canceled.</param>
@@ -31,9 +32,9 @@ namespace Akka.Actor
             CancelAfter(delay);
         }
 
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after the specified amount of time.
+        /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after 
+        /// the specified amount of time.
         /// </summary>
         /// <param name="scheduler">The scheduler.</param>
         /// <param name="delay">The delay before the cancelable is canceled.</param>
@@ -43,9 +44,9 @@ namespace Akka.Actor
             CancelAfter(delay);
         }
 
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after the specified amount of milliseconds.
+        /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after 
+        /// the specified amount of milliseconds.
         /// </summary>
         /// <param name="scheduler">The scheduler.</param>
         /// <param name="millisecondsDelay">The delay in milliseconds.</param>
@@ -83,63 +84,27 @@ namespace Akka.Actor
         }
 
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool IsCancellationRequested
-        {
-            get { return _source.IsCancellationRequested; }
-        }
+        /// <inheritdoc/>
+        public bool IsCancellationRequested => _source.IsCancellationRequested;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public CancellationToken Token
-        {
-            get { return _source.Token; }
-        }
+        /// <inheritdoc/>
+        public CancellationToken Token => _source.Token;
 
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public void Cancel()
         {
             Cancel(false);
         }
 
-        /// <summary>
-        /// Communicates a request for cancellation, and specifies whether remaining callbacks and cancelable operations should be processed.
-        /// </summary>
-        /// <param name="throwOnFirstException"><c>true</c> if exceptions should immediately propagate; otherwise, <c>false</c>.</param>
-        /// <remarks>
-        /// The associated cancelable will be notified of the cancellation and will transition to a state where
-        /// <see cref="IsCancellationRequested" /> returns <c>true</c>.
-        /// Any callbacks or cancelable operations registered with the cancelable will be executed.
-        /// Cancelable operations and callbacks registered with the token should not throw exceptions.
-        /// If <paramref name="throwOnFirstException" /> is <c>true</c>, an exception will immediately propagate out of
-        /// the call to Cancel, preventing the remaining callbacks and cancelable operations from being processed.
-        /// If <paramref name="throwOnFirstException" /> is <c>false</c>, this overload will aggregate any exceptions
-        /// thrown into an <see cref="AggregateException" />, such that one callback throwing an exception will not
-        /// prevent other registered callbacks from being executed.
-        /// The <see cref="ExecutionContext" /> that was captured when each callback was registered will be reestablished when the callback is invoked.
-        /// </remarks>
-        /// <exception cref="ObjectDisposedException">
-        /// This exception is thrown if this cancelable has already been disposed.
-        /// </exception>
+        /// <inheritdoc/>
         public void Cancel(bool throwOnFirstException)
         {
             ThrowIfDisposed();
             _source.Cancel(throwOnFirstException);
         }
 
-
-        /// <summary>
-        /// Schedules a cancel operation on this cancelable after the specified delay.
-        /// </summary>
-        /// <param name="delay">The delay before this instance is canceled.</param>
-        /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="delay"/> is less than or equal to 0.</exception>
-        /// <exception cref="ObjectDisposedException">This exception is thrown if this cancelable has already been disposed.</exception>
+        /// <inheritdoc/>
         public void CancelAfter(TimeSpan delay)
         {
             if(delay < TimeSpan.Zero)
@@ -147,12 +112,7 @@ namespace Akka.Actor
             InternalCancelAfter(delay);
         }
 
-        /// <summary>
-        /// Schedules a cancel operation on this cancelable after the specified number of milliseconds.
-        /// </summary>
-        /// <param name="millisecondsDelay">The delay in milliseconds before this instance is canceled.</param>
-        /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="millisecondsDelay"/> is less than or equal to 0.</exception>
-        /// <exception cref="ObjectDisposedException">This exception is thrown if this cancelable has already been disposed.</exception>
+        /// <inheritdoc/>
         public void CancelAfter(int millisecondsDelay)
         {
             if(millisecondsDelay < 0)
@@ -182,7 +142,6 @@ namespace Akka.Actor
         /// <summary>
         /// Returns a <see cref="ICancelable"/> that has already been canceled.
         /// </summary>
-        /// <returns>TBD</returns>
         public static ICancelable CreateCanceled()
         {
             return AlreadyCanceledCancelable.Instance;
@@ -201,7 +160,6 @@ namespace Akka.Actor
             var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokens);
             return new Cancelable(scheduler.Advanced, cts);
         }
-
 
         /// <summary>
         /// Creates a <see cref="ICancelable"/> that will be in the canceled state

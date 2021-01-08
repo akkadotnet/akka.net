@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2016 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2016 Akka.NET project <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -96,12 +96,16 @@ namespace Akka.Util.Internal
                 capturedException = ExceptionDispatchInfo.Capture(ex);
             }
 
-            bool throwException = capturedException != null;
-            if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
+            // Need to make sure that timeouts are reported as timeouts
+            if (capturedException != null)
             {
-                CallFails();
-                if (throwException)
-                    capturedException.Throw();
+                CallFails(capturedException.SourceException);
+                capturedException.Throw();
+            }
+            else if (DateTime.UtcNow.CompareTo(deadline) >= 0)
+            {
+                CallFails(new TimeoutException(
+                    $"Execution did not complete within the time allotted {_callTimeout.TotalMilliseconds} ms"));
             }
             else
             {
@@ -135,11 +139,16 @@ namespace Akka.Util.Internal
                 capturedException = ExceptionDispatchInfo.Capture(ex);
             }
 
-            bool throwException = capturedException != null;
-            if (throwException || DateTime.UtcNow.CompareTo(deadline) >= 0)
+            // Need to make sure that timeouts are reported as timeouts
+            if (capturedException != null)
             {
-                CallFails();
-                if (throwException) capturedException.Throw();
+                CallFails(capturedException?.SourceException);
+                capturedException.Throw();
+            } 
+            else if (DateTime.UtcNow.CompareTo(deadline) >= 0)
+            {
+                CallFails(new TimeoutException(
+                    $"Execution did not complete within the time allotted {_callTimeout.TotalMilliseconds} ms"));
             }
             else
             {
@@ -167,12 +176,12 @@ namespace Akka.Util.Internal
         /// <summary>
         /// Invoked when call fails
         /// </summary>
-        protected abstract void CallFails();
+        protected internal abstract void CallFails(Exception cause);
 
         /// <summary>
         /// Invoked when call succeeds
         /// </summary>
-        protected abstract void CallSucceeds();
+        protected internal abstract void CallSucceeds();
 
         /// <summary>
         /// Invoked on the transitioned-to state during transition. Notifies listeners after invoking subclass template method _enter
