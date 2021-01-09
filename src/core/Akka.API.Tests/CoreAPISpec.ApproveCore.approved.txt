@@ -466,6 +466,7 @@ namespace Akka.Actor
         public static Akka.Actor.BootstrapSetup Create() { }
         public Akka.Actor.BootstrapSetup WithActorRefProvider(Akka.Actor.ProviderSelection name) { }
         public Akka.Actor.BootstrapSetup WithConfig(Akka.Configuration.Config config) { }
+        public Akka.Actor.BootstrapSetup WithConfigFallback(Akka.Configuration.Config config) { }
     }
     public class Cancelable : Akka.Actor.ICancelable, System.IDisposable
     {
