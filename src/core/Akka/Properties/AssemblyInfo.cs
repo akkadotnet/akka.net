@@ -45,3 +45,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Benchmarks")]
 [assembly: InternalsVisibleTo("Akka.Persistence.TCK")]
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
+[assembly: InternalsVisibleTo("Akka.DependencyInjection")]
