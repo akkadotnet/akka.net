@@ -42,6 +42,9 @@ namespace Samples.Cluster.Simple
                     Log.Info("Member is Up: {0}", mem.Member);
                     break;
                 }
+                case ClusterEvent.MemberJoined joined:
+                    Log.Info("Member is joining {0}", joined.Member);
+                    break;
                 case ClusterEvent.UnreachableMember unreachable:
                     Log.Info("Member detected as unreachable: {0}", unreachable.Member);
                     break;

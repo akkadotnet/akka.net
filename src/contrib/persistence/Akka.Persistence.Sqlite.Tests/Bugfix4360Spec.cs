@@ -129,10 +129,14 @@ auto-initialize = on
             ExpectTerminated(recoveryActor);
 
             // recreate the actor and recover
-            var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), recoveryActor.Path.Name);
 
-            var r2 = ExpectMsg<IEnumerable<string>>();
-            r2.Should().Contain(new[] { "foo", "bar" });
+            AwaitAssert(() =>
+            {
+                var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), recoveryActor.Path.Name);
+
+                var r2 = ExpectMsg<IEnumerable<string>>(TimeSpan.FromMilliseconds(100));
+                r2.Should().Contain(new[] { "foo", "bar" });
+            }, interval:TimeSpan.FromMilliseconds(150));
         }
 
         [Fact]
