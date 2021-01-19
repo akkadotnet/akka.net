@@ -29,7 +29,7 @@ namespace Samples.Cluster.Transformation
             LaunchFrontend(new string[0]);
             //starting 2 frontend nodes and 3 backend nodes
             Console.WriteLine("Press any key to exit.");
-            Console.ReadKey();
+            Console.ReadLine();
         }
 
         static void LaunchBackend(string[] args)
