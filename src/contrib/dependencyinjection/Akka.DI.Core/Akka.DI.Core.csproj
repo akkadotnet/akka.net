@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.DI.Core</AssemblyTitle>
-    <Description>Dependency injection support for Akka.NET</Description>
+    <Description>Dependency injection support for Akka.NET [DEPRECATED - replaced by Akka.DependencyInjection]</Description>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);dependency injection</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -22,7 +22,7 @@
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="3.1.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="5.0.0" />
   </ItemGroup>
 
 </Project>

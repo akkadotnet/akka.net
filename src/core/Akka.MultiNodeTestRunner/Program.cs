@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,8 @@ namespace Akka.MultiNodeTestRunner
         private static HashSet<string> _validNetCorePlatform = new HashSet<string>
         {
             "net",
-            "netcore"
+            "netcore",
+            "net5"
         };
         
         protected static ActorSystem TestRunSystem;
@@ -274,6 +275,7 @@ namespace Akka.MultiNodeTestRunner
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         break;
                                     case "netcore":
+                                    case "net5":
                                         fileName = "dotnet";
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         sbArguments.Insert(0, ntrNetCorePath);
@@ -309,7 +311,7 @@ namespace Akka.MultiNodeTestRunner
                                 var nodeRole = nodeTest.Role;
 
 #if CORECLR
-                            if (platform == "netcore")
+                            if (platform == "netcore" || platform == "net5")
                             {
                                 process.StartInfo.FileName = "dotnet";
                                 process.StartInfo.Arguments = ntrNetCorePath + " " + process.StartInfo.Arguments;

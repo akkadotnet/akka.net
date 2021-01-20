@@ -2,9 +2,9 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.NodeTestRunner</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,12 +20,12 @@
     <PackageReference Include="xunit.runner.utility" Version="2.4.1" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)'">
+  <ItemGroup Condition="'$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)'">
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
-    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="3.1.6" />
+    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="5.0.0" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 

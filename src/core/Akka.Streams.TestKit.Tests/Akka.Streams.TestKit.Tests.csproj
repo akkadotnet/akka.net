@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AssemblyName>Akka.Streams.TestKit.Tests</AssemblyName>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
   
   <ItemGroup>
@@ -29,7 +29,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZATION;AKKAIO</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)'">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 

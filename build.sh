@@ -9,11 +9,12 @@ TOOLS_DIR=$SCRIPT_DIR/tools
 INCREMENTALIST_DIR=$TOOLS_DIR/incrementalist
 INCREMENTALIST_EXE=$INCREMENTALIST_DIR/Incrementalist.Cmd.exe
 NUGET_EXE=$TOOLS_DIR/nuget.exe
-NUGET_URL=https://dist.nuget.org/win-x86-commandline/v4.3.0/nuget.exe
+NUGET_URL=https://dist.nuget.org/win-x86-commandline/v5.8.0/nuget.exe
 FAKE_VERSION=4.63.0
 FAKE_EXE=$TOOLS_DIR/FAKE/tools/FAKE.exe
 DOTNET_EXE=$SCRIPT_DIR/.dotnet/dotnet
-DOTNET_VERSION=3.1.105
+DOTNETCORE_VERSION=3.1.105
+DOTNET_VERSION=5.0.101
 DOTNET_INSTALLER_URL=https://dot.net/v1/dotnet-install.sh
 DOTNET_CHANNEL=LTS
 PROTOBUF_VERSION=3.4.0
@@ -43,22 +44,6 @@ done
 if [ ! -d "$TOOLS_DIR" ]; then
   mkdir "$TOOLS_DIR"
 fi
-
-###########################################################################
-# INSTALL .NET CORE CLI
-###########################################################################
-
-echo "Installing .NET CLI..."
-if [ ! -d "$SCRIPT_DIR/.dotnet" ]; then
-  mkdir "$SCRIPT_DIR/.dotnet"
-fi
-curl -Lsfo "$SCRIPT_DIR/.dotnet/dotnet-install.sh" $DOTNET_INSTALLER_URL
-bash "$SCRIPT_DIR/.dotnet/dotnet-install.sh" --version $DOTNET_VERSION --channel $DOTNET_CHANNEL --install-dir .dotnet --no-path
-export PATH="$SCRIPT_DIR/.dotnet":$PATH
-export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
-export DOTNET_CLI_TELEMETRY_OPTOUT=1
-chmod -R 0755 ".dotnet"
-"$SCRIPT_DIR/.dotnet/dotnet" --info
 
 ###########################################################################
 # INSTALL NUGET
@@ -119,7 +104,7 @@ fi
 # INSTALL Incrementalist
 ###########################################################################
 if [ ! -f "$INCREMENTALIST_EXE" ]; then
-    "$SCRIPT_DIR/.dotnet/dotnet" tool install Incrementalist.Cmd --version $INCREMENTALIST_VERSION --tool-path "$INCREMENTALIST_DIR"
+    dotnet tool install Incrementalist.Cmd --version $INCREMENTALIST_VERSION --tool-path "$INCREMENTALIST_DIR"
     if [ $? -ne 0 ]; then
         echo "Incrementalist already installed."
     fi

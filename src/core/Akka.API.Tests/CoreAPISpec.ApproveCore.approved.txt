@@ -1,10 +1,12 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DependencyInjection")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence")]
@@ -464,6 +466,7 @@ namespace Akka.Actor
         public static Akka.Actor.BootstrapSetup Create() { }
         public Akka.Actor.BootstrapSetup WithActorRefProvider(Akka.Actor.ProviderSelection name) { }
         public Akka.Actor.BootstrapSetup WithConfig(Akka.Configuration.Config config) { }
+        public Akka.Actor.BootstrapSetup WithConfigFallback(Akka.Configuration.Config config) { }
     }
     public class Cancelable : Akka.Actor.ICancelable, System.IDisposable
     {
