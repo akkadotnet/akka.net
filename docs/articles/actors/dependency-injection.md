@@ -5,6 +5,12 @@ title: Dependency injection
 # Dependency Injection
 As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyInjection library, which integrates directly with Microsoft.Extensions.DependencyInjection and deprecates the previous Akka.DI.Core and Akka.DI.* libraries.
 
+You can install Akka.DependenecyInjection via NuGet:
+
+```
+PS> Install-Package Akka.DependencyInjection
+```
+
 Akka.DependencyInjection allows users to pass in an [`IServiceProvider`](https://docs.microsoft.com/en-us/dotnet/api/system.iserviceprovider) into the `ActorSystem` before the latter is created, via [a new kind of programmatic configuration `Setup` that was introduced in Akka.NET v1.4](xref:configuration#programmatic-configuration-with-setup)
 
 ## Integrating with Microsoft.Extensions.DependencyInjection
@@ -32,7 +38,7 @@ From there, we want to call `ServiceProvider.Props` to create a set of `Props` f
 ### Managing Lifecycle Dependencies with Akka.DependencyInjection
 Akka.DependencyInjection allows Akka.NET developers to mix and match injected dependencies along with non-injected dependencies - for instance:
 
-[!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection/ActorServiceProviderPropsWithScopesSpecs.cs?name=NonDiArgsActor)]
+[!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=NonDiArgsActor)]
 
 In this case, the actor accepts:
 
@@ -42,7 +48,7 @@ In this case, the actor accepts:
 
 Here's how Akka.DependencyInjection is used to instantiate this actor via `Props`:
 
-[!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection/ActorServiceProviderPropsWithScopesSpecs.cs?name=CreateNonDiActor)]
+[!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=CreateNonDiActor)]
 
 The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your depedency injection container.
 
@@ -61,9 +67,13 @@ A best practice for working with Akka.NET actors and Microsoft.Extensions.Depend
 
 You can see an example of an actor that follows this pattern below:
 
-[!code-csharp[MixedActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection/ActorServiceProviderPropsWithScopesSpecs.cs?name=MixedActor)]
+[!code-csharp[MixedActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=MixedActor)]
 
 ## Akka.DI - Deprecated Akka.NET DI Dupport
+
+> [!WARNING]
+> As of [Akka.NET v1.4.15](https://github.com/akkadotnet/akka.net/releases/tag/1.4.15), Akka.DI.Core and all of the libraries that implement it are deprecated. Going forward Akka.NET users are encouraged to use the [Akka.DependencyInjection library](xref:dependency-injection) instead, which uses the Microsoft.Extensions.DependencyInjection interfaces to integration DI directly into your Akka.NET actors.
+
 If your actor has a constructor that takes parameters then those need
 to be part of the `Props` as well, as described above. But there are cases when
 a factory method must be used, for example when the actual constructor arguments
