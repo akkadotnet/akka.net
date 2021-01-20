@@ -8,6 +8,7 @@
         <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);dependency injection</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <PackageProjectUrl>https://getakka.net/articles/actors/dependency-injection.html</PackageProjectUrl>
     </PropertyGroup>
 
     <ItemGroup>
