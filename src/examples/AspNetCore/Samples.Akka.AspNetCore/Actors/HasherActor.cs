@@ -14,6 +14,7 @@ using Samples.Akka.AspNetCore.Services;
 
 namespace Samples.Akka.AspNetCore.Actors
 {
+    // <HasherActor>
     public class HasherActor : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -40,4 +41,5 @@ namespace Samples.Akka.AspNetCore.Actors
             _log.Info("Terminating. Is ScopedService disposed? {0}", _hashService.IsDisposed);
         }
     }
+    // </HasherActor>
 }

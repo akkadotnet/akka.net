@@ -24,18 +24,20 @@ namespace Samples.Akka.AspNetCore
     {
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
+        // <DiSetup>
         public void ConfigureServices(IServiceCollection services)
         {
             // set up a simple service we're going to hash
             services.AddScoped<IHashService, HashServiceImpl>();
 
             // creates instance of IPublicHashingService that can be accessed by ASP.NET
-            services.AddSingleton<IPublicHashingService, AkkaService>(); 
+            services.AddSingleton<IPublicHashingService, AkkaService>();
 
             // starts the IHostedService, which creates the ActorSystem and actors
             services.AddHostedService<AkkaService>(sp => (AkkaService)sp.GetRequiredService<IPublicHashingService>());
-            
+
         }
+        // </DiSetup>
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
