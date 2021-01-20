@@ -122,6 +122,7 @@ namespace Akka.DependencyInjection.Tests
             "DI: actors who receive a non-DI'd dependencies should be started correctly")]
         public void ActorsWithNonDiDependenciesShouldStart()
         {
+            // <CreateNonDiActor>
             var spExtension = ServiceProvider.For(Sys);
             var arg1 = "foo";
             var arg2 = "bar";
@@ -129,6 +130,7 @@ namespace Akka.DependencyInjection.Tests
 
             // create a scoped actor using the props from Akka.DependencyInjection
             var scoped1 = Sys.ActorOf(props, "scoped1");
+            // </CreateNonDiActor>
             scoped1.Tell(new FetchDependencies());
             var deps1 = ExpectMsg<CurrentDependencies>();
             deps1.Dependencies.All(x => x.Disposed).Should().BeFalse();
@@ -204,6 +206,7 @@ namespace Akka.DependencyInjection.Tests
             }
         }
 
+        // <MixedActor>
         public class MixedActor : ReceiveActor
         {
             private readonly AkkaDiFixture.ISingletonDependency _singleton;
@@ -235,7 +238,9 @@ namespace Akka.DependencyInjection.Tests
                 _scope.Dispose();
             }
         }
+        // </MixedActor>
 
+        // <NonDiArgsActor>
         public class NonDiArgsActor : ReceiveActor
         {
             private readonly AkkaDiFixture.ISingletonDependency _singleton;
@@ -277,7 +282,8 @@ namespace Akka.DependencyInjection.Tests
                 _scope.Dispose();
             }
         }
+        // </NonDiArgsActor>
     }
 
-   
+
 }

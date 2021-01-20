@@ -25,6 +25,7 @@ namespace Samples.Akka.AspNetCore.Actors
     /// <summary>
     /// Implements <see cref="IPublicHashingService"/>, which is the public interface used by ASP.NET Core.
     /// </summary>
+    // <AkkaServiceSetup>
     public class AkkaService : IPublicHashingService, IHostedService
     {
         private ActorSystem _actorSystem;
@@ -43,10 +44,13 @@ namespace Samples.Akka.AspNetCore.Actors
             var di = ServiceProviderSetup.Create(_sp);
             var actorSystemSetup = bootstrap.And(di);
             _actorSystem = ActorSystem.Create("AspNetDemo", actorSystemSetup);
+            // </AkkaServiceSetup>
 
+            // <ServiceProviderFor>
             // props created via IServiceProvider dependency injection
             var hasherProps = ServiceProvider.For(_actorSystem).Props<HasherActor>();
             RouterActor = _actorSystem.ActorOf(hasherProps.WithRouter(FromConfig.Instance), "hasher");
+            // </ServiceProviderFor>
 
             await Task.CompletedTask;
         }

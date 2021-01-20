@@ -96,10 +96,12 @@ namespace Akka.DependencyInjection.Tests
         {
             Services = new ServiceCollection();
 
+            // <DiFixture>
             // register some default services
             Services.AddSingleton<ISingletonDependency, Singleton>()
                 .AddScoped<IScopedDependency, Scoped>()
                 .AddTransient<ITransientDependency, Transient>();
+            // </DiFixture>
             Provider = Services.BuildServiceProvider();
         }
 
