@@ -69,7 +69,7 @@ You can see an example of an actor that follows this pattern below:
 
 [!code-csharp[MixedActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=MixedActor)]
 
-## Akka.DI - Deprecated Akka.NET DI Dupport
+## Akka.DI - Deprecated Akka.NET DI Support
 
 > [!WARNING]
 > As of [Akka.NET v1.4.15](https://github.com/akkadotnet/akka.net/releases/tag/1.4.15), Akka.DI.Core and all of the libraries that implement it are deprecated. Going forward Akka.NET users are encouraged to use the [Akka.DependencyInjection library](xref:dependency-injection) instead, which uses the Microsoft.Extensions.DependencyInjection interfaces to integration DI directly into your Akka.NET actors.
