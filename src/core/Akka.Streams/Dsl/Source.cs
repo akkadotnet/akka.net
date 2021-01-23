@@ -372,9 +372,7 @@ namespace Akka.Streams.Dsl
         /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
         public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
             IMaterializer materializer) =>
-            new StreamsAsyncEnumerableRerunnable<TOut>(
-                ViaMaterialized(KillSwitches.Single<TOut>(),Keep.Right).
-                ToMaterialized(Sink.Queue<TOut>(), Keep.Both), materializer);
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer);
 
         /// <summary>
         /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
@@ -389,12 +387,8 @@ namespace Akka.Streams.Dsl
         public IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(
             IMaterializer materializer, int minBuffer = 4,
             int maxBuffer = 16) =>
-            new StreamsAsyncEnumerableRerunnable<TOut>(
-                ViaMaterialized(KillSwitches.Single<TOut>(), Keep.Right)
-                    .ToMaterialized(
-                        Sink.Queue<TOut>().WithAttributes(
-                            Attributes.CreateInputBuffer(minBuffer, maxBuffer)),
-                        Keep.Both), materializer);
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
+                this, materializer,minBuffer,maxBuffer);
         
 
         /// <summary>

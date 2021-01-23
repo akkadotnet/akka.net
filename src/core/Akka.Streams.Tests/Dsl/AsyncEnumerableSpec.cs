@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Pattern;
 using Akka.Routing;
@@ -30,6 +31,32 @@ namespace Akka.Streams.Tests.Dsl
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
+
+        [Fact] public async Task RunAsAsyncEnumerable_Uses_CancellationToken()
+        {
+            var input = Enumerable.Range(1, 6).ToList();
+
+            var cts = new CancellationTokenSource();
+            var token = cts.Token;
+            
+            var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
+            var output = input.ToArray();
+            bool caught = false;
+            try
+            {
+                await foreach (var a in asyncEnumerable.WithCancellation(token))
+                {
+                    cts.Cancel();
+                }
+            }
+            catch (OperationCanceledException e)
+            {
+                caught = true;
+            }
+            
+            caught.ShouldBeTrue();
+        }
+        
         [Fact]
         public async Task RunAsAsyncEnumerable_must_return_an_IAsyncEnumerableT_from_a_Source()
         {
@@ -76,7 +103,7 @@ namespace Akka.Streams.Tests.Dsl
             
             var a = Task.Run( async () =>
             {
-                await foreach (var B in task)
+                await foreach (var notused in task)
                 {
                     materializer.Shutdown();
                 }
@@ -113,6 +140,8 @@ namespace Akka.Streams.Tests.Dsl
             };
             a.ShouldThrow<IllegalStateException>();
         }
+        
+        
     }
 
 #else
