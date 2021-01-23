@@ -56,54 +56,59 @@ namespace Akka.Util.Reflection
         private static object[] ParseCallArgs(int argCount,
             ReadOnlyCollection<Expression> argProv)
         {
+            //ConstantExpression constExpr;
             object[] _jobArgs = new object[argCount];
             for (int i = 0; i < argCount; i++)
             {
                 var theArg = argProv[i];
-                object val = null;
+                //object val = null;
                 try
                 {
-                    if (theArg is ConstantExpression _theConst)
+
+                    //constExpr = theArg as ConstantExpression;
+                    if (theArg.NodeType == ExpressionType.Constant)
                     {
                         //Happy Case.
                         //If constant, no need for invokes,
                         //or anything else
-                        val = _theConst.Value;
+                        _jobArgs[i] = ((ConstantExpression)theArg).Value;
                     }
                     else
                     {
-                        bool memSet = false;
-                        
-                            if (theArg is MemberExpression _memArg)
+                        if (theArg is MemberExpression _memArg)
+                        {
+                            if (_memArg.Expression is ConstantExpression ce)
                             {
-                                if (_memArg.Expression is ConstantExpression c)
+                                //We don't need .Convert() here because for better or worse
+                                //GetValue will box for us.
+                                if (_memArg.Member.MemberType == MemberTypes.Field)
                                 {
-                                    if (_memArg.Member is FieldInfo f)
-                                    {
-                                        val = f.GetValue(c.Value);
-                                        memSet = true;
-                                    }
-                                    else if (_memArg.Member is PropertyInfo p)
-                                    {
-                                        val = p.GetValue(c.Value);
-                                        memSet = true;
-                                    }
+                                    _jobArgs[i] =
+                                        ((FieldInfo)_memArg.Member).GetValue(
+                                            (ce).Value);
+                                    theArg = null;
+                                }
+                                else if (_memArg.Member.MemberType == MemberTypes.Property)
+                                {
+                                    _jobArgs[i] =
+                                        ((PropertyInfo)_memArg.Member).GetValue(
+                                            (ce).Value);
+                                    theArg = null;
                                 }
                             }
-                        
+                        }
 
-                        if (memSet == false)
+
+                        if (theArg != null)
                         {
                             //If we are dealing with a Valuetype,
                             //we need a convert here.
-                            val = CompileExprWithConvert(Expression
+                            _jobArgs[i] = CompileExprWithConvert(Expression
                                     .Lambda<Func<object>>(
                                         ConvertIfNeeded(theArg)))
                                 .Invoke();
                         }
                     }
-
-                    _jobArgs[i] = val;
                 }
                 catch (Exception exception)
                 {
@@ -112,17 +117,17 @@ namespace Akka.Util.Reflection
                     {
                         object fallbackVal;
                         {
-                            fallbackVal = Expression.Lambda(
+                            _jobArgs[i] = Expression.Lambda(
                                     Expression.Convert(theArg, _objectType)
                                 )
                                 .Compile().DynamicInvoke();
                         }
-                        _jobArgs[i] = fallbackVal;
+
                     }
 
                     catch (Exception ex)
                     {
-                        throw new ParseArgumentException(
+                        throw new ArgumentException(
                             "Couldn't derive value from Expression! Please use variables whenever possible",
                             ex);
                     }
@@ -169,19 +174,12 @@ namespace Akka.Util.Reflection
             }
             else
             {
-                return toConv.GetType();
+                return toConv;
             }
         }
         private static T CompileExprWithConvert<T>(Expression<T> lambda) where T : class
         {
             return lambda.Compile();
-        }
-    }
-    public class ParseArgumentException : Exception
-    {
-        public ParseArgumentException(string message, Exception ex):base(message,ex)
-        {
-            
         }
     }
 }
