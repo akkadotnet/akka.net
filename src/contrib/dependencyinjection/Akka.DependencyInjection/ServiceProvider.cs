@@ -137,7 +137,11 @@ namespace Akka.DependencyInjection
         /// <returns>The newly created <see cref="Akka.Actor.Props"/></returns>
         protected override Props Copy()
         {
-            return new ServiceProviderProps<TActor>(_provider, Arguments);
+            return new ServiceProviderProps<TActor>(_provider, Arguments)
+            {
+                Deploy = Deploy,
+                SupervisorStrategy = SupervisorStrategy
+            };
         }
 
         #endregion
