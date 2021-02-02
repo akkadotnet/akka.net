@@ -51,11 +51,6 @@ namespace Akka.Coordination
         public Config LeaseConfig { get; }
 
         /// <summary>
-        /// Lease implementation type
-        /// </summary>
-        public Type LeaseType { get; }
-
-        /// <summary>
         /// Creates a new instance of the <see cref="LeaseSettings"/>.
         /// </summary>
         /// <param name="leaseName">Lease name</param>
@@ -68,12 +63,6 @@ namespace Akka.Coordination
             OwnerName = ownerName;
             TimeoutSettings = timeoutSettings;
             LeaseConfig = leaseConfig;
-
-            var leaseClassName = leaseConfig.GetString("lease-class", null);
-            if (string.IsNullOrEmpty(leaseClassName))
-                throw new ArgumentException("lease-class must not be empty");
-
-            LeaseType = Type.GetType(leaseClassName, true);
         }
 
         /// <summary>
