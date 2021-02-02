@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -230,6 +230,34 @@ namespace Akka.Persistence.Journal
         }
     }
 
+    [Serializable]
+    internal class ReadWriteEventAdapter : IEventAdapter
+    {
+        private readonly IWriteEventAdapter _writeEventAdapter;
+        private readonly IReadEventAdapter _readEventAdapter;
+
+        public ReadWriteEventAdapter(IReadEventAdapter readEventAdapter, IWriteEventAdapter writeEventAdapter)
+        {
+            _readEventAdapter = readEventAdapter;
+            _writeEventAdapter = writeEventAdapter;
+        }
+
+        public string Manifest(object evt)
+        {
+            return _writeEventAdapter.Manifest(evt);
+        }
+
+        public object ToJournal(object evt)
+        {
+            return _writeEventAdapter.ToJournal(evt);
+        }
+
+        public IEventSequence FromJournal(object evt, string manifest)
+        {
+            return _readEventAdapter.FromJournal(evt, manifest);
+        }
+    }
+
     /// <summary>
     /// TBD
     /// </summary>
@@ -302,7 +330,7 @@ namespace Akka.Persistence.Journal
                 var type = Type.GetType(kv.Key);
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
-                    : new NoopWriteEventAdapter(new CombinedReadEventAdapter(kv.Value.Select(h => handlers[h])));
+                    : CombineAdapters(kv.Value.Select(h => handlers[h]));
                 return new KeyValuePair<Type, IEventAdapter>(type, adapter);
             }).ToList());
 
@@ -330,6 +358,16 @@ namespace Akka.Persistence.Journal
 
                 return buf;
             });
+        }
+
+        private static IEventAdapter CombineAdapters(IEnumerable<IEventAdapter> adapters)
+        {
+            var writeAdapters = adapters.Where(a => a is NoopReadEventAdapter);
+            if (writeAdapters.Count() == 0)
+                return new NoopWriteEventAdapter(new CombinedReadEventAdapter(adapters));
+            else if (writeAdapters.Count() == 1)
+                return new ReadWriteEventAdapter(new CombinedReadEventAdapter(adapters.Where(a => a is NoopWriteEventAdapter)), writeAdapters.First());
+            throw new IllegalStateException("Cannot have multiple write adapters for a single adapter binding");
         }
 
         private static int IndexWhere<T>(IList<T> list, Predicate<T> predicate)

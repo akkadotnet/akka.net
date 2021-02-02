@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryEventAdaptersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,6 +51,7 @@ akka.persistence.journal {
       """ + typeof (ReadMeEvent).FullName + @", Akka.Persistence.Tests"" = reader
       """ + typeof (WriteMeEvent).FullName + @", Akka.Persistence.Tests"" = writer
       """ + typeof(ReadMeTwiceEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader]
+      """ + typeof(ReadWriteEvent).FullName + @", Akka.Persistence.Tests"" = [reader, another-reader, writer]
     }
   }
 }").WithFallback(ConfigurationFactory.Default());
@@ -130,6 +131,19 @@ akka.persistence.journal.inmem {
                 .Should()
                 .BeEquivalentTo("from-ReadMeTwiceEvent()", "again-ReadMeTwiceEvent()");
         }
+
+        [Fact]
+        public void EventAdapters_should_allow_read_write_ReadWriteEventAdapter()
+        {
+            var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);
+
+            var readWriteAdapter = adapters.Get<ReadWriteEvent>();
+            var events = readWriteAdapter.FromJournal(readWriteAdapter.ToJournal(new ReadWriteEvent()), "").Events
+                .Select(c => c.ToString())
+                .Should()
+                .BeEquivalentTo("from-to-ReadWriteEvent()", "again-to-ReadWriteEvent()");
+        }
+
     }
 
     public abstract class BaseTestAdapter : IEventAdapter
@@ -167,6 +181,14 @@ akka.persistence.journal.inmem {
         public override string ToString()
         {
             return "ReadMeTwiceEvent()";
+        }
+    }
+
+    public class ReadWriteEvent
+    {
+        public override string ToString()
+        {
+            return "ReadWriteEvent()";
         }
     }
 

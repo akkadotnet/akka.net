@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyBatchWriterSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,17 +66,13 @@ namespace Akka.Remote.Tests.Transport
                     batching{
                         enabled = false
                         max-pending-writes = 50
-                        max-pending-bytes = 32k
-                        flush-interval = 10ms
                     }
                 }
             ";
             var s = DotNettyTransportSettings.Create(c.GetConfig("akka.remote.dot-netty.tcp"));
 
             s.BatchWriterSettings.EnableBatching.Should().BeFalse();
-            s.BatchWriterSettings.FlushInterval.Should().NotBe(BatchWriterSettings.DefaultFlushInterval);
-            s.BatchWriterSettings.MaxPendingBytes.Should().NotBe(BatchWriterSettings.DefaultMaxPendingBytes);
-            s.BatchWriterSettings.MaxPendingWrites.Should().NotBe(BatchWriterSettings.DefaultMaxPendingWrites);
+            s.BatchWriterSettings.MaxExplicitFlushes.Should().NotBe(BatchWriterSettings.DefaultMaxPendingWrites);
         }
 
         /// <summary>
@@ -85,7 +81,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task BatchWriter_should_succeed_with_timer()
         {
-            var writer = new BatchWriter(new BatchWriterSettings());
+            var writer = new FlushConsolidationHandler();
             var ch = new EmbeddedChannel(Flush, writer);
 
             await Flush.Activated;
@@ -98,14 +94,13 @@ namespace Akka.Remote.Tests.Transport
                 var ints = Enumerable.Range(0, 4).ToArray();
                 foreach (var i in ints)
                 {
-                    _ = ch.WriteAsync(Unpooled.Buffer(1).WriteInt(i));
+                    _ = ch.WriteAndFlushAsync(Unpooled.Buffer(1).WriteInt(i));
                 }
 
                 // force write tasks to run
                 ch.RunPendingTasks();
 
-                ch.Unsafe.OutboundBuffer.TotalPendingWriteBytes().Should().Be(ints.Length * 4);
-                ch.OutboundMessages.Count.Should().Be(0);
+                ch.OutboundMessages.Count.Should().Be(ints.Length);
 
                 await AwaitAssertAsync(() =>
                 {
@@ -124,7 +119,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task BatchWriter_should_flush_messages_during_shutdown()
         {
-            var writer = new BatchWriter(new BatchWriterSettings());
+            var writer = new FlushConsolidationHandler();
             var ch = new EmbeddedChannel(Flush, writer);
 
             await Flush.Activated;
@@ -136,14 +131,13 @@ namespace Akka.Remote.Tests.Transport
             var ints = Enumerable.Range(0, 10).ToArray();
             foreach (var i in ints)
             {
-                _ = ch.WriteAsync(Unpooled.Buffer(1).WriteInt(i));
+                _ = ch.WriteAndFlushAsync(Unpooled.Buffer(1).WriteInt(i));
             }
 
             // force write tasks to run
             ch.RunPendingTasks();
 
-            ch.Unsafe.OutboundBuffer.TotalPendingWriteBytes().Should().Be(ints.Length * 4);
-            ch.OutboundMessages.Count.Should().Be(0);
+            ch.OutboundMessages.Count.Should().Be(ints.Length);
 
             // close channels
             _ = ch.CloseAsync();

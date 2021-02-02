@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMetricsRouting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -289,7 +289,6 @@ namespace Akka.Cluster.Metrics
     /// </summary>
     public sealed class AdaptiveLoadBalancingGroup : Group
     {
-        private readonly IEnumerable<string> _paths;
         private readonly IMetricsSelector _metricsSelector;
 
         /// <summary>
@@ -309,7 +308,6 @@ namespace Akka.Cluster.Metrics
         public AdaptiveLoadBalancingGroup(IMetricsSelector metricsSelector = null, IEnumerable<string> paths = null, string routerDispatcher = null) 
             : base(paths, routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
-            _paths = paths;
             _metricsSelector = metricsSelector ?? MixMetricsSelector.Instance;
         }
 
@@ -338,21 +336,21 @@ namespace Akka.Cluster.Metrics
         {
             return new AdaptiveLoadBalancingGroupSurrogate()
             {
-                Paths = _paths,
+                Paths = InternalPaths,
                 MetricsSelector = _metricsSelector,
                 RouterDispatcher = RouterDispatcher
             };
         }
 
         /// <inheritdoc />
-        public override IEnumerable<string> GetPaths(ActorSystem system) => _paths;
+        public override IEnumerable<string> GetPaths(ActorSystem system) => InternalPaths;
 
         /// <summary>
         /// Setting the dispatcher to be used for the router head actor, which handles router management messages
         /// </summary>
         public AdaptiveLoadBalancingGroup WithDispatcher(string dispatcherId)
         {
-            return new AdaptiveLoadBalancingGroup(_metricsSelector, _paths, dispatcherId);
+            return new AdaptiveLoadBalancingGroup(_metricsSelector, InternalPaths, dispatcherId);
         }
         
         /// <summary>

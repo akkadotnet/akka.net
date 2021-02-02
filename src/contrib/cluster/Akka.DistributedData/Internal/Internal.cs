@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Internal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -558,7 +558,15 @@ namespace Akka.DistributedData.Internal
 
             foreach (var entry in Pruning)
             {
-                if (!Equals(entry.Value, other.Pruning[entry.Key])) return false;
+                //"it's possible that one node that begins pruning may"
+                //"have different data than another node that hasn't started"
+                if (other.Pruning.TryGetValue(entry.Key, out var state))
+                {
+                    if (!Equals(entry.Value, state))
+                        return false;
+                }
+                else
+                    return false;
             }
 
             return true;

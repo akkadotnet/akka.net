@@ -3,7 +3,7 @@
   <Import Project="..\..\..\xunitSettings.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.Serialization.Hyperion.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
  
   <ItemGroup>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Logging.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -197,6 +197,28 @@ namespace Akka.Event
                     return Off;
                 default:
                     throw new ArgumentException("Unknown LogLevel", nameof(logLevel));
+            }
+        }
+
+        /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Used by actors / infrastructure that are starting up around the same time as the RemoteTransport
+        /// is being booted, and therefore can cause problems similar to https://github.com/akkadotnet/akka.net/issues/4677 at startup.
+        /// </summary>
+        /// <param name="context">The context used to configure the logging adapter.</param>
+        /// <param name="logMessageFormatter">The formatter used to format log messages.</param>
+        /// <returns>The newly created logging adapter.</returns>
+        internal static ILoggingAdapter GetLoggerStartup(this IActorContext context, ILogMessageFormatter logMessageFormatter = null)
+        {
+            try
+            {
+                return context.GetLogger(logMessageFormatter);
+            }
+            catch // had a failure, don't want to propagate it. Just start the logger without remote context
+            {
+                var logSource = LogSource.Create(context);
+                return new BusLogging(context.System.EventStream, logSource.Source, logSource.Type, logMessageFormatter ?? new DefaultLogMessageFormatter());
             }
         }
 

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Bugfix4360Spec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -129,10 +136,14 @@ auto-initialize = on
             ExpectTerminated(recoveryActor);
 
             // recreate the actor and recover
-            var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), recoveryActor.Path.Name);
 
-            var r2 = ExpectMsg<IEnumerable<string>>();
-            r2.Should().Contain(new[] { "foo", "bar" });
+            AwaitAssert(() =>
+            {
+                var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), recoveryActor.Path.Name);
+
+                var r2 = ExpectMsg<IEnumerable<string>>(TimeSpan.FromMilliseconds(100));
+                r2.Should().Contain(new[] { "foo", "bar" });
+            }, interval:TimeSpan.FromMilliseconds(150));
         }
 
         [Fact]

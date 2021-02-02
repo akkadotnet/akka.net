@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AllEventsPublisher.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
@@ -109,7 +116,8 @@ namespace Akka.Persistence.Query.Sql
                         offset: new Sequence(replayed.Offset),
                         persistenceId: replayed.Persistent.PersistenceId,
                         sequenceNr: replayed.Persistent.SequenceNr,
-                        @event: replayed.Persistent.Payload));
+                        @event: replayed.Persistent.Payload,
+                        timestamp: replayed.Persistent.Timestamp));
 
                     CurrentOffset = replayed.Offset;
                     Buffer.DeliverBuffer(TotalDemand);

@@ -1,5 +1,101 @@
-#### 1.4.13 November 16 2020 ####
-**Placeholder for Nightlies**
+#### 1.4.16 January 22 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a tiny release of Akka.NET, aimed at solving a transient dependency issue with Akka.DependencyInjection:
+
+* [Akka.DependencyInjection: Allow different versions of MS Abstractions nuget package for Akka.DependencyInjection](https://github.com/akkadotnet/akka.net/pull/4739) - rolls back to Microsoft.Extensions.DependencyInjection.Abstractions 3.1 instead of 5.0
+
+#### 1.4.15 January 19 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.15 introduces a new module, Akka.DependencyInjection, which will replace Akka.DI.Core and all of the libraries which depend on it. This seemed like the easiest way to preserve backwards compatibility - simple deprecate the old package and replace it with a new one.
+
+So what does Akka.DependencyInjection do differently than Akka.DI.Core?
+
+1. **Allows users to pass in an [`IServiceProvider`](https://docs.microsoft.com/en-us/dotnet/api/system.iserviceprovider) into the `ActorSystem` before the latter is created, via [a new kind of programmatic configuration `Setup` that was introduced in Akka.NET v1.4](https://getakka.net/articles/concepts/configuration.html#programmatic-configuration-with-setup)**. This ensures that the `IServiceProvider` is immutable within an `ActorSystem`, a problem that we have currently with Akka.DI.Core.
+2. **Makes it easy to access the `IServiceProvider` via the `Akka.DependencyInjection.ServiceProvider.For(ActorSystem)` method**, which is what we can use to get access to the service provider in order to consume required services inside our actors.
+3. **Makes it possible to dependency inject some parameters will dynamically specifying some others**, something that users have been asking for since 2015.
+
+To see a full example of how to use Akka.DependencyInjection in concert with Microsoft.Extensions.DependencyInjection, please see https://getakka.net/articles/actors/dependency-injection.html
+
+Other changes:
+
+* [Akka: Add `WithConfigFallback` quality of life helper method to `BootstrapSetup`](https://github.com/akkadotnet/akka.net/pull/4714)
+* [Akka.MultiNodeTestRunner: Provide .NET 5.0 support for MultiNode TestKit](https://github.com/akkadotnet/akka.net/issues/4602)
+
+To see the [full set of fixes in Akka.NET v1.4.15, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/46).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 5351 | 4004 | Aaron Stannard |
+| 3 | 5 | 5 | dependabot-preview[bot] |
+| 2 | 369 | 170 | Ebere Abanonu |
+| 1 | 7 | 0 | Gregorius Soedharmo |
+
+#### 1.4.14 December 30 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.14 contains some significant bug fixes and improvements. It is a _highly recommended upgrade_ for all Akka.NET users.
+
+
+**Major Reduction in Idle CPU Usage and Latency for Akka.Remote**
+One of the most important fixes introduced in [Akka.NET v1.4.14 is the new self-tuning batching system for Akka.Remote's DotNetty transport](https://getakka.net/articles/remoting/performance.html), which simulatneously reduces idle CPU consumption on low-traffic systems by as much as 55% while improving latency by a factor of 10 for low-traffic systems. 
+
+The batching system no longer needs to be configured - it can scale up and down with workload automatically in order to both maximize throughput with a minimal amount of latency. You can read more about it here: https://getakka.net/articles/remoting/performance.html
+
+Other bug fixes and improvements:
+
+* [Akka: Move RouterActor routing logic controller actor instantiation from OnReceive to constructor](https://github.com/akkadotnet/akka.net/pull/4700)
+* [Akka.Streams: Serializing a `SinkRef` wrapped inside a POCO failed](https://github.com/akkadotnet/akka.net/issues/4421)
+* [Akka.Persistence: Akka.NET Should Allow Separate Read and Write Event Adapter Bindings](https://github.com/akkadotnet/akka.net/issues/4567)
+* [Akka.Persistence.Query: Added Timestamp to `EventEnvelope`](https://github.com/akkadotnet/akka.net/pull/4680) - **breaking API change**; will require all Akka.Persistence plugins to be recompiled and updated.
+* [Akka.Remote: fix NRE inside `RemotingTerminator`](https://github.com/akkadotnet/akka.net/pull/4686)
+
+To see the [full set of fixes in Akka.NET v1.4.14, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/45).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 9 | 533 | 370 | Aaron Stannard |      
+| 4 | 5617 | 44 | Gregorius Soedharmo | 
+| 1 | 61 | 1 | Brian Sain |             
+| 1 | 207 | 54 | Ismael Hamed |         
+
+#### 1.4.13 December 16 2020 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.13 includes a number of bug fixes and enhancements:
+
+**`AppVersion` now uses Assembly Version by Default**
+The new `AppVersion` setting, which is used to communicate application version numbers throughout Akka.Cluster and is used in scenarios such as Akka.Cluster.Sharding to help determine which nodes receive new shard allocations and which ones do not, now uses the following default HOCON setting:
+
+```
+akka.cluster.app-version = assembly-version
+```
+
+By default now the `AppVersion` communicated inside Akka.Cluster `Member` events uses the `Major.Minor.BuildNumber` from the `Assembly.GetEntryssembly()` or `Assembly.GetExecutingAssembly()` (in case the `EntryAssembly` is `null`). That way any updates made to your executable's (i.e. the .dll that hosts `Program.cs`) version number will be automatically reflected in the cluster now without Akka.NET developers having to set an additional configuration value during deployments.
+
+Other bug fixes and improvements:
+
+* [Akka.IO: UdpExt.Manager: OverflowException when sending UDP packets to terminated clients](https://github.com/akkadotnet/akka.net/issues/4641)
+* [Akka.Configuration / Akka.Streams: Memory Leak when using many short lived instances of ActorMaterializer](https://github.com/akkadotnet/akka.net/issues/4659)
+* [Akka: Deprecate `PatternMatch`](https://github.com/akkadotnet/akka.net/issues/4658)
+* [Akka: FSM: exception in LogTermination changes stopEvent.Reason to Shutdown](https://github.com/akkadotnet/akka.net/issues/3723)
+* [Akka.Cluster.Tools: ClusterSingleton - Ignore possible state change in start](https://github.com/akkadotnet/akka.net/pull/4646)
+* [Akka.Cluster.Tools: DistributedPubSub - new setting and small fixes](https://github.com/akkadotnet/akka.net/pull/4649)
+* [Akka.DistributedData: `KeyNotFoundException` thrown periodically](https://github.com/akkadotnet/akka.net/issues/4639)
+
+To see the [full set of fixes in Akka.NET v1.4.13, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/44).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 316 | 29 | Aaron Stannard |
+| 2 | 53 | 8 | Gregorius Soedharmo |
+| 2 | 223 | 197 | zbynek001 |
+| 2 | 2 | 2 | dependabot-preview[bot] |
+| 2 | 11 | 3 | Ebere Abanonu |
+| 1 | 37 | 27 | Razvan Goga |
+| 1 | 217 | 11 | motmot80 |
+| 1 | 2 | 0 | Ismael Hamed |
 
 #### 1.4.12 November 16 2020 ####
 **Maintenance Release for Akka.NET 1.4**

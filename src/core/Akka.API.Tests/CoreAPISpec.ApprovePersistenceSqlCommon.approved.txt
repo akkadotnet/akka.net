@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e438d2c3-1075-4b01-bb84-e9efd3a36691")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
 namespace Akka.Persistence.Sql.Common.Journal
@@ -82,6 +83,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected const int PersistenceIdIndex = 0;
         protected const int SequenceNrIndex = 1;
         protected const int SerializerIdIndex = 6;
+        protected const int TimestampIndex = 2;
         protected BatchingSqlJournal(Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup setup) { }
         protected virtual string AllEventsSql { get; }
         protected virtual string AllPersistenceIdsSql { get; }
