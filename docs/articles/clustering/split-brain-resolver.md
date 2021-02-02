@@ -51,7 +51,7 @@ akka.cluster {
 
 This will cause the [`Akka.Cluster.SBR.SplitBrainResolverProvider`](xref:Akka.Cluster.SBR.SplitBrainResolverProvider) to be loaded by Akka.Cluster at startup and it will automatically begin executing your configured `active-strategy` on each member node that joins the cluster.
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > _The cluster leader_ on either side of the partition is the only one who actually downs unreachable nodes in the event of a split brain - so it is _essential_ that every node in the cluster be configured using the same split brain resolver settings. Otherwise there's no way to guarantee predictable behavior when network partitions occur.
 
 The following strategies are supported:
@@ -99,12 +99,12 @@ There is no simple way to decide the value of `stable-after`, as:
 * A shorter value will give you the faster reaction time for unreachable nodes at cost of higher risk of false positives, i.e. healthy nodes that are slow to be observed as reachable again prematurely being removed for the cluster due to temporary network issues. 
 * A higher value will increase the amount of time it takes to move resources on the truly unreachable side of the partition, i.e. sharded actors, cluster singletons, DData replicas, and so on longer to be re-homed onto reachable nodes in the healthy partition.
 
-> ![NOTE]
+> [!NOTE]
 > The rule of thumb for this setting is to set `stable-after` to `log10(maxExpectedNumberOfNodes) * 10`.
 
 The `down-all-when-unstable` option, which is _enabled by default_, will terminate the entire cluster in the event that cluster instability lasts for longer than the `stable-after` + 3/4 of the `stable-after` value in seconds - so by default, 35 seconds.
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > If you are running in an environment where processes are not automatically restarted in the event of an unplanned termination (i.e. Kubernetes), we strongly recommend that you disable this setting by setting `akka.cluster.split-brain-resolver.down-all-when-unstable = off`.
 > If you're running in a self-hosted environment or on infrastructure as a service, TURN THIS SETTING OFF unless you have automatic process supervision in-place (which you should always try to have.) 
 
@@ -138,7 +138,7 @@ There is no simple way to decide the value of `stable-after`, as:
 * A shorter value will give you the faster reaction time for unreachable nodes at cost of higher risk of false positives, i.e. healthy nodes that are slow to be observed as reachable again prematurely being removed for the cluster due to temporary network issues. 
 * A higher value will increase the amount of time it takes to move resources on the truly unreachable side of the partition, i.e. sharded actors, cluster singletons, DData replicas, and so on longer to be re-homed onto reachable nodes in the healthy partition.
 
-> ![NOTE]
+> [!NOTE]
 > The rule of thumb for this setting is to set `stable-after` to `log10(maxExpectedNumberOfNodes) * 10`.
 
 #### Static Quorum
@@ -247,7 +247,7 @@ akka.cluster {
 }
 ```
 
-> ![WARNING]
+> [!WARNING]
 > Akka.NET's hand-rolled split brain resolvers are deprecated and will be removed from Akka.NET as part of the Akka.NET v1.5 update. Please see "[Split Brain Resolution Strategies](#split-brain-resolution-strategies)" for the current guidance as of Akka.NET v1.4.16.
 
 The `keep-referee` strategy will simply down the part that does not contain the given referee node.
