@@ -132,12 +132,15 @@ namespace Akka.Remote.Tests.Transport
 
             var probe = CreateTestProbe();
 
-            AwaitAssert(() =>
+            Within(TimeSpan.FromSeconds(10), () =>
             {
-                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(100));
-            }, TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100));
-            
+                AwaitAssert(() =>
+                {
+                    Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                    probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(1000));
+                }, TimeSpan.FromMilliseconds(1000));
+            });
+
         }
 
         [Fact]
