@@ -131,8 +131,16 @@ namespace Akka.Remote.Tests.Transport
             Setup(ValidCertPath, Password);
 
             var probe = CreateTestProbe();
-            Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-            probe.ExpectMsg("hello");
+
+            Within(TimeSpan.FromSeconds(12), () =>
+            {
+                AwaitAssert(() =>
+                {
+                    Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                    probe.ExpectMsg("hello");
+                }, TimeSpan.FromSeconds(3));
+            });
+
         }
 
         [Fact]
