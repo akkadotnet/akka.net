@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 using Akka.Configuration;
 using Akka.Util.Internal;
 
@@ -22,22 +20,30 @@ namespace Akka.Cluster.SBR
         public const string KeepOldestName = "keep-oldest";
         public const string DownAllName = "down-all";
 
-        public readonly static ImmutableHashSet<string> AllStrategyNames = ImmutableHashSet.Create(KeepMajorityName, LeaseMajorityName, StaticQuorumName, KeepOldestName, DownAllName);
+        public static readonly ImmutableHashSet<string> AllStrategyNames = ImmutableHashSet.Create(KeepMajorityName,
+            LeaseMajorityName, StaticQuorumName, KeepOldestName, DownAllName);
+
+        private readonly Lazy<string> lazyKeepMajorityRole;
+        private readonly Lazy<KeepOldestSettings> lazyKeepOldestSettings;
+        private readonly Lazy<LeaseMajoritySettings> lazyLeaseMajoritySettings;
+        private readonly Lazy<StaticQuorumSettings> lazyStaticQuorumSettings;
 
         public SplitBrainResolverSettings(Config config)
         {
             var cc = config.GetConfig("akka.cluster.split-brain-resolver");
             if (cc.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolverSettings>("akka.cluster.split-brain-resolver");
+                throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolverSettings>(
+                    "akka.cluster.split-brain-resolver");
 
             DowningStableAfter = cc.GetTimeSpan("stable-after");
             if (DowningStableAfter <= TimeSpan.Zero)
-                throw new ConfigurationException($"'split-brain-resolver.stable-after' must be  >= 0s");
+                throw new ConfigurationException("'split-brain-resolver.stable-after' must be  >= 0s");
 
 
             DowningStrategy = cc.GetString("active-strategy")?.ToLowerInvariant();
             if (!AllStrategyNames.Contains(DowningStrategy))
-                throw new ConfigurationException($"Unknown downing strategy 'split-brain-resolver.active-strategy'=[{DowningStrategy}]. Select one of [{string.Join(", ", AllStrategyNames)}]");
+                throw new ConfigurationException(
+                    $"Unknown downing strategy 'split-brain-resolver.active-strategy'=[{DowningStrategy}]. Select one of [{string.Join(", ", AllStrategyNames)}]");
 
             {
                 var key = "down-all-when-unstable";
@@ -45,7 +51,8 @@ namespace Akka.Cluster.SBR
                 {
                     case "on":
                         // based on stable-after
-                        DownAllWhenUnstable = TimeSpan.FromSeconds(4).Max(new TimeSpan(DowningStableAfter.Ticks * 3 / 4));
+                        DownAllWhenUnstable =
+                            TimeSpan.FromSeconds(4).Max(new TimeSpan(DowningStableAfter.Ticks * 3 / 4));
                         break;
                     case "off":
                         // disabled
@@ -54,7 +61,8 @@ namespace Akka.Cluster.SBR
                     default:
                         DownAllWhenUnstable = cc.GetTimeSpan(key);
                         if (DowningStableAfter <= TimeSpan.Zero)
-                            throw new ConfigurationException($"'split-brain-resolver.{key}' must be  >= 0s or 'off' to disable");
+                            throw new ConfigurationException(
+                                $"'split-brain-resolver.{key}' must be  >= 0s or 'off' to disable");
                         break;
                 }
             }
@@ -74,17 +82,15 @@ namespace Akka.Cluster.SBR
                 return r;
             }
 
-            lazyKeepMajorityRole = new Lazy<string>(() =>
-            {
-                return Role(StrategyConfig(KeepMajorityName));
-            });
+            lazyKeepMajorityRole = new Lazy<string>(() => { return Role(StrategyConfig(KeepMajorityName)); });
 
             lazyStaticQuorumSettings = new Lazy<StaticQuorumSettings>(() =>
             {
                 var c = StrategyConfig(StaticQuorumName);
                 var size = c.GetInt("quorum-size");
                 if (size < 1)
-                    throw new ConfigurationException($"'split-brain-resolver.{StaticQuorumName}.quorum-size' must be  >= 1");
+                    throw new ConfigurationException(
+                        $"'split-brain-resolver.{StaticQuorumName}.quorum-size' must be  >= 1");
 
                 return new StaticQuorumSettings(size, Role(c));
             });
@@ -102,18 +108,14 @@ namespace Akka.Cluster.SBR
                 var c = StrategyConfig(LeaseMajorityName);
                 var leaseImplementation = c.GetString("lease-implementation");
                 if (string.IsNullOrEmpty(leaseImplementation))
-                    throw new ConfigurationException($"'split-brain-resolver.{LeaseMajorityName}.lease-implementation' must be defined");
+                    throw new ConfigurationException(
+                        $"'split-brain-resolver.{LeaseMajorityName}.lease-implementation' must be defined");
 
                 var acquireLeaseDelayForMinority = c.GetTimeSpan("acquire-lease-delay-for-minority");
 
                 return new LeaseMajoritySettings(leaseImplementation, acquireLeaseDelayForMinority, Role(c));
             });
         }
-
-        private readonly Lazy<string> lazyKeepMajorityRole;
-        private readonly Lazy<StaticQuorumSettings> lazyStaticQuorumSettings;
-        private readonly Lazy<KeepOldestSettings> lazyKeepOldestSettings;
-        private readonly Lazy<LeaseMajoritySettings> lazyLeaseMajoritySettings;
 
         public TimeSpan DowningStableAfter { get; }
 
@@ -132,44 +134,43 @@ namespace Akka.Cluster.SBR
 
     public sealed class StaticQuorumSettings
     {
-        public int Size { get; }
-
-        public string Role { get; }
-
         public StaticQuorumSettings(int size, string role)
         {
             Size = size;
             Role = role;
         }
+
+        public int Size { get; }
+
+        public string Role { get; }
     }
 
     public sealed class KeepOldestSettings
     {
-        public bool DownIfAlone { get; }
-
-        public string Role { get; }
-
         public KeepOldestSettings(bool downIfAlone, string role)
         {
             DownIfAlone = downIfAlone;
             Role = role;
         }
+
+        public bool DownIfAlone { get; }
+
+        public string Role { get; }
     }
 
     public sealed class LeaseMajoritySettings
     {
-        public string LeaseImplementation { get; }
-
-        public TimeSpan AcquireLeaseDelayForMinority { get; }
-
-        public string Role { get; }
-
         public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role)
         {
             LeaseImplementation = leaseImplementation;
             AcquireLeaseDelayForMinority = acquireLeaseDelayForMinority;
             Role = role;
         }
+
+        public string LeaseImplementation { get; }
+
+        public TimeSpan AcquireLeaseDelayForMinority { get; }
+
+        public string Role { get; }
     }
 }
-

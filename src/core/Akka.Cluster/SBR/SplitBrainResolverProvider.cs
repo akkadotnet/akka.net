@@ -6,23 +6,21 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Akka.Actor;
 using Akka.Coordination;
 
 namespace Akka.Cluster.SBR
 {
     /// <summary>
-    /// Enabled with configuration:
-    /// {
-    /// akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider"
-    /// }
+    ///     Enabled with configuration:
+    ///     {
+    ///     akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider"
+    ///     }
     /// </summary>
     public class SplitBrainResolverProvider : IDowningProvider
     {
-        private readonly ActorSystem system;
         private readonly SplitBrainResolverSettings settings;
+        private readonly ActorSystem system;
 
         public SplitBrainResolverProvider(ActorSystem system)
         {
@@ -41,8 +39,7 @@ namespace Akka.Cluster.SBR
 #pragma warning restore CS0618 // Type or member is obsolete
                 if (drm != TimeSpan.Zero)
                     return drm;
-                else
-                    return settings.DowningStableAfter;
+                return settings.DowningStableAfter;
             }
         }
 
@@ -72,7 +69,8 @@ namespace Akka.Cluster.SBR
                     case SplitBrainResolverSettings.LeaseMajorityName:
                         var lms = settings.LeaseMajoritySettings;
                         var leaseOwnerName = cluster.SelfUniqueAddress.Address.HostPort();
-                        var lease = LeaseProvider.Get(system).GetLease($"{system.Name}-akka-sbr", lms.LeaseImplementation, leaseOwnerName);
+                        var lease = LeaseProvider.Get(system).GetLease($"{system.Name}-akka-sbr",
+                            lms.LeaseImplementation, leaseOwnerName);
                         strategy = new LeaseMajority(lms.Role, lease, lms.AcquireLeaseDelayForMinority);
                         break;
                     default:
