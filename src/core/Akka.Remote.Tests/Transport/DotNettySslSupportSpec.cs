@@ -137,8 +137,8 @@ namespace Akka.Remote.Tests.Transport
                 AwaitAssert(() =>
                 {
                     Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                    probe.ExpectMsg("hello");
-                }, TimeSpan.FromSeconds(3));
+                    probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
+                }, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
             });
 
         }
@@ -159,8 +159,8 @@ namespace Akka.Remote.Tests.Transport
                     AwaitAssert(() =>
                     {
                         Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                        probe.ExpectMsg("hello");
-                    }, TimeSpan.FromSeconds(3));
+                        probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
+                    }, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
                 });
             }
             finally
