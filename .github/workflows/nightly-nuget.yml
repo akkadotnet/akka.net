@@ -22,6 +22,6 @@ jobs:
       env:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
     - name: Build Packages
-      run: build.cmd nugetprerelease=dev
+      run: ./build.cmd nugetprerelease=dev
     - name: Push Packages
       run: dotnet nuget push bin/nuget/*.nupkg
