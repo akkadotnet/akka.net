@@ -22,4 +22,4 @@ jobs:
       env:
         NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
     - name: Build Packages
-      run: ./build.cmd nugetprerelease=dev nugetpublishurl="https://nuget.pkg.github.com/akkadotnet/index.json" nugetkey=${{secrets.GITHUB_TOKEN}}
+      run: ./build.cmd Nuget nugetprerelease=dev nugetpublishurl="https://nuget.pkg.github.com/akkadotnet/index.json" nugetkey=${{secrets.GITHUB_TOKEN}}
