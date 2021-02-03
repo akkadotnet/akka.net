@@ -3,6 +3,12 @@ on:
   schedule:
     # Once a day at 8 AM
    - cron: 0 8 * * *
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'     
+        required: true
+        default: 'local testing'
 jobs:
   build-and-publish:
     runs-on: windows-latest
