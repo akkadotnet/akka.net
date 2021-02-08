@@ -31,6 +31,12 @@ namespace Akka.API.Tests
 {
     public class CoreAPISpec
     {
+        public CoreAPISpec()
+        {
+            // force xunit.assert to be loaded into context, to fix https://github.com/akkadotnet/akka.net/issues/4765
+            var ass = AppDomain.CurrentDomain.Load("xunit.assert");
+        }
+        
         [Fact]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveCore()
