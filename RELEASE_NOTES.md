@@ -1,5 +1,39 @@
-#### 1.4.15 December 30 2020 ####
+#### 1.4.17 Feb 3 2021 ####
 **Placeholder for nightlies**
+
+#### 1.4.16 January 22 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a tiny release of Akka.NET, aimed at solving a transient dependency issue with Akka.DependencyInjection:
+
+* [Akka.DependencyInjection: Allow different versions of MS Abstractions nuget package for Akka.DependencyInjection](https://github.com/akkadotnet/akka.net/pull/4739) - rolls back to Microsoft.Extensions.DependencyInjection.Abstractions 3.1 instead of 5.0
+
+#### 1.4.15 January 19 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.15 introduces a new module, Akka.DependencyInjection, which will replace Akka.DI.Core and all of the libraries which depend on it. This seemed like the easiest way to preserve backwards compatibility - simple deprecate the old package and replace it with a new one.
+
+So what does Akka.DependencyInjection do differently than Akka.DI.Core?
+
+1. **Allows users to pass in an [`IServiceProvider`](https://docs.microsoft.com/en-us/dotnet/api/system.iserviceprovider) into the `ActorSystem` before the latter is created, via [a new kind of programmatic configuration `Setup` that was introduced in Akka.NET v1.4](https://getakka.net/articles/concepts/configuration.html#programmatic-configuration-with-setup)**. This ensures that the `IServiceProvider` is immutable within an `ActorSystem`, a problem that we have currently with Akka.DI.Core.
+2. **Makes it easy to access the `IServiceProvider` via the `Akka.DependencyInjection.ServiceProvider.For(ActorSystem)` method**, which is what we can use to get access to the service provider in order to consume required services inside our actors.
+3. **Makes it possible to dependency inject some parameters will dynamically specifying some others**, something that users have been asking for since 2015.
+
+To see a full example of how to use Akka.DependencyInjection in concert with Microsoft.Extensions.DependencyInjection, please see https://getakka.net/articles/actors/dependency-injection.html
+
+Other changes:
+
+* [Akka: Add `WithConfigFallback` quality of life helper method to `BootstrapSetup`](https://github.com/akkadotnet/akka.net/pull/4714)
+* [Akka.MultiNodeTestRunner: Provide .NET 5.0 support for MultiNode TestKit](https://github.com/akkadotnet/akka.net/issues/4602)
+
+To see the [full set of fixes in Akka.NET v1.4.15, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/46).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 5351 | 4004 | Aaron Stannard |
+| 3 | 5 | 5 | dependabot-preview[bot] |
+| 2 | 369 | 170 | Ebere Abanonu |
+| 1 | 7 | 0 | Gregorius Soedharmo |
 
 #### 1.4.14 December 30 2020 ####
 **Maintenance Release for Akka.NET 1.4**

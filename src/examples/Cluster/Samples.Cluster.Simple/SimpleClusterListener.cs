@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SimpleClusterListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,6 +42,9 @@ namespace Samples.Cluster.Simple
                     Log.Info("Member is Up: {0}", mem.Member);
                     break;
                 }
+                case ClusterEvent.MemberJoined joined:
+                    Log.Info("Member is joining {0}", joined.Member);
+                    break;
                 case ClusterEvent.UnreachableMember unreachable:
                     Log.Info("Member detected as unreachable: {0}", unreachable.Member);
                     break;

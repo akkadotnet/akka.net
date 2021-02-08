@@ -1,4 +1,11 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+﻿//-----------------------------------------------------------------------
+// <copyright file="BitOperations.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;

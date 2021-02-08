@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
@@ -142,6 +143,11 @@ namespace Akka.Actor
         {
             return new BootstrapSetup(config, ActorRefProvider);
         }
+
+        public BootstrapSetup WithConfigFallback(Config config)
+            => Config.HasValue
+                ? new BootstrapSetup(Config.Value.SafeWithFallback(config), ActorRefProvider)
+                : WithConfig(config);
     }
 
     /// <summary>

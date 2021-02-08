@@ -53,7 +53,7 @@ let runIncrementally = hasBuildParam "incremental"
 let incrementalistReport = output @@ "incrementalist.txt"
 
 // Configuration values for tests
-let testNetFrameworkVersion = "net461"
+let testNetFrameworkVersion = "net471"
 let testNetCoreVersion = "netcoreapp3.1"
 let testNetVersion = "net5.0"
 
