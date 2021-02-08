@@ -20,10 +20,6 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
     using EntryId = String;
     using Msg = Object;
-
-    
-    // break approval spec
-    public class Tmp { }
     
     /// <summary>
     /// This actor creates children entity actors on demand that it is told to be
