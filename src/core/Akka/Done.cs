@@ -22,7 +22,4 @@ namespace Akka
 
         private Done() { }
     }
-    
-    // break approval spec
-    public class Tmp { }
 }

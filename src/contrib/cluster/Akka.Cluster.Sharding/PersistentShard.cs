@@ -21,6 +21,10 @@ namespace Akka.Cluster.Sharding
     using EntryId = String;
     using Msg = Object;
 
+    
+    // break approval spec
+    public class Tmp { }
+    
     /// <summary>
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
