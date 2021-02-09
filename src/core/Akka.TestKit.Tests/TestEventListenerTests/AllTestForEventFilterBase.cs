@@ -127,8 +127,6 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             TestSuccessful = true;
         }
 
-
-
         [Fact]
         public void Specified_numbers_of_messagesan_be_intercepted()
         {
