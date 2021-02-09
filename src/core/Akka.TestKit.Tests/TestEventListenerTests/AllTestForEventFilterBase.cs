@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Event;
+using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
 
@@ -139,6 +140,17 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             TestSuccessful = true;
         }
 
+        [Fact]
+        public void Expect_0_events_Should_work()
+        {
+            this.Invoking(_ =>
+            {
+                EventFilter.Error().Expect(0, () =>
+                {
+                    Log.Error("something");
+                });
+            }).Should().Throw<Exception>("Expected 0 events");
+        }
 
         [Fact]
         public void Messages_can_be_muted()
