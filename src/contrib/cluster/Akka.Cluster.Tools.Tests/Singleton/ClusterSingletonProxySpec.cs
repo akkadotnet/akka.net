@@ -42,11 +42,30 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
 
+        [Fact]
+        public void ClusterSingletonProxy_with_zero_buffering_should_work()
+        {
+            var seed = new ActorSys();
+            seed.Cluster.Join(seed.Cluster.SelfAddress);
+
+            var testSystem = new ActorSys(joinTo: seed.Cluster.SelfAddress, bufferSize: 0);
+
+            try
+            {
+                testSystem.TestProxy("Hello");
+            }
+            finally
+            {
+                // force everything to cleanup
+                Task.WhenAll(testSystem.Sys.Terminate()).Wait(TimeSpan.FromSeconds(30));
+            }
+        }
+
         private class ActorSys : TestKit.Xunit2.TestKit
         {
             public Cluster Cluster { get; }
 
-            public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null)
+            public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null, int bufferSize = 1000)
                 : base(ActorSystem.Create(name, ConfigurationFactory.ParseString(_cfg).WithFallback(TestKit.Configs.TestConfigs.DefaultConfig)))
             {
                 Cluster = Cluster.Get(Sys);
@@ -63,8 +82,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 });
 
                 Proxy =
-                    Sys.ActorOf(ClusterSingletonProxy.Props("user/singletonmanager",
-                        ClusterSingletonProxySettings.Create(Sys)), $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
+                    Sys.ActorOf(
+                        ClusterSingletonProxy.Props(
+                            "user/singletonmanager",
+                            ClusterSingletonProxySettings.Create(Sys).WithBufferSize(bufferSize)), 
+                        $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
             }
 
             public IActorRef Proxy { get; private set; }
