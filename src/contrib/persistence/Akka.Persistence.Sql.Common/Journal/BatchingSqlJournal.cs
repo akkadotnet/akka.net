@@ -994,7 +994,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.CommandText = HighestSequenceNrSql;
 
             command.Parameters.Clear();
-            AddParameter(command, "PersistenceId", DbType.String, persistenceId);
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
 
             var result = await command.ExecuteScalarAsync();
             var highestSequenceNr = result is long ? Convert.ToInt64(result) : 0L;
