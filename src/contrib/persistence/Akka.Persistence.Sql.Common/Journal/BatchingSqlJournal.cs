@@ -547,9 +547,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         private int _remainingOperations;
 
         private bool _columnSizeLoaded = false;
-        private Option<int> _persistenceIdColumnSize = Option<int>.None;
-        private Option<int> _tagColumnSize = Option<int>.None;
-        private Option<int> _manifestColumnSize = Option<int>.None;
+        protected Option<int> PersistenceIdColumnSize = Option<int>.None;
+        protected Option<int> TagColumnSize = Option<int>.None;
+        protected Option<int> ManifestColumnSize = Option<int>.None;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournal{TConnection, TCommand}" /> class.
@@ -1387,18 +1387,25 @@ namespace Akka.Persistence.Sql.Common.Journal
             // for known string columns, keep parameter size constant for all queries for query plans optimization
             switch (paramName)
             {
-                case "@PersistenceId" when _persistenceIdColumnSize.HasValue:
-                    param.Size = _persistenceIdColumnSize.Value;
+                case "@PersistenceId" when PersistenceIdColumnSize.HasValue:
+                    param.Size = PersistenceIdColumnSize.Value;
                     break;
-                case "@Tag" when _tagColumnSize.HasValue:
-                    param.Size = _tagColumnSize.Value;
+                case "@Tag" when TagColumnSize.HasValue:
+                    param.Size = TagColumnSize.Value;
                     break;
-                case "@Manifest" when _manifestColumnSize.HasValue:
-                    param.Size = _manifestColumnSize.Value;
+                case "@Manifest" when ManifestColumnSize.HasValue:
+                    param.Size = ManifestColumnSize.Value;
                     break;
             }
             
             command.Parameters.Add(param);
+        }
+
+        protected virtual void LoadColumnSizesInternal(DbConnection connection, QueryConfiguration conventions)
+        {
+            PersistenceIdColumnSize = Option<int>.None;
+            TagColumnSize = Option<int>.None;
+            ManifestColumnSize = Option<int>.None;
         }
 
         private void LoadColumnSizes(DbConnection connection, QueryConfiguration conventions)
@@ -1409,37 +1416,19 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                var schema = connection.GetSchema();
-
-                // save real persistenceId column size to use in query parameter
-                if (schema.Columns.Contains(conventions.PersistenceIdColumnName) &&
-                    schema.Columns[conventions.PersistenceIdColumnName].MaxLength > 0)
-                {
-                    _persistenceIdColumnSize = schema.Columns[conventions.PersistenceIdColumnName].MaxLength;
-                }
-
-                // save real tag column size to use in query parameter
-                if (schema.Columns.Contains(conventions.TagsColumnName) &&
-                    schema.Columns[conventions.TagsColumnName].MaxLength > 0)
-                {
-                    _tagColumnSize = schema.Columns[conventions.TagsColumnName].MaxLength;
-                }
-
-                // save real manifest column size to use in query parameter
-                if (schema.Columns.Contains(conventions.ManifestColumnName) &&
-                    schema.Columns[conventions.ManifestColumnName].MaxLength > 0)
-                {
-                    _manifestColumnSize = schema.Columns[conventions.ManifestColumnName].MaxLength;
-                }
+                LoadColumnSizesInternal(connection, conventions);
             }
             catch (Exception exception)
             {
-                // something might not be supported - do not want to generate this exception again 
-                Log.Debug($"Could not load db schema and column sizes: {exception}");
+                // something might not be supported
+                Log.Error($"Could not load db schema and column sizes: {exception}");
+            }
+            finally
+            {
                 _columnSizeLoaded = true;
             }
         }
-
+        
         private RequestChunk DequeueChunk(int chunkId)
         {
             var operationsCount = Math.Min(Buffer.Count, Setup.MaxBatchSize);
