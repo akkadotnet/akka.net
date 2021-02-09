@@ -985,7 +985,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             catch (Exception cause)
             {
                 var response = new DeleteMessagesFailure(cause, toSequenceNr);
-                req.PersistentActor.Tell(response, ActorRefs.NoSender);
+                req.PersistentActor.Tell(response, ActorRefs.NoSender); 
             }
         }
 
