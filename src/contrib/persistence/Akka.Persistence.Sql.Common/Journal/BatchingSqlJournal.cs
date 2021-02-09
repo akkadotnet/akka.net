@@ -545,6 +545,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly Akka.Serialization.Serialization _serialization;
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
+
+        private bool _columnSizeLoaded = false;
         private Option<int> _persistenceIdColumnSize = Option<int>.None;
         private Option<int> _tagColumnSize = Option<int>.None;
         private Option<int> _manifestColumnSize = Option<int>.None;
@@ -1402,30 +1404,39 @@ namespace Akka.Persistence.Sql.Common.Journal
         private void LoadColumnSizes(DbConnection connection, QueryConfiguration conventions)
         {
             // load schema/initialize column sizes only once
-            if (_persistenceIdColumnSize.HasValue || _tagColumnSize.HasValue || _manifestColumnSize.HasValue)
+            if (_columnSizeLoaded)
                 return;
-            
-            var schema = connection.GetSchema();
-            
-            // save real persistenceId column size to use in query parameter
-            if (schema.Columns.Contains(conventions.PersistenceIdColumnName) &&
-                schema.Columns[conventions.PersistenceIdColumnName].MaxLength > 0)
-            {
-                _persistenceIdColumnSize = schema.Columns[conventions.PersistenceIdColumnName].MaxLength;
-            }
 
-            // save real tag column size to use in query parameter
-            if (schema.Columns.Contains(conventions.TagsColumnName) &&
-                schema.Columns[conventions.TagsColumnName].MaxLength > 0)
+            try
             {
-                _tagColumnSize = schema.Columns[conventions.TagsColumnName].MaxLength;
-            }
+                var schema = connection.GetSchema();
 
-            // save real manifest column size to use in query parameter
-            if (schema.Columns.Contains(conventions.ManifestColumnName) &&
-                schema.Columns[conventions.ManifestColumnName].MaxLength > 0)
+                // save real persistenceId column size to use in query parameter
+                if (schema.Columns.Contains(conventions.PersistenceIdColumnName) &&
+                    schema.Columns[conventions.PersistenceIdColumnName].MaxLength > 0)
+                {
+                    _persistenceIdColumnSize = schema.Columns[conventions.PersistenceIdColumnName].MaxLength;
+                }
+
+                // save real tag column size to use in query parameter
+                if (schema.Columns.Contains(conventions.TagsColumnName) &&
+                    schema.Columns[conventions.TagsColumnName].MaxLength > 0)
+                {
+                    _tagColumnSize = schema.Columns[conventions.TagsColumnName].MaxLength;
+                }
+
+                // save real manifest column size to use in query parameter
+                if (schema.Columns.Contains(conventions.ManifestColumnName) &&
+                    schema.Columns[conventions.ManifestColumnName].MaxLength > 0)
+                {
+                    _manifestColumnSize = schema.Columns[conventions.ManifestColumnName].MaxLength;
+                }
+            }
+            catch (Exception exception)
             {
-                _manifestColumnSize = schema.Columns[conventions.ManifestColumnName].MaxLength;
+                // something might not be supported - do not want to generate this exception again 
+                Log.Debug($"Could not load db schema and column sizes: {exception}");
+                _columnSizeLoaded = true;
             }
         }
 
