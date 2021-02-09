@@ -547,9 +547,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         private int _remainingOperations;
 
         private bool _columnSizeLoaded = false;
-        protected Option<int> PersistenceIdColumnSize = Option<int>.None;
-        protected Option<int> TagColumnSize = Option<int>.None;
-        protected Option<int> ManifestColumnSize = Option<int>.None;
+        
+        protected ColumnSizesInfo ColumnSizes { get; } = new ColumnSizesInfo();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournal{TConnection, TCommand}" /> class.
@@ -1387,25 +1386,43 @@ namespace Akka.Persistence.Sql.Common.Journal
             // for known string columns, keep parameter size constant for all queries for query plans optimization
             switch (paramName)
             {
-                case "@PersistenceId" when PersistenceIdColumnSize.HasValue:
-                    param.Size = PersistenceIdColumnSize.Value;
+                case "@PersistenceId" when ColumnSizes.PersistenceIdColumnSize.HasValue:
+                    param.Size = ColumnSizes.PersistenceIdColumnSize.Value;
                     break;
-                case "@Tag" when TagColumnSize.HasValue:
-                    param.Size = TagColumnSize.Value;
+                case "@Tag" when ColumnSizes.TagsColumnSize.HasValue:
+                    param.Size = ColumnSizes.TagsColumnSize.Value;
                     break;
-                case "@Manifest" when ManifestColumnSize.HasValue:
-                    param.Size = ManifestColumnSize.Value;
+                case "@Manifest" when ColumnSizes.ManifestColumnSize.HasValue:
+                    param.Size = ColumnSizes.ManifestColumnSize.Value;
                     break;
             }
             
             command.Parameters.Add(param);
         }
 
+        /// <summary>
+        /// Override this method to provide column sizes used for parameters generation in query.
+        /// 
+        /// <para>
+        /// When sql query is generated, parameter type and size may be included in the query.
+        /// By default, size is calculated from actual parameter value provided in the query.
+        /// This may have impact on performance - in this case, having constant parameter sizes is helpful.
+        /// </para>
+        /// 
+        /// <para>
+        /// When overriding this method, use provider-specific queries to get actual column sizes, and populate
+        /// <see cref="ColumnSizes"/> object properties with actual values.
+        /// <see cref="Option{T}.None"/> property value indicates that parameter size will be set dynamically (the default).
+        /// </para>
+        /// 
+        /// </summary>
+        /// <param name="connection"></param>
+        /// <param name="conventions"></param>
         protected virtual void LoadColumnSizesInternal(DbConnection connection, QueryConfiguration conventions)
         {
-            PersistenceIdColumnSize = Option<int>.None;
-            TagColumnSize = Option<int>.None;
-            ManifestColumnSize = Option<int>.None;
+            ColumnSizes.PersistenceIdColumnSize = Option<int>.None;
+            ColumnSizes.TagsColumnSize = Option<int>.None;
+            ColumnSizes.ManifestColumnSize = Option<int>.None;
         }
 
         private void LoadColumnSizes(DbConnection connection, QueryConfiguration conventions)
@@ -1452,6 +1469,22 @@ namespace Akka.Persistence.Sql.Common.Journal
             else Log.Debug("Completed batch (chunkId: {0}) of {1} operations in {2} milliseconds", msg.ChunkId, msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
 
             TryProcess();
+        }
+
+        public class ColumnSizesInfo
+        {
+            /// <summary>
+            /// Size of the column containing PersistenceId values
+            /// </summary>
+            public Option<int> PersistenceIdColumnSize { get; set; } = Option<int>.None;
+            /// <summary>
+            /// Size of the column containing Tags values
+            /// </summary>
+            public Option<int> TagsColumnSize { get; set; } = Option<int>.None;
+            /// <summary>
+            /// Size of the column containing Manifest values
+            /// </summary>
+            public Option<int> ManifestColumnSize { get; set; } = Option<int>.None;
         }
     }
 
