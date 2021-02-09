@@ -546,9 +546,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
 
-        private bool _columnSizeLoaded = false;
-        
-        protected ColumnSizesInfo ColumnSizes { get; } = new ColumnSizesInfo();
+        protected ColumnSizesInfo ColumnSizes { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournal{TConnection, TCommand}" /> class.
@@ -1418,31 +1416,26 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="conventions"></param>
-        protected virtual void LoadColumnSizesInternal(DbConnection connection, QueryConfiguration conventions)
+        protected virtual ColumnSizesInfo LoadColumnSizesInternal(DbConnection connection, QueryConfiguration conventions)
         {
-            ColumnSizes.PersistenceIdColumnSize = Option<int>.None;
-            ColumnSizes.TagsColumnSize = Option<int>.None;
-            ColumnSizes.ManifestColumnSize = Option<int>.None;
+            return ColumnSizesInfo.Default;
         }
 
         private void LoadColumnSizes(DbConnection connection, QueryConfiguration conventions)
         {
             // load schema/initialize column sizes only once
-            if (_columnSizeLoaded)
+            if (ColumnSizes != null)
                 return;
 
             try
             {
-                LoadColumnSizesInternal(connection, conventions);
+                ColumnSizes = LoadColumnSizesInternal(connection, conventions);
             }
             catch (Exception exception)
             {
                 // something might not be supported
                 Log.Error($"Could not load db schema and column sizes: {exception}");
-            }
-            finally
-            {
-                _columnSizeLoaded = true;
+                ColumnSizes = ColumnSizesInfo.Default;
             }
         }
         
@@ -1485,6 +1478,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             /// Size of the column containing Manifest values
             /// </summary>
             public Option<int> ManifestColumnSize { get; set; } = Option<int>.None;
+
+            /// <summary>
+            /// Default column sizes initializer - all sizes are calculated dynamically from parameter values
+            /// </summary>
+            public static readonly ColumnSizesInfo Default = new ColumnSizesInfo();
         }
     }
 
