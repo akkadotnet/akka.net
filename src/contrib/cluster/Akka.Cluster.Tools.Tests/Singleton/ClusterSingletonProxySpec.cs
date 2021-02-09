@@ -12,11 +12,12 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
-    public class ClusterSingletonProxySpec 
+    public class ClusterSingletonProxySpec : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void ClusterSingletonProxy_must_correctly_identify_the_singleton()
@@ -43,12 +44,17 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         }
 
         [Fact]
-        public void ClusterSingletonProxy_with_zero_buffering_should_work()
+        public async Task ClusterSingletonProxy_with_zero_buffering_should_work()
         {
             var seed = new ActorSys();
             seed.Cluster.Join(seed.Cluster.SelfAddress);
 
             var testSystem = new ActorSys(joinTo: seed.Cluster.SelfAddress, bufferSize: 0);
+            
+            // have to wait for cluster singleton to be ready, otherwise message will be rejected
+            await AwaitConditionAsync(
+                () => Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2,
+                TimeSpan.FromSeconds(30));
 
             try
             {
