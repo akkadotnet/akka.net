@@ -892,7 +892,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                 await connection.OpenAsync();
                 
                 // pre-load column sizes to use in queries
-                LoadColumnSizes(connection, Setup.NamingConventions);
+                await LoadColumnSizes(connection);
 
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
@@ -1414,14 +1414,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </para>
         /// 
         /// </summary>
-        /// <param name="connection"></param>
-        /// <param name="conventions"></param>
-        protected virtual ColumnSizesInfo LoadColumnSizesInternal(DbConnection connection, QueryConfiguration conventions)
+        /// <param name="connection">Already opened connection to the database</param>
+        protected virtual Task<ColumnSizesInfo> LoadColumnSizesInternal(DbConnection connection)
         {
-            return ColumnSizesInfo.Default;
+            return Task.FromResult(ColumnSizesInfo.Default);
         }
 
-        private void LoadColumnSizes(DbConnection connection, QueryConfiguration conventions)
+        private async Task LoadColumnSizes(DbConnection connection)
         {
             // load schema/initialize column sizes only once
             if (ColumnSizes != null)
@@ -1429,7 +1428,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
             try
             {
-                ColumnSizes = LoadColumnSizesInternal(connection, conventions);
+                ColumnSizes = await LoadColumnSizesInternal(connection);
             }
             catch (Exception exception)
             {
