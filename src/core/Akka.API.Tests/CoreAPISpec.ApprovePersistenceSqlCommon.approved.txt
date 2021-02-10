@@ -90,7 +90,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual string AllPersistenceIdsSql { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
-        protected Akka.Persistence.Sql.Common.Journal.BatchingSqlJournal<TConnection, TCommand>.ColumnSizesInfo ColumnSizes { get; }
         protected virtual string DeleteBatchSql { get; }
         protected bool HasNewEventsSubscribers { get; }
         protected bool HasPersistenceIdSubscribers { get; }
@@ -110,7 +109,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context) { }
         protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command) { }
         protected virtual System.Threading.Tasks.Task HandleSelectCurrentPersistenceIds(Akka.Persistence.Sql.Common.Journal.SelectCurrentPersistenceIds message, TCommand command) { }
-        protected virtual System.Threading.Tasks.Task<Akka.Persistence.Sql.Common.Journal.BatchingSqlJournal<TConnection, TCommand>.ColumnSizesInfo> LoadColumnSizesInternal(System.Data.Common.DbConnection connection) { }
         protected virtual void OnBufferOverflow(Akka.Persistence.IJournalMessage request) { }
         protected override void PreStart() { }
         protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
@@ -118,16 +116,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(TCommand command) { }
         protected virtual bool Receive(object message) { }
         protected virtual void WriteEvent(TCommand command, Akka.Persistence.IPersistentRepresentation persistent, string tags = "") { }
-        public class ColumnSizesInfo<TConnection, TCommand>
-            where TConnection : System.Data.Common.DbConnection
-            where TCommand : System.Data.Common.DbCommand
-        {
-            public static readonly Akka.Persistence.Sql.Common.Journal.BatchingSqlJournal<TConnection, TCommand>.ColumnSizesInfo Default;
-            public ColumnSizesInfo() { }
-            public Akka.Util.Option<int> ManifestColumnSize { get; set; }
-            public Akka.Util.Option<int> PersistenceIdColumnSize { get; set; }
-            public Akka.Util.Option<int> TagsColumnSize { get; set; }
-        }
     }
     public sealed class CircuitBreakerSettings
     {
