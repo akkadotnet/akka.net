@@ -544,7 +544,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             parameter.DbType = parameterType;
             parameter.Value = value;
 
-            CustomDbParameterSetup(command, parameter);
+            PreAddParameterToCommand(command, parameter);
 
             command.Parameters.Add(parameter);
         }
@@ -554,7 +554,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         /// </summary>
         /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
         /// <param name="param">Parameter to customize</param>
-        protected virtual void CustomDbParameterSetup(DbCommand command, DbParameter param) { }
+        protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param) { }
 
         /// <summary>
         /// TBD

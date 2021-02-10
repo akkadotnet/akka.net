@@ -1376,7 +1376,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             param.ParameterName = paramName;
             param.DbType = dbType;
 
-            CustomDbParameterSetup(command, param);
+            PreAddParameterToCommand(command, param);
             
             command.Parameters.Add(param);
         }
@@ -1386,7 +1386,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
         /// <param name="param">Parameter to customize</param>
-        protected virtual void CustomDbParameterSetup(TCommand command, DbParameter param) { }
+        protected virtual void PreAddParameterToCommand(TCommand command, DbParameter param) { }
         
         private RequestChunk DequeueChunk(int chunkId)
         {
