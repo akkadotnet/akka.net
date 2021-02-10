@@ -36,7 +36,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected void AddParameter(System.Data.Common.DbCommand command, string parameterName, System.Data.DbType parameterType, object value) { }
         protected abstract System.Data.Common.DbCommand CreateCommand(System.Data.Common.DbConnection connection);
         public virtual System.Threading.Tasks.Task CreateTablesAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
-        protected virtual void CustomDbParameterSetup(System.Data.Common.DbCommand command, System.Data.Common.DbParameter param) { }
         public virtual System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long toSequenceNr) { }
         protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
         public virtual System.Threading.Tasks.Task InsertBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, Akka.Persistence.Sql.Common.Journal.WriteJournalBatch write) { }
@@ -104,7 +103,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected void AddParameter(TCommand command, string paramName, System.Data.DbType dbType, object value) { }
         protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
         protected abstract TConnection CreateConnection(string connectionString);
-        protected virtual void CustomDbParameterSetup(TCommand command, System.Data.Common.DbParameter param) { }
         protected virtual System.Threading.Tasks.Task HandleDeleteMessagesTo(Akka.Persistence.DeleteMessagesTo req, TCommand command) { }
         protected virtual System.Threading.Tasks.Task HandleReplayAllMessages(Akka.Persistence.Sql.Common.Journal.ReplayAllEvents req, TCommand command) { }
         protected virtual System.Threading.Tasks.Task HandleReplayMessages(Akka.Persistence.ReplayMessages req, TCommand command, Akka.Actor.IActorContext context) { }
@@ -372,7 +370,6 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected void AddParameter(System.Data.Common.DbCommand command, string parameterName, System.Data.DbType parameterType, object value) { }
         protected abstract System.Data.Common.DbCommand CreateCommand(System.Data.Common.DbConnection connection);
         public virtual System.Threading.Tasks.Task CreateTableAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken) { }
-        protected virtual void CustomDbParameterSetup(System.Data.Common.DbCommand command, System.Data.Common.DbParameter param) { }
         public virtual System.Threading.Tasks.Task DeleteAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long sequenceNr, System.Nullable<System.DateTime> timestamp) { }
         public virtual System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, System.DateTime maxTimestamp) { }
         protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
