@@ -546,8 +546,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         private readonly CircuitBreaker _circuitBreaker;
         private int _remainingOperations;
 
-        protected ColumnSizesInfo ColumnSizes { get; private set; }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournal{TConnection, TCommand}" /> class.
         /// </summary>
@@ -890,9 +888,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             using (var connection = CreateConnection(Setup.ConnectionString))
             {
                 await connection.OpenAsync();
-                
-                // pre-load column sizes to use in queries
-                await LoadColumnSizes(connection);
 
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
@@ -1381,62 +1376,17 @@ namespace Akka.Persistence.Sql.Common.Journal
             param.ParameterName = paramName;
             param.DbType = dbType;
 
-            // for known string columns, keep parameter size constant for all queries for query plans optimization
-            switch (paramName)
-            {
-                case "@PersistenceId" when ColumnSizes.PersistenceIdColumnSize.HasValue:
-                    param.Size = ColumnSizes.PersistenceIdColumnSize.Value;
-                    break;
-                case "@Tag" when ColumnSizes.TagsColumnSize.HasValue:
-                    param.Size = ColumnSizes.TagsColumnSize.Value;
-                    break;
-                case "@Manifest" when ColumnSizes.ManifestColumnSize.HasValue:
-                    param.Size = ColumnSizes.ManifestColumnSize.Value;
-                    break;
-            }
+            CustomDbParameterSetup(command, param);
             
             command.Parameters.Add(param);
         }
 
         /// <summary>
-        /// Override this method to provide column sizes used for parameters generation in query.
-        /// 
-        /// <para>
-        /// When sql query is generated, parameter type and size may be included in the query.
-        /// By default, size is calculated from actual parameter value provided in the query.
-        /// This may have impact on performance - in this case, having constant parameter sizes is helpful.
-        /// </para>
-        /// 
-        /// <para>
-        /// When overriding this method, use provider-specific queries to get actual column sizes, and populate
-        /// <see cref="ColumnSizes"/> object properties with actual values.
-        /// <see cref="Option{T}.None"/> property value indicates that parameter size will be set dynamically (the default).
-        /// </para>
-        /// 
+        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
         /// </summary>
-        /// <param name="connection">Already opened connection to the database</param>
-        protected virtual Task<ColumnSizesInfo> LoadColumnSizesInternal(DbConnection connection)
-        {
-            return Task.FromResult(ColumnSizesInfo.Default);
-        }
-
-        private async Task LoadColumnSizes(DbConnection connection)
-        {
-            // load schema/initialize column sizes only once
-            if (ColumnSizes != null)
-                return;
-
-            try
-            {
-                ColumnSizes = await LoadColumnSizesInternal(connection);
-            }
-            catch (Exception exception)
-            {
-                // something might not be supported
-                Log.Error($"Could not load db schema and column sizes: {exception}");
-                ColumnSizes = ColumnSizesInfo.Default;
-            }
-        }
+        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="param">Parameter to customize</param>
+        protected virtual void CustomDbParameterSetup(TCommand command, DbParameter param) { }
         
         private RequestChunk DequeueChunk(int chunkId)
         {
@@ -1461,27 +1411,6 @@ namespace Akka.Persistence.Sql.Common.Journal
             else Log.Debug("Completed batch (chunkId: {0}) of {1} operations in {2} milliseconds", msg.ChunkId, msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
 
             TryProcess();
-        }
-
-        public class ColumnSizesInfo
-        {
-            /// <summary>
-            /// Size of the column containing PersistenceId values
-            /// </summary>
-            public Option<int> PersistenceIdColumnSize { get; set; } = Option<int>.None;
-            /// <summary>
-            /// Size of the column containing Tags values
-            /// </summary>
-            public Option<int> TagsColumnSize { get; set; } = Option<int>.None;
-            /// <summary>
-            /// Size of the column containing Manifest values
-            /// </summary>
-            public Option<int> ManifestColumnSize { get; set; } = Option<int>.None;
-
-            /// <summary>
-            /// Default column sizes initializer - all sizes are calculated dynamically from parameter values
-            /// </summary>
-            public static readonly ColumnSizesInfo Default = new ColumnSizesInfo();
         }
     }
 

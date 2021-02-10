@@ -871,7 +871,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             parameter.DbType = parameterType;
             parameter.Value = value;
 
+            CustomDbParameterSetup(command, parameter);
+
             command.Parameters.Add(parameter);
         }
+
+        /// <summary>
+        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        /// </summary>
+        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="param">Parameter to customize</param>
+        protected virtual void CustomDbParameterSetup(DbCommand command, DbParameter param) { }
     }
 }
