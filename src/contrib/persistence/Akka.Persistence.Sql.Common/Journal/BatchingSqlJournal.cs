@@ -230,7 +230,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
-        public string DefaultSerializer { get; }
+        public string DefaultSerializer { get; } 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
