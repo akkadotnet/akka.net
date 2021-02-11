@@ -91,7 +91,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private ImmutableHashSet<RoleName> SeenLatestGossip()
         {
-            return ClusterView.SeenBy.Select(RoleName).ToImmutableHashSet();
+            return ClusterView.State.SeenBy.Select(RoleName).ToImmutableHashSet();
         }
 
         private void AwaitSeen(params Address[] addresses)

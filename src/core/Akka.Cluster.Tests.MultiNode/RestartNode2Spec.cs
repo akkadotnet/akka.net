@@ -127,8 +127,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 RunOn(() =>
                 {
                     Cluster.Get(seed1System.Value).JoinSeedNodes(SeedNodes);
-                    AwaitAssert(() => Cluster.Get(seed1System.Value).ReadView.Members.Count.Should().Be(2));
-                    AwaitAssert(() => Cluster.Get(seed1System.Value).ReadView.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue());
+                    AwaitAssert(() => Cluster.Get(seed1System.Value).State.Members.Count.Should().Be(2));
+                    AwaitAssert(() => Cluster.Get(seed1System.Value).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue());
                 }, _config.Seed1);
 
                 RunOn(() =>
@@ -150,8 +150,8 @@ namespace Akka.Cluster.Tests.MultiNode
                     Cluster.Get(restartedSeed1System.Value).JoinSeedNodes(SeedNodes);
                     Within(TimeSpan.FromSeconds(30), () =>
                     {
-                        AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).ReadView.Members.Count.Should().Be(2));
-                        AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).ReadView.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue());
+                        AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).State.Members.Count.Should().Be(2));
+                        AwaitAssert(() => Cluster.Get(restartedSeed1System.Value).State.Members.All(x => x.Status == MemberStatus.Up).Should().BeTrue());
                     });
                 }, _config.Seed1);
 
