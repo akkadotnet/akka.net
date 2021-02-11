@@ -151,6 +151,17 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
+        public void Expect_should_not_suppress_output()
+        {
+            EventFilter.Error().Expect(1, () =>
+            {
+                Log.Error("error1");
+                Log.Error("error2");
+                Log.Info("into");
+            });
+        }
+
+        [Fact]
         public void Messages_can_be_muted()
         {
             _testingEventFilter.ForLogLevel(LogLevel).Mute(() =>
