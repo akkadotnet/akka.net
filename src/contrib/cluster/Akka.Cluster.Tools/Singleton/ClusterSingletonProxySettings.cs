@@ -99,8 +99,8 @@ namespace Akka.Cluster.Tools.Singleton
                 throw new ArgumentNullException(nameof(singletonName));
             if (singletonIdentificationInterval == TimeSpan.Zero)
                 throw new ArgumentException("singletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
-            if (bufferSize <= 0)
-                throw new ArgumentException("bufferSize must be positive", nameof(bufferSize));
+            if (bufferSize < 0)
+                throw new ArgumentException("bufferSize must not be negative", nameof(bufferSize));
 
             SingletonName = singletonName;
             Role = role;
