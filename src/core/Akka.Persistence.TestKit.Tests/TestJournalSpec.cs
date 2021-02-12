@@ -5,6 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+
+using Akka.Configuration;
+
 namespace Akka.Persistence.TestKit.Tests
 {
     using System;
@@ -16,7 +19,10 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class TestJournalSpec : PersistenceTestKit
     {
-        public TestJournalSpec()
+        // Expect should be passing by default, need to make them less sencitive to timing
+        private static readonly Config DefaultTimeoutConfig = "akka.test.single-expect-default = 30s";
+        
+        public TestJournalSpec() : base(DefaultTimeoutConfig)
         {
             _probe = CreateTestProbe();
         }
