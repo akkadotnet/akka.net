@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Configuration\Cluster.conf" />
+    <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
   </ItemGroup>
 
