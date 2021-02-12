@@ -97,13 +97,10 @@ namespace Akka.Tests.Actor
             var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
-            Within(1.Seconds(), () =>
-            {
-                fsm.Tell(new SubscribeTransitionCallBack(forward));
-                ExpectMsg(new CurrentState<int>(fsm, 0));
-                fsm.Tell("stay");
-                ExpectNoMsg(500.Milliseconds());
-            });
+            fsm.Tell(new SubscribeTransitionCallBack(forward));
+            ExpectMsg(new CurrentState<int>(fsm, 0));
+            fsm.Tell("stay");
+            ExpectNoMsg(500.Milliseconds());
         }
 
         [Fact]

@@ -151,6 +151,26 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         }
 
         [Fact]
+        public async Task ExpectAsync_0_events_Should_work()
+        {
+            Exception ex = null;
+            try
+            {
+                await EventFilter.Error().ExpectAsync(0, async () =>
+                {
+                    await Task.Delay(100); // bug only happens when error is not logged instantly
+                    Log.Error("something");
+                });
+            }
+            catch (Exception e)
+            {
+                ex = e;
+            }
+
+            ex.Should().NotBeNull("Expected 0 errors logged, but there are error logs");
+        }
+
+        [Fact]
         public void Messages_can_be_muted()
         {
             _testingEventFilter.ForLogLevel(LogLevel).Mute(() =>
