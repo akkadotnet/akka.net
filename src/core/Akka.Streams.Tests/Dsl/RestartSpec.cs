@@ -663,7 +663,10 @@ namespace Akka.Streams.Tests.Dsl
 
             // This will complete the flow in probe and cancel the flow out probe
             flowInProbe.Request(2);
-            ImmutableList.Create(flowInProbe.ExpectNext(TimeSpan.FromSeconds(5)), flowInProbe.ExpectNext(TimeSpan.FromSeconds(5))).Should()
+            ImmutableList.Create(
+                    flowInProbe.ExpectNext(TimeSpan.FromSeconds(30)), 
+                    flowInProbe.ExpectNext(TimeSpan.FromSeconds(30)))
+                .Should()
                 .Contain(ImmutableList.Create("in complete", "out complete"));
 
             // and it should restart
