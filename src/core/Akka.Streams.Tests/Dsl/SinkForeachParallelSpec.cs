@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy due to timing on Azure DevOps")]
         public void A_ForeachParallel_must_produce_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
