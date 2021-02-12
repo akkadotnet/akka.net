@@ -46,16 +46,16 @@ namespace Akka.Streams.Tests.Dsl
                     probe.Ref.Tell(n);
                 }), Materializer);
                 latch[2].CountDown();
-                probe.ExpectMsg(2);
+                probe.ExpectMsg(2, TimeSpan.FromSeconds(5));
                 latch[4].CountDown();
-                probe.ExpectMsg(4);
+                probe.ExpectMsg(4, TimeSpan.FromSeconds(5));
                 latch[3].CountDown();
-                probe.ExpectMsg(3);
+                probe.ExpectMsg(3, TimeSpan.FromSeconds(5));
 
                 p.IsCompleted.Should().BeFalse();
 
                 latch[1].CountDown();
-                probe.ExpectMsg(1);
+                probe.ExpectMsg(1, TimeSpan.FromSeconds(5));
 
                 p.Wait(TimeSpan.FromSeconds(4)).Should().BeTrue();
                 p.IsCompleted.Should().BeTrue();
