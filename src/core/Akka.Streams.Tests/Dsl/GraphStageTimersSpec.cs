@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var driver = SetupIsolatedStage();
             driver.Tell(TestRepeatedTimer.Instance);
-            var seq = ReceiveWhile(TimeSpan.FromSeconds(2), o => (Tick)o);
+            var seq = ReceiveWhile(TimeSpan.FromSeconds(30), o => (Tick)o, msgs: 5);
             seq.Should().HaveCount(5);
             ExpectNoMsg(TimeSpan.FromSeconds(1));
             driver.StopStage();
