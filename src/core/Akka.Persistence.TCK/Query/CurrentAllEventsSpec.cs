@@ -20,7 +20,10 @@ namespace Akka.Persistence.TCK.Query
 {
     public class CurrentAllEventsSpec : Akka.TestKit.Xunit2.TestKit
     {
-        private static readonly Config InternalConfig = "akka.persistence.query.journal.sql.max-buffer-size = 3";
+        // Expect should be passing by default, need to make them less sencitive to timing
+        private static readonly Config DefaultTimeoutConfig = "akka.test.single-expect-default = 30s";
+        
+        private static readonly Config InternalConfig = DefaultTimeoutConfig.WithFallback("akka.persistence.query.journal.sql.max-buffer-size = 3");
 
         protected ActorMaterializer Materializer { get; }
 
