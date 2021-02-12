@@ -1,0 +1,194 @@
+/*
+ * Copyright (C) 2009-2020 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2013-2020 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+
+package Akka.DistributedData.Serialization.Proto.Msg;
+
+option optimize_for = SPEED;
+import "ReplicatorMessages.proto";
+
+enum ValType{
+  Int = 0;
+  Long = 1;
+  String = 2;
+  ActorRef = 3;
+  Other = 4;
+}
+
+message TypeDescriptor{
+  ValType type = 1;
+  string TypeName = 2; // used when ValType.Other is selected  
+}
+
+message GSet {
+  repeated string stringElements = 1;
+  TypeDescriptor typeInfo = 2;
+  repeated sint32 intElements = 3 [packed=true];
+  repeated sint64 longElements = 4 [packed=true];
+  repeated OtherMessage otherElements = 5;
+  repeated string actorRefElements = 6; 
+  
+}
+
+message ORSet {
+  VersionVector vvector = 1;
+  TypeDescriptor typeInfo = 2;
+  repeated VersionVector dots = 3; 
+  repeated string stringElements = 4;
+  repeated sint32 intElements = 5 [packed=true];
+  repeated sint64 longElements = 6 [packed=true];
+  repeated OtherMessage otherElements = 7;
+  repeated string actorRefElements = 8;
+}
+
+message ORSetDeltaGroup {
+  message Entry {
+    ORSetDeltaOp operation = 1;
+    ORSet underlying = 2;
+  }
+  
+  repeated Entry entries = 1;
+  TypeDescriptor typeInfo = 2;
+}
+
+enum ORSetDeltaOp {
+  Add = 0;
+  Remove = 1;
+  Full = 2;
+}
+
+message Flag {
+   bool enabled = 1;
+}
+
+message LWWRegister {
+   sint64 timestamp = 1;
+   UniqueAddress node = 2;
+   OtherMessage state = 3;
+   TypeDescriptor typeInfo = 4;
+}
+
+message GCounter {
+  message Entry {
+     UniqueAddress node = 1;
+     bytes value = 2;
+  }
+  
+  repeated Entry entries = 1; 
+}
+
+message PNCounter {
+   GCounter increments = 1;
+   GCounter decrements = 2;
+}
+
+message ORMap {
+  message Entry {
+    string stringKey = 1;
+    OtherMessage value = 2;
+    sint32 intKey = 3;
+    sint64 longKey = 4;
+    OtherMessage otherKey = 5;
+  }
+  
+  ORSet keys = 1;
+  repeated Entry entries = 2;
+  TypeDescriptor valueTypeInfo = 4;
+}
+
+message ORMapDeltaGroup {
+  message MapEntry {
+    string stringKey = 1;
+    OtherMessage value = 2;
+    sint32 intKey = 3;
+    sint64 longKey = 4;
+    OtherMessage otherKey = 5;
+  }
+  message Entry {
+     ORMapDeltaOp operation = 1;
+     ORSet underlying = 2;
+     sint32 zeroTag = 3;
+     repeated MapEntry entryData = 4;
+  }
+
+  repeated Entry entries = 1;
+  TypeDescriptor keyTypeInfo = 2;
+  TypeDescriptor valueTypeInfo = 3;
+}
+
+message ORMultiMapDelta {
+  ORMapDeltaGroup delta = 1;
+  bool withValueDeltas = 2;
+}
+
+enum ORMapDeltaOp {
+  ORMapPut = 0;
+  ORMapRemove = 1;
+  ORMapRemoveKey = 2;
+  ORMapUpdate = 3;
+}
+
+message LWWMap {
+  message Entry {
+     string stringKey = 1;
+     LWWRegister value = 2;
+     sint32 intKey = 3;
+     sint64 longKey = 4;
+     OtherMessage otherKey = 5;
+  }
+  
+  ORSet keys = 1;
+  repeated Entry entries = 2;
+  TypeDescriptor valueTypeInfo = 3;
+}
+
+message PNCounterMap {
+  message Entry {
+    string stringKey = 1;
+    PNCounter value = 2;
+    sint32 intKey = 3;
+    sint64 longKey = 4;
+    OtherMessage otherKey = 5;
+  }
+  
+  ORSet keys = 1;
+  repeated Entry entries = 2;
+}
+
+message ORMultiMap {
+   message Entry {
+     string stringKey = 1;
+     ORSet value = 2;
+     sint32 intKey = 3;
+     sint64 longKey = 4;
+     OtherMessage otherKey = 5;
+   }
+
+  ORSet keys = 1;
+  repeated Entry entries = 2;
+  bool withValueDeltas = 3;
+  TypeDescriptor valueTypeInfo = 4;
+ }
+
+enum KeyType{
+  ORSetKey = 0;
+  GSetKey = 1;
+  GCounterKey = 2;
+  PNCounterKey = 3;
+  FlagKey = 4;
+  LWWRegisterKey = 5;
+  ORMapKey = 6;
+  LWWMapKey = 7;
+  PNCounterMapKey = 8;
+  ORMultiMapKey = 9;
+}
+
+message Key{
+  string keyId = 1;
+  KeyType keyType = 2;
+  TypeDescriptor keyTypeInfo = 3;
+  TypeDescriptor valueTypeInfo = 4;
+}

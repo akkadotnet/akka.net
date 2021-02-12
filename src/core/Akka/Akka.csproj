@@ -8,7 +8,6 @@
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>7.2</LangVersion>
-    <TargetIsMono Condition="'$(TargetFramework)' == '$(NetFrameworkLibVersion)' and '$(OS)' == 'Unix'">true</TargetIsMono>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,12 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.7.0" />
-  </ItemGroup>
-    
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)'">
-    <Reference Include="System.Configuration" />
+      <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
+    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
@@ -29,7 +24,7 @@
           <Version>4.7.0</Version>
       </PackageReference>
   </ItemGroup>
-  
+
   <ItemGroup>
     <None Update="Util\MatchHandler\PartialHandlerArgumentsCapture.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -41,10 +36,6 @@
       <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
     </Compile>
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION;UNSAFE_THREADING;CLONEABLE;APPDOMAIN</DefineConstants>
-  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR;CONFIGURATION;</DefineConstants>

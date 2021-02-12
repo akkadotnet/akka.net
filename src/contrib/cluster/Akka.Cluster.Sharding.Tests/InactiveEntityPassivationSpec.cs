@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -95,15 +96,15 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ExtractShardId _extractShard = message =>
             message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
 
-        public AbstractInactiveEntityPassivationSpec(Config config)
-            : base(config.WithFallback(GetConfig()))
+        public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
+            : base(config.WithFallback(GetConfig()), helper)
         {
         }
 
         public static Config GetConfig()
         {
             return ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.cluster.sharding.passivate-idle-entity-after = 3s
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
@@ -160,8 +161,8 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class InactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
     {
-        public InactiveEntityPassivationSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"))
+        public InactiveEntityPassivationSpec(ITestOutputHelper helper)
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"), helper)
         {
         }
 
@@ -193,8 +194,8 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class DisabledInactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
     {
-        public DisabledInactiveEntityPassivationSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"))
+        public DisabledInactiveEntityPassivationSpec(ITestOutputHelper helper)
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"), helper)
         {
         }
 

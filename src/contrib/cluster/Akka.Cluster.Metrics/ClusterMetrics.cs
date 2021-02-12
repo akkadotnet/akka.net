@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="ClusterMetricsExtension.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMetrics.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
@@ -14,6 +14,7 @@ using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Util;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics
 {
@@ -40,7 +41,7 @@ namespace Akka.Cluster.Metrics
         public ClusterMetricsSettings Settings { get; }
 
         /// <summary>
-        /// Default HOCON settings for cluster sharding.
+        /// Default HOCON settings for cluster metrics.
         /// </summary>
         /// <returns>TBD</returns>
         public static Config DefaultConfig()
@@ -110,7 +111,7 @@ namespace Akka.Cluster.Metrics
         }
 
         /// <summary>
-        /// Unubscribe user metrics listener actor from <see cref="IClusterMetricsEvent"/>
+        /// Unsubscribe user metrics listener actor from <see cref="IClusterMetricsEvent"/>
         /// events published by extension on the system event bus.
         /// </summary>
         /// <param name="metricsListener"></param>

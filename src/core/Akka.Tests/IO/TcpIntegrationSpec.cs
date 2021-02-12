@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -326,7 +326,7 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5));
                 received.Sum(r => r.Data.Count).ShouldBe(counter.Current);
             });
         }
@@ -379,7 +379,7 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received, and be in the same order as they were sent
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5));
                 var content = string.Join("", received.Select(r => r.Data.ToString()));
                 content.ShouldBe(contentBuilder.ToString());
             });

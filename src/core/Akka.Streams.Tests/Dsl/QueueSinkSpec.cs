@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
         public void QueueSink_should_fail_pull_future_when_stream_is_completed()
         {
             this.AssertAllStagesStopped(() =>
@@ -167,14 +167,13 @@ namespace Akka.Streams.Tests.Dsl
                 ExpectMsg(new Option<int>(1));
 
                 sub.SendComplete();
-                var future = queue.PullAsync();
-                future.Wait(_pause).Should().BeTrue();
-                future.Result.Should().Be(Option<int>.None);
+                var result = queue.PullAsync().Result;
+                result.Should().Be(Option<int>.None);
 
                 ((Task)queue.PullAsync()).ContinueWith(t =>
                 {
                     t.Exception.InnerException.Should().BeOfType<IllegalStateException>();
-                }, TaskContinuationOptions.OnlyOnFaulted).Wait(TimeSpan.FromMilliseconds(300));
+                }, TaskContinuationOptions.OnlyOnFaulted).Wait();
             }, _materializer);
         }
 

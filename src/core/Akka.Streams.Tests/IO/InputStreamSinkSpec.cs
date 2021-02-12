@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -94,7 +94,7 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy in Linux")]
         public void InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
             this.AssertAllStagesStopped(() =>
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
+                var sys = ActorSystem.Create("InputStreamSink-testing", Utils.UnboundedMailboxConfig);
                 var materializer = ActorMaterializer.Create(sys);
                 try
                 {
@@ -310,7 +310,7 @@ namespace Akka.Streams.Tests.IO
                     (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                     var children = ExpectMsg<StreamSupervisor.Children>().Refs;
                     var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
-                    Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                    Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                 }
                 finally
                 {

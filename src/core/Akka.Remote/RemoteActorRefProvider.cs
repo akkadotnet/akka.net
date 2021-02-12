@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -21,6 +20,7 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util.Internal;
+using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -66,7 +66,7 @@ namespace Akka.Remote
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
         /// <param name="path">TBD</param>
@@ -182,6 +182,8 @@ namespace Akka.Remote
 
         /// <inheritdoc/>
         public IActorRef DeadLetters { get { return _local.DeadLetters; } }
+
+        public IActorRef IgnoreRef => _local.IgnoreRef;
 
         /// <inheritdoc/>
         public Deployer Deployer { get; protected set; }
@@ -474,7 +476,7 @@ namespace Akka.Remote
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Called in deserialization of incoming remote messages where the correct local address is known.
         /// </summary>
         /// <param name="path">TBD</param>
@@ -499,7 +501,7 @@ namespace Akka.Remote
             return InternalDeadLetters;
         }
 
-        
+
         /// <summary>
         /// Used to create <see cref="RemoteActorRef"/> instances upon deserialiation inside the Akka.Remote pipeline.
         /// </summary>
@@ -518,6 +520,9 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
+            if (IgnoreActorRef.IsIgnoreRefPath(path))
+                return IgnoreRef;
+
             // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
@@ -698,7 +703,9 @@ namespace Akka.Remote
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
-                _log = Context.GetLogger();
+
+                // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
+                _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
                 InitFSM();
             }
 
@@ -706,8 +713,7 @@ namespace Akka.Remote
             {
                 When(TerminatorState.Uninitialized, @event =>
                 {
-                    var internals = @event.FsmEvent as Internals;
-                    if (internals != null)
+                    if (@event.FsmEvent is Internals internals)
                     {
                         _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);

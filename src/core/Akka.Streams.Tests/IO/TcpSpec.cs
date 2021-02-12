@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace Akka.Streams.Tests.IO
     public class TcpSpec : TcpHelper
     {
         public TcpSpec(ITestOutputHelper helper) : base(@"
-            akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
+akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
         }
 
@@ -473,7 +473,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_handle_when_connection_actor_terminates_unexpectedly()
         {
-            var system2 = ActorSystem.Create("system2");
+            var system2 = ActorSystem.Create("system2", Sys.Settings.Config);
             InitializeLogger(system2);
             var mat2 = ActorMaterializer.Create(system2);
 
@@ -500,7 +500,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
         {
-            var sys2 = ActorSystem.Create("shutdown-test-system");
+            var sys2 = ActorSystem.Create("shutdown-test-system", Sys.Settings.Config);
             var mat2 = sys2.Materializer();
 
             try

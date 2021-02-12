@@ -1,9 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistenceTestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+using Akka.Actor.Setup;
+using Akka.Configuration;
 
 namespace Akka.Persistence.TestKit
 {
@@ -24,10 +27,11 @@ namespace Akka.Persistence.TestKit
         /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
         /// A new system with the specified configuration will be created.
         /// </summary>
+        /// <param name="setup">Test ActorSystem configuration</param>
         /// <param name="actorSystemName">Optional: The name of the actor system</param>
         /// <param name="output">TBD</param>
-        protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
-            : base(GetConfig(), actorSystemName, output)
+        protected PersistenceTestKit(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(GetConfig(setup), actorSystemName, output)
         {
             var persistenceExtension = Persistence.Instance.Apply(Sys);
 
@@ -36,6 +40,36 @@ namespace Akka.Persistence.TestKit
 
             SnapshotsActorRef = persistenceExtension.SnapshotStoreFor(null);
             Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
+        }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
+        /// A new system with the specified configuration will be created.
+        /// </summary>
+        /// <param name="config">Test ActorSystem configuration</param>
+        /// <param name="actorSystemName">Optional: The name of the actor system</param>
+        /// <param name="output">TBD</param>
+        protected PersistenceTestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(GetConfig(config), actorSystemName, output)
+        {
+            var persistenceExtension = Persistence.Instance.Apply(Sys);
+
+            JournalActorRef = persistenceExtension.JournalFor(null);
+            Journal = TestJournal.FromRef(JournalActorRef);
+
+            SnapshotsActorRef = persistenceExtension.SnapshotStoreFor(null);
+            Snapshots = TestSnapshotStore.FromRef(SnapshotsActorRef);
+        }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="PersistenceTestKit"/> class.
+        /// A new system with the default configuration will be created.
+        /// </summary>
+        /// <param name="actorSystemName">Optional: The name of the actor system</param>
+        /// <param name="output">TBD</param>
+        protected PersistenceTestKit(string actorSystemName = null, ITestOutputHelper output = null)
+            : this(Config.Empty, actorSystemName, output)
+        {
         }
 
         /// <summary>
@@ -272,14 +306,49 @@ namespace Akka.Persistence.TestKit
                 execution();
                 return Task.FromResult(true);
             });
-        
+
         /// <summary>
         ///     Loads from embedded resources actor system persistence configuration with <see cref="TestJournal"/> and
         ///     <see cref="TestSnapshotStore"/> configured as default persistence plugins.
         /// </summary>
+        /// <param name="customConfig">Custom configuration that was passed in the constructor.</param>
         /// <returns>Actor system configuration object.</returns>
         /// <seealso cref="Config"/>
-        static Config GetConfig()
-            => ConfigurationFactory.FromResource<TestJournal>("Akka.Persistence.TestKit.config.conf");
+        private static ActorSystemSetup GetConfig(ActorSystemSetup customConfig)
+        {
+            var bootstrapSetup = customConfig.Get<BootstrapSetup>();
+            var config = bootstrapSetup.FlatSelect(x => x.Config);
+            var actorProvider = bootstrapSetup.FlatSelect(x => x.ActorRefProvider);
+            var newSetup = BootstrapSetup.Create();
+            if (config.HasValue)
+            {
+                newSetup = newSetup.WithConfig(GetConfig(config.Value));
+            }
+            else
+            {
+                newSetup = newSetup.WithConfig(GetConfig(Config.Empty));
+            }
+
+            if (actorProvider.HasValue)
+            {
+                newSetup = newSetup.WithActorRefProvider(actorProvider.Value);
+            }
+
+            return customConfig.WithSetup(newSetup);
+        }
+
+        /// <summary>
+        ///     Loads from embedded resources actor system persistence configuration with <see cref="TestJournal"/> and
+        ///     <see cref="TestSnapshotStore"/> configured as default persistence plugins.
+        /// </summary>
+        /// <param name="customConfig">Custom configuration that was passed in the constructor.</param>
+        /// <returns>Actor system configuration object.</returns>
+        /// <seealso cref="Config"/>
+        private static Config GetConfig(Config customConfig)
+        {
+            var defaultConfig = ConfigurationFactory.FromResource<TestJournal>("Akka.Persistence.TestKit.config.conf");
+            if (customConfig == Config.Empty) return defaultConfig;
+            else return defaultConfig.SafeWithFallback(customConfig);
+        }        
     }
 }

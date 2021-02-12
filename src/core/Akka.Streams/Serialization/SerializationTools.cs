@@ -1,9 +1,9 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="SerializationTools.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="SerializationTools.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
@@ -48,6 +48,32 @@ namespace Akka.Streams.Serialization
             var originRef = system.Provider.ResolveActorRef(originPath);
 
             return SourceRefImpl.Create(type, originRef);
+        }
+
+        public static SinkRef ToSinkRef(SinkRefImpl sinkRef)
+        {
+            return new SinkRef()
+            {
+                EventType = TypeToProto(sinkRef.EventType),
+                TargetRef = new ActorRef()
+                {
+                    Path = Akka.Serialization.Serialization.SerializedActorPath(sinkRef.InitialPartnerRef)
+                }
+            };
+        }
+
+        public static ISurrogate ToSurrogate(SinkRefImpl sinkRef)
+        {
+            var snkRef = ToSinkRef(sinkRef);
+            return new SinkRefSurrogate(snkRef.EventType.TypeName, snkRef.TargetRef.Path);
+        }
+
+        public static SinkRefImpl ToSinkRefImpl(ExtendedActorSystem system, string eventType, string originPath)
+        {
+            var type = TypeFromString(eventType);
+            var originRef = system.Provider.ResolveActorRef(originPath);
+
+            return SinkRefImpl.Create(type, originRef);
         }
     }
 }

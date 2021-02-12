@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
+using Akka.Util;
 
 namespace Akka.Cluster.Tests
 {
@@ -34,9 +35,12 @@ namespace Akka.Cluster.Tests
               periodic-tasks-initial-delay = 120 s
               publish-stats-interval = 0 s # always, when it happens
               run-coordinated-shutdown-when-down = off
+              app-version = ""1.2.3""
             }
+            akka.actor.serialize-messages = on
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
             akka.coordinated-shutdown.terminate-actor-system = off
+            akka.coordinated-shutdown.run-by-actor-system-terminate = off
             akka.remote.log-remote-lifecycle-events = off
             akka.remote.dot-netty.tcp.port = 0";
 
@@ -76,6 +80,9 @@ namespace Akka.Cluster.Tests
             ClusterView.Members.Select(m => m.Address).ToImmutableHashSet()
                 .Should().BeEquivalentTo(ImmutableHashSet.Create(_selfAddress));
             AwaitAssert(() => ClusterView.Status.Should().Be(MemberStatus.Up));
+            ClusterView.Self.AppVersion.Should().Be(AppVersion.Create("1.2.3"));
+            ClusterView.Members.FirstOrDefault(i => i.Address == _selfAddress).AppVersion.Should().Be(AppVersion.Create("1.2.3"));
+            ClusterView.State.HasMoreThanOneAppVersion.Should().BeFalse();
         }
 
         [Fact]
@@ -174,6 +181,7 @@ namespace Akka.Cluster.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
+                akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
@@ -431,6 +439,7 @@ namespace Akka.Cluster.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
+                akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
 
@@ -463,6 +472,7 @@ namespace Akka.Cluster.Tests
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
                 akka.coordinated-shutdown.terminate-actor-system = off
+                akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
                 akka.cluster.min-nr-of-members = 2
             ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));

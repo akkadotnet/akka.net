@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="StreamRefsDocTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -94,7 +101,7 @@ namespace DocsExamples.Streams
                     StreamRefs.SinkRef<string>()
                         .To(sink)
                         .Run(Context.System.Materializer())
-                        .PipeTo(Sender, success: sinkRef => new MeasurementsSinkReady(prepare.Id, sinkRef));
+                        .PipeTo(Sender, success: sinkRef => sinkRef);
                 });
             }
 
@@ -106,7 +113,7 @@ namespace DocsExamples.Streams
         private ActorMaterializer Materializer { get; }
 
         public StreamRefsDocTests(ITestOutputHelper output)
-            : base("", output)
+            : base("{}", output)
         {
             Materializer = Sys.Materializer();
         }
@@ -128,12 +135,12 @@ namespace DocsExamples.Streams
             #region sink-ref-materialization
             var receiver = Sys.ActorOf(Props.Create<DataReceiver>(), "receiver");
 
-            var ready = await receiver.Ask<MeasurementsSinkReady>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
+            var ready = await receiver.Ask<ISinkRef<string>>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
 
             // stream local metrics to Sink's origin:
             Source.From(Enumerable.Range(1, 100))
                 .Select(i => i.ToString())
-                .RunWith(ready.SinkRef.Sink, Materializer);
+                .RunWith(ready.Sink, Materializer);
             #endregion
         }
     }

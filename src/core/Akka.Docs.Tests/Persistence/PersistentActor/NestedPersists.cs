@@ -1,10 +1,18 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="NestedPersists.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Persistence;
 
 namespace DocsExamples.Persistence.PersistentActor
 {
     public static class NestedPersists
     {
+        #region NestedPersists1
         public class MyPersistentActor : UntypedPersistentActor
         {
             public override string PersistenceId => "my-stable-persistence-id";
@@ -34,12 +42,14 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
 
         public static void MainApp()
         {
             var system = ActorSystem.Create("NestedPersists");
             var persistentActor = system.ActorOf<MyPersistentActor>();
 
+            #region NestedPersists2
             persistentActor.Tell("a");
             persistentActor.Tell("b");
 
@@ -55,6 +65,7 @@ namespace DocsExamples.Persistence.PersistentActor
             // b-outer-2
             // b-inner-1
             // b-inner-2
+            #endregion
         }
     }
 }

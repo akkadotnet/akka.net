@@ -1,9 +1,17 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="CreateCustomSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Serialization;
 
 namespace DocsExamples.Networking.Serialization
 {
+    #region CustomSerialization
     public class MySerializer : Serializer
     {
         public MySerializer(ExtendedActorSystem system) : base(system)
@@ -40,4 +48,5 @@ namespace DocsExamples.Networking.Serialization
             throw new NotImplementedException();
         }
     }
+    #endregion
 }

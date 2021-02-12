@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Internal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,16 +99,22 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public DataEnvelope Envelope { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public UniqueAddress FromNode { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="key">TBD</param>
         /// <param name="envelope">TBD</param>
-        public Write(string key, DataEnvelope envelope)
+        /// <param name="fromNode">TBD</param>
+        public Write(string key, DataEnvelope envelope, UniqueAddress fromNode = null)
         {
             Key = key;
             Envelope = envelope;
+            FromNode = fromNode;
         }
 
         /// <inheritdoc/>
@@ -117,7 +123,7 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Key == other.Key && Equals(Envelope, other.Envelope);
+            return Key == other.Key && Equals(Envelope, other.Envelope) && Equals(FromNode, other.FromNode);
         }
 
         /// <inheritdoc/>
@@ -209,10 +215,17 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
+        public UniqueAddress FromNode { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="key">TBD</param>
-        public Read(string key)
+        /// <param name="fromNode">TBD</param>
+        public Read(string key, UniqueAddress fromNode = null)
         {
             Key = key;
+            FromNode = fromNode;
         }
 
         /// <inheritdoc/>
@@ -412,7 +425,7 @@ namespace Akka.DistributedData.Internal
         /// <param name="owner">TBD</param>
         /// <returns>TBD</returns>
         internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
-            new DataEnvelope(Data, Pruning.Add(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
+            new DataEnvelope(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
 
         /// <summary>
         /// TBD
@@ -545,7 +558,15 @@ namespace Akka.DistributedData.Internal
 
             foreach (var entry in Pruning)
             {
-                if (!Equals(entry.Value, other.Pruning[entry.Key])) return false;
+                //"it's possible that one node that begins pruning may"
+                //"have different data than another node that hasn't started"
+                if (other.Pruning.TryGetValue(entry.Key, out var state))
+                {
+                    if (!Equals(entry.Value, state))
+                        return false;
+                }
+                else
+                    return false;
             }
 
             return true;
@@ -597,30 +618,21 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Placeholder used to represent deleted data that has not yet been pruned or is permanently tombstoned.
     /// </summary>
-    /// <returns>TBD</returns>
     [Serializable]
-    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
+    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>, IReplicatedDataSerialization
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public static readonly DeletedData Instance = new DeletedData();
 
         private DeletedData() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IReplicatedData{T}"/>
         public DeletedData Merge(DeletedData other) => this;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IReplicatedData{T}"/>
         public IReplicatedData Merge(IReplicatedData other) => Merge((DeletedData)other);
         /// <inheritdoc/>
         public bool Equals(DeletedData other) => true;
@@ -653,6 +665,14 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public int TotalChunks { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? ToSystemUid { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? FromSystemUid { get; }
 
         /// <summary>
         /// TBD
@@ -660,11 +680,15 @@ namespace Akka.DistributedData.Internal
         /// <param name="digests">TBD</param>
         /// <param name="chunk">TBD</param>
         /// <param name="totalChunks">TBD</param>
-        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks)
+        /// <param name="toSystemUid">TBD</param>
+        /// <param name="fromSystemUid">TBD</param>
+        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks, long? toSystemUid = null, long? fromSystemUid = null)
         {
             Digests = digests;
             Chunk = chunk;
             TotalChunks = totalChunks;
+            ToSystemUid = toSystemUid;
+            FromSystemUid = fromSystemUid;
         }
 
         /// <inheritdoc/>
@@ -673,7 +697,11 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.Chunk.Equals(Chunk) && other.TotalChunks.Equals(TotalChunks) && Digests.SequenceEqual(other.Digests);
+            return other.Chunk.Equals(Chunk) 
+                && other.TotalChunks.Equals(TotalChunks) 
+                && Digests.SequenceEqual(other.Digests)
+                && ToSystemUid.Equals(other.ToSystemUid)
+                && FromSystemUid.Equals(other.FromSystemUid);
         }
 
         /// <inheritdoc/>
@@ -720,16 +748,28 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public bool SendBack { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? ToSystemUid { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? FromSystemUid { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="updatedData">TBD</param>
         /// <param name="sendBack">TBD</param>
-        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
+        /// <param name="toSystemUid">TBD</param>
+        /// <param name="fromSystemUid">TBD</param>
+        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? toSystemUid = null, long? fromSystemUid = null)
         {
             UpdatedData = updatedData;
             SendBack = sendBack;
+            ToSystemUid = toSystemUid;
+            FromSystemUid = fromSystemUid;
         }
 
         /// <inheritdoc/>
@@ -738,7 +778,10 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.SendBack.Equals(SendBack) && UpdatedData.SequenceEqual(other.UpdatedData);
+            return other.SendBack.Equals(SendBack) 
+                && UpdatedData.SequenceEqual(other.UpdatedData)
+                && ToSystemUid.Equals(other.ToSystemUid)
+                && FromSystemUid.Equals(other.FromSystemUid);
         }
 
         /// <inheritdoc/>

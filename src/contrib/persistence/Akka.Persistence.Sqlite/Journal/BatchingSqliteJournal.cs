@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqliteJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,8 +28,8 @@ namespace Akka.Persistence.Sqlite.Journal
         /// <param name="config">Config object used to obtain Journal settings</param>
         public BatchingSqliteJournalSetup(Config config) : base(config, new QueryConfiguration(
                     schemaName: null,
-                    journalEventsTableName: config.GetString("table-name"),
-                    metaTableName: config.GetString("metadata-table-name"),
+                    journalEventsTableName: config.GetString("table-name", null),
+                    metaTableName: config.GetString("metadata-table-name", null),
                     persistenceIdColumnName: "persistence_id",
                     sequenceNrColumnName: "sequence_nr",
                     payloadColumnName: "payload",
@@ -39,9 +39,9 @@ namespace Akka.Persistence.Sqlite.Journal
                     tagsColumnName: "tags",
                     orderingColumnName: "ordering",
                     serializerIdColumnName: "serializer_id",
-                    timeout: config.GetTimeSpan("connection-timeout"),
-                    defaultSerializer: config.GetString("serializer"),
-                    useSequentialAccess: config.GetBoolean("use-sequential-access")))
+                    timeout: config.GetTimeSpan("connection-timeout", null),
+                    defaultSerializer: config.GetString("serializer", null),
+                    useSequentialAccess: config.GetBoolean("use-sequential-access", false)))
         {
         }
 

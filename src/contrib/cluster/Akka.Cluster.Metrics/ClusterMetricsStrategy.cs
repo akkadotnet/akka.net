@@ -1,12 +1,13 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="ClusterMetricsStrategy.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMetricsStrategy.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
@@ -18,9 +19,9 @@ namespace Akka.Cluster.Metrics
     {
         public ClusterMetricsStrategy(Config config)
             : base(
-                maxNrOfRetries: config.GetInt("maxNrOfRetries"), 
-                withinTimeMilliseconds: (int)config.GetTimeSpan("withinTimeRange").TotalMilliseconds, 
-                loggingEnabled: config.GetBoolean("loggingEnabled"),
+                maxNrOfRetries: config.GetInt("maxNrOfRetries", 0), 
+                withinTimeMilliseconds: (int)config.GetTimeSpan("withinTimeRange", null).TotalMilliseconds, 
+                loggingEnabled: config.GetBoolean("loggingEnabled", false),
                 localOnlyDecider: MetricsDecider)
         {
         }

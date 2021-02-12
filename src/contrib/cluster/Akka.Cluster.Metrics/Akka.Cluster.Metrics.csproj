@@ -4,20 +4,13 @@
     <PropertyGroup>
         <AssemblyTitle>Akka.Cluster.Metrics</AssemblyTitle>
         <Description>
-            The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes 
+            The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes
             and to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
         </Description>
-        <VersionSuffix>beta</VersionSuffix>
         <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
-
-    <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-        <Reference Include="System.Core" />
-        <Reference Include="System.Xml.Linq" />
-        <Reference Include="System.Data.DataSetExtensions" />
-    </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />

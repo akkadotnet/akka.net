@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -448,9 +448,9 @@ namespace Akka.DistributedData
                 count += load.Data.Count;
                 foreach (var entry in load.Data)
                 {
-                    var envelope = entry.Value.Data;
+                    var envelope = entry.Value.DataEnvelope;
                     var newEnvelope = Write(entry.Key, envelope);
-                    if (!ReferenceEquals(newEnvelope.Data, envelope.Data))
+                    if (!ReferenceEquals(newEnvelope, envelope))
                     {
                         _durableStore.Tell(new Store(entry.Key, new DurableDataEnvelope(newEnvelope), null));
                     }
@@ -694,34 +694,29 @@ namespace Akka.DistributedData
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
-            var envelope = GetData(key);
-            if (envelope != null)
+            switch(GetData(key))
             {
-                if (envelope.Equals(writeEnvelope))
-                {
+                case DataEnvelope envelope when envelope.Equals(writeEnvelope):
                     return envelope;
-                }
-                if (envelope.Data is DeletedData) return DeletedEnvelope; // already deleted
-
-                try
-                {
-                   
-                    // DataEnvelope will mergeDelta when needed
-                    var merged = envelope.Merge(writeEnvelope).AddSeen(_selfAddress);
-
-                    return SetData(key, merged);
-                }
-                catch (ArgumentException e)
-                {
-                    _log.Warning("Couldn't merge [{0}] due to: {1}", key, e.Message);
-                    return null;
-                }
-            }
-            else
-            {
-                // no existing data for the key
-                if (writeEnvelope.Data is IReplicatedDelta withDelta)
-                    writeEnvelope = writeEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
+                case DataEnvelope envelope when envelope.Data is DeletedData:
+                    // already deleted
+                    return DeletedEnvelope;
+                case DataEnvelope envelope:
+                    try
+                    {
+                        // DataEnvelope will mergeDelta when needed
+                        var merged = envelope.Merge(writeEnvelope).AddSeen(_selfAddress);
+                        return SetData(key, merged);
+                    }
+                    catch (ArgumentException e)
+                    {
+                        _log.Warning("Couldn't merge [{0}] due to: {1}", key, e.Message);
+                        return null;
+                    }
+                default:
+                    // no existing data for the key
+                    if (writeEnvelope.Data is IReplicatedDelta withDelta)
+                        writeEnvelope = writeEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
 
                 return SetData(key, writeEnvelope.AddSeen(_selfAddress));
             }
@@ -836,9 +831,7 @@ namespace Akka.DistributedData
         {
             if (Equals(envelope.Data, DeletedData.Instance)) return DeletedDigest;
 
-            // TODO: need to serialize the content of the envelope, but Hyperion doesn't produce stable output
-            // Workaround: using the string representation of the envelope for now
-            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions().ToString());
+            var bytes = _serializer.ToBinary(envelope.WithoutDeltaVersions());
             var serialized = SHA1.Create().ComputeHash(bytes);
             return ByteString.CopyFrom(serialized);
         }

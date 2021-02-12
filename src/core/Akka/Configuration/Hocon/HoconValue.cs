@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconValue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,6 +72,11 @@ namespace Akka.Configuration.Hocon
         /// serving exclusively to skip rendering such values in <see cref="HoconObject.ToString()"/>
         /// </summary>
         internal bool AdoptedFromFallback { get; private set; }
+
+        public Config ToConfig()
+        {
+            return new Config(new HoconRoot(this, Enumerable.Empty<HoconSubstitution>()));
+        }
 
         /// <summary>
         /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.
@@ -169,7 +174,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>The element at the given key.</returns>
         public HoconValue GetChildObject(string key)
         {
-            return GetObject().GetKey(key);
+            return GetObject()?.GetKey(key);
         }
 
         /// <summary>
@@ -343,9 +348,9 @@ namespace Akka.Configuration.Hocon
         /// <returns>A list of values represented by this <see cref="HoconValue"/>.</returns>
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in Values
-                where arr.IsArray()
-                from e in arr.GetArray()
+            IEnumerable<HoconValue> x = from element in Values
+                where element.IsArray()
+                from e in element.GetArray()
                 select e;
 
             return x.ToList();
@@ -359,7 +364,7 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public bool IsArray()
         {
-            return GetArray() != null;
+            return GetArray().Count != 0;
         }
 
         /// <summary>
@@ -501,14 +506,13 @@ namespace Akka.Configuration.Hocon
         {
             return ToString(0);
         }
-        
+
         /// <summary>
         /// Returns a HOCON string representation of this <see cref="HoconValue"/>.
         /// </summary>
         /// <param name="indent">The number of spaces to indent the string.</param>
-        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
         /// <returns>A HOCON string representation of this <see cref="HoconValue"/>.</returns>
-        internal string ToString(int indent, bool includeFallback)
+        public virtual string ToString(int indent)
         {
             if (IsString())
             {
@@ -519,12 +523,12 @@ namespace Akka.Configuration.Hocon
             {
                 if (indent == 0)
                 {
-                    return GetObject().ToString(indent + 1, includeFallback);
+                    return GetObject().ToString(indent + 1);
                 }
                 else
                 {
                     var i = new string(' ', indent * 2);
-                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1, includeFallback));
+                    return string.Format("{{\r\n{1}{0}}}", i, GetObject().ToString(indent + 1));
                 }
             }
             if (IsArray())
@@ -532,17 +536,6 @@ namespace Akka.Configuration.Hocon
                 return string.Format("[{0}]", string.Join(",", GetArray().Select(e => e.ToString(indent + 1))));
             }
             return "<<unknown value>>";
-        }
-
-
-        /// <summary>
-        /// Returns a HOCON string representation of this <see cref="HoconValue"/>.
-        /// </summary>
-        /// <param name="indent">The number of spaces to indent the string.</param>
-        /// <returns>A HOCON string representation of this <see cref="HoconValue"/>.</returns>
-        public virtual string ToString(int indent)
-        {
-            return ToString(indent, false);
         }
 
         private string QuoteIfNeeded(string text)

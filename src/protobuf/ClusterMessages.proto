@@ -30,6 +30,7 @@ import "ContainerFormats.proto";
 message Join {
   UniqueAddress node = 1;
   repeated string roles = 2;
+  optional string appVersion = 3;
 }
 
 // Welcome, reply to Join
@@ -93,6 +94,7 @@ message Gossip {
   repeated Member members = 4;
   GossipOverview overview = 5;
   VectorClock version = 6;
+  repeated string allAppVersions = 8;
 }
 
 // Gossip Overview
@@ -136,6 +138,7 @@ message Member {
   int32 upNumber = 2;
   MemberStatus status = 3;
   repeated int32 rolesIndexes = 4 [packed = true];
+  optional int32 appVersionIndex = 5;
 }
 
 // Vector Clock

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -141,10 +141,12 @@ namespace Akka.Cluster
             /// </summary>
             /// <param name="node">the node that wants to join the cluster</param>
             /// <param name="roles">TBD</param>
-            public Join(UniqueAddress node, ImmutableHashSet<string> roles)
+            /// <param name="appVersion">Application version</param>
+            public Join(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
             {
                 _node = node;
                 _roles = roles;
+                AppVersion = appVersion ?? Util.AppVersion.Zero;
             }
 
             /// <summary>
@@ -156,6 +158,8 @@ namespace Akka.Cluster
             /// </summary>
             public ImmutableHashSet<string> Roles { get { return _roles; } }
 
+            public AppVersion AppVersion { get; }
+
             /// <inheritdoc/>
             public override bool Equals(object obj)
             {
@@ -166,7 +170,7 @@ namespace Akka.Cluster
 
             private bool Equals(Join other)
             {
-                return _node.Equals(other._node) && !_roles.Except(other._roles).Any();
+                return _node.Equals(other._node) && !_roles.Except(other._roles).Any() && AppVersion.Equals(other.AppVersion);
             }
 
             /// <inheritdoc/>
@@ -765,7 +769,7 @@ namespace Akka.Cluster
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Used to publish Gossip and Membership changes inside Akka.Cluster.
         /// </summary>
         internal sealed class PublishChanges : IPublishMessage
@@ -992,6 +996,8 @@ namespace Akka.Cluster
         {
             return node.Address + "-" + node.Uid;
         }
+
+        private bool _isCurrentlyLeader;
 
         // note that self is not initially member,
         // and the SendGossip is not versioned for this 'Node' yet
@@ -1368,7 +1374,7 @@ namespace Akka.Cluster
             }
             else if (message is InternalClusterAction.Join @join)
             {
-                Joining(@join.Node, @join.Roles);
+                Joining(@join.Node, @join.Roles, @join.AppVersion);
             }
             else if (message is ClusterUserAction.Down down)
             {
@@ -1516,7 +1522,7 @@ namespace Akka.Cluster
                 if (address.Equals(_cluster.SelfAddress))
                 {
                     BecomeInitialized();
-                    Joining(SelfUniqueAddress, _cluster.SelfRoles);
+                    Joining(SelfUniqueAddress, _cluster.SelfRoles, _cluster.Settings.AppVersion);
                 }
                 else
                 {
@@ -1525,7 +1531,7 @@ namespace Akka.Cluster
                         : Deadline.Now + _cluster.Settings.RetryUnsuccessfulJoinAfter;
 
                     Context.Become(m => TryingToJoin(m, address, joinDeadline));
-                    ClusterCore(address).Tell(new InternalClusterAction.Join(_cluster.SelfUniqueAddress, _cluster.SelfRoles));
+                    ClusterCore(address).Tell(new InternalClusterAction.Join(_cluster.SelfUniqueAddress, _cluster.SelfRoles, _cluster.Settings.AppVersion));
                 }
             }
         }
@@ -1555,7 +1561,7 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="node">TBD</param>
         /// <param name="roles">TBD</param>
-        public void Joining(UniqueAddress node, ImmutableHashSet<string> roles)
+        public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             var selfStatus = _latestGossip.GetMember(SelfUniqueAddress).Status;
             if (!node.Address.Protocol.Equals(_cluster.SelfAddress.Protocol))
@@ -1615,8 +1621,8 @@ namespace Akka.Cluster
                     // add joining node as Joining
                     // add self in case someone else joins before self has joined (Set discards duplicates)
                     var newMembers = localMembers
-                            .Add(Member.Create(node, roles))
-                            .Add(Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles));
+                            .Add(Member.Create(node, roles, appVersion))
+                            .Add(Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles, _cluster.Settings.AppVersion));
                     var newGossip = _latestGossip.Copy(members: newMembers);
 
                     UpdateLatestGossip(newGossip);
@@ -1625,7 +1631,7 @@ namespace Akka.Cluster
 
                     if (node.Equals(SelfUniqueAddress))
                     {
-                        _cluster.LogInfo("Node [{0}] is JOINING itself (with roles [{1}]) and forming a new cluster", node.Address, string.Join(",", roles));
+                        _cluster.LogInfo("Node [{0}] is JOINING itself (with roles [{1}], version [{2}]) and forming a new cluster", node.Address, string.Join(",", roles), appVersion);
 
                         if (localMembers.IsEmpty)
                         {
@@ -1635,7 +1641,7 @@ namespace Akka.Cluster
                     }
                     else
                     {
-                        _cluster.LogInfo("Node [{0}] is JOINING, roles [{1}]", node.Address, string.Join(",", roles));
+                        _cluster.LogInfo("Node [{0}] is JOINING, roles [{1}], version [{2}]", node.Address, string.Join(",", roles), appVersion);
                         Sender.Tell(new InternalClusterAction.Welcome(SelfUniqueAddress, _latestGossip));
                     }
 
@@ -1741,6 +1747,17 @@ namespace Akka.Cluster
                 UpdateLatestGossip(newGossip);
 
                 Publish(_latestGossip);
+
+                if (address == _cluster.SelfAddress)
+                {
+                    // spread the word quickly, without waiting for next gossip tick
+                    SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
+                }
+                else
+                {
+                    // try to gossip immediately to downed node, as a STONITH signal
+                    GossipTo(member.UniqueAddress);
+                }
             }
             else if (member != null)
             {
@@ -1988,6 +2005,12 @@ namespace Akka.Cluster
                 _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
             }
 
+            if (selfStatus == MemberStatus.Down && localGossip.GetMember(SelfUniqueAddress).Status != MemberStatus.Down)
+            {
+                _log.Warning("Received gossip where this member has been downed, from [{0}]", from.Address);
+                ShutdownSelfWhenDown();
+            }
+
             if (talkback)
             {
                 // send back gossip to sender() when sender() had different view, i.e. merge, or sender() had
@@ -2026,7 +2049,8 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsGossipSpeedupNeeded()
         {
-            return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
+            return _latestGossip.Members.Any(m => m.Status == MemberStatus.Down) ||
+                _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
         }
 
         private void SendGossipRandom(int n)
@@ -2125,6 +2149,11 @@ namespace Akka.Cluster
             if (_latestGossip.IsLeader(SelfUniqueAddress, SelfUniqueAddress))
             {
                 // only run the leader actions if we are the LEADER
+                if (!_isCurrentlyLeader)
+                {
+                    _cluster.LogInfo("is the new leader among reachable nodes (more leaders may exist)");
+                    _isCurrentlyLeader = true;
+                }
                 const int firstNotice = 20;
                 const int periodicNotice = 60;
                 if (_latestGossip.Convergence(SelfUniqueAddress, _exitingConfirmed))
@@ -2153,6 +2182,11 @@ namespace Akka.Cluster
                                     _latestGossip.SeenByNode(m.UniqueAddress)))));
                     }
                 }
+            }
+            else if (_isCurrentlyLeader)
+            {
+                _cluster.LogInfo("is no longer leader");
+                _isCurrentlyLeader = false;
             }
 
             CleanupExitingConfirmed();
@@ -2525,8 +2559,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         public bool ValidNodeForGossip(UniqueAddress node)
         {
-            return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
-                    _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(node);
+            return !node.Equals(SelfUniqueAddress) && _latestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, node);
         }
 
         /// <summary>

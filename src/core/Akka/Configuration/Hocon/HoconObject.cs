@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconObject.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -142,26 +142,6 @@ namespace Akka.Configuration.Hocon
         /// <summary>
         /// Returns a HOCON string representation of this element.
         /// </summary>
-        /// <param name="indent">The number of spaces to indent the string.</param>
-        /// <param name="includeFallback">if true returns string with current config combined with fallback key-values else only current config key-values</param>
-        /// <returns>A HOCON string representation of this element.</returns>
-        internal string ToString(int indent, bool includeFallback)
-        {
-            var i = new string(' ', indent *2);
-            var sb = new StringBuilder();
-            foreach (var kvp in Items)
-            {
-                if (kvp.Value.AdoptedFromFallback && !includeFallback) continue;
-                string key = QuoteIfNeeded(kvp.Key);
-                sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent, includeFallback));
-            }
-            return sb.ToString();
-        }
-        
-        
-        /// <summary>
-        /// Returns a HOCON string representation of this element.
-        /// </summary>
         /// <returns>A HOCON string representation of this element.</returns>
         public override string ToString()
         {
@@ -175,7 +155,14 @@ namespace Akka.Configuration.Hocon
         /// <returns>A HOCON string representation of this element.</returns>
         public string ToString(int indent)
         {
-            return ToString(indent, false);
+            var i = new string(' ', indent*2);
+            var sb = new StringBuilder();
+            foreach (var kvp in Items)
+            {
+                string key = QuoteIfNeeded(kvp.Key);
+                sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
+            }
+            return sb.ToString();
         }
 
         private string QuoteIfNeeded(string text)
@@ -198,6 +185,7 @@ namespace Akka.Configuration.Hocon
         {
             var thisItems = Items;
             var otherItems = other.Items;
+            var modified = new List<KeyValuePair<string, HoconValue>>();
 
             foreach (var otherItem in otherItems)
             {
@@ -207,14 +195,27 @@ namespace Akka.Configuration.Hocon
                 {
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
-                        thisItem.GetObject().Merge(otherItem.Value.GetObject());
+                    {
+                        var newObject = thisItem.GetObject().MergeImmutable(otherItem.Value.GetObject());
+                        var value = new HoconValue();
+                        value.Values.Add(newObject);
+                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, value));
+                    }
+                    else
+                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
                 else
                 {
                     //other key was not present in this object, just copy it over
-                    Items.Add(otherItem.Key, otherItem.Value);
+                    modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
             }
+
+            if (modified.Count == 0)
+                return;
+
+            foreach(var kvp in modified)
+                Items[kvp.Key] = kvp.Value;
         }
 
         /// <summary>
@@ -240,6 +241,8 @@ namespace Akka.Configuration.Hocon
                         mergedValue.AppendValue(mergedObject);
                         thisItems[otherItem.Key] = mergedValue;
                     }
+                    else
+                        thisItems[otherItem.Key] = otherItem.Value;
                 }
                 else
                 {

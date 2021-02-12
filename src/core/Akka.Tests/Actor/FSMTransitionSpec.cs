@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSMTransitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -96,13 +96,10 @@ namespace Akka.Tests.Actor
             var forward = Sys.ActorOf(Props.Create(() => new Forwarder(TestActor)));
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
-            Within(1.Seconds(), () =>
-            {
-                fsm.Tell(new SubscribeTransitionCallBack(forward));
-                ExpectMsg(new CurrentState<int>(fsm, 0));
-                fsm.Tell("stay");
-                ExpectNoMsg(500.Milliseconds());
-            });
+            fsm.Tell(new SubscribeTransitionCallBack(forward));
+            ExpectMsg(new CurrentState<int>(fsm, 0));
+            fsm.Tell("stay");
+            ExpectNoMsg(500.Milliseconds());
         }
 
         [Fact]

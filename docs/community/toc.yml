@@ -1,3 +1,5 @@
+- name: What's New in Akka.NET?
+  href: whats-new/toc.yml
 - name: Building Akka.NET
   href: building-akka-net.md
 - name: Getting Access to Nightly Akka.NET Builds

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Option.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,10 +16,10 @@ namespace Akka.Util
     /// Useful where distinguishing between null (or zero, or false) and uninitialized is significant.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public struct Option<T>
+    public readonly struct Option<T>
     {
         /// <summary>
-        /// TBD
+        /// None.
         /// </summary>
         public static readonly Option<T> None = new Option<T>();
 
@@ -30,13 +30,15 @@ namespace Akka.Util
         public Option(T value)
         {
             Value = value;
-            HasValue = true;
+            HasValue = value != null;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         public bool HasValue { get; }
+
+        public bool IsEmpty => !HasValue;
 
         /// <summary>
         /// TBD
@@ -66,16 +68,28 @@ namespace Akka.Util
             return selector(Value);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Unwraps the option value and returns it without converting it into an option.
+        /// </summary>
+        /// <typeparam name="TNew">The output type.</typeparam>
+        /// <param name="mapper">The mapping method.</param>
+        public Option<TNew> FlatSelect<TNew>(Func<T, Option<TNew>> mapper)
+        {
+            if (!HasValue)
+                return Option<TNew>.None;
+
+            return mapper(Value);
+        }
+
         public bool Equals(Option<T> other)
             => HasValue == other.HasValue && EqualityComparer<T>.Default.Equals(Value, other.Value);
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
+            if (obj is null)
                 return false;
-            return obj is Option<T> && Equals((Option<T>)obj);
+            return obj is Option<T> opt && Equals(opt);
         }
         
         /// <inheritdoc/>
@@ -98,6 +112,16 @@ namespace Akka.Util
         {
             if (HasValue)
                 action(Value);
+        }
+
+        public static bool operator ==(Option<T> left, Option<T> right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Option<T> left, Option<T> right)
+        {
+            return !(left == right);
         }
     }
 }

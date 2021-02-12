@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCellKeepingSynchronizationContext.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -39,17 +39,13 @@ namespace Akka.TestKit
         /// <param name="state">TBD</param>
         public override void Post(SendOrPostCallback d, object state)
         {
-#if UNSAFE_THREADING
-            ThreadPool.UnsafeQueueUserWorkItem(_ =>
-#else
             ThreadPool.QueueUserWorkItem(_ =>
-#endif
             {
                 var oldCell = InternalCurrentActorCellKeeper.Current;
                 var oldContext = Current;
                 SetSynchronizationContext(this);
                 InternalCurrentActorCellKeeper.Current = _cell;
-                
+
                 try
                 {
                     d(state);
@@ -85,4 +81,4 @@ namespace Akka.TestKit
             tcs.Task.Wait();
         }
     }
-} 
+}

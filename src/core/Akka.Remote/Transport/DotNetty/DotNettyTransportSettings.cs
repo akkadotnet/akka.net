@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransportSettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -19,14 +20,17 @@ namespace Akka.Remote.Transport.DotNetty
 {
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Defines the settings for the <see cref="DotNettyTransport"/>.
     /// </summary>
     internal sealed class DotNettyTransportSettings
     {
         public static DotNettyTransportSettings Create(ActorSystem system)
         {
-            return Create(system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp"));
+            var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.dot-netty.tcp");
+            return Create(config);
         }
 
         /// <summary>
@@ -52,10 +56,11 @@ namespace Akka.Remote.Transport.DotNetty
 
         public static DotNettyTransportSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty HOCON config was not found (default path: `akka.remote.dot-netty`)");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>();
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
-            var host = config.GetString("hostname");
+            var host = config.GetString("hostname", null);
             if (string.IsNullOrEmpty(host)) host = IPAddress.Any.ToString();
             var publicHost = config.GetString("public-hostname", null);
             var publicPort = config.GetInt("public-port", 0);
@@ -81,7 +86,7 @@ namespace Akka.Remote.Transport.DotNetty
                 publicPort: publicPort > 0 ? publicPort : (int?)null,
                 serverSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 clientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
-                maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size")) ?? 128000,
+                maxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
                 ssl: config.HasPath("ssl") ? SslSettings.Create(config.GetConfig("ssl")) : SslSettings.Empty,
                 dnsUseIpv6: config.GetBoolean("dns-use-ipv6", false),
                 tcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
@@ -89,12 +94,12 @@ namespace Akka.Remote.Transport.DotNetty
                 tcpNoDelay: config.GetBoolean("tcp-nodelay", true),
                 backlog: config.GetInt("backlog", 4096),
                 enforceIpFamily: RuntimeDetector.IsMono || config.GetBoolean("enforce-ip-family", false),
-                receiveBufferSize: ToNullableInt(config.GetByteSize("receive-buffer-size") ?? 256000),
-                sendBufferSize: ToNullableInt(config.GetByteSize("send-buffer-size") ?? 256000),
-                writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark")),
-                writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark")),
+                receiveBufferSize: ToNullableInt(config.GetByteSize("receive-buffer-size", null) ?? 256000),
+                sendBufferSize: ToNullableInt(config.GetByteSize("send-buffer-size", null) ?? 256000),
+                writeBufferHighWaterMark: ToNullableInt(config.GetByteSize("write-buffer-high-water-mark", null)),
+                writeBufferLowWaterMark: ToNullableInt(config.GetByteSize("write-buffer-low-water-mark", null)),
                 backwardsCompatibilityModeEnabled: config.GetBoolean("enable-backwards-compatibility", false),
-                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport"),
+                logTransport: config.HasPath("log-transport") && config.GetBoolean("log-transport", false),
                 byteOrder: order,
                 enableBufferPooling: config.GetBoolean("enable-pooling", true),
                 batchWriterSettings: batchWriterSettings);
@@ -104,16 +109,17 @@ namespace Akka.Remote.Transport.DotNetty
 
         private static int ComputeWorkerPoolSize(Config config)
         {
-            if (config == null) return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
+            if (config.IsNullOrEmpty())
+                return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
 
             return ThreadPoolConfig.ScaledPoolSize(
-                floor: config.GetInt("pool-size-min"),
-                scalar: config.GetDouble("pool-size-factor"),
-                ceiling: config.GetInt("pool-size-max"));
+                floor: config.GetInt("pool-size-min", 0),
+                scalar: config.GetDouble("pool-size-factor", 0),
+                ceiling: config.GetInt("pool-size-max", 0));
         }
 
         /// <summary>
-        /// Transport mode used by underlying socket channel. 
+        /// Transport mode used by underlying socket channel.
         /// Currently only TCP is supported.
         /// </summary>
         public readonly TransportMode TransportMode;
@@ -126,7 +132,7 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool EnableSsl;
 
         /// <summary>
-        /// Sets a connection timeout for all outbound connections 
+        /// Sets a connection timeout for all outbound connections
         /// i.e. how long a connect may take until it is timed out.
         /// </summary>
         public readonly TimeSpan ConnectTimeout;
@@ -163,7 +169,7 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly SslSettings Ssl;
 
         /// <summary>
-        /// If set to true, we will use IPv6 addresses upon DNS resolution for 
+        /// If set to true, we will use IPv6 addresses upon DNS resolution for
         /// host names. Otherwise IPv4 will be used.
         /// </summary>
         public readonly bool DnsUseIpv6;
@@ -185,8 +191,8 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool TcpNoDelay;
 
         /// <summary>
-        /// If set to true, we will enforce usage of IPv4 or IPv6 addresses upon DNS 
-        /// resolution for host names. If true, we will use IPv6 enforcement. Otherwise, 
+        /// If set to true, we will enforce usage of IPv4 or IPv6 addresses upon DNS
+        /// resolution for host names. If true, we will use IPv6 enforcement. Otherwise,
         /// we will use IPv4.
         /// </summary>
         public readonly bool EnforceIpFamily;
@@ -214,7 +220,7 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool BackwardsCompatibilityModeEnabled;
 
         /// <summary>
-        /// When set to true, it will enable logging of DotNetty user events 
+        /// When set to true, it will enable logging of DotNetty user events
         /// and message frames.
         /// </summary>
         public readonly bool LogTransport;
@@ -241,7 +247,7 @@ namespace Akka.Remote.Transport.DotNetty
         public DotNettyTransportSettings(TransportMode transportMode, bool enableSsl, TimeSpan connectTimeout, string hostname, string publicHostname,
             int port, int? publicPort, int serverSocketWorkerPoolSize, int clientSocketWorkerPoolSize, int maxFrameSize, SslSettings ssl,
             bool dnsUseIpv6, bool tcpReuseAddr, bool tcpKeepAlive, bool tcpNoDelay, int backlog, bool enforceIpFamily,
-            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder, 
+            int? receiveBufferSize, int? sendBufferSize, int? writeBufferHighWaterMark, int? writeBufferLowWaterMark, bool backwardsCompatibilityModeEnabled, bool logTransport, ByteOrder byteOrder,
             bool enableBufferPooling, BatchWriterSettings batchWriterSettings)
         {
             if (maxFrameSize < 32000) throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(maxFrameSize));
@@ -285,26 +291,25 @@ namespace Akka.Remote.Transport.DotNetty
         public static readonly SslSettings Empty = new SslSettings();
         public static SslSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
-
-            
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.Ssl`)");
 
             if (config.GetBoolean("certificate.use-thumprint-over-file", false))
             {
-                return new SslSettings(config.GetString("certificate.thumbprint"),
-                    config.GetString("certificate.store-name"),
-                    ParseStoreLocationName(config.GetString("certificate.store-location")),
+                return new SslSettings(config.GetString("certificate.thumbprint", null),
+                    config.GetString("certificate.store-name", null),
+                    ParseStoreLocationName(config.GetString("certificate.store-location", null)),
                         config.GetBoolean("suppress-validation", false));
 
             }
             else
             {
-                var flagsRaw = config.GetStringList("certificate.flags");
+                var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
                 var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
 
                 return new SslSettings(
-                    certificatePath: config.GetString("certificate.path"),
-                    certificatePassword: config.GetString("certificate.password"),
+                    certificatePath: config.GetString("certificate.path", null),
+                    certificatePassword: config.GetString("certificate.password", null),
                     flags: flags,
                     suppressValidation: config.GetBoolean("suppress-validation", false));
             }
@@ -353,13 +358,10 @@ namespace Akka.Remote.Transport.DotNetty
 
         public SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
         {
-
-            var store = new X509Store(storeName, storeLocation);
-            try
+            using (var store = new X509Store(storeName, storeLocation))
             {
                 store.Open(OpenFlags.ReadOnly);
 
-                
                 var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
                 if (find.Count == 0)
                 {
@@ -370,17 +372,8 @@ namespace Akka.Remote.Transport.DotNetty
                 Certificate = find[0];
                 SuppressValidation = suppressValidation;
             }
-            finally
-            {
-#if  NET45 //netstandard1.6 doesn't have close on store.
-                store.Close();
-#else
-#endif
-
-            }
-
         }
-            
+
         public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
         {
             if (string.IsNullOrEmpty(certificatePath))

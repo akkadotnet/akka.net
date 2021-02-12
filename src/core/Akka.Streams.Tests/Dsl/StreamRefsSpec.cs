@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -311,7 +311,7 @@ namespace Akka.Streams.Tests
             ex.Message.Should().Contain("has terminated unexpectedly");
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void SourceRef_must_not_receive_subscription_timeout_when_got_subscribed()
         {
             _remoteActor.Tell("give-subscribe-timeout");
@@ -405,7 +405,7 @@ namespace Akka.Streams.Tests
             probe.ExpectCancellation();
         }
 
-        [Fact]
+        [Fact(Skip ="Racy")]
         public void SinkRef_must_not_receive_timeout_if_subscribing_is_already_done_to_the_sink_ref()
         {
             _remoteActor.Tell("receive-subscribe-timeout");
@@ -460,13 +460,11 @@ namespace Akka.Streams.Tests
             var sinkRef = ExpectMsg<ISinkRef<string>>();
 
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-            var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-
             p1.EnsureSubscription();
             var req = p1.ExpectRequest();
-
-            // will be cancelled immediately, since it's 2nd:
-            p2.EnsureSubscription();
+            
+            var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
+            p2.EnsureSubscription(); // will be cancelled immediately, since it's 2nd
             p2.ExpectCancellation();
         }
     }

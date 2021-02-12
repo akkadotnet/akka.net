@@ -1,4 +1,11 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="AvoidPoisonPill.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Persistence;
 using System;
 
@@ -6,6 +13,7 @@ namespace DocsExamples.Persistence.PersistentActor
 {
     public static class AvoidPoisonPill
     {
+        #region AvoidPoisonPill1
         public class Shutdown {}
 
         public class SafePersistentActor : UntypedPersistentActor
@@ -33,12 +41,14 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
 
         public static void MainApp()
         {
             var system = ActorSystem.Create("AvoidPoisonPill");
             var persistentActor = system.ActorOf<SafePersistentActor>();
 
+            #region AvoidPoisonPill2
             // UN-SAFE, due to PersistentActor's command stashing:
             persistentActor.Tell("a");
             persistentActor.Tell("b");
@@ -66,6 +76,7 @@ namespace DocsExamples.Persistence.PersistentActor
             //   # unstashing;                            internal-stash = []
             // Shutdown
             // -- stop --
+            #endregion
         }
     }
 }

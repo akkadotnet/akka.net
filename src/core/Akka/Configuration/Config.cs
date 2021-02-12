@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Config.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Configuration.Hocon;
 using Akka.Util.Internal;
 
@@ -37,6 +38,7 @@ namespace Akka.Configuration
             if (root.Value == null)
                 throw new ArgumentNullException(nameof(root), "The root value cannot be null.");
 
+            Value = root.Value;
             Root = root.Value;
             Substitutions = root.Substitutions;
         }
@@ -52,6 +54,7 @@ namespace Akka.Configuration
             if (source == null)
                 throw new ArgumentNullException(nameof(source), "The source configuration cannot be null.");
 
+            Value = source.Value;
             Root = source.Root;
             Fallback = fallback;
         }
@@ -68,6 +71,8 @@ namespace Akka.Configuration
         {
             get { return Root == null || Root.IsEmpty; }
         }
+
+        private HoconValue Value { get; set; }
 
         /// <summary>
         /// The root node of this configuration section
@@ -90,6 +95,7 @@ namespace Akka.Configuration
             {
                 Fallback = Fallback != null ? Fallback.Copy(fallback) : fallback,
                 Root = Root,
+                Value = Value,
                 Substitutions = Substitutions
             };
         }
@@ -136,6 +142,20 @@ namespace Akka.Configuration
         {
             HoconValue value = GetNode(path);
             if (value == null) return null;
+            return value.GetByteSize();
+        }
+
+        /// <summary>
+        /// Retrieves a long value, optionally suffixed with a 'b', from the specified path in the configuration.
+        /// </summary>
+        /// <param name="path">The path that contains the value to retrieve.</param>
+        /// <param name="def">Default return value if none provided.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
+        /// <returns>The long value defined in the specified path.</returns>
+        public virtual long? GetByteSize(string path, long? def = null)
+        {
+            HoconValue value = GetNode(path);
+            if (value == null) return def;
             return value.GetByteSize();
         }
 
@@ -323,12 +343,27 @@ namespace Akka.Configuration
         /// Retrieves a list of string values from the specified path in the configuration.
         /// </summary>
         /// <param name="path">The path that contains the values to retrieve.</param>
+        /// <param name="strings"></param>
         /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
         /// <returns>The list of string values defined in the specified path.</returns>
         public virtual IList<string> GetStringList(string path)
         {
             HoconValue value = GetNode(path);
             if (value == null) return new List<string>();
+            return value.GetStringList();
+        }
+
+        /// <summary>
+        /// Retrieves a list of string values from the specified path in the configuration.
+        /// </summary>
+        /// <param name="path">The path that contains the values to retrieve.</param>
+        /// <param name="defaultPaths">Default paths that will be returned to the user.</param>
+        /// <exception cref="InvalidOperationException">This exception is thrown if the current node is undefined.</exception>
+        /// <returns>The list of string values defined in the specified path.</returns>
+        public virtual IList<string> GetStringList(string path, string[] defaultPaths)
+        {
+            HoconValue value = GetNode(path);
+            if (value == null) return defaultPaths;
             return value.GetStringList();
         }
 
@@ -394,10 +429,10 @@ namespace Akka.Configuration
         /// <returns>A string containing the current configuration.</returns>
         public override string ToString()
         {
-            if (Root == null)
+            if (Value == null)
                 return "";
 
-            return Root.ToString();
+            return Value.ToString();
         }
 
         /// <summary>
@@ -409,23 +444,7 @@ namespace Akka.Configuration
         {
             if (includeFallback == false)
                 return ToString();
-
-            Config current = this;
-
-            if (current.Fallback == null)
-                return current.ToString();
-
-            Config clone = Copy();
-
-            while (current.Fallback != null)
-            {
-                var mergedValue = clone.Root.GetObject().MergeImmutable(current.Fallback.Root.GetObject());
-                var newValue = new HoconValue(new List<IHoconElement> { mergedValue }, !includeFallback);
-                clone.Root = newValue;
-                current = current.Fallback;
-            }
-
-            return clone.Root.ToString(0, includeFallback);
+            return Root.ToString();
         }
 
         /// <summary>
@@ -440,7 +459,13 @@ namespace Akka.Configuration
                 throw new ArgumentException("Config can not have itself as fallback", nameof(fallback));
             if (fallback == null)
                 return this;
-            var mergedRoot = Root.GetObject().MergeImmutable(fallback.Root.GetObject());
+            if (IsEmpty)
+                return fallback;
+
+            if (Contains(fallback))
+                return this;
+
+            var mergedRoot = fallback.Root.GetObject().MergeImmutable(Root.GetObject());
             var newRoot = new HoconValue();
             newRoot.AppendValue(mergedRoot);
             var mergedConfig = Copy(fallback);
@@ -521,6 +546,42 @@ namespace Akka.Configuration
         /// A static "Empty" configuration we can use instead of <c>null</c> in some key areas.
         /// </summary>
         public static readonly Config Empty = ConfigurationFactory.Empty;
+
+        internal bool Contains(Config other)
+            => Contains(other.Root.GetObject().Items, "");
+
+        private bool Contains(Dictionary<string, HoconValue> other, string path)
+        {
+            foreach (var kvp in other)
+            {
+                var currentPath = path == "" ? kvp.Key : $"{path}.\"{kvp.Key}\"";
+                if (!HasPath(currentPath))
+                    return false;
+
+                var value = kvp.Value;
+                if (value.IsObject())
+                {
+                    if (!Contains(value.GetObject().Items, currentPath))
+                        return false;
+                }
+                else if (value.IsArray())
+                {
+                    var list = GetStringList(currentPath);
+                    foreach (var str in value.GetArray().Select(v => v.GetString()))
+                    {
+                        if (!list.Contains(str))
+                            return false;
+                    }
+                }
+                else
+                {
+                    if (value.GetString() != GetString(currentPath))
+                        return false;
+                }
+            }
+
+            return true;
+        }
     }
 
     /// <summary>
@@ -555,3 +616,4 @@ namespace Akka.Configuration
         }
     }
 }
+

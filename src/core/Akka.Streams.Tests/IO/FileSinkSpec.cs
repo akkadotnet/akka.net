@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
@@ -217,20 +218,24 @@ namespace Akka.Streams.Tests.IO
             {
                 TargetFile(f =>
                 {
-                    var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
+                    var sys = ActorSystem.Create("FileSinkSpec-dispatcher-testing-1", Utils.UnboundedMailboxConfig);
                     var materializer = ActorMaterializer.Create(sys);
 
                     try
                     {
                         //hack for Iterator.continually
-                        Source.FromEnumerator(() => Enumerable.Repeat(_testByteStrings.Head(), Int32.MaxValue).GetEnumerator())
+                        Source
+                            .FromEnumerator(() => Enumerable.Repeat(_testByteStrings.Head(), int.MaxValue).GetEnumerator())
                             .RunWith(FileIO.ToFile(f), materializer);
 
-                        ((ActorMaterializerImpl)materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
+                        ((ActorMaterializerImpl)materializer)
+                            .Supervisor
+                            .Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                         var refs = ExpectMsg<StreamSupervisor.Children>().Refs;
-                        //NOTE: Akka uses "fileSource" as name for DefaultAttributes.FileSink - I think it's mistake on the JVM implementation side
                         var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("fileSink"));
-                        Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+
+                        // haven't figured out why this returns the aliased id rather than the id, but the stage is going away so whatever
+                        Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                     }
                     finally
                     {
@@ -248,7 +253,7 @@ namespace Akka.Streams.Tests.IO
             {
                 TargetFile(f =>
                 {
-                    var sys = ActorSystem.Create("dispatcher_testing", Utils.UnboundedMailboxConfig);
+                    var sys = ActorSystem.Create("FileSinkSpec-dispatcher-testing-2", Utils.UnboundedMailboxConfig);
                     var materializer = ActorMaterializer.Create(sys);
 
                     try

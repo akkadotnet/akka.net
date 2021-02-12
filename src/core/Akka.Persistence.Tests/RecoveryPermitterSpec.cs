@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RecoveryPermitterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ namespace Akka.Persistence.Tests
             # snapshot store plugin is NOT defined, things should still work
             akka.persistence.snapshot-store.plugin = ""akka.persistence.no-snapshot-store""
             akka.persistence.snapshot-store.local.dir = ""target/snapshots-" + typeof(RecoveryPermitterSpec).FullName +
-                                                                               "/"))
+                                                                               @"/"""))
         {
             permitter = Persistence.Instance.Apply(Sys).RecoveryPermitter();
         }

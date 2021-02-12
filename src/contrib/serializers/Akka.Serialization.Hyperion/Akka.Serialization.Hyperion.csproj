@@ -3,7 +3,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Serialization.Hyperion</AssemblyTitle>
     <Description>Hyperion serializer for Akka.NET</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -13,10 +12,7 @@
     <PackageReference Include="Hyperion" Version="$(HyperionVersion)" />
     <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
-  
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
-  </PropertyGroup>
+
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>

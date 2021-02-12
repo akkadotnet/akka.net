@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventFilterApplier.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -296,15 +296,15 @@ namespace Akka.TestKit.Internal
                     {
                         var expectedNumberOfEvents = expectedOccurrences.Value;
                         if(actualNumberOfEvents < expectedNumberOfEvents)
-                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, string.Join(",", _filters));
+                            msg = string.Format("Timeout ({0}) while waiting for messages. Only received {1}/{2} messages that matched filter [{3}]", timeoutValue, actualNumberOfEvents, expectedNumberOfEvents, string.Join(",", _filters).Replace("{", "{{").Replace("}", "}}"));
                         else
                         {
                             var tooMany = actualNumberOfEvents - expectedNumberOfEvents;
-                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but received {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters));
+                            msg = string.Format("Received {0} {1} too many. Expected {2} {3} but received {4} that matched filter [{5}]", tooMany, GetMessageString(tooMany), expectedNumberOfEvents, GetMessageString(expectedNumberOfEvents), actualNumberOfEvents, string.Join(",", _filters).Replace("{", "{{").Replace("}", "}}"));
                         }
                     }
                     else
-                        msg = string.Format("Timeout ({0}) while waiting for messages that matched filter [{1}]", timeoutValue, _filters);
+                        msg = string.Format("Timeout ({0}) while waiting for messages that matched filter [{1}]", timeoutValue, string.Join(",", _filters).Replace("{", "{{").Replace("}", "}}"));
 
                     var assertionsProvider = system.HasExtension<TestKitAssertionsProvider>()
                         ? TestKitAssertionsExtension.For(system)
@@ -395,11 +395,20 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected bool AwaitDone(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
-            if(expectedOccurrences.HasValue)
+            if (expectedOccurrences.HasValue)
             {
                 var expected = expectedOccurrences.GetValueOrDefault();
-                _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
-                return matchedEventHandler.ReceivedCount == expected;
+                if (expected > 0)
+                {
+                    _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                    return matchedEventHandler.ReceivedCount == expected;
+                }
+                else
+                {
+                    // if expecting no events to arrive - assert that given condition will never match
+                    var foundEvent = _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount > 0, timeout);
+                    return foundEvent == false;
+                }
             }
             return true;
         }

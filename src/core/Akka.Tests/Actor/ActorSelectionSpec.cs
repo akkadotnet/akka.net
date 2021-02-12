@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelectionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -450,6 +450,41 @@ namespace Akka.Tests.Actor
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Sys.ActorSelection("/user/a/*/c/d/e").Tell(new Identify(8), probe.Ref);
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+        }
+
+        [Fact]
+        public void An_ActorSelection_must_identify_actors_with_double_wildcard_selection_correctly()
+        {
+            var creator = CreateTestProbe();
+            var top = Sys.ActorOf(Props, "a");
+            var b1 = top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3)).Result;
+            var b2 = top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3)).Result;
+            var b3 = top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3)).Result;
+            var c1 = b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3)).Result;
+            var c2 = b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3)).Result;
+            var d = c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3)).Result;
+
+            var probe = CreateTestProbe();
+
+            // grab everything below /user/a
+            Sys.ActorSelection("/user/a/**").Tell(new Identify(1), probe.Ref);
+            probe.ReceiveN(6)
+                .Cast<ActorIdentity>()
+                .Select(i => i.Subject)
+                .ShouldAllBeEquivalentTo(new[] { b1, b2, b3, c1, c2, d });
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+
+            // grab everything below /user/a/b2
+            Sys.ActorSelection("/user/a/b2/**").Tell(new Identify(2), probe.Ref);
+            probe.ReceiveN(3)
+                .Cast<ActorIdentity>()
+                .Select(i => i.Subject)
+                .ShouldAllBeEquivalentTo(new[] { c1, c2, d });
+            probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+
+            // nothing under /user/a/b2/c1/d
+            Sys.ActorSelection("/user/a/b2/c1/d/**").Tell(new Identify(3), probe.Ref);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
         }
 

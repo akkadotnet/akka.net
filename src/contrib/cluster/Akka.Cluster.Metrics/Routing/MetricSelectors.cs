@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="MetricSelectors.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="MetricSelectors.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
@@ -12,6 +12,7 @@ using Akka.Cluster.Metrics.Helpers;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Configuration;
 using Akka.Util;
+using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
@@ -37,6 +38,9 @@ namespace Akka.Cluster.Metrics
         /// <returns></returns>
         public static IMetricsSelector BuildFromConfig(Config config)
         {
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<IMetricsSelector>();
+
             var selectorTypeName = config.GetString("metrics-selector");
             switch (selectorTypeName)
             {

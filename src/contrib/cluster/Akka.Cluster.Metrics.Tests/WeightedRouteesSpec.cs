@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="WeightedRouteesSpec.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="WeightedRouteesSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -16,13 +16,15 @@ using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using Akka.Configuration;
 using Xunit;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Cluster.Metrics.Tests
 {
     public class WeightedRouteesSpec : AkkaSpec
     {
-        // TODO: Once Artery will be impleented, need to use "akka" value when enabled
+        // TODO: Once Artery will be implemented, need to use "akka" value when enabled
         // i.e. : RARP(system).provider.remoteSettings.Artery.Enabled ? "akka" : "akka.tcp"
         private const string Protocol = "akka.tcp";
         

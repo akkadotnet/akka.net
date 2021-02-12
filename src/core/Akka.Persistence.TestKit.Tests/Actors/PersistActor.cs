@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,10 +23,10 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnCommand(object message)
         {
-            switch (message as string)
+            switch (message)
             {
-                case "write":
-                    Persist(message, _ =>
+                case WriteMessage msg:
+                    Persist(msg.Data, _ =>
                     {
                         _probe.Tell("ack");
                     });
@@ -40,6 +40,7 @@ namespace Akka.Persistence.TestKit.Tests
 
         protected override void OnRecover(object message)
         {
+            _probe.Tell(message);
         }
 
         protected override void OnPersistFailure(Exception cause, object @event, long sequenceNr)
@@ -54,6 +55,16 @@ namespace Akka.Persistence.TestKit.Tests
             _probe.Tell("rejected");
 
             base.OnPersistRejected(cause, @event, sequenceNr);
+        }
+
+        public class WriteMessage
+        {
+            public string Data { get; }
+
+            public WriteMessage(string data)
+            {
+                Data = data;
+            }
         }
     }
 }

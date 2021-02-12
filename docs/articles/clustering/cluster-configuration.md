@@ -33,6 +33,20 @@ akka {
 }
 ```
 
+### Cluster Info Logging
+
+You can silence the logging of cluster events at info level with configuration property:
+
+```
+akka.cluster.log-info = off
+```
+
+You can enable verbose logging of cluster events at info level, e.g. for temporary troubleshooting, with configuration property:
+
+```
+akka.cluster.log-info-verbose = on
+```
+
 ## Specifying Minimum Cluster Sizes
 One feature of Akka.Cluster that can be useful in a number of scenarios is the ability to specify a minimum cluster size, i.e. "this cluster must have at least 3 nodes present before it can be considered 'up'."
 

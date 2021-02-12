@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="ClusterMetricsRouting.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClusterMetricsRouting.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;
 using Akka.Util.Extensions;
+using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
@@ -125,7 +126,7 @@ namespace Akka.Cluster.Metrics
     ///
     /// The supervision strategy of the router actor can be configured with
     /// [[#withSupervisorStrategy]]. If no strategy is provided, routers default to
-    /// a strategy of “always escalate”. This means that errors are passed up to the
+    /// a strategy of â€œalways escalateâ€. This means that errors are passed up to the
     /// router's supervisor for handling.
     ///
     /// The router's supervisor will treat the error as an error with the router itself.
@@ -198,7 +199,7 @@ namespace Akka.Cluster.Metrics
         public override Resizer Resizer => null;
 
         /// <summary>
-        /// Setting the supervisor strategy to be used for the “head” Router actor.
+        /// Setting the supervisor strategy to be used for the â€œheadâ€ Router actor.
         /// </summary>
         public AdaptiveLoadBalancingPool WithSupervisorStrategy(SupervisorStrategy strategy)
         {
@@ -223,7 +224,7 @@ namespace Akka.Cluster.Metrics
                 return this;
 
             if (routerConfig is FromConfig || routerConfig is NoRouter)
-                return this; // NoRouter is the default, hence “neutral”
+                return this; // NoRouter is the default, hence â€œneutralâ€
 
             if (routerConfig is AdaptiveLoadBalancingPool adaptiveLoadBalancingPool)
             {
@@ -288,7 +289,6 @@ namespace Akka.Cluster.Metrics
     /// </summary>
     public sealed class AdaptiveLoadBalancingGroup : Group
     {
-        private readonly IEnumerable<string> _paths;
         private readonly IMetricsSelector _metricsSelector;
 
         /// <summary>
@@ -308,7 +308,6 @@ namespace Akka.Cluster.Metrics
         public AdaptiveLoadBalancingGroup(IMetricsSelector metricsSelector = null, IEnumerable<string> paths = null, string routerDispatcher = null) 
             : base(paths, routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
-            _paths = paths;
             _metricsSelector = metricsSelector ?? MixMetricsSelector.Instance;
         }
 
@@ -316,7 +315,7 @@ namespace Akka.Cluster.Metrics
         /// Creates new instance of <see cref="AdaptiveLoadBalancingGroup"/> from provided configuration
         /// </summary>
         public AdaptiveLoadBalancingGroup(Config config)
-            : this(MetricsSelectorBuilder.BuildFromConfig(config), paths: config.GetStringList("routees.paths"))
+            : this(MetricsSelectorBuilder.BuildFromConfig(config), paths: config.GetStringList("routees.paths", new string[] { }))
         {
         }
         
@@ -337,21 +336,21 @@ namespace Akka.Cluster.Metrics
         {
             return new AdaptiveLoadBalancingGroupSurrogate()
             {
-                Paths = _paths,
+                Paths = InternalPaths,
                 MetricsSelector = _metricsSelector,
                 RouterDispatcher = RouterDispatcher
             };
         }
 
         /// <inheritdoc />
-        public override IEnumerable<string> GetPaths(ActorSystem system) => _paths;
+        public override IEnumerable<string> GetPaths(ActorSystem system) => InternalPaths;
 
         /// <summary>
         /// Setting the dispatcher to be used for the router head actor, which handles router management messages
         /// </summary>
         public AdaptiveLoadBalancingGroup WithDispatcher(string dispatcherId)
         {
-            return new AdaptiveLoadBalancingGroup(_metricsSelector, _paths, dispatcherId);
+            return new AdaptiveLoadBalancingGroup(_metricsSelector, InternalPaths, dispatcherId);
         }
         
         /// <summary>

@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="DelegatingSupervisorStrategy.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="DelegatingSupervisorStrategy.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -23,13 +23,7 @@ namespace Akka.TestKit
         {
             throw new NotImplementedException();
         }
-
-        protected override void ProcessFailure(IActorContext context, bool restart, Exception cause, ChildRestartStats failedChildStats,
-            IReadOnlyCollection<ChildRestartStats> allChildren)
-        {
-            Delegates[failedChildStats.Child].ProcessFailure(context, restart, failedChildStats.Child, cause, failedChildStats, allChildren);
-        }
-
+        
         public override void ProcessFailure(IActorContext context, bool restart, IActorRef child, Exception cause, ChildRestartStats stats,
             IReadOnlyCollection<ChildRestartStats> children)
         {

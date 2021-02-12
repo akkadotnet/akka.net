@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TailChopping.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -155,11 +155,11 @@ namespace Akka.Routing
         /// <param name="config">The configuration used to configure the pool.</param>
         public TailChoppingPool(Config config)
             : this(
-                  config.GetInt("nr-of-instances"),
+                  config.GetInt("nr-of-instances", 0),
                   Resizer.FromConfig(config),
                   Pool.DefaultSupervisorStrategy,
                   Dispatchers.DefaultDispatcherId,
-                  config.GetTimeSpan("within"), config.GetTimeSpan("tail-chopping-router.interval"), config.HasPath("pool-dispatcher"))
+                  config.GetTimeSpan("within", null), config.GetTimeSpan("tail-chopping-router.interval", null), config.HasPath("pool-dispatcher"))
         {
         }
 
@@ -390,9 +390,9 @@ namespace Akka.Routing
         /// </param>
         public TailChoppingGroup(Config config)
             : this(
-                  config.GetStringList("routees.paths"),
-                  config.GetTimeSpan("within"),
-                  config.GetTimeSpan("tail-chopping-router.interval"),
+                  config.GetStringList("routees.paths", new string[] { }),
+                  config.GetTimeSpan("within", null),
+                  config.GetTimeSpan("tail-chopping-router.interval", null),
                   Dispatchers.DefaultDispatcherId)
         {
         }

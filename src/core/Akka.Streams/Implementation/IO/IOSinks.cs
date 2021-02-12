@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IOSinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -87,7 +87,12 @@ namespace Akka.Streams.Implementation.IO
             var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _startPosition, _fileMode);
             var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.AttributeList.First()) as ActorAttributes.Dispatcher;
 
-            var actorRef = mat.ActorOf(context, props.WithDispatcher(dispatcher.Name));
+            var actorRef = mat.ActorOf(
+                context, 
+                props.WithDispatcher(context
+                    .EffectiveAttributes
+                    .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
+                    .Name));
             materializer = ioResultPromise.Task;
             return new ActorSubscriberImpl<ByteString>(actorRef);
         }
@@ -151,7 +156,16 @@ namespace Akka.Streams.Implementation.IO
             var ioResultPromise = new TaskCompletionSource<IOResult>();
 
             var os = _createOutput();
-            var props = OutputStreamSubscriber.Props(os, ioResultPromise, settings.MaxInputBufferSize, _autoFlush);
+            var maxInputBufferSize = context
+                .EffectiveAttributes
+                .GetMandatoryAttribute<Attributes.InputBuffer>()
+                .Max;
+            var props = OutputStreamSubscriber
+                .Props(os, ioResultPromise, maxInputBufferSize, _autoFlush)
+                .WithDispatcher(context
+                    .EffectiveAttributes
+                    .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
+                    .Name);
             var actorRef = mat.ActorOf(context, props);
 
             materializer = ioResultPromise.Task;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Key.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ namespace Akka.DistributedData
     /// <summary>
     /// Marker interface for all replicated key types in DData.
     /// </summary>
-    public interface IKey
+    public interface IKey : IReplicatedDataSerialization
     {
         /// <summary>
         /// The identifier for the key.
@@ -25,17 +25,6 @@ namespace Akka.DistributedData
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
     public interface IKey<out T> : IKey where T : IReplicatedData { }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    interface IKeyWithGenericType : IKey
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        Type Type { get; }
-    }
 
     /// <summary>
     /// Key for the key-value data in <see cref="Replicator"/>. The type of the data value
