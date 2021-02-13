@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(11, 10)).RunWith(sink, Materializer);
 
-                result.AwaitResult().OrderBy(x => x).ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
+                result.AwaitResult().OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20));
             }, Materializer);
         }
 
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
                     upstream.SendNext(i);
 
                 upstream.ExpectCancellation();
-                result.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+                result.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
 
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
                     upstream1.SendNext(i);
 
                 upstream1.ExpectCancellation();
-                result.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+                result.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
                 Source.FromPublisher(upstream2).RunWith(sink, Materializer);
                 upstream2.ExpectCancellation();
@@ -174,7 +174,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
-                result.AwaitResult().OrderBy(x => x).ShouldAllBeEquivalentTo(Enumerable.Range(1, 20000));
+                result.AwaitResult().OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
             }, Materializer);
         }
 
@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
-                result.AwaitResult().OrderBy(x => x).ShouldAllBeEquivalentTo(Enumerable.Range(1, 20000));
+                result.AwaitResult().OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
             }, Materializer);
         }
 
@@ -211,7 +211,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 1000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(1001, 1000)).RunWith(sink, Materializer);
 
-                result.AwaitResult().OrderBy(x => x).ShouldAllBeEquivalentTo(Enumerable.Range(1, 2000));
+                result.AwaitResult().OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 2000));
 
             }, Materializer);
         }
@@ -231,7 +231,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(1001, 1000)).RunWith(sink, Materializer);
 
-                result.AwaitResult().OrderBy(x => x).ShouldAllBeEquivalentTo(Enumerable.Range(1, 2000));
+                result.AwaitResult().OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 2000));
             }, Materializer);
         }
 
@@ -246,10 +246,10 @@ namespace Akka.Streams.Tests.Dsl
                     .ToMaterialized(Sink.FromSubscriber(downstream), Keep.Left)
                     .Run(Materializer);
                 Source.From(Enumerable.Range(1, 100)).RunWith(sink, Materializer);
-                downstream.RequestNext().ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
+                downstream.RequestNext().Should().BeEquivalentTo(Enumerable.Range(1, 100));
 
                 Source.From(Enumerable.Range(101, 100)).RunWith(sink, Materializer);
-                downstream.RequestNext().ShouldAllBeEquivalentTo(Enumerable.Range(101, 100));
+                downstream.RequestNext().Should().BeEquivalentTo(Enumerable.Range(101, 100));
 
                 downstream.Cancel();
             }, Materializer);
@@ -270,7 +270,7 @@ namespace Akka.Streams.Tests.Dsl
                     Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
                 });
 
-                result.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                result.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -282,7 +282,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = Source.From(Enumerable.Range(1, 10)).RunWith(BroadcastHub.Sink<int>(8), Materializer);
                 source.RunWith(Sink.Seq<int>(), Materializer)
                     .AwaitResult()
-                    .ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -306,8 +306,8 @@ namespace Akka.Streams.Tests.Dsl
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
                 Thread.Sleep(500);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                f1.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -331,8 +331,8 @@ namespace Akka.Streams.Tests.Dsl
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
                 Thread.Sleep(500);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                f1.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 20));
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -345,11 +345,11 @@ namespace Akka.Streams.Tests.Dsl
                 source.Take(10)
                     .RunWith(Sink.Seq<int>(), Materializer)
                     .AwaitResult()
-                    .ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                    .Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 source.Take(10)
                     .RunWith(Sink.Seq<int>(), Materializer)
                     .AwaitResult()
-                    .ShouldAllBeEquivalentTo(Enumerable.Range(11, 10));
+                    .Should().BeEquivalentTo(Enumerable.Range(11, 10));
             }, Materializer);
         }
 
@@ -374,8 +374,8 @@ namespace Akka.Streams.Tests.Dsl
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
                 Thread.Sleep(500);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                f1.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -400,8 +400,8 @@ namespace Akka.Streams.Tests.Dsl
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
                 Thread.Sleep(500);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                f1.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -430,8 +430,8 @@ namespace Akka.Streams.Tests.Dsl
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
                 Thread.Sleep(100);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
+                f1.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 20));
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 20));
             }, Materializer);
         }
 
@@ -455,8 +455,8 @@ namespace Akka.Streams.Tests.Dsl
                 // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
                 Thread.Sleep(500);
                 firstElement.SetResult(1);
-                f1.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                f1.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -569,7 +569,7 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(50);
 
                 var task = source.RunWith(Sink.Seq<int>(), Materializer);
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>();
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -582,7 +582,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = Source.From(items)
                     .RunWith(PartitionHub.Sink<int>((size, e) => 0, 0, 8), Materializer);
                 var result = source.RunWith(Sink.Seq<int>(), Materializer).AwaitResult();
-                result.ShouldAllBeEquivalentTo(items);
+                result.Should().BeEquivalentTo(items);
             }, Materializer);
         }
 
@@ -597,8 +597,8 @@ namespace Akka.Streams.Tests.Dsl
                 // it should not start publishing until startAfterNrOfConsumers = 2
                 Thread.Sleep(50);
                 var result2 = source.RunWith(Sink.Seq<int>(), Materializer);
-                result1.AwaitResult().ShouldAllBeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
-                result2.AwaitResult().ShouldAllBeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
+                result1.AwaitResult().Should().BeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
+                result2.AwaitResult().Should().BeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
             }, Materializer);
         }
 
@@ -619,8 +619,8 @@ namespace Akka.Streams.Tests.Dsl
                     }, 2, 8), Materializer);
                 var result1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var result2 = source.RunWith(Sink.Seq<int>(), Materializer);
-                result1.AwaitResult().ShouldAllBeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
-                result2.AwaitResult().ShouldAllBeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
+                result1.AwaitResult().Should().BeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
+                result2.AwaitResult().Should().BeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
             }, Materializer);
         }
 
@@ -646,8 +646,8 @@ namespace Akka.Streams.Tests.Dsl
                     }, 2, 8), Materializer);
                 var result1 = source.RunWith(Sink.Seq<string>(), Materializer);
                 var result2 = source.RunWith(Sink.Seq<string>(), Materializer);
-                result1.AwaitResult().ShouldAllBeEquivalentTo(new[] { "usr-2" });
-                result2.AwaitResult().ShouldAllBeEquivalentTo(new[] { "usr-1", "usr-1", "usr-3" });
+                result1.AwaitResult().Should().BeEquivalentTo(new[] { "usr-2" });
+                result2.AwaitResult().Should().BeEquivalentTo(new[] { "usr-1", "usr-1", "usr-3" });
             }, Materializer);
         }
 
@@ -818,8 +818,8 @@ namespace Akka.Streams.Tests.Dsl
                 var expectationF1 = Enumerable.Range(1, 18).Where(v => v % 2 == 0).ToList();
                 expectationF1.Insert(0, 50);
 
-                f1.AwaitResult().ShouldAllBeEquivalentTo(expectationF1);
-                f2.AwaitResult().ShouldAllBeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
+                f1.AwaitResult().Should().BeEquivalentTo(expectationF1);
+                f2.AwaitResult().Should().BeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
             }, Materializer);
         }
 
@@ -904,7 +904,7 @@ namespace Akka.Streams.Tests.Dsl
                 Thread.Sleep(50);
 
                 Action a = () => source.RunWith(Sink.Seq<int>(), Materializer).AwaitResult();
-                a.ShouldThrow<TestException>().WithMessage("Fail!");
+                a.Should().Throw<TestException>().WithMessage("Fail!");
             }, Materializer);
         }
     }

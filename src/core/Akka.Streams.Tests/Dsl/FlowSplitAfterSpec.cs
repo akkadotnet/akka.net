@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer)
                     .Wait(TimeSpan.FromSeconds(3));
             };
-            a.ShouldThrow<SubscriptionTimeoutException>();
+            a.Should().Throw<SubscriptionTimeoutException>();
         }, Materializer);
 
         // Probably covert by SplitAfter_should_work_when_last_element_is_split_by

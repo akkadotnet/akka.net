@@ -93,7 +93,7 @@ namespace Akka.Persistence.Tests
             });
 
             latch.CountDown();
-            ReceiveN(100).ShouldAllBeEquivalentTo(Enumerable.Range(1, 100).Select(n => $"a{n}-B-2"));
+            ReceiveN(100).Should().BeEquivalentTo(Enumerable.Range(1, 100).Select(n => $"a{n}-B-2"));
         }
     }
 }

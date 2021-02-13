@@ -108,7 +108,7 @@ namespace Akka.Discovery.Tests
 
             Action discoveryInstance = () => _ = Discovery.Get(sys).Default;
             discoveryInstance
-                .ShouldThrow<TargetInvocationException>()
+                .Should().Throw<TargetInvocationException>()
                 .WithInnerException<DiscoveryException>();
         }
 

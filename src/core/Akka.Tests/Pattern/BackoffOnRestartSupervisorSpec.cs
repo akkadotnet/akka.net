@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Threading;
+using FluentAssertions.Extensions;
 
 namespace Akka.Tests.Pattern
 {

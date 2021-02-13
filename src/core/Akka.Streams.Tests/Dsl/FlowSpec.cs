@@ -334,7 +334,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1,10));
 
             // Reusable:
             task = Source.From(Enumerable.Range(1, 10))
@@ -343,7 +343,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
         [Fact]
@@ -589,7 +589,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(Enumerable.Range(0, 10))
                 .Via(Flow.FromFunction<int, int>(i => i + 1))
                 .RunWith(Sink.Seq<int>(), Materializer)
-                .Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                .Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
         [Fact]

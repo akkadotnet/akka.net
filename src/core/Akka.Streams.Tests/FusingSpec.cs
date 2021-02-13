@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.Distinct().OrderBy(i => i).ShouldAllBeEquivalentTo(Enumerable.Range(0, 199).Where(i => i%2 == 0));
+            t.Result.Distinct().OrderBy(i => i).Should().BeEquivalentTo(Enumerable.Range(0, 199).Where(i => i%2 == 0));
         }
 
         [Fact]
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             t.Wait(TimeSpan.FromSeconds(3));
-            t.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 10));
+            t.Result.Should().BeEquivalentTo(Enumerable.Range(0, 10));
 
             var refs = ReceiveN(20);
             // main flow + 10 subflows
@@ -109,7 +109,7 @@ namespace Akka.Streams.Tests
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             t.Wait(TimeSpan.FromSeconds(3));
-            t.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 10));
+            t.Result.Should().BeEquivalentTo(Enumerable.Range(0, 10));
 
             var refs = ReceiveN(20);
             // main flow + 10 subflows

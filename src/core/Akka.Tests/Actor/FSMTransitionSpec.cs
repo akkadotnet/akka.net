@@ -9,6 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using static Akka.Actor.FSMBase;
 
