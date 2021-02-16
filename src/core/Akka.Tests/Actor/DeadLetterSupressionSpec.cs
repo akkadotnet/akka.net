@@ -12,6 +12,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Tests.Actor
 {

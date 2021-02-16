@@ -395,11 +395,20 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected bool AwaitDone(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
-            if(expectedOccurrences.HasValue)
+            if (expectedOccurrences.HasValue)
             {
                 var expected = expectedOccurrences.GetValueOrDefault();
-                _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
-                return matchedEventHandler.ReceivedCount == expected;
+                if (expected > 0)
+                {
+                    _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                    return matchedEventHandler.ReceivedCount == expected;
+                }
+                else
+                {
+                    // if expecting no events to arrive - assert that given condition will never match
+                    var foundEvent = _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount > 0, timeout);
+                    return foundEvent == false;
+                }
             }
             return true;
         }
@@ -412,8 +421,17 @@ namespace Akka.TestKit.Internal
             if(expectedOccurrences.HasValue)
             {
                 var expected = expectedOccurrences.GetValueOrDefault();
-                await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
-                return matchedEventHandler.ReceivedCount == expected;
+                if (expected > 0)
+                {
+                    await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                    return matchedEventHandler.ReceivedCount == expected;
+                }
+                else
+                {
+                    // if expecting no events to arrive - assert that given condition will never match
+                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount > 0, timeout);
+                    return foundEvent == false;
+                }
             }
             return true;
         }

@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 

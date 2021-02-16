@@ -132,15 +132,11 @@ namespace Akka.Remote.Tests.Transport
 
             var probe = CreateTestProbe();
 
-            Within(TimeSpan.FromSeconds(12), () =>
+            AwaitAssert(() =>
             {
-                AwaitAssert(() =>
-                {
-                    Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                    probe.ExpectMsg("hello");
-                }, TimeSpan.FromSeconds(3));
-            });
-
+                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
@@ -153,8 +149,15 @@ namespace Akka.Remote.Tests.Transport
                 SetupThumbprint(ValidCertPath, Password);
 
                 var probe = CreateTestProbe();
-                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                probe.ExpectMsg("hello");
+
+                Within(TimeSpan.FromSeconds(12), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                        probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(100));
+                    }, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
+                });
             }
             finally
             {

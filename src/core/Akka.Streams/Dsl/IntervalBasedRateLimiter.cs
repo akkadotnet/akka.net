@@ -27,8 +27,10 @@ namespace Akka.Streams.Dsl
         /// <returns></returns>
         [ApiMayChange]
         public static IGraph<FlowShape<T, IEnumerable<T>>, NotUsed> Create<T>(TimeSpan minInterval, int maxBatchSize)
-        {
-            return Flow.Create<T>().GroupedWithin(maxBatchSize, minInterval).Via(new DelayFlow<IEnumerable<T>>(minInterval));
+        { 
+            // for spec purposes, we need this timeout to stop waiting for the last batch (it may never be of maxBatchSize size)
+            var minGroupingInterval = TimeSpan.FromTicks(minInterval.Ticks * 3);
+            return Flow.Create<T>().GroupedWithin(maxBatchSize, minGroupingInterval).Via(new DelayFlow<IEnumerable<T>>(minInterval));
         }
     }
 }

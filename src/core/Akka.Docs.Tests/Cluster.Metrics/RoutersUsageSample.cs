@@ -15,6 +15,7 @@ using Akka.Cluster.Routing;
 using Akka.Event;
 using Akka.Routing;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Metrics.Tests
 {

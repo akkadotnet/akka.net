@@ -228,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
             var source = Source.FromGraph(GraphDsl.Create(b => new SourceShape<NotUsed>(b.MaterializedValue)));
             var task = source.RunWith(Sink.Seq<NotUsed>(), materializer);
             task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.ShouldAllBeEquivalentTo(NotUsed.Instance);
+            task.Result.Should().BeEquivalentTo(NotUsed.Instance);
         }
 
         [Theory]

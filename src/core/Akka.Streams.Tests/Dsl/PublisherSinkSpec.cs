@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var task = Source.FromPublisher(pub).Limit(1000).RunWith(Sink.Seq<int>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
 
         }
 
