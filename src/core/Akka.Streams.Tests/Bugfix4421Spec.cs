@@ -60,9 +60,9 @@ namespace Akka.Streams.Tests
             var serializer = Sys.Serialization.FindSerializerFor(message);
 
             byte[] serialized = null;
-            serializer.Invoking(s => serialized = s.ToBinary(message)).ShouldNotThrow();
+            serializer.Invoking(s => serialized = s.ToBinary(message)).Should().NotThrow();
             object deserialized = null;
-            serializer.Invoking(s => deserialized = s.FromBinary<MeasurementsSinkReady>(serialized)).ShouldNotThrow();
+            serializer.Invoking(s => deserialized = s.FromBinary<MeasurementsSinkReady>(serialized)).Should().NotThrow();
             deserialized.Should().BeOfType<MeasurementsSinkReady>();
         }
 

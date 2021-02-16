@@ -14,6 +14,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Collections.Immutable;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tools.Tests.ClusterClient
 {

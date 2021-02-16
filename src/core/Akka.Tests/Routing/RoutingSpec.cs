@@ -18,6 +18,7 @@ using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Routing

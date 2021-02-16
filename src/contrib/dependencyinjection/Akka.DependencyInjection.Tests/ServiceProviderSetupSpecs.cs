@@ -70,7 +70,7 @@ namespace Akka.DependencyInjection.Tests
                 var sp = ServiceProvider.For(Sys);
             };
 
-            getSp.ShouldThrow<ConfigurationException>();
+            getSp.Should().Throw<ConfigurationException>();
         }
     }
 }
