@@ -8,7 +8,6 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Remote.Artery.Compress;
-using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Utils;
 using Akka.Util;
 using Akka.Util.Internal;

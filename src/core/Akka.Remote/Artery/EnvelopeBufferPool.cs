@@ -7,7 +7,6 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.Pattern;
 using Akka.Remote.Artery.Compress;
-using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Internal;
 using Akka.Remote.Artery.Utils;
 using Akka.Remote.Serialization;
