@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Utils;
 using Akka.Streams;
 using Akka.Streams.Stage;
@@ -12,6 +11,27 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
+    /// <summary>
+    /// INTERNAL API
+    /// marker trait for protobuf-serializable artery messages
+    /// </summary>
+    internal interface IArteryMessage
+    { }
+
+    /// <summary>
+    /// INTERNAL API
+    /// Marker trait for control messages that can be sent via the system message sub-channel
+    /// but don't need full reliable delivery. E.g. `HandshakeReq` and `Reply`.
+    /// </summary>
+    internal interface IControlMessage : IArteryMessage
+    { }
+
+    /// <summary>
+    /// INTERNAL API
+    /// Marker trait for reply messages
+    /// </summary>
+    internal interface IReply : IControlMessage
+    { }
 
     /// <summary>
     /// INTERNAL API

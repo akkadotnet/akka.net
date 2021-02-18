@@ -1,5 +1,4 @@
 using Akka.Actor;
-using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Utils;
 
 namespace Akka.Remote.Artery
@@ -24,6 +23,32 @@ namespace Akka.Remote.Artery
             => new ReusableInboundEnvelope()
                 .Init(recipient, sender, originUid, -1, "", 0, null, association, 0)
                 .WithMessage(message);
+    }
+
+    internal interface IInboundEnvelope : INoSerializationVerificationNeeded
+    {
+        IOptionVal<IInternalActorRef> Recipient { get; }
+        IOptionVal<IActorRef> Sender { get; }
+        long OriginUid { get; }
+        IOptionVal<IOutboundContext> Association { get; }
+
+        int Serializer { get; }
+        string ClassManifest { get; }
+        object Message { get; }
+        EnvelopeBuffer EnvelopeBuffer { get; }
+
+        byte Flags { get; }
+        bool Flag(ByteFlag byteFlag);
+
+        IInboundEnvelope WithMessage(object message);
+
+        IInboundEnvelope ReleaseEnvelopeBuffer();
+
+        IInboundEnvelope WithRecipient(IInternalActorRef @ref);
+        IInboundEnvelope WithEnvelopeBuffer(EnvelopeBuffer envelopeBuffer);
+
+        int Lane { get; }
+        IInboundEnvelope CopyForLane(int lane);
     }
 
     internal class ReusableInboundEnvelope : IInboundEnvelope

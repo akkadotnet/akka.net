@@ -8,7 +8,6 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Remote.Artery.Compress;
-using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Utils;
 using Akka.Remote.Transport;
 using Akka.Streams;
@@ -17,6 +16,50 @@ using Akka.Util.Internal;
 
 namespace Akka.Remote.Artery
 {
+    /// <summary>
+    /// INTERNAL API
+    /// Inbound API that is used by the stream operators.
+    /// Separate trait to facilitate testing without real transport.
+    /// </summary>
+    internal interface IInboundContext
+    {
+        /// <summary>
+        /// The local inbound address.
+        /// </summary>
+        UniqueAddress LocalAddress { get; }
+
+        ArterySettings Settings { get; }
+
+        /// <summary>
+        /// An inbound operator can send control message, e.g. a reply, to the origin
+        /// address with this method. It will be sent over the control sub-channel.
+        /// </summary>
+        /// <param name="to"></param>
+        /// <param name="message"></param>
+        void SendControl(Address to, IControlMessage message);
+
+        /// <summary>
+        /// Lookup the outbound association for a given address.
+        /// </summary>
+        /// <param name="remoteAddress"></param>
+        /// <returns></returns>
+        IOutboundContext Association(Address remoteAddress);
+
+        /// <summary>
+        /// Lookup the outbound association for a given UID.
+        /// </summary>
+        /// <param name="uid"></param>
+        /// <returns>
+        /// <see cref="Some{OutboundContext}"/> if an association is found.
+        /// <see cref="None{OutboundContext}"/> if the UID is unknown, i.e. handshake not completed.
+        /// </returns>
+        IOptionVal<IOutboundContext> Association(long uid);
+
+        Task<Done> CompleteHandshake(UniqueAddress peer);
+
+        void PublishDropped(IInboundEnvelope inbound, string reason);
+    }
+
     internal class AssociationState
     {
         public static AssociationState Create()
@@ -175,107 +218,43 @@ namespace Akka.Remote.Artery
             => $"AssociationState({Incarnation}, {(!UniqueRemoteAddress.HasValue ? "unknown" : UniqueRemoteAddress.Value.ToString())})";
     }
 
-    internal class FlushOnShutdown : UntypedActor
+    /// <summary>
+    /// INTERNAL API
+    /// Outbound association API that is used by the stream operators.
+    /// Separate trait to facilitate testing without real transport.
+    /// </summary>
+    internal interface IOutboundContext
     {
-        public static Props Props(
-            TaskCompletionSource<Done> done,
-            TimeSpan timeout,
-            IInboundContext inboundContext,
-            ImmutableHashSet<Association> associations)
-        {
-            associations.Requiring(a => !a.IsEmpty, $"{nameof(associations)} must not be empty");
-            return new Props(typeof(FlushOnShutdown), new object[] {done, timeout, inboundContext, associations});
-        }
+        /// <summary>
+        /// The local inbound address.
+        /// </summary>
+        UniqueAddress LocalAddress { get; }
 
-        public class TimeoutMessage
-        { }
+        /// <summary>
+        /// The outbound address for this association.
+        /// </summary>
+        Address RemoteAddress { get; }
 
-        public TaskCompletionSource<Done> Done { get; }
-        public TimeSpan Timeout { get; }
-        public IInboundContext InboundContext { get; }
-        public ImmutableHashSet<Association> Associations { get; }
+        AssociationState AssociationState { get; }
 
-        private ImmutableDictionary<UniqueAddress, int> _remaining = ImmutableDictionary<UniqueAddress, int>.Empty;
+        void Quarantine(string reason);
 
-        private ICancelable _timeoutTask;
+        /// <summary>
+        /// An inbound operator can send control message, e.g. a HandshakeReq, to the remote
+        /// address of this association. It will be sent over the control sub-channel.
+        /// </summary>
+        /// <param name="message"></param>
+        void SendControl(IControlMessage message);
 
-        public FlushOnShutdown(
-            TaskCompletionSource<Done> done,
-            TimeSpan timeout,
-            IInboundContext inboundContext,
-            ImmutableHashSet<Association> associations)
-        {
-            Done = done;
-            Timeout = timeout;
-            InboundContext = inboundContext;
-            Associations = associations;
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>`true` if any of the streams are active (not stopped due to idle)</returns>
+        bool IsOrdinaryMessageStreamActive();
 
-            // ARTERY: Scala code can explicitly state which threading context a scheduled lambda is being run, WE DON'T HAVE THIS
-            // val timeoutTask = context.system.scheduler.scheduleOnce(timeout, self, FlushOnShutdown.Timeout)(context.dispatcher)
-            _timeoutTask = Context.System.Scheduler.ScheduleTellOnceCancelable(timeout, Self, new TimeoutMessage(), Self);
-        }
+        InboundControlJunction.IControlMessageSubject ControlSubject { get; }
 
-        protected override void PreStart()
-        {
-            try
-            {
-                foreach (var a in Associations)
-                {
-                    var ackExpected = a.SendTerminationHint(Self);
-                    Option<UniqueAddress> address = a.AssociationState.UniqueRemoteAddress;
-                    if(address.HasValue)
-                    {
-                        _remaining = _remaining.ContainsKey(address.Value) ? 
-                            _remaining.SetItem(address.Value, ackExpected) : 
-                            _remaining.Add(address.Value, ackExpected);
-                    }
-                    else
-                    {
-                        // Ignore, handshake was not completed on this association
-                    }
-                }
-
-                if (_remaining.Values.Sum() == 0)
-                {
-                    Done.TrySetResult(Akka.Done.Instance);
-                    Context.Stop(Self);
-                }
-            }
-            catch (Exception e)
-            {
-                if (!e.NonFatal()) throw;
-
-                Done.TrySetException(e);
-                throw;
-            }
-        }
-
-        protected override void PostStop()
-        {
-            _timeoutTask.Cancel();
-            Done.TrySetResult(Akka.Done.Instance);
-        }
-
-        protected override void OnReceive(object message)
-        {
-            switch (message)
-            {
-                case ActorSystemTerminatingAck from:
-                    // Just treat unexpected acks as systems from which zero acks are expected
-                    var acksRemaining = _remaining.GetOrElse(from.From, 0);
-                    _remaining = acksRemaining <= 1 ? 
-                        _remaining.Remove(from.From) : 
-                        _remaining.SetItem(from.From, acksRemaining - 1);
-
-                    if(_remaining.IsEmpty)
-                        Context.Stop(Self);
-                    break;
-
-                case TimeoutMessage _:
-                    Context.Stop(Self);
-                    break;
-            }
-        }
+        ArterySettings Settings { get; }
     }
 
     internal abstract class ArteryTransport : RemoteTransport, IInboundContext

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote.Artery.Compress;
-using Akka.Remote.Artery.Interfaces;
 using Akka.Remote.Artery.Utils;
 using Akka.Remote.Artery.Utils.Concurrent;
 using Akka.Streams;
@@ -15,7 +14,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
-    internal class Association : AbstractAssociation, IOutboundContext
+    internal class Association : IOutboundContext
     {
         #region Static region
         public interface IQueueWrapper : SendQueue.IProducerApi<IOutboundEnvelope>
@@ -147,11 +146,32 @@ namespace Akka.Remote.Artery
 
         private readonly AtomicReference<IOptionVal<Cancelable>> _idleTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
         private readonly AtomicReference<IOptionVal<Cancelable>> _stopQuarantinedTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
+        private InboundControlJunction.IControlMessageSubject _controlSubject;
 
         public ArteryTransport Transport { get; }
         public Materializer Materializer{ get; }
         public Materializer ControlMaterializer{ get; }
+        public UniqueAddress LocalAddress { get; }
         public Address RemoteAddress{ get; }
+        public AssociationState AssociationState { get; }
+        public void Quarantine(string reason)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SendControl(IControlMessage message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsOrdinaryMessageStreamActive()
+        {
+            throw new NotImplementedException();
+        }
+
+        InboundControlJunction.IControlMessageSubject IOutboundContext.ControlSubject => _controlSubject;
+
+        public ArterySettings Settings { get; }
         public ControlMessageSubject ControlSubject{ get; }
         public WildcardIndex<NotUsed> LargeMessageDestinations{ get; }
         public WildcardIndex<NotUsed> PriorityMessageDestinations{ get; }
