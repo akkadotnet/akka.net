@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.Artery.Compress;
+using Akka.Remote.Serialization;
 using Akka.Streams;
 using Akka.Streams.Stage;
 
@@ -241,22 +242,86 @@ namespace Akka.Remote.Artery
 
     internal sealed class ActorRefResolveCacheWithAddress : AbstractActorRefResolveCache<IInternalActorRef>
     {
-        private readonly IRemoteActorRefProvider Provider;
-        private readonly UniqueAddress LocalAddress;
+        private readonly IRemoteActorRefProvider _provider;
+        private readonly UniqueAddress _localAddress;
 
         public ActorRefResolveCacheWithAddress(
             IRemoteActorRefProvider provider, 
             UniqueAddress localAddress)
         {
-            Provider = provider;
-            LocalAddress = localAddress;
+            _provider = provider;
+            _localAddress = localAddress;
         }
 
         protected override IInternalActorRef Compute(string k)
         {
-            return Provider.ResolveActorRefWithLocalAddress(k, LocalAddress.Address);
+            return _provider.ResolveActorRefWithLocalAddress(k, _localAddress.Address);
         }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal class Deserializer : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
+    {
+        private readonly IInboundContext _inboundContext;
+        private readonly ExtendedActorSystem _system;
+        private readonly EnvelopeBufferPool _bufferPool;
 
+        public readonly Inlet<IInboundEnvelope> In = new Inlet<IInboundEnvelope>("Artery.Deserializer.In");
+        public readonly Outlet<IInboundEnvelope> Out = new Outlet<IInboundEnvelope>("Artery.Deserializer.Out");
+        public override FlowShape<IInboundEnvelope, IInboundEnvelope> Shape { get; }
+
+        public Deserializer(IInboundContext inboundContext, ExtendedActorSystem system, EnvelopeBufferPool bufferPool)
+        {
+            _inboundContext = inboundContext;
+            _system = system;
+            _bufferPool = bufferPool;
+            Shape = new FlowShape<IInboundEnvelope, IInboundEnvelope>(In, Out);
+        }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// The HandshakeReq message must be passed in each inbound lane to
+    /// ensure that it arrives before any application message. Otherwise there is a risk
+    /// that an application message arrives in the InboundHandshake operator before the
+    /// handshake is completed and then it would be dropped.
+    /// </summary>
+    internal class DuplicateHandshakeReq : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
+    {
+        private readonly int _numberOfLanes;
+        private readonly IInboundContext _inboundContext;
+        private readonly ExtendedActorSystem _system;
+        private readonly EnvelopeBufferPool _bufferPool;
+
+        public readonly Inlet<IInboundEnvelope> In = new Inlet<IInboundEnvelope>("Artery.Deserializer.In");
+        public readonly Outlet<IInboundEnvelope> Out = new Outlet<IInboundEnvelope>("Artery.Deserializer.Out");
+        public override FlowShape<IInboundEnvelope, IInboundEnvelope> Shape { get; }
+
+        public DuplicateHandshakeReq(
+            int numberOfLanes, 
+            IInboundContext inboundContext, 
+            ExtendedActorSystem system, 
+            EnvelopeBufferPool bufferPool)
+        {
+            _numberOfLanes = numberOfLanes;
+            _inboundContext = inboundContext;
+            _system = system;
+            _bufferPool = bufferPool;
+
+            Shape = new FlowShape<IInboundEnvelope, IInboundEnvelope>(In, Out);
+        }
+
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }
