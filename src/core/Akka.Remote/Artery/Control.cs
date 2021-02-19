@@ -74,6 +74,18 @@ namespace Akka.Remote.Artery
         }
     }
 
+    internal sealed class Flush : IControlMessage
+    {
+        public static Flush Instance = new Flush();
+        private Flush() {}
+    }
+
+    internal sealed class FlushAck : IArteryMessage
+    {
+        public static FlushAck Instance = new FlushAck();
+        private FlushAck() {}
+    }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
