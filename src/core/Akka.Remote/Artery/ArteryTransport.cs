@@ -325,8 +325,8 @@ namespace Akka.Remote.Artery
         private volatile UniqueAddress _localAddress;
         private volatile UniqueAddress _bindAddress;
         private volatile ImmutableHashSet<Address> _addresses;
-        protected volatile Materializer _materializer;
-        protected volatile Materializer _controlMaterializer;
+        protected volatile IMaterializer _materializer;
+        protected volatile IMaterializer _controlMaterializer;
         private volatile InboundControlJunction.IControlMessageSubject _controlSubject;
         private volatile MessageDispatcher _messageDispatcher;
 
@@ -386,6 +386,28 @@ namespace Akka.Remote.Artery
         }
 
         public ArterySettings Settings => Provider.RemoteSettings.Artery;
+
+        /// <summary>
+        /// Exposed for orderly shutdown purposes, can not be trusted except for during shutdown as streams may restart.
+        /// Will complete successfully even if one of the stream completion futures failed
+        /// </summary>
+        private Task<Done> StreamsCompleted {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public bool IsShutdown => _hasBeenShutdown.Value;
+
+        // ARTERY: Need to figure out how to do a coordinated shutdown hook
+        private Action ShutdownHook
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         public readonly Sink<IInboundEnvelope, Task<Done>> MessageDispatcherSink;
 
@@ -483,13 +505,15 @@ namespace Akka.Remote.Artery
         {
             // ARTERY: This is scala code to hook a callback to JVM shutdown event.
             //         Need to convert this to dotnet somehow.
+            /*
             if (System.Settings.ClrShutdownHooks)
                 Runtime.GetRuntime().AddShutdownHook(ShutdownHook);
+            */
 
             StartTransport();
             FlightRecorder.TransportStarted();
 
-            var systemMaterializer = new SystemMaterializer(System);
+            var systemMaterializer = SystemMaterializer.Get(System);
             _materializer =
                 systemMaterializer.CreateAdditionalLegacySystemMaterializer(
                     "remote",
@@ -550,21 +574,7 @@ namespace Akka.Remote.Artery
 
         private void StartRemoveQuarantinedAssociationTask()
         {
-            var removeAfter = Settings.Advanced.RemoveQuarantinedAssociationAfter;
-            var interval = new TimeSpan(removeAfter.Ticks / 2);
-
-            // ARTERY: Scala code can explicitly state which threading context a scheduled lambda is being run, WE DON'T HAVE THIS
-            /*
-             * system.scheduler.scheduleWithFixedDelay(removeAfter, interval) { () =>
-             *     if (!isShutdown)
-             *         associationRegistry.removeUnusedQuarantined(removeAfter)
-             * }(system.dispatchers.internalDispatcher)
-             */
-            System.Scheduler.ScheduleRepeatedly(removeAfter, interval, () =>
-            {
-                if (!IsShutdown)
-                    _associationRegistry.RemoveUnusedQuarantined(removeAfter);
-            });
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -585,12 +595,6 @@ namespace Akka.Remote.Artery
                 default:
                     return env.Lane;
             }
-        }
-
-        // ARTERY: Need to figure out how to do a coordinated shutdown hook
-        internal void ShutdownHook()
-        {
-            throw new NotImplementedException();
         }
 
         private class ControlMessageObserver : InboundControlJunction.IControlMessageObserver
@@ -614,20 +618,44 @@ namespace Akka.Remote.Artery
                 }
             }
 
-            public void ControlSubjectCompleted(Try<Done> signal)
-            {
-                throw new NotImplementedException();
-            }
+            public void ControlSubjectCompleted(Try<Done> signal) { }
         }
 
         protected void AttachControlMessageObserver(InboundControlJunction.IControlMessageSubject ctrl)
         {
             _controlSubject = ctrl;
-            // ARTERY: Need to figure out how to port this
             _controlSubject.Attach(new ControlMessageObserver(this));
         }
 
+        protected void AttachInboundStreamRestart(string streamName, Task<Done> streamCompleted, Action restart)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task Shutdown()
+        {
+            throw new NotImplementedException();
+        }
+
+        private Task<Done> InternalShutdown()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected abstract Task<Done> ShutdownTransport();
+
+        public override Task<bool> ManagementCommand(object cmd)
+        {
+            throw new NotImplementedException();
+        }
+
+        // IInboundContext
         public void SendControl(Address to, IControlMessage message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Send(object message, IActorRef sender, RemoteActorRef recipient)
         {
             throw new NotImplementedException();
         }
@@ -678,13 +706,10 @@ namespace Akka.Remote.Artery
             throw new NotImplementedException();
         }
 
-        public Sink<EnvelopeBuffer, Task<Done>> OutboundTransportSink(
-            IOutboundContext outboundContext, 
+        protected abstract Sink<EnvelopeBuffer, Task<Done>> OutboundTransportSink(
+            IOutboundContext outboundContext,
             int streamId,
-            EnvelopeBufferPool bufferPool)
-        {
-            throw new NotImplementedException();
-        }
+            EnvelopeBufferPool bufferPool);
 
         public Flow<IOutboundEnvelope, EnvelopeBuffer, Encoder.IOutboundCompressionAccess>
             OutboundLane(IOutboundContext outboundContext)
