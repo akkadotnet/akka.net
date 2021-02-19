@@ -68,4 +68,47 @@ namespace Akka.Remote.Serialization
             return !(v is EmptyLocalActorRef);
         }
     }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="TActorRef"></typeparam>
+    internal abstract class AbstractActorRefResolveCache<TActorRef> : LruBoundedCache<string, TActorRef> 
+        where TActorRef: class, IActorRef
+    {
+        protected AbstractActorRefResolveCache() : base(capacity: 1024, evictAgeThreshold: 600)
+        {
+        }
+
+        /// <summary>
+        /// Compared to `getOrCompute` this will also invalidate cachedAssociation of RemoteActorRef
+        /// if the `Association` is removed.
+        /// </summary>
+        /// <param name="k"></param>
+        /// <returns></returns>
+        public TActorRef Resolve(string k)
+        {
+            var @ref = GetOrCompute(k);
+            if (@ref is RemoteActorRef r)
+            {
+                var cachedAssociation = r.CachedAssociation;
+                if (cachedAssociation != null && cachedAssociation.IsRemovedAfterQuarantined())
+                    r.CachedAssociation = null;
+            }
+
+            return @ref;
+        }
+
+        protected override int Hash(string k)
+            => FastHash.OfStringFast(k);
+
+        protected override bool IsCacheable(TActorRef v)
+        {
+            if (v is EmptyLocalActorRef)
+                return false;
+
+            // "temp" only for one request-response interaction so don't cache
+            return !InternalActorRef.IsTemporaryRef(v);
+        }
+    }
 }

@@ -8,10 +8,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Remote.Artery;
 
 namespace Akka.Remote
 {
@@ -44,6 +46,8 @@ namespace Akka.Remote
         /// </summary>
         private readonly Props _props;
 
+        internal volatile Association _cachedAssociation = null;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RemoteActorRef"/> class.
         /// </summary>
@@ -56,6 +60,14 @@ namespace Akka.Remote
         public RemoteActorRef(RemoteTransport remote, Address localAddressToUse, ActorPath path, IInternalActorRef parent,
             Props props, Deploy deploy)
         {
+            // detect mistakes such as using "akka.tcp" with Artery
+            if (remote is ArteryTransport t)
+            {
+                if (path.Address.Protocol != t.LocalAddress.Address.Protocol)
+                    throw new ArgumentException(
+                        $"Wrong protocol of [{path}], expected [{t.LocalAddress.Address.Protocol}]");
+            }
+
             Remote = remote;
             LocalAddressToUse = localAddressToUse;
             _path = path;
@@ -65,6 +77,12 @@ namespace Akka.Remote
 
             if (path.Address.HasLocalScope)
                 throw new ArgumentException($"Unexpected local address in RemoteActorRef [{this}]");
+        }
+
+        internal Association CachedAssociation
+        {
+            get => Volatile.Read(ref _cachedAssociation);
+            set => Volatile.Write(ref _cachedAssociation, value);
         }
 
         /// <summary>

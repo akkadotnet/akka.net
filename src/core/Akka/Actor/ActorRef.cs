@@ -374,6 +374,17 @@ namespace Akka.Actor
         }
     }
 
+    internal static class InternalActorRef
+    {
+        public static bool IsTemporaryRef(IActorRef @ref)
+        {
+            if (!(@ref is IInternalActorRef i))
+                return false;
+
+            return (i.IsLocal && i is PromiseActorRef) || (!i.IsLocal && i.Path.Elements[0] == "temp");
+        }
+    }
+
     /// <summary>
     /// INTERNAL API.
     /// 
