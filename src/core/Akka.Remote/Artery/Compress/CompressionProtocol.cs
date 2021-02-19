@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
-using Akka.Remote.Artery.Interfaces;
 
 namespace Akka.Remote.Artery.Compress
 {
