@@ -2486,6 +2486,9 @@ namespace Akka.Streams.Dsl.Internal
         /// </summary>
         public static IFlow<T, TMat> Watch<T, TMat>(this IFlow<T, TMat> flow, IActorRef actorRef) => flow.Via(new Fusing.Watch<T>(actorRef));
 
+        public static IFlow<T, TMat> Filter<T, TMat>(this IFlow<T, TMat> flow, Func<T, bool> filter) =>
+            flow.Via(new Fusing.Filter<T>(filter));
+
         //TODO: there is no HKT in .NET, so we cannot simply do `to` method, which evaluates to either Source ⇒ IRunnableGraph, or Flow ⇒ Sink
 
     }
