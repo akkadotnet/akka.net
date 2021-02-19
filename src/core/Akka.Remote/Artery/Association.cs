@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.Remote.Artery.Compress;
 using Akka.Remote.Artery.Utils;
 using Akka.Remote.Artery.Utils.Concurrent;
@@ -14,10 +17,9 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
-    internal class Association : IOutboundContext
+    internal static class Association
     {
-        #region Static region
-        public interface IQueueWrapper : SendQueue.IProducerApi<IOutboundEnvelope>
+                public interface IQueueWrapper : SendQueue.IProducerApi<IOutboundEnvelope>
         {
             IQueue<IOutboundEnvelope> Queue { get; }
         }
@@ -121,68 +123,113 @@ namespace Akka.Remote.Artery
                 Stopping = stopping;
             }
         }
-        #endregion
+    }
+
+    // ARTERY: TLifeCycle bleeds from ArteryTransport to here
+    internal class Association<TLifeCycle> : IOutboundContext
+    {
+        public readonly ArteryTransport<TLifeCycle> Transport;
+        public readonly Materializer Materializer;
+        public readonly Materializer ControlMaterializer;
+        public InboundControlJunction.IControlMessageSubject ControlSubject{ get; }
+        public readonly WildcardIndex<NotUsed> LargeMessageDestinations;
+        public readonly WildcardIndex<NotUsed> PriorityMessageDestinations;
+        public readonly ObjectPool<ReusableOutboundEnvelope> OutboundEnvelopePool;
 
         private readonly ILoggingAdapter _log;
-        private readonly IRemotingFlightRecorder _flightRecorder;
-        private readonly ArterySettings _settings;
-        private readonly ArterySettings.AdvancedSettings _advancedSettings;
+        private IRemotingFlightRecorder FlightRecorder => Transport.FlightRecorder;
+        public ArterySettings Settings => Transport.Settings;
+        public ArterySettings.AdvancedSettings AdvancedSettings => Transport.Settings.Advanced;
+
         private readonly bool _deathWatchNotificationFlushEnabled;
         private readonly RestartCounter _restartCounter;
+
         private readonly int _outboundLanes;
         private readonly int _controlQueueSize;
         private readonly int _queueSize;
         private readonly int _largeQueueSize;
+
         private readonly SendQueue.IProducerApi<IOutboundEnvelope>[] _queues;
-        private readonly SendQueue.IProducerApi<IOutboundEnvelope> _controlQueue;
 
         private volatile bool _queuesVisibility = false;
+
+        private SendQueue.IProducerApi<IOutboundEnvelope> ControlQueue => _queues[Association.ControlQueueIndex];
+
         private volatile IOptionVal<OutboundControlJunction.IOutboundControlIngress> _outboundControlIngress = OptionVal.None<OutboundControlJunction.IOutboundControlIngress>();
         private volatile CountDownLatch _materializing = new CountDownLatch(1);
-        private volatile List<OutboundCompressionAccess> _outboundCompressionAccess = new List<OutboundCompressionAccess>();
+        private volatile List<Encoder.IOutboundCompressionAccess> _outboundCompressionAccess = new List<Encoder.IOutboundCompressionAccess>();
 
         // keyed by stream queue index
-        private readonly AtomicReference<Dictionary<int, OutboundStreamMatValues>> _streamMatValues = new AtomicReference<Dictionary<int, OutboundStreamMatValues>>();
+        private readonly AtomicReference<Dictionary<int, Association.OutboundStreamMatValues>> _streamMatValues = new AtomicReference<Dictionary<int, Association.OutboundStreamMatValues>>();
 
         private readonly AtomicReference<IOptionVal<Cancelable>> _idleTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
         private readonly AtomicReference<IOptionVal<Cancelable>> _stopQuarantinedTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
-        private InboundControlJunction.IControlMessageSubject _controlSubject;
 
-        public ArteryTransport Transport { get; }
-        public Materializer Materializer{ get; }
-        public Materializer ControlMaterializer{ get; }
-        public UniqueAddress LocalAddress { get; }
+        private IActorRef DeadLetters => Transport.System.DeadLetters;
+
+        public OutboundControlJunction.IOutboundControlIngress OutboundControlIngress
+        {
+            get
+            {
+                switch (_outboundControlIngress)
+                {
+                    case Some<OutboundControlJunction.IOutboundControlIngress> o:
+                        return o.Get;
+                    default:
+                        if (ControlQueue is Association.LazyQueueWrapper w)
+                            w.RunMaterialize();
+
+                        // the outboundControlIngress may be accessed before the stream is materialized
+                        // using CountDownLatch to make sure that materialization is completed
+                        _materializing.Wait(TimeSpan.FromSeconds(10));
+                        switch (_outboundControlIngress)
+                        {
+                            case Some<OutboundControlJunction.IOutboundControlIngress> o:
+                                return o.Get;
+                            default:
+                                if(Transport.IsShutdown || IsRemovedAfterQuarantined())
+                                    throw ArteryTransport.ShuttingDown.Instance;
+                                throw new IllegalStateException(
+                                    $"outboundControlIngress for [{RemoteAddress}] not initialized yet");
+                        }
+                }
+            }
+        }
+
+        public UniqueAddress LocalAddress => Transport.LocalAddress;
+
+        /// <summary>
+        /// Holds reference to shared state of Association - *access only via helper methods*
+        /// </summary>
+        private readonly AtomicReference<AssociationState> _sharedStateDoNotCallMeDirectly = AssociationState.Create();
+
+        /// <summary>
+        /// Helper method for access to underlying state via Unsafe
+        /// </summary>
+        /// <param name="oldState">Previous state</param>
+        /// <param name="newState">Next state on transition</param>
+        /// <returns>Whether the previous state matched correctly</returns>
+        public bool SwapState(AssociationState oldState, AssociationState newState)
+        {
+            return _sharedStateDoNotCallMeDirectly.CompareAndSet(oldState, newState);
+        }
+
+        public AssociationState AssociationState => _sharedStateDoNotCallMeDirectly.Value;
+
+        public void SetControlIdleKillSwitch(IOptionVal<SharedKillSwitch> killSwitch)
+        {
+            var current = AssociationState;
+            SwapState(current, current.WithControlIdleKillSwitch(killSwitch));
+        }
+
         public Address RemoteAddress{ get; }
-        public AssociationState AssociationState { get; }
-        public void Quarantine(string reason)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SendControl(IControlMessage message)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool IsOrdinaryMessageStreamActive()
-        {
-            throw new NotImplementedException();
-        }
-
-        InboundControlJunction.IControlMessageSubject IOutboundContext.ControlSubject => _controlSubject;
-
-        public ArterySettings Settings { get; }
-        public ControlMessageSubject ControlSubject{ get; }
-        public WildcardIndex<NotUsed> LargeMessageDestinations{ get; }
-        public WildcardIndex<NotUsed> PriorityMessageDestinations{ get; }
-        public ObjectPool<ReusableOutboundEnvelope> OutboundEnvelopePool{ get; }
 
         public Association(
-            ArteryTransport transport, 
+            ArteryTransport<TLifeCycle> transport, 
             Materializer materializer, 
             Materializer controlMaterializer, 
             Address remoteAddress, 
-            ControlMessageSubject controlSubject, 
+            InboundControlJunction.IControlMessageSubject controlSubject, 
             WildcardIndex<NotUsed> largeMessageDestinations, 
             WildcardIndex<NotUsed> priorityMessageDestinations, 
             ObjectPool<ReusableOutboundEnvelope> outboundEnvelopePool)
@@ -199,32 +246,28 @@ namespace Akka.Remote.Artery
             OutboundEnvelopePool = outboundEnvelopePool;
 
             _log = Logging.WithMarker(transport.System, this.GetType());
-            _flightRecorder = transport.FlightRecorder;
-            _settings = transport.Settings;
-            _advancedSettings = transport.Settings.Advanced;
             _deathWatchNotificationFlushEnabled =
-                _advancedSettings.DeathWatchNotificationFlushTimeout > TimeSpan.Zero &&
+                AdvancedSettings.DeathWatchNotificationFlushTimeout > TimeSpan.Zero &&
                 transport.Provider.Settings.HasCluster;
 
-            _restartCounter = new RestartCounter(_advancedSettings.OutboundMaxRestarts, _advancedSettings.OutboundRestartTimeout);
+            _restartCounter = new RestartCounter(AdvancedSettings.OutboundMaxRestarts, AdvancedSettings.OutboundRestartTimeout);
 
-            _outboundLanes = _advancedSettings.OutboundLanes;
-            _controlQueueSize = _advancedSettings.OutboundControlQueueSize;
-            _queueSize = _advancedSettings.OutboundMessageQueueSize;
-            _largeQueueSize = _advancedSettings.OutboundLargeMessageQueueSize;
+            _outboundLanes = AdvancedSettings.OutboundLanes;
+            _controlQueueSize = AdvancedSettings.OutboundControlQueueSize;
+            _queueSize = AdvancedSettings.OutboundMessageQueueSize;
+            _largeQueueSize = AdvancedSettings.OutboundLargeMessageQueueSize;
 
             _queues = new SendQueue.IProducerApi<IOutboundEnvelope>[2 + _outboundLanes];
-            _queues[ControlQueueIndex] = new QueueWrapperImpl<IQueue<IOutboundEnvelope>, IOutboundEnvelope>(CreateQueue(_controlQueueSize, ControlQueueIndex));
-            _queues[LargeQueueIndex] = transport.LargeMessageChannelEnabled
-                ? new QueueWrapperImpl(CreateQueue(_largeQueueSize, LargeQueueIndex))
-                : DisabledQueueWrapper.Instance;
+            _queues[Association.ControlQueueIndex] = new Association.QueueWrapperImpl(CreateQueue(_controlQueueSize, Association.ControlQueueIndex));
+            _queues[Association.LargeQueueIndex] = transport.LargeMessageChannelEnabled
+                ? new Association.QueueWrapperImpl(CreateQueue(_largeQueueSize, Association.LargeQueueIndex))
+                : (Association.IQueueWrapper)Association.DisabledQueueWrapper.Instance;
 
             for (var i = 0; i < _outboundLanes; ++i)
             {
-                _queues[OrdinaryQueueIndex + i] = new QueueWrapperImpl(CreateQueue(_queueSize, OrdinaryQueueIndex + 1));
+                _queues[Association.OrdinaryQueueIndex + i] = new Association.QueueWrapperImpl(
+                    CreateQueue(_queueSize, Association.OrdinaryQueueIndex + 1));
             }
-
-            _controlQueue = _queues[ControlQueueIndex];
         }
 
         // We start with the raw wrapped queue and then it is replaced with the materialized value of
@@ -232,35 +275,273 @@ namespace Akka.Remote.Artery
         // start sending (enqueuing) to the Association immediate after construction.
         private IQueue<IOutboundEnvelope> CreateQueue(int capacity, int queueIndex)
         {
-            var linked = queueIndex == ControlQueueIndex || queueIndex == LargeQueueIndex;
-            if (linked)
-                return new LinkedBlockingQueue<IOutboundEnvelope>(capacity);
-            else
-                return new ManyToOneConcurrentArrayQueue<IOutboundEnvelope>(capacity);
+            var linked = queueIndex == Association.ControlQueueIndex || queueIndex == Association.LargeQueueIndex;
+            return linked 
+                ? new LinkedBlockingQueue<IOutboundEnvelope>(capacity) 
+                : (IQueue<IOutboundEnvelope>) new ManyToOneConcurrentArrayQueue<IOutboundEnvelope>(capacity);
         }
 
         public Task<Done> ChangeActorRefCompression(CompressionTable<IActorRef> table)
-            => UpdateOutboundCompression(c => c.ChangeActorRefCompression(false));
+            => UpdateOutboundCompression(c => c.ChangeActorRefCompression(table));
 
-        private Task<Done> UpdateOutboundCompression(Func<OutboundCompressionAccess, Task<Done>> action)
+        public Task<Done> ChangeClassManifestCompression(CompressionTable<string> table)
+            => UpdateOutboundCompression(c => c.ChangeClassManifestCompression(table));
+
+        public Task<Done> ClearOutboundCompression()
+            => UpdateOutboundCompression(c => c.ClearCompression());
+
+        private Task<Done> UpdateOutboundCompression(Func<Encoder.IOutboundCompressionAccess, Task<Done>> action)
         {
-            var ec = Transport.System.Dispatchers.InternalDispatcher;
+            //var ec = Transport.System.Dispatchers.InternalDispatcher;
             var c = Volatile.Read(ref _outboundCompressionAccess);
-            switch (c.Count)
+            var tasks = c.Select(action).ToList();
+
+            return tasks.Count switch
             {
-                case 0:
-                    return Task.FromResult(Done.Instance);
-                case 1:
-                    return action(c[0]);
-                default:
-                    var tasks = new List<Task<Done>>();
-                    foreach (var item in c)
-                    {
-                        tasks.Add(action(item));
-                    }
-                    // TODO: RECHECK CODE: I'm not sure this is a proper 1 to 1 conversion of the original scala code
-                    return Task.WhenAll(tasks).ContinueWith(t => Task.FromResult(Done.Instance)).Unwrap();
+                0 => Task.FromResult(Done.Instance),
+                1 => action(c[0]),
+                // ARTERY TODO: RECHECK CODE: I'm not sure this is a proper 1 to 1 conversion of the original scala code
+                _ => Task.WhenAll(tasks).ContinueWith(t => Task.FromResult(Done.Instance)).Unwrap()
+            };
+        }
+
+        public Task<Done> CompleteHandshake(UniqueAddress peer)
+        {
+            throw new NotImplementedException();
+        }
+
+        // IOutboundContext
+        public void SendControl(IControlMessage message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Send(object message, IOptionVal<IActorRef> sender, IOptionVal<RemoteActorRef> recipient)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int SelectQueue(IOptionVal<RemoteActorRef> recipient)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsOrdinaryMessageStreamActive()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsStreamActive(int queueIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int SendTerminationHint(IActorRef replyTo)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int SendFlush(IActorRef replyTo, bool excludeControlQueue)
+        {
+            throw new NotImplementedException();
+        }
+
+        public int SendToAllQueues(IControlMessage msg, IActorRef replyTo, bool excludeControlQueue)
+        {
+            throw new NotImplementedException();
+        }
+
+        // IOutboundContext
+        public void Quarantine(string reason)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Quarantine(string reason, IOptionVal<long> uid, bool harmless)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// After calling this no messages can be sent with this Association instance
+        /// </summary>
+        public void RemovedAfterQuarantined()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool IsRemovedAfterQuarantined()
+            => _queues[Association.ControlQueueIndex].Equals(Association.RemovedQueueWrapper.Instance);
+
+        private void CancelStopQuarantinedTimer()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SetupStopQuarantinedTimer()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void AbortQuarantined()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CancelIdleTimer()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SetupIdleTimer()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CancelAllTimers()
+        {
+            CancelIdleTimer();
+            CancelStopQuarantinedTimer();
+        }
+
+        /// <summary>
+        /// Called once after construction when the `Association` instance
+        /// wins the CAS in the `AssociationRegistry`. It will materialize
+        /// the streams. It is possible to sending (enqueuing) to the association
+        /// before this method is called.
+        /// </summary>
+        /// <exception cref="ArteryTransport.ShuttingDown">if called while the transport is shutting down</exception>
+        public void Associate()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RunOutboundStreams()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RunOutboundControlStream()
+        {
+            throw new NotImplementedException();
+        }
+
+        private Association.IQueueWrapper GetOrCreateQueueWrapper(int queueIndex, int capacity)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RunOutboundOrdinaryMessageStream()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RunOutboundLargeMessageStream()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void AttachOutboundStreamRestart(
+            string streamName, 
+            int queueIndex, 
+            int queueCapacity,
+            Task<Done> streamCompleted, 
+            Action restart)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void UpdateStreamMatValues(int streamId, SharedKillSwitch streamKillSwitch, Task<Done> completed)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void UpdateStreamMatValues(int streamId, Association.OutboundStreamMatValues values)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void SetStopReason(int streamId, Association.IStopSignal stopSignal)
+        {
+            throw new NotImplementedException();
+        }
+
+        private IOptionVal<Association.IStopSignal> GetStopReason(int streamId)
+        {
+            throw new NotImplementedException();
+        }
+
+        // after it has been used we remove the kill switch to cleanup some memory,
+        // not a "leak" but a KillSwitch is rather heavy
+        private void ClearStreamKillSwitch(int streamIs, SharedKillSwitch old)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Exposed for orderly shutdown purposes, can not be trusted except for during shutdown as streams may restart.
+        /// Will complete successfully even if one of the stream completion futures failed
+        /// </summary>
+        public Task<Done> StreamsCompleted
+        {
+            get
+            {
+                throw new NotImplementedException();
             }
+        }
+
+        public override string ToString()
+            => $"Association({LocalAddress} -> {RemoteAddress} with {AssociationState})";
+    }
+
+    internal class AssociationRegistry<TLifeCycle>
+    {
+        private readonly Func<Address, Association<TLifeCycle>> _createAssociation;
+        private readonly AtomicReference<Dictionary<Address, Association<TLifeCycle>>> _associationByAddress;
+        private readonly AtomicReference<ImmutableDictionary<long, Association<TLifeCycle>>> _associationByUid;
+
+        public ImmutableHashSet<Association<TLifeCycle>> AllAssociations =>
+            _associationByAddress.Value.Values.ToImmutableHashSet();
+
+        public AssociationRegistry(Func<Address, Association<TLifeCycle>> createAssociation)
+        {
+            _createAssociation = createAssociation;
+            _associationByAddress =
+                new AtomicReference<Dictionary<Address, Association<TLifeCycle>>>(
+                    new Dictionary<Address, Association<TLifeCycle>>());
+            _associationByUid =
+                new AtomicReference<ImmutableDictionary<long, Association<TLifeCycle>>>(
+                    ImmutableDictionary<long, Association<TLifeCycle>>.Empty);
+        }
+
+        public Association<TLifeCycle> Association(Address remoteAddress)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IOptionVal<Association<TLifeCycle>> Association(long uid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Association<TLifeCycle> SetUid(UniqueAddress peer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RemoveUnusedQuarantined(TimeSpan after)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RemoveUnusedQuarantinedByAddress(TimeSpan after)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void RemoveUnusedQuarantinedByUid(TimeSpan after)
+        {
+            throw new NotImplementedException();
         }
     }
 }
