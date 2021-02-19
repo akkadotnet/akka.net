@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
 using Akka.Routing;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -45,8 +46,24 @@ namespace Akka.Tests.Actor
             InitializeLogger(Sys1);
             InitializeLogger(Sys2);
         }
-        
+
         [Fact]
+        public async Task Ask_from_local_actor_without_remote_association_should_work()
+        {
+            // create actor in Sys1
+            const string actorName = "actor1";
+            Sys1.ActorOf(dsl => dsl.ReceiveAny((m, ctx) => TestActor.Tell(m)), actorName);
+            
+            // create ActorSelection from Sys2 --> Sys1
+            var sel = Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / actorName);
+            
+            // make sure that actor1 is able to resolve temporary actor's path
+            // see https://github.com/akkadotnet/akka.net/issues/4384 - tmp actor should belong to Sys2 here
+            var msg = await sel.Ask<ActorIdentity>(new Identify("foo"), TimeSpan.FromSeconds(30));
+            msg.MessageId.Should().Be("foo");
+        }
+        
+        [Fact(Skip = "The spec above contains the reproduction of the real issue")]
         public async Task ConsistentHashingPoolRoutersShouldWorkAsExpectedWithHashMapping()
         {
             var poolRouter =
