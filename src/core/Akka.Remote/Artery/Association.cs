@@ -81,10 +81,15 @@ namespace Akka.Remote.Artery
                 _materialize = materialize;
             }
 
-            public bool Offer(IOutboundEnvelope message)
+            public void RunMaterialize()
             {
                 if (_onlyOnce.CompareAndSet(false, true))
                     _materialize();
+            }
+
+            public bool Offer(IOutboundEnvelope message)
+            {
+                RunMaterialize();
                 return Queue.Offer(message);
             }
 
@@ -129,8 +134,8 @@ namespace Akka.Remote.Artery
         #endregion
 
         public readonly ArteryTransport Transport;
-        public readonly Materializer Materializer;
-        public readonly Materializer ControlMaterializer;
+        public readonly IMaterializer Materializer;
+        public readonly IMaterializer ControlMaterializer;
         public InboundControlJunction.IControlMessageSubject ControlSubject{ get; }
         public readonly WildcardIndex<NotUsed> LargeMessageDestinations;
         public readonly WildcardIndex<NotUsed> PriorityMessageDestinations;
@@ -181,7 +186,7 @@ namespace Akka.Remote.Artery
 
                         // the outboundControlIngress may be accessed before the stream is materialized
                         // using CountDownLatch to make sure that materialization is completed
-                        _materializing.Wait(TimeSpan.FromSeconds(10));
+                        _materializing.Await().Wait(TimeSpan.FromSeconds(10));
                         switch (_outboundControlIngress)
                         {
                             case Some<OutboundControlJunction.IOutboundControlIngress> o:
@@ -226,8 +231,8 @@ namespace Akka.Remote.Artery
 
         public Association(
             ArteryTransport transport, 
-            Materializer materializer, 
-            Materializer controlMaterializer, 
+            IMaterializer materializer, 
+            IMaterializer controlMaterializer, 
             Address remoteAddress, 
             InboundControlJunction.IControlMessageSubject controlSubject, 
             WildcardIndex<NotUsed> largeMessageDestinations, 
