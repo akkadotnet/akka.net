@@ -2287,7 +2287,10 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<T, T, TMat> Watch<T, TMat>(this Flow<T, T, TMat> flow, IActorRef actorRef) =>
             (Flow<T, T, TMat>)InternalFlowOperations.Watch(flow, actorRef);
-        
+
+        public static Flow<T, T, TMat> Filter<T, TMat>(this Flow<T, T, TMat> flow, Func<T, bool> filter)
+            => (Flow<T, T, TMat>) InternalFlowOperations.Filter(flow, filter);
+
         /// <summary>
         /// Turns a Flow into a FlowWithContext which manages a context per element along a stream.
         /// </summary>
