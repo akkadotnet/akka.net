@@ -14,6 +14,7 @@ using Akka.Actor.Dsl;
 using Akka.Configuration;
 using Akka.Routing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
@@ -24,7 +25,7 @@ namespace Akka.Tests.Actor
         public ActorSystem Sys2 { get; }
         public Address Sys2Address { get; }
         
-        public BugFix4384Spec() : base()
+        public BugFix4384Spec(ITestOutputHelper outputHelper) : base(nameof(BugFix4384Spec), outputHelper)
         {
             var sys1Port = GetFreeTcpPort();
             var sys2Port = GetFreeTcpPort();
@@ -32,14 +33,17 @@ namespace Akka.Tests.Actor
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                 akka.remote.dot-netty.tcp.port = {sys1Port}
                 akka.remote.dot-netty.tcp.hostname = 127.0.0.1
-            ").WithFallback(DefaultConfig));
+            ").WithFallback(DefaultConfig.WithFallback(FullDebugConfig)));
             Sys2 = ActorSystem.Create("Sys2", config: ConfigurationFactory.ParseString($@"
                 akka.actor.provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
                 akka.remote.dot-netty.tcp.port = {sys2Port}
                 akka.remote.dot-netty.tcp.hostname = 127.0.0.1
-            ").WithFallback(DefaultConfig));
+            ").WithFallback(DefaultConfig.WithFallback(FullDebugConfig)));
             Sys1Address = new Address("akka.tcp", Sys1.Name, "127.0.0.1", sys1Port);
             Sys2Address = new Address("akka.tcp", Sys2.Name, "127.0.0.1", sys2Port);
+            
+            InitializeLogger(Sys1);
+            InitializeLogger(Sys2);
         }
         
         [Fact]
@@ -57,7 +61,7 @@ namespace Akka.Tests.Actor
 
             // use some auto-received messages to ensure that those still work
             var numRoutees = (await poolRouter.Ask<Routees>(new GetRoutees(), TimeSpan.FromSeconds(2))).Members.Count();
-
+            
             // establish association between ActorSystems
             var sys2Probe = CreateTestProbe(Sys2);
             var secondActor = Sys1.ActorOf(act => act.ReceiveAny((o, ctx) => ctx.Sender.Tell(o)), "foo");
