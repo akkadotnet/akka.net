@@ -257,8 +257,13 @@ namespace Akka.Remote.Artery
         ArterySettings Settings { get; }
     }
 
-    internal static class ArteryTransport
+    // ARTERY: The scala code "cheats" by using the type keyword to declare TLifeCycle, making it a
+    //         locally scoped generic parameter. We don't have this, so this generic parameter will bleed
+    //         over to other sibling classes. Need to find a way to fix this. -- Gregorius
+    internal abstract class ArteryTransport : RemoteTransport, IInboundContext
     {
+        #region Static region
+
         public const string ProtocolName = "akka";
 
         // Note that the used version of the header format for outbound messages is defined in
@@ -314,13 +319,9 @@ namespace Akka.Remote.Artery
                 _ => throw new Exception($"Unknown stream id: {streamId}")
             };
         }
-    }
 
-    // ARTERY: The scala code "cheats" by using the type keyword to declare TLifeCycle, making it a
-    //         locally scoped generic parameter. We don't have this, so this generic parameter will bleed
-    //         over to other sibling classes. Need to find a way to fix this. -- Gregorius
-    internal abstract class ArteryTransport<TLifeCycle> : RemoteTransport, IInboundContext
-    {
+        #endregion
+
         private volatile UniqueAddress _localAddress;
         private volatile UniqueAddress _bindAddress;
         private volatile ImmutableHashSet<Address> _addresses;
@@ -357,7 +358,7 @@ namespace Akka.Remote.Artery
 
         protected readonly SharedKillSwitch KillSwitch;
 
-        protected readonly AtomicReference<ImmutableDictionary<int, ArteryTransport.InboundStreamMatValues<TLifeCycle>>> StreamMatValues;
+        protected readonly AtomicReference<ImmutableDictionary<int, InboundStreamMatValues<TLifeCycle>>> StreamMatValues;
         private readonly AtomicBoolean _hasBeenShutdown;
 
         private readonly SharedTestState _testState;
@@ -374,7 +375,7 @@ namespace Akka.Remote.Artery
         // The outboundEnvelopePool is shared among all outbound associations
         private readonly ObjectPool<ReusableOutboundEnvelope> _outboundEnvelopePool;
 
-        private readonly AssociationRegistry<TLifeCycle> _associationRegistry;
+        private readonly AssociationRegistry _associationRegistry;
 
         public ImmutableHashSet<Address> RemoteAddresses
         {
@@ -405,8 +406,8 @@ namespace Akka.Remote.Artery
 
             // keyed by the streamId
             StreamMatValues =
-                new AtomicReference<ImmutableDictionary<int, ArteryTransport.InboundStreamMatValues<TLifeCycle>>>(
-                    ImmutableDictionary<int, ArteryTransport.InboundStreamMatValues<TLifeCycle>>.Empty);
+                new AtomicReference<ImmutableDictionary<int, InboundStreamMatValues<TLifeCycle>>>(
+                    ImmutableDictionary<int, InboundStreamMatValues<TLifeCycle>>.Empty);
             _hasBeenShutdown = new AtomicBoolean(false);
 
             _testState = new SharedTestState();
@@ -437,7 +438,7 @@ namespace Akka.Remote.Artery
                 Settings.Advanced.OutboundLargeMessageQueueSize * Settings.Advanced.OutboundLanes * 3);
 
             // ARTERY: AssociationRegistry is different than the one in TestTransport
-            Func<Address, Association<TLifeCycle>> createAssociation = remoteAddress => new Association<TLifeCycle>(
+            Func<Address, Association> createAssociation = remoteAddress => new Association(
                 this,
                 _materializer,
                 _controlMaterializer,
@@ -446,7 +447,7 @@ namespace Akka.Remote.Artery
                 Settings.LargeMessageDestinations,
                 _priorityMessageDestinations,
                 _outboundEnvelopePool);
-            _associationRegistry = new AssociationRegistry<TLifeCycle>(createAssociation);
+            _associationRegistry = new AssociationRegistry(createAssociation);
 
             MessageDispatcherSink = Sink.ForEach<IInboundEnvelope>(m =>
             {
@@ -503,13 +504,13 @@ namespace Akka.Remote.Artery
             var (port, boundPort) = BindInboundStreams();
 
             _localAddress = new UniqueAddress(
-                new Address(ArteryTransport.ProtocolName, System.Name, Settings.Canonical.Hostname, port),
+                new Address(ProtocolName, System.Name, Settings.Canonical.Hostname, port),
                 AddressUidExtension.Uid(System));
 
             _addresses = ImmutableHashSet<Address>.Empty.Add(_localAddress.Address);
 
             _bindAddress = new UniqueAddress(
-                new Address(ArteryTransport.ProtocolName, System.Name, Settings.Bind.Hostname, boundPort), 
+                new Address(ProtocolName, System.Name, Settings.Bind.Hostname, boundPort), 
                 AddressUidExtension.Uid(System));
 
             FlightRecorder.TransportUniqueAddressSet(_localAddress);
@@ -594,9 +595,9 @@ namespace Akka.Remote.Artery
 
         private class ControlMessageObserver : InboundControlJunction.IControlMessageObserver
         {
-            private ArteryTransport<TLifeCycle> _parent;
+            private ArteryTransport _parent;
 
-            public ControlMessageObserver(ArteryTransport<TLifeCycle> parent)
+            public ControlMessageObserver(ArteryTransport parent)
             {
                 _parent = parent;
             }
@@ -607,7 +608,7 @@ namespace Akka.Remote.Artery
                 {
                     throw new NotImplementedException();
                 }
-                catch (ArteryTransport.ShuttingDown)
+                catch (ShuttingDown)
                 {
                     // silence it
                 }
