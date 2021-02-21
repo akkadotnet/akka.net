@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using Akka.Actor;
+using Akka.Util;
 
 namespace Akka.Remote.Artery
 {
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal interface IRemotingFlightRecorder : IExtension
     {
         void TransportMediaDriverStarted(string directoryName);
@@ -55,24 +59,41 @@ namespace Akka.Remote.Artery
         void TcpInboundReceived(int size);
     }
 
-    internal class RemotingFlightRecorderExtension : ExtensionIdProvider<IRemotingFlightRecorder>
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal static class RemotingFlightRecorder
     {
         public static IRemotingFlightRecorder Get(ActorSystem system)
         {
             return system.WithExtension<IRemotingFlightRecorder, RemotingFlightRecorderExtension>();
         }
 
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal class RemotingFlightRecorderExtension : ExtensionIdProvider<IRemotingFlightRecorder>
+    {
         public override IRemotingFlightRecorder CreateExtension(ExtendedActorSystem system)
         {
             if (system.Settings.Config.GetBoolean("akka.clr-flight-recorder.enabled"))
             {
-                // ARTERY NOT IMPLEMENTED YET
                 // ARTERY: supposed to return an instance of akka.remote.artery.jfr.JFRRemotingFlightRecorder
+                //         which is based on java jdk.jfr, do we need to port this?
+                FlightRecorderLoader.Load(
+                    system,
+                    "Akka.Remote.Artery.Jfr.JFRRemotingFlightRecorder, Akka.Remote",
+                    NoOpRemotingFlightRecorder.Instance);
             }
             return NoOpRemotingFlightRecorder.Instance;
         }
     }
 
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
     internal sealed class NoOpRemotingFlightRecorder : IRemotingFlightRecorder
     {
         public static readonly NoOpRemotingFlightRecorder Instance = new NoOpRemotingFlightRecorder();

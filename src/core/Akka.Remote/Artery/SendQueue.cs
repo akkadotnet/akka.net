@@ -30,33 +30,9 @@ namespace Akka.Remote.Artery
         }
     }
 
-    [SuppressMessage("ReSharper", "InconsistentNaming")]
     internal sealed class SendQueue<T> : GraphStageWithMaterializedValue<SourceShape<T>, SendQueue.IQueueValue<T>>
     {
-        private readonly TaskCompletionSource<Try<IQueue<T>>> _queuePromise = new TaskCompletionSource<Try<IQueue<T>>>();
-        private readonly Logic _logic;
-        private volatile bool _needWakeup_DoNotAccessDirectly;
-
-        public Outlet<T> Out => new Outlet<T>("SendQueue.out");
-        public override SourceShape<T> Shape => new SourceShape<T>(Out);
-        public Action<List<T>> PostStopAction { get; }
-
-#pragma warning disable 420
-        public bool NeedWakeup
-        {
-            get => Volatile.Read(ref _needWakeup_DoNotAccessDirectly);
-            set => Volatile.Write(ref _needWakeup_DoNotAccessDirectly, value);
-        }
-#pragma warning restore 420
-
-        public SendQueue(Action<List<T>> postStopAction) // (Vector<T> postStopAction)
-        {
-            PostStopAction = postStopAction;
-            _logic = new Logic(this);
-        }
-
-        public override ILogicAndMaterializedValue<SendQueue.IQueueValue<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
-            => new LogicAndMaterializedValue<SendQueue.IQueueValue<T>>(_logic, new QueueValue(this));
+        #region Logic
 
         public class Logic : OutGraphStageLogic, SendQueue.IWakeupSignal
         {
@@ -94,7 +70,7 @@ namespace Akka.Remote.Artery
                         FailStage(result.Failure.Value);
                 });
 
-                // TODO: in the original scala code, the pre-start callback is called inside the materializer execution context, but we don't have execution contexts. Does MessageDispatcher.Schedule equals to the scala ExecutionContext.Execute?
+                // ARTERY TODO: in the original scala code, the pre-start callback is called inside the materializer execution context, but we don't have execution contexts. Does MessageDispatcher.Schedule equals to the scala ExecutionContext.Execute?
                 var ec = Materializer.ExecutionContext;
                 _source._queuePromise.Task.ContinueWith(task => ec.Schedule(() => cb.Invoke(task.Result)));
             }
@@ -141,11 +117,40 @@ namespace Akka.Remote.Artery
                     }
                     _consumerQueue.Clear();
                 }
-                _source.PostStopAction?.Invoke(pending);
+                _source.PostStopAction.Invoke(pending);
 
                 base.PostStop();
             }
         }
+
+        #endregion
+
+        private readonly TaskCompletionSource<Try<IQueue<T>>> _queuePromise = new TaskCompletionSource<Try<IQueue<T>>>();
+        private readonly Logic _logic;
+        private volatile bool _needWakeup;
+
+        public Outlet<T> Out => new Outlet<T>("SendQueue.out");
+        public override SourceShape<T> Shape => new SourceShape<T>(Out);
+        public Action<List<T>> PostStopAction { get; }
+
+#pragma warning disable 420
+        public bool NeedWakeup
+        {
+            get => Volatile.Read(ref _needWakeup);
+            set => Volatile.Write(ref _needWakeup, value);
+        }
+#pragma warning restore 420
+
+        public SendQueue(Action<List<T>> postStopAction) // (Vector<T> postStopAction)
+        {
+            postStopAction.Requiring(p => p != null, "postStopAction must not be null");
+
+            PostStopAction = postStopAction;
+            _logic = new Logic(this);
+        }
+
+        public override ILogicAndMaterializedValue<SendQueue.IQueueValue<T>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+            => new LogicAndMaterializedValue<SendQueue.IQueueValue<T>>(_logic, new QueueValue(this));
 
         public class QueueValue : SendQueue.IQueueValue<T>
         {

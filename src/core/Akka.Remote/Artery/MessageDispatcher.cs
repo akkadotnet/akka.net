@@ -22,7 +22,9 @@ namespace Akka.Remote.Artery
             _provider = provider;
 
             _remoteDaemon = provider.RemoteDaemon;
-            _log = Logging.GetLogger(system, GetType().Name); //Logging.WithMarker(system, GetType().Name);
+            // TODO: switch to WithMarker if we port over marker logging in the future
+            //_log = Logging.WithMarker(system, GetType().Name);
+            _log = Logging.GetLogger(system, GetType().Name); 
             _debugLogEnabled = _log.IsDebugEnabled;
         }
 

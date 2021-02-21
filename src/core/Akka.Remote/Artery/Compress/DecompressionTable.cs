@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Security.Cryptography;
-using System.Security.Policy;
-using System.Text;
 using Akka.Util.Internal;
 
 namespace Akka.Remote.Artery.Compress
