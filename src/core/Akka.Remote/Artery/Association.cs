@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -250,7 +251,9 @@ namespace Akka.Remote.Artery
             PriorityMessageDestinations = priorityMessageDestinations;
             OutboundEnvelopePool = outboundEnvelopePool;
 
-            _log = Logging.WithMarker(transport.System, GetType());
+            // TODO: switch to WithMarker if we port over marker logging in the future
+            //_log = Logging.WithMarker(transport.System, GetType());
+            _log = Logging.GetLogger(transport.System, GetType());
             _deathWatchNotificationFlushEnabled =
                 AdvancedSettings.DeathWatchNotificationFlushTimeout > TimeSpan.Zero &&
                 transport.Provider.Settings.HasCluster;

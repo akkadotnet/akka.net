@@ -5,14 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Remote.Artery.Compress;
 using Akka.Remote.Artery.Utils;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.IO;
-using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Remote.Artery
 {
@@ -409,13 +406,14 @@ namespace Akka.Remote.Artery
             }
         }
 
-        public readonly Sink<IInboundEnvelope, Task<Done>> MessageDispatcherSink;
+        public readonly Sink<IInboundEnvelope, Task> MessageDispatcherSink;
 
         public readonly Flow<IInboundEnvelope, IInboundEnvelope, NotUsed> FlushReplier;
 
         protected ArteryTransport(ExtendedActorSystem system, RemoteActorRefProvider provider) : base(system, provider)
         {
             // TODO: Scala logging is way more advanced than ours, this logger supposed to have marker adapter added to it
+            //_log = Logging.WithMarker(system, GetType());
             _log = Logging.GetLogger(system, GetType());
             FlightRecorder = RemotingFlightRecorderExtension.Get(system);
             _log.Debug($"Using flight recorder {FlightRecorder}");
@@ -460,7 +458,7 @@ namespace Akka.Remote.Artery
                 Settings.Advanced.OutboundLargeMessageQueueSize * Settings.Advanced.OutboundLanes * 3);
 
             // ARTERY: AssociationRegistry is different than the one in TestTransport
-            Func<Address, Association> createAssociation = remoteAddress => new Association(
+            _associationRegistry = new AssociationRegistry(remoteAddress => new Association(
                 this,
                 _materializer,
                 _controlMaterializer,
@@ -468,8 +466,7 @@ namespace Akka.Remote.Artery
                 _controlSubject,
                 Settings.LargeMessageDestinations,
                 _priorityMessageDestinations,
-                _outboundEnvelopePool);
-            _associationRegistry = new AssociationRegistry(createAssociation);
+                _outboundEnvelopePool));
 
             MessageDispatcherSink = Sink.ForEach<IInboundEnvelope>(m =>
             {
@@ -494,7 +491,7 @@ namespace Akka.Remote.Artery
                 }
                 else
                 {
-                    _log.Error("Expected sender for Flush message from [{0}]", envelope.association);
+                    _log.Error("Expected sender for Flush message from [{0}]", envelope.Association);
                 }
 
                 return false;
