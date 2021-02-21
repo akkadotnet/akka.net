@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
-using Akka.Remote.Artery.Compress;
 using Akka.Remote.Artery.Utils;
 using Akka.Util;
 using Akka.Util.Internal;
 
-namespace Akka.Remote.Artery
+namespace Akka.Remote.Artery.Compress
 {
     /// <summary>
     /// INTERNAL API
@@ -629,7 +626,7 @@ namespace Akka.Remote.Artery
 
         private CompressionTable<T> PrepareCompressionAdvertisement(byte nextTableVersion)
         {
-            var mappings = BuildTableForAdvertisement(HeavyHitters.GetEnumerator());
+            var mappings = BuildTableForAdvertisement(HeavyHitters);
             return new CompressionTable<T>(OriginUid, nextTableVersion, mappings);
         }
 

@@ -191,15 +191,70 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class RemoteInstruments
     {
+        #region Static region
+
         public static RemoteInstruments Apply(ExtendedActorSystem system)
             => new RemoteInstruments(system);
+        
+                // key/length of a metadata element are encoded within a single integer:
+        // supports keys in the range of <0-31>
+        private const int LengthMask = ~(31 << 26);
+        private static int CombineKeyLength(byte k, int l) => ((int)k << 26) | (l & LengthMask);
+        private static byte GetKey(int kl) => (byte)((uint)kl >> 26);
+        private static int GetLength(int kl) => kl & LengthMask;
 
+        public static ImmutableList<RemoteInstrument> Create(
+            ExtendedActorSystem system, 
+            ILoggingAdapter log) // not used
+        {
+            var c = system.Settings.Config;
+            var path = "akka.remote.artery.advanced.instruments";
+
+            var configuredInstruments = c
+                .GetStringList(path)
+                .Select(fqcn =>
+                {
+                    var type = Type.GetType(fqcn);
+                    if(type == null)
+                        throw new ConfigurationException($"[akka.remote.artery.advanced.instruments] Failed to create instance of class [{fqcn}]");
+                    try
+                    {
+                        return (RemoteInstrument)Activator.CreateInstance(type);
+                    }
+                    catch
+                    {
+                        return (RemoteInstrument)Activator.CreateInstance(type, BindingFlags.CreateInstance, null, new[] { system });
+                    }
+                }).ToList();
+
+            return system.Provider switch
+            {
+                RemoteActorRefProvider rarp => rarp.Transport switch
+                {
+                    ArteryTransport artery => artery.Settings.LogFrameSizeExceeding switch
+                    {
+                        Some<int> _ => Add(configuredInstruments, new LoggingRemoteInstrument(system)).ToImmutableList(),
+                        _ => configuredInstruments.ToImmutableList()
+                    },
+                    _ => configuredInstruments.ToImmutableList(),
+                },
+                _ => configuredInstruments.ToImmutableList(),
+            };
+        }
+
+        #endregion
+
+        private readonly ExtendedActorSystem _system;
         private readonly ILoggingAdapter _log;
+
+        // keep the remote instruments sorted by identifier to speed up deserialization
         private readonly ImmutableList<RemoteInstrument> _instruments;
+        // does any of the instruments want serialization timing?
+        private readonly bool _serializationTimingEnabled;
 
         public bool IsEmpty => _instruments.Count == 0;
         public bool NonEmpty => _instruments.Count != 0;
-        public bool TimeSerialization { get; }
+        public bool TimeSerialization => _serializationTimingEnabled;
 
         public RemoteInstruments(ExtendedActorSystem system, ILoggingAdapter log) 
             : this(system, log, Create(system, log))
@@ -211,10 +266,10 @@ namespace Akka.Remote.Artery
 
         public RemoteInstruments(ExtendedActorSystem system, ILoggingAdapter log, ImmutableList<RemoteInstrument> instruments)
         {
+            _system = system;
             _log = log;
             _instruments = instruments.Sort((x, y) => x.Identifier - y.Identifier);
-
-            TimeSerialization = _instruments.Exists(ri => ri.SerializationTimingEnabled);
+            _serializationTimingEnabled = _instruments.Exists(ri => ri.SerializationTimingEnabled);
         }
 
         public void Serialize(IOptionVal<IOutboundEnvelope> outboundEnvelope, ByteBuffer buffer)
@@ -482,50 +537,6 @@ namespace Akka.Remote.Artery
             object IEnumerator.Current => Current;
 
             public void Dispose() { }
-        }
-
-        // key/length of a metadata element are encoded within a single integer:
-        // supports keys in the range of <0-31>
-        private const int LengthMask = ~(31 << 26);
-        private static int CombineKeyLength(byte k, int l) => ((int)k << 26) | (l & LengthMask);
-        private static byte GetKey(int kl) => (byte)((uint)kl >> 26);
-        private static int GetLength(int kl) => kl & LengthMask;
-
-        public static ImmutableList<RemoteInstrument> Create(ExtendedActorSystem system, ILoggingAdapter log)
-        {
-            var c = system.Settings.Config;
-            var path = "akka.remote.artery.advanced.instruments";
-
-            var configuredInstruments = c
-                .GetStringList(path)
-                .Select(fqcn =>
-                {
-                    var type = Type.GetType(fqcn);
-                    if(type == null)
-                        throw new ConfigurationException($"[akka.remote.artery.advanced.instruments] Failed to create instance of class [{fqcn}]");
-                    try
-                    {
-                        return (RemoteInstrument)Activator.CreateInstance(type);
-                    }
-                    catch
-                    {
-                        return (RemoteInstrument)Activator.CreateInstance(type, BindingFlags.CreateInstance, null, new[] { system });
-                    }
-                }).ToList();
-
-            return system.Provider switch
-            {
-                RemoteActorRefProvider rarp => rarp.Transport switch
-                {
-                    ArteryTransport artery => artery.Settings.LogFrameSizeExceeding switch
-                    {
-                        Some<int> _ => Add(configuredInstruments, new LoggingRemoteInstrument(system)).ToImmutableList(),
-                        _ => configuredInstruments.ToImmutableList()
-                    },
-                    _ => configuredInstruments.ToImmutableList(),
-                },
-                _ => configuredInstruments.ToImmutableList(),
-            };
         }
 
         private static IEnumerable<RemoteInstrument> Add(
