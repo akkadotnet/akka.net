@@ -103,7 +103,9 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (_log.IsDebugEnabled)
             {
-                _log.Debug("Channel {0} received a message ({1}) of type [{2}]", ctx.Channel, message, message == null ? "NULL" : message.GetType().TypeQualifiedName());
+                
+                // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
+                _log.Debug("Channel {0} received a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(), message == null ? "NULL" : message.GetType().TypeQualifiedName());
             }
             ctx.FireChannelRead(message);
         }
@@ -112,7 +114,8 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (_log.IsDebugEnabled)
             {
-                _log.Debug("Channel {0} writing a message ({1}) of type [{2}]", ctx.Channel, message, message == null ? "NULL" : message.GetType().TypeQualifiedName());
+                // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
+                _log.Debug("Channel {0} writing a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(), message == null ? "NULL" : message.GetType().TypeQualifiedName());
             }
             return ctx.WriteAsync(message);
         }

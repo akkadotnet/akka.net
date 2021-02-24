@@ -166,7 +166,7 @@ namespace Akka.DistributedData.Tests
                 { "c", 7 },
             }.ToImmutableDictionary();
 
-            m3.Entries.ShouldBeEquivalentTo(expected);
+            m3.Entries.Should().BeEquivalentTo(expected);
         }
 
         /// <summary>

@@ -16,6 +16,7 @@ using Akka.Persistence.Snapshot;
 using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Persistence.Tests

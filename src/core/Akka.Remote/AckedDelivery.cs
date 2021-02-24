@@ -283,6 +283,10 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class Ack
     {
+        [Obsolete("Only used for serialization", true)]
+        public Ack()
+        { }
+
         /// <summary>
         /// Class representing an acknowledgement with select negative acknowledgements.
         /// </summary>

@@ -76,7 +76,7 @@ namespace Akka.Streams.Implementation.IO
             => message.Match()
                     .With<Request>(ReadAndSignal)
                     .With<Continue>(ReadAndSignal)
-                    .With<Cancel>(() => Context.Stop(Self))
+                    .With<Actors.Cancel>(() => Context.Stop(Self))
                     .WasHandled;
 
         /// <summary>

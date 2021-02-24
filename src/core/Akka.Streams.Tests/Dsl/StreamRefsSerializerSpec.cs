@@ -187,7 +187,8 @@ namespace Akka.Streams.Tests
             var sinkActor = RemoteSystem.ActorOf(ConsumerActor.Props(source.Path.ToStringWithAddress(remoteAddress), _probe), "sink");
             sinkActor.Tell(new StartListening());
 
-            _probe.ExpectMsg(payload);
+            // when running in Azure DevOps, greater timeout needed to ensure real Remoting has enough time to handle stuff
+            _probe.ExpectMsg(payload, TimeSpan.FromSeconds(30)); 
         }
     }
 }

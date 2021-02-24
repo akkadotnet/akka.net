@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic open = Flow.Create<int>();
             Action compiler = () => open.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
 
         [Fact]
@@ -51,15 +51,15 @@ namespace Akka.Streams.Tests.Dsl
             var open2 = Flow.Create<string>().Select(x => x.GetHashCode());
             dynamic open3 = open1.Via(open2);
             Action compiler = () => open3.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
 
             dynamic closedSource = IntSeq.Via(open3);
             compiler = () => closedSource.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
 
             dynamic closedSink = open3.To(Sink.AsPublisher<int>(false));
             compiler = () => closedSink.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
 
             closedSource.To(Sink.AsPublisher<int>(false)).Run(Materializer);
             IntSeq.To(closedSink).Run(Materializer);
@@ -72,9 +72,9 @@ namespace Akka.Streams.Tests.Dsl
             var closedSink = Flow.Create<string>().Select(x => x.GetHashCode()).To(Sink.AsPublisher<int>(false));
             dynamic appended = open.To(closedSink);
             Action compiler = () => appended.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
             compiler = () => appended.To(Sink.First<int>());
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
             IntSeq.To(appended).Run(Materializer);
         }
 
@@ -85,9 +85,9 @@ namespace Akka.Streams.Tests.Dsl
             var closedSource = StringSeq.Via(Flow.Create<string>().Select(x => x.GetHashCode()));
             dynamic closedSource2 = closedSource.Via(open);
             Action compiler = () => closedSource2.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
             compiler = () => StringSeq.To(closedSource2);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
             closedSource2.To(Sink.AsPublisher<string>(false)).Run(Materializer);
         }
 
@@ -103,7 +103,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic openSink = OpenSink;
             Action compiler = () => openSink.To(Sink.First<string>());
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
 
         [Fact]
@@ -111,7 +111,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic openSink = OpenSink;
             Action compiler = () => openSink.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
 
 
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic openSource = OpenSource;
             Action compiler = () => openSource.To(IntSeq);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
 
         [Fact]
@@ -133,7 +133,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic openSource = OpenSource;
             Action compiler = () => openSource.Run(Materializer);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
 
 
@@ -151,7 +151,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic intSeq = IntSeq;
             Action compiler = () => intSeq.To(Closed);
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
 
         [Fact]
@@ -159,7 +159,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             dynamic closed = Closed;
             Action compiler = () => closed.To(Sink.First<string>());
-            compiler.ShouldThrow<RuntimeBinderException>();
+            compiler.Should().Throw<RuntimeBinderException>();
         }
     }
 }

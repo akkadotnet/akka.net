@@ -173,7 +173,7 @@ namespace Akka.Streams.Tests.Dsl
                         .Grouped(1000);
                 var task = testSource.RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1,10));
 
                 var runnable = testSource.ToMaterialized(Sink.Ignore<IEnumerable<int>>(), Keep.Left);
                 var t = runnable.Run(Materializer);
@@ -196,13 +196,13 @@ namespace Akka.Streams.Tests.Dsl
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
                 var runnable =
                     Source.From(Enumerable.Range(1, 5))
                         .ViaMaterialized(testFlow, Keep.Both)
                         .To(Sink.Ignore<IEnumerable<int>>());
-                runnable.Invoking(r => r.Run(Materializer)).ShouldNotThrow();
+                runnable.Invoking(r => r.Run(Materializer)).Should().NotThrow();
 
                 runnable.MapMaterializedValue(_ => "boo").Run(Materializer).Should().Be("boo");
             }, Materializer);
@@ -220,7 +220,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ViaMaterialized(testFlow, Keep.Both)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
                 //var sink = testFlow.ConcatMaterialized(Source.From(Enumerable.Range(1, 5)), Keep.Both)
                 //    .To(Sink.Ignore<IEnumerable<int>>())
