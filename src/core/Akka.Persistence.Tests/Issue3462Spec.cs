@@ -9,12 +9,12 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
-    public class BugFix2Spec : TestKit.Xunit2.TestKit
+    public class Issue3462Spec : TestKit.Xunit2.TestKit
     {
         private IActorRef m_actor;
 		private Supervisor m_actorConcrete;
 
-        public BugFix2Spec(ITestOutputHelper output) : base((ActorSystem)null, output)
+        public Issue3462Spec(ITestOutputHelper output) : base((ActorSystem)null, output)
         {
             var testActor = ActorOfAsTestActorRef<Supervisor>(Props.Create(() => new Supervisor()));
             m_actor = testActor.Ref;

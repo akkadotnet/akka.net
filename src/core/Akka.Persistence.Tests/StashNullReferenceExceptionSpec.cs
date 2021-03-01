@@ -12,9 +12,9 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
-    public class BugFixSpec : PersistenceSpec
+    public class StashNullReferenceExceptionSpec : PersistenceSpec
     {
-        public BugFixSpec(ITestOutputHelper output) 
+        public StashNullReferenceExceptionSpec(ITestOutputHelper output) 
             : base (Configuration("baseTest"), output)
         {
         }
