@@ -14,13 +14,13 @@
     <HyperionVersion>0.9.16</HyperionVersion>
     <NewtonsoftJsonVersion>12.0.3</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.14.0</ProtobufVersion>
+    <ProtobufVersion>3.15.2</ProtobufVersion>
     <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
     <NetTestVersion>net5.0</NetTestVersion>
     <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
-    <FsCheckVersion>2.14.4</FsCheckVersion>
+    <FsCheckVersion>2.14.6</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
