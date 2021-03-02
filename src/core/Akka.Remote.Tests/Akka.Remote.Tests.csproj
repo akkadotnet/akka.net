@@ -25,7 +25,7 @@
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
     <PackageReference Include="FsCheck" Version="2.15.1" />
-    <PackageReference Include="FsCheck.Xunit" Version="2.14.6" />
+    <PackageReference Include="FsCheck.Xunit" Version="2.15.1" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
