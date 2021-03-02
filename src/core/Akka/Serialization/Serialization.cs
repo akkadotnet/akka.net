@@ -186,15 +186,10 @@ namespace Akka.Serialization
             }
 
             // Add any serializers that are registered via the SerializationSetup
+            // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
             {
                 AddSerializer(details.Alias, details.Serializer);
-
-                // populate the serialization map
-                foreach (var t in details.UseFor)
-                {
-                    AddSerializationMap(t, details.Serializer);
-                }
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -210,17 +205,24 @@ namespace Akka.Serialization
                     continue;
                 }
 
-
                 if (!_serializersByName.TryGetValue(serializerName, out var serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
-
                 AddSerializationMap(messageType, serializer);
             }
 
-            
+            // Add any serializer bindings that are registered via the SerializationSetup
+            // This has to be done here because SerializationSetup ALWAYS win.
+            foreach (var details in _serializerDetails)
+            {
+                // populate the serialization map
+                foreach (var t in details.UseFor)
+                {
+                    AddSerializationMap(t, details.Serializer);
+                }
+            }
         }
 
         private Information SerializationInfo => System.Provider.SerializationInformation;
