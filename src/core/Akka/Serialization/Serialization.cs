@@ -255,6 +255,38 @@ namespace Akka.Serialization
             }
         }
 
+        /// <summary>
+        /// Performs the requested serialization function while also setting
+        /// the <see cref="CurrentTransportInformation"/> based on available data
+        /// from the <see cref="ActorSystem"/>. Useful when serializing <see cref="IActorRef"/>s.
+        /// </summary>
+        /// <typeparam name="T">The type of message being serialized.</typeparam>
+        /// <typeparam name="TState">The type of caller input state to be used in the function</typeparam>
+        /// <param name="system">The <see cref="ActorSystem"/> performing serialization.</param>
+        /// <param name="state">the other input state to be passed in to the serialization function</param>
+        /// <param name="action">The serialization function.</param>
+        /// <returns>The serialization output.</returns>
+        public static T WithTransport<TState, T>(ExtendedActorSystem system, TState state, Func<TState, T> action)
+        {
+            var info = system.Provider.SerializationInformation;
+            if (CurrentTransportInformation == info)
+            {
+                // already set
+                return action(state);
+            }
+
+            var oldInfo = CurrentTransportInformation;
+            try
+            {
+                CurrentTransportInformation = info;
+                return action(state);
+            }
+            finally
+            {
+                CurrentTransportInformation = oldInfo;
+            }
+        }
+
         private T WithTransport<T>(Func<T> action)
         {
             var oldInfo = CurrentTransportInformation;
