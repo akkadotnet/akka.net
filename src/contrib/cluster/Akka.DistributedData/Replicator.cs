@@ -556,43 +556,52 @@ namespace Akka.DistributedData
             {
                 DataEnvelope envelope;
                 IReplicatedData delta;
-                if (localValue == null)
+                switch (localValue)
                 {
-                    var d = modify(null);
-                    if (d is IDeltaReplicatedData withDelta)
+                    case null:
                     {
-                        envelope = new DataEnvelope(withDelta.ResetDelta());
-                        delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
+                        var modified = modify(null);
+                        switch (modified)
+                        {
+                            case IDeltaReplicatedData d:
+                                envelope = new DataEnvelope(d.ResetDelta());
+                                delta = d.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
+                                break;
+                            case var d:
+                                envelope = new DataEnvelope(d);
+                                delta = null;
+                                break;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        envelope = new DataEnvelope(d);
+                    case var e when e.Data is DeletedData:
+                        envelope = e;
                         delta = null;
-                    }
+                        break;
+                    case var e:
+                        switch (modify(localValue.Data))
+                        {
+                            case IDeltaReplicatedData d:
+                                envelope = e.Merge(d.ResetDelta());
+                                delta = d.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
+                                break;
+                            case var d:
+                                envelope = e.Merge(d);
+                                delta = null;
+                                break;
+                        }
+                        break;
                 }
-                else if (localValue.Data is DeletedData)
+
+                // case Success((DataEnvelope(DeletedData, _, _), _)) =>
+                if (envelope.Data is DeletedData)
                 {
                     _log.Debug("Received update for deleted key {0}", key);
                     Sender.Tell(new DataDeleted(key, request));
                     return;
                 }
-                else
-                {
-                    var d = modify(localValue.Data);
-                    if (d is IDeltaReplicatedData withDelta)
-                    {
-                        envelope = localValue.Merge(withDelta.ResetDelta());
-                        delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
-                    }
-                    else
-                    {
-                        envelope = localValue.Merge(d);
-                        delta = null;
-                    }
-                }
 
                 // case Success((envelope, delta)) ⇒
-
                 _log.Debug("Received Update for key {0}", key);
 
                 // handle the delta
@@ -622,21 +631,25 @@ namespace Akka.DistributedData
                 {
                     DataEnvelope writeEnvelope;
                     Delta writeDelta;
-                    if (delta == null || Equals(delta, DeltaPropagation.NoDeltaPlaceholder))
+                    switch (delta)
                     {
-                        writeEnvelope = newEnvelope;
-                        writeDelta = null;
-                    }
-                    else if (delta is IRequireCausualDeliveryOfDeltas)
-                    {
-                        var version = _deltaPropagationSelector.CurrentVersion(key.Id);
-                        writeEnvelope = newEnvelope;
-                        writeDelta = new Delta(newEnvelope.WithData(delta), version, version);
-                    }
-                    else
-                    {
-                        writeEnvelope = newEnvelope.WithData(delta);
-                        writeDelta = null;
+                        case null:
+                            writeEnvelope = newEnvelope;
+                            writeDelta = null;
+                            break;
+                        case var d when ReferenceEquals(d, DeltaPropagation.NoDeltaPlaceholder):
+                            writeEnvelope = newEnvelope;
+                            writeDelta = null;
+                            break;
+                        case IRequireCausualDeliveryOfDeltas d:
+                            var v = _deltaPropagationSelector.CurrentVersion(key.Id);
+                            writeEnvelope = newEnvelope;
+                            writeDelta = new Delta(newEnvelope.WithData(d), v, v);
+                            break;
+                        case var d:
+                            writeEnvelope = newEnvelope.WithData(d);
+                            writeDelta = null;
+                            break;
                     }
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
@@ -1422,14 +1435,14 @@ namespace Akka.DistributedData
                     return allNodes;
                 }
             }
-                
+
 
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas)
             {
                 // Important to include the pruning state in the deltas. For example if the delta is based
                 // on an entry that has been pruned but that has not yet been performed on the target node.
                 var newDeltas = deltas
-                    .Where(x => !Equals(x.Value.data, DeltaPropagation.NoDeltaPlaceholder))
+                    .Where(x => !ReferenceEquals(x.Value.data, DeltaPropagation.NoDeltaPlaceholder))
                     .Select(x =>
                     {
                         var key = x.Key;

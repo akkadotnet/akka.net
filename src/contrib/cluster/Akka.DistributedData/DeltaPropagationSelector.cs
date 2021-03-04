@@ -10,8 +10,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster;
 using Akka.DistributedData.Internal;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
@@ -55,89 +57,83 @@ namespace Akka.DistributedData
         public ImmutableDictionary<Address, DeltaPropagation> CollectPropagations()
         {
             PropagationCount++;
-            var all = AllNodes;
-            if (all.IsEmpty)
+            var all = AllNodes.ToList();
+            if (all.Count == 0)
                 return ImmutableDictionary<Address, DeltaPropagation>.Empty;
+
+            // For each tick we pick a few nodes in round-robin fashion, 2 - 10 nodes for each tick.
+            // Normally the delta is propagated to all nodes within the gossip tick, so that
+            // full state gossip is not needed.
+            var sliceSize = NodeSliceSize(all.Count);
+            List<Address> slice;
+            if (all.Count <= sliceSize) slice = all;
             else
             {
-                // For each tick we pick a few nodes in round-robin fashion, 2 - 10 nodes for each tick.
-                // Normally the delta is propagated to all nodes within the gossip tick, so that
-                // full state gossip is not needed.
-                var sliceSize = NodeSliceSize(all.Length);
-                ImmutableArray<Address> slice;
-                if (all.Length <= sliceSize) slice = all;
-                else
-                {
-                    var start = (int)(_deltaNodeRoundRobinCounter % all.Length);
-                    var buffer = new Address[sliceSize];
-                    for (var i = 0; i < sliceSize; i++)
-                    {
-                        buffer[i] = all[(start + i) % all.Length];
-                    }
-                    slice = ImmutableArray.CreateRange(buffer);
-                }
-
-                _deltaNodeRoundRobinCounter += sliceSize;
-
-                var result = ImmutableDictionary<Address, DeltaPropagation>.Empty.ToBuilder();
-                var cache = new Dictionary<(string, long, long), IReplicatedData>();
-                foreach (var node in slice)
-                {
-                    // collect the deltas that have not already been sent to the node and merge
-                    // them into a delta group
-                    var deltas = ImmutableDictionary<string, (IReplicatedData, long, long)>.Empty.ToBuilder();
-                    foreach (var entry in _deltaEntries)
-                    {
-                        var key = entry.Key;
-                        var entries = entry.Value;
-
-                        var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<Address, long>.Empty);
-                        
-                        var j = deltaSentToNodeForKey.GetValueOrDefault(node, 0L);
-                        var deltaEntriesAfterJ = DeltaEntriesAfter(entries, j);
-                        if (!deltaEntriesAfterJ.IsEmpty)
-                        {
-                            var fromSeqNr = deltaEntriesAfterJ.Keys.First(); // should be min
-                            var toSeqNr = deltaEntriesAfterJ.Keys.Last(); // should be max
-
-                            // in most cases the delta group merging will be the same for each node,
-                            // so we cache the merged results
-                            var cacheKey = (key, fromSeqNr, toSeqNr);
-                            if (!cache.TryGetValue(cacheKey, out var deltaGroup))
-                            {
-                                using (var e = deltaEntriesAfterJ.Values.GetEnumerator())
-                                {
-                                    e.MoveNext();
-                                    deltaGroup = e.Current;
-                                    while (e.MoveNext())
-                                    {
-                                        deltaGroup = deltaGroup.Merge(e.Current);
-                                        if (deltaGroup is IReplicatedDeltaSize s && s.DeltaSize > MaxDeltaSize)
-                                        {
-                                            deltaGroup = DeltaPropagation.NoDeltaPlaceholder;
-                                        }
-                                    }
-                                }
-
-                                cache[cacheKey] = deltaGroup;
-                            }
-
-                            deltas[key] = (deltaGroup, fromSeqNr, toSeqNr);
-                            _deltaSentToNode = _deltaSentToNode.SetItem(key, deltaSentToNodeForKey.SetItem(node, toSeqNr));
-                        }
-                    }
-
-                    if (deltas.Count > 0)
-                    {
-                        // Important to include the pruning state in the deltas. For example if the delta is based
-                        // on an entry that has been pruned but that has not yet been performed on the target node.
-                        var deltaPropagation = CreateDeltaPropagation(deltas.ToImmutable());
-                        result[node] = deltaPropagation;
-                    }
-                }
-
-                return result.ToImmutable();
+                var i = (int)(_deltaNodeRoundRobinCounter % all.Count);
+                slice = all.Slice(i, sliceSize).ToList();
+                
+                if (slice.Count != sliceSize)
+                    slice.AddRange(all.Take(sliceSize - slice.Count));
             }
+
+            _deltaNodeRoundRobinCounter += sliceSize;
+
+            var result = ImmutableDictionary<Address, DeltaPropagation>.Empty.ToBuilder();
+            var cache = new Dictionary<(string, long, long), IReplicatedData>();
+            foreach (var node in slice)
+            {
+                // collect the deltas that have not already been sent to the node and merge
+                // them into a delta group
+                var deltas = ImmutableDictionary.CreateBuilder<string, (IReplicatedData, long, long)>();
+                foreach (var entry in _deltaEntries)
+                {
+                    var key = entry.Key;
+                    var entries = entry.Value;
+
+                    var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<Address, long>.Empty);
+                        
+                    var j = deltaSentToNodeForKey.GetValueOrDefault(node, 0L);
+                    var deltaEntriesAfterJ = DeltaEntriesAfter(entries, j);
+                    if (!deltaEntriesAfterJ.IsEmpty)
+                    {
+                        var fromSeqNr = deltaEntriesAfterJ.Keys.First(); // should be min
+                        var toSeqNr = deltaEntriesAfterJ.Keys.Last(); // should be max
+
+                        // in most cases the delta group merging will be the same for each node,
+                        // so we cache the merged results
+                        var cacheKey = (key, fromSeqNr, toSeqNr);
+                        if (!cache.TryGetValue(cacheKey, out var deltaGroup))
+                        {
+                            deltaGroup = deltaEntriesAfterJ.Values.Aggregate((d1, d2) =>
+                            {
+                                var merged = ReferenceEquals(d2, DeltaPropagation.NoDeltaPlaceholder) 
+                                    ? DeltaPropagation.NoDeltaPlaceholder 
+                                    : d1.Merge(d2);
+
+                                if (merged is IReplicatedDeltaSize s && s.DeltaSize >= MaxDeltaSize)
+                                    return DeltaPropagation.NoDeltaPlaceholder; // discard too large deltas
+
+                                return merged;
+                            });
+
+                            cache[cacheKey] = deltaGroup;
+                        }
+
+                        deltas[key] = (deltaGroup, fromSeqNr, toSeqNr);
+                        _deltaSentToNode = _deltaSentToNode.SetItem(key, deltaSentToNodeForKey.SetItem(node, toSeqNr));
+                    }
+                }
+
+                if (deltas.Count > 0)
+                {
+                    // Important to include the pruning state in the deltas. For example if the delta is based
+                    // on an entry that has been pruned but that has not yet been performed on the target node.
+                    var deltaPropagation = CreateDeltaPropagation(deltas.ToImmutable());
+                    result[node] = deltaPropagation;
+                }
+            }
+
+            return result.ToImmutable();
         }
 
         public bool HasDeltaEntries(string key)
@@ -181,16 +177,15 @@ namespace Akka.DistributedData
             ImmutableSortedDictionary<long, IReplicatedData> entries, long version) =>
             entries.Where(e => e.Key > version).ToImmutableSortedDictionary();
 
-        private long FindSmallestVersionPropagatedToAllNodes(string key, IEnumerable<Address> nodes)
+        private long FindSmallestVersionPropagatedToAllNodes(string key, ImmutableArray<Address> nodes)
         {
-            if (_deltaSentToNode.TryGetValue(key, out var deltaSentToNodeForKey) && !deltaSentToNodeForKey.IsEmpty)
-            {
-                return nodes.Any(node => !deltaSentToNodeForKey.ContainsKey(node))
-                    ? 0L
-                    : deltaSentToNodeForKey.Values.Min();
-            }
-
-            return 0L;
+            if (!_deltaSentToNode.TryGetValue(key, out var deltaSentToNodeForKey))
+                return 0L;
+            if (deltaSentToNodeForKey.IsEmpty)
+                return 0L;
+            if (nodes.Any(node => !deltaSentToNodeForKey.ContainsKey(node)))
+                return 0L;
+            return deltaSentToNodeForKey.Values.Min();
         }
     }
 }
