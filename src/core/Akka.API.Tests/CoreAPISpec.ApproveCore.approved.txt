@@ -4667,6 +4667,7 @@ namespace Akka.Serialization
         [System.ObsoleteAttribute("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
         public static T WithTransport<T>(Akka.Actor.ActorSystem system, Akka.Actor.Address address, System.Func<T> action) { }
         public static T WithTransport<T>(Akka.Actor.ExtendedActorSystem system, System.Func<T> action) { }
+        public static T WithTransport<TState, T>(Akka.Actor.ExtendedActorSystem system, TState state, System.Func<TState, T> action) { }
     }
     public sealed class SerializationSetup : Akka.Actor.Setup.Setup
     {
@@ -5135,7 +5136,7 @@ namespace Akka.Util.Reflection
 {
     public class static ExpressionExtensions
     {
-        public static System.Collections.Generic.IEnumerable<object> GetArguments(this System.Linq.Expressions.NewExpression newExpression) { }
+        public static object[] GetArguments(this System.Linq.Expressions.NewExpression newExpression) { }
     }
     public class static TypeCache
     {

@@ -1480,7 +1480,7 @@ namespace Akka.Remote
             {
                 _log.Error(
                   ex,
-                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
                   send.Message.GetType());
                 return true;
             }

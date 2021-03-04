@@ -129,20 +129,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Resolves <see cref="IActorRefProvider"/> for Ask pattern
         /// </summary>
-        /// <param name="self">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="self">Reference to someone we are sending Ask request to</param>
+        /// <returns>Provider used for Ask pattern implementation</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
-            if (ActorCell.Current != null)
-                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
+            if (self is ActorSelection)
+                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
 
             if (self is IInternalActorRef)
                 return self.AsInstanceOf<IInternalActorRef>().Provider;
-
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+            
+            if (ActorCell.Current != null)
+                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
             return null;
         }
