@@ -21,7 +21,7 @@ namespace Akka.DependencyInjection.Tests
 
     public class ActorServiceProviderPropsWithScopesSpecs : AkkaSpec, IClassFixture<AkkaDiFixture>
     {
-        public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(ServiceProviderSetup.Create(fixture.Provider)
+        public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(DependencyResolverSetup.Create(fixture.Provider)
             .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), output)
         {
 
@@ -30,7 +30,7 @@ namespace Akka.DependencyInjection.Tests
         [Fact(DisplayName = "DI: actors who receive an IServiceScope through Props should dispose of their dependencies upon termination")]
         public void ActorsWithScopedDependenciesShouldDisposeUponStop()
         {
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var props = spExtension.Props<ScopedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
@@ -64,7 +64,7 @@ namespace Akka.DependencyInjection.Tests
             "DI: actors who receive an IServiceScope through Props should dispose of their dependencies and recreate upon restart")]
         public void ActorsWithScopedDependenciesShouldDisposeAndRecreateUponRestart()
         {
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var props = spExtension.Props<ScopedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
@@ -95,7 +95,7 @@ namespace Akka.DependencyInjection.Tests
             "DI: actors who receive a mix of dependencies via IServiceScope should dispose ONLY of their scoped dependencies and recreate upon restart")]
         public void ActorsWithMixedDependenciesShouldDisposeAndRecreateScopedUponRestart()
         {
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var props = spExtension.Props<MixedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
@@ -134,7 +134,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithNonDiDependenciesShouldStart()
         {
             // <CreateNonDiActor>
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var arg1 = "foo";
             var arg2 = "bar";
             var props = spExtension.Props<NonDiArgsActor>(arg1, arg2);
