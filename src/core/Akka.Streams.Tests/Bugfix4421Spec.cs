@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Bugfix4421Spec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -53,9 +60,9 @@ namespace Akka.Streams.Tests
             var serializer = Sys.Serialization.FindSerializerFor(message);
 
             byte[] serialized = null;
-            serializer.Invoking(s => serialized = s.ToBinary(message)).ShouldNotThrow();
+            serializer.Invoking(s => serialized = s.ToBinary(message)).Should().NotThrow();
             object deserialized = null;
-            serializer.Invoking(s => deserialized = s.FromBinary<MeasurementsSinkReady>(serialized)).ShouldNotThrow();
+            serializer.Invoking(s => deserialized = s.FromBinary<MeasurementsSinkReady>(serialized)).Should().NotThrow();
             deserialized.Should().BeOfType<MeasurementsSinkReady>();
         }
 

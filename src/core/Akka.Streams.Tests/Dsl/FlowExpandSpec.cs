@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowExpandSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
             future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
-            future.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
+            future.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
         }
 
         [Fact]

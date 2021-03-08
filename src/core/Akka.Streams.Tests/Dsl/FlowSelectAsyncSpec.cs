@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,13 +99,13 @@ namespace Akka.Streams.Tests.Dsl
             var sub = c.ExpectSubscription();
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             sub.Request(1);
-            probe.ReceiveN(9).ShouldAllBeEquivalentTo(Enumerable.Range(1, 9));
+            probe.ReceiveN(9).Should().BeEquivalentTo(Enumerable.Range(1, 9));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             sub.Request(2);
-            probe.ReceiveN(2).ShouldAllBeEquivalentTo(Enumerable.Range(10, 2));
+            probe.ReceiveN(2).Should().BeEquivalentTo(Enumerable.Range(10, 2));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             sub.Request(10);
-            probe.ReceiveN(9).ShouldAllBeEquivalentTo(Enumerable.Range(12, 9));
+            probe.ReceiveN(9).Should().BeEquivalentTo(Enumerable.Range(12, 9));
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
 
             Enumerable.Range(1, 13).ForEach(n => c.ExpectNext(n));
@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(n);
                     }).RunWith(Sink.Ignore<int>(), Materializer);
 
-                done.Invoking(d => d.Wait(RemainingOrDefault)).ShouldThrow<Exception>().WithMessage("err1");
+                done.Invoking(d => d.Wait(RemainingOrDefault)).Should().Throw<Exception>().WithMessage("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -260,7 +260,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 
-                t.AwaitResult().ShouldAllBeEquivalentTo(new[] {1, 2});
+                t.AwaitResult().Should().BeEquivalentTo(new[] {1, 2});
             }, Materializer);
         }
 

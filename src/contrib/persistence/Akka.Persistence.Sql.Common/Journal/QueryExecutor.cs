@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -778,27 +778,30 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
-            var payloadType = e.Payload.GetType();
-            var serializer = Serialization.FindSerializerForType(payloadType, Configuration.DefaultSerializer);
+            
+            var serializer = Serialization.FindSerializerForType(e.Payload.GetType(), Configuration.DefaultSerializer);
 
             // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
-            string manifest = "";
-            var binary = Akka.Serialization.Serialization.WithTransport(Serialization.System, () =>
+            var (binary,manifest) = Akka.Serialization.Serialization.WithTransport(Serialization.System,(e.Payload,serializer) ,(state) =>
             {
                 
-                if (serializer is SerializerWithStringManifest stringManifest)
+                var (thePayload, theSerializer) = state;
+                string thisManifest = "";
+                if (theSerializer is SerializerWithStringManifest stringManifest)
                 {
-                    manifest = stringManifest.Manifest(e.Payload);
+                    thisManifest = stringManifest.Manifest(thePayload);
                 }
                 else
                 {
-                    if (serializer.IncludeManifest)
+                    if (theSerializer.IncludeManifest)
                     {
-                        manifest = e.Payload.GetType().TypeQualifiedName();
+                        thisManifest = thePayload.GetType().TypeQualifiedName();
                     }
                 }
 
-                return serializer.ToBinary(e.Payload);
+                return (theSerializer.ToBinary(thePayload),
+                        thisManifest
+                    );
             });
            
 
@@ -844,7 +847,14 @@ namespace Akka.Persistence.Sql.Common.Journal
                 var type = Type.GetType(manifest, true);
                 var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
                 // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
-                deserialized = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => deserializer.FromBinary((byte[])payload, type) );
+                deserialized = Akka.Serialization.Serialization.WithTransport(
+                    Serialization.System, (deserializer, (byte[])payload, type),
+                    (state) =>
+                    {
+                        return state.deserializer.FromBinary(state.Item2,
+                            state.type);
+                    });
+                //deserialized = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => deserializer.FromBinary((byte[])payload, type) );
             }
             else
             {
@@ -871,7 +881,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             parameter.DbType = parameterType;
             parameter.Value = value;
 
+            PreAddParameterToCommand(command, parameter);
+
             command.Parameters.Add(parameter);
         }
+
+        /// <summary>
+        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        /// </summary>
+        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="param">Parameter to customize</param>
+        protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param) { }
     }
 }

@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="ActorSystemDispatcherSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -74,7 +81,7 @@ namespace Akka.Tests.Actor
         public void The_ActorSystem_must_provide_a_good_error_on_a_dispatcher_alias_loop_in_config()
         {
             Sys.Dispatchers.Invoking(d => d.Lookup("dispatcher-loop-1"))
-                .ShouldThrow<ConfigurationException>()
+                .Should().Throw<ConfigurationException>()
                 .And.Message
                 .StartsWith("Could not find a concrete dispatcher config after following").ShouldBeTrue();
         }

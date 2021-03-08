@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LazySourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -172,7 +172,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsFaulted.ShouldBe(true);
                 task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.ShouldBeEquivalentTo(matFail);
+                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
 
             }, Materializer);
         }

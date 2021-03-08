@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,25 +47,26 @@ namespace Akka.Persistence.TestKit
             var exceptions = new List<Exception>();
             foreach (var w in messages)
             {
-                foreach (var p in (IEnumerable<IPersistentRepresentation>) w.Payload)
+                try
                 {
-                    try
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                     {
                         await _writeInterceptor.InterceptAsync(p);
                         Add(p);
-                        exceptions.Add(null);
-                    }
-                    catch (TestJournalRejectionException rejected)
-                    {
-                        // i.e. problems with data: corrupted data-set, problems in serialization, constraints, etc.
-                        exceptions.Add(rejected);
-                    }
-                    catch (TestJournalFailureException)
-                    {
-                        // i.e. data-store problems: network, invalid credentials, etc.
-                        throw;
                     }
                 }
+                catch (TestJournalRejectionException rejected)
+                {
+                    // i.e. problems with data: corrupted data-set, problems in serialization, constraints, etc.
+                    exceptions.Add(rejected);
+                    continue;
+                }
+                catch (TestJournalFailureException)
+                {
+                    // i.e. data-store problems: network, invalid credentials, etc.
+                    throw;
+                }
+                exceptions.Add(null);
             }
 
             return exceptions.ToImmutableList();

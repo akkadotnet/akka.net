@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CoordinatedShutdownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -242,7 +242,7 @@ namespace Akka.Tests.Actor
 
             co.Run(customReason, "b").Wait(RemainingOrDefault);
             ReceiveN(2).Should().Equal(new object[] { "B", "C" });
-            co.ShutdownReason.ShouldBeEquivalentTo(customReason);
+            co.ShutdownReason.Should().BeEquivalentTo(customReason);
         }
 
         [Fact]
@@ -262,12 +262,12 @@ namespace Akka.Tests.Actor
 
             co.ShutdownReason.Should().BeNull();
             co.Run(customReason).Wait(RemainingOrDefault);
-            co.ShutdownReason.ShouldBeEquivalentTo(customReason);
+            co.ShutdownReason.Should().BeEquivalentTo(customReason);
             ExpectMsg("A");
             co.Run(CoordinatedShutdown.UnknownReason.Instance).Wait(RemainingOrDefault);
             TestActor.Tell("done");
             ExpectMsg("done"); // no additional A
-            co.ShutdownReason.ShouldBeEquivalentTo(customReason);
+            co.ShutdownReason.Should().BeEquivalentTo(customReason);
         }
 
         [Fact]
@@ -409,7 +409,7 @@ namespace Akka.Tests.Actor
             shutdownSystem.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
 
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
-            CoordinatedShutdown.Get(Sys).ShutdownReason.ShouldBeEquivalentTo(customReason);
+            CoordinatedShutdown.Get(Sys).ShutdownReason.Should().BeEquivalentTo(customReason);
         }
 
         [Fact]
@@ -417,7 +417,7 @@ namespace Akka.Tests.Actor
         {
             await Sys.Terminate();
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
-            CoordinatedShutdown.Get(Sys).ShutdownReason.ShouldBeEquivalentTo(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+            CoordinatedShutdown.Get(Sys).ShutdownReason.Should().BeEquivalentTo(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
         }
 
         [Fact]
@@ -436,7 +436,7 @@ namespace Akka.Tests.Actor
             {
                 await sys.Terminate();
                 sys.WhenTerminated.IsCompleted.Should().BeTrue();
-                actor.ShutdownReason.ShouldBeEquivalentTo(null);
+                actor.ShutdownReason.Should().BeNull();
             }
             finally
             {
@@ -467,7 +467,7 @@ namespace Akka.Tests.Actor
                 }
             };
 
-            act.Invoking(a => a()).ShouldThrow<ConfigurationException>();
+            act.Invoking(a => a()).Should().Throw<ConfigurationException>();
         }
 
     }

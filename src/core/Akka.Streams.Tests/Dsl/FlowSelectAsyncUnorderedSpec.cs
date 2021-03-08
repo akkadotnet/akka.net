@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectAsyncUnorderedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Dsl
                 Enumerable.Range(2, 19).ForEach(_ => got.Add(c.ExpectNext()));
                 return NotUsed.Instance;
             });
-            got.ShouldAllBeEquivalentTo(Enumerable.Range(1, 20));
+            got.Should().BeEquivalentTo(Enumerable.Range(1, 20));
             c.ExpectComplete();
         }
 
@@ -162,7 +162,7 @@ namespace Akka.Streams.Tests.Dsl
                         return Task.FromResult(n);
                     }).RunWith(Sink.Ignore<int>(), Materializer);
 
-                done.Invoking(d => d.Wait(RemainingOrDefault)).ShouldThrow<Exception>().WithMessage("err1");
+                done.Invoking(d => d.Wait(RemainingOrDefault)).Should().Throw<Exception>().WithMessage("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -258,7 +258,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 t.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                t.Result.ShouldAllBeEquivalentTo(new[] {1, 2});
+                t.Result.Should().BeEquivalentTo(new[] {1, 2});
             }, Materializer);
         }
 

@@ -1,9 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestJournalSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
+
+
+using Akka.Configuration;
 
 namespace Akka.Persistence.TestKit.Tests
 {
@@ -16,7 +19,10 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class TestJournalSpec : PersistenceTestKit
     {
-        public TestJournalSpec()
+        // Expect should be passing by default, need to make them less sencitive to timing
+        private static readonly Config DefaultTimeoutConfig = "akka.test.single-expect-default = 30s";
+        
+        public TestJournalSpec() : base(DefaultTimeoutConfig)
         {
             _probe = CreateTestProbe();
         }

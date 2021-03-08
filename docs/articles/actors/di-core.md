@@ -5,6 +5,9 @@ title: DI Core
 
 # Akka.DI.Core
 
+> [!WARNING]
+> As of [Akka.NET v1.4.15](https://github.com/akkadotnet/akka.net/releases/tag/1.4.15), Akka.DI.Core and all of the libraries that implement it are deprecated. Going forward Akka.NET users are encouraged to use the [Akka.DependencyInjection library](xref:dependency-injection) instead, which uses the Microsoft.Extensions.DependencyInjection interfaces to integration DI directly into your Akka.NET actors.
+
 **Actor Producer Extension** library is used to create a Dependency Injection Container for the [Akka.NET](https://github.com/akkadotnet/akka.net) framework.
 
 # What is it?

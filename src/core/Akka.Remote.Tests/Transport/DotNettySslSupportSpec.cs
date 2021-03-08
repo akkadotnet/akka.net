@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettySslSupportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -131,8 +131,12 @@ namespace Akka.Remote.Tests.Transport
             Setup(ValidCertPath, Password);
 
             var probe = CreateTestProbe();
-            Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-            probe.ExpectMsg("hello");
+
+            AwaitAssert(() =>
+            {
+                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
@@ -145,8 +149,15 @@ namespace Akka.Remote.Tests.Transport
                 SetupThumbprint(ValidCertPath, Password);
 
                 var probe = CreateTestProbe();
-                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                probe.ExpectMsg("hello");
+
+                Within(TimeSpan.FromSeconds(12), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                        probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(100));
+                    }, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
+                });
             }
             finally
             {

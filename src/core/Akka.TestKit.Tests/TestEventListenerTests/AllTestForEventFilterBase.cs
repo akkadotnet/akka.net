@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AllTestForEventFilterBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
 using Akka.Event;
+using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
 
@@ -126,8 +127,6 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             TestSuccessful = true;
         }
 
-
-
         [Fact]
         public void Specified_numbers_of_messagesan_be_intercepted()
         {
@@ -139,6 +138,37 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
             TestSuccessful = true;
         }
 
+        [Fact]
+        public void Expect_0_events_Should_work()
+        {
+            this.Invoking(_ =>
+            {
+                EventFilter.Error().Expect(0, () =>
+                {
+                    Log.Error("something");
+                });
+            }).Should().Throw<Exception>("Expected 0 events");
+        }
+
+        [Fact]
+        public async Task ExpectAsync_0_events_Should_work()
+        {
+            Exception ex = null;
+            try
+            {
+                await EventFilter.Error().ExpectAsync(0, async () =>
+                {
+                    await Task.Delay(100); // bug only happens when error is not logged instantly
+                    Log.Error("something");
+                });
+            }
+            catch (Exception e)
+            {
+                ex = e;
+            }
+
+            ex.Should().NotBeNull("Expected 0 errors logged, but there are error logs");
+        }
 
         [Fact]
         public void Messages_can_be_muted()

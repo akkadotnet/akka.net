@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSplitAfterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.Ignore<int>(), tightTimeoutMaterializer)
                     .Wait(TimeSpan.FromSeconds(3));
             };
-            a.ShouldThrow<SubscriptionTimeoutException>();
+            a.Should().Throw<SubscriptionTimeoutException>();
         }, Materializer);
 
         // Probably covert by SplitAfter_should_work_when_last_element_is_split_by

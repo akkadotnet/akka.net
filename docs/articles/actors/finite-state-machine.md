@@ -43,7 +43,7 @@ The only missing piece is where the `Batches` are actually sent to the target, f
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/FiniteStateMachine/ExampleFSMActor.cs?name=TransitionHandler)]
 
-The transition callback is a function which takes as input a pair of states—the current and the next state. The `FSM` class includes a convenience extractor for these in form of an arrow operator, which conveniently reminds you of the direction of the state change which is being matched. During the state change, the old state data is available via `StateData` as shown, and the new state data would be available as `NextStateData`.
+The transition callback is a function which takes as input a pair of states—the current and the next state. During the state change, the old state data is available via `StateData` as shown, and the new state data would be available as `NextStateData`.
 
 To verify that this buncher actually works, it is quite easy to write a test using the `Testing Actor Systems`.
 
@@ -70,7 +70,7 @@ public class Buncher : FSM<State, IData>
 > The `FSM` class defines a receive method which handles internal messages and passes everything else through to the `FSM` logic (according to the current state). When overriding the receive method, keep in mind that e.g. state timeout handling depends on actually passing the messages through the `FSM` logic.
 
 The `FSM` class takes two type parameters:
-- the supertype of all state names, usually a sealed trait with case objects extending it,
+- the supertype of all state names, usually an enum,
 - the type of the state data which are tracked by the `FSM` module itself.
 
 > [!NOTE]

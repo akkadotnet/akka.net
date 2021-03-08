@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorState.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using Akka.Util;
 namespace Akka.Actor
 {
     /// <summary>
-    /// This interface represents the parts of the internal actor state; the behavior stack, watched by, watching and termination queue
+    /// This interface represents the parts of the internal actor state; the behavior stack, watched by, watching and termination queue.
     /// </summary>
     internal interface IActorState 
     {

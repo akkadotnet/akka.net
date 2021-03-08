@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
 namespace Akka.Persistence.Query

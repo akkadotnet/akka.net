@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowWatchTerminationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,7 +76,7 @@ namespace Akka.Streams.Tests.Dsl
                 var future = t.Item2;
                 p.SendNext(1);
                 p.SendError(ex);
-                future.Invoking(f => f.Wait()).ShouldThrow<Exception>().WithMessage("Stream failed.");
+                future.Invoking(f => f.Wait()).Should().Throw<Exception>().WithMessage("Stream failed.");
             }, Materializer);
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
             materializer.Shutdown();
 
             Action a = () => task.Wait(TimeSpan.FromSeconds(3));
-            a.ShouldThrow<AbruptTerminationException>();
+            a.Should().Throw<AbruptTerminationException>();
         }
     }
 }
