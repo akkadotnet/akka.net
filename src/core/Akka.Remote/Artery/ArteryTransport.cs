@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
+using Akka.Remote.Artery.Compress;
 using Akka.Remote.Artery.Utils;
 using Akka.Streams;
 using Akka.Streams.Dsl;
@@ -328,7 +329,6 @@ namespace Akka.Remote.Artery
         private volatile MessageDispatcher _messageDispatcher;
 
         private readonly ILoggingAdapter _log;
-        public readonly IRemotingFlightRecorder FlightRecorder;
 
         /*
          * Compression tables must be created once, such that inbound lane restarts don't cause dropping of the tables.
@@ -415,11 +415,9 @@ namespace Akka.Remote.Artery
             // TODO: Scala logging is way more advanced than ours, this logger supposed to have marker adapter added to it
             //_log = Logging.WithMarker(system, GetType());
             _log = Logging.GetLogger(system, GetType());
-            FlightRecorder = RemotingFlightRecorderExtension.Get(system);
-            _log.Debug($"Using flight recorder {FlightRecorder}");
 
             InboundCompressions = Settings.Advanced.Compression.Enabled
-                ? new InboundCompressionsImpl(System, this, Settings.Advanced.Compression, FlightRecorder)
+                ? new InboundCompressionsImpl(System, this, Settings.Advanced.Compression)
                 : (IInboundCompressions) NoInboundCompressions.Instance;
 
             KillSwitch = KillSwitches.Shared("transportKillSwitch");
@@ -508,7 +506,6 @@ namespace Akka.Remote.Artery
             */
 
             StartTransport();
-            FlightRecorder.TransportStarted();
 
             var systemMaterializer = SystemMaterializer.Get(System);
             _materializer =
@@ -520,7 +517,6 @@ namespace Akka.Remote.Artery
                 Settings.Advanced.ControlStreamMaterializerSettings);
 
             _messageDispatcher = new MessageDispatcher(System, Provider);
-            FlightRecorder.TransportMaterializerStarted();
 
             var (port, boundPort) = BindInboundStreams();
 
@@ -534,11 +530,7 @@ namespace Akka.Remote.Artery
                 new Address(ProtocolName, System.Name, Settings.Bind.Hostname, boundPort), 
                 AddressUidExtension.Uid(System));
 
-            FlightRecorder.TransportUniqueAddressSet(_localAddress);
-
             RunInboundStreams(port, boundPort);
-
-            FlightRecorder.TransportStartupFinished();
 
             StartRemoveQuarantinedAssociationTask();
 
