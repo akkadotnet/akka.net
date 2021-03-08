@@ -412,7 +412,16 @@ namespace Akka.Remote.Artery.Compress
         private Tables<T> _tables = Tables.Empty<T>();
 
         // We should not continue sending advertisements to an association that might be dead (not quarantined yet)
-        private volatile bool _alive = true;
+        // ReSharper disable once InconsistentNaming
+        private volatile bool _alive_DoNotUseDirectly = true;
+
+        private bool Alive
+        {
+#pragma warning disable 420
+            get => Volatile.Read(ref _alive_DoNotUseDirectly);
+            set => Volatile.Write(ref _alive_DoNotUseDirectly, value);
+#pragma warning restore 420
+        }
 
         private int _resendCount = 0;
         private const int MaxResendCount = 3;
@@ -529,7 +538,7 @@ namespace Akka.Remote.Artery.Compress
         {
             var count = _cms.AddObjectAndEstimateCount(value, n);
             AddAndCheckIfHeavyHitterDetected(value, count);
-            Volatile.Write(ref _alive, true);
+            Alive = true;
         }
 
         /// <summary>
@@ -562,7 +571,7 @@ namespace Akka.Remote.Artery.Compress
                 switch (InboundContext.Association(OriginUid))
                 {
                     case Some<IOutboundContext> association:
-                        if (Volatile.Read(ref _alive) && association.Get.IsOrdinaryMessageStreamActive())
+                        if (Alive && association.Get.IsOrdinaryMessageStreamActive())
                         {
                             var table = PrepareCompressionAdvertisement(_tables.NextTable.Version);
                             // TODO ARTERY expensive, check if building the other way wouldn't be faster?
@@ -570,7 +579,7 @@ namespace Akka.Remote.Artery.Compress
                                 nextTable: table.Invert(),
                                 advertisementInProgress: new Option<CompressionTable<T>>(table));
                             _tables = nextState;
-                            Volatile.Write(ref _alive, false); // will be set to true on first incoming message
+                            Alive = false; // will be set to true on first incoming message
                             _resendCount = 0;
                             AdvertiseCompressionTable(association.Get, table);
                         } else if (association.Get.IsOrdinaryMessageStreamActive())
