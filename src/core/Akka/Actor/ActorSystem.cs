@@ -168,7 +168,7 @@ namespace Akka.Actor
     ///     </b>
     ///     This class is not meant to be extended by user code.
     /// </summary>
-    public abstract class ActorSystem : IActorRefFactory, IDisposable, IClassicActorSystemProvider
+    public abstract class ActorSystem : IActorRefFactory, IDisposable
     {
         /// <summary>Gets the settings.</summary>
         /// <value>The settings.</value>
@@ -209,8 +209,6 @@ namespace Akka.Actor
 
         /// <summary>Gets the log</summary>
         public abstract ILoggingAdapter Log { get; }
-
-        public abstract ActorSystem ClassicSystem { get; }
 
         /// <summary>
         /// Start-up time since the epoch.

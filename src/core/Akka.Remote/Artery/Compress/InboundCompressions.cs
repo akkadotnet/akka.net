@@ -59,18 +59,15 @@ namespace Akka.Remote.Artery.Compress
         public ActorSystem System { get; }
         public IInboundContext InboundContext { get; }
         public ArterySettings.CompressionSettings Settings { get; }
-        public IRemotingFlightRecorder FlightRecorder { get; }
 
         public InboundCompressionsImpl(
             ActorSystem system,
             IInboundContext inboundContext, 
-            ArterySettings.CompressionSettings settings,
-            IRemotingFlightRecorder flightRecorder = null)
+            ArterySettings.CompressionSettings settings)
         {
             System = system;
             InboundContext = inboundContext;
             Settings = settings;
-            FlightRecorder = flightRecorder ?? NoOpRemotingFlightRecorder.Instance;
 
             _actorRefsIns = new Dictionary<long, InboundActorRefCompression>();
             _inboundActorRefsLog = Logging.GetLogger(System, typeof(InboundActorRefCompression));
@@ -122,7 +119,6 @@ namespace Akka.Remote.Artery.Compress
                 switch (InboundContext.Association(inbound.OriginUid))
                 {
                     case Some<IOutboundContext> a when !a.Get.AssociationState.IsQuarantined(inbound.OriginUid):
-                        FlightRecorder.CompressionActorRefAdvertisement(inbound.OriginUid);
                         inbound.RunNextTableAdvertisement();
                         break;
                     default:
@@ -160,7 +156,6 @@ namespace Akka.Remote.Artery.Compress
                 switch (InboundContext.Association(inbound.OriginUid))
                 {
                     case Some<IOutboundContext> a when !a.Get.AssociationState.IsQuarantined(inbound.OriginUid):
-                        FlightRecorder.CompressionClassManifestAdvertisement(inbound.OriginUid);
                         inbound.RunNextTableAdvertisement();
                         break;
                     default:

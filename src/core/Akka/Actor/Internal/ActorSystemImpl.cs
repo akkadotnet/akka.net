@@ -148,8 +148,6 @@ namespace Akka.Actor.Internal
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
 
-        public override ActorSystem ClassicSystem => this;
-
         public Option<Props> GuardianProps { get; }
 
         /// <summary>

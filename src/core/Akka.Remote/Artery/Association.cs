@@ -143,7 +143,6 @@ namespace Akka.Remote.Artery
         public readonly ObjectPool<ReusableOutboundEnvelope> OutboundEnvelopePool;
 
         private readonly ILoggingAdapter _log;
-        private IRemotingFlightRecorder FlightRecorder => Transport.FlightRecorder;
         public ArterySettings Settings => Transport.Settings;
         public ArterySettings.AdvancedSettings AdvancedSettings => Transport.Settings.Advanced;
 
