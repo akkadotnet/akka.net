@@ -781,7 +781,7 @@ namespace Akka.Remote.Artery.Utils.Concurrent
             if(c is null)
                 throw new ArgumentNullException(nameof(c));
             if(ReferenceEquals(c, this))
-                throw new IllegalArgumentException();
+                throw new ArgumentException();
             if (maxElements <= 0)
                 return 0;
 

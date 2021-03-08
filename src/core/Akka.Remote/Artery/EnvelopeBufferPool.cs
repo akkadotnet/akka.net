@@ -542,7 +542,7 @@ namespace Akka.Remote.Artery
             header.Version = buffer.Get(VersionOffset);
 
             if (header.Version > ArteryTransport.HighestVersion)
-                throw new IllegalArgumentException(
+                throw new ArgumentException(
                     $"Incompatible protocol version [{header.Version}], " +
                     $"highest known version for this node is [{ArteryTransport.HighestVersion}]");
 
@@ -622,7 +622,7 @@ namespace Akka.Remote.Artery
         {
             var length = literal?.Length ?? 0;
             if (length > 65535)
-                throw new IllegalArgumentException("Literals longer than 65535 cannot be encoded in the envelope");
+                throw new ArgumentException("Literals longer than 65535 cannot be encoded in the envelope");
 
             ByteBuffer.PutInt(tagOffset, ByteBuffer.Position());
             ByteBuffer.PutShort((ushort)length);

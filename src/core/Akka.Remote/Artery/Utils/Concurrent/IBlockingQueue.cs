@@ -58,7 +58,7 @@ namespace Akka.Remote.Artery.Utils.Concurrent
         /// collection {@code c} may result in elements being in neither,
         /// either or both collections when the associated exception is
         /// thrown.  Attempts to drain a queue to itself result in
-        /// {@code IllegalArgumentException}. Further, the behavior of
+        /// {@code ArgumentException}. Further, the behavior of
         /// this operation is undefined if the specified collection is
         /// modified while the operation is in progress.
         /// </summary>
@@ -73,7 +73,7 @@ namespace Akka.Remote.Artery.Utils.Concurrent
         /// collection {@code c} may result in elements being in neither,
         /// either or both collections when the associated exception is
         /// thrown.  Attempts to drain a queue to itself result in
-        /// {@code IllegalArgumentException}. Further, the behavior of
+        /// {@code ArgumentException}. Further, the behavior of
         /// this operation is undefined if the specified collection is
         /// modified while the operation is in progress.
         /// </summary>

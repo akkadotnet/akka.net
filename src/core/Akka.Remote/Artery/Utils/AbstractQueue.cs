@@ -51,7 +51,7 @@ namespace Akka.Remote.Artery.Utils
         /// <summary>
         /// Adds all of the elements in the specified collection to this
         /// queue.  Attempts to addAll of a queue to itself result in
-        /// {@code IllegalArgumentException}. Further, the behavior of
+        /// {@code ArgumentException}. Further, the behavior of
         /// this operation is undefined if the specified collection is
         /// modified while the operation is in progress.
         ///
@@ -70,7 +70,7 @@ namespace Akka.Remote.Artery.Utils
             if(c is null)
                 throw new ArgumentNullException(nameof(c));
             if(ReferenceEquals(this, c))
-                throw new IllegalArgumentException();
+                throw new ArgumentException();
 
             var modified = false;
             foreach (var e in c)
