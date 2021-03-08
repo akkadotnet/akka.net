@@ -1,0 +1,89 @@
+/*
+ * Copyright (C) 2016-2021 Lightbend Inc. <https://www.lightbend.com>
+ */
+
+syntax = "proto3";
+package Akka.Remote.Serialization.Proto.Msg;
+
+option optimize_for = SPEED;
+
+message Quarantined {
+  UniqueAddress from = 1;
+  UniqueAddress to = 2;
+}
+
+// Generic message declaration that is used for all types of message that (currently) have a single
+// address field. A message that needs to changed later can be cloned from this one and then adapted.
+// ActorSystemTerminating
+// ActorSystemTerminating.Ack
+// OutboundHandshake.HandshakeRsp
+message MessageWithAddress {
+  UniqueAddress address = 1;
+}
+
+message HandshakeReq {
+  UniqueAddress from = 1;
+  Address to = 2;
+}
+
+// CompressionProtocol.ActorRefCompressionAdvertisement
+// CompressionProtocol.ClassManifestCompressionAdvertisement
+message CompressionTableAdvertisement {
+  UniqueAddress from = 1;
+  uint64 originUid = 2;
+  uint32 tableVersion = 3;
+
+  // actual Map is represented by separate sequences of keys and values,
+  // relies on both sequences using the same order so that corresponding entries can be
+  // associated again when deserializing
+  repeated string keys = 4;
+  repeated uint32 values = 5;
+}
+
+// CompressionProtocol.ActorRefCompressionAdvertisementAck
+// CompressionProtocol.ClassManifestCompressionAdvertisementAck
+message CompressionTableAdvertisementAck {
+  UniqueAddress from = 1;
+  uint32 version = 2;
+}
+
+// SystemMessageDelivery.SystemMessageEnvelope
+message SystemMessageEnvelope {
+  bytes message = 1;
+  int32 serializerId = 2;
+  bytes messageManifest = 3;
+  uint64 seqNo = 4;
+  UniqueAddress ackReplyTo = 5;
+}
+
+// SystemMessageDelivery.Ack
+// SystemMessageDelivery.Nack
+message SystemMessageDeliveryAck {
+  uint64 seqNo = 1;
+  UniqueAddress from = 2;
+}
+
+/**
+ * Defines a remote address.
+ */
+message Address {
+  string protocol = 1;
+  string system = 2;
+  string hostname = 3;
+  uint32 port = 4;
+}
+
+/**
+ * Defines a remote address with uid.
+ */
+message UniqueAddress {
+  Address address = 1;
+  uint64 uid = 2;
+}
+
+
+// RemoteWatcher.ArteryHeartbeat is empty array
+// RemoteWatcher.ArteryHeartbeatRsp
+message ArteryHeartbeatRsp {
+  uint64 uid = 1;
+}
