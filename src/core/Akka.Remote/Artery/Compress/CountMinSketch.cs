@@ -14,6 +14,8 @@ namespace Akka.Remote.Artery.Compress
     /// 
     /// Not thread-safe.
     ///
+    /// File location in JVM implementation: /src/main/java/akka.remote/artery/compress/CountMinSketch.java
+    /// 
     /// An Improved Data Stream Summary: The Count-Min Sketch and its Applications
     /// https://web.archive.org/web/20060907232042/http://www.eecs.harvard.edu/~michaelm/CS222/countmin.pdf
     /// his implementation is mostly taken and adjusted from the Apache V2 licensed project
