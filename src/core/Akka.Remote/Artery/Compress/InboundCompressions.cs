@@ -288,25 +288,26 @@ namespace Akka.Remote.Artery.Compress
 
         public static class Tables
         {
-            public static Tables<T> Empty<T>()
-                => new Tables<T>(
-                    oldTables: new List<DecompressionTable<T>>(new[] { DecompressionTable.Disabled<T>() }),
-                    activeTable: DecompressionTable.Empty<T>(),
-                    nextTable: DecompressionTable.Empty<T>().Copy(version: 1),
-                    advertisementInProgress: Option<CompressionTable<T>>.None,
+            public static Tables<TTable> Empty<TTable>() 
+                where TTable : class, T => new Tables<TTable>(
+                    oldTables: new List<DecompressionTable<TTable>>(new[] { DecompressionTable.Disabled<TTable>() }),
+                    activeTable: DecompressionTable.Empty<TTable>(),
+                    nextTable: DecompressionTable.Empty<TTable>().Copy(version: 1),
+                    advertisementInProgress: Option<CompressionTable<TTable>>.None,
                     keepOldTables: KeepOldTablesNumber);
         }
 
         /// <summary>
         /// Encapsulates the various compression tables that Inbound Compression uses.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        public class Tables<T>
+        /// <typeparam name="TTable"></typeparam>
+        public class Tables<TTable> 
+            where TTable: class, T
         {
-            public List<DecompressionTable<T>> OldTables { get; }
-            public DecompressionTable<T> ActiveTable { get; }
-            public DecompressionTable<T> NextTable { get; }
-            public Option<CompressionTable<T>> AdvertisementInProgress { get; }
+            public List<DecompressionTable<TTable>> OldTables { get; }
+            public DecompressionTable<TTable> ActiveTable { get; }
+            public DecompressionTable<TTable> NextTable { get; }
+            public Option<CompressionTable<TTable>> AdvertisementInProgress { get; }
             public int KeepOldTable { get; }
 
             /// <summary>
@@ -322,10 +323,10 @@ namespace Akka.Remote.Artery.Compress
             /// <param name="advertisementInProgress"></param>
             /// <param name="keepOldTables"></param>
             public Tables(
-                List<DecompressionTable<T>> oldTables,
-                DecompressionTable<T> activeTable,
-                DecompressionTable<T> nextTable,
-                Option<CompressionTable<T>> advertisementInProgress,
+                List<DecompressionTable<TTable>> oldTables,
+                DecompressionTable<TTable> activeTable,
+                DecompressionTable<TTable> nextTable,
+                Option<CompressionTable<TTable>> advertisementInProgress,
                 int keepOldTables)
             {
                 OldTables = oldTables;
@@ -335,7 +336,7 @@ namespace Akka.Remote.Artery.Compress
                 KeepOldTable = keepOldTables;
             }
 
-            public IOptionVal<DecompressionTable<T>> SelectTable(int version)
+            public IOptionVal<DecompressionTable<TTable>> SelectTable(int version)
             {
                 if (ActiveTable.Version == version)
                 {
@@ -343,7 +344,7 @@ namespace Akka.Remote.Artery.Compress
                     return OptionVal.Some(ActiveTable);
                 }
 
-                var found = OptionVal.None<DecompressionTable<T>>();
+                var found = OptionVal.None<DecompressionTable<TTable>>();
                 foreach (var table in OldTables)
                 {
                     if(table.Version == version)
@@ -356,13 +357,13 @@ namespace Akka.Remote.Artery.Compress
 #if COMPRESS_DEBUG
                 switch (found)
                 {
-                    case Some<DecompressionTable<T>> t:
+                    case Some<DecompressionTable<TTable>> t:
                         DebugUtil.PrintLn($"Found table [version: {version}], was [OLD][{found}], " +
-                                          $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<T>, int>(ot => ot.Version))}]");
+                                          $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<TTable>, int>(ot => ot.Version))}]");
                         break;
                     default:
                         DebugUtil.PrintLn($"Did not find table [version: {version}], " +
-                                          $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<T>, int>(ot => ot.Version))}], " +
+                                          $"old tables: [{string.Join(", ", OldTables.Select<DecompressionTable<TTable>, int>(ot => ot.Version))}], " +
                                           $"ActiveTable: {ActiveTable}, " +
                                           $"NextTable: {NextTable}");
                         break;
@@ -371,30 +372,30 @@ namespace Akka.Remote.Artery.Compress
                 return found;
             }
 
-            public Tables<T> StartUsingNextTable()
+            public Tables<TTable> StartUsingNextTable()
             {
                 static byte IncrementTableVersion(byte version)
                     => (byte)(version == 127 ? 0 : ++version);
 
-                var newOldTables = new List<DecompressionTable<T>>( new []{ ActiveTable });
+                var newOldTables = new List<DecompressionTable<TTable>>( new []{ ActiveTable });
                 newOldTables.AddRange(OldTables);
                 newOldTables.Capacity = KeepOldTable;
                 newOldTables.TrimExcess();
-                return new Tables<T>(
+                return new Tables<TTable>(
                     oldTables: newOldTables,
                     activeTable: NextTable,
-                    nextTable: DecompressionTable.Empty<T>().Copy(version: IncrementTableVersion(NextTable.Version)),
-                    advertisementInProgress: Option<CompressionTable<T>>.None,
+                    nextTable: DecompressionTable.Empty<TTable>().Copy(version: IncrementTableVersion(NextTable.Version)),
+                    advertisementInProgress: Option<CompressionTable<TTable>>.None,
                     keepOldTables: KeepOldTable);
             }
 
-            public Tables<T> Copy(
-                List<DecompressionTable<T>> oldTables = null,
-                DecompressionTable<T> activeTable = null,
-                DecompressionTable<T> nextTable = null,
-                Option<CompressionTable<T>>? advertisementInProgress = null,
+            public Tables<TTable> Copy(
+                List<DecompressionTable<TTable>> oldTables = null,
+                DecompressionTable<TTable> activeTable = null,
+                DecompressionTable<TTable> nextTable = null,
+                Option<CompressionTable<TTable>>? advertisementInProgress = null,
                 int keepOldTables = -1)
-                => new Tables<T>(
+                => new Tables<TTable>(
                     oldTables ?? OldTables,
                     activeTable ?? ActiveTable,
                     nextTable ?? NextTable,
