@@ -137,9 +137,9 @@ namespace Akka.Remote.Artery.Internal
         public int AlignmentOffset(int index, int unitSize)
         {
             if(index < 0)
-                throw new IllegalArgumentException($"Index less than zero: {index}");
+                throw new ArgumentException($"Index less than zero: {index}");
             if(unitSize < 1 || (unitSize & (unitSize - 1)) != 0)
-                throw new IllegalArgumentException($"Unit size not a power of two: {unitSize}");
+                throw new ArgumentException($"Unit size not a power of two: {unitSize}");
             return index % unitSize;
         }
 
@@ -377,12 +377,12 @@ namespace Akka.Remote.Artery.Internal
         /// <exception cref="Buffer{T}.OverflowException">
         /// If there is insufficient space in this buffer for the remaining bytes in the source buffer
         /// </exception>
-        /// <exception cref="IllegalArgumentException">If the source buffer is this buffer</exception>
+        /// <exception cref="ArgumentException">If the source buffer is this buffer</exception>
         /// <exception cref="Buffer{T}.ReadOnlyException">If this buffer is read-only</exception>
         public ByteBuffer Put(ByteBuffer src)
         {
             if(src.Equals(this))
-                throw new IllegalArgumentException("The source buffer is this buffer");
+                throw new ArgumentException("The source buffer is this buffer");
             if(IsReadOnly)
                 throw new ReadOnlyException();
             var n = src.Remaining;

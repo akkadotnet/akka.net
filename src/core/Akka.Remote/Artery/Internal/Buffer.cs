@@ -112,14 +112,14 @@ namespace Akka.Remote.Artery.Internal
         protected Buffer(int mark, int pos, int lim, int cap)
         {
             if (cap < 0)
-                throw new IllegalArgumentException($"Capacity < 0: ({cap} < 0)");
+                throw new ArgumentException($"Capacity < 0: ({cap} < 0)");
             _capacity = cap;
             Limit(lim);
             Position(pos);
             if (mark >= 0)
             {
                 if(mark > pos)
-                    throw new IllegalArgumentException($"mark > position: ({mark} > {pos})");
+                    throw new ArgumentException($"mark > position: ({mark} > {pos})");
                 _mark = mark;
             }
         }
@@ -138,9 +138,9 @@ namespace Akka.Remote.Artery.Internal
         public Buffer<T> Position(int value)
         {
             if (value > _limit)
-                throw new IllegalArgumentException($"New position > Limit: ({value} > {_limit})");
+                throw new ArgumentException($"New position > Limit: ({value} > {_limit})");
             if (value < 0)
-                throw new IllegalArgumentException($"New position < 0: ({value} < 0)");
+                throw new ArgumentException($"New position < 0: ({value} < 0)");
             _position = value;
             if (_mark > _position) _mark = -1;
             return this;
@@ -161,9 +161,9 @@ namespace Akka.Remote.Artery.Internal
         public Buffer<T> Limit(int value)
         {
             if (value > _capacity)
-                throw new IllegalArgumentException($"New limit > Capacity: ({value} > {_capacity}");
+                throw new ArgumentException($"New limit > Capacity: ({value} > {_capacity}");
             if (value < 0)
-                throw new IllegalArgumentException($"New limit < 0: ({value} < 0)");
+                throw new ArgumentException($"New limit < 0: ({value} < 0)");
             _limit = value;
             if (_position > _limit) _position = _limit;
             if (_mark > _limit) _mark = -1;

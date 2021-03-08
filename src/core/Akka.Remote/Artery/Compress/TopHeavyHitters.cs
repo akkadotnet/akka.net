@@ -244,7 +244,7 @@ namespace Akka.Remote.Artery.Compress
         private void UpdateExistingHeavyHitter(int foundHashIndex, long count)
         {
             if(_weights[foundHashIndex] > count)
-                throw new IllegalArgumentException(
+                throw new ArgumentException(
                     "Weights can be only incremented or kept the same, not decremented. " +
                     $"Previous weight was [{_weights[foundHashIndex]}], attempted to modify it to [{count}].");
             _weights[foundHashIndex] = count; // we don't need to change `hashCode`, `heapIndex` or `item`, those remain the same
