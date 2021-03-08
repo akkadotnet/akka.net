@@ -18,7 +18,7 @@ namespace Akka.Remote.Artery
                 Deadline = deadline;
             }
 
-            public State Copy(int? count = null, Deadline? deadline = null)
+            public State Copy(int? count = null, Deadline deadline = null)
                 => new State(count ?? Count, deadline ?? Deadline);
         }
 

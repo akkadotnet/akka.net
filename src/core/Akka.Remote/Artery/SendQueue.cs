@@ -92,7 +92,7 @@ namespace Akka.Remote.Artery
                         if (firstAttempt)
                             TryPush(false);
                         break;
-                    case T elem:
+                    case var elem:
                         _source.NeedWakeup = false; // there will be another onPull
                         Push(_out, elem);
                         break;

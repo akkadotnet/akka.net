@@ -236,7 +236,12 @@ namespace Akka.Remote.Artery
             /// <summary>
             /// External call from ChangeInboundCompression materialized value
             /// </summary>
-            public Task<HashSet<long>> CurrentCompressionOriginUids { get; }
+            public Task<HashSet<long>> CurrentCompressionOriginUids {
+                get
+                {
+                    throw new NotImplementedException();
+                }
+            }
         }
     }
 

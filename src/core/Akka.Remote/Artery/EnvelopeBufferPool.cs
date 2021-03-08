@@ -215,25 +215,14 @@ namespace Akka.Remote.Artery
         private static SerializationFormatCache ToSerializationFormat => new SerializationFormatCache();
 
         private readonly IInboundCompressions _inboundCompression;
-        private CompressionTable<IActorRef> _outboundActorRefCompression;
-        private CompressionTable<string> _outboundClassManifestCompression;
 
 
         private byte _version = (byte)0;
         private byte _flags = (byte)0;
         private long _uid = 0L;
-        internal byte _inboundActorRefCompressionTableVersion = (byte)0;
-        internal byte _inboundClassManifestCompressionTableVersion = (byte)0;
         private bool _useOutboundCompression = true;
 
-        internal string _senderActorRef = null;
-        internal int _senderActorRefIdx = -1;
-        internal string _recipientActorRef = null;
-        internal int _recipientActorRefIdx = -1;
-
         private int _serializer = 0;
-        internal string _manifest = null;
-        internal int _manifestIdx = -1;
 
         public void ResetMessageFields()
         {
@@ -242,14 +231,14 @@ namespace Akka.Remote.Artery
             // version, uid, streamId
 
             _flags = 0;
-            _senderActorRef = null;
-            _senderActorRefIdx = -1;
-            _recipientActorRef = null;
-            _recipientActorRefIdx = - 1;
+            InternalSenderActorRef = null;
+            SenderActorRefIdx = -1;
+            InternalRecipientActorRef = null;
+            RecipientActorRefIdx = - 1;
 
             _serializer = 0;
-            _manifest = null;
-            _manifestIdx = -1;
+            InternalManifest = null;
+            ManifestIdx = -1;
         }
 
         public byte Version
@@ -274,65 +263,65 @@ namespace Akka.Remote.Artery
             set => _uid = value;
         }
 
-        public byte InboundActorRefCompressionTableVersion => _inboundActorRefCompressionTableVersion;
-        public byte InboundClassManifestCompressionTableVersion => _inboundClassManifestCompressionTableVersion;
+        public byte InboundActorRefCompressionTableVersion { get; internal set; } = (byte)0;
+
+        public byte InboundClassManifestCompressionTableVersion { get; internal set; } = (byte)0;
 
         public void UseOutboundCompression(bool on) => _useOutboundCompression = on;
 
-        public CompressionTable<IActorRef> OutboundActorRefCompression
-        {
-            get => _outboundActorRefCompression;
-            set => _outboundActorRefCompression = value;
-        }
+        public CompressionTable<IActorRef> OutboundActorRefCompression { get; set; }
 
-        public CompressionTable<string> OutboundClassManifestCompression
-        {
-            get => _outboundClassManifestCompression;
-            set => _outboundClassManifestCompression = value;
-        }
+        public CompressionTable<string> OutboundClassManifestCompression { get; set; }
+
+        internal string InternalSenderActorRef { get; set; } = null;
+        internal int SenderActorRefIdx { get; set; } = -1;
+        internal string InternalRecipientActorRef { get; set; } = null;
+        internal int RecipientActorRefIdx { get; set; } = -1;
+        internal string InternalManifest { get; set; } = null;
+        internal int ManifestIdx { get; set; } = -1;
 
         public void SetSenderActorRef(IActorRef @ref)
         {
             if(_useOutboundCompression)
             {
-                _senderActorRefIdx = OutboundActorRefCompression.Compress(@ref);
-                if (_senderActorRefIdx == -1)
-                    _senderActorRef = Akka.Serialization.Serialization.SerializedActorPath(@ref);
+                SenderActorRefIdx = OutboundActorRefCompression.Compress(@ref);
+                if (SenderActorRefIdx == -1)
+                    InternalSenderActorRef = Akka.Serialization.Serialization.SerializedActorPath(@ref);
             }
             else
             {
-                _senderActorRef = Akka.Serialization.Serialization.SerializedActorPath(@ref);
+                InternalSenderActorRef = Akka.Serialization.Serialization.SerializedActorPath(@ref);
             }
         }
         public void SetNoSender()
         {
-            _senderActorRef = null;
-            _senderActorRefIdx = HeaderBuilder.DeadLettersCode;
+            InternalSenderActorRef = null;
+            SenderActorRefIdx = HeaderBuilder.DeadLettersCode;
         }
         public bool IsNoSender 
-            => _senderActorRef is null && _senderActorRefIdx == HeaderBuilder.DeadLettersCode;
+            => InternalSenderActorRef is null && SenderActorRefIdx == HeaderBuilder.DeadLettersCode;
         public IOptionVal<IActorRef> SenderActorRef(long originUid)
         {
             // we treat deadLetters as always present, but not included in table
-            if (_senderActorRef is null && !IsNoSender)
+            if (InternalSenderActorRef is null && !IsNoSender)
                 return _inboundCompression.DecompressActorRef(
                     originUid,
                     InboundActorRefCompressionTableVersion,
-                    _senderActorRefIdx);
+                    SenderActorRefIdx);
             else
                 return OptionVal.None<IActorRef>();
         }
 
-        public IOptionVal<string> SenderActorRefPath => OptionVal.Some(_senderActorRef);
+        public IOptionVal<string> SenderActorRefPath => OptionVal.Some(InternalSenderActorRef);
 
         public void SetNoRecipient()
         {
-            _recipientActorRef = null;
-            _recipientActorRefIdx = HeaderBuilder.DeadLettersCode;
+            InternalRecipientActorRef = null;
+            RecipientActorRefIdx = HeaderBuilder.DeadLettersCode;
         }
 
         public bool IsNoRecipient 
-            => _recipientActorRef is null && _recipientActorRefIdx == HeaderBuilder.DeadLettersCode;
+            => InternalRecipientActorRef is null && RecipientActorRefIdx == HeaderBuilder.DeadLettersCode;
 
         // Note that Serialization.currentTransportInformation must be set when calling this method,
         // because it's using `Serialization.serializedActorPath`
@@ -340,27 +329,27 @@ namespace Akka.Remote.Artery
         {
             if (_useOutboundCompression)
             {
-                _recipientActorRefIdx = OutboundActorRefCompression.Compress(@ref);
-                if (_recipientActorRefIdx == -1) 
-                    _recipientActorRef = ToSerializationFormat.GetOrCompute(@ref);
+                RecipientActorRefIdx = OutboundActorRefCompression.Compress(@ref);
+                if (RecipientActorRefIdx == -1) 
+                    InternalRecipientActorRef = ToSerializationFormat.GetOrCompute(@ref);
             } 
             else
             {
-                _recipientActorRef = ToSerializationFormat.GetOrCompute(@ref);
+                InternalRecipientActorRef = ToSerializationFormat.GetOrCompute(@ref);
             }
         }
         public IOptionVal<IActorRef> RecipientActorRef(long originUid)
         {
             // we treat deadLetters as always present, but not included in table
-            if (_recipientActorRef is null && !IsNoRecipient)
+            if (InternalRecipientActorRef is null && !IsNoRecipient)
                 return _inboundCompression.DecompressActorRef(
                     originUid,
                     InboundActorRefCompressionTableVersion,
-                    _recipientActorRefIdx);
+                    RecipientActorRefIdx);
             else
                 return OptionVal.None<IActorRef>();
         }
-        public IOptionVal<string> RecipientActorRefPath => OptionVal.Some(_recipientActorRef);
+        public IOptionVal<string> RecipientActorRefPath => OptionVal.Some(InternalRecipientActorRef);
 
         public int Serializer
         {
@@ -372,22 +361,22 @@ namespace Akka.Remote.Artery
         {
             if (_useOutboundCompression)
             {
-                _manifestIdx = OutboundClassManifestCompression.Compress(manifest);
-                if (_manifestIdx == -1) _manifest = manifest;
+                ManifestIdx = OutboundClassManifestCompression.Compress(manifest);
+                if (ManifestIdx == -1) InternalManifest = manifest;
             } else
             {
-                _manifest = manifest;
+                InternalManifest = manifest;
             }
         }
         public IOptionVal<string> Manifest(long originUid)
         {
-            if (_manifest != null)
-                return OptionVal.Some(_manifest);
+            if (InternalManifest != null)
+                return OptionVal.Some(InternalManifest);
             else
                 return _inboundCompression.DecompressClassManifest(
                     originUid,
                     InboundClassManifestCompressionTableVersion,
-                    _manifestIdx);
+                    ManifestIdx);
         }
 
         public HeaderBuilderImpl(
@@ -396,22 +385,22 @@ namespace Akka.Remote.Artery
             CompressionTable<string> outboundClassManifestCompression)
         {
             _inboundCompression = inboundCompressions;
-            _outboundActorRefCompression = outboundActorRefCompression;
-            _outboundClassManifestCompression = outboundClassManifestCompression;
+            OutboundActorRefCompression = outboundActorRefCompression;
+            OutboundClassManifestCompression = outboundClassManifestCompression;
         }
 
         public override string ToString()
             => "HeaderBuilderImpl(" +
-            $"version:{_version}, " +
-            $"flags:{ByteFlag.BinaryLeftPad(_flags)}, " +
+            $"Version:{_version}, " +
+            $"Flags:{ByteFlag.BinaryLeftPad(_flags)}, " +
             $"UID:{_uid}, " +
-            $"_senderActorRef:{_senderActorRef}, " +
-            $"_senderActorRefIdx:{_senderActorRefIdx}, " +
-            $"_recipientActorRef:{_recipientActorRef}, " +
-            $"_recipientActorRefIdx:{_recipientActorRefIdx}, " +
-            $"_serializer:{Serializer}, " +
-            $"_manifest:{_manifest}, " +
-            $"_manifestIdx:{_manifestIdx})";
+            $"SenderActorRef:{InternalSenderActorRef}, " +
+            $"SenderActorRefIdx:{SenderActorRefIdx}, " +
+            $"RecipientActorRef:{InternalRecipientActorRef}, " +
+            $"RecipientActorRefIdx:{RecipientActorRefIdx}, " +
+            $"Serializer:{Serializer}, " +
+            $"Manifest:{InternalManifest}, " +
+            $"ManifestIdx:{ManifestIdx})";
     }
 
     /// <summary>
@@ -515,22 +504,22 @@ namespace Akka.Remote.Artery
             */
 
             // Serialize sender
-            if (header._senderActorRefIdx != -1)
-                buffer.PutInt(SenderActorRefTagOffset, (int)(header._senderActorRefIdx | TagTypeMask));
+            if (header.SenderActorRefIdx != -1)
+                buffer.PutInt(SenderActorRefTagOffset, (int)(header.SenderActorRefIdx | TagTypeMask));
             else
-                WriteLiteral(SenderActorRefTagOffset, header._senderActorRef);
+                WriteLiteral(SenderActorRefTagOffset, header.InternalSenderActorRef);
 
             // Serialize recipient
-            if (header._recipientActorRefIdx != -1)
-                buffer.PutInt(RecipientActorRefTagOffset, (int)(header._recipientActorRefIdx | TagTypeMask));
+            if (header.RecipientActorRefIdx != -1)
+                buffer.PutInt(RecipientActorRefTagOffset, (int)(header.RecipientActorRefIdx | TagTypeMask));
             else
-                WriteLiteral(RecipientActorRefTagOffset, header._recipientActorRef);
+                WriteLiteral(RecipientActorRefTagOffset, header.InternalRecipientActorRef);
 
             // Serialize class manifest
-            if (header._manifestIdx != -1)
-                buffer.PutInt(ClassManifestTagOffset, (int)(header._manifestIdx | TagTypeMask));
+            if (header.ManifestIdx != -1)
+                buffer.PutInt(ClassManifestTagOffset, (int)(header.ManifestIdx | TagTypeMask));
             else
-                WriteLiteral(ClassManifestTagOffset, header._manifest);
+                WriteLiteral(ClassManifestTagOffset, header.InternalManifest);
         }
 
         public void ParseHeader(IHeaderBuilder h)
@@ -548,8 +537,8 @@ namespace Akka.Remote.Artery
 
             header.Flags = buffer.Get(FlagsOffset);
             // compression table versions (stored in the Tag)
-            header._inboundActorRefCompressionTableVersion = buffer.Get(ActorRefCompressionTableVersionOffset);
-            header._inboundClassManifestCompressionTableVersion =
+            header.InboundActorRefCompressionTableVersion = buffer.Get(ActorRefCompressionTableVersionOffset);
+            header.InboundClassManifestCompressionTableVersion =
                 buffer.Get(ClassManifestCompressionTableVersionOffset);
             header.Uid = buffer.GetLong(UidOffset);
             header.Serializer = buffer.GetInt(SerializerOffset);
@@ -567,12 +556,12 @@ namespace Akka.Remote.Artery
             if ((senderTag & TagTypeMask) != 0)
             {
                 var idx = senderTag & TagValueMask;
-                header._senderActorRef = null;
-                header._senderActorRefIdx = idx;
+                header.InternalSenderActorRef = null;
+                header.SenderActorRefIdx = idx;
             }
             else
             {
-                header._senderActorRef = EmptyAsNull(ReadLiteral());
+                header.InternalSenderActorRef = EmptyAsNull(ReadLiteral());
             }
 
             // deserialize recipient
@@ -580,12 +569,12 @@ namespace Akka.Remote.Artery
             if ((recipientTag & TagTypeMask) != 0)
             {
                 var idx = recipientTag & TagValueMask;
-                header._recipientActorRef = null;
-                header._recipientActorRefIdx = idx;
+                header.InternalRecipientActorRef = null;
+                header.RecipientActorRefIdx = idx;
             }
             else
             {
-                header._recipientActorRef = EmptyAsNull(ReadLiteral());
+                header.InternalRecipientActorRef = EmptyAsNull(ReadLiteral());
             }
 
             // deserialize class manifest
@@ -593,12 +582,12 @@ namespace Akka.Remote.Artery
             if ((manifestTag & TagTypeMask) != 0)
             {
                 var idx = manifestTag & TagValueMask;
-                header._manifest = null;
-                header._manifestIdx = idx;
+                header.InternalManifest = null;
+                header.ManifestIdx = idx;
             }
             else
             {
-                header._manifest = EmptyAsNull(ReadLiteral());
+                header.InternalManifest = EmptyAsNull(ReadLiteral());
             }
         }
 
@@ -626,7 +615,7 @@ namespace Akka.Remote.Artery
 
             ByteBuffer.PutInt(tagOffset, ByteBuffer.Position());
             ByteBuffer.PutShort((ushort)length);
-            if (length > 0)
+            if (length > 0 && literal != null)
                 ByteBuffer.Put(Encoding.UTF8.GetBytes(literal), 0, length);
         }
 

@@ -162,7 +162,10 @@ namespace Akka.Remote.Artery
 
         private volatile IOptionVal<OutboundControlJunction.IOutboundControlIngress> _outboundControlIngress = OptionVal.None<OutboundControlJunction.IOutboundControlIngress>();
         private volatile CountDownLatch _materializing = new CountDownLatch(1);
-        private volatile List<Encoder.IOutboundCompressionAccess> _outboundCompressionAccess = new List<Encoder.IOutboundCompressionAccess>();
+
+        // ReSharper disable once InconsistentNaming
+        private volatile List<Encoder.IOutboundCompressionAccess> _outboundCompressionAccess_DoNotUseDirectly
+            = new List<Encoder.IOutboundCompressionAccess>();
 
         // keyed by stream queue index
         private readonly AtomicReference<Dictionary<int, OutboundStreamMatValues>> _streamMatValues = new AtomicReference<Dictionary<int, OutboundStreamMatValues>>();
@@ -171,6 +174,14 @@ namespace Akka.Remote.Artery
         private readonly AtomicReference<IOptionVal<Cancelable>> _stopQuarantinedTimer = new AtomicReference<IOptionVal<Cancelable>>(OptionVal.None<Cancelable>());
 
         private IActorRef DeadLetters => Transport.System.DeadLetters;
+
+        private List<Encoder.IOutboundCompressionAccess> OutboundCompressionAccess
+        {
+#pragma warning disable 420
+            get => Volatile.Read(ref _outboundCompressionAccess_DoNotUseDirectly);
+            set => Volatile.Write(ref _outboundCompressionAccess_DoNotUseDirectly, value);
+#pragma warning restore 420
+        }
 
         public OutboundControlJunction.IOutboundControlIngress OutboundControlIngress
         {
@@ -300,7 +311,7 @@ namespace Akka.Remote.Artery
         private Task<Done> UpdateOutboundCompression(Func<Encoder.IOutboundCompressionAccess, Task<Done>> action)
         {
             //var ec = Transport.System.Dispatchers.InternalDispatcher;
-            var c = Volatile.Read(ref _outboundCompressionAccess);
+            var c = OutboundCompressionAccess;
             var tasks = c.Select(action).ToList();
 
             return tasks.Count switch
