@@ -182,8 +182,6 @@ namespace Akka.Remote.Artery
         void SetManifest(string manifest);
         IOptionVal<string> Manifest(long originUid);
 
-        void SetRemoteInstruments(RemoteInstruments instruments);
-
         /// <summary>
         /// Reset all fields that are related to an outbound message,
         /// i.e. Encoder calls this as the first thing in onPush.
@@ -237,8 +235,6 @@ namespace Akka.Remote.Artery
         internal string _manifest = null;
         internal int _manifestIdx = -1;
 
-        internal IOptionVal<RemoteInstruments> _remoteInstruments = OptionVal.None<RemoteInstruments>();
-
         public void ResetMessageFields()
         {
             // some fields must not be reset because they are set only once from the Encoder,
@@ -254,8 +250,6 @@ namespace Akka.Remote.Artery
             _serializer = 0;
             _manifest = null;
             _manifestIdx = -1;
-
-            _remoteInstruments = OptionVal.None<RemoteInstruments>();
         }
 
         public byte Version
@@ -396,9 +390,6 @@ namespace Akka.Remote.Artery
                     _manifestIdx);
         }
 
-        public void SetRemoteInstruments(RemoteInstruments instruments)
-            => _remoteInstruments = OptionVal.Apply(instruments);
-
         public HeaderBuilderImpl(
             IInboundCompressions inboundCompressions,
             CompressionTable<IActorRef> outboundActorRefCompression,
@@ -507,6 +498,9 @@ namespace Akka.Remote.Artery
 
             // maybe write some metadata
             // after metadata is written (or not), buffer is at correct position to continue writing literals
+            // NOTE: For Akka.Net, we do not have any metadata that needed writing at the moment, but if we do,
+            //       this is the place to inject it (plus the sample code)
+            /*
             buffer.Position(MetadataContainerAndLiteralSectionOffset);
             if (header._remoteInstruments.IsDefined)
             {
@@ -518,6 +512,7 @@ namespace Akka.Remote.Artery
                     buffer.Put(FlagsOffset, header.Flags);
                 }
             }
+            */
 
             // Serialize sender
             if (header._senderActorRefIdx != -1)
