@@ -1,5 +1,43 @@
-#### 1.4.17 Feb 3 2021 ####
-**Placeholder for nightlies**
+#### 1.4.17 March 09 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a more significant release of Akka.NET that solves a number of bugs, introduces new features, and more.
+
+**Introduction of Akka.Cluster.SBR - Lightbend's Split Brain Resolvers**
+In Akka.NET v1.4.17 we introduce a new set of Akka.Cluster split brain resolvers for Akka.NET, which are based on the recently open sourced Lightbend implementations of the same. We've [documented how to work with each of the new SBR types here](https://getakka.net/articles/clustering/split-brain-resolver.html), but here's the complete list:
+
+* `static-quorum` 
+* `keep-majority`
+* `keep-oldest`
+* `down-all`
+* `lease-majority`
+* `keep-referee` - only available with the legacy split brain resolver (still ships with Akka.NET.)
+
+Other bug fixes:
+
+* [Akka: Parse expressions where possible to avoid penalties for `.Compile()`](https://github.com/akkadotnet/akka.net/pull/4712)
+* [Akka: Ask can't find temporary actor inside async context](https://github.com/akkadotnet/akka.net/issues/4384)
+* [Akka: Add Serialization.WithTransport overload that takes TState](https://github.com/akkadotnet/akka.net/pull/4764)
+* [Akka.DependencyInjection: Allow different versions of MS Abstractions nuget package](https://github.com/akkadotnet/akka.net/pull/4739)
+* [Akka.DependencyInjection: `ServiceProviderProps` did not copy over `Deploy` and `SupervisorStrategy` properties properly](https://github.com/akkadotnet/akka.net/pull/4745)
+* [Akka.Cluster.Tools: on singleton-proxy setting buffer-size to 0 via Hocon fail on exception](https://github.com/akkadotnet/akka.net/issues/4763)
+* [Akka.Streams: InputStreamPublisher cannot be cancelled and StreamRef will be blocked](https://github.com/akkadotnet/akka.net/issues/4744)
+* [Akka.DistributedData: ORDictionary.DeltaGroup.Merge InvalidCastException](https://github.com/akkadotnet/akka.net/issues/4806)
+* [Akka.TestKit: `Expect(0)` with `EventFilter` does not work](https://github.com/akkadotnet/akka.net/issues/4770)
+
+To see the [full set of fixes in Akka.NET v1.4.17, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/47).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |         
+| --- | --- | --- | --- |                  
+| 20 | 282 | 237 | IgorFedchenko |         
+| 14 | 76 | 25 | Aaron Stannard |          
+| 13 | 17 | 17 | dependabot-preview[bot] | 
+| 8 | 1031 | 749 | Igor Fedchenko |        
+| 6 | 225 | 53 | Gregorius Soedharmo |     
+| 3 | 3 | 3 | Brah McDude |                
+| 2 | 328 | 21 | Drew |                    
+| 1 | 4053 | 59 | zbynek001 |              
+| 1 | 2 | 1 | Vagif Abilov |               
 
 #### 1.4.16 January 22 2021 ####
 **Maintenance Release for Akka.NET 1.4**
