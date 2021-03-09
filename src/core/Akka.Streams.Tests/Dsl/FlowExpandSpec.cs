@@ -125,7 +125,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
             future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
-            future.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
+            future.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
         }
 
         [Fact]

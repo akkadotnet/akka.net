@@ -380,7 +380,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectionPathElement.
     /// </summary>
-    public abstract class SelectionPathElement
+    public abstract class SelectionPathElement 
     {
     }
 

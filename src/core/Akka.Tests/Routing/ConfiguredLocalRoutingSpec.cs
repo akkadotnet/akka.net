@@ -16,6 +16,7 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Configuration;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Routing
@@ -234,7 +235,7 @@ namespace Akka.Tests.Routing
 
             routerConfig.Should().BeOfType<RandomGroup>();
             var randomGroup = (RandomGroup)routerConfig;
-            randomGroup.GetPaths(Sys).ShouldAllBeEquivalentTo(new List<string> { "/user/service1", "/user/service2" });
+            randomGroup.GetPaths(Sys).Should().BeEquivalentTo(new List<string> { "/user/service1", "/user/service2" });
 
             var result = await actor.GracefulStop(3.Seconds());
             result.Should().BeTrue();
@@ -287,7 +288,7 @@ namespace Akka.Tests.Routing
             // TODO: wrong actor names
             var expected = new List<string> { "a", "b", "c" }.Select(i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault).Result).ToList();
 
-            received.ShouldAllBeEquivalentTo(expected);
+            received.Should().BeEquivalentTo(expected);
             ExpectNoMsg(1.Seconds());
         }
 

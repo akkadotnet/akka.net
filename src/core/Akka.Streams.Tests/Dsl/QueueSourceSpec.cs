@@ -81,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
             var task = source.OfferAsync(42);
             var ex = source.OfferAsync(43);
             ex.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3)))
-                .ShouldThrow<IllegalStateException>()
+                .Should().Throw<IllegalStateException>()
                 .And.Message.Should()
                 .Contain("have to wait");
 
@@ -456,7 +456,7 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
 
@@ -473,7 +473,7 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(1);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
 
@@ -491,7 +491,7 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(2);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
 
         }
@@ -508,7 +508,7 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
 
@@ -525,7 +525,7 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(1);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
     }

@@ -108,7 +108,7 @@ namespace Akka.Streams.Tests.Dsl
                 }).RunAggregateAsync(NotUsed.Instance, (notused, _) => Task.FromResult(notused), Materializer);
 
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>()
+                    .Should().Throw<TestException>()
                     .And.Should().Be(error);
             }, Materializer);
         }
@@ -131,7 +131,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 future.Invoking(f => f.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<TestException>()
+                    .Should().Throw<TestException>()
                     .And.Should().Be(error);
             }, Materializer);
         }
@@ -294,7 +294,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .Grouped(10)
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
-                    .AwaitResult().ShouldAllBeEquivalentTo(2);
+                    .AwaitResult().Should().BeEquivalentTo(2);
             }, Materializer);
         }
 

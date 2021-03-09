@@ -16,6 +16,7 @@ using FluentAssertions;
 using System;
 using System.Linq;
 using System.Threading;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -460,13 +461,11 @@ namespace Akka.Streams.Tests
             var sinkRef = ExpectMsg<ISinkRef<string>>();
 
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-            var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-
             p1.EnsureSubscription();
             var req = p1.ExpectRequest();
-
-            // will be cancelled immediately, since it's 2nd:
-            p2.EnsureSubscription();
+            
+            var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
+            p2.EnsureSubscription(); // will be cancelled immediately, since it's 2nd
             p2.ExpectCancellation();
         }
     }

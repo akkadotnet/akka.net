@@ -248,7 +248,7 @@ namespace Akka.Streams.Tests.Implementation
             var g = Enumerable.Range(1, TooDeepForStack)
                 .Aggregate(Flow.Create<int>().MapMaterializedValue(_ => 1),
                     (flow, i) => flow.MapMaterializedValue(x => x + i));
-            g.Invoking(flow => Streams.Fusing.Aggressive(flow)).ShouldThrow<StackOverflowException>();
+            g.Invoking(flow => Streams.Fusing.Aggressive(flow)).Should().Throw<StackOverflowException>();
         }
 #endif
 

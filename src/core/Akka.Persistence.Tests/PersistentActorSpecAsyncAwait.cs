@@ -339,7 +339,7 @@ namespace Akka.Persistence.Tests
                 pref.Tell(new Cmd(i));
             }
             pref.Tell(new Cmd("done"));
-            ExpectMsg("done", TimeSpan.FromSeconds(5));
+            ExpectMsg("done", TimeSpan.FromSeconds(30));
         }
 
         [Fact]
