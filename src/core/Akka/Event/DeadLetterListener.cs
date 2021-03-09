@@ -162,11 +162,12 @@ namespace Akka.Event
 
         private void LogDeadLetter(object message, IActorRef snd, IActorRef recipient, string doneMsg)
         {
+            var messageType = ReferenceEquals(null, message) ? "null" : message.GetType().Name;
             var origin = ReferenceEquals(snd, Context.System.DeadLetters) ? "without sender" : $"from {snd.Path}";
             _eventStream.Publish(new Info(
                 recipient.Path.ToString(),
                 recipient.GetType(),
-                $"Message [{message.GetType().Name}] {origin} to {recipient.Path} was not delivered. [{_count.ToString()}] dead letters encountered{doneMsg}. " +
+                $"Message [{messageType}] {origin} to {recipient.Path} was not delivered. [{_count.ToString()}] dead letters encountered{doneMsg}. " +
                 $"If this is not an expected behavior then {recipient.Path} may have terminated unexpectedly. " +
                 "This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' " +
                 "and 'akka.log-dead-letters-during-shutdown'."));
