@@ -163,6 +163,11 @@ namespace Akka.Cluster.SBR
 
         public string LeaseName { get; }
 
+        public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role)
+            : this(leaseImplementation, acquireLeaseDelayForMinority, role, null)
+        {
+        }
+
         public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role, string leaseName)
         {
             LeaseImplementation = leaseImplementation;
