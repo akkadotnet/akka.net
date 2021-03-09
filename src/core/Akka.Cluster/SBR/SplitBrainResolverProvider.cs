@@ -1,21 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿//-----------------------------------------------------------------------
+// <copyright file="SplitBrainResolverProvider.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.Coordination;
 
 namespace Akka.Cluster.SBR
 {
     /// <summary>
-    /// Enabled with configuration:
-    /// {
-    /// akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider"
-    /// }
+    ///     Enabled with configuration:
+    ///     {
+    ///     akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider"
+    ///     }
     /// </summary>
     public class SplitBrainResolverProvider : IDowningProvider
     {
-        private readonly ActorSystem system;
         private readonly SplitBrainResolverSettings settings;
+        private readonly ActorSystem system;
 
         public SplitBrainResolverProvider(ActorSystem system)
         {
@@ -34,8 +39,7 @@ namespace Akka.Cluster.SBR
 #pragma warning restore CS0618 // Type or member is obsolete
                 if (drm != TimeSpan.Zero)
                     return drm;
-                else
-                    return settings.DowningStableAfter;
+                return settings.DowningStableAfter;
             }
         }
 
@@ -65,8 +69,10 @@ namespace Akka.Cluster.SBR
                     case SplitBrainResolverSettings.LeaseMajorityName:
                         var lms = settings.LeaseMajoritySettings;
                         var leaseOwnerName = cluster.SelfUniqueAddress.Address.HostPort();
+
                         var leaseName = lms.SafeLeaseName(system.Name);
                         var lease = LeaseProvider.Get(system).GetLease(leaseName, lms.LeaseImplementation, leaseOwnerName);
+
                         strategy = new LeaseMajority(lms.Role, lease, lms.AcquireLeaseDelayForMinority);
                         break;
                     default:
