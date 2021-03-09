@@ -66,6 +66,7 @@ The following strategies are supported:
 All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
 
 ```hocon
+akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster"
 akka.cluster.split-brain-resolver {
   # Enable one of the available strategies (see descriptions below):
   # static-quorum, keep-majority, keep-oldest, keep-referee 
@@ -107,39 +108,6 @@ The `down-all-when-unstable` option, which is _enabled by default_, will termina
 > [!IMPORTANT]
 > If you are running in an environment where processes are not automatically restarted in the event of an unplanned termination (i.e. Kubernetes), we strongly recommend that you disable this setting by setting `akka.cluster.split-brain-resolver.down-all-when-unstable = off`.
 > If you're running in a self-hosted environment or on infrastructure as a service, TURN THIS SETTING OFF unless you have automatic process supervision in-place (which you should always try to have.) 
-
-### Strategies
-
-This section describes the different split brain resolver strategies. Please keep in mind, that there's no universal solution and each one of them may fail under specific circumstances.
-
-To decide which strategy to use, you can set `akka.cluster.split-brain-resolver.active-strategy` to one of 4 different options:
-
-- `static-quorum`
-- `keep-majority`
-- `keep-oldest`
-- `keep-referee`
-
-All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
-
-```hocon
-akka.cluster.split-brain-resolver {
-  # Enable one of the available strategies (see descriptions below):
-  # static-quorum, keep-majority, keep-oldest, keep-referee 
-  active-strategy = off
-  
-  # Decision is taken by the strategy when there has been no membership or
-  # reachability changes for this duration, i.e. the cluster state is stable.
-  stable-after = 20s
-}   
-```
-
-There is no simple way to decide the value of `stable-after`, as:
-
-* A shorter value will give you the faster reaction time for unreachable nodes at cost of higher risk of false positives, i.e. healthy nodes that are slow to be observed as reachable again prematurely being removed for the cluster due to temporary network issues. 
-* A higher value will increase the amount of time it takes to move resources on the truly unreachable side of the partition, i.e. sharded actors, cluster singletons, DData replicas, and so on longer to be re-homed onto reachable nodes in the healthy partition.
-
-> [!NOTE]
-> The rule of thumb for this setting is to set `stable-after` to `log10(maxExpectedNumberOfNodes) * 10`.
 
 #### Static Quorum
 
@@ -231,6 +199,18 @@ akka.cluster.split-brain-resolver {
 }
 ```
 
+#### Down All
+As the name implies, this strategy results in all members of the being downed unconditionally - forcing a full rebuild and recreation of the entire cluster if there are any unreachable nodes alive for longer than  `akka.cluster.split-brain-resolver.stable-after` (20 seconds by default.)
+
+You can enable this strategy via the following:
+
+```hocon
+akka.cluster {
+  downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster"
+  active-strategy = down-all
+}
+```
+
 #### Keep Referee
 This strategy is only available with the legacy Akka.Cluster split brain resolver, which you can enable via the following HOCON:
 
@@ -248,7 +228,7 @@ akka.cluster {
 ```
 
 > [!WARNING]
-> Akka.NET's hand-rolled split brain resolvers are deprecated and will be removed from Akka.NET as part of the Akka.NET v1.5 update. Please see "[Split Brain Resolution Strategies](#split-brain-resolution-strategies)" for the current guidance as of Akka.NET v1.4.16.
+> Akka.NET's hand-rolled split brain resolvers are deprecated and will be removed from Akka.NET as part of the Akka.NET v1.5 update. Please see "[Split Brain Resolution Strategies](#split-brain-resolution-strategies)" for the current guidance as of Akka.NET v1.4.17.
 
 The `keep-referee` strategy will simply down the part that does not contain the given referee node.
 
@@ -260,6 +240,27 @@ Things to keep in mind:
 2. A referee node is a single point of failure for the cluster.
 
 You can configure a minimum required amount of reachable nodes to maintain operability by using `down-all-if-less-than-nodes`. If a strategy will detect that the number of reachable nodes will go below that minimum it will down the entire partition even when referee node was reachable.
+
+#### Lease Majority
+The `lease-majority` downing provider strategy keeps all of the nodes in the cluster who are able to successfully acquire an [`Akka.Coordination.Lease`](xref:Akka.Coordination.Lease) - and the implementation of which must be specified by the user via configuration:
+
+```hocon
+akka.cluster.split-brain-resolver.lease-majority {
+  lease-implementation = ""
+
+  # This delay is used on the minority side before trying to acquire the lease,
+  # as an best effort to try to keep the majority side.
+  acquire-lease-delay-for-minority = 2s
+
+  # If the 'role' is defined the majority/minority is based only on members with that 'role'.
+  role = ""
+}
+```
+
+A `Lease` is a type of distributed lock implementation.
+
+> [!NOTE]
+> We are working on improving the documentation for Akka.Coordination, which will shed some more light on how this feature can be used in the future.
 
 ### Relation to Cluster Singleton and Cluster Sharding
 
