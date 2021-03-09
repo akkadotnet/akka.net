@@ -65,7 +65,8 @@ namespace Akka.Cluster.SBR
                     case SplitBrainResolverSettings.LeaseMajorityName:
                         var lms = settings.LeaseMajoritySettings;
                         var leaseOwnerName = cluster.SelfUniqueAddress.Address.HostPort();
-                        var lease = LeaseProvider.Get(system).GetLease($"{system.Name}-akka-sbr", lms.LeaseImplementation, leaseOwnerName);
+                        var leaseName = lms.SafeLeaseName(system.Name);
+                        var lease = LeaseProvider.Get(system).GetLease(leaseName, lms.LeaseImplementation, leaseOwnerName);
                         strategy = new LeaseMajority(lms.Role, lease, lms.AcquireLeaseDelayForMinority);
                         break;
                     default:
