@@ -401,10 +401,20 @@ namespace Akka.Remote.Artery
                 .WithFallback(_config));
         }
 
-        private static string GetHostname(Config config, string key)
+        public static TransportType GetTransport(string transport)
+            => transport switch
+            {
+                "aeron-udp" => throw new ConfigurationException("Aeron transport is not supported."),
+                "tcp" => TransportType.Tcp,
+                "tls-tcp" => TransportType.TlsTcp,
+                _ => throw new ConfigurationException(
+                    $"Unknown transport [{transport}], possible values: {nameof(TransportType.AeronUdp)}, {nameof(TransportType.Tcp)}, or {nameof(TransportType.TlsTcp)}")
+            };
+
+        public static string GetHostname(Config config, string key)
             => GetHostName(config.GetString(key)) ?? throw new ConfigurationException("No network adapter with an IPv4 address found in host machine.");
 
-        private static string GetHostName(string value, bool useIpv4 = true, bool useIpv6 = false)
+        public static string GetHostName(string value, bool useIpv4 = true, bool useIpv6 = false)
         {
             return value switch
             {
@@ -426,9 +436,7 @@ namespace Akka.Remote.Artery
                 }
                 return null;
             }
-        }
-
-    }
+        }    }
 
     #region Static extensions
 
@@ -440,7 +448,7 @@ namespace Akka.Remote.Artery
                 TransportType.AeronUdp => "aeron-udp",
                 TransportType.Tcp => "tcp",
                 TransportType.TlsTcp => "tls-tcp",
-                _ => $"Unknown transport [{type}], possible values: {nameof(TransportType.AeronUdp)}, {nameof(TransportType.Tcp)}, or {nameof(TransportType.TlsTcp)}"
+                _ => throw new ConfigurationException($"Unknown transport [{type}], possible values: {nameof(TransportType.AeronUdp)}, {nameof(TransportType.Tcp)}, or {nameof(TransportType.TlsTcp)}")
             };
     }
 
