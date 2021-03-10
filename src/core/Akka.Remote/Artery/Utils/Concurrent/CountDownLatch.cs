@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Akka.Remote.Artery.Utils
+namespace Akka.Remote.Artery.Utils.Concurrent
 {
     // Best fit approximation of how java CountDownLatch works.
     internal class CountDownLatch :IDisposable

@@ -291,12 +291,13 @@ namespace Akka.Remote.Artery
         // We start with the raw wrapped queue and then it is replaced with the materialized value of
         // the `SendQueue` after materialization. Using same underlying queue. This makes it possible to
         // start sending (enqueuing) to the Association immediate after construction.
+        // ARTERY TODO: We're replacing ManyToOneArrayQueue with a ConcurrentQueue wrapped in a facade class, need to check that this emulates agrona ManyToOneArrayQueue behavior.
         private IQueue<IOutboundEnvelope> CreateQueue(int capacity, int queueIndex)
         {
             var linked = queueIndex == ControlQueueIndex || queueIndex == LargeQueueIndex;
             return linked 
                 ? new LinkedBlockingQueue<IOutboundEnvelope>(capacity) 
-                : (IQueue<IOutboundEnvelope>) new ManyToOneConcurrentArrayQueue<IOutboundEnvelope>(capacity);
+                : (IQueue<IOutboundEnvelope>) new ConcurrentQueueWrapper<IOutboundEnvelope>(capacity);
         }
 
         public Task<Done> ChangeActorRefCompression(CompressionTable<IActorRef> table)

@@ -291,14 +291,12 @@ namespace Akka.Remote.Artery
             public override string StackTrace => "";
         }
 
-        public sealed class InboundStreamMatValues<TLifeCycle>
+        public sealed class InboundStreamMatValues
         {
-            public TLifeCycle LifeCycle { get; }
             public Task<Done> Completed { get; }
 
-            public InboundStreamMatValues(TLifeCycle lifeCycle, Task<Done> completed)
+            public InboundStreamMatValues(Task<Done> completed)
             {
-                LifeCycle = lifeCycle;
                 Completed = completed;
             }
         }
@@ -355,7 +353,7 @@ namespace Akka.Remote.Artery
 
         protected readonly SharedKillSwitch KillSwitch;
 
-        protected readonly AtomicReference<ImmutableDictionary<int, InboundStreamMatValues<TLifeCycle>>> StreamMatValues;
+        protected readonly AtomicReference<ImmutableDictionary<int, InboundStreamMatValues>> StreamMatValues;
         private readonly AtomicBoolean _hasBeenShutdown;
 
         private readonly SharedTestState _testState;
@@ -424,8 +422,8 @@ namespace Akka.Remote.Artery
 
             // keyed by the streamId
             StreamMatValues =
-                new AtomicReference<ImmutableDictionary<int, InboundStreamMatValues<TLifeCycle>>>(
-                    ImmutableDictionary<int, InboundStreamMatValues<TLifeCycle>>.Empty);
+                new AtomicReference<ImmutableDictionary<int, InboundStreamMatValues>>(
+                    ImmutableDictionary<int, InboundStreamMatValues>.Empty);
             _hasBeenShutdown = new AtomicBoolean(false);
 
             _testState = new SharedTestState();

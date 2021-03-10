@@ -35,7 +35,8 @@ namespace Akka.Remote.Artery.Utils.Concurrent
     /// methods of the {@link Collection} and {@link Iterator} interfaces.</p>
     /// </summary>
     /// <typeparam name="T">the type of elements held in this queue</typeparam>
-    public class LinkedBlockingQueue<T> : AbstractQueue<T>, IBlockingQueue<T> where T : class
+    public class LinkedBlockingQueue<T> : AbstractQueue<T>, IBlockingQueue<T> 
+        where T : class
     {
         /*
          * A variant of the "two lock queue" algorithm.  The putLock gates
@@ -75,10 +76,10 @@ namespace Akka.Remote.Artery.Utils.Concurrent
         /// <summary>
         /// Linked list node class.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        internal class Node<T>
+        /// <typeparam name="TNode"></typeparam>
+        internal class Node<TNode>
         {
-            public T Item;
+            public TNode Item;
 
             /// <summary>
             /// One of:
@@ -86,9 +87,9 @@ namespace Akka.Remote.Artery.Utils.Concurrent
             /// - this Node, meaning the successor is head.next
             /// - null, meaning there is no successor (this is the last node)
             /// </summary>
-            public Node<T> Next;
+            public Node<TNode> Next;
 
-            public Node(T x)
+            public Node(TNode x)
             {
                 Item = x;
             }
@@ -836,7 +837,7 @@ namespace Akka.Remote.Artery.Utils.Concurrent
             return new Enumerator(this);
         }
 
-        public override bool IsReadOnly => true;
+        public override bool IsReadOnly => false;
 
         public override void CopyTo(T[] array, int arrayIndex)
         {
