@@ -1988,7 +1988,6 @@ namespace Akka.Cluster.Sharding
             return false;
         }
 
-        //def update[E <: DomainEvent](evt: E)(f: E => Unit): Unit
         private void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
             update(e, evn => handler((TEvent)evn));

@@ -58,10 +58,8 @@ namespace Akka.Cluster.Sharding
             baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
                 Context, log, verboseDebug, Update, UnstashOneGetShardHomeRequest);
 
-
             //should have been this: $"/sharding/{typeName}Coordinator";
-            PersistenceId = $"/system/sharding/{typeName}Coordinator/singleton/coordinator"; //used for backward compatibility
-            //PersistenceId = Self.Path.ToStringWithoutAddress(); //used for backward compatibility
+            PersistenceId = $"/system/sharding/{typeName}Coordinator/singleton/coordinator"; //used for backward compatibility instead of Self.Path.ToStringWithoutAddress()
 
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;

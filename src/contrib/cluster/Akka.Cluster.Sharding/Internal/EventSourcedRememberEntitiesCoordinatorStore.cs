@@ -91,7 +91,7 @@ namespace Akka.Cluster.Sharding.Internal
             Settings = settings;
 
             //should have been this: $"/sharding/{typeName}Coordinator";
-            PersistenceId = $"/system/sharding/{typeName}Coordinator/singleton/coordinator"; //used for backward compatibility
+            PersistenceId = $"/system/sharding/{typeName}Coordinator/singleton/coordinator"; //used for backward compatibility instead of Self.Path.ToStringWithoutAddress()
 
             JournalPluginId = settings.JournalPluginId;
             SnapshotPluginId = settings.SnapshotPluginId;
