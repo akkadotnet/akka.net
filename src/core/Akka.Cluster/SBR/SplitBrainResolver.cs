@@ -249,13 +249,13 @@ namespace Akka.Cluster.SBR
                 case MemberLeft ch:
                     Leaving(ch.Member);
                     return true;
+                case MemberExited ch:
+                    Exited(ch.Member);
+                    return true;
                 case UnreachableMember ch:
                     UnreachableMember(ch.Member);
                     return true;
                 case MemberDowned ch:
-                    UnreachableMember(ch.Member);
-                    return true;
-                case MemberExited ch:
                     UnreachableMember(ch.Member);
                     return true;
                 case ReachableMember ch:
@@ -508,10 +508,10 @@ namespace Akka.Cluster.SBR
                 : "";
 
             Log.Warning(
-                $"SBR took decision {decision} and is downing [{string.Join(", ", nodesToDown.Select(i => i.Address))}]{(downMyself ? " including myself, " : "")}, " +
-                $"[{Strategy.Unreachable.Count}] unreachable of [{Strategy.Members.Count}] members" +
-                indirectlyConnectedLogMessage +
-                $", full reachability status: {Strategy.Reachability}");
+              $"SBR took decision {decision} and is downing [{string.Join(", ", nodesToDown.Select(i => i.Address))}]{(downMyself ? " including myself, " : "")}, " +
+                  $"[{Strategy.Unreachable.Count}] unreachable of [{Strategy.Members.Count}] members" +
+                  indirectlyConnectedLogMessage +
+                  $", full reachability status: [{Strategy.Reachability}]");
         }
 
         public void UnreachableMember(Member m)
@@ -597,6 +597,15 @@ namespace Akka.Cluster.SBR
         {
             Log.Debug("SBR leaving [{0}]", m);
             MutateMemberInfo(false, () => { Strategy.Add(m); });
+        }
+
+        public void Exited(Member m)
+        {
+            Log.Debug("SBR exited [{0}]", m);
+            MutateMemberInfo(resetStable: true, () =>
+            {
+                Strategy.Add(m);
+            });
         }
 
         public void AddJoining(Member m)

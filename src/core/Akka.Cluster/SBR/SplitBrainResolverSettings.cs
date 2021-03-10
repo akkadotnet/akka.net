@@ -113,7 +113,11 @@ namespace Akka.Cluster.SBR
 
                 var acquireLeaseDelayForMinority = c.GetTimeSpan("acquire-lease-delay-for-minority");
 
-                return new LeaseMajoritySettings(leaseImplementation, acquireLeaseDelayForMinority, Role(c));
+                var leaseName = c.GetString("lease-name").Trim();
+                if (string.IsNullOrEmpty(leaseName))
+                    leaseName = null;
+
+                return new LeaseMajoritySettings(leaseImplementation, acquireLeaseDelayForMinority, Role(c), leaseName);
             });
         }
 
@@ -161,10 +165,21 @@ namespace Akka.Cluster.SBR
     public sealed class LeaseMajoritySettings
     {
         public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role)
+            : this(leaseImplementation, acquireLeaseDelayForMinority, role, null)
+        {
+        }
+
+        public LeaseMajoritySettings(string leaseImplementation, TimeSpan acquireLeaseDelayForMinority, string role, string leaseName)
         {
             LeaseImplementation = leaseImplementation;
             AcquireLeaseDelayForMinority = acquireLeaseDelayForMinority;
             Role = role;
+            LeaseName = leaseName;
+        }
+
+        public string SafeLeaseName(string systemName)
+        {
+            return LeaseName ?? $"{systemName}-akka-sbr";
         }
 
         public string LeaseImplementation { get; }
@@ -172,5 +187,7 @@ namespace Akka.Cluster.SBR
         public TimeSpan AcquireLeaseDelayForMinority { get; }
 
         public string Role { get; }
+      
+        public string LeaseName { get; }
     }
 }

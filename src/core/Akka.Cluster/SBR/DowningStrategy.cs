@@ -129,7 +129,13 @@ namespace Akka.Cluster.SBR
 
     internal class ReverseDownIndirectlyConnected : IDecision
     {
+        public static readonly ReverseDownIndirectlyConnected Instance = new ReverseDownIndirectlyConnected();
+
         public bool IsIndirectlyConnected => true;
+
+        private ReverseDownIndirectlyConnected()
+        {
+        }
     }
 
     internal abstract class DowningStrategy
@@ -424,9 +430,9 @@ namespace Akka.Cluster.SBR
                 case DownAll _:
                     return DownAll.Instance;
                 case DownIndirectlyConnected _:
-                    return new ReverseDownIndirectlyConnected();
+                    return ReverseDownIndirectlyConnected.Instance;
                 case AcquireLeaseAndDownIndirectlyConnected _:
-                    return new ReverseDownIndirectlyConnected();
+                    return ReverseDownIndirectlyConnected.Instance;
                 case ReverseDownIndirectlyConnected _:
                     return DownIndirectlyConnected.Instance;
             }

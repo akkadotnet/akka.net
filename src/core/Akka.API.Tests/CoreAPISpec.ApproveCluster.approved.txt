@@ -398,9 +398,12 @@ namespace Akka.Cluster.SBR
     public sealed class LeaseMajoritySettings
     {
         public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role) { }
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role, string leaseName) { }
         public System.TimeSpan AcquireLeaseDelayForMinority { get; }
         public string LeaseImplementation { get; }
+        public string LeaseName { get; }
         public string Role { get; }
+        public string SafeLeaseName(string systemName) { }
     }
     public class SplitBrainResolverProvider : Akka.Cluster.IDowningProvider
     {
