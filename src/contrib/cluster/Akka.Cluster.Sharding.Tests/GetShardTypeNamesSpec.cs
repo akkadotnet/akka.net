@@ -45,7 +45,7 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding.Get(Sys).Start("type1", EchoActor.Props(this), settings, ExtractEntityId, ExtractShardId);
             ClusterSharding.Get(Sys).Start("type2", EchoActor.Props(this), settings, ExtractEntityId, ExtractShardId);
 
-            ClusterSharding.Get(Sys).ShardTypeNames.ShouldBeEquivalentTo(new string[] { "type1", "type2" });
+            ClusterSharding.Get(Sys).ShardTypeNames.Should().BeEquivalentTo(new string[] { "type1", "type2" });
         }
 
         private Option<(string, object)> ExtractEntityId(object message)

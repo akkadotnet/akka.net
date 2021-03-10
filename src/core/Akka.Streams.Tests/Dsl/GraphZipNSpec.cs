@@ -60,14 +60,14 @@ namespace Akka.Streams.Tests.Dsl
 
             var subscription = probe.ExpectSubscription();
             subscription.Request(2);
-            probe.ExpectNext().ShouldAllBeEquivalentTo(new[] {1, 2});
-            probe.ExpectNext().ShouldAllBeEquivalentTo(new[] {2, 3});
+            probe.ExpectNext().Should().BeEquivalentTo(new[] {1, 2});
+            probe.ExpectNext().Should().BeEquivalentTo(new[] {2, 3});
 
             subscription.Request(1);
-            probe.ExpectNext().ShouldAllBeEquivalentTo(new[] {3, 4});
+            probe.ExpectNext().Should().BeEquivalentTo(new[] {3, 4});
 
             subscription.Request(1);
-            probe.ExpectNext().ShouldAllBeEquivalentTo(new[] {4, 5});
+            probe.ExpectNext().Should().BeEquivalentTo(new[] {4, 5});
 
             probe.ExpectComplete();
         }
@@ -96,7 +96,7 @@ namespace Akka.Streams.Tests.Dsl
             upstream2.SendComplete();
 
             downstream.Request(1);
-            downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] {1, 2});
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] {1, 2});
             downstream.ExpectComplete();
             upstream1.ExpectCancellation();
         }
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
 
             upstream1.SendNext(1);
             upstream2.SendNext(2);
-            downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] { 1, 2 });
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] { 1, 2 });
 
             upstream2.SendComplete();
             downstream.ExpectComplete();
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
             upstream2.SendComplete();
 
             downstream.Request(1);
-            downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] { 1, 2 });
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] { 1, 2 });
             downstream.ExpectComplete();
         }
 
@@ -183,7 +183,7 @@ namespace Akka.Streams.Tests.Dsl
             upstream2.SendComplete();
 
             downstream.Request(1);
-            downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] { 1, 2 });
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] { 1, 2 });
             downstream.ExpectComplete();
         }
 
@@ -214,7 +214,7 @@ namespace Akka.Streams.Tests.Dsl
             upstream2.SendNext(2);
             upstream2.SendComplete();
             downstream.Request(1);
-            downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] { 1, 2 });
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] { 1, 2 });
             downstream.ExpectComplete();
         }
 

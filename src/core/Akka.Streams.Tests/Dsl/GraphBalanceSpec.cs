@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
                 }, Materializer);
 
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(new[] {1, 2, 3});
+                task.Result.Should().BeEquivalentTo(new[] {1, 2, 3});
             }, Materializer);
         }
 
@@ -191,7 +191,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3, t.Item4, t.Item5);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result.SelectMany(l=>l).ShouldAllBeEquivalentTo(Enumerable.Range(0, 15));
+                task.Result.SelectMany(l=>l).Should().BeEquivalentTo(Enumerable.Range(0, 15));
             }, Materializer);
         }
 

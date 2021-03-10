@@ -126,7 +126,7 @@ namespace Akka.Remote.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         EventFilter.Warning(null, null, "The remote system has quarantined this system")
-                            .ExpectOne(10.Seconds(), () => actorRef.Tell("boo!"));
+                            .ExpectOne(TimeSpan.FromSeconds(10), () => actorRef.Tell("boo!"));
                     });
                 });
 

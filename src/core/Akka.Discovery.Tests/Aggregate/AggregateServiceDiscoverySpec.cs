@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Discovery.Tests.Aggregate

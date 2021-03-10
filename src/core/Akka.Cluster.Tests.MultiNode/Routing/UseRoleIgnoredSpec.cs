@@ -16,6 +16,7 @@ using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
@@ -112,8 +113,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             var zero = Roles.Select(c => GetAddress(c)).ToDictionary(c => c, c => 0);
             var replays = ReceiveWhile(5.Seconds(), msg =>
             {
-                var routee = msg as UseRoleIgnoredSpecConfig.Reply;
-                if (routee != null && routee.RouteeType.GetType() == routeeType.GetType())
+                if (msg is UseRoleIgnoredSpecConfig.Reply routee && routee.RouteeType.GetType() == routeeType.GetType())
                     return FullAddress(routee.ActorRef);
                 return null;
             }, expectedReplies).Aggregate(zero, (replyMap, address) =>

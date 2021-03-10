@@ -288,7 +288,7 @@ namespace Akka.Cluster
             if (oldRecord.Status == ReachabilityStatus.Terminated || oldRecord.Status == status)
                 return this;
 
-            if(status == ReachabilityStatus.Reachable && 
+            if (status == ReachabilityStatus.Reachable &&
                 oldObserverRows.Values.All(r => r.Status == ReachabilityStatus.Reachable || r.Subject.Equals(subject)))
                 return new Reachability(_records.FindAll(r => !r.Observer.Equals(observer)), newVersions);
 
@@ -373,6 +373,11 @@ namespace Akka.Cluster
                 var newVersions = _versions.RemoveRange(nodes);
                 return new Reachability(newRecords, newVersions);
             }
+        }
+
+        public Reachability FilterRecords(Predicate<Record> f)
+        {
+            return new Reachability(Records.FindAll(f), Versions);
         }
 
         /// <summary>
@@ -495,7 +500,10 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableHashSet<UniqueAddress> AllObservers
         {
-            get { return ImmutableHashSet.CreateRange(_versions.Keys); }
+            get
+            {
+                return _records.Select(i => i.Observer).ToImmutableHashSet();
+        }
         }
 
         /// <summary>

@@ -189,7 +189,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(Enumerable.Range(0, 9))
                 .ToMaterialized(Sink.Seq<int>().ContraMap<int>(i => i + 1), Keep.Right)
                 .Run(Materializer)
-                .Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 9));
+                .Result.Should().BeEquivalentTo(Enumerable.Range(1, 9));
         }
 
         [Fact]

@@ -65,7 +65,7 @@ namespace Akka.Streams.Tests.Dsl
                 return probe.ExpectNext();
             });
 
-            collected.ShouldAllBeEquivalentTo(result);
+            collected.Should().BeEquivalentTo(result);
             probe.ExpectComplete();
         }
 

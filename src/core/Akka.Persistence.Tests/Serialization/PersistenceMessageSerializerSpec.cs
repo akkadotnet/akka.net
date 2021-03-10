@@ -91,7 +91,7 @@ namespace Akka.Persistence.Tests.Serialization
         public void MessageSerializer_ToBinary_should_throw_an_exception_on_wrong_type()
         {
             Action serializeAction = () => _serializer.ToBinary("non supporter string type");
-            serializeAction.ShouldThrow<ArgumentException>()
+            serializeAction.Should().Throw<ArgumentException>()
                 .WithMessage($"Can't serialize object of type [{typeof(string)}] in [{typeof(PersistenceMessageSerializer)}]");
 
             Action deserializeAction = () =>
@@ -99,7 +99,7 @@ namespace Akka.Persistence.Tests.Serialization
                 _serializer.FromBinary<string>(new byte[] { 4, 5, 6 });
             };
 
-            deserializeAction.ShouldThrow<SerializationException>()
+            deserializeAction.Should().Throw<SerializationException>()
                 .WithMessage($"Unimplemented deserialization of message with type [{typeof(string)}] in [{typeof(PersistenceMessageSerializer)}]");
         }
     }

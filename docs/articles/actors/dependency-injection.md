@@ -5,7 +5,7 @@ title: Dependency injection
 # Dependency Injection
 As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyInjection library, which integrates directly with Microsoft.Extensions.DependencyInjection and deprecates the previous Akka.DI.Core and Akka.DI.* libraries.
 
-You can install Akka.DependenecyInjection via NuGet:
+You can install Akka.DependencyInjection via NuGet:
 
 ```
 PS> Install-Package Akka.DependencyInjection
