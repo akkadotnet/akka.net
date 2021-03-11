@@ -9,34 +9,38 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Persistence;
 using Akka.Remote;
 using Akka.Streams.Dsl;
-using ApiApprover;
 using ApprovalTests;
-using Mono.Cecil;
 using Xunit;
 using Akka.Persistence.Query;
-using PublicApiGenerator;
 using static PublicApiGenerator.ApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
 using Akka.Persistence.Query.Sql;
 using Akka.Persistence.Sql.Common.Journal;
+using ApprovalTests.Core;
+using ApprovalTests.Reporters;
+using DiffPlex;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Akka.API.Tests
 {
+#if(DEBUG)
+    [UseReporter(typeof(DiffPlexReporter), typeof(DiffReporter), typeof(AllFailingTestsClipboardReporter))]
+#else
+    [UseReporter(typeof(DiffPlexReporter))]
+#endif
     public class CoreAPISpec
     {
-        public CoreAPISpec()
-        {
-            // force xunit.assert to be loaded into context, to fix https://github.com/akkadotnet/akka.net/issues/4765
-            var ass = AppDomain.CurrentDomain.Load("xunit.assert");
-        }
-        
         [Fact]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public void ApproveCore()
@@ -158,6 +162,60 @@ namespace Akka.API.Tests
                 .Where(l => !l.StartsWith("[assembly: ReleaseDateAttribute("))
                 .Where(l => !string.IsNullOrWhiteSpace(l))
                 );
+        }
+    }
+
+    internal class ApiNotApprovedException : XunitException
+    {
+        public ApiNotApprovedException(string message) : base($"Failed API approval. Diff:\n{message}")
+        { }
+
+        public override string StackTrace { get; } = string.Empty;
+    }
+
+    internal class DiffPlexReporter : IApprovalFailureReporter
+    {
+        public void Report(string approved, string received)
+        {
+            var approvedText = File.ReadAllText(approved);
+            var receivedText = File.ReadAllText(received);
+
+            var diffBuilder = new SideBySideDiffBuilder(new Differ());
+            var diff = diffBuilder.BuildDiffModel(approvedText, receivedText);
+
+            var sb = new StringBuilder()
+                .AppendLine($"<<<<<<<<< {Path.GetFileName(approved)}")
+                .AppendDiff(diff.OldText)
+                .AppendLine("=========")
+                .AppendDiff(diff.NewText)
+                .Append($">>>>>>>>> {Path.GetFileName(received)}");
+
+            //_out.WriteLine(sb.ToString());
+            throw new ApiNotApprovedException(sb.ToString());
+        }
+    }
+
+    internal static class Extensions
+    {
+        public static StringBuilder AppendDiff(this StringBuilder output, DiffPaneModel diff)
+        {
+            foreach (var line in diff.Lines)
+            {
+                switch (line.Type)
+                {
+                    case ChangeType.Deleted:
+                        output.AppendLine($"[{line.Position:0000}] - {line.Text}");
+                        break;
+                    case ChangeType.Inserted:
+                        output.AppendLine($"[{line.Position:0000}] + {line.Text}");
+                        break;
+                    case ChangeType.Modified:
+                        output.AppendLine($"[{line.Position:0000}] ? {line.Text}");
+                        break;
+                }
+            }
+
+            return output;
         }
 
     }
