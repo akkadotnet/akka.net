@@ -5,7 +5,7 @@ using Akka.Event;
 
 namespace Akka.Remote.Artery.Utils
 {
-    public static class DictionaryExtensions
+    internal static class DictionaryExtensions
     {
         /// <summary>
         /// Get a value for a given key, or if it does not exist then default the value via a

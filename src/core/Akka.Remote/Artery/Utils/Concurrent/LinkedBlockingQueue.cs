@@ -35,7 +35,7 @@ namespace Akka.Remote.Artery.Utils.Concurrent
     /// methods of the {@link Collection} and {@link Iterator} interfaces.</p>
     /// </summary>
     /// <typeparam name="T">the type of elements held in this queue</typeparam>
-    public class LinkedBlockingQueue<T> : AbstractQueue<T>, IBlockingQueue<T> 
+    internal class LinkedBlockingQueue<T> : AbstractQueue<T>, IBlockingQueue<T> 
         where T : class
     {
         /*

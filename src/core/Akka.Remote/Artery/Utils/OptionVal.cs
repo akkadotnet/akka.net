@@ -6,7 +6,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Utils
 {
-    public static class OptionVal
+    internal static class OptionVal
     {
         public static IOptionVal<T> Apply<T>(T x)
             => x == null ? (IOptionVal<T>)Utils.None<T>.Instance : new Some<T>(x);
@@ -16,7 +16,7 @@ namespace Akka.Remote.Artery.Utils
         public static IOptionVal<T> None<T>() => Utils.None<T>.Instance;
     }
 
-    public interface IOptionVal<T>
+    internal interface IOptionVal<T>
     {
         bool IsEmpty { get; }
         bool IsDefined { get; }
@@ -27,7 +27,7 @@ namespace Akka.Remote.Artery.Utils
         T Get { get; }
     }
 
-    public sealed class Some<T> : IOptionVal<T>
+    internal sealed class Some<T> : IOptionVal<T>
     {
         private readonly T _x;
 
@@ -87,7 +87,7 @@ namespace Akka.Remote.Artery.Utils
         }
     }
 
-    public sealed class None<T> : IOptionVal<T>
+    internal sealed class None<T> : IOptionVal<T>
     {
         public static readonly None<T> Instance = new None<T>();
 

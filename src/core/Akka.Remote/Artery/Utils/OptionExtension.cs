@@ -5,7 +5,7 @@ using Akka.Util;
 
 namespace Akka.Remote.Artery.Utils
 {
-    public static class OptionExtension
+    internal static class OptionExtension
     {
         public static bool Contains<T>(this Option<T> option, T value)
             => option.HasValue && option.Value.Equals(value);

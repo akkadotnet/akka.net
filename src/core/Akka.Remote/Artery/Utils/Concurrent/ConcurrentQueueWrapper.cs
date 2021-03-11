@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Akka.Remote.Artery.Utils.Concurrent
 {
-    public class ConcurrentQueueWrapper<T> : AbstractQueue<T> where T: class
+    internal class ConcurrentQueueWrapper<T> : AbstractQueue<T> where T: class
     {
         private readonly ConcurrentQueue<T> _backingQueue;
         private readonly int _capacity;

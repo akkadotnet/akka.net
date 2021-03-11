@@ -9,7 +9,7 @@ namespace Akka.Remote.Artery.Utils
     /// A wrapper/facade interface for C# Queue to emulate java.util.Queue
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IQueue<T> : ICollection<T>
+    internal interface IQueue<T> : ICollection<T>
     {
     /// <summary>
     /// Inserts the specified element into this queue if it is possible to do so

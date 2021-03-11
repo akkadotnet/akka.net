@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Akka.Remote.Artery.Utils.Concurrent
 {
-    public interface IBlockingQueue<T> : IQueue<T>
+    internal interface IBlockingQueue<T> : IQueue<T>
     {
         /// <summary>
         /// Inserts the specified element into this queue, waiting if necessary
