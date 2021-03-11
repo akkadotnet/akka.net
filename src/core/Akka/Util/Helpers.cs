@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Akka.Util
 {
-    public static class Helpers
+    internal static class Helpers
     {
         public static T Requiring<T>(this T obj, Func<T, bool> cond, string msg)
         {

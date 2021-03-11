@@ -4814,10 +4814,6 @@ namespace Akka.Util
         public bool IsValueCreated { get; }
         public T Value { get; }
     }
-    public class static Helpers
-    {
-        public static T Requiring<T>(this T obj, System.Func<T, bool> cond, string msg) { }
-    }
     public interface IResolver
     {
         T Resolve<T>(object[] args);
