@@ -38,6 +38,10 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
+        public static readonly Attributes Filter = Attributes.CreateName("filter");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Attributes Where = Attributes.CreateName("where");
         /// <summary>
         /// TBD
