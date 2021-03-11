@@ -317,7 +317,7 @@ namespace Akka.Streams
         }
 
         // NOTE: Make sure that this class can handle empty Config
-        private static ActorMaterializerSettings Create(Config config)
+        internal static ActorMaterializerSettings Create(Config config)
         {
             // No need to check for Config.IsEmpty because this function expects empty Config.
             if (config == null)
