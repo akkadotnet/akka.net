@@ -197,7 +197,11 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() => "Where";
     }
 
-
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
+    [InternalApi]
     public sealed class Filter<T> : SimpleLinearGraphStage<T>
     {
         #region Logic
