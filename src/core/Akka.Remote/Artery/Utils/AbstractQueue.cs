@@ -8,7 +8,7 @@ using Akka.Streams;
 
 namespace Akka.Remote.Artery.Utils
 {
-    public abstract class AbstractQueue<T> : IQueue<T> 
+    internal abstract class AbstractQueue<T> : IQueue<T> 
     {
         public virtual bool Add(T e)
         {

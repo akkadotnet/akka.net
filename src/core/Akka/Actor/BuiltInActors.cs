@@ -182,7 +182,7 @@ namespace Akka.Actor
     /// Message envelopes may implement this trait for better logging, such as logging of
     /// message class name of the wrapped message instead of the envelope class name.
     /// </summary>
-    public interface IWrappedMessage
+    internal interface IWrappedMessage
     {
         object Message { get; }
     }

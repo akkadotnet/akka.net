@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Akka.Remote.Artery.Internal
 {
-    public class UnsupportedOperationException : Exception
+    internal class UnsupportedOperationException : Exception
     {
         public UnsupportedOperationException(string message) : base (message) { }
         public UnsupportedOperationException(string message, Exception innerException) : base(message, innerException) { }
