@@ -140,7 +140,7 @@ namespace Akka.Event
             return n;
         }
 
-        public static string MessageClassName(object message)
+        internal static string MessageClassName(object message)
         {
             switch (message)
             {
