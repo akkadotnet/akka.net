@@ -1304,6 +1304,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Delay<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan of, System.Nullable<Akka.Streams.DelayOverflowStrategy> strategy = null) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Detach<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Expand<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, System.Collections.Generic.IEnumerator<TOut2>> extrapolate) { }
+        public static Akka.Streams.Dsl.Flow<T, T, TMat> Filter<T, TMat>(this Akka.Streams.Dsl.Flow<T, T, TMat> flow, System.Func<T, bool> filter) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> Grouped<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int n) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWithin<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int n, System.TimeSpan timeout) { }
@@ -3864,6 +3865,14 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
+    public sealed class Filter<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    {
+        public Filter(System.Func<T, bool> filterAction) { }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class GraphAssembly
     {
         public readonly int[] InletOwners;
@@ -4340,6 +4349,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Akka.Streams.Attributes FanoutPublisherSink;
         public static readonly Akka.Streams.Attributes FileSink;
         public static readonly Akka.Streams.Attributes FileSource;
+        public static readonly Akka.Streams.Attributes Filter;
         public static readonly Akka.Streams.Attributes FirstOrDefaultSink;
         public static readonly Akka.Streams.Attributes FirstSink;
         public static readonly Akka.Streams.Attributes FlattenMerge;
