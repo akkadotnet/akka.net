@@ -22,7 +22,7 @@
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <FsCheckVersion>2.15.1</FsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
-    <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
+    <ConfigurationManagerVersion>5.0.0</ConfigurationManagerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
