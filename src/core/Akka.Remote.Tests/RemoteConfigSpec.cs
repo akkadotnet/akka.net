@@ -14,7 +14,7 @@ using System.Net.Sockets;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using Akka.Remote.Artery.Settings;
+using Akka.Remote.Artery;
 using Akka.Remote.Transport.DotNetty;
 using Akka.Remote.Transport;
 using static Akka.Util.RuntimeDetector;
@@ -296,7 +296,6 @@ namespace Akka.Remote.Tests
         {
             var settings = RARP.For(Sys).Provider.RemoteSettings.Artery.Advanced.Compression;
 
-            settings.Debug.ShouldBeFalse();
             settings.Enabled.ShouldBeTrue();
 
             settings.ActorRefs.Max.ShouldBe(256);
@@ -347,15 +346,15 @@ namespace Akka.Remote.Tests
                 }
             }
 
-            "<getHostAddress>".GetHostName().ShouldBe(hostIp);
-            "<getHostName>".GetHostName().ShouldBe(Dns.GetHostName());
+            ArterySettings.GetHostName("<getHostAddress>").ShouldBe(hostIp); 
+            ArterySettings.GetHostName("<getHostName>").ShouldBe(Dns.GetHostName());
 
-            "tcp".GetTransport().ShouldBe(Remote.Artery.Settings.Transport.Tcp);
-            "tls-tcp".GetTransport().ShouldBe(Remote.Artery.Settings.Transport.TlsTcp);
+            ArterySettings.GetTransport("tcp").Should().Be(ArterySettings.TransportType.Tcp);
+            ArterySettings.GetTransport("tls-tcp").Should().Be(ArterySettings.TransportType.TlsTcp);
 
-            "aeron-udp".Invoking(s => s.GetTransport())
+            "".Invoking(s => ArterySettings.GetTransport("aeron-udp"))
                 .ShouldThrow<ConfigurationException>()
-                .WithMessage("Aeron transport is not supported yet.");
+                .WithMessage("Aeron transport is not supported.");
         }
 
     }

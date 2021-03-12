@@ -2287,7 +2287,20 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public static Flow<T, T, TMat> Watch<T, TMat>(this Flow<T, T, TMat> flow, IActorRef actorRef) =>
             (Flow<T, T, TMat>)InternalFlowOperations.Watch(flow, actorRef);
-        
+
+        /// <summary>
+        /// Only pass on those elements that satisfy the given predicate.
+        ///
+        /// Adheres to the [[ActorAttributes.SupervisionStrategy]] attribute.
+        ///
+        /// '''Emits when''' the given predicate returns true for the element
+        /// '''Backpressures when''' the given predicate returns true for the element and downstream backpressures
+        /// '''Completes when''' upstream completes
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Flow<T, T, TMat> Filter<T, TMat>(this Flow<T, T, TMat> flow, Func<T, bool> filter)
+            => (Flow<T, T, TMat>) InternalFlowOperations.Filter(flow, filter);
+
         /// <summary>
         /// Turns a Flow into a FlowWithContext which manages a context per element along a stream.
         /// </summary>

@@ -19,6 +19,7 @@ using Akka.Serialization;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using ActorRefMessage = Akka.Remote.Serialization.Proto.Msg.ActorRefData;
+using Address = Akka.Actor.Address;
 
 namespace Akka.Cluster.Sharding.Serialization
 {
