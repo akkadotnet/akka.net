@@ -68,7 +68,7 @@ namespace Akka.Remote.Tests
             };
             remoteSettings.Adapters
                 .ToDictionary(kvp => kvp.Key, kvp => Type.GetType(kvp.Value))
-                .ShouldAllBeEquivalentTo(adapters);
+                .Should().BeEquivalentTo(adapters);
 
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
@@ -207,7 +207,7 @@ namespace Akka.Remote.Tests
 
             // Root settings
             settings.Enabled.ShouldBeTrue();
-            settings.Transport.ShouldBe(Remote.Artery.Settings.Transport.Tcp);
+            settings.Transport.Should().Be(ArterySettings.TransportType.Tcp);
             settings.LargeMessageDestinations.IsEmpty.ShouldBeTrue();
 
             // ARTERY: Akka.NET SSL implementation is different compared to scala, this code is wrong.
@@ -228,7 +228,7 @@ namespace Akka.Remote.Tests
 
             // Canonical settings
             settings.Canonical.Port.ShouldBe(25520);
-            settings.Canonical.Hostname.ShouldBe("<getHostAddress>".GetHostName());
+            settings.Canonical.Hostname.ShouldBe(ArterySettings.GetHostName("<getHostAddress>"));
         }
 
         [Fact]
@@ -353,7 +353,7 @@ namespace Akka.Remote.Tests
             ArterySettings.GetTransport("tls-tcp").Should().Be(ArterySettings.TransportType.TlsTcp);
 
             "".Invoking(s => ArterySettings.GetTransport("aeron-udp"))
-                .ShouldThrow<ConfigurationException>()
+                .Should().Throw<ConfigurationException>()
                 .WithMessage("Aeron transport is not supported.");
         }
 
