@@ -68,7 +68,7 @@ namespace Akka.Remote.Tests
             };
             remoteSettings.Adapters
                 .ToDictionary(kvp => kvp.Key, kvp => Type.GetType(kvp.Value))
-                .ShouldAllBeEquivalentTo(adapters);
+                .Should().BeEquivalentTo(adapters);
 
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
@@ -354,7 +354,7 @@ namespace Akka.Remote.Tests
             "tls-tcp".GetTransport().ShouldBe(Remote.Artery.Settings.Transport.TlsTcp);
 
             "aeron-udp".Invoking(s => s.GetTransport())
-                .ShouldThrow<ConfigurationException>()
+                .Should().Throw<ConfigurationException>()
                 .WithMessage("Aeron transport is not supported yet.");
         }
 
