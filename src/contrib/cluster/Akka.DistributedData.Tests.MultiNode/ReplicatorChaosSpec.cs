@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReplicatorChaosSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ namespace Akka.DistributedData.Tests.MultiNode
                 _replicator.Tell(Dsl.Update(KeyB, PNCounter.Empty, new WriteTo(2, _timeout), x => x.Increment(_cluster, 20)));
                 _replicator.Tell(Dsl.Update(KeyC, GCounter.Empty, new WriteAll(_timeout), x => x.Increment(_cluster, 20)));
 
-                ReceiveN(3).ToImmutableHashSet().ShouldBeEquivalentTo(new[]
+                ReceiveN(3).ToImmutableHashSet().Should().BeEquivalentTo(new[]
                 {
                     new UpdateSuccess(KeyA, null),
                     new UpdateSuccess(KeyB, null),

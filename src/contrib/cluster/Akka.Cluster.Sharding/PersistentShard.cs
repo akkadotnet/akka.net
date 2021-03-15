@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
     using EntryId = String;
     using Msg = Object;
-
+    
     /// <summary>
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.
@@ -75,11 +75,11 @@ namespace Akka.Cluster.Sharding
             PersistenceId = "/sharding/" + TypeName + "Shard/" + ShardId;
             JournalPluginId = settings.JournalPluginId;
             SnapshotPluginId = settings.SnapshotPluginId;
-            RememberedEntitiesRecoveryStrategy = Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+            RememberedEntitiesRecoveryStrategy = Settings.TuningParameters.EntityRecoveryStrategy == "constant"
                 ? EntityRecoveryStrategy.ConstantStrategy(
                     Context.System,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
                 : EntityRecoveryStrategy.AllStrategy;
 
             var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
@@ -113,14 +113,14 @@ namespace Akka.Cluster.Sharding
             {
                 case SaveSnapshotSuccess m:
                     Log.Debug("PersistentShard snapshot saved successfully");
-                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TunningParameters.KeepNrOfBatches, Settings.TunningParameters.SnapshotAfter);
+                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TuningParameters.KeepNrOfBatches, Settings.TuningParameters.SnapshotAfter);
                     break;
                 case SaveSnapshotFailure m:
                     Log.Warning("PersistentShard snapshot failure: [{0}]", m.Cause.Message);
                     break;
                 case DeleteMessagesSuccess m:
                     var deleteTo = m.ToSequenceNr - 1;
-                    var deleteFrom = Math.Max(0, deleteTo - Settings.TunningParameters.KeepNrOfBatches * Settings.TunningParameters.SnapshotAfter);
+                    var deleteFrom = Math.Max(0, deleteTo - Settings.TuningParameters.KeepNrOfBatches * Settings.TuningParameters.SnapshotAfter);
                     Log.Debug("PersistentShard messages to [{0}] deleted successfully. Deleting snapshots from [{1}] to [{2}]", m.ToSequenceNr, deleteFrom, deleteTo);
                     DeleteSnapshots(new SnapshotSelectionCriteria(deleteTo, DateTime.MaxValue, deleteFrom));
                     break;
@@ -177,7 +177,7 @@ namespace Akka.Cluster.Sharding
 
         public void SaveSnapshotWhenNeeded()
         {
-            if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
+            if (LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(State);
@@ -212,7 +212,7 @@ namespace Akka.Cluster.Sharding
                 if (!Passivating.Contains(tref))
                 {
                     Log.Debug("Entity [{0}] stopped without passivating, will restart after backoff", id);
-                    Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.EntityRestartBackoff, Self, new Shard.RestartEntity(id), ActorRefs.NoSender);
+                    Context.System.Scheduler.ScheduleTellOnce(Settings.TuningParameters.EntityRestartBackoff, Self, new Shard.RestartEntity(id), ActorRefs.NoSender);
                 }
                 else
                     ProcessChange(new Shard.EntityStopped(id), this.PassivateCompleted);

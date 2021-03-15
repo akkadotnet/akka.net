@@ -1,9 +1,9 @@
-﻿////-----------------------------------------------------------------------
-//// <copyright file="ConfigurationSample.cs" company="Akka.NET Project">
-////     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-////     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//// </copyright>
-////-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConfigurationSample.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 //using System;
 //using System.Collections.Generic;
@@ -45,7 +45,7 @@
 //a = [1,2]
 //b = ${a} [3, 4]";
 //            Config config = hoconString; // This Config uses implicit conversion from string directly into a Config object
-//            (new[] { 1, 2, 3, 4 }).ShouldAllBeEquivalentTo(config.GetIntList("b"));
+//            (new[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(config.GetIntList("b"));
 //            // </ArraySubstitutionSample>
 //        }
        
@@ -69,7 +69,7 @@
 //  }
 //}";
 //            Config config = hoconString;
-//            //expectedHoconString.ShouldBeEquivalentTo(config.Value.ToString(1, 2));
+//            //expectedHoconString.Should().BeEquivalentTo(config.Value.ToString(1, 2));
 //            // </ObjectMergeSubstitutionSample>
 //        }
 
@@ -103,7 +103,7 @@
 //a = ${a} [3, 4]
 //";
 //            Config config = hoconString;
-//            (new int[] { 1, 2, 3, 4 }).ShouldAllBeEquivalentTo(config.GetIntList("a"));
+//            (new int[] { 1, 2, 3, 4 }).Should().BeEquivalentTo(config.GetIntList("a"));
 //            // </SelfReferencingSubstitutionWithArray>
 //        }
 
@@ -126,7 +126,7 @@
 //            array[0].GetInt().Should().Be(1);
 //            array[1].GetInt().Should().Be(2);
 //            array[2].GetInt().Should().Be(3);
-//            array[3].GetIntList().ShouldAllBeEquivalentTo(new int[] { 4, 5 });
+//            array[3].GetIntList().Should().BeEquivalentTo(new int[] { 4, 5 });
 //            // </PlusEqualOperatorSample>
 //        }
 

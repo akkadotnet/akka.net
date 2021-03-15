@@ -11,11 +11,12 @@
     <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
     <iconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</iconUrl>
     <description>Akka.NET Multi-node Test Runner; used for executing tests written with Akka.Remote.TestKit</description>
-    <copyright>Copyright � 2013-2019 .NET Foundation</copyright>
+    <copyright>Copyright � 2013-2020 .NET Foundation</copyright>
     <tags>akka actors actor model Akka concurrency</tags>
   </metadata>
   <files>
-    <file src="bin\Release\net461\win7-x64\publish\*.*" target="lib\net461\" />
-    <file src="bin\Release\netcoreapp3.1\win7-x64\publish\*.*" target="lib\netcoreapp3.1\" />
+    <file src="bin\Release\net471\win10-x64\publish\*.*" target="lib\net471\" />
+    <file src="bin\Release\netcoreapp3.1\win10-x64\publish\*.*" target="lib\netcoreapp3.1\" />
+    <file src="bin\Release\net5.0\win10-x64\publish\*.*" target="lib\net5.0\" />
   </files>
 </package>

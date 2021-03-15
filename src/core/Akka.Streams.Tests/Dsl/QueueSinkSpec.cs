@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = probe.ExpectSubscription();
                 var future = queue.PullAsync();
                 var future2 = queue.PullAsync();
-                future2.Invoking(t => t.Wait(RemainingOrDefault)).ShouldThrow<IllegalStateException>();
+                future2.Invoking(t => t.Wait(RemainingOrDefault)).Should().Throw<IllegalStateException>();
 
                 sub.SendNext(1);
                 future.PipeTo(TestActor);
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.SendError(TestException());
                 queue.Invoking(q => q.PullAsync().Wait(RemainingOrDefault))
-                    .ShouldThrow<TestException>();
+                    .Should().Throw<TestException>();
             }, _materializer);
         }
 
@@ -237,7 +237,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.Single(1)
                 .Invoking(
                     s => s.RunWith(Sink.Queue<int>().WithAttributes(Attributes.CreateInputBuffer(0, 0)), _materializer))
-                .ShouldThrow<ArgumentException>();
+                .Should().Throw<ArgumentException>();
         }
     }
 }

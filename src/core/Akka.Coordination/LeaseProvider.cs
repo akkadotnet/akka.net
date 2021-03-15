@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LeaseProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,15 +130,20 @@ namespace Akka.Coordination
 
                 var settings = LeaseSettings.Create(leaseConfig, leaseName, ownerName);
 
+                var leaseClassName = settings.LeaseConfig.GetString("lease-class", null);
+                if (string.IsNullOrEmpty(leaseClassName))
+                    throw new ArgumentException("lease-class must not be empty");
+                var leaseType = Type.GetType(leaseClassName, true);
+
                 try
                 {
                     try
                     {
-                        return (Lease)Activator.CreateInstance(settings.LeaseType, settings, _system);
+                        return (Lease)Activator.CreateInstance(leaseType, settings, _system);
                     }
                     catch
                     {
-                        return (Lease)Activator.CreateInstance(settings.LeaseType, settings);
+                        return (Lease)Activator.CreateInstance(leaseType, settings);
                     }
                 }
                 catch (Exception ex)
@@ -150,7 +155,7 @@ namespace Akka.Coordination
                       "optionally ActorSystem parameter.",
                       settings.LeaseName,
                       configPath,
-                      settings.LeaseType);
+                      leaseType);
 
                     throw;
                 }

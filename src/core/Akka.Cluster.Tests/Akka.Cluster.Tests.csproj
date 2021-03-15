@@ -4,10 +4,11 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
@@ -24,7 +25,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZABLE;</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)'">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 

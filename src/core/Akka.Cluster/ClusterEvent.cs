@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -184,6 +184,9 @@ namespace Akka.Cluster
                     }
                 }
             }
+
+            internal bool IsMemberUp(Address address) =>
+                Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up);
 
             /// <summary>
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you

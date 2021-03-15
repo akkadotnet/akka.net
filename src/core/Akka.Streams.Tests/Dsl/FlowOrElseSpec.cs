@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowOrElseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.Seq<int>();
 
-            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().ShouldAllBeEquivalentTo(new[] {1, 2, 3});
+            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().Should().BeEquivalentTo(new[] {1, 2, 3});
         }
 
         [Fact]
@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var sink = Sink.Seq<int>();
 
-            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().ShouldAllBeEquivalentTo(new[] { 4, 5, 6 });
+            source1.OrElse(source2).RunWith(sink, Materializer).AwaitResult().Should().BeEquivalentTo(new[] { 4, 5, 6 });
         }
 
         [Fact]

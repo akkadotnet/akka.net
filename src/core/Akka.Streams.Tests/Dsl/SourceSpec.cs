@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -167,7 +167,7 @@ namespace Akka.Streams.Tests.Dsl
                 //external cancellation
                 neverPromise.SetException(new Exception("Boom"));
 
-                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>()
+                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>()
                     .WithMessage("Boom");
             }, Materializer);
         }
@@ -209,7 +209,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 5; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.ShouldAllBeEquivalentTo(new[] {0, 1, 2, 3, 4});
+            gotten.Should().BeEquivalentTo(new[] {0, 1, 2, 3, 4});
             outProbe.ExpectComplete();
         }
 
@@ -238,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 3; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.ShouldAllBeEquivalentTo(new[] {0, 1, 2});
+            gotten.Should().BeEquivalentTo(new[] {0, 1, 2});
             outProbe.ExpectComplete();
         }
 
@@ -267,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 2; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.ShouldAllBeEquivalentTo(new[] {0, 1});
+            gotten.Should().BeEquivalentTo(new[] {0, 1});
             outProbe.ExpectComplete();
         }
 
@@ -355,7 +355,7 @@ namespace Akka.Streams.Tests.Dsl
                     return ints;
                 }, Materializer);
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<Exception>()
+                    .Should().Throw<Exception>()
                     .WithMessage("expected");
             });
         }
@@ -414,7 +414,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(9)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
                 .AwaitResult()
-                .ShouldAllBeEquivalentTo(expected);
+                .Should().BeEquivalentTo(expected);
         }
 
         [Fact]
@@ -422,7 +422,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var empty = Enumerable.Empty<int>().GetEnumerator();
             var task = Source.Cycle(()=>empty).RunWith(Sink.First<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -438,7 +438,7 @@ namespace Akka.Streams.Tests.Dsl
                 b = true;
                 return single;
             }).RunWith(Sink.Last<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -460,7 +460,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.ZipN(sources)
                 .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
                 .AwaitResult()
-                .ShouldAllBeEquivalentTo(new[]
+                .Should().BeEquivalentTo(new[]
                 {
                     new[] {1, 10, 100},
                     new[] {2, 20, 200},
@@ -481,7 +481,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.ZipWithN(list => list.Sum(), sources)
                 .RunWith(Sink.Seq<int>(), Materializer)
                 .AwaitResult()
-                .ShouldAllBeEquivalentTo(new[] {111, 222, 333});
+                .Should().BeEquivalentTo(new[] {111, 222, 333});
         }
 
         [Fact]
@@ -560,7 +560,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.Empty<int>().MapMaterializedValue<int>(_ => throw new InvalidOperationException("boom"));
 
             Action thrower = () => matValPoweredSource.PreMaterialize(Sys.Materializer());
-            thrower.ShouldThrow<InvalidOperationException>();
+            thrower.Should().Throw<InvalidOperationException>();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingLeavingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,7 +45,7 @@ namespace Akka.Cluster.Sharding.Tests
                             ""System.Object"" = hyperion
                         }}
                     }}
-                    akka.loglevel = INFO
+                    akka.loglevel = DEBUG
                     akka.actor.provider = cluster
                     akka.remote.log-remote-lifecycle-events = off
                     akka.cluster.auto-down-unreachable-after = 0s
@@ -60,6 +60,7 @@ namespace Akka.Cluster.Sharding.Tests
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
                     }}
+                    akka.cluster.sharding.rebalance-interval = 1s # make rebalancing more likely to happen to test for RebalanceWorker.ShardRegionTerminated
                     akka.cluster.sharding.state-store-mode = ""{mode}""
                     akka.cluster.sharding.distributed-data.durable.lmdb {{
                       dir = ""target/ClusterShardinLeavingSpec/sharding-ddata""
@@ -80,17 +81,17 @@ namespace Akka.Cluster.Sharding.Tests
         public DDataClusterShardingLeavingSpecConfig() : base("ddata") { }
     }
 
-    public class PersistentClusterShardingLeavingSpec : ClusterShardinLeavingSpec
+    public class PersistentClusterShardingLeavingSpec : ClusterShardingLeavingSpec
     {
         public PersistentClusterShardingLeavingSpec() : this(new PersistentClusterShardingLeavingSpecConfig()) { }
         protected PersistentClusterShardingLeavingSpec(PersistentClusterShardingLeavingSpecConfig config) : base(config, typeof(PersistentClusterShardingLeavingSpec)) { }
     }
-    public class DDataClusterShardingLeavingSpec : ClusterShardinLeavingSpec
+    public class DDataClusterShardingLeavingSpec : ClusterShardingLeavingSpec
     {
         public DDataClusterShardingLeavingSpec() : this(new DDataClusterShardingLeavingSpecConfig()) { }
         protected DDataClusterShardingLeavingSpec(DDataClusterShardingLeavingSpecConfig config) : base(config, typeof(DDataClusterShardingLeavingSpec)) { }
     }
-    public abstract class ClusterShardinLeavingSpec : MultiNodeClusterSpec
+    public abstract class ClusterShardingLeavingSpec : MultiNodeClusterSpec
     {
         #region setup
 
@@ -153,7 +154,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private readonly List<FileInfo> _storageLocations;
 
-        protected ClusterShardinLeavingSpec(ClusterShardingLeavingSpecConfig config, Type type) : base(config, type)
+        protected ClusterShardingLeavingSpec(ClusterShardingLeavingSpecConfig config, Type type) : base(config, type)
         {
             _config = config;
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
@@ -169,7 +170,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();
@@ -286,7 +287,6 @@ namespace Akka.Cluster.Sharding.Tests
 
         public void ClusterSharding_with_leaving_member_should__recover_after_leaving_coordinator_node()
         {
-
             Sys.ActorSelection(Node(_config.First) / "user" / "shardLocations").Tell(GetLocations.Instance);
             var originalLocations = ExpectMsg<Locations>();
             var firstAddress = Node(_config.First).Address;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,10 +25,10 @@ namespace Akka.Actor
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// All ActorRefs have a scope which describes where they live. Since it is often
     /// necessary to distinguish between local and non-local references, this is the only
-    /// method provided on the scope. 
+    /// method provided on the scope.
     /// </summary>
     [InternalApi]
     public interface IActorRefScope
@@ -41,19 +41,19 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Marker interface for Actors that are deployed within local scope, 
+    /// Marker interface for Actors that are deployed within local scope,
     /// i.e. <see cref="IActorRefScope.IsLocal"/> always returns <c>true</c>.
     /// </summary>
     internal interface ILocalRef : IActorRefScope { }
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// RepointableActorRef (and potentially others) may change their locality at
     /// runtime, meaning that isLocal might not be stable. RepointableActorRef has
     /// the feature that it starts out "not fully started" (but you can send to it),
     /// which is why <see cref="IsStarted"/> features here; it is not improbable that cluster
-    /// actor refs will have the same behavior. 
+    /// actor refs will have the same behavior.
     /// </summary>
     public interface IRepointableRef : IActorRefScope
     {
@@ -65,7 +65,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
     public class FutureActorRef : MinimalActorRef
@@ -167,7 +167,7 @@ namespace Akka.Actor
     /// An actor reference. Acts as a handle to an actor. Used to send messages to an actor, whether an actor is local or remote.
     /// If you receive a reference to an actor, that actor is guaranteed to have existed at some point
     /// in the past. However, an actor can always be terminated in the future.
-    /// 
+    ///
     /// If you want to be notified about an actor terminating, call <see cref="ICanWatch.Watch(IActorRef)">IActorContext.Watch</see>
     /// on this actor and you'll receive a <see cref="Terminated"/> message when the actor dies or if it
     /// is already dead.
@@ -327,7 +327,7 @@ namespace Akka.Actor
         public int CompareTo(object obj)
         {
             if (obj is null) return 1;
-            if(!(obj is IActorRef other))
+            if (!(obj is IActorRef other))
                 throw new ArgumentException($"Object must be of type IActorRef, found {obj.GetType()} instead.", nameof(obj));
 
             return CompareTo(other);
@@ -338,9 +338,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="other"></param>
         /// <returns>
-        /// <c>true</c> if this <see cref="IActorRef"/> instance have the same reference 
-        /// as the <paramref name="other"/> instance, if this <see cref="ActorPath"/> of 
-        /// this <see cref="IActorRef"/> instance is equal to the <paramref name="other"/> instance, 
+        /// <c>true</c> if this <see cref="IActorRef"/> instance have the same reference
+        /// as the <paramref name="other"/> instance, if this <see cref="ActorPath"/> of
+        /// this <see cref="IActorRef"/> instance is equal to the <paramref name="other"/> instance,
         /// and <paramref name="other"/> is not <c>null</c>; otherwise <c>false</c>.
         /// </returns>
         public bool Equals(IActorRef other)
@@ -376,7 +376,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Used by built-in <see cref="IActorRef"/> implementations for handling
     /// internal operations that are not exposed directly to end-users.
     /// </summary>
@@ -400,9 +400,9 @@ namespace Akka.Actor
         bool IsTerminated { get; }
 
         /// <summary>
-        /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or 
-        /// looking it up at some provider-specific location. 
-        /// A path element of ".." signifies the parent, a trailing "" element must be disregarded. 
+        /// Obtain a child given the paths element to that actor, by possibly traversing the actor tree or
+        /// looking it up at some provider-specific location.
+        /// A path element of ".." signifies the parent, a trailing "" element must be disregarded.
         /// If the requested path does not exist, returns <see cref="Nobody"/>.
         /// </summary>
         /// <param name="name">The path elements.</param>
@@ -453,7 +453,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Abstract implementation of <see cref="IInternalActorRef"/>.
     /// </summary>
     [InternalApi]
@@ -466,7 +466,7 @@ namespace Akka.Actor
         public abstract IActorRefProvider Provider { get; }
 
         /// <inheritdoc cref="IInternalActorRef"/>
-        public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.		
+        public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
 
         /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Resume(Exception causedByFailure = null);
@@ -502,7 +502,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// INTERNAL API.
-    /// 
+    ///
     /// Barebones <see cref="IActorRef"/> with no backing actor or <see cref="ActorCell"/>.
     /// </summary>
     [InternalApi]
@@ -569,6 +569,68 @@ namespace Akka.Actor
         public override bool IsTerminated { get { return false; } }
     }
 
+
+    /// <summary>
+    /// An ActorRef that ignores any incoming messages.
+    /// </summary>
+    internal sealed class IgnoreActorRef : MinimalActorRef
+    {
+        /// <summary>
+        /// A surrogate for serializing <see cref="IgnoreActorRef"/>.
+        /// </summary>
+        public class IgnoreActorRefSurrogate : ISurrogate
+        {
+            /// <summary>
+            /// Converts the <see cref="ISurrogate"/> into a <see cref="IActorRef"/>.
+            /// </summary>
+            /// <param name="system">The actor system.</param>
+            /// <returns>TBD</returns>
+            public ISurrogated FromSurrogate(ActorSystem system)
+            {
+                return new IgnoreActorRef(system.AsInstanceOf<ExtendedActorSystem>().Provider);
+            }
+        }
+
+        private static readonly IgnoreActorRefSurrogate SurrogateInstance = new IgnoreActorRefSurrogate();
+
+        private const string fakeSystemName = "local";
+
+        private static readonly ActorPath path = new RootActorPath(new Address("akka", fakeSystemName)) / "ignore";
+        private static readonly string pathString = path.ToString();
+
+        public static ActorPath StaticPath => path;
+
+        public IgnoreActorRef(IActorRefProvider provider)
+        {
+            Provider = provider;
+        }
+
+        public override ActorPath Path => path;
+
+        public override IActorRefProvider Provider { get; }
+
+        /// <summary>
+        /// Check if the passed `otherPath` is the same as IgnoreActorRef.path
+        /// </summary>
+        /// <param name="otherPath"></param>
+        /// <returns></returns>
+        public static bool IsIgnoreRefPath(string otherPath) =>
+            pathString.Equals(otherPath);
+
+        /// <summary>
+        /// Check if the passed `otherPath` is the same as IgnoreActorRef.path
+        /// </summary>
+        /// <param name="otherPath"></param>
+        /// <returns></returns>
+        public static bool IsIgnoreRefPath(ActorPath otherPath) =>
+            path.Equals(otherPath);
+
+        public override ISurrogate ToSurrogate(ActorSystem system)
+        {
+            return SurrogateInstance;
+        }
+    }
+
     /// <summary> This is an internal look-up failure token, not useful for anything else.</summary>
     public sealed class Nobody : MinimalActorRef
     {
@@ -623,7 +685,7 @@ namespace Akka.Actor
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Used to power actors that use an <see cref="ActorCell"/>, which is the majority of them.
     /// </summary>
     [InternalApi]
@@ -815,7 +877,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         }
 
         /// <summary>
-        /// Returns <c>true</c> if the <see cref="VirtualPathContainer"/> contains any children, 
+        /// Returns <c>true</c> if the <see cref="VirtualPathContainer"/> contains any children,
         /// <c>false</c> otherwise.
         /// </summary>
         public bool HasChildren
@@ -865,7 +927,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
 
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// This kind of ActorRef passes all received messages to the given function for
     /// performing a non-blocking side-effect. The intended use is to transform the
     /// message before sending to the real target actor. Such references can be created
@@ -874,7 +936,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
     /// towards the live children of an actor, they do not receive the Terminate command
     /// and do not prevent the parent from terminating. FunctionRef is properly
     /// registered for remote lookup and ActorSelection.
-    /// 
+    ///
     /// When using the <see cref="ICanWatch.Watch"/> feature you must ensure that upon reception of the
     /// Terminated message the watched actorRef is <see cref="ICanWatch.Unwatch"/>ed.
     /// </summary>
@@ -902,7 +964,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         /// Have this FunctionRef watch the given Actor. This method must not be
         /// called concurrently from different threads, it should only be called by
         /// its parent Actor.
-        /// 
+        ///
         /// Upon receiving the Terminated message, <see cref="Unwatch"/> must be called from a
         /// safe context (i.e. normally from the parent Actor).
         /// </summary>

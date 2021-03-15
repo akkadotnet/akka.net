@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="KeepAliveConcatSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
 
             t.AwaitResult()
                 .SelectMany(x => x)
-                .ShouldBeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
+                .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
         }
 
         [Fact]
@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
 
             t.AwaitResult()
                 .SelectMany(x => x)
-                .ShouldBeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
+                .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
         }
 
         [Fact]
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             downstream.Request(1);
 
             upstream.SendNext(new[] { 1 });
-            downstream.ExpectNext().ShouldBeEquivalentTo(new[] { 1 });
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] { 1 });
 
             upstream.SendComplete();
             downstream.ExpectComplete();
@@ -90,12 +90,12 @@ namespace Akka.Streams.Tests.Dsl
 
             var actual = downstream.ExpectNextN(6);
             var expected = Enumerable.Range(1, 3).Grouped(1).Concat(Enumerable.Range(4, 7).Grouped(3));
-            actual.ShouldBeEquivalentTo(expected, o => o.WithStrictOrdering());
+            actual.Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
 
             downstream.Request(1);
 
             upstream.SendNext(new[] { 1 });
-            downstream.ExpectNext().ShouldBeEquivalentTo(new[] { 1 });
+            downstream.ExpectNext().Should().BeEquivalentTo(new[] { 1 });
 
             upstream.SendComplete();
             downstream.ExpectComplete();
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var actual = downstream.ExpectNextN(6);
             var expected = Enumerable.Range(1, 3).Grouped(1).Concat(Enumerable.Range(4, 7).Grouped(3));
-            actual.ShouldBeEquivalentTo(expected, o => o.WithStrictOrdering());
+            actual.Should().BeEquivalentTo(expected, o => o.WithStrictOrdering());
 
             downstream.ExpectNoMsg(TimeSpan.FromSeconds(1.5));
             downstream.Request(1);
@@ -139,7 +139,7 @@ namespace Akka.Streams.Tests.Dsl
             upstream.SendComplete();
 
             downstream.Request(2);
-            downstream.ExpectNextN(2).ShouldBeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+            downstream.ExpectNextN(2).Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
 
             downstream.Request(1);
             downstream.ExpectComplete();

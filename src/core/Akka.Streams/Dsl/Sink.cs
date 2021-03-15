@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch.MessageQueues;
 using Akka.Pattern;
 using Akka.Streams.Implementation;
@@ -284,7 +285,8 @@ namespace Akka.Streams.Dsl
         public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
             => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
 
-        internal static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(Action onTerminated = null)
+        [InternalApi]
+        public static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(Action onTerminated = null)
             => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink"), onTerminated));
 
         /// <summary>

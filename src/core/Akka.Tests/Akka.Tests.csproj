@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,7 +27,7 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)'">
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Extensions" Version="4.3.1" />
   </ItemGroup>
@@ -36,7 +36,7 @@
     <DefineConstants>$(DefineConstants);SERIALIZATION;CONFIGURATION</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetCoreTestVersion)' OR '$(TargetFramework)' == '$(NetTestVersion)'">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>
 

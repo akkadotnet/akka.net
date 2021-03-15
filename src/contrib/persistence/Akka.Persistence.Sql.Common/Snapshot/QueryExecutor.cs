@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -544,8 +544,17 @@ namespace Akka.Persistence.Sql.Common.Snapshot
             parameter.DbType = parameterType;
             parameter.Value = value;
 
+            PreAddParameterToCommand(command, parameter);
+
             command.Parameters.Add(parameter);
         }
+
+        /// <summary>
+        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        /// </summary>
+        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="param">Parameter to customize</param>
+        protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param) { }
 
         /// <summary>
         /// TBD

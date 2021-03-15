@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1258,6 +1258,7 @@ namespace Akka.Cluster.Sharding
         public ILoggingAdapter Log { get; }
         public ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; } = ImmutableDictionary<string, ICancelable>.Empty;
         public ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; } = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
+        public ImmutableHashSet<IActorRef> RebalanceWorkers { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         // regions that have requested handoff, for graceful shutdown
         public ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> AliveRegions { get; set; } = ImmutableHashSet<IActorRef>.Empty;
@@ -1270,6 +1271,7 @@ namespace Akka.Cluster.Sharding
         IActorRef IShardCoordinator.Self => Self;
         IActorRef IShardCoordinator.Sender => Sender;
         IActorContext IShardCoordinator.Context => Context;
+        IActorRef IShardCoordinator.IgnoreRef => Context.System.IgnoreRef;
 
         /// <summary>
         /// TBD
@@ -1297,7 +1299,7 @@ namespace Akka.Cluster.Sharding
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;
 
-            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RebalanceInterval, Settings.TunningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
+            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
 
             Cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
@@ -1309,6 +1311,19 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public override String PersistenceId { get; }
+
+        protected override void PreStart()
+        {
+            switch (AllocationStrategy)
+            {
+                case IStartableAllocationStrategy strategy:
+                    strategy.Start();
+                    break;
+                case IActorSystemDependentAllocationStrategy strategy:
+                    strategy.Start(Context.System);
+                    break;
+            }
+        }
 
         protected override void PostStop()
         {
@@ -1420,7 +1435,7 @@ namespace Akka.Cluster.Sharding
             {
                 case SaveSnapshotSuccess m:
                     Log.Debug("Persistent snapshot saved successfully");
-                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TunningParameters.KeepNrOfBatches, Settings.TunningParameters.SnapshotAfter);
+                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TuningParameters.KeepNrOfBatches, Settings.TuningParameters.SnapshotAfter);
                     break;
 
                 case SaveSnapshotFailure m:
@@ -1463,7 +1478,7 @@ namespace Akka.Cluster.Sharding
 
         private void SaveSnapshotWhenNeeded()
         {
-            if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
+            if (LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(CurrentState);

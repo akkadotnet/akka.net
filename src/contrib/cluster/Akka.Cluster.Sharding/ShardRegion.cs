@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardRegion.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
 {
@@ -26,12 +27,13 @@ namespace Akka.Cluster.Sharding
     /// It delegates messages targeted to other shards to the responsible
     /// <see cref="ShardRegion"/> actor on other nodes.
     /// </summary>
-    public class ShardRegion : ActorBase
+    public class ShardRegion : ActorBase, IWithTimers
     {
         #region messages
 
         /// <summary>
-        /// TBD
+        /// Periodic tick to run some house-keeping.
+        /// This message is continuously sent to `self` using a timer configured with `retryInterval`.
         /// </summary>
         [Serializable]
         internal sealed class Retry : IShardRegionCommand
@@ -41,6 +43,26 @@ namespace Akka.Cluster.Sharding
             /// </summary>
             public static readonly Retry Instance = new Retry();
             private Retry() { }
+        }
+
+        /// <summary>
+        /// Similar to <see cref="Retry"/> but used only when <see cref="ShardRegion"/> is starting and when we detect that
+        /// the coordinator is moving.
+        ///
+        /// This is to ensure that a <see cref="ShardRegion"/> can register as soon as possible while the
+        /// <see cref="ShardCoordinator"/> is in the process of recovering its state.
+        ///
+        /// This message is sent to `Self` using a interval lower then <see cref="Retry"/> (higher frequency).
+        /// The interval increases exponentially until it equals <see cref="_retryInterval"/> in which case
+        /// we stop to schedule it and let <see cref="Retry"/> take over.
+        /// </summary>
+        internal sealed class RegisterRetry : IShardRegionCommand
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public static readonly RegisterRetry Instance = new RegisterRetry();
+            private RegisterRetry() { }
         }
 
         /// <summary>
@@ -174,26 +196,49 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// INTERNAL API. Sends stopMessage (e.g. <see cref="PoisonPill"/>) to the entities and when all of them have terminated it replies with `ShardStopped`.
         /// </summary>
-        internal class HandOffStopper : ReceiveActor
+        internal class HandOffStopper : ReceiveActor, IWithTimers
         {
+            private class StopTimeout
+            {
+                public static readonly StopTimeout Instance = new StopTimeout();
+
+                private StopTimeout()
+                {
+                }
+            }
+
+            private class StopTimeoutWarning
+            {
+                public static readonly StopTimeoutWarning Instance = new StopTimeoutWarning();
+
+                private StopTimeoutWarning()
+                {
+                }
+            }
+
+            private static readonly TimeSpan StopTimeoutWarningAfter = TimeSpan.FromSeconds(5);
+
             private ILoggingAdapter _log;
             /// <summary>
             /// TBD
             /// </summary>
             public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
 
+            public ITimerScheduler Timers { get; set; }
+
             /// <summary>
             /// TBD
             /// </summary>
+            /// <param name="typeName">TBD</param>
             /// <param name="shard">TBD</param>
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
             /// <param name="handoffTimeout">TBD</param>
             /// <returns>TBD</returns>
-            public static Props Props(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
+            public static Props Props(string typeName, ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
-                return Actor.Props.Create(() => new HandOffStopper(shard, replyTo, entities, stopMessage, handoffTimeout)).WithDeploy(Deploy.Local);
+                return Actor.Props.Create(() => new HandOffStopper(typeName, shard, replyTo, entities, stopMessage, handoffTimeout)).WithDeploy(Deploy.Local);
             }
 
             /// <summary>
@@ -201,22 +246,16 @@ namespace Akka.Cluster.Sharding
             /// them have terminated it replies with `ShardStopped`.
             /// If the entities don't terminate after `handoffTimeout` it will try stopping them forcefully.
             /// </summary>
+            /// <param name="typeName">TBD</param>
             /// <param name="shard">TBD</param>
             /// <param name="replyTo">TBD</param>
             /// <param name="entities">TBD</param>
             /// <param name="stopMessage">TBD</param>
             /// <param name="handoffTimeout">TBD</param>
-            public HandOffStopper(ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
+            public HandOffStopper(string typeName, ShardId shard, IActorRef replyTo, IEnumerable<IActorRef> entities, object stopMessage, TimeSpan handoffTimeout)
             {
                 var remaining = new HashSet<IActorRef>(entities);
 
-                Receive<ReceiveTimeout>(t =>
-                {
-                    Log.Warning("HandOffStopMessage[{0}] is not handled by some of the entities of the [{1}] shard after [{2}], " +
-                        "stopping the remaining [{3}] entities.", stopMessage.GetType(), shard, handoffTimeout, remaining.Count);
-                    foreach (var r in remaining)
-                        Context.Stop(r);
-                });
                 Receive<Terminated>(t =>
                 {
                     remaining.Remove(t.ActorRef);
@@ -226,8 +265,29 @@ namespace Akka.Cluster.Sharding
                         Context.Stop(Self);
                     }
                 });
+                Receive<StopTimeoutWarning>(s =>
+                {
+                    Log.Warning(
+                        $"{typeName}: [{remaining.Count}] of the entities in shard [{{0}}] not stopped after [{{1}}]. " +
+                        "Maybe the handOffStopMessage [{2}] is not handled? {3}",
+                        shard,
+                        StopTimeoutWarningAfter,
+                        stopMessage.GetType(),
+                        (CoordinatedShutdown.Get(Context.System).ShutdownReason != null) ?
+                            "" // the region will be shutdown earlier so would be confusing to say more
+                            : $"Waiting additional [{handoffTimeout}] before stopping the remaining entities.");
+                });
+                Receive<StopTimeout>(s =>
+                {
+                    Log.Warning($"{typeName}: HandOffStopMessage[{{0}}] is not handled by some of the entities in shard [{{1}}] after [{{2}}], " +
+                        "stopping the remaining [{3}] entities.", stopMessage.GetType(), shard, handoffTimeout, remaining.Count);
 
-                Context.SetReceiveTimeout(handoffTimeout);
+                    foreach (var r in remaining)
+                        Context.Stop(r);
+                });
+
+                Timers.StartSingleTimer(StopTimeoutWarning.Instance, StopTimeoutWarning.Instance, StopTimeoutWarningAfter);
+                Timers.StartSingleTimer(StopTimeout.Instance, StopTimeout.Instance, handoffTimeout);
 
                 foreach (var aref in remaining)
                 {
@@ -345,9 +405,11 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         protected IImmutableSet<IActorRef> HandingOff = ImmutableHashSet<IActorRef>.Empty;
 
-        private readonly ICancelable _retryTask;
         private IActorRef _coordinator;
         private int _retryCount;
+        private TimeSpan _retryInterval;
+        private TimeSpan _initRegistrationDelay;
+        private TimeSpan _nextRegistrationDelay;
         private bool _loggedFullBufferWarning;
         private const int RetryCountThreshold = 5;
 
@@ -378,8 +440,11 @@ namespace Akka.Cluster.Sharding
             _replicator = replicator;
             _majorityMinCap = majorityMinCap;
 
-            _retryTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RetryInterval, Settings.TunningParameters.RetryInterval, Self, Retry.Instance, Self);
             SetupCoordinatedShutdown();
+
+            _retryInterval = Settings.TuningParameters.RetryInterval;
+            _initRegistrationDelay = TimeSpan.FromMilliseconds(100).Max(new TimeSpan(_retryInterval.Ticks / 2 / 2 / 2));
+            _nextRegistrationDelay = _initRegistrationDelay;
         }
 
         private void SetupCoordinatedShutdown()
@@ -404,6 +469,9 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         public ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+
+        public ITimerScheduler Timers { get; set; }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -451,7 +519,6 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-
         /// <inheritdoc cref="ActorBase.PreStart"/>
         /// <summary>
         /// Subscribe to MemberEvent, re-subscribe when restart
@@ -459,6 +526,8 @@ namespace Akka.Cluster.Sharding
         protected override void PreStart()
         {
             Cluster.Subscribe(Self, typeof(ClusterEvent.IMemberEvent));
+            Timers.StartPeriodicTimer(Retry.Instance, Retry.Instance, Settings.TuningParameters.RetryInterval);
+            StartRegistration();
             LogPassivateIdleEntities();
         }
 
@@ -468,7 +537,6 @@ namespace Akka.Cluster.Sharding
             base.PostStop();
             Cluster.Unsubscribe(Self);
             _gracefulShutdownProgress.TrySetResult(Done.Instance);
-            _retryTask.Cancel();
         }
 
         private void LogPassivateIdleEntities()
@@ -506,7 +574,7 @@ namespace Akka.Cluster.Sharding
                         after?.Address.ToString() ?? string.Empty);
 
                 _coordinator = null;
-                Register();
+                StartRegistration();
             }
         }
 
@@ -559,6 +627,29 @@ namespace Akka.Cluster.Sharding
             DeliverBufferedMessage(id, shardRef);
         }
 
+        void StartRegistration()
+        {
+            _nextRegistrationDelay = _initRegistrationDelay;
+
+            Register();
+            ScheduleNextRegistration();
+        }
+
+        void ScheduleNextRegistration()
+        {
+            if (_nextRegistrationDelay < _retryInterval)
+            {
+                Timers.StartSingleTimer(RegisterRetry.Instance, RegisterRetry.Instance, _nextRegistrationDelay);
+                // exponentially increasing retry interval until reaching the normal retryInterval
+                _nextRegistrationDelay += _nextRegistrationDelay;
+            }
+        }
+
+        void FinishRegistration()
+        {
+            Timers.Cancel(RegisterRetry.Instance);
+        }
+
         private void Register()
         {
             var actorSelections = CoordinatorSelection;
@@ -569,25 +660,25 @@ namespace Akka.Cluster.Sharding
             {
                 if (actorSelections.Count > 0)
                 {
-                    var coordinatorMessage = Cluster.State.Unreachable.Contains(MembersByAge.First()) 
-                        ? $"Coordinator [{MembersByAge.First()}] is unreachable." 
+                    var coordinatorMessage = Cluster.State.Unreachable.Contains(MembersByAge.First())
+                        ? $"Coordinator [{MembersByAge.First()}] is unreachable."
                         : $"Coordinator [{MembersByAge.First()}] is reachable.";
 
-                    Log.Warning("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. Total [{2}] buffered messages. [{3}]", 
-                        TypeName, 
-                        string.Join(", ", actorSelections.Select(i => i.PathString)), 
-                        TotalBufferSize, 
+                    Log.Warning("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. Total [{2}] buffered messages. [{3}]",
+                        TypeName,
+                        string.Join(", ", actorSelections.Select(i => i.PathString)),
+                        TotalBufferSize,
                         coordinatorMessage);
                 }
                 else
                 {
                     // Members start off as "Removed"
                     var partOfCluster = Cluster.SelfMember.Status != MemberStatus.Removed;
-                    var possibleReason = partOfCluster 
-                        ? "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?" 
+                    var possibleReason = partOfCluster
+                        ? "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?"
                         : "Probably, no seed-nodes configured and manual cluster join not performed?";
 
-                    Log.Warning("{0}: No coordinator found to register. {1} Total [{2}] buffered messages.", 
+                    Log.Warning("{0}: No coordinator found to register. {1} Total [{2}] buffered messages.",
                         TypeName, possibleReason, TotalBufferSize);
                 }
             }
@@ -681,7 +772,7 @@ namespace Akka.Cluster.Sharding
         private void BufferMessage(ShardId shardId, Msg message, IActorRef sender)
         {
             var totalBufferSize = TotalBufferSize;
-            if (totalBufferSize >= Settings.TunningParameters.BufferSize)
+            if (totalBufferSize >= Settings.TuningParameters.BufferSize)
             {
                 if (_loggedFullBufferWarning)
                     Log.Debug("{0}: Buffer is full, dropping message for shard [{1}]", TypeName, shardId);
@@ -701,7 +792,7 @@ namespace Akka.Cluster.Sharding
 
                 // log some insight to how buffers are filled up every 10% of the buffer capacity
                 var total = totalBufferSize + 1;
-                var bufferSize = Settings.TunningParameters.BufferSize;
+                var bufferSize = Settings.TuningParameters.BufferSize;
                 if (total % (bufferSize / 10) == 0)
                 {
                     const string logMsg = "{0}: ShardRegion is using [{1} %] of its buffer capacity.";
@@ -718,25 +809,63 @@ namespace Akka.Cluster.Sharding
             switch (command)
             {
                 case Retry _:
-                    SendGracefulShutdownToCoordinator();
-
+                    // retryCount is used to avoid flooding the logs
+                    // it's used inside register() whenever shardBuffers.nonEmpty
+                    // therefore we update it if needed on each Retry msg
+                    // the reason why it's updated here is because we don't want to increase it on each RegisterRetry, only on Retry
                     if (ShardBuffers.Count != 0) _retryCount++;
 
+                    // we depend on the coordinator each time, if empty we need to register
+                    // otherwise we can try to deliver some buffered messages
                     if (_coordinator == null) Register();
                     else
                     {
-                        RequestShardBufferHomes();
+                        // Note: we do try to deliver buffered messages even in the middle of
+                        // a graceful shutdown every message that we manage to deliver is a win
+                        TryRequestShardBufferHomes();
                     }
 
-                    TryCompleteGracefulShutdown();
+                    // eventually, also re-trigger a graceful shutdown if one is in progress
+                    SendGracefulShutdownToCoordinatorIfInProgress();
+                    TryCompleteGracefulShutdownIfInProgress();
 
+                    break;
+
+                case RegisterRetry _:
+                    if (_coordinator == null)
+                    {
+                        Register();
+                        ScheduleNextRegistration();
+                    }
                     break;
 
                 case GracefulShutdown _:
                     Log.Debug("{0}: Starting graceful shutdown of region and all its shards", TypeName);
+
+                    var coordShutdown = CoordinatedShutdown.Get(Context.System);
+                    if (coordShutdown.ShutdownReason != null)
+                    {
+                        // use a shorter timeout than the coordinated shutdown phase to be able to log better reason for the timeout
+                        var timeout = coordShutdown.Timeout(CoordinatedShutdown.PhaseClusterShardingShutdownRegion) - TimeSpan.FromSeconds(1);
+                        if (timeout > TimeSpan.Zero)
+                        {
+                            Timers.StartSingleTimer(GracefulShutdownTimeout.Instance, GracefulShutdownTimeout.Instance, timeout);
+                        }
+                    }
+
                     GracefulShutdownInProgress = true;
-                    SendGracefulShutdownToCoordinator();
-                    TryCompleteGracefulShutdown();
+                    SendGracefulShutdownToCoordinatorIfInProgress();
+                    TryCompleteGracefulShutdownIfInProgress();
+                    break;
+
+                case GracefulShutdownTimeout _:
+                    Log.Warning(
+                        "{0}: Graceful shutdown of shard region timed out, region will be stopped. Remaining shards [{1}], " +
+                        "remaining buffered messages [{2}].",
+                        TypeName,
+                        string.Join(", ", Shards.Keys),
+                        TotalBufferSize);
+                    Context.Stop(Self);
                     break;
 
                 default:
@@ -808,19 +937,23 @@ namespace Akka.Cluster.Sharding
             return Task.WhenAll(tasks);
         }
 
-        private void TryCompleteGracefulShutdown()
+        private void TryCompleteGracefulShutdownIfInProgress()
         {
             if (GracefulShutdownInProgress && Shards.Count == 0 && ShardBuffers.Count == 0)
+            {
+                Log.Debug("{0}: Completed graceful shutdown of region.", TypeName);
                 Context.Stop(Self);     // all shards have been rebalanced, complete graceful shutdown
+            }
         }
 
-        private void SendGracefulShutdownToCoordinator()
+        private void SendGracefulShutdownToCoordinatorIfInProgress()
         {
             if (GracefulShutdownInProgress)
             {
-                Log.Debug("Sending graceful shutdown to {0}", CoordinatorSelection);
-                CoordinatorSelection.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
-            } 
+                var actorSelections = CoordinatorSelection;
+                Log.Debug("Sending graceful shutdown to {0}", actorSelections);
+                actorSelections.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
+            }
         }
 
         private void HandleCoordinatorMessage(PersistentShardCoordinator.ICoordinatorMessage message)
@@ -829,15 +962,27 @@ namespace Akka.Cluster.Sharding
             {
                 case PersistentShardCoordinator.HostShard hs:
                     {
-                        var shard = hs.Shard;
-                        Log.Debug("{0}: Host shard [{1}]", TypeName, shard);
-                        RegionByShard = RegionByShard.SetItem(shard, Self);
-                        UpdateRegionShards(Self, shard);
+                        if (GracefulShutdownInProgress)
+                        {
+                            Log.Debug("{0}: Ignoring Host Shard request for [{1}] as region is shutting down", TypeName, hs.Shard);
 
-                        // Start the shard, if already started this does nothing
-                        GetShard(shard);
+                            // if the coordinator is sending HostShard to a region that is shutting down
+                            // it means that it missed the shutting down message (coordinator moved?)
+                            // we want to inform it as soon as possible so it doesn't keep trying to allocate the shard here
+                            SendGracefulShutdownToCoordinatorIfInProgress();
+                        }
+                        else
+                        {
+                            var shard = hs.Shard;
+                            Log.Debug("{0}: Host shard [{1}]", TypeName, shard);
+                            RegionByShard = RegionByShard.SetItem(shard, Self);
+                            UpdateRegionShards(Self, shard);
 
-                        Sender.Tell(new PersistentShardCoordinator.ShardStarted(shard));
+                            // Start the shard, if already started this does nothing
+                            GetShard(shard);
+
+                            Sender.Tell(new PersistentShardCoordinator.ShardStarted(shard));
+                        }
                     }
                     break;
                 case PersistentShardCoordinator.ShardHome home:
@@ -870,7 +1015,8 @@ namespace Akka.Cluster.Sharding
                 case PersistentShardCoordinator.RegisterAck ra:
                     _coordinator = ra.Coordinator;
                     Context.Watch(_coordinator);
-                    RequestShardBufferHomes();
+                    FinishRegistration();
+                    TryRequestShardBufferHomes();
                     break;
                 case PersistentShardCoordinator.BeginHandOff bho:
                     {
@@ -929,17 +1075,34 @@ namespace Akka.Cluster.Sharding
             Regions = Regions.SetItem(regionRef, shards.Add(shard));
         }
 
-        private void RequestShardBufferHomes()
+        /// <summary>
+        /// Send GetShardHome for all shards with buffered messages
+        /// If coordinator is empty, nothing happens
+        /// </summary>
+        private void TryRequestShardBufferHomes()
         {
-            foreach (var buffer in ShardBuffers)
+            if (_coordinator != null)
             {
-                const string logMsg = "{0}: Retry request for shard [{1}] homes from coordinator at [{2}]. [{3}] buffered messages.";
-                if (_retryCount >= RetryCountThreshold)
-                    Log.Warning(logMsg, TypeName, buffer.Key, _coordinator, buffer.Value.Count);
-                else
-                    Log.Debug(logMsg, TypeName, buffer.Key, _coordinator, buffer.Value.Count);
+                foreach (var buffer in ShardBuffers)
+                {
+                    Log.Debug("{0}: Requesting shard home for [{1}] from coordinator at [{2}]. [{3}] buffered messages.",
+                        TypeName,
+                        buffer.Key,
+                        _coordinator,
+                        buffer.Value.Count);
 
-                _coordinator.Tell(new PersistentShardCoordinator.GetShardHome(buffer.Key));
+                    _coordinator.Tell(new PersistentShardCoordinator.GetShardHome(buffer.Key));
+                }
+            }
+
+            if (_retryCount >= RetryCountThreshold && _retryCount % RetryCountThreshold == 0 && Log.IsWarningEnabled)
+            {
+                Log.Warning(
+                    "{0}: Requested shard homes [{1}] from coordinator at [{2}]. [{3}] total buffered messages.",
+                    TypeName,
+                    string.Join(", ", ShardBuffers.Keys.OrderBy(i => i)),
+                    _coordinator,
+                    ShardBuffers.Values.Sum(i => i.Count));
             }
         }
 
@@ -1054,7 +1217,10 @@ namespace Akka.Cluster.Sharding
         private void HandleTerminated(Terminated terminated)
         {
             if (_coordinator != null && _coordinator.Equals(terminated.ActorRef))
+            {
                 _coordinator = null;
+                StartRegistration();
+            }
             else if (Regions.TryGetValue(terminated.ActorRef, out var shards))
             {
                 RegionByShard = RegionByShard.RemoveRange(shards);
@@ -1078,10 +1244,12 @@ namespace Akka.Cluster.Sharding
                     // if persist fails it will stop
                     Log.Debug("{0}: Shard [{1}] terminated while not being handed off", TypeName, shard);
                     if (Settings.RememberEntities)
-                        Context.System.Scheduler.ScheduleTellOnce(Settings.TunningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
+                        Context.System.Scheduler.ScheduleTellOnce(Settings.TuningParameters.ShardFailureBackoff, Self, new RestartShard(shard), Self);
                 }
 
-                TryCompleteGracefulShutdown();
+                // did this shard get removed because the ShardRegion is shutting down?
+                // If so, we can try to speed-up the region shutdown. We don't need to wait for the next tick.
+                TryCompleteGracefulShutdownIfInProgress();
             }
         }
     }
