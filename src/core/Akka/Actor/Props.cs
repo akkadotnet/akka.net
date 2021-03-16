@@ -35,8 +35,8 @@ namespace Akka.Actor
     {
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
-        private static readonly Deploy defaultDeploy = new Deploy();
-        private static readonly object[] noArgs = { };
+        private static readonly Deploy DefaultDeploy = new Deploy();
+        private static readonly object[] NoArgs = { };
 
         /// <summary>
         ///     A pre-configured <see cref="Akka.Actor.Props" /> that doesn't create actors.
@@ -45,17 +45,15 @@ namespace Akka.Actor
         ///     </note>
         /// </summary>
         public static readonly Props None = null;
-
-        private static readonly IIndirectActorProducer defaultProducer = new DefaultProducer();
-        private Type inputType;
-        private Type outputType;
-        private readonly IIndirectActorProducer producer;
+        private Type _inputType;
+        private Type _outputType;
+        private readonly IIndirectActorProducer _producer;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class.
         /// </summary>
         protected Props()
-            : this(defaultDeploy, null, noArgs)
+            : this(DefaultDeploy, null, NoArgs)
         {
         }
 
@@ -64,7 +62,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="copy">The object that is being cloned.</param>
         protected Props(Props copy)
-            : this(copy.Deploy, copy.inputType, copy.SupervisorStrategy, copy.Arguments)
+            : this(copy.Deploy, copy._inputType, copy.SupervisorStrategy, copy.Arguments)
         {
         }
 
@@ -80,7 +78,7 @@ namespace Akka.Actor
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
         public Props(Type type, object[] args)
-            : this(defaultDeploy, type, args)
+            : this(DefaultDeploy, type, args)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
@@ -97,7 +95,7 @@ namespace Akka.Actor
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
         public Props(Type type)
-            : this(defaultDeploy, type, noArgs)
+            : this(DefaultDeploy, type, NoArgs)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
@@ -113,7 +111,7 @@ namespace Akka.Actor
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
         public Props(Type type, SupervisorStrategy supervisorStrategy, IEnumerable<object> args)
-            : this(defaultDeploy, type, args.ToArray())
+            : this(DefaultDeploy, type, args.ToArray())
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
@@ -131,7 +129,7 @@ namespace Akka.Actor
         ///     This exception is thrown if <see cref="Props" /> is not instantiated with an actor type.
         /// </exception>
         public Props(Type type, SupervisorStrategy supervisorStrategy, params object[] args)
-            : this(defaultDeploy, type, args)
+            : this(DefaultDeploy, type, args)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
@@ -165,9 +163,27 @@ namespace Akka.Actor
         public Props(Deploy deploy, Type type, params object[] args)
         {
             Deploy = deploy;
-            inputType = type;
-            Arguments = args ?? noArgs;
-            producer = CreateProducer(inputType, Arguments);
+            _inputType = type;
+            Arguments = args ?? NoArgs;
+            _producer = CreateProducer(_inputType, Arguments);
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="Props" /> class using a specified <see cref="IIndirectActorProducer"/>.
+        /// </summary>
+        /// <remarks>
+        ///     This API is meant for advanced use cases, such as Akka.DependencyInjection.
+        /// </remarks>
+        /// <param name="producer">The type of <see cref="IIndirectActorProducer"/> that will be used to instantiate <see cref="Type"/></param>
+        /// <param name="deploy">The configuration used to deploy the actor.</param>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        public Props(IIndirectActorProducer producer, Deploy deploy, Type type, params object[] args)
+        {
+            Deploy = deploy;
+            _inputType = type;
+            Arguments = args ?? NoArgs;
+           _producer = producer;
         }
 
         /// <summary>
@@ -178,9 +194,9 @@ namespace Akka.Actor
         {
             get
             {
-                if (outputType == null) outputType = producer.ActorType;
+                if (_outputType == null) _outputType = _producer.ActorType;
 
-                return outputType;
+                return _outputType;
             }
         }
 
@@ -208,9 +224,9 @@ namespace Akka.Actor
         /// </summary>
         public string TypeName
         {
-            get => inputType.AssemblyQualifiedName;
+            get => _inputType.AssemblyQualifiedName;
             //for serialization
-            private set => inputType = Type.GetType(value);
+            private set => _inputType = Type.GetType(value);
         }
 
         /// <summary>
@@ -266,7 +282,7 @@ namespace Akka.Actor
 
         private bool CompareInputType(Props other)
         {
-            return inputType == other.inputType;
+            return _inputType == other._inputType;
         }
 
         private bool CompareDeploy(Props other)
@@ -320,7 +336,7 @@ namespace Akka.Actor
                 var hashCode = Deploy != null ? Deploy.GetHashCode() : 0;
                 //  hashCode = (hashCode*397) ^ (SupervisorStrategy != null ? SupervisorStrategy.GetHashCode() : 0);
                 //  hashCode = (hashCode*397) ^ (Arguments != null ? Arguments.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (inputType != null ? inputType.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_inputType != null ? _inputType.GetHashCode() : 0);
                 return hashCode;
             }
         }
@@ -512,7 +528,7 @@ namespace Akka.Actor
             var arguments = Arguments;
             try
             {
-                return producer.Produce();
+                return _producer.Produce();
             }
             catch (Exception e)
             {
@@ -528,12 +544,13 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Props" /></returns>
         protected virtual Props Copy()
         {
-            return new Props(Deploy, inputType, Arguments) { SupervisorStrategy = SupervisorStrategy };
+            return new Props(Deploy, _inputType, Arguments) { SupervisorStrategy = SupervisorStrategy };
         }
 
+        [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference isntead.")]
         private static IIndirectActorProducer CreateProducer(Type type, object[] args)
         {
-            if (type == null) return defaultProducer;
+            if (type == null) return DefaultProducer.Instance;
 
             if (typeof(IIndirectActorProducer).IsAssignableFrom(type))
                 return Activator.CreateInstance(type, args).AsInstanceOf<IIndirectActorProducer>();
@@ -551,7 +568,7 @@ namespace Akka.Actor
         {
             try
             {
-                if (producer != null) producer.Release(actor);
+                _producer?.Release(actor);
             }
             finally
             {
@@ -609,6 +626,10 @@ namespace Akka.Actor
 
         private class DefaultProducer : IIndirectActorProducer
         {
+            private DefaultProducer(){}
+
+            public static readonly DefaultProducer Instance = new DefaultProducer();
+
             public ActorBase Produce()
             {
                 throw new InvalidOperationException("No actor producer specified!");
