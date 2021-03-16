@@ -14,7 +14,7 @@ using System.Net.Sockets;
 using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using Akka.Remote.Artery.Settings;
+using Akka.Remote.Artery;
 using Akka.Remote.Transport.DotNetty;
 using Akka.Remote.Transport;
 using static Akka.Util.RuntimeDetector;
@@ -207,7 +207,7 @@ namespace Akka.Remote.Tests
 
             // Root settings
             settings.Enabled.ShouldBeTrue();
-            settings.Transport.ShouldBe(Remote.Artery.Settings.Transport.Tcp);
+            settings.Transport.ShouldBe(ArterySettings.TransportType.Tcp);
             settings.LargeMessageDestinations.IsEmpty.ShouldBeTrue();
 
             // ARTERY: Akka.NET SSL implementation is different compared to scala, this code is wrong.
@@ -228,7 +228,7 @@ namespace Akka.Remote.Tests
 
             // Canonical settings
             settings.Canonical.Port.ShouldBe(25520);
-            settings.Canonical.Hostname.ShouldBe("<getHostAddress>".GetHostName());
+            settings.Canonical.Hostname.ShouldBe(ArterySettings.GetHostName("<getHostAddress>"));
         }
 
         [Fact]
@@ -296,7 +296,6 @@ namespace Akka.Remote.Tests
         {
             var settings = RARP.For(Sys).Provider.RemoteSettings.Artery.Advanced.Compression;
 
-            settings.Debug.ShouldBeFalse();
             settings.Enabled.ShouldBeTrue();
 
             settings.ActorRefs.Max.ShouldBe(256);
@@ -347,15 +346,15 @@ namespace Akka.Remote.Tests
                 }
             }
 
-            "<getHostAddress>".GetHostName().ShouldBe(hostIp);
-            "<getHostName>".GetHostName().ShouldBe(Dns.GetHostName());
+            ArterySettings.GetHostName("<getHostAddress>").ShouldBe(hostIp); 
+            ArterySettings.GetHostName("<getHostName>").ShouldBe(Dns.GetHostName());
 
-            "tcp".GetTransport().ShouldBe(Remote.Artery.Settings.Transport.Tcp);
-            "tls-tcp".GetTransport().ShouldBe(Remote.Artery.Settings.Transport.TlsTcp);
+            ArterySettings.GetTransport("tcp").Should().Be(ArterySettings.TransportType.Tcp);
+            ArterySettings.GetTransport("tls-tcp").Should().Be(ArterySettings.TransportType.TlsTcp);
 
-            "aeron-udp".Invoking(s => s.GetTransport())
-                .Should().Throw<ConfigurationException>()
-                .WithMessage("Aeron transport is not supported yet.");
+            "".Invoking(s => ArterySettings.GetTransport("aeron-udp"))
+                .ShouldThrow<ConfigurationException>()
+                .WithMessage("Aeron transport is not supported.");
         }
 
     }
