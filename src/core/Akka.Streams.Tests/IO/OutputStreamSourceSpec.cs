@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -194,7 +194,7 @@ namespace Akka.Streams.Tests.IO
                 outputStream.Dispose();
                 probe.ExpectComplete();
 
-                outputStream.Invoking(s => s.Write(_bytesArray, 0, _byteString.Count)).ShouldThrow<IOException>();
+                outputStream.Invoking(s => s.Write(_bytesArray, 0, _byteString.Count)).Should().Throw<IOException>();
             }, _materializer);
         }
 
@@ -248,7 +248,7 @@ namespace Akka.Streams.Tests.IO
                 sourceProbe.ExpectMsg<GraphStageMessages.DownstreamFinish>();
 
                 Thread.Sleep(500);
-                outputStream.Invoking(os => os.Write(_bytesArray, 0, _bytesArray.Length)).ShouldThrow<IOException>();
+                outputStream.Invoking(os => os.Write(_bytesArray, 0, _bytesArray.Length)).Should().Throw<IOException>();
             }, _materializer);
         }
 
@@ -259,7 +259,7 @@ namespace Akka.Streams.Tests.IO
                 () =>
                     StreamConverters.AsOutputStream(Timeout)
                         .WithAttributes(Attributes.CreateInputBuffer(0, 0))
-                        .RunWith(Sink.First<ByteString>(), _materializer)).ShouldThrow<ArgumentException>();
+                        .RunWith(Sink.First<ByteString>(), _materializer)).Should().Throw<ArgumentException>();
             /*
              With Sink.First we test the code path in which the source
              itself throws an exception when being materialized. If

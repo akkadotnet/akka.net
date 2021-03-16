@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxySettings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -99,8 +99,8 @@ namespace Akka.Cluster.Tools.Singleton
                 throw new ArgumentNullException(nameof(singletonName));
             if (singletonIdentificationInterval == TimeSpan.Zero)
                 throw new ArgumentException("singletonIdentificationInterval must be positive", nameof(singletonIdentificationInterval));
-            if (bufferSize <= 0)
-                throw new ArgumentException("bufferSize must be positive", nameof(bufferSize));
+            if (bufferSize < 0)
+                throw new ArgumentException("bufferSize must not be negative", nameof(bufferSize));
 
             SingletonName = singletonName;
             Role = role;

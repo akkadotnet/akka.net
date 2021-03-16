@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RestartNodeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -140,8 +140,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 RunOn(() =>
                 {
                     Cluster.Get(_secondSystem.Value).JoinSeedNodes(SeedNodes);
-                    AwaitAssert(() => Assert.Equal(3, Cluster.Get(_secondSystem.Value).ReadView.Members.Count));
-                    AwaitAssert(() => Assert.True(Cluster.Get(_secondSystem.Value).ReadView.Members.Select(x => x.Status).All(s => s == MemberStatus.Up)));
+                    AwaitAssert(() => Assert.Equal(3, Cluster.Get(_secondSystem.Value).State.Members.Count));
+                    AwaitAssert(() => Assert.True(Cluster.Get(_secondSystem.Value).State.Members.Select(x => x.Status).All(s => s == MemberStatus.Up)));
                 }, _config.Second);
                 EnterBarrier("started");
 
@@ -162,17 +162,17 @@ namespace Akka.Cluster.Tests.MultiNode
                 RunOn(() =>
                 {
                     Cluster.Get(_secondRestartedSystem.Value).JoinSeedNodes(SeedNodes);
-                    AwaitAssert(() => Assert.Equal(3, Cluster.Get(_secondRestartedSystem.Value).ReadView.Members.Count));
-                    AwaitAssert(() => Assert.True(Cluster.Get(_secondRestartedSystem.Value).ReadView.Members.Select(x => x.Status).All(s => s == MemberStatus.Up)));
+                    AwaitAssert(() => Assert.Equal(3, Cluster.Get(_secondRestartedSystem.Value).State.Members.Count));
+                    AwaitAssert(() => Assert.True(Cluster.Get(_secondRestartedSystem.Value).State.Members.Select(x => x.Status).All(s => s == MemberStatus.Up)));
                 }, _config.Second);
 
                 RunOn(() =>
                 {
                     AwaitAssert(() =>
                     {
-                        Assert.Equal(3, Cluster.Get(Sys).ReadView.Members.Count);
+                        Assert.Equal(3, Cluster.Get(Sys).State.Members.Count);
                         Assert.Contains(
-                            Cluster.Get(Sys).ReadView.Members,
+                            Cluster.Get(Sys).State.Members,
                             m => m.Address.Equals(SecondUniqueAddress.Address) && m.UniqueAddress.Uid != SecondUniqueAddress.Uid);
                     });
                 }, _config.First, _config.Third);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Try.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,6 +70,24 @@ namespace Akka.Util
             else
             {
                 return this;
+            }
+        }
+
+        /// <summary>
+        /// Applies the given function `f` if this is a `Failure`, otherwise returns this if this is a `Success`.
+        /// </summary>
+        public Try<T> RecoverWith(Func<Exception, Try<T>> failureHandler)
+        {
+            if (!Failure.HasValue)
+                return this;
+
+            try
+            {
+                return failureHandler(Failure.Value);
+            }
+            catch (Exception ex)
+            {
+                return new Try<T>(ex);
             }
         }
         

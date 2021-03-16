@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IntervalBasedRateLimiterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
             foreach (var interval in intervals)
                 interval.Should().BeGreaterOrEqualTo(minInterval);
 
-            batches.SelectMany(x => x).ShouldBeEquivalentTo(Enumerable.Range(1, numOfElements), o => o.WithStrictOrdering());
+            batches.SelectMany(x => x).Should().BeEquivalentTo(Enumerable.Range(1, numOfElements), o => o.WithStrictOrdering());
             batches.Count.Should().BeOneOf(numOfElements / maxBatchSize, numOfElements / maxBatchSize + 1);
         }
     }

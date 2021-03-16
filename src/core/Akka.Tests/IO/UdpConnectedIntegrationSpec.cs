@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpConnectedIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -63,8 +64,7 @@ namespace Akka.Tests.IO
 
             var clientAddress = ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
             {
-                var received = msg as Udp.Received;
-                if (received != null)
+                if (msg is Udp.Received received)
                 {
                     received.Data.ShouldBe(data1);
                     return received.Sender;
@@ -89,8 +89,7 @@ namespace Akka.Tests.IO
 
             ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
             {
-                var received = msg as Udp.Received;
-                if (received != null)
+                if (msg is Udp.Received received)
                 {
                     received.Data.ShouldBe(data1);
                     Assert.True(received.Sender.Is(clientAddress));

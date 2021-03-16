@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -84,6 +84,20 @@ namespace Akka.Cluster.Sharding
         {
         }
     }
+
+    [Serializable]
+    internal sealed class GracefulShutdownTimeout : IShardRegionCommand
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly GracefulShutdownTimeout Instance = new GracefulShutdownTimeout();
+
+        private GracefulShutdownTimeout()
+        {
+        }
+    }
+
 
     /// <summary>
     /// We must be sure that a shard is initialized before to start send messages to it.

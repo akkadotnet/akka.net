@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonLeavingSpeedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -115,10 +115,10 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         private void ClusterSingleton_that_is_leaving_must_quickly_hand_over_to_next_oldest()
         {
-            List<(TimeSpan, TimeSpan)> durations = new List<(TimeSpan, TimeSpan)>();
-            Stopwatch sw = new Stopwatch();
+            var durations = new List<(TimeSpan stoppedDuration, TimeSpan startDuration)>();
+            var sw = new Stopwatch();
             sw.Start();
-            for (int i = 0; i < _systems.Length; i++)
+            for (var i = 0; i < _systems.Length; i++)
             {
                 var leaveAddress = Cluster.Get(_systems[i]).SelfAddress;
                 CoordinatedShutdown.Get(_systems[i]).Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
@@ -152,7 +152,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
             sw.Stop();
 
-            for (int i = 0; i < durations.Count; i++)
+            for (var i = 0; i < durations.Count; i++)
             {
                 Log.Info($"Singleton {i} stopped in {(int)durations[i].Item1.TotalMilliseconds} ms, started in {(int)durations[i].Item2.Milliseconds} ms, diff ${(int)(durations[i].Item2 - durations[i].Item1).TotalMilliseconds} ms");
             }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -353,11 +353,7 @@ namespace Akka.Actor
             /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
-                object timerMsg;
-                if (Message is IAutoReceivedMessage)
-                    timerMsg = Message;
-                else
-                    timerMsg = this;
+                var timerMsg = Message is IAutoReceivedMessage ? Message : this;
 
                 _ref = Repeat
                     ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, timerMsg, Context.Self)
@@ -671,7 +667,7 @@ namespace Akka.Actor
     /// <typeparam name="TData">The state data type</typeparam>
     public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLoggerStartup();
 
         /// <summary>
         /// Initializes a new instance of the FSM class.
@@ -813,8 +809,8 @@ namespace Akka.Actor
             /// <returns>TBD</returns>
             public StateFunction Using(Func<State<TState, TData>, State<TState, TData>> andThen)
             {
-                StateFunction continuedDelegate = @event => andThen.Invoke(Func.Invoke(@event));
-                return continuedDelegate;
+                State<TState, TData> ContinuedDelegate(Event<TData> @event) => andThen.Invoke(Func.Invoke(@event));
+                return ContinuedDelegate;
             }
         }
 
@@ -1083,14 +1079,14 @@ namespace Akka.Actor
         /// <returns>A <see cref="StateFunction"/> which combines both the results of <paramref name="original"/> and <paramref name="fallback"/></returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
-            StateFunction chained = delegate(Event<TData> @event)
+            State<TState, TData> Chained(Event<TData> @event)
             {
                 var originalResult = original.Invoke(@event);
                 if (originalResult == null) return fallback.Invoke(@event);
                 return originalResult;
-            };
+            }
 
-            return chained;
+            return Chained;
         }
 
         #endregion
@@ -1100,20 +1096,24 @@ namespace Akka.Actor
         /// <inheritdoc/>
         protected override bool Receive(object message)
         {
-            var timeoutMarker = message as TimeoutMarker;
-            if (timeoutMarker != null)
+            switch (message)
             {
-                if (_generation == timeoutMarker.Generation)
+                case TimeoutMarker timeoutMarker:
                 {
-                    ProcessMsg(StateTimeout.Instance, "state timeout");
+                    if (_generation == timeoutMarker.Generation)
+                    {
+                        ProcessMsg(StateTimeout.Instance, "state timeout");
+                    }
+                    return true;
                 }
-                return true;
-            }
-
-            if (message is Timer timer)
-            {
-                if (ReferenceEquals(timer.Owner, this) && _timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
+                case Timer timer:
                 {
+                    // if we don't own the timer, don't have a reference to it, or
+                    // if it's an older reference - ignore it.
+                    if (!ReferenceEquals(timer.Owner, this)  
+                        || !_timers.TryGetValue(timer.Name, out var oldTimer) 
+                        || oldTimer.Generation != timer.Generation) 
+                        return true;
                     if (_timeoutFuture != null)
                     {
                         _timeoutFuture.Cancel(false);
@@ -1125,43 +1125,27 @@ namespace Akka.Actor
                         _timers.Remove(timer.Name);
                     }
                     ProcessMsg(timer.Message, timer);
+                    return true;
                 }
-                return true;
-            }
-
-            var subscribeTransitionCallBack = message as SubscribeTransitionCallBack;
-            if (subscribeTransitionCallBack != null)
-            {
-                Context.Watch(subscribeTransitionCallBack.ActorRef);
-                Listeners.Add(subscribeTransitionCallBack.ActorRef);
-                //send the current state back as a reference point
-                subscribeTransitionCallBack.ActorRef.Tell(new CurrentState<TState>(Self, _currentState.StateName));
-                return true;
-            }
-
-            var listen = message as Listen;
-            if (listen != null)
-            {
-                Context.Watch(listen.Listener);
-                Listeners.Add(listen.Listener);
-                listen.Listener.Tell(new CurrentState<TState>(Self, _currentState.StateName));
-                return true;
-            }
-
-            var unsubscribeTransitionCallBack = message as UnsubscribeTransitionCallBack;
-            if (unsubscribeTransitionCallBack != null)
-            {
-                Context.Unwatch(unsubscribeTransitionCallBack.ActorRef);
-                Listeners.Remove(unsubscribeTransitionCallBack.ActorRef);
-                return true;
-            }
-
-            var deafen = message as Deafen;
-            if (deafen != null)
-            {
-                Context.Unwatch(deafen.Listener);
-                Listeners.Remove(deafen.Listener);
-                return true;
+                case SubscribeTransitionCallBack subscribeTransitionCallBack:
+                    Context.Watch(subscribeTransitionCallBack.ActorRef);
+                    Listeners.Add(subscribeTransitionCallBack.ActorRef);
+                    //send the current state back as a reference point
+                    subscribeTransitionCallBack.ActorRef.Tell(new CurrentState<TState>(Self, _currentState.StateName));
+                    return true;
+                case Listen listen:
+                    Context.Watch(listen.Listener);
+                    Listeners.Add(listen.Listener);
+                    listen.Listener.Tell(new CurrentState<TState>(Self, _currentState.StateName));
+                    return true;
+                case UnsubscribeTransitionCallBack unsubscribeTransitionCallBack:
+                    Context.Unwatch(unsubscribeTransitionCallBack.ActorRef);
+                    Listeners.Remove(unsubscribeTransitionCallBack.ActorRef);
+                    return true;
+                case Deafen deafen:
+                    Context.Unwatch(deafen.Listener);
+                    Listeners.Remove(deafen.Listener);
+                    return true;
             }
 
             if (_timeoutFuture != null)
@@ -1213,16 +1197,13 @@ namespace Akka.Actor
 
         private string GetSourceString(object source)
         {
-            var s = source as string;
-            if (s != null)
+            if (source is string s)
                 return s;
 
-            var timer = source as Timer;
-            if (timer != null)
+            if (source is Timer timer)
                 return "timer '" + timer.Name + "'";
 
-            var actorRef = source as IActorRef;
-            if (actorRef != null)
+            if (source is IActorRef actorRef)
                 return actorRef.ToString();
 
             return "unknown";
@@ -1329,8 +1310,7 @@ namespace Akka.Actor
         /// <param name="reason">TBD</param>
         protected virtual void LogTermination(Reason reason)
         {
-            var failure = reason as Failure;
-            if (failure != null)
+            if (reason is Failure failure)
             {
                 if (failure.Cause is Exception)
                 {
@@ -1338,7 +1318,7 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    _log.Error(failure.Cause.ToString());
+                    _log.Error(failure.Cause is null? "null": failure.Cause.ToString());
                 }
             }
         }

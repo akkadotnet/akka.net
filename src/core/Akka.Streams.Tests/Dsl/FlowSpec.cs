@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -334,7 +334,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1,10));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1,10));
 
             // Reusable:
             task = Source.From(Enumerable.Range(1, 10))
@@ -343,7 +343,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.Seq<int>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
         [Fact]
@@ -589,7 +589,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.From(Enumerable.Range(0, 10))
                 .Via(Flow.FromFunction<int, int>(i => i + 1))
                 .RunWith(Sink.Seq<int>(), Materializer)
-                .Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                .Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
         }
 
         [Fact]

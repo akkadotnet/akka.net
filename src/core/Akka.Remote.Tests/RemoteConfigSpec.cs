@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ namespace Akka.Remote.Tests
             };
             remoteSettings.Adapters
                 .ToDictionary(kvp => kvp.Key, kvp => Type.GetType(kvp.Value))
-                .ShouldAllBeEquivalentTo(adapters);
+                .Should().BeEquivalentTo(adapters);
 
             Assert.Equal(typeof(PhiAccrualFailureDetector), Type.GetType(remoteSettings.WatchFailureDetectorImplementationClass));
             Assert.Equal(TimeSpan.FromSeconds(1), remoteSettings.WatchHeartBeatInterval);
@@ -182,9 +182,7 @@ namespace Akka.Remote.Tests
             var s = DotNettyTransportSettings.Create(c);
 
             s.BatchWriterSettings.EnableBatching.Should().BeTrue();
-            s.BatchWriterSettings.FlushInterval.Should().Be(BatchWriterSettings.DefaultFlushInterval);
-            s.BatchWriterSettings.MaxPendingBytes.Should().Be(BatchWriterSettings.DefaultMaxPendingBytes);
-            s.BatchWriterSettings.MaxPendingWrites.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
+            s.BatchWriterSettings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
         }
 
         [Fact]
@@ -356,7 +354,7 @@ namespace Akka.Remote.Tests
             "tls-tcp".GetTransport().ShouldBe(Remote.Artery.Settings.Transport.TlsTcp);
 
             "aeron-udp".Invoking(s => s.GetTransport())
-                .ShouldThrow<ConfigurationException>()
+                .Should().Throw<ConfigurationException>()
                 .WithMessage("Aeron transport is not supported yet.");
         }
 

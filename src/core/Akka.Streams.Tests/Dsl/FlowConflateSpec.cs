@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowConflateSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
             saw4Latch.Ready(TimeSpan.FromSeconds(3));
             sinkSub.Request(1);
 
-            sinkProbe.ExpectNext().ShouldAllBeEquivalentTo(new [] {1, 3, 4});
+            sinkProbe.ExpectNext().Should().BeEquivalentTo(new [] {1, 3, 4});
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ISystemMessage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -602,8 +602,8 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="message">TBD</param>
         public ActorTaskSchedulerMessage(ActorTaskScheduler scheduler, Task task, object message)
         {
-            _scheduler = scheduler;
-            _task = task;
+            _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+            _task = task ?? throw new ArgumentNullException(nameof(task));
             Message = message;
         }
 
@@ -614,18 +614,18 @@ namespace Akka.Dispatch.SysMsg
         /// <param name="message">The message causing the exception</param>
         public ActorTaskSchedulerMessage(Exception exception, object message)
         {
-            Exception = exception;
+            Exception = exception ?? throw new ArgumentNullException(nameof(exception));
             Message = message;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public Exception Exception { get; private set; }
+        public Exception Exception { get; }
         /// <summary>
         /// TBD
         /// </summary>
-        public object Message { get; private set; }
+        public object Message { get; }
 
         /// <summary>
         /// TBD

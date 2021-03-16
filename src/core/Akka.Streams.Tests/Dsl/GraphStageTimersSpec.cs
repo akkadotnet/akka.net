@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStageTimersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var driver = SetupIsolatedStage();
             driver.Tell(TestRepeatedTimer.Instance);
-            var seq = ReceiveWhile(TimeSpan.FromSeconds(2), o => (Tick)o);
+            var seq = ReceiveWhile(TimeSpan.FromSeconds(30), o => (Tick)o, msgs: 5);
             seq.Should().HaveCount(5);
             ExpectNoMsg(TimeSpan.FromSeconds(1));
             driver.StopStage();

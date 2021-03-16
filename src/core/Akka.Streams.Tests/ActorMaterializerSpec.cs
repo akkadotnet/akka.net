@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorMaterializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,7 +43,7 @@ namespace Akka.Streams.Tests
             m.Shutdown();
 
             Action action = () => f.Wait(TimeSpan.FromSeconds(3));
-            action.ShouldThrow<AbruptTerminationException>();
+            action.Should().Throw<AbruptTerminationException>();
         }
 
         [Fact]
@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests
             m.Shutdown();
 
             Action action = () => Source.From(Enumerable.Range(1, 5)).RunForeach(Console.Write, m);
-            action.ShouldThrow<IllegalStateException>();
+            action.Should().Throw<IllegalStateException>();
         }
 
         [Fact]
@@ -75,7 +75,7 @@ namespace Akka.Streams.Tests
         {
             var m = Sys.Materializer();
             Action action = () => Source.ActorPublisher<object>(Props.Create(typeof(TestActor), "wrong", "args")).RunWith(Sink.First<object>(), m);
-            action.ShouldThrow<ArgumentException>();
+            action.Should().Throw<ArgumentException>();
         }
 
         [Fact]

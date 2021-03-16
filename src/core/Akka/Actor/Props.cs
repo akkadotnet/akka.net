@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Props.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -398,7 +398,7 @@ namespace Akka.Actor
             if (newExpression == null)
                 throw new ArgumentException("The create function must be a 'new T (args)' expression");
 
-            object[] args = newExpression.GetArguments().ToArray();
+            object[] args = newExpression.GetArguments();
 
             return new Props(typeof (TActor), supervisorStrategy, args);
         }
