@@ -370,7 +370,7 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
-            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy);
+            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args);
         }
 
         /// <summary>
