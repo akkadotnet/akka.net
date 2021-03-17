@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Akka.Util.Internal
@@ -118,6 +119,9 @@ namespace Akka.Util.Internal
             else
                 hash.Add(key,value);
         }
+
+        public static ImmutableDictionary<TKey, TValue> AddOrSet<TKey, TValue>(this ImmutableDictionary<TKey, TValue> hash, TKey key, TValue value)
+            => hash.ContainsKey(key) ? hash.SetItem(key, value) : hash.Add(key, value);
 
         /// <summary>
         /// TBD

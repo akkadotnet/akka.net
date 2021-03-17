@@ -179,6 +179,15 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// Message envelopes may implement this trait for better logging, such as logging of
+    /// message class name of the wrapped message instead of the envelope class name.
+    /// </summary>
+    internal interface IWrappedMessage
+    {
+        object Message { get; }
+    }
+
+    /// <summary>
     ///     Class DeadLetterActorRef.
     /// </summary>
     public class DeadLetterActorRef : EmptyLocalActorRef

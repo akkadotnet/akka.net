@@ -12,6 +12,7 @@ using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using Address = Akka.Actor.Address;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Transport
