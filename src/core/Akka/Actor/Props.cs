@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;
@@ -160,12 +161,9 @@ namespace Akka.Actor
         /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
-        public Props(Deploy deploy, Type type, params object[] args)
+        public Props(Deploy deploy, Type type, params object[] args) : this(CreateProducer(type, args), deploy, args)
         {
-            Deploy = deploy;
-            _inputType = type;
-            Arguments = args ?? NoArgs;
-            _producer = CreateProducer(_inputType, Arguments);
+
         }
 
         /// <summary>
@@ -176,12 +174,11 @@ namespace Akka.Actor
         /// </remarks>
         /// <param name="producer">The type of <see cref="IIndirectActorProducer"/> that will be used to instantiate <see cref="Type"/></param>
         /// <param name="deploy">The configuration used to deploy the actor.</param>
-        /// <param name="type">The type of the actor to create.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
-        public Props(IIndirectActorProducer producer, Deploy deploy, Type type, params object[] args)
+        internal Props(IIndirectActorProducer producer, Deploy deploy, params object[] args)
         {
             Deploy = deploy;
-            _inputType = type;
+            _inputType = producer.ActorType;
             Arguments = args ?? NoArgs;
            _producer = producer;
         }
@@ -372,7 +369,7 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
-            return new Props(typeof(TActor), args);
+            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy);
         }
 
         /// <summary>
@@ -381,9 +378,21 @@ namespace Akka.Actor
         /// <typeparam name="TProducer">The type of producer used to create the actor.</typeparam>
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        [Obsolete("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] args) instead")]
         public static Props CreateBy<TProducer>(params object[] args) where TProducer : class, IIndirectActorProducer
         {
             return new Props(typeof(TProducer), args);
+        }
+
+        /// <summary>
+        ///     Creates an actor using a specified actor producer.
+        /// </summary>
+        /// <param name="producer">The actor producer that will be used to create the underlying actor..</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        public static Props CreateBy(IIndirectActorProducer producer, params object[] args)
+        {
+            return new Props(producer, DefaultDeploy, args);
         }
 
         /// <summary>

@@ -16,15 +16,15 @@ using System.Reflection;
 namespace Akka.Util.Reflection
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public static class ExpressionExtensions
     {
         /// <summary>
-        /// TBD
+        /// Fetches constructor arguments from a <see cref="NewExpression"/>.
         /// </summary>
-        /// <param name="newExpression">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="newExpression">The <see cref="NewExpression"/> used typically to create an actor.</param>
+        /// <returns>The constructor type and arguments</returns>
         public static object[] GetArguments(this NewExpression newExpression)
         {
             return newExpression.ParseExpressionArgs(); 
