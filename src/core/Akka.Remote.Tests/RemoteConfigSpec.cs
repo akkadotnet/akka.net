@@ -352,8 +352,8 @@ namespace Akka.Remote.Tests
             ArterySettings.GetTransport("tcp").Should().Be(ArterySettings.TransportType.Tcp);
             ArterySettings.GetTransport("tls-tcp").Should().Be(ArterySettings.TransportType.TlsTcp);
 
-            "".Invoking(s => ArterySettings.GetTransport("aeron-udp"))
-                .ShouldThrow<ConfigurationException>()
+            "aeron-udp".Invoking(ArterySettings.GetTransport)
+                .Should().Throw<ConfigurationException>()
                 .WithMessage("Aeron transport is not supported.");
         }
 

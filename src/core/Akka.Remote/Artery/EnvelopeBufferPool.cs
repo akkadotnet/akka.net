@@ -641,13 +641,5 @@ namespace Akka.Remote.Artery
         {
             ByteBuffer?.Dispose();
         }
-
-        private static string ReadLiteral(BinaryReader reader)
-        {
-            var length = (int)reader.ReadInt16();
-            if (length == 0) return null;
-            var byteArray = reader.ReadBytes(length);
-            return Encoding.ASCII.GetString(byteArray);
-        }
     }
 }
