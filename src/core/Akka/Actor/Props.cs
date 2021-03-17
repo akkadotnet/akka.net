@@ -162,7 +162,7 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
         public Props(Deploy deploy, Type type, params object[] args) 
-            : this(CreateProducer(type, args), deploy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
+            : this(CreateProducer(type, args), deploy, SupervisorStrategy.DefaultStrategy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
         {
 
         }
@@ -175,13 +175,15 @@ namespace Akka.Actor
         /// </remarks>
         /// <param name="producer">The type of <see cref="IIndirectActorProducer"/> that will be used to instantiate <see cref="Type"/></param>
         /// <param name="deploy">The configuration used to deploy the actor.</param>
+        /// <param name="strategy">The supervisor strategy to use.</param>
         /// <param name="args">The arguments needed to create the actor.</param>
-        internal Props(IIndirectActorProducer producer, Deploy deploy, params object[] args)
+        internal Props(IIndirectActorProducer producer, Deploy deploy, SupervisorStrategy strategy, params object[] args)
         {
             Deploy = deploy;
             _inputType = producer.ActorType;
             Arguments = args ?? NoArgs;
-           _producer = producer;
+            _producer = producer;
+            SupervisorStrategy = strategy;
         }
 
         /// <summary>
@@ -359,7 +361,7 @@ namespace Akka.Actor
 
             var args = newExpression.GetArguments();
 
-            return new Props(typeof(TActor), supervisorStrategy, args);
+            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, supervisorStrategy, args);
         }
 
         /// <summary>
@@ -370,7 +372,7 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
-            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args);
+            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, SupervisorStrategy.DefaultStrategy, args);
         }
 
         /// <summary>
@@ -393,7 +395,7 @@ namespace Akka.Actor
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         public static Props CreateBy(IIndirectActorProducer producer, params object[] args)
         {
-            return new Props(producer, DefaultDeploy, args);
+            return new Props(producer, DefaultDeploy, SupervisorStrategy.DefaultStrategy, args);
         }
 
         /// <summary>
