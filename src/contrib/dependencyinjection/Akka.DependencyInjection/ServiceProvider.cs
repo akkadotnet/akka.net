@@ -47,21 +47,6 @@ namespace Akka.DependencyInjection
             return actorSystem.WithExtension<ServiceProvider, ServiceProviderExtension>();
         }
 
-        ///// <summary>
-        ///// Uses a delegate to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
-        ///// and others are not.
-        ///// </summary>
-        ///// <remarks>
-        ///// YOU ARE RESPONSIBLE FOR MANAGING THE LIFECYCLE OF YOUR OWN DEPENDENCIES. AKKA.NET WILL NOT ATTEMPT TO DO IT FOR YOU.
-        ///// </remarks>
-        ///// <typeparam name="T">The type of actor to instantiate.</typeparam>
-        ///// <param name="producer">The delegate used to create a new instance of your actor type.</param>
-        ///// <returns>A new <see cref="Props"/> instance which uses DI internally.</returns>
-        //public Props Props<T>(Func<IServiceProvider, T> producer) where T : ActorBase
-        //{
-        //    return new ServiceProviderProps<T>(producer, Provider);
-        //}
-
         /// <summary>
         /// Uses a delegate to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
         /// and others are not.
@@ -74,7 +59,7 @@ namespace Akka.DependencyInjection
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props<T>(params object[] args) where T : ActorBase
         {
-            return new Props(typeof(T), args);
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(Provider, args));
         }
     }
 
@@ -104,16 +89,16 @@ namespace Akka.DependencyInjection
     /// Used to create actors via the <see cref="ActivatorUtilities"/>.
     /// </summary>
     /// <typeparam name="TActor">the actor type</typeparam>
-    internal sealed class ServiceProviderActorProducer : IIndirectActorProducer
+    internal sealed class ServiceProviderActorProducer<TActor> : IIndirectActorProducer where TActor:ActorBase
     {
         private readonly IServiceProvider _provider;
         private readonly object[] _args;
 
-        public ServiceProviderActorProducer(IServiceProvider provider, Type actorType, object[] args)
+        public ServiceProviderActorProducer(IServiceProvider provider, object[] args)
         {
             _provider = provider;
             _args = args;
-            ActorType = actorType;
+            ActorType = typeof(TActor);
         }
 
         public ActorBase Produce()
