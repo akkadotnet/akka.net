@@ -1408,8 +1408,11 @@ namespace Akka.Actor
         public static Akka.Actor.Props Create<TActor>(Akka.Actor.SupervisorStrategy supervisorStrategy)
             where TActor : Akka.Actor.ActorBase, new () { }
         public static Akka.Actor.Props Create(System.Type type, params object[] args) { }
+        [System.ObsoleteAttribute("Do not use this method. Call CreateBy(IIndirectActorProducer, params object[] arg" +
+            "s) instead")]
         public static Akka.Actor.Props CreateBy<TProducer>(params object[] args)
             where TProducer :  class, Akka.Actor.IIndirectActorProducer { }
+        public static Akka.Actor.Props CreateBy(Akka.Actor.IIndirectActorProducer producer, params object[] args) { }
         public bool Equals(Akka.Actor.Props other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
