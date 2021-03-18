@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -160,6 +161,37 @@ namespace Akka.DependencyInjection.Tests
             var deps2Single = deps2.Dependencies.Single(x => (x is AkkaDiFixture.ISingletonDependency));
 
             deps1Single.Should().Be(deps2Single);
+        }
+
+        [Fact(DisplayName = "Props created via the ServiceProvider should support the standard Props copying methods")]
+        public void ServiceProvider_Props_should_support_copying()
+        {
+            // <CreateNonDiActor>
+            var spExtension = ServiceProvider.For(Sys);
+            var arg1 = "foo";
+            var arg2 = "bar";
+            var props = spExtension.Props<NonDiArgsActor>(arg1, arg2).WithRouter(new RoundRobinPool(10).WithSupervisorStrategy(new OneForOneStrategy(
+                ex =>
+                {
+                    TestActor.Tell(ex);
+                    return Directive.Restart;
+                })));
+
+            // create a scoped round robin pool using the props from Akka.DependencyInjection
+            var scoped1 = Sys.ActorOf(props, "scoped1");
+
+            // validate that non-DI'd arguments were passed to actor constructor arguments correctly
+            scoped1.Tell("fetch");
+            ExpectMsg<string>().Should().Be(arg1);
+            ExpectMsg<string>().Should().Be(arg2);
+
+            // validate that this is a router
+            scoped1.Tell(GetRoutees.Instance);
+            ExpectMsg<Routees>().Members.Count().Should().Be(10);
+
+            // validate that the router's supervision strategy has been enforced
+            scoped1.Tell(new Crash());
+            ExpectMsg<ApplicationException>();
         }
 
         public class Crash { }
