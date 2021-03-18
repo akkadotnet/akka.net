@@ -40,7 +40,7 @@ namespace Akka.Streams.Implementation.IO
             int bufferSize, 
             long startPosition, 
             FileMode fileMode,
-            bool autoFlush = true,
+            bool autoFlush = false,
             object flushCommand = null)
         {
             if(bufferSize <= 0)
