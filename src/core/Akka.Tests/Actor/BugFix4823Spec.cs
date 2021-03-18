@@ -26,7 +26,7 @@ namespace Akka.Tests.Actor
         {
             var props = Props.Create(() => new MyActor(TestActor));
             var identity = ActorOfAsTestActorRef<MyActor>(props, TestActor);
-            identity.Tell(new MyMessage());
+            identity.Tell(NotUsed.Instance);
             var selfBefore = ExpectMsg<IActorRef>();
             var selfAfter = ExpectMsg<IActorRef>();
             selfAfter.Should().Be(selfBefore);
@@ -36,23 +36,13 @@ namespace Akka.Tests.Actor
         {
             public MyActor(IActorRef testActor)
             {
-                ReceiveAsync<MyMessage>(async msg =>
+                ReceiveAnyAsync(async _ =>
                 {
                     testActor.Tell(Self);
-                    Become(Tracking);
-                    await SomeAsyncProcessing(msg);
+                    await Task.Delay(100);
                     testActor.Tell(Self);
                 });
             }
-
-            private void Tracking()
-            {
-                ReceiveAny(m => Context.GetLogger().Info($"Received {m} in tracking state"));
-            }
-
-            private Task SomeAsyncProcessing(MyMessage msg) => Task.Delay(100); // changing to Task.CompletedTask does not reproduce bug
         }
-        
-        class MyMessage { }
     }
 }
