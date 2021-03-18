@@ -73,7 +73,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="fileMode">TBD</param>
         /// <param name="autoFlush"></param>
         /// <param name="flushCommand"></param>
-        private FileSubscriber(
+        public FileSubscriber(
             FileInfo f, 
             TaskCompletionSource<IOResult> completionPromise, 
             int bufferSize, 
@@ -104,7 +104,7 @@ namespace Akka.Streams.Implementation.IO
         {
             try
             {
-                _chan = _f.Open(_fileMode, FileAccess.Write);
+                _chan = _f.Open(_fileMode, FileAccess.Write, FileShare.ReadWrite);
                 if (_startPosition > 0)
                     _chan.Position = _startPosition;
                 base.PreStart();

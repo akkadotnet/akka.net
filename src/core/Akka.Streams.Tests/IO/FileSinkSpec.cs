@@ -297,6 +297,37 @@ namespace Akka.Streams.Tests.IO
             }, _materializer);
         }
 
+        [Fact]
+        public void SynchronousFileSink_should_write_each_element_if_auto_flush_is_set()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f => 
+                {
+                    var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
+                        .Select(ByteString.FromString)
+                        .ToMaterialized(FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, autoFlush:true), (a, t) => (a, t))
+                        .Run(_materializer);
+
+                    actor.Tell("a\n");
+                    actor.Tell("b\n");
+
+                    // wait for flush
+                    Thread.Sleep(100);
+                    CheckFileContent(f, "a\nb\n");
+
+                    actor.Tell("a\n");
+                    actor.Tell("b\n");
+
+                    actor.Tell(new Status.Success(NotUsed.Instance));
+                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+                    f.Length.ShouldBe(8);
+                    CheckFileContent(f, "a\nb\na\nb\n");
+                });
+            }, _materializer);
+        }
+
         private static void TargetFile(Action<FileInfo> block, bool create = true)
         {
             var targetFile = new FileInfo(Path.Combine(Path.GetTempPath(), "synchronous-file-sink.tmp"));
@@ -320,10 +351,14 @@ namespace Akka.Streams.Tests.IO
 
         private static void CheckFileContent(FileInfo f, string contents)
         {
-            var s = f.OpenText();
-            var cont = s.ReadToEnd();
-            s.Dispose();
-            cont.Should().Be(contents);
+            using (var s = f.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                using(var reader = new StreamReader(s))
+                {
+                    var cont = reader.ReadToEnd();
+                    cont.Should().Be(contents);
+                }
+            }
         }
     }
 }
