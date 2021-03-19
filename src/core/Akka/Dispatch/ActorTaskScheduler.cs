@@ -25,6 +25,9 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         public object CurrentMessage { get; private set; }
+        
+        public Action OnBeforeTaskSchedule { get; set; } 
+        public Action OnTaskCompletion { get; set; } 
 
         /// <summary>
         /// TBD
@@ -142,6 +145,8 @@ namespace Akka.Dispatch
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
+            actorScheduler.OnBeforeTaskSchedule?.Invoke();
+            
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
                               .ContinueWith(parent =>
@@ -160,6 +165,7 @@ namespace Akka.Dispatch
                                   }
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;
+                                  actorScheduler.OnTaskCompletion?.Invoke();
                               }, actorScheduler);
         }
 

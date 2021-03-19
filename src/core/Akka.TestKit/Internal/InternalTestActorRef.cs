@@ -232,6 +232,22 @@ namespace Akka.TestKit.Internal
                     base.AutoReceiveMessage(envelope);
             }
 
+            /// <inheritdoc />
+            protected override void ReceiveMessage(object message)
+            {
+                var self = this;
+                TaskScheduler.OnBeforeTaskSchedule = () =>
+                {
+                    ActorCellKeepingSynchronizationContext.AsyncCache = self;
+                };
+                TaskScheduler.OnTaskCompletion = () =>
+                {
+                    ActorCellKeepingSynchronizationContext.AsyncCache = null;
+                };
+                
+                base.ReceiveMessage(message);
+            }
+
             /// <summary>
             /// TBD
             /// </summary>
