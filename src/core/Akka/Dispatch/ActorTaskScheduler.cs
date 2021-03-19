@@ -26,8 +26,8 @@ namespace Akka.Dispatch
         /// </summary>
         public object CurrentMessage { get; private set; }
         
-        public Action OnBeforeTaskSchedule { get; set; } 
-        public Action OnTaskCompletion { get; set; } 
+        internal Action OnBeforeTaskSchedule { get; set; } 
+        internal Action OnTaskCompletion { get; set; } 
 
         /// <summary>
         /// TBD
@@ -37,7 +37,7 @@ namespace Akka.Dispatch
         {
             _actorCell = actorCell;
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>

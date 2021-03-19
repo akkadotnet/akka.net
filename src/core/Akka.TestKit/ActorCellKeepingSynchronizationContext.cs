@@ -23,7 +23,7 @@ namespace Akka.TestKit
     {
         private readonly ActorCell _cell;
         
-        public static ActorCell AsyncCache { get; set; }
+        internal static ActorCell AsyncCache { get; set; }
 
         /// <summary>
         /// TBD
