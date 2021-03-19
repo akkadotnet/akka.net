@@ -21,14 +21,26 @@ namespace Akka.Dispatch
     public class ActorTaskScheduler : TaskScheduler
     {
         private readonly ActorCell _actorCell;
+
+        private Action _beforeTaskStarted;
+        private Action _afterTaskCompleted;
+        
         /// <summary>
         /// TBD
         /// </summary>
         public object CurrentMessage { get; private set; }
-        
-        internal Action OnBeforeTaskSchedule { get; set; } 
-        internal Action OnTaskCompletion { get; set; } 
 
+        /// <summary>
+        /// Wraps async task scheduling with pre/post actions
+        /// </summary>
+        /// <param name="beforeStartStarted">Executed before scheduling the task call/></param>
+        /// <param name="afterTaskCompleted">Executed in task continuation after task completion</param>
+        internal void WrapTaskScheduling(Action beforeStartStarted = null, Action afterTaskCompleted = null)
+        {
+            _beforeTaskStarted = beforeStartStarted;
+            _afterTaskCompleted = afterTaskCompleted;
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -145,7 +157,7 @@ namespace Akka.Dispatch
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
-            actorScheduler.OnBeforeTaskSchedule?.Invoke();
+            actorScheduler._beforeTaskStarted?.Invoke();
             
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
@@ -165,7 +177,7 @@ namespace Akka.Dispatch
                                   }
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;
-                                  actorScheduler.OnTaskCompletion?.Invoke();
+                                  actorScheduler._afterTaskCompleted?.Invoke();
                               }, actorScheduler);
         }
 

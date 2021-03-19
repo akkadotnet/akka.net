@@ -236,14 +236,13 @@ namespace Akka.TestKit.Internal
             protected override void ReceiveMessage(object message)
             {
                 var self = this;
-                TaskScheduler.OnBeforeTaskSchedule = () =>
-                {
-                    ActorCellKeepingSynchronizationContext.AsyncCache = self;
-                };
-                TaskScheduler.OnTaskCompletion = () =>
-                {
-                    ActorCellKeepingSynchronizationContext.AsyncCache = null;
-                };
+                
+                // fix for https://github.com/akkadotnet/akka.net/issues/4823
+                // when using InternalTestActorRef, need to preserve async context between task continuations
+                TaskScheduler.WrapTaskScheduling(
+                    beforeStartStarted: () => ActorCellKeepingSynchronizationContext.AsyncCache = self,
+                    afterTaskCompleted: () => ActorCellKeepingSynchronizationContext.AsyncCache = null
+                );
                 
                 base.ReceiveMessage(message);
             }

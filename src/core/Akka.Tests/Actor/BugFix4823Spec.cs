@@ -25,7 +25,6 @@ namespace Akka.Tests.Actor
         public void Actor_should_not_loose_self_context_after_async_call()
         {
             var identity = ActorOfAsTestActorRef<MyActor>(Props.Create(() => new MyActor(TestActor)), TestActor);
-            // var identity = Sys.ActorOf(Props.Create(() => new MyActor(TestActor)));
             identity.Tell(NotUsed.Instance);
             var selfBefore = ExpectMsg<IActorRef>();
             var selfAfter = ExpectMsg<IActorRef>();
