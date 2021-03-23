@@ -63,8 +63,9 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="copy">The object that is being cloned.</param>
         protected Props(Props copy)
-            : this(copy.Deploy, copy._inputType, copy.SupervisorStrategy, copy.Arguments)
+            : this(copy._producer, copy.Deploy, copy.Arguments)
         {
+            SupervisorStrategy = copy.SupervisorStrategy;
         }
 
         /// <summary>
@@ -558,7 +559,7 @@ namespace Akka.Actor
             return new Props(_producer, Deploy, Arguments) { SupervisorStrategy = SupervisorStrategy };
         }
 
-        [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference isntead.")]
+        [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference instead.")]
         private static IIndirectActorProducer CreateProducer(Type type, object[] args)
         {
             if (type == null) return DefaultProducer.Instance;
