@@ -63,7 +63,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="copy">The object that is being cloned.</param>
         protected Props(Props copy)
-            : this(copy.Deploy, copy._inputType, copy.Arguments)
+            : this(copy._producer, copy.Deploy, copy.Arguments)
         {
             SupervisorStrategy = copy.SupervisorStrategy;
         }
