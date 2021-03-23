@@ -22,24 +22,19 @@ namespace Akka.Dispatch
     {
         private readonly ActorCell _actorCell;
 
-        private Action _beforeTaskStarted;
-        private Action _afterTaskCompleted;
-        
         /// <summary>
         /// TBD
         /// </summary>
         public object CurrentMessage { get; private set; }
-
+        
         /// <summary>
-        /// Wraps async task scheduling with pre/post actions
+        /// Called when async task is scheduled, before Task.StartNew call
         /// </summary>
-        /// <param name="beforeStartStarted">Executed before scheduling the task call/></param>
-        /// <param name="afterTaskCompleted">Executed in task continuation after task completion</param>
-        internal void WrapTaskScheduling(Action beforeStartStarted = null, Action afterTaskCompleted = null)
-        {
-            _beforeTaskStarted = beforeStartStarted;
-            _afterTaskCompleted = afterTaskCompleted;
-        }
+        protected virtual void OnBeforeTaskStarted() { }
+        /// <summary>
+        /// Called in completed scheduled task continuation
+        /// </summary>
+        protected virtual void OnAfterTaskCompleted() { }
         
         /// <summary>
         /// TBD
@@ -157,7 +152,7 @@ namespace Akka.Dispatch
             ActorTaskScheduler actorScheduler = context.TaskScheduler;
             actorScheduler.CurrentMessage = context.CurrentMessage;
 
-            actorScheduler._beforeTaskStarted?.Invoke();
+            actorScheduler.OnBeforeTaskStarted();
             
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
@@ -177,7 +172,7 @@ namespace Akka.Dispatch
                                   }
                                   //clear the current message field of the scheduler
                                   actorScheduler.CurrentMessage = null;
-                                  actorScheduler._afterTaskCompleted?.Invoke();
+                                  actorScheduler.OnAfterTaskCompleted();
                               }, actorScheduler);
         }
 

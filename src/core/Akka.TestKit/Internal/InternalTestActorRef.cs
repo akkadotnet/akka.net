@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
@@ -207,6 +208,8 @@ namespace Akka.TestKit.Internal
         /// </summary>
         protected class TestActorCell : ActorCell
         {
+            private TestActorTaskScheduler _taskScheduler;
+            
             /// <summary>
             /// TBD
             /// </summary>
@@ -233,24 +236,47 @@ namespace Akka.TestKit.Internal
             }
 
             /// <inheritdoc />
-            protected override void ReceiveMessage(object message)
+            public override ActorTaskScheduler TaskScheduler
             {
-                var self = this;
-                
-                // fix for https://github.com/akkadotnet/akka.net/issues/4823
-                // when using InternalTestActorRef, need to preserve async context between task continuations
-                TaskScheduler.WrapTaskScheduling(
-                    beforeStartStarted: () => ActorCellKeepingSynchronizationContext.AsyncCache = self,
-                    afterTaskCompleted: () => ActorCellKeepingSynchronizationContext.AsyncCache = null
-                );
-                
-                base.ReceiveMessage(message);
+                get
+                {
+                    var taskScheduler = Volatile.Read(ref _taskScheduler);
+
+                    if (taskScheduler != null)
+                        return taskScheduler;
+
+                    taskScheduler = new TestActorTaskScheduler(this);
+                    return Interlocked.CompareExchange(ref _taskScheduler, taskScheduler, null) ?? taskScheduler;
+                }
             }
 
             /// <summary>
             /// TBD
             /// </summary>
             public new object Actor { get { return base.Actor; } }
+        }
+
+        internal class TestActorTaskScheduler : ActorTaskScheduler
+        {
+            private readonly ActorCell _testActorCell;
+
+            /// <inheritdoc />
+            internal TestActorTaskScheduler(ActorCell testActorCell) : base(testActorCell)
+            {
+                _testActorCell = testActorCell;
+            }
+
+            /// <inheritdoc />
+            protected override void OnBeforeTaskStarted()
+            {
+                ActorCellKeepingSynchronizationContext.AsyncCache = _testActorCell;
+            }
+
+            /// <inheritdoc />
+            protected override void OnAfterTaskCompleted()
+            {
+                ActorCellKeepingSynchronizationContext.AsyncCache = null;
+            }
         }
 
         /// <summary>
