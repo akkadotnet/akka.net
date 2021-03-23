@@ -612,11 +612,11 @@ namespace Akka.Actor
         public Akka.Actor.Scope Scope { get; }
         public bool Equals(Akka.Actor.Deploy other) { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Deploy WithDispatcher(string dispatcher) { }
-        public Akka.Actor.Deploy WithFallback(Akka.Actor.Deploy other) { }
-        public Akka.Actor.Deploy WithMailbox(string mailbox) { }
-        public Akka.Actor.Deploy WithRouterConfig(Akka.Routing.RouterConfig routerConfig) { }
-        public Akka.Actor.Deploy WithScope(Akka.Actor.Scope scope) { }
+        public virtual Akka.Actor.Deploy WithDispatcher(string dispatcher) { }
+        public virtual Akka.Actor.Deploy WithFallback(Akka.Actor.Deploy other) { }
+        public virtual Akka.Actor.Deploy WithMailbox(string mailbox) { }
+        public virtual Akka.Actor.Deploy WithRouterConfig(Akka.Routing.RouterConfig routerConfig) { }
+        public virtual Akka.Actor.Deploy WithScope(Akka.Actor.Scope scope) { }
         public class DeploySurrogate : Akka.Util.ISurrogate
         {
             public DeploySurrogate() { }
