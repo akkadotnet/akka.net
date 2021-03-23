@@ -1,3 +1,21 @@
+#### 1.4.18 March 23 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a minor release of Akka.NET that redesigns how the `Props` class and Akka.DependencyInjection uses it. _These changes are non-breaking_, but please let us know if you run into any trouble at all.
+
+* [Akka: `Props` methods for propagating and setting `IActorProducer` are pretty weird](https://github.com/akkadotnet/akka.net/issues/3599)
+* [Akka: made `Deploy` methods virtual](https://github.com/akkadotnet/akka.net/pull/4868)
+* [Akka.DependencyInjection: `ServiceProviderProps` is broken - needs to be rewritten](https://github.com/akkadotnet/akka.net/issues/4853)
+* [Akka.Streams: FileIO sinks don't flush until completed](https://github.com/akkadotnet/akka.net/issues/4851)
+
+To see the [full set of fixes in Akka.NET v1.4.18, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/48).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 3 | 431 | 451 | Aaron Stannard |      
+| 3 | 229 | 4980 | Gregorius Soedharmo |
+| 2 | 2 | 2 | dependabot-preview[bot] | 
+
 #### 1.4.17 March 09 2021 ####
 **Maintenance Release for Akka.NET 1.4**
 
