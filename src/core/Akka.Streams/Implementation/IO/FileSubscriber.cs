@@ -41,7 +41,7 @@ namespace Akka.Streams.Implementation.IO
             long startPosition, 
             FileMode fileMode,
             bool autoFlush = false,
-            object flushCommand = null)
+            FlushSignaler flushCommand = null)
         {
             if(bufferSize <= 0)
                 throw new ArgumentException($"bufferSize must be > 0 (was {bufferSize})", nameof(bufferSize));
@@ -59,7 +59,6 @@ namespace Akka.Streams.Implementation.IO
         private readonly ILoggingAdapter _log;
         private readonly WatermarkRequestStrategy _requestStrategy;
         private readonly bool _autoFlush;
-        private readonly object _flushCommand;
         private FileStream _chan;
         private long _bytesWritten;
 
@@ -72,7 +71,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="startPosition">TBD</param>
         /// <param name="fileMode">TBD</param>
         /// <param name="autoFlush"></param>
-        /// <param name="flushCommand"></param>
+        /// <param name="flushSignaler"></param>
         public FileSubscriber(
             FileInfo f, 
             TaskCompletionSource<IOResult> completionPromise, 
@@ -80,16 +79,18 @@ namespace Akka.Streams.Implementation.IO
             long startPosition, 
             FileMode fileMode,
             bool autoFlush, 
-            object flushCommand)
+            FlushSignaler flushSignaler)
         {
             _f = f;
             _completionPromise = completionPromise;
             _startPosition = startPosition;
             _fileMode = fileMode;
             _autoFlush = autoFlush;
-            _flushCommand = flushCommand;
             _log = Context.GetLogger();
             _requestStrategy = new WatermarkRequestStrategy(highWatermark: bufferSize);
+
+            if (flushSignaler != null)
+                flushSignaler.FileSubscriber = Self;
         }
 
         /// <summary>
@@ -160,8 +161,8 @@ namespace Akka.Streams.Implementation.IO
                     Context.Stop(Self);
                     return true;
 
-                case var msg when _flushCommand != null && ReferenceEquals(_flushCommand, msg):
-                    _chan.Flush();
+                case FlushSignal _:
+                    _chan.Flush(true);
                     return true;
             }
 
@@ -184,6 +185,24 @@ namespace Akka.Streams.Implementation.IO
 
             _completionPromise.TrySetResult(IOResult.Success(_bytesWritten));
             base.PostStop();
+        }
+
+        internal class FlushSignal
+        {
+            public static readonly FlushSignal Instance = new FlushSignal();
+            private FlushSignal() { }
+        }
+    }
+
+    public class FlushSignaler
+    {
+        internal IActorRef FileSubscriber;
+
+        public void Flush()
+        {
+            if (FileSubscriber == null)
+                throw new InvalidOperationException("Instance has not been initialized by passing it into a file sink factory");
+            FileSubscriber.Tell(IO.FileSubscriber.FlushSignal.Instance);
         }
     }
 }

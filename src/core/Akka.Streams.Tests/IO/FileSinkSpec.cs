@@ -16,6 +16,7 @@ using Akka.Dispatch;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
+using Akka.Streams.Implementation.IO;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
@@ -324,6 +325,47 @@ namespace Akka.Streams.Tests.IO
 
                     f.Length.ShouldBe(8);
                     CheckFileContent(f, "a\nb\na\nb\n");
+                });
+            }, _materializer);
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_write_buffered_element_if_manual_flush_is_called()
+        {
+            this.AssertAllStagesStopped(() => 
+            {
+                TargetFile(f =>
+                {
+                    var flusher = new FlushSignaler();
+                    var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
+                        .Select(ByteString.FromString)
+                        .ToMaterialized(
+                            FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, flushSignaler:flusher), 
+                            (a, t) => (a, t))
+                        .Run(_materializer);
+                    Thread.Sleep(100); // wait for stream to catch up
+
+                    actor.Tell("a\n");
+                    actor.Tell("b\n");
+                    Thread.Sleep(200); // wait for stream to catch up
+
+                    flusher.Flush();
+                    Thread.Sleep(100); // wait for flush
+                    CheckFileContent(f, "a\nb\n"); // file should be flushed
+
+                    actor.Tell("c\n");
+                    actor.Tell("d\n");
+                    Thread.Sleep(200); // wait for stream to catch up
+                    CheckFileContent(f, "a\nb\n"); // file content should not change
+
+                    flusher.Flush();
+                    Thread.Sleep(100); // wait for flush
+                    CheckFileContent(f, "a\nb\nc\nd\n"); // file content should all be flushed
+
+                    actor.Tell(new Status.Success(NotUsed.Instance));
+                    task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                    task.Result.WasSuccessful.Should().BeTrue();
+                    task.Result.Count.Should().Be(8);
                 });
             }, _materializer);
         }
