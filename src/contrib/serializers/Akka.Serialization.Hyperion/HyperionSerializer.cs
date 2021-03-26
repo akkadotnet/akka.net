@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
@@ -57,7 +59,7 @@ namespace Akka.Serialization
         public HyperionSerializer(ExtendedActorSystem system, HyperionSerializerSettings settings)
             : base(system)
         {
-            this.Settings = settings;
+            Settings = settings;
             var akkaSurrogate =
                 Surrogate
                 .Create<ISurrogated, ISurrogate>(
@@ -73,6 +75,7 @@ namespace Akka.Serialization
                     surrogates: new[] { akkaSurrogate },
                     knownTypes: provider.GetKnownTypes(),
                     ignoreISerializable:true));
+                    // packageNameOverrides: settings.PackageNameOverrides));
         }
 
         /// <summary>
@@ -174,15 +177,39 @@ namespace Akka.Serialization
         public static HyperionSerializerSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.serializers.hyperion");
+                throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.actor.serialization-settings.hyperion");
 
             var typeName = config.GetString("known-types-provider", null);
             var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
 
+            var framework = RuntimeInformation.FrameworkDescription;
+            string frameworkKey;
+            if (framework.Contains(".NET Framework"))
+                frameworkKey = "netfx";
+            else if (framework.Contains(".NET Core"))
+                frameworkKey = "netcore";
+            else
+                frameworkKey = "net";
+
+            List<CrossPlatformPackageNameOverride> packageNameOverrides = null;
+
+            var overrideConfigs = config.GetValue($"cross-platform-package-name-overrides.{frameworkKey}");
+            if (overrideConfigs != null)
+            {
+                var configs = overrideConfigs.GetArray();
+                packageNameOverrides = new List<CrossPlatformPackageNameOverride>(configs
+                    .Select(value => value.GetObject())
+                    .Select(obj => new CrossPlatformPackageNameOverride(
+                        fingerprint: obj.GetKey("fingerprint").GetString(), 
+                        @from: obj.GetKey("rename-from").GetString(), 
+                        to: obj.GetKey("rename-to").GetString())));
+            }
+
             return new HyperionSerializerSettings(
                 preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
                 versionTolerance: config.GetBoolean("version-tolerance", true),
-                knownTypesProvider: type);
+                knownTypesProvider: type,
+                packageNameOverrides: packageNameOverrides);
         }
 
         /// <summary>
@@ -207,14 +234,17 @@ namespace Akka.Serialization
         /// </summary>
         public readonly Type KnownTypesProvider;
 
+        public readonly List<CrossPlatformPackageNameOverride> PackageNameOverrides;
+
         /// <summary>
         /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
         /// </summary>
         /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
         /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
         /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
+        /// <param name="packageNameOverrides">TBD</param>
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
-        public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
+        public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider, List<CrossPlatformPackageNameOverride> packageNameOverrides = null)
         {
             knownTypesProvider = knownTypesProvider ?? typeof(NoKnownTypes);
             if (!typeof(IKnownTypesProvider).IsAssignableFrom(knownTypesProvider))
@@ -223,6 +253,22 @@ namespace Akka.Serialization
             PreserveObjectReferences = preserveObjectReferences;
             VersionTolerance = versionTolerance;
             KnownTypesProvider = knownTypesProvider;
+            PackageNameOverrides = packageNameOverrides;
+        }
+
+        // This will be replaced with the class from the Hyperion package when it is released
+        public class CrossPlatformPackageNameOverride
+        {
+            public CrossPlatformPackageNameOverride(string fingerprint, string @from, string to)
+            {
+                Fingerprint = fingerprint;
+                RenameFrom = @from;
+                RenameTo = to;
+            }
+
+            public string Fingerprint { get; }
+            public string RenameFrom { get; }
+            public string RenameTo { get; }
         }
     }
 }
