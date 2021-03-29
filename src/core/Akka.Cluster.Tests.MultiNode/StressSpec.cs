@@ -74,6 +74,7 @@ namespace Akka.Cluster.Tests.MultiNode
       convergence-within-factor = 1.0
     }
     akka.actor.provider = cluster
+    
     akka.cluster {
       failure-detector.acceptable-heartbeat-pause = 3s
       downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
@@ -86,10 +87,29 @@ namespace Akka.Cluster.Tests.MultiNode
     akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
             akka.loglevel = INFO
             akka.remote.log-remote-lifecycle-events = off
-            akka.actor.default-dispatcher.fork-join-executor {
-                parallelism - min = 8
-                parallelism - max = 8
+            akka.actor.default-dispatcher = {
+                executor = channel-executor
+              fork-join-executor {
+                parallelism-min = 2
+                parallelism-factor = 1
+                parallelism-max = 64
+              }
             }
+            akka.actor.internal-dispatcher = {
+              executor = channel-executor
+              fork-join-executor {
+                parallelism-min = 2
+                parallelism-factor = 1
+                parallelism-max = 64
+              }
+            }
+akka.remote.default-remote-dispatcher {
+	  executor = channel-executor
+      fork-join-executor {
+        parallelism-min = 2
+        parallelism-factor = 0.5
+        parallelism-max = 16
+      }
             ");
 
             TestTransport = true;

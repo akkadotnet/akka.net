@@ -278,6 +278,10 @@ namespace Akka.Actor
 
         private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
         {
+            // allows the ThreadPool to scale up / down dynamically
+            // by removing minimum thread count, which in our benchmarks
+            // appears to negatively impact performance
+            ThreadPool.SetMinThreads(0, 0); 
             var system = new ActorSystemImpl(name, withFallback, setup, Option<Props>.None);
             system.Start();
             return system;
