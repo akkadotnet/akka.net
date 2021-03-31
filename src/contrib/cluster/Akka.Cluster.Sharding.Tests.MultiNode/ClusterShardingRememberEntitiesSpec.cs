@@ -8,11 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 
@@ -57,10 +59,11 @@ namespace Akka.Cluster.Sharding.Tests
                         plugin-dispatcher = ""akka.actor.default-dispatcher""
                         timeout = 5s
                     }}
+                    akka.cluster.sharding.remember-entities = on
                     akka.cluster.sharding.state-store-mode = ""{mode}""
                     akka.cluster.sharding.distributed-data.durable.lmdb {{
                       dir = ""target/ClusterShardingMinMembersSpec/sharding-ddata""
-                      map-size = 10000000
+                      map-size = 10 MiB
                     }}
                 "))
                 .WithFallback(Sharding.ClusterSharding.DefaultConfig())
@@ -95,7 +98,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class DDataClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
     {
         public DDataClusterShardingRememberEntitiesSpec() : this(new DDataClusterShardingRememberEntitiesSpecConfig()) { }
-        protected DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
+        protected DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(DDataClusterShardingRememberEntitiesSpec)) { }
     }
 
     public abstract class ClusterShardingRememberEntitiesSpec : MultiNodeClusterSpec
@@ -142,6 +145,8 @@ namespace Akka.Cluster.Sharding.Tests
         };
 
         private Lazy<IActorRef> _region;
+
+        static readonly string TypeName = "Entity";
 
         private readonly ClusterShardingRememberEntitiesSpecConfig _config;
         private readonly List<FileInfo> _storageLocations;
@@ -193,7 +198,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1);
             ClusterSharding.Get(sys).Start(
-                typeName: "Entity",
+                typeName: TypeName,
                 entityProps: Props.Create(() => new TestEntity(probe)),
                 settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
                 extractEntityId: extractEntityId,
@@ -205,9 +210,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_setup_shared_journal();
             Cluster_sharding_with_remember_entities_should_start_remembered_entities_when_coordinator_fail_over();
-
-            // https://github.com/akkadotnet/akka.net/issues/4262 - need to resolve this and then we can remove if statement
-            if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
+            Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
         }
 
         public void Cluster_sharding_with_remember_entities_should_setup_shared_journal()

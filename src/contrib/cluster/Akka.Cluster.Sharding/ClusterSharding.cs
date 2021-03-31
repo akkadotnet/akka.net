@@ -322,6 +322,9 @@ namespace Akka.Cluster.Sharding
         {
             if (settings.ShouldHostShard(_cluster))
             {
+                if (_regions.TryGetValue(typeName, out var @ref))
+                    return @ref;
+
                 var timeout = _system.Settings.CreationTimeout;
                 var startMsg = new ClusterShardingGuardian.Start(typeName, _ => entityProps, settings, extractEntityId, extractShardId, allocationStrategy, handOffStopMessage);
 

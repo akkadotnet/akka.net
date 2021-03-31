@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.DistributedData;
 using Akka.Pattern;
@@ -168,10 +169,29 @@ namespace Akka.Cluster.Sharding
                 try
                 {
                     var settings = start.Settings;
+                    var replicator = Replicator(settings);
+
+                    IRememberEntitiesProvider rememberEntitiesStoreProvider = null;
+                    if (settings.RememberEntities)
+                    {
+                        // with the deprecated persistence state store mode we always use the event sourced provider for shard regions
+                        // and no store for coordinator (the coordinator is a PersistentActor in that case)
+                        var rememberEntitiesProvider = settings.StateStoreMode == StateStoreMode.Persistence
+                            ? ClusterShardingSettings.RememberEntitiesStoreEventSourced
+                            : settings.RememberEntitiesStore;
+                        switch (rememberEntitiesProvider)
+                        {
+                            case ClusterShardingSettings.RememberEntitiesStoreDData:
+                                rememberEntitiesStoreProvider =
+                                    new DDataRememberEntitiesProvider(start.TypeName, settings, _majorityMinCap, replicator);
+                                break;
+                            // TODO: FILL IN THE REST
+                        }
+                    }
+
                     var encName = Uri.EscapeDataString(start.TypeName);
                     var coordinatorSingletonManagerName = CoordinatorSingletonManagerName(encName);
                     var coordinatorPath = CoordinatorPath(encName);
-                    var replicator = Replicator(settings);
 
                     var shardRegion = Context.Child(encName).GetOrElse(() =>
                     {
@@ -181,7 +201,7 @@ namespace Akka.Cluster.Sharding
                             var maxBackoff = new TimeSpan(minBackoff.Ticks * 5);
                             var coordinatorProps = settings.StateStoreMode == StateStoreMode.Persistence
                                 ? PersistentShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy)
-                                : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, settings.RememberEntities);
+                                : DDataShardCoordinator.Props(start.TypeName, settings, start.AllocationStrategy, replicator, _majorityMinCap, rememberEntitiesStoreProvider);
 
                             var singletonProps = BackoffSupervisor.Props(
                                 Backoff.OnStop(
@@ -205,8 +225,7 @@ namespace Akka.Cluster.Sharding
                             extractEntityId: start.ExtractEntityId,
                             extractShardId: start.ExtractShardId,
                             handOffStopMessage: start.HandOffStopMessage,
-                            replicator: replicator,
-                            majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName);
+                            rememberEntitiesStoreProvider).WithDispatcher(Context.Props.Dispatcher), encName);
                     });
 
                     Sender.Tell(new Started(shardRegion));
@@ -233,9 +252,7 @@ namespace Akka.Cluster.Sharding
                         settings: settings,
                         coordinatorPath: coordinatorPath,
                         extractEntityId: startProxy.ExtractEntityId,
-                        extractShardId: startProxy.ExtractShardId,
-                        replicator: Context.System.DeadLetters,
-                        majorityMinCap: _majorityMinCap).WithDispatcher(Context.Props.Dispatcher), encName));
+                        extractShardId: startProxy.ExtractShardId).WithDispatcher(Context.Props.Dispatcher), encName));
 
                     Sender.Tell(new Started(shardRegion));
                 }

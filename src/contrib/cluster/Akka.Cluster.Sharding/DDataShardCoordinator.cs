@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Runtime.ExceptionServices;
 using Akka.Actor;
+using Akka.Cluster.Sharding.Internal;
 using Akka.DistributedData;
 using Akka.Event;
 
@@ -16,8 +17,21 @@ namespace Akka.Cluster.Sharding
 {
     internal sealed class DDataShardCoordinator : ActorBase, IShardCoordinator, IWithUnboundedStash
     {
-        internal static Props Props(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities) =>
-            Actor.Props.Create(() => new DDataShardCoordinator(typeName, settings, allocationStrategy, replicator, majorityMinCap, rememberEntities)).WithDeploy(Deploy.Local);
+        internal static Props Props(
+            string typeName, 
+            ClusterShardingSettings settings, 
+            IShardAllocationStrategy allocationStrategy, 
+            IActorRef replicator, 
+            int majorityMinCap, 
+            IRememberEntitiesProvider rememberEntitiesStoreProvider) =>
+            Actor.Props.Create(() => 
+                new DDataShardCoordinator(
+                    typeName, 
+                    settings, 
+                    allocationStrategy, 
+                    replicator, 
+                    majorityMinCap, 
+                    rememberEntitiesStoreProvider)).WithDeploy(Deploy.Local);
 
         public PersistentShardCoordinator.State CurrentState { get; set; }
         public ClusterShardingSettings Settings { get; }
@@ -44,17 +58,21 @@ namespace Akka.Cluster.Sharding
         private readonly LWWRegisterKey<PersistentShardCoordinator.State> _coordinatorStateKey;
         private readonly GSetKey<string> _allShardsKey;
         private readonly IActorRef _replicator;
-        private readonly bool _rememberEntities;
 
         private bool _allRegionsRegistered = false;
         private ImmutableHashSet<IKey<IReplicatedData>> _allKeys;
         private IImmutableSet<string> _shards = ImmutableHashSet<string>.Empty;
         private bool _terminating = false;
 
-        public DDataShardCoordinator(string typeName, ClusterShardingSettings settings, IShardAllocationStrategy allocationStrategy, IActorRef replicator, int majorityMinCap, bool rememberEntities)
+        public DDataShardCoordinator(
+            string typeName, 
+            ClusterShardingSettings settings, 
+            IShardAllocationStrategy allocationStrategy, 
+            IActorRef replicator, 
+            int majorityMinCap, 
+            IRememberEntitiesProvider rememberEntitiesProvider)
         {
             _replicator = replicator;
-            _rememberEntities = rememberEntities;
             Settings = settings;
             AllocationStrategy = allocationStrategy;
             Log = Context.GetLogger();

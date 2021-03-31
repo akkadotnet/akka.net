@@ -112,7 +112,7 @@ namespace Akka.DistributedData
             .With<ReadRepairAck>(x =>
             {
                 var reply = envelope.Data is DeletedData
-                    ? (object)new DataDeleted(_key, null)
+                    ? (object)new GetDataDeleted(_key, _req)
                     : new GetSuccess(_key, _req, envelope.Data);
                 _replyTo.Tell(reply, Context.Parent);
                 Context.Stop(Self);

@@ -172,6 +172,10 @@ namespace Akka.Cluster.Sharding
         public const string StateStoreModePersistence = "Persistence";
         public const string StateStoreModeDData = "DData";
 
+        internal const string RememberEntitiesStoreCustom = "custom";
+        internal const string RememberEntitiesStoreDData = "ddata";
+        internal const string RememberEntitiesStoreEventSourced = "eventsourced";
+
         /// <summary>
         /// Specifies that this entity type requires cluster nodes with a specific role.
         /// If the role is not specified all nodes in the cluster are used.
@@ -197,6 +201,8 @@ namespace Akka.Cluster.Sharding
         /// to persistence used by the entity actors.
         /// </summary>
         public readonly string SnapshotPluginId;
+
+        public readonly string RememberEntitiesStore;
 
         /// <summary>
         /// Passivate entities that have not received any message in this interval.
@@ -295,6 +301,7 @@ namespace Akka.Cluster.Sharding
                 snapshotPluginId: config.GetString("snapshot-plugin-id"),
                 passivateIdleEntityAfter: passivateIdleAfter,
                 stateStoreMode: (StateStoreMode)Enum.Parse(typeof(StateStoreMode), config.GetString("state-store-mode"), ignoreCase: true),
+                rememberEntitiesStore: config.GetString("remember-entities-store"),
                 tuningParameters: tuningParameters,
                 coordinatorSingletonSettings: coordinatorSingletonSettings,
                 leaseSettings: lease);
@@ -311,6 +318,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="stateStoreMode">TBD</param>
         /// <param name="tuningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
+        [Obsolete]
         public ClusterShardingSettings(
             string role,
             bool rememberEntities,
@@ -336,6 +344,7 @@ namespace Akka.Cluster.Sharding
         /// <param name="tuningParameters">TBD</param>
         /// <param name="coordinatorSingletonSettings">TBD</param>
         /// <param name="leaseSettings">TBD</param>
+        [Obsolete]
         public ClusterShardingSettings(
             string role,
             bool rememberEntities,
@@ -343,6 +352,55 @@ namespace Akka.Cluster.Sharding
             string snapshotPluginId,
             TimeSpan passivateIdleEntityAfter,
             StateStoreMode stateStoreMode,
+            TuningParameters tuningParameters,
+            ClusterSingletonManagerSettings coordinatorSingletonSettings,
+            LeaseUsageSettings leaseSettings) : this(role, rememberEntities, journalPluginId, snapshotPluginId, passivateIdleEntityAfter, stateStoreMode, "ddata", tuningParameters, coordinatorSingletonSettings, leaseSettings)
+        { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="role">
+        /// specifies that this entity type requires cluster nodes with a specific role.
+        /// If the role is not specified all nodes in the cluster are used.
+        /// </param>
+        /// <param name="rememberEntities">
+        /// true if active entity actors shall be automatically restarted upon `Shard`
+        /// restart. i.e. if the `Shard` is started on a different `ShardRegion` due to rebalance or crash.
+        /// </param>
+        /// <param name="journalPluginId">
+        /// Absolute path to the journal plugin configuration entity that is to
+        /// be used for the internal persistence of ClusterSharding. If not defined the default
+        /// journal plugin is used. Note that this is not related to persistence used by the entity
+        /// actors.
+        /// </param>
+        /// <param name="snapshotPluginId">
+        /// Absolute path to the snapshot plugin configuration entity that is to
+        /// be used for the internal persistence of ClusterSharding. If not defined the default
+        /// snapshot plugin is used. Note that this is not related to persistence used by the entity
+        /// actors.
+        /// </param>
+        /// <param name="passivateIdleEntityAfter">
+        /// Passivate entities that have not received any message in this interval.
+        /// Note that only messages sent through sharding are counted, so direct messages
+        /// to the `ActorRef` of the actor or messages that it sends to itself are not counted as activity.
+        /// Use 0 to disable automatic passivation. It is always disabled if `rememberEntities` is enabled.
+        /// </param>
+        /// <param name="stateStoreMode">TBD</param>
+        /// <param name="rememberEntitiesStore">TBD</param>
+        /// <param name="tuningParameters">
+        /// additional tuning parameters, see descriptions in reference.conf
+        /// </param>
+        /// <param name="coordinatorSingletonSettings">TBD</param>
+        /// <param name="leaseSettings">TBD</param>
+        public ClusterShardingSettings(
+            string role,
+            bool rememberEntities,
+            string journalPluginId,
+            string snapshotPluginId,
+            TimeSpan passivateIdleEntityAfter,
+            StateStoreMode stateStoreMode,
+            string rememberEntitiesStore,
             TuningParameters tuningParameters,
             ClusterSingletonManagerSettings coordinatorSingletonSettings,
             LeaseUsageSettings leaseSettings)
@@ -353,6 +411,7 @@ namespace Akka.Cluster.Sharding
             SnapshotPluginId = snapshotPluginId;
             PassivateIdleEntityAfter = passivateIdleEntityAfter;
             StateStoreMode = stateStoreMode;
+            RememberEntitiesStore = rememberEntitiesStore;
             TuningParameters = tuningParameters;
             CoordinatorSingletonSettings = coordinatorSingletonSettings;
             LeaseSettings = leaseSettings;
@@ -365,7 +424,7 @@ namespace Akka.Cluster.Sharding
         /// <returns></returns>
         internal bool ShouldHostShard(Cluster cluster)
         {
-            return string.IsNullOrEmpty(Role) || cluster.SelfRoles.Contains(Role);
+            return string.IsNullOrEmpty(Role) || cluster.SelfMember.Roles.Contains(Role);
         }
 
         /// <summary>

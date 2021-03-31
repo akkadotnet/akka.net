@@ -317,6 +317,36 @@ namespace Akka.DistributedData
     }
 
     /// <summary>
+    /// The <see cref="Get"/> request couldn't be performed because the entry has been deleted.
+    /// </summary>
+    [Serializable]
+    public sealed class GetDataDeleted : IGetResponse, IEquatable<GetDataDeleted>
+    {
+        public GetDataDeleted(IKey key, object request)
+        {
+            Key = key;
+            Request = request;
+        }
+
+        public IKey Key { get; }
+        public object Request { get; }
+        public bool IsSuccessful { get; } = false;
+        public bool IsFound { get; } = false;
+        public bool IsFailure { get; } = true;
+
+        public T Get<T>(IKey<T> key) where T : IReplicatedData
+        {
+            throw new InvalidOperationException(
+                "The Get request couldn't be performed because the entry has been deleted.");
+        }
+
+        public bool Equals(GetDataDeleted other)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
     /// Register a subscriber that will be notified with a <see cref="Changed"/> message
     /// when the value of the given <see cref="Key"/> is changed. Current value is also
     /// sent as a <see cref="Changed"/> message to a new subscriber.
@@ -653,6 +683,55 @@ namespace Akka.DistributedData
             ExceptionDispatchInfo.Capture(Cause).Throw();
         }
     }
+
+    /// <summary>
+    /// The <see cref="Update"/> operation couldn't be performed because the entry has been deleted.
+    /// </summary>
+    [Serializable]
+    public sealed class UpdateDataDeleted : IUpdateResponse, IEquatable<UpdateDataDeleted>
+    {
+        public IKey Key { get; }
+        public object Request { get; }
+
+        public UpdateDataDeleted(IKey key, object request)
+        {
+            Key = key;
+            Request = request;
+        }
+
+        /// <inheritdoc/>
+        public bool Equals(UpdateDataDeleted other)
+        {
+            if (other == null) return false;
+            if (ReferenceEquals(this, other)) return true;
+
+            return Equals(Key, other.Key) && Equals(Request, other.Request);
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => obj is UpdateDataDeleted udd && Equals(udd);
+
+        /// <inheritdoc/>
+        public override string ToString() => $"UpdateDataDeleted({Key}{(Request == null ? "" : ", req=" + Request)})";
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Key.GetHashCode() * 397) ^ (Request?.GetHashCode() ?? 0);
+            }
+        }
+
+        public bool IsSuccessful => false;
+        public Exception Cause => new InvalidOperationException("The Update couldn't be performed because the entry has been deleted.");
+
+        public void ThrowOnFailure()
+        {
+            ExceptionDispatchInfo.Capture(Cause).Throw();
+        }
+    }
+
 
     /// <summary>
     /// If the `modify` function of the <see cref="Update"/> throws an exception the reply message

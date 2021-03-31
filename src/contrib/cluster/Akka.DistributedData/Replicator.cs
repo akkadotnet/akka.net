@@ -526,7 +526,7 @@ namespace Akka.DistributedData
             if (IsLocalGet(consistency))
             {
                 if (localValue == null) Sender.Tell(new NotFound(key, req));
-                else if (localValue.Data is DeletedData) Sender.Tell(new DataDeleted(key, req));
+                else if (localValue.Data is DeletedData) Sender.Tell(new GetDataDeleted(key, req));
                 else Sender.Tell(new GetSuccess(key, req, localValue.Data));
             }
             else
@@ -573,7 +573,7 @@ namespace Akka.DistributedData
                 else if (localValue.Data is DeletedData)
                 {
                     _log.Debug("Received update for deleted key {0}", key);
-                    Sender.Tell(new DataDeleted(key, request));
+                    Sender.Tell(new UpdateDataDeleted(key, request));
                     return;
                 }
                 else
