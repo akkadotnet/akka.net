@@ -1,8 +1,9 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("5cf8a8be-b634-473f-bb01-eba878746bd4")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
 namespace Akka.Cluster.Tools.Client
 {
     public sealed class ClusterClient : Akka.Actor.ActorBase
@@ -48,11 +49,6 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientReceptionistExtensionProvider() { }
         public override Akka.Cluster.Tools.Client.ClusterClientReceptionist CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
     }
-    public sealed class ClusterClients
-    {
-        public ClusterClients(System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> clusterClientsList) { }
-        public System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
-    }
     public sealed class ClusterClientSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public ClusterClientSettings(System.Collections.Immutable.IImmutableSet<Akka.Actor.ActorPath> initialContacts, System.TimeSpan establishingGetContactsInterval, System.TimeSpan refreshContactsInterval, System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, int bufferSize, System.Nullable<System.TimeSpan> reconnectTimeout = null) { }
@@ -82,6 +78,11 @@ namespace Akka.Cluster.Tools.Client
         public ClusterClientUp(Akka.Actor.IActorRef clusterClient) { }
         public Akka.Actor.IActorRef ClusterClient { get; }
     }
+    public sealed class ClusterClients
+    {
+        public ClusterClients(System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> clusterClientsList) { }
+        public System.Collections.Immutable.IImmutableSet<Akka.Actor.IActorRef> ClusterClientsList { get; }
+    }
     public sealed class ClusterReceptionist : Akka.Actor.ActorBase
     {
         public ClusterReceptionist(Akka.Actor.IActorRef pubSubMediator, Akka.Cluster.Tools.Client.ClusterReceptionistSettings settings) { }
@@ -103,9 +104,9 @@ namespace Akka.Cluster.Tools.Client
         public static Akka.Cluster.Tools.Client.ClusterReceptionistSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithHeartbeat(System.TimeSpan heartbeatInterval, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan failureDetectionInterval) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithNumberOfContacts(int numberOfContacts) { }
-        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithoutRole() { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithResponseTunnelReceiveTimeout(System.TimeSpan responseTunnelReceiveTimeout) { }
         public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithRole(string role) { }
+        public Akka.Cluster.Tools.Client.ClusterReceptionistSettings WithoutRole() { }
     }
     public sealed class ContactPointAdded : Akka.Cluster.Tools.Client.IContactPointChange
     {
@@ -197,19 +198,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     {
         public DistributedPubSubMediator(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
         public Akka.Event.ILoggingAdapter Log { get; }
-        public System.Collections.Generic.IDictionary<Akka.Actor.Address, long> OwnVersions { get; }
+        public System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, long> OwnVersions { get; }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
     }
     public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        [System.ObsoleteAttribute("Obsolete - please us the full constructor instead. This constructor only exists f" +
+            "or backwards API compatibility.")]
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
         public System.TimeSpan GossipInterval { get; }
         public int MaxDeltaElements { get; }
         public System.TimeSpan RemovedTimeToLive { get; }
         public string Role { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
+        public bool SendToDeadLettersWhenNoSubscribers { get; }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
@@ -217,6 +222,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRemovedTimeToLive(System.TimeSpan removedTtl) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRoutingLogic(Akka.Routing.RoutingLogic routingLogic) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithSendToDeadLettersWhenNoSubscribers(bool sendToDeadLetterWhenNoSubscribers) { }
     }
     public sealed class GetTopics
     {
@@ -339,18 +345,20 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonManagerIsStuckException : Akka.Actor.AkkaException
     {
         public ClusterSingletonManagerIsStuckException(string message) { }
-        public ClusterSingletonManagerIsStuckException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class ClusterSingletonManagerSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
         public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval) { }
+        public ClusterSingletonManagerSettings(string singletonName, string role, System.TimeSpan removalMargin, System.TimeSpan handOverRetryInterval, Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public System.TimeSpan HandOverRetryInterval { get; }
+        public Akka.Coordination.LeaseUsageSettings LeaseSettings { get; }
         public System.TimeSpan RemovalMargin { get; }
         public string Role { get; }
         public string SingletonName { get; }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithHandOverRetryInterval(System.TimeSpan handOverRetryInterval) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithLeaseSettings(Akka.Coordination.LeaseUsageSettings leaseSettings) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRemovalMargin(System.TimeSpan removalMargin) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithRole(string role) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonManagerSettings WithSingletonName(string singletonName) { }
@@ -374,20 +382,23 @@ namespace Akka.Cluster.Tools.Singleton
         public static Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithBufferSize(int bufferSize) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithRole(string role) { }
+        [System.ObsoleteAttribute("For compatibility reasons only. Use method with TimeSpan parameter instead")]
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(string singletonIdentificationInterval) { }
+        public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonIdentificationInterval(System.TimeSpan singletonIdentificationInterval) { }
         public Akka.Cluster.Tools.Singleton.ClusterSingletonProxySettings WithSingletonName(string singletonName) { }
     }
     public enum ClusterSingletonState
     {
         Start = 0,
-        Oldest = 1,
-        Younger = 2,
-        BecomingOldest = 3,
-        WasOldest = 4,
-        HandingOver = 5,
-        TakeOver = 6,
-        Stopping = 7,
-        End = 8,
+        AcquiringLease = 1,
+        Oldest = 2,
+        Younger = 3,
+        BecomingOldest = 4,
+        WasOldest = 5,
+        HandingOver = 6,
+        TakeOver = 7,
+        Stopping = 8,
+        End = 9,
     }
     public interface IClusterSingletonData { }
     public interface IClusterSingletonMessage { }

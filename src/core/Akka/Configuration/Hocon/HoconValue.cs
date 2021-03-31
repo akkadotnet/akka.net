@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconValue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -72,6 +72,11 @@ namespace Akka.Configuration.Hocon
         /// serving exclusively to skip rendering such values in <see cref="HoconObject.ToString()"/>
         /// </summary>
         internal bool AdoptedFromFallback { get; private set; }
+
+        public Config ToConfig()
+        {
+            return new Config(new HoconRoot(this, Enumerable.Empty<HoconSubstitution>()));
+        }
 
         /// <summary>
         /// Wraps this <see cref="HoconValue"/> into a new <see cref="Config"/> object at the specified key.
@@ -169,7 +174,7 @@ namespace Akka.Configuration.Hocon
         /// <returns>The element at the given key.</returns>
         public HoconValue GetChildObject(string key)
         {
-            return GetObject().GetKey(key);
+            return GetObject()?.GetKey(key);
         }
 
         /// <summary>
@@ -343,9 +348,9 @@ namespace Akka.Configuration.Hocon
         /// <returns>A list of values represented by this <see cref="HoconValue"/>.</returns>
         public IList<HoconValue> GetArray()
         {
-            IEnumerable<HoconValue> x = from arr in Values
-                where arr.IsArray()
-                from e in arr.GetArray()
+            IEnumerable<HoconValue> x = from element in Values
+                where element.IsArray()
+                from e in element.GetArray()
                 select e;
 
             return x.ToList();
@@ -359,7 +364,7 @@ namespace Akka.Configuration.Hocon
         /// </returns>
         public bool IsArray()
         {
-            return GetArray() != null;
+            return GetArray().Count != 0;
         }
 
         /// <summary>

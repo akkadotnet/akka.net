@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemberOrderingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Util;
 using Akka.Util.Internal.Collections;
 using FluentAssertions;
 using Xunit;
@@ -20,7 +21,7 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void MemberOrdering_must_order_members_by_host_and_port()
         {
-            var members = new SortedSet<Member>       
+            var members = new SortedSet<Member>
             {
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1112"), MemberStatus.Up),
                 TestMember.Create(Address.Parse("akka://sys@darkstar:1113"), MemberStatus.Joining),
@@ -55,7 +56,7 @@ namespace Akka.Cluster.Tests
         {
             var address = new Address("akka.tcp", "sys1", "host1", 9000);
             var m1 = TestMember.Create(address, MemberStatus.Joining);
-            var m11 = Member.Create(new UniqueAddress(address, -3), ImmutableHashSet<string>.Empty);
+            var m11 = Member.Create(new UniqueAddress(address, -3), ImmutableHashSet<string>.Empty, AppVersion.Zero);
             var m2 = m1.Copy(status: MemberStatus.Up);
             var m22 = m11.Copy(status: MemberStatus.Up);
             var m3 = TestMember.Create(address.WithPort(10000), MemberStatus.Up);
@@ -88,7 +89,7 @@ namespace Akka.Cluster.Tests
 
             //different uid
             var a = TestMember.Create(address1, MemberStatus.Joining);
-            var b = Member.Create(new UniqueAddress(address1, -3), ImmutableHashSet<string>.Empty);
+            var b = Member.Create(new UniqueAddress(address1, -3), ImmutableHashSet<string>.Empty, AppVersion.Zero);
             Member.Ordering.Compare(a, b).Should().Be(1);
             Member.Ordering.Compare(b, a).Should().Be(-1);
         }

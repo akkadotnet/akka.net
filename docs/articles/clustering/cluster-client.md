@@ -107,11 +107,11 @@ akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtension
 ## Events
 As mentioned earlier, both the `ClusterClient` and `ClusterClientReceptionist` emit events that can be subscribed to. The following code snippet declares an actor that will receive notifications on contact points (addresses to the available receptionists), as they become available. The code illustrates subscribing to the events and receiving the `ClusterClient` initial state.
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/ClusterClient/ClientListener.cs?range=7-47)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/ClusterClient/ClientListener.cs?name=ClusterClient)]
 
 Similarly we can have an actor that behaves in a similar fashion for learning what cluster clients contact a `ClusterClientReceptionist`:
 
-[!code-csharp[Main](../../examples/DocsExamples/Networking/ClusterClient/ReceptionistListener.cs?range=7-47)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/ClusterClient/ReceptionistListener.cs?name=ReceptionistListener)]
 
 ## Configuration
 The `ClusterClientReceptionist` extension (or `ClusterReceptionistSettings`) can be configured with the following properties:

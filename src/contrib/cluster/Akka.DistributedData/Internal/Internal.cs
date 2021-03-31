@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Internal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,13 +36,13 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     [Serializable]
     internal sealed class DeltaPropagationTick
     {
         /// <summary>
-        /// TBD
+        /// Singleton instance
         /// </summary>
         public static DeltaPropagationTick Instance { get; } = new DeltaPropagationTick();
 
@@ -99,16 +99,22 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public DataEnvelope Envelope { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public UniqueAddress FromNode { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="key">TBD</param>
         /// <param name="envelope">TBD</param>
-        public Write(string key, DataEnvelope envelope)
+        /// <param name="fromNode">TBD</param>
+        public Write(string key, DataEnvelope envelope, UniqueAddress fromNode = null)
         {
             Key = key;
             Envelope = envelope;
+            FromNode = fromNode;
         }
 
         /// <inheritdoc/>
@@ -117,7 +123,7 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Key == other.Key && Equals(Envelope, other.Envelope);
+            return Key == other.Key && Equals(Envelope, other.Envelope) && Equals(FromNode, other.FromNode);
         }
 
         /// <inheritdoc/>
@@ -209,10 +215,17 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
+        public UniqueAddress FromNode { get; }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="key">TBD</param>
-        public Read(string key)
+        /// <param name="fromNode">TBD</param>
+        public Read(string key, UniqueAddress fromNode = null)
         {
             Key = key;
+            FromNode = fromNode;
         }
 
         /// <inheritdoc/>
@@ -374,13 +387,13 @@ namespace Akka.DistributedData.Internal
         }
 
         internal DataEnvelope WithData(IReplicatedData data) =>
-            new DataEnvelope(data, this.Pruning, this.DeltaVersions);
+            new DataEnvelope(data, Pruning, DeltaVersions);
 
         internal DataEnvelope WithPruning(ImmutableDictionary<UniqueAddress, IPruningState> pruning) =>
-            new DataEnvelope(this.Data, pruning, this.DeltaVersions);
+            new DataEnvelope(Data, pruning, DeltaVersions);
 
         internal DataEnvelope WithDeltaVersions(VersionVector deltaVersions) =>
-            new DataEnvelope(this.Data, this.Pruning, deltaVersions);
+            new DataEnvelope(Data, Pruning, deltaVersions);
 
         internal DataEnvelope WithoutDeltaVersions() =>
             DeltaVersions.IsEmpty
@@ -402,8 +415,7 @@ namespace Akka.DistributedData.Internal
         /// <returns>TBD</returns>
         internal bool NeedPruningFrom(UniqueAddress removedNode)
         {
-            var r = Data as IRemovedNodePruning;
-            return r != null && r.NeedPruningFrom(removedNode);
+            return Data is IRemovedNodePruning r && r.NeedPruningFrom(removedNode);
         }
 
         /// <summary>
@@ -413,7 +425,7 @@ namespace Akka.DistributedData.Internal
         /// <param name="owner">TBD</param>
         /// <returns>TBD</returns>
         internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
-            new DataEnvelope(Data, Pruning.Add(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
+            new DataEnvelope(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
 
         /// <summary>
         /// TBD
@@ -424,15 +436,12 @@ namespace Akka.DistributedData.Internal
         /// <returns>TBD</returns>
         internal DataEnvelope Prune(UniqueAddress from, PruningPerformed pruningPerformed)
         {
-            var dataWithRemovedNodePruning = Data as IRemovedNodePruning;
-            if (dataWithRemovedNodePruning != null)
+            if (Data is IRemovedNodePruning dataWithRemovedNodePruning)
             {
-                IPruningState state;
-                if (!Pruning.TryGetValue(from, out state))
+                if (!Pruning.TryGetValue(from, out var state))
                     throw new ArgumentException($"Can't prune {@from} since it's not found in DataEnvelope");
 
-                var initialized = state as PruningInitialized;
-                if (initialized != null)
+                if (state is PruningInitialized initialized)
                 {
                     var prunedData = dataWithRemovedNodePruning.Prune(from, initialized.Owner);
                     return new DataEnvelope(data: prunedData, pruning: Pruning.SetItem(from, pruningPerformed), deltaVersions: CleanedDeltaVersions(from));
@@ -449,42 +458,39 @@ namespace Akka.DistributedData.Internal
         internal DataEnvelope Merge(DataEnvelope other)
         {
             if (other.Data is DeletedData) return DeletedEnvelope;
-            else
+
+            var mergedPrunning = other.Pruning.ToBuilder();
+            foreach (var entry in this.Pruning)
             {
-                var mergedPrunning = other.Pruning.ToBuilder();
-                foreach (var entry in this.Pruning)
-                {
-                    IPruningState state;
-                    if (mergedPrunning.TryGetValue(entry.Key, out state))
-                        mergedPrunning[entry.Key] = entry.Value.Merge(state);
-                    else
-                        mergedPrunning[entry.Key] = entry.Value;
-                }
-
-                var currentTime = DateTime.UtcNow;
-                var filteredMergedPruning = mergedPrunning.Count == 0
-                    ? mergedPrunning.ToImmutable()
-                    : mergedPrunning
-                        .Where(entry =>
-                        {
-                            var performed = entry.Value as PruningPerformed;
-                            return !performed?.IsObsolete(currentTime) ?? true;
-                        })
-                        .ToImmutableDictionary();
-
-                // cleanup and merge DeltaVersions
-                var removedNodes = filteredMergedPruning.Keys.ToArray();
-                var cleanedDeltaVersions = removedNodes.Aggregate(DeltaVersions, (acc, node) => acc.PruningCleanup(node));
-                var cleanedOtherDeltaVersions = removedNodes.Aggregate(other.DeltaVersions, (acc, node) => acc.PruningCleanup(node));
-                var mergedDeltaVersions = cleanedDeltaVersions.Merge(cleanedOtherDeltaVersions);
-
-                // cleanup both sides before merging, `merge(otherData: ReplicatedData)` will cleanup other.data
-                return new DataEnvelope(
-                        data: Cleaned(Data, filteredMergedPruning),
-                        pruning: filteredMergedPruning,
-                        deltaVersions: mergedDeltaVersions)
-                    .Merge(other.Data);
+                if (mergedPrunning.TryGetValue(entry.Key, out var state))
+                    mergedPrunning[entry.Key] = entry.Value.Merge(state);
+                else
+                    mergedPrunning[entry.Key] = entry.Value;
             }
+
+            var currentTime = DateTime.UtcNow;
+            var filteredMergedPruning = mergedPrunning.Count == 0
+                ? mergedPrunning.ToImmutable()
+                : mergedPrunning
+                    .Where(entry =>
+                    {
+                        var performed = entry.Value as PruningPerformed;
+                        return !performed?.IsObsolete(currentTime) ?? true;
+                    })
+                    .ToImmutableDictionary();
+
+            // cleanup and merge DeltaVersions
+            var removedNodes = filteredMergedPruning.Keys.ToArray();
+            var cleanedDeltaVersions = removedNodes.Aggregate(DeltaVersions, (acc, node) => acc.PruningCleanup(node));
+            var cleanedOtherDeltaVersions = removedNodes.Aggregate(other.DeltaVersions, (acc, node) => acc.PruningCleanup(node));
+            var mergedDeltaVersions = cleanedDeltaVersions.Merge(cleanedOtherDeltaVersions);
+
+            // cleanup both sides before merging, `merge(otherData: ReplicatedData)` will cleanup other.data
+            return new DataEnvelope(
+                    data: Cleaned(Data, filteredMergedPruning),
+                    pruning: filteredMergedPruning,
+                    deltaVersions: mergedDeltaVersions)
+                .Merge(other.Data);
         }
 
         /// <summary>
@@ -511,8 +517,7 @@ namespace Akka.DistributedData.Internal
 
         private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, IPruningState> p) => p.Aggregate(c, (state, kvp) =>
         {
-            var pruning = c as IRemovedNodePruning;
-            if (pruning != null
+            if (c is IRemovedNodePruning pruning
                 && kvp.Value is PruningPerformed
                 && pruning.NeedPruningFrom(kvp.Key))
                 return pruning.PruningCleanup(kvp.Key);
@@ -547,12 +552,21 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            if (!Equals(Data, other.Data)) return false;
+            if (!Data.Equals(other.Data)) return false;
             if (Pruning.Count != other.Pruning.Count) return false;
+            if (!DeltaVersions.Equals(other.DeltaVersions)) return false;
 
             foreach (var entry in Pruning)
             {
-                if (!Equals(entry.Value, other.Pruning[entry.Key])) return false;
+                //"it's possible that one node that begins pruning may"
+                //"have different data than another node that hasn't started"
+                if (other.Pruning.TryGetValue(entry.Key, out var state))
+                {
+                    if (!Equals(entry.Value, state))
+                        return false;
+                }
+                else
+                    return false;
             }
 
             return true;
@@ -563,7 +577,7 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <param name="obj">TBD</param>
         /// <returns>TBD</returns>
-        public override bool Equals(object obj) => obj is DataEnvelope && Equals((DataEnvelope)obj);
+        public override bool Equals(object obj) => obj is DataEnvelope envelope && Equals(envelope);
 
         /// <summary>
         /// TBD
@@ -573,7 +587,15 @@ namespace Akka.DistributedData.Internal
         {
             unchecked
             {
-                return ((Data != null ? Data.GetHashCode() : 0) * 397) ^ (Pruning != null ? Pruning.GetHashCode() : 0);
+                var seed =  ((Data != null ? Data.GetHashCode() : 0) * 397)
+                            ^ (DeltaVersions != null ? DeltaVersions.GetHashCode() : 0);
+
+                foreach (var p in Pruning)
+                {
+                    seed *= p.Key.GetHashCode() ^ p.Value.GetHashCode();
+                }
+
+                return seed;
             }
         }
 
@@ -596,30 +618,21 @@ namespace Akka.DistributedData.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Placeholder used to represent deleted data that has not yet been pruned or is permanently tombstoned.
     /// </summary>
-    /// <returns>TBD</returns>
     [Serializable]
-    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>
+    internal sealed class DeletedData : IReplicatedData<DeletedData>, IEquatable<DeletedData>, IReplicatedDataSerialization
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
         public static readonly DeletedData Instance = new DeletedData();
 
         private DeletedData() { }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IReplicatedData{T}"/>
         public DeletedData Merge(DeletedData other) => this;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="IReplicatedData{T}"/>
         public IReplicatedData Merge(IReplicatedData other) => Merge((DeletedData)other);
         /// <inheritdoc/>
         public bool Equals(DeletedData other) => true;
@@ -652,6 +665,14 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public int TotalChunks { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? ToSystemUid { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? FromSystemUid { get; }
 
         /// <summary>
         /// TBD
@@ -659,11 +680,15 @@ namespace Akka.DistributedData.Internal
         /// <param name="digests">TBD</param>
         /// <param name="chunk">TBD</param>
         /// <param name="totalChunks">TBD</param>
-        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks)
+        /// <param name="toSystemUid">TBD</param>
+        /// <param name="fromSystemUid">TBD</param>
+        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks, long? toSystemUid = null, long? fromSystemUid = null)
         {
             Digests = digests;
             Chunk = chunk;
             TotalChunks = totalChunks;
+            ToSystemUid = toSystemUid;
+            FromSystemUid = fromSystemUid;
         }
 
         /// <inheritdoc/>
@@ -672,7 +697,11 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.Chunk.Equals(Chunk) && other.TotalChunks.Equals(TotalChunks) && Digests.SequenceEqual(other.Digests);
+            return other.Chunk.Equals(Chunk) 
+                && other.TotalChunks.Equals(TotalChunks) 
+                && Digests.SequenceEqual(other.Digests)
+                && ToSystemUid.Equals(other.ToSystemUid)
+                && FromSystemUid.Equals(other.FromSystemUid);
         }
 
         /// <inheritdoc/>
@@ -719,16 +748,28 @@ namespace Akka.DistributedData.Internal
         /// TBD
         /// </summary>
         public bool SendBack { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? ToSystemUid { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public long? FromSystemUid { get; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="updatedData">TBD</param>
         /// <param name="sendBack">TBD</param>
-        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
+        /// <param name="toSystemUid">TBD</param>
+        /// <param name="fromSystemUid">TBD</param>
+        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? toSystemUid = null, long? fromSystemUid = null)
         {
             UpdatedData = updatedData;
             SendBack = sendBack;
+            ToSystemUid = toSystemUid;
+            FromSystemUid = fromSystemUid;
         }
 
         /// <inheritdoc/>
@@ -737,7 +778,10 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.SendBack.Equals(SendBack) && UpdatedData.SequenceEqual(other.UpdatedData);
+            return other.SendBack.Equals(SendBack) 
+                && UpdatedData.SequenceEqual(other.UpdatedData)
+                && ToSystemUid.Equals(other.ToSystemUid)
+                && FromSystemUid.Equals(other.FromSystemUid);
         }
 
         /// <inheritdoc/>

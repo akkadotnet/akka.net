@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PublisherSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                                 var broadcast = b.Add(new Broadcast<int>(2));
                                 var source =
                                     Source.From(Enumerable.Range(0, 6))
-                                        .MapMaterializedValue<Tuple<IPublisher<int>, IPublisher<int>>>(_ => null);
+                                        .MapMaterializedValue(_ => default((IPublisher<int>, IPublisher<int>)));
                                 b.From(source).To(broadcast.In);
                                 b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(i => i * 2)).To(p1.Inlet);
                                 b.From(broadcast.Out(1)).To(p2.Inlet);
@@ -73,7 +73,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var task = Source.FromPublisher(pub).Limit(1000).RunWith(Sink.Seq<int>(), Materializer);
             task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 100));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 100));
 
         }
 

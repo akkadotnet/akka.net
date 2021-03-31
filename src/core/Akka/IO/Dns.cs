@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Dns.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -206,10 +206,13 @@ namespace Akka.IO
             /// <param name="config">TBD</param>
             public DnsSettings(Config config)
             {
-                Dispatcher = config.GetString("dispatcher");
-                Resolver = config.GetString("resolver");
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<DnsSettings>();
+
+                Dispatcher = config.GetString("dispatcher", null);
+                Resolver = config.GetString("resolver", null);
                 ResolverConfig = config.GetConfig(Resolver);
-                ProviderObjectName = ResolverConfig.GetString("provider-object");
+                ProviderObjectName = ResolverConfig.GetString("provider-object", null);
             }
 
             /// <summary>
@@ -240,7 +243,12 @@ namespace Akka.IO
         public DnsExt(ExtendedActorSystem system)
         {
             _system = system;
-            Settings = new DnsSettings(system.Settings.Config.GetConfig("akka.io.dns"));
+
+            var config = system.Settings.Config.GetConfig("akka.io.dns");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DnsSettings>("akka.io.dns");
+
+            Settings = new DnsSettings(config);
             //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
             Provider = (IDnsProvider) Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName));
             Cache = Provider.Cache;

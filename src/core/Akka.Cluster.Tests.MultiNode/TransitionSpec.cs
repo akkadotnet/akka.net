@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             // sorts the addresses and provides the address of the node with the lowest port number
             // as that node will be the leader
-            return roles.Select(x => Tuple.Create(x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
+            return roles.Select(x => (x, GetAddress(x).Port)).OrderBy(x => x.Item2).First().Item1;
         }
 
         private RoleName[] NonLeader(params RoleName[] roles)
@@ -91,7 +91,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private ImmutableHashSet<RoleName> SeenLatestGossip()
         {
-            return ClusterView.SeenBy.Select(RoleName).ToImmutableHashSet();
+            return ClusterView.State.SeenBy.Select(RoleName).ToImmutableHashSet();
         }
 
         private void AwaitSeen(params Address[] addresses)
@@ -332,12 +332,23 @@ namespace Akka.Cluster.Tests.MultiNode
             }, _config.First);
 
             EnterBarrier("after-second-down");
+
+            RunOn(() =>
+            {
+                // first should have sent immediate gossip to second when it downed second
+                // and second should then shutdown
+                AwaitAssert(() => Cluster.IsTerminated.Should().BeTrue());
+            }, _config.Second);
+
+            EnterBarrier("second-received-down");
+
             GossipTo(_config.First, _config.Third);
             RunOn(() =>
             {
                 AwaitAssert(() => ClusterView.UnreachableMembers.Select(c => c.Address).Should().Contain(GetAddress(_config.Second)));
                 AwaitMemberStatus(GetAddress(_config.Second), Akka.Cluster.MemberStatus.Down);
-                AwaitAssert(() => SeenLatestGossip().Should().BeEquivalentTo(ImmutableHashSet.Create(_config.First, _config.Third)));
+                // second will also gossip when it shuts down, so it has seen it
+                AwaitAssert(() => SeenLatestGossip().Should().BeEquivalentTo(ImmutableHashSet.Create(_config.First, _config.Second, _config.Third)));
             }, _config.First, _config.Third);
 
             EnterBarrier("after-4");

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,9 +16,10 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
+using Akka.Actor.Setup;
 using Akka.Serialization;
 using Akka.Util;
-
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor.Internal
 {
@@ -28,7 +29,7 @@ namespace Akka.Actor.Internal
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
@@ -53,7 +54,11 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         public ActorSystemImpl(string name)
-            : this(name, ConfigurationFactory.Load())
+            : this(
+                name,
+                ConfigurationFactory.Default(),
+                ActorSystemSetup.Empty,
+                Option<Props>.None)
         {
         }
 
@@ -62,21 +67,31 @@ namespace Akka.Actor.Internal
         /// </summary>
         /// <param name="name">The name given to the actor system.</param>
         /// <param name="config">The configuration used to configure the actor system.</param>
+        /// <param name="setup">The <see cref="ActorSystemSetup"/> used to help programmatically bootstrap the actor system.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="name"/> is an invalid name for an actor system.
         ///  Note that the name must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-').
         /// </exception>
         /// <exception cref="ArgumentNullException">This exception is thrown if the given <paramref name="config"/> is undefined.</exception>
-        public ActorSystemImpl(string name, Config config)
+        public ActorSystemImpl(
+            string name,
+            Config config,
+            ActorSystemSetup setup,
+            Option<Props>? guardianProps = null)
         {
             if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
                     $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')", nameof(name));
-            if(config == null)
-                throw new ArgumentNullException(nameof(config), "Configuration must not be null.");
 
-            _name = name;            
-            ConfigureSettings(config);
+            // Not checking for empty Config here, default values will be substituted in Settings class constructor (called in ConfigureSettings)
+            if(config is null)
+                throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
+
+            _name = name;
+
+            GuardianProps = guardianProps ?? Option<Props>.None;
+
+            ConfigureSettings(config, setup);
             ConfigureEventStream();
             ConfigureLoggers();
             ConfigureScheduler();
@@ -107,6 +122,9 @@ namespace Akka.Actor.Internal
         public override IActorRef DeadLetters { get { return Provider.DeadLetters; } }
 
         /// <inheritdoc cref="ActorSystem"/>
+        public override IActorRef IgnoreRef { get { return Provider.IgnoreRef; } }
+
+        /// <inheritdoc cref="ActorSystem"/>
         public override Dispatchers Dispatchers { get { return _dispatchers; } }
 
         /// <inheritdoc cref="ActorSystem"/>
@@ -129,6 +147,8 @@ namespace Akka.Actor.Internal
 
         /// <inheritdoc cref="ActorSystem"/>
         public override IInternalActorRef SystemGuardian { get { return _provider.SystemGuardian; } }
+
+        public Option<Props> GuardianProps { get; }
 
         /// <summary>
         /// Creates a new system actor that lives under the "/system" guardian.
@@ -173,7 +193,7 @@ namespace Akka.Actor.Internal
 
         /// <summary>
         /// Shuts down the <see cref="ActorSystem"/> without all of the usual guarantees,
-        /// i.e. we may not guarantee that remotely deployed actors are properly shut down 
+        /// i.e. we may not guarantee that remotely deployed actors are properly shut down
         /// when we abort.
         /// </summary>
         public override void Abort()
@@ -187,6 +207,9 @@ namespace Akka.Actor.Internal
         {
             try
             {
+                // Force TermInfoDriver to initialize in order to protect us from the issue seen in #2432
+                typeof(Console).GetProperty("BackgroundColor").GetValue(null); // HACK: Only needed for MONO
+
                 RegisterOnTermination(StopScheduler);
                 _provider.Init(this);
                 LoadExtensions();
@@ -224,7 +247,7 @@ namespace Akka.Actor.Internal
         private void WarnIfJsonIsDefaultSerializer()
         {
             const string configPath = "akka.suppress-json-serializer-warning";
-            var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath);
+            var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath, false);
 
             if (showSerializerWarning &&
                 Serialization.FindSerializerForType(typeof (object)) is NewtonSoftJsonSerializer)
@@ -239,7 +262,9 @@ namespace Akka.Actor.Internal
         /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
-            return _provider.Guardian.Cell.AttachChild(props, false, name);
+            if(GuardianProps.IsEmpty)
+                return _provider.Guardian.Cell.AttachChild(props, false, name);
+            throw new InvalidOperationException($"cannot create top-level actor { (string.IsNullOrEmpty(name) ? "" : $"[{name} ]")}from the outside on ActorSystem with custom user guardian");
         }
 
         /// <inheritdoc/>
@@ -269,7 +294,7 @@ namespace Akka.Actor.Internal
         private void LoadExtensions()
         {
             var extensions = new List<IExtensionId>();
-            foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions"))
+            foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {
                 var extensionType = Type.GetType(extensionFqn);
                 if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
@@ -322,8 +347,7 @@ namespace Akka.Actor.Internal
         /// <returns>The specified extension registered to this actor system</returns>
         public override object GetExtension(IExtensionId extensionId)
         {
-            object extension;
-            TryGetExtension(extensionId.ExtensionType, out extension);
+            TryGetExtension(extensionId.ExtensionType, out var extension);
             return extension;
         }
 
@@ -360,8 +384,7 @@ namespace Akka.Actor.Internal
         /// <returns>The specified extension registered to this actor system</returns>
         public override T GetExtension<T>()
         {
-            T extension;
-            TryGetExtension(out extension);
+            TryGetExtension(out T extension);
             return extension;
         }
 
@@ -389,9 +412,10 @@ namespace Akka.Actor.Internal
             return _extensions.ContainsKey(typeof(T));
         }
 
-        private void ConfigureSettings(Config config)
+        private void ConfigureSettings(Config config, ActorSystemSetup setup)
         {
-            _settings = new Settings(this, config);
+            // TODO: on this line, in scala, the config is validated with `Dispatchers.InternalDispatcherId` path removed.
+            _settings = new Settings(this, config, setup);
         }
 
         private void ConfigureEventStream()
@@ -443,7 +467,14 @@ namespace Akka.Actor.Internal
 
         private void ConfigureDispatchers()
         {
-            _dispatchers = new Dispatchers(this, new DefaultDispatcherPrerequisites(EventStream, Scheduler, Settings, Mailboxes));
+            _dispatchers = new Dispatchers(
+                this,
+                new DefaultDispatcherPrerequisites(
+                    EventStream,
+                    Scheduler,
+                    Settings,
+                    Mailboxes),
+                _log);
         }
 
         private void ConfigureActorProducerPipeline()
@@ -492,9 +523,22 @@ namespace Akka.Actor.Internal
         /// </returns>
         public override Task Terminate()
         {
-            Log.Debug("System shutdown initiated");
-            _provider.Guardian.Stop();
+            if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
+            {
+                CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+            } else
+            {
+                FinalTerminate();
+            }
             return WhenTerminated;
+        }
+
+        internal override void FinalTerminate()
+        {
+            Log.Debug("System shutdown initiated");
+            if (!Settings.LogDeadLettersDuringShutdown && _logDeadLetterListener != null)
+                Stop(_logDeadLetterListener);
+            _provider.Guardian.Stop();
         }
 
         /// <summary>
@@ -520,12 +564,17 @@ namespace Akka.Actor.Internal
             else
                 ((IInternalActorRef)actor).Stop();
         }
+
+        public override string ToString()
+        {
+            return LookupRoot.Path.Root.Address.ToString();
+        }
     }
 
     /// <summary>
     /// This class represents a callback used to run a task when the actor system is terminating.
     /// </summary>
-    class TerminationCallbacks
+    internal class TerminationCallbacks
     {
         private Task _terminationTask;
         private readonly AtomicReference<Task> _atomicRef;

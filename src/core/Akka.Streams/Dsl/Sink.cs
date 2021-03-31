@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sink.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Dispatch.MessageQueues;
 using Akka.Pattern;
 using Akka.Streams.Implementation;
@@ -89,10 +90,10 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">The materializer.</param>
         /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Sink"/>
         ///  that can be used to consume elements from the newly materialized <see cref="Sink"/>.</returns>
-        public Tuple<TMat, Sink<TIn, NotUsed>> PreMaterialize(IMaterializer materializer)
+        public (TMat, Sink<TIn, NotUsed>) PreMaterialize(IMaterializer materializer)
         {
             var sub = Source.AsSubscriber<TIn>().ToMaterialized(this, Keep.Both).Run(materializer);
-            return Tuple.Create(sub.Item2, Sink.FromSubscriber(sub.Item1));
+            return (sub.Item2, Sink.FromSubscriber(sub.Item1));
         }
 
         /// <summary>
@@ -282,7 +283,11 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TIn">TBD</typeparam>
         /// <returns>TBD</returns>
         public static Sink<TIn, IPublisher<TIn>> FanoutPublisher<TIn>()
-            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
+            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink")));
+
+        [InternalApi]
+        public static Sink<TIn, IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(Action onTerminated = null)
+            => new Sink<TIn, IPublisher<TIn>>(new FanoutPublisherSink<TIn, DistinctRetainingMultiReaderBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("DistinctRetainingFanOutPublisherSink"), onTerminated));
 
         /// <summary>
         /// A <see cref="Sink{TIn,TMat}"/> that will consume the stream and discard the elements.
@@ -592,7 +597,7 @@ namespace Akka.Streams.Dsl
         {
             SinkModule<TIn, IPublisher<TIn>> publisherSink;
             if (fanout)
-                publisherSink = new FanoutPublisherSink<TIn>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink"));
+                publisherSink = new FanoutPublisherSink<TIn, ResizableMultiReaderRingBuffer<TIn>>(DefaultAttributes.FanoutPublisherSink, Shape<TIn>("FanoutPublisherSink"));
             else
                 publisherSink = new PublisherSink<TIn>(DefaultAttributes.PublisherSink, Shape<TIn>("PublisherSink"));
 

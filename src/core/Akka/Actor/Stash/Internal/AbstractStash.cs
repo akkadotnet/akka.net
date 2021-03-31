@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractStash.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Dispatch;
 using Akka.Dispatch.MessageQueues;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor.Internal
@@ -167,7 +168,7 @@ An (unbounded) deque-based mailbox can be configured as follows:
             var terminatedMessage = msg.Message as Terminated;
             if(terminatedMessage != null)
             {
-                _actorCell.TerminatedQueuedFor(terminatedMessage.ActorRef);
+                _actorCell.TerminatedQueuedFor(terminatedMessage.ActorRef, Option<object>.None);
             }
         }
     }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
+using Akka.Util;
 
 namespace Akka.Streams.Dsl.Internal
 {
@@ -471,9 +472,38 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
+        }
+
+        /// <summary>
+        /// Transform this stream by applying the given function <paramref name="collector"/> to each of the elements
+        /// on which the function is defined (read: <paramref name="isDefined"/> returns true) as they pass through this processing step.
+        /// Non-matching elements are filtered out.
+        /// <para>
+        /// Emits when the provided function <paramref name="collector"/> is defined for the element
+        /// </para>
+        /// Backpressures when the function <paramref name="collector"/> is defined for the element and downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="isDefined">TBD</param>
+        /// <param name="collector">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(
+            this IFlow<TIn, TMat> flow, 
+            Func<TIn, bool> isDefined, 
+            Func<TIn, TOut> collector)
+        {
+            return flow.Via(new Fusing.Collect<TIn, TOut>(isDefined, collector));
         }
 
         /// <summary>
@@ -1198,7 +1228,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<Tuple<IImmutableList<T>, Source<T, NotUsed>>, TMat> PrefixAndTail<T, TMat>(
+        public static IFlow<(IImmutableList<T>, Source<T, NotUsed>), TMat> PrefixAndTail<T, TMat>(
             this IFlow<T, TMat> flow, int n)
         {
             return flow.Via(new Fusing.PrefixAndTail<T>(n));
@@ -1890,20 +1920,20 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static IFlow<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow,
+        public static IFlow<(T1, T2), TMat> Zip<T1, T2, TMat>(this IFlow<T1, TMat> flow,
             IGraph<SourceShape<T2>, TMat> other)
         {
             return flow.Via(ZipGraph<T1, T2, TMat>(other));
         }
 
-        private static IGraph<FlowShape<T1, Tuple<T1, T2>>, TMat> ZipGraph<T1, T2, TMat>(
+        private static IGraph<FlowShape<T1, (T1, T2)>, TMat> ZipGraph<T1, T2, TMat>(
             IGraph<SourceShape<T2>, TMat> other)
         {
             return GraphDsl.Create(other, (builder, shape) =>
             {
                 var zip = builder.Add(new Zip<T1, T2>());
                 builder.From(shape).To(zip.In1);
-                return new FlowShape<T1, Tuple<T1, T2>>(zip.In0, zip.Out);
+                return new FlowShape<T1, (T1, T2)>(zip.In0, zip.Out);
             });
         }
 
@@ -1958,12 +1988,12 @@ namespace Akka.Streams.Dsl.Internal
         /// <para/>
         /// Cancels when downstream cancels
         /// </summary>
-        public static IFlow<Tuple<T1, long>, TMat> ZipWithIndex<T1, TMat>(this IFlow<T1, TMat> flow)
+        public static IFlow<(T1, long), TMat> ZipWithIndex<T1, TMat>(this IFlow<T1, TMat> flow)
         {
-            return flow.StatefulSelectMany<T1, Tuple<T1, long>, TMat>(() =>
+            return flow.StatefulSelectMany<T1, (T1, long), TMat>(() =>
             {
                 var index = 0L;
-                return element => new[] {Tuple.Create(element, index++)};
+                return element => new[] {(element, index++)};
             });
         }
 

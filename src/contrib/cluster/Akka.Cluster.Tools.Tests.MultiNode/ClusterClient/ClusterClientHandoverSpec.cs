@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientHandoverSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -159,12 +159,18 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Client
         {
             RunOn(() =>
             {
-                // bugfix verification for https://github.com/akkadotnet/akka.net/issues/3840
-                // need to make sure that no dead contacts are hanging around
-                _clusterClient.Tell(GetContactPoints.Instance);
-                var contacts = ExpectMsg<ContactPoints>().ContactPointsList;
-                contacts.Count.Should().Be(2);
-                contacts.Select(x => x.Address).Should().Contain(Node(_config.Second).Address);
+                Within(TimeSpan.FromSeconds(5), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        // bugfix verification for https://github.com/akkadotnet/akka.net/issues/3840
+                        // need to make sure that no dead contacts are hanging around
+                        _clusterClient.Tell(GetContactPoints.Instance);
+                        var contacts = ExpectMsg<ContactPoints>(TimeSpan.FromSeconds(1)).ContactPointsList;
+                        contacts.Select(x => x.Address).Should().Contain(Node(_config.Second).Address);
+                    });
+                });
+               
 
                 _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
                 ExpectMsg<string>().Should().Be("hello");

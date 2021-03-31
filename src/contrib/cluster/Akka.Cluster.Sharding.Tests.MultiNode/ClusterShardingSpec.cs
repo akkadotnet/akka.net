@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,6 +20,7 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
+using Akka.Util;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests
@@ -77,8 +78,8 @@ namespace Akka.Cluster.Sharding.Tests
                             number-of-entities = 1
                         }}
                         least-shard-allocation-strategy {{
-                            rebalance-threshold = 1
-                            max-simultaneous-rebalance = 1
+                            rebalance-absolute-limit = 1
+                            rebalance-relative-limit = 1.0
                         }}
                         distributed-data.durable.lmdb {{
                           dir = ""target/ClusterShardingSpec/sharding-ddata""
@@ -197,11 +198,11 @@ namespace Akka.Cluster.Sharding.Tests
             switch (message)
             {
                 case EntityEnvelope env:
-                    return Tuple.Create(env.Id.ToString(), env.Payload);
+                    return (env.Id.ToString(), env.Payload);
                 case Get msg:
-                    return Tuple.Create(msg.CounterId.ToString(), message);
+                    return (msg.CounterId.ToString(), message);
             }
-            return null;
+            return Option<(string, object)>.None;
         };
 
         public static readonly ExtractShardId ExtractShardId = message =>
@@ -408,7 +409,7 @@ namespace Akka.Cluster.Sharding.Tests
             _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";
@@ -473,7 +474,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,
-                    PoisonPill.Instance,
+                    Terminate.Instance,
                     ClusterSingletonManagerSettings.Create(Sys)),
                     typeName + "Coordinator");
             }
@@ -481,7 +482,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         private Props CoordinatorProps(string typeName, bool rebalanceEntities, bool rememberEntities)
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
+
             var config = ConfigurationFactory.ParseString(string.Format(@"
                 handoff-timeout = 10s
                 shard-start-timeout = 10s

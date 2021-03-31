@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterClientConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Collections.Immutable;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tools.Tests.ClusterClient
 {
@@ -85,6 +86,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
             clusterReceptionistSettings.FailureDetectionInterval.Should().Be(2.Seconds());
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.client.receptionist");
+            Assert.False(config.IsNullOrEmpty());
             config.GetString("name").Should().Be("receptionist");
             config.GetString("use-dispatcher").Should().Be(string.Empty);
         }

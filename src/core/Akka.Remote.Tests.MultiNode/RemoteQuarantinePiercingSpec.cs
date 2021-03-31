@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteQuarantinePiercingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Remote.Tests.MultiNode
                 Receive<string>(str => str == "shutdown", c => Context.System.Terminate());
                 Receive<string>(str => str == "identify", c =>
                 {
-                    Sender.Tell(Tuple.Create(AddressUidExtension.Uid(Context.System), Self));
+                    Sender.Tell((AddressUidExtension.Uid(Context.System), Self));
                 });
             }
         }
@@ -59,10 +59,10 @@ namespace Akka.Remote.Tests.MultiNode
             _specConfig = specConfig;
         }
 
-        private Tuple<int, IActorRef> Identify(RoleName role, string actorName)
+        private (int, IActorRef) Identify(RoleName role, string actorName)
         {
             Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-            return ExpectMsg<Tuple<int, IActorRef>>();
+            return ExpectMsg<(int, IActorRef)>();
         }
 
         [MultiNodeFact]
@@ -89,19 +89,19 @@ namespace Akka.Remote.Tests.MultiNode
 
                 // Quarantine is up -- Cannot communicate with remote system any more
                 Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
-                ExpectNoMsg(2.Seconds());
+                ExpectNoMsg(TimeSpan.FromSeconds(2));
 
                 // Shut down the other system -- which results in restart (see runOn(second))
                 TestConductor.Shutdown(_specConfig.Second).Wait(TimeSpan.FromSeconds(30));
 
                 // Now wait until second system becomes alive again
-                Within(30.Seconds(), () =>
+                Within(TimeSpan.FromSeconds(30), () =>
                 {
                     // retry because the Subject actor might not be started yet
                     AwaitAssert(() =>
                     {
                         Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
-                        var tuple2 = ExpectMsg<Tuple<int, IActorRef>>(TimeSpan.FromSeconds(1));
+                        var tuple2 = ExpectMsg<(int, IActorRef)>(TimeSpan.FromSeconds(1));
                         tuple2.Item1.Should().NotBe(uidFirst);
                         tuple2.Item2.Should().NotBe(subjectFirst);
                     });
@@ -118,7 +118,7 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("actors-started");
 
                 EnterBarrier("actor-identified");
-                Sys.WhenTerminated.Wait(30.Seconds());
+                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.hostname = {addr.Host}
@@ -126,7 +126,7 @@ namespace Akka.Remote.Tests.MultiNode
                 ").WithFallback(Sys.Settings.Config));
 
                 freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");
-                freshSystem.WhenTerminated.Wait(30.Seconds());
+                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
             }, _specConfig.Second);
         }
     }

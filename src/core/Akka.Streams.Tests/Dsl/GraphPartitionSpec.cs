@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphPartitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,14 +37,12 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var s = Sink.Seq<int>();
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, Tuple.Create, (b, sink1, sink2, sink3) =>
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(s, s, s, ValueTuple.Create, (b, sink1, sink2, sink3) =>
                 {
                     var partition = b.Add(new Partition<int>(3, i => i > 3 ? 0 : (i < 3 ? 1 : 2)));
                     var source =
                         Source.From(Enumerable.Range(1, 5))
-                            .MapMaterializedValue
-                            <Tuple<Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>>>(
-                                _ => null);
+                            .MapMaterializedValue(_ => default((Task<IImmutableList<int>>, Task<IImmutableList<int>>, Task<IImmutableList<int>>)));
 
                     b.From(source).To(partition.In);
                     b.From(partition.Out(0)).To(sink1.Inlet);
@@ -56,9 +54,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result[0].ShouldAllBeEquivalentTo(new[] {4, 5});
-                task.Result[1].ShouldAllBeEquivalentTo(new[] {1, 2});
-                task.Result[2].ShouldAllBeEquivalentTo(new[] {3});
+                task.Result[0].Should().BeEquivalentTo(new[] {4, 5});
+                task.Result[1].Should().BeEquivalentTo(new[] {1, 2});
+                task.Result[2].Should().BeEquivalentTo(new[] {3});
             }, Materializer);
         }
 
@@ -186,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 })).Run(Materializer);
 
                 task.Wait(RemainingOrDefault).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(input);
+                task.Result.Should().BeEquivalentTo(input);
             }, Materializer);
         }
 

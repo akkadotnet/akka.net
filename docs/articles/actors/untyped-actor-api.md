@@ -48,7 +48,7 @@ Props props4 = Props.Create(typeof(MyActorWithArgs), "arg");
 The second variant shows how to pass constructor arguments to the `Actor` being created, but it should only be used outside of actors as explained below.
 
 #### Recommended Practices
-It is a good idea to provide static factory methods on the `ReceiveActor` which help keeping the creation of suitable `Props` as close to the actor definition as possible.
+It is a good idea to provide static factory methods on the `UntypedActor` which help keeping the creation of suitable `Props` as close to the actor definition as possible.
 
 ```csharp
 public class DemoActor : UntypedActor
@@ -300,7 +300,7 @@ Messages can be sent via the `ActorSelection` and the path of the `ActorSelectio
 
 To acquire an `IActorRef` for an `ActorSelection` you need to send a message to the selection and use the `Sender` reference of the reply from the actor. There is a built-in `Identify` message that all Actors will understand and automatically reply to with a `ActorIdentity` message containing the `IActorRef`. This message is handled specially by the actors which are traversed in the sense that if a concrete name lookup fails (i.e. a non-wildcard path element does not correspond to a live actor) then a negative result is generated. Please note that this does not mean that delivery of that reply is guaranteed, it still is a normal message.
 
-[!code-csharp[Main](../../examples/DocsExamples/Actors/UntypedActorAPI/Follower.cs?range=8-41)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Actors/UntypedActorAPI/Follower.cs?name=UntypedActor)]
 
 You can also acquire an `IActorRef` for an `ActorSelection` with the `ResolveOne` method of the `ActorSelection`. It returns a Task of the matching `IActorRef` if such an actor exists. It is completed with failure `akka.actor.ActorNotFound` if no such actor exists or the identification didn't complete within the supplied timeout.
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PagedSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit.Tests;
 using Akka.Streams.Util;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -46,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
                 var source = PagedSource.Create(0, new MultiplesOfTwoPage().Page);
                 var t = source.Take(3).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().ShouldBeEquivalentTo(new[] { 0, 2, 4 }, o => o.WithStrictOrdering());
+                t.AwaitResult().Should().BeEquivalentTo(new[] { 0, 2, 4 }, o => o.WithStrictOrdering());
             }
 
             [Fact]
@@ -83,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.Take(4).RunWith(Sink.Seq<string>(), Sys.Materializer());
 
-                t.AwaitResult().ShouldBeEquivalentTo(new[] { "a", "b", "c", "d" }, o => o.WithStrictOrdering());
+                t.AwaitResult().Should().BeEquivalentTo(new[] { "a", "b", "c", "d" }, o => o.WithStrictOrdering());
             }
 
             [Fact]
@@ -91,7 +92,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.RunWith(Sink.Seq<string>(), Sys.Materializer());
 
-                t.AwaitResult().ShouldBeEquivalentTo(new[] { "a", "b", "c", "d", "e" }, o => o.WithStrictOrdering());
+                t.AwaitResult().Should().BeEquivalentTo(new[] { "a", "b", "c", "d", "e" }, o => o.WithStrictOrdering());
             }
         }
 
@@ -110,15 +111,15 @@ namespace Akka.Streams.Tests.Dsl
                 }
             );
 
-            private static Tuple<int[], string> Page(string key)
+            private static (int[], string) Page(string key)
             {
                 if (key == "first")
-                    return Tuple.Create(new[] { 1, 2 }, "second");
+                    return (new[] { 1, 2 }, "second");
 
                 if (key == "second")
-                    return Tuple.Create(new[] { 3, 4, 5 }, "");
+                    return (new[] { 3, 4, 5 }, "");
 
-                return Tuple.Create(new[] { 6 }, "");
+                return (new[] { 6 }, "");
             }
 
             [Fact]
@@ -126,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.Take(4).RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().ShouldBeEquivalentTo(new[] { 1, 2, 3, 4 }, o => o.WithStrictOrdering());
+                t.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2, 3, 4 }, o => o.WithStrictOrdering());
             }
 
             [Fact]
@@ -134,7 +135,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var t = _source.RunWith(Sink.Seq<int>(), Sys.Materializer());
 
-                t.AwaitResult().ShouldBeEquivalentTo(new[] { 1, 2, 3, 4, 5 }, o => o.WithStrictOrdering());
+                t.AwaitResult().Should().BeEquivalentTo(new[] { 1, 2, 3, 4, 5 }, o => o.WithStrictOrdering());
             }
         }
     }

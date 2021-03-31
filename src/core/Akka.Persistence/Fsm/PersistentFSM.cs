@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -458,13 +458,16 @@ namespace Akka.Persistence.Fsm
 
         public SnapshotAfterExtension(Config config)
         {
-            if (config.GetString(Key).ToLowerInvariant().Equals("off"))
+            var useSnapshot = config.GetString(Key, "");
+            if (useSnapshot.ToLowerInvariant().Equals("off") ||
+                useSnapshot.ToLowerInvariant().Equals("false") ||
+                useSnapshot.ToLowerInvariant().Equals("no"))
             {
                 SnapshotAfterValue = null;
             }
             else
             {
-                SnapshotAfterValue = config.GetInt(Key);
+                SnapshotAfterValue = config.GetInt(Key, 0);
             }
         }
         

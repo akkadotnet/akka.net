@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1480,7 +1480,7 @@ namespace Akka.Remote
             {
                 _log.Error(
                   ex,
-                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
                   send.Message.GetType());
                 return true;
             }
@@ -1892,7 +1892,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
+           
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;
@@ -1935,12 +1935,13 @@ namespace Akka.Remote
                             }
                             catch (Exception e)
                             {
-                                throw e;
+                                throw;
                             }
                         }
                     }
                 }
             });
+            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 SaveState();
@@ -1981,31 +1982,33 @@ namespace Akka.Remote
 
         private void SaveState()
         {
-            var key = new EndpointManager.Link(LocalAddress, RemoteAddress);
-            _receiveBuffers.TryGetValue(key, out var previousValue);
-            UpdateSavedState(key, previousValue);
-        }
-
-        private EndpointManager.ResendState Merge(EndpointManager.ResendState current,
-            EndpointManager.ResendState oldState)
-        {
-            if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
-            return current;
-        }
-
-        private void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
-        {
-            if (expectedState == null)
+            EndpointManager.ResendState Merge(EndpointManager.ResendState current,
+                EndpointManager.ResendState oldState)
             {
-                if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
-                {
-                    UpdateSavedState(key, _receiveBuffers[key]);
-                }
-            } else if (!_receiveBuffers.TryUpdate(key, expectedState,
-                Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState)))
-            {
-                UpdateSavedState(key, _receiveBuffers[key]);
+                if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
+                return current;
             }
+
+            void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
+            {
+                if (expectedState == null)
+                {
+                    if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
+                    {
+                        _receiveBuffers.TryGetValue(key, out var prevValue);
+                        UpdateSavedState(key, prevValue);
+                    }
+                }
+                else if (!_receiveBuffers.TryUpdate(key,
+                    Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
+                {
+                    _receiveBuffers.TryGetValue(key, out var prevValue);
+                    UpdateSavedState(key, prevValue);
+                }
+            }
+
+            var k = new EndpointManager.Link(LocalAddress, RemoteAddress);
+            UpdateSavedState(k, !_receiveBuffers.TryGetValue(k, out var previousValue) ? null : previousValue);
         }
 
         private void HandleDisassociated(DisassociateInfo info)

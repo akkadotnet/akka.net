@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ValveSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            seq.Invoking(x => x.AwaitResult()).ShouldThrow<Exception>().And.Should().Be(ex);
+            seq.Invoking(x => x.AwaitResult()).Should().Throw<Exception>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(SwitchMode.Close), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => Tuple.Create(l.Item1, l.Item2, r))
+                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
                 .Run(Sys.Materializer());
 
             var probe = t.Item1;
@@ -292,7 +292,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            seq.Invoking(x => x.AwaitResult()).ShouldThrow<Exception>().And.Should().Be(ex);
+            seq.Invoking(x => x.AwaitResult()).Should().Throw<Exception>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -300,7 +300,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var t = this.SourceProbe<int>()
                 .ViaMaterialized(new Valve<int>(), Keep.Both)
-                .ToMaterialized(Sink.First<int>(), (l, r) => Tuple.Create(l.Item1, l.Item2, r))
+                .ToMaterialized(Sink.First<int>(), (l, r) => (l.Item1, l.Item2, r))
                 .Run(Sys.Materializer());
 
             var probe = t.Item1;

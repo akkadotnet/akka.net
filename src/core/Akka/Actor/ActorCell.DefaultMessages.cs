@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ namespace Akka.Actor
         /// </exception>>
         public void Invoke(Envelope envelope)
         {
-            
+
             var message = envelope.Message;
             var influenceReceiveTimeout = !(message is INotInfluenceReceiveTimeout);
 
@@ -64,6 +64,7 @@ namespace Akka.Actor
                 // Akka JVM doesn't have these lines
                 CurrentMessage = envelope.Message;
                 _currentEnvelopeId++;
+                if (_currentEnvelopeId == int.MaxValue) _currentEnvelopeId = 0;
 
                 Sender = MatchSender(envelope);
 
@@ -88,10 +89,8 @@ namespace Akka.Actor
             }
             finally
             {
-                if (influenceReceiveTimeout)
-                {
-                    CheckReceiveTimeout(); // Reschedule receive timeout
-                }
+                // Schedule or reschedule receive timeout
+                CheckReceiveTimeout(influenceReceiveTimeout);
             }
         }
 
@@ -131,7 +130,7 @@ namespace Akka.Actor
         /// <exception cref="ActorKilledException">
         /// This exception is thrown if a <see cref="Akka.Actor.Kill"/> message is included in the given <paramref name="envelope"/>.
         /// </exception>
-        protected virtual void AutoReceiveMessage(Envelope envelope)
+        protected internal virtual void AutoReceiveMessage(Envelope envelope)
         {
             var message = envelope.Message;
 
@@ -142,12 +141,27 @@ namespace Akka.Actor
                 Publish(new Debug(Self.Path.ToString(), actorType, "received AutoReceiveMessage " + message));
 
             var m = envelope.Message;
-            if (m is Terminated) ReceivedTerminated(m as Terminated);
-            else if (m is AddressTerminated) AddressTerminated((m as AddressTerminated).Address);
-            else if (m is Kill) Kill();
-            else if (m is PoisonPill) HandlePoisonPill();
-            else if (m is ActorSelectionMessage) ReceiveSelection(m as ActorSelectionMessage);
-            else if (m is Identify) HandleIdentity(m as Identify);
+            switch (m)
+            {
+                case Terminated terminated:
+                    ReceivedTerminated(terminated);
+                    break;
+                case AddressTerminated terminated:
+                    AddressTerminated(terminated.Address);
+                    break;
+                case Kill _:
+                    Kill();
+                    break;
+                case PoisonPill _:
+                    HandlePoisonPill();
+                    break;
+                case ActorSelectionMessage selectionMessage:
+                    ReceiveSelection(selectionMessage);
+                    break;
+                case Identify identify:
+                    HandleIdentity(identify);
+                    break;
+            }
         }
 
         /// <summary>
@@ -186,7 +200,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>   
+        /// <summary>
         ///     Receives the selection.
         /// </summary>
         /// <param name="m">The m.</param>
@@ -233,51 +247,54 @@ namespace Akka.Actor
 
         private void SysMsgInvokeAll(EarliestFirstSystemMessageList messages, int currentState)
         {
-           
-            var nextState = currentState;
-            var todo = messages;
-            while(true)
+            while (true)
             {
-                var m = todo.Head;
-                todo = messages.Tail;
-                m.Unlink();
+                var rest = messages.Tail;
+                var message = messages.Head;
+                message.Unlink();
+
                 try
                 {
-                    // TODO: replace with direct cast
-                    if (ShouldStash(m, nextState))
+                    switch (message)
                     {
-                        Stash(m);
-                    }
-                    if (m is ActorTaskSchedulerMessage) HandleActorTaskSchedulerMessage((ActorTaskSchedulerMessage)m);
-                    else if (m is Failed) HandleFailed(m as Failed);
-                    else if (m is DeathWatchNotification)
-                    {
-                        var msg = m as DeathWatchNotification;
-                        WatchedActorTerminated(msg.Actor, msg.ExistenceConfirmed, msg.AddressTerminated);
-                    }
-                    else if (m is Create) Create((m as Create).Failure);
-                    else if (m is Watch)
-                    {
-                        var watch = m as Watch;
-                        AddWatcher(watch.Watchee, watch.Watcher);
-                    }
-                    else if (m is Unwatch)
-                    {
-                        var unwatch = m as Unwatch;
-                        RemWatcher(unwatch.Watchee, unwatch.Watcher);
-                    }
-                    else if (m is Recreate) FaultRecreate((m as Recreate).Cause);
-                    else if (m is Suspend) FaultSuspend();
-                    else if (m is Resume) FaultResume((m as Resume).CausedByFailure);
-                    else if (m is Terminate) Terminate();
-                    else if (m is Supervise)
-                    {
-                        var supervise = m as Supervise;
-                        Supervise(supervise.Child, supervise.Async);
-                    }
-                    else
-                    {
-                        throw new NotSupportedException($"Unknown message {m.GetType().Name}");
+                        case SystemMessage sm when ShouldStash(sm, currentState):
+                            Stash(message);
+                            break;
+                        case ActorTaskSchedulerMessage atsm:
+                            HandleActorTaskSchedulerMessage(atsm);
+                            break;
+                        case Failed f:
+                            HandleFailed(f);
+                            break;
+                        case DeathWatchNotification n:
+                            WatchedActorTerminated(n.Actor, n.ExistenceConfirmed, n.AddressTerminated);
+                            break;
+                        case Create c:
+                            Create(c.Failure);
+                            break;
+                        case Watch w:
+                            AddWatcher(w.Watchee, w.Watcher);
+                            break;
+                        case Unwatch uw:
+                            RemWatcher(uw.Watchee, uw.Watcher);
+                            break;
+                        case Recreate r:
+                            FaultRecreate(r.Cause);
+                            break;
+                        case Suspend _:
+                            FaultSuspend();
+                            break;
+                        case Resume r:
+                            FaultResume(r.CausedByFailure);
+                            break;
+                        case Terminate _:
+                            Terminate();
+                            break;
+                        case Supervise s:
+                            Supervise(s.Child, s.Async);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Unknown message {message.GetType().Name}");
                     }
                 }
                 catch (Exception cause)
@@ -285,18 +302,21 @@ namespace Akka.Actor
                     HandleInvokeFailure(cause);
                 }
 
-                nextState = CalculateState();
+                var nextState = CalculateState();
                 // As each state accepts a strict subset of another state, it is enough to unstash if we "walk up" the state
                 // chain
-                todo = nextState < currentState ? todo + UnstashAll() : todo;
+                var todo = nextState < currentState ? rest + UnstashAll() : rest;
+
                 if (IsTerminated)
                 {
                     SendAllToDeadLetters(todo);
-                    return;
+                    break;
                 }
-                if (todo.IsEmpty) return; // keep running until the stash is empty
-            }
+                else if (todo.IsEmpty) break;
 
+                currentState = nextState;
+                messages = todo;
+            }
         }
 
         /// <summary>
@@ -311,7 +331,7 @@ namespace Akka.Actor
         /// </exception>
         internal void SystemInvoke(ISystemMessage envelope)
         {
-           SysMsgInvokeAll(new EarliestFirstSystemMessageList((SystemMessage)envelope), CalculateState());
+            SysMsgInvokeAll(new EarliestFirstSystemMessageList((SystemMessage)envelope), CalculateState());
         }
 
         private void HandleActorTaskSchedulerMessage(ActorTaskSchedulerMessage m)
@@ -363,7 +383,6 @@ namespace Akka.Actor
 
         private void Supervise(IActorRef child, bool async)
         {
-            //TODO: complete this
             if (!IsTerminating)
             {
                 var childRestartStats = InitChild((IInternalActorRef)child);
@@ -384,9 +403,9 @@ namespace Akka.Actor
 
         private void HandleSupervise(IActorRef child, bool async)
         {
-            if (async && child is RepointableActorRef)
+            if (async && child is RepointableActorRef @ref)
             {
-                ((RepointableActorRef)child).Point();
+                @ref.Point();
             }
         }
 

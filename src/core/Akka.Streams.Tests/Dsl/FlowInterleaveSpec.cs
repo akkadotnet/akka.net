@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowInterleaveSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ namespace Akka.Streams.Tests.Dsl
                     collected.Add(probe.ExpectNext());
                 }
 
-                collected.ShouldAllBeEquivalentTo(new[] {0, 1, 4, 7, 8, 9, 5, 2, 3, 10, 11, 6});
+                collected.Should().BeEquivalentTo(new[] {0, 1, 4, 7, 8, 9, 5, 2, 3, 10, 11, 6});
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var source = Source.From(Enumerable.Range(0, 3));
                 source.Invoking(s => s.Interleave(Source.From(Enumerable.Range(3, 3)), 0))
-                    .ShouldThrow<ArgumentException>();
+                    .Should().Throw<ArgumentException>();
             }, Materializer);
         }
 
@@ -218,7 +218,7 @@ namespace Akka.Streams.Tests.Dsl
                 var down = this.CreateManualSubscriberProbe<int>();
 
                 var t = Source.AsSubscriber<int>()
-                    .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, Tuple.Create)
+                    .InterleaveMaterialized(Source.AsSubscriber<int>(), 2, ValueTuple.Create)
                     .ToMaterialized(Sink.FromSubscriber(down), Keep.Left)
                     .Run(Materializer);
                 var graphSubscriber1 = t.Item1;

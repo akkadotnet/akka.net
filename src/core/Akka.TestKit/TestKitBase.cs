@@ -1,17 +1,21 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Pattern;
 using Akka.TestKit.Internal;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.TestKit
@@ -69,7 +73,7 @@ namespace Akka.TestKit
         /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
         /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
-            : this(assertions, system, _defaultConfig, null, testActorName)
+            : this(assertions, system, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(_defaultConfig)), null, testActorName)
         {
         }
 
@@ -77,19 +81,35 @@ namespace Akka.TestKit
         /// Create a new instance of the <see cref="TestKitBase"/> class.
         /// A new system with the specified configuration will be created.
         /// </summary>
-        /// <param name="assertions">TBD</param>
+        /// <param name="assertions">The set of assertions used by the TestKit.</param>
+        /// <param name="setup">The <see cref="ActorSystemSetup"/> to use for the configuring the system.</param>
+        /// <param name="actorSystemName">Optional: the name of the ActorSystem.</param>
+        /// <param name="testActorName">Optional: the name of the TestActor.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
+        /// </exception>
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystemSetup setup, string actorSystemName = null, string testActorName = null)
+            : this(assertions, null, setup, actorSystemName, testActorName)
+        {
+        }
+
+        /// <summary>
+        /// Create a new instance of the <see cref="TestKitBase"/> class.
+        /// A new system with the specified configuration will be created.
+        /// </summary>
+        /// <param name="assertions">The set of assertions used by the TestKit.</param>
         /// <param name="config">The configuration to use for the system.</param>
-        /// <param name="actorSystemName">TBD</param>
-        /// <param name="testActorName">Optional: The name of the TestActor.</param>
+        /// <param name="actorSystemName">Optional: the name of the ActorSystem.</param>
+        /// <param name="testActorName">Optional: the name of the TestActor.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
         /// </exception>
         protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
-            : this(assertions, null, config ?? ConfigurationFactory.Empty, actorSystemName, testActorName)
+            : this(assertions, null, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(config)), actorSystemName, testActorName)
         {
         }
 
-        private TestKitBase(ITestKitAssertions assertions, ActorSystem system, Config config, string actorSystemName, string testActorName)
+        private TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
             if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
 
@@ -105,14 +125,27 @@ namespace Akka.TestKit
         /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
         /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
         /// <param name="testActorName">The name of the test actor. Can be null.</param>
-        protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
+        protected void InitializeTest(ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
             _testState = new TestState();
 
             if (system == null)
             {
-                var configWithDefaultFallback = config.SafeWithFallback(_defaultConfig);
-                system = ActorSystem.Create(actorSystemName ?? "test", configWithDefaultFallback);
+                var bootstrap = config.Get<BootstrapSetup>();
+                var configWithDefaultFallback = bootstrap.HasValue
+                    ? bootstrap.Value.Config.Select(c => c == _defaultConfig ? c : c.WithFallback(_defaultConfig))
+                    : _defaultConfig;
+
+                var newBootstrap = BootstrapSetup.Create().WithConfig(
+                    configWithDefaultFallback.HasValue 
+                        ? configWithDefaultFallback.Value 
+                        : _defaultConfig);
+                if (bootstrap.FlatSelect(x => x.ActorRefProvider).HasValue)
+                {
+                    newBootstrap =
+                        newBootstrap.WithActorRefProvider(bootstrap.FlatSelect(x => x.ActorRefProvider).Value);
+                }
+                system = ActorSystem.Create(actorSystemName ?? "test", config.WithSetup(newBootstrap));
             }
 
             _testState.System = system;
@@ -134,6 +167,7 @@ namespace Akka.TestKit
 
             var testActor = CreateTestActor(system, testActorName);
             //Wait for the testactor to start
+            // Calling sync version here, since .Wait() causes deadlock
             AwaitCondition(() =>
             {
                 var repRef = testActor as IRepointableRef;
@@ -154,6 +188,18 @@ namespace Akka.TestKit
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
 
             _testState.TestActor = testActor;
+        }
+
+        /// <summary>
+        /// Initializes the <see cref="TestState"/> for a new spec.
+        /// </summary>
+        /// <param name="system">The actor system this test will use. Can be null.</param>
+        /// <param name="config">The configuration that <paramref name="system"/> will use if it's null.</param>
+        /// <param name="actorSystemName">The name that <paramref name="system"/> will use if it's null.</param>
+        /// <param name="testActorName">The name of the test actor. Can be null.</param>
+        protected void InitializeTest(ActorSystem system, Config config, string actorSystemName, string testActorName)
+        {
+           InitializeTest(system, ActorSystemSetup.Create(BootstrapSetup.Create().WithConfig(config)), actorSystemName, testActorName);
         }
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
@@ -446,6 +492,54 @@ namespace Akka.TestKit
                 //TODO: replace "" with system.PrintTree()
                 system.Log.Warning(msg, system.Name, durationValue, ""); //TODO: replace "" with system.PrintTree()
             }
+        }
+
+        /// <summary>
+        /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="name">Child actor name</param>
+        /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, string name, SupervisorStrategy supervisorStrategy)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, name, supervisorStrategy));
+            return ExpectMsg<IActorRef>();
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with an auto-generated name, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="supervisorStrategy">Supervisor strategy for the child actor</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, SupervisorStrategy supervisorStrategy)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, supervisorStrategy));
+            return ExpectMsg<IActorRef>();
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with a stopping supervisor strategy, and returns the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <param name="name">Child actor name</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props, string name)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, name, Option<SupervisorStrategy>.None));
+            return ExpectMsg<IActorRef>();
+        }
+        
+        /// <summary>
+        /// Spawns an actor as a child of this test actor with an auto-generated name and stopping supervisor strategy, returning the child's ActorRef.
+        /// </summary>
+        /// <param name="props">Child actor props</param>
+        /// <returns></returns>
+        public IActorRef ChildActorOf(Props props)
+        {
+            TestActor.Tell(new TestActor.Spawn(props, Option<string>.None, Option<SupervisorStrategy>.None));
+            return ExpectMsg<IActorRef>();
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackwardsCompatSqliteSnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,7 +46,6 @@ namespace Akka.Persistence.Sqlite.Tests.AssemblyVersioning
                         sqlite {
                             class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""
-                            table-name = snapshot_store
                             auto-initialize = on
                             connection-string = """ + connectionString + @"""
                         }

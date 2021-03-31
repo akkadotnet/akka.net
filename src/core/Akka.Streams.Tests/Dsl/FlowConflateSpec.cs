@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowConflateSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,7 +129,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+            future.Wait();
             future.Result.Should().Be(500500);
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (sum, i) => sum + i, Materializer);
-            future.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
+            future.Wait();
             future.Result.Should().Be(500500);
         }
 
@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
             saw4Latch.Ready(TimeSpan.FromSeconds(3));
             sinkSub.Request(1);
 
-            sinkProbe.ExpectNext().ShouldAllBeEquivalentTo(new [] {1, 3, 4});
+            sinkProbe.ExpectNext().Should().BeEquivalentTo(new [] {1, 3, 4});
         }
     }
 }

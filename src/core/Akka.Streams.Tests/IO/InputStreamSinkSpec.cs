@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -89,12 +89,12 @@ namespace Akka.Streams.Tests.IO
                 var arr = new byte[_byteString.Count + 1];
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
                 inputStream.Dispose();
-                ByteString.FromBytes(arr).ShouldBeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
+                ByteString.FromBytes(arr).Should().BeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
 
             }, _materializer);
         }
 
-        [Fact]
+        [Fact(Skip ="Racy in Linux")]
         public void InputStreamSink_should_block_read_until_get_requested_number_of_bytes_from_upstream()
         {
             this.AssertAllStagesStopped(() =>
@@ -136,7 +136,7 @@ namespace Akka.Streams.Tests.IO
                 probe.ExpectCancellation();
 
                 Action block = () => inputStream.Read(new byte[1], 0, 1);
-                block.ShouldThrow<IOException>();
+                block.Should().Throw<IOException>();
             }, _materializer);
         }
 
@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.IO
 
                     var result = ReadN(inputStream, 3);
                     result.Item1.Should().Be(expected.Count);
-                    result.Item2.ShouldBeEquivalentTo(expected);
+                    result.Item2.Should().BeEquivalentTo(expected);
                 }
 
                 inputStream.Dispose();
@@ -193,10 +193,10 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var buf = new byte[3];
 
-                Action(() => inputStream.Read(buf, -1, 2)).ShouldThrow<ArgumentException>();
-                Action(() => inputStream.Read(buf, 0, 5)).ShouldThrow<ArgumentException>();
-                Action(() => inputStream.Read(new byte[0], 0, 1)).ShouldThrow<ArgumentException>();
-                Action(() => inputStream.Read(buf, 0, 0)).ShouldThrow<ArgumentException>();
+                Action(() => inputStream.Read(buf, -1, 2)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(buf, 0, 5)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(new byte[0], 0, 1)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(buf, 0, 0)).Should().Throw<ArgumentException>();
             }, _materializer);
         }
 
@@ -218,7 +218,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     var r = ReadN(inputStream, 8);
                     r.Item1.Should().Be(8);
-                    r.Item2.ShouldBeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
+                    r.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
                 }
 
                 inputStream.Dispose();
@@ -240,11 +240,11 @@ namespace Akka.Streams.Tests.IO
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);
-                r1.Item2.ShouldBeEquivalentTo(Enumerable.Concat(bytes1, bytes2.Slice(0, 5)));
+                r1.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes1, bytes2.Slice(0, 5)));
 
                 var r2 = ReadN(inputStream, 15);
                 r2.Item1.Should().Be(5);
-                r2.Item2.ShouldBeEquivalentTo(bytes2.Slice(5));
+                r2.Item2.Should().BeEquivalentTo(bytes2.Slice(5));
 
                 inputStream.Dispose();
             }, _materializer);
@@ -259,7 +259,7 @@ namespace Akka.Streams.Tests.IO
 
                 var r = ReadN(inputStream, _byteString.Count);
                 r.Item1.Should().Be(_byteString.Count);
-                r.Item2.ShouldBeEquivalentTo(_byteString);
+                r.Item2.Should().BeEquivalentTo(_byteString);
 
                 inputStream.ReadByte().Should().Be(-1);
                 inputStream.Dispose();
@@ -282,7 +282,7 @@ namespace Akka.Streams.Tests.IO
 
                 var r = ReadN(inputStream, _byteString.Count);
                 r.Item1.Should().Be(_byteString.Count);
-                r.Item2.ShouldBeEquivalentTo(_byteString);
+                r.Item2.Should().BeEquivalentTo(_byteString);
 
                 probe.SendError(ex);
                 sinkProbe.ExpectMsg<GraphStageMessages.Failure>().Ex.Should().Be(ex);
@@ -290,7 +290,7 @@ namespace Akka.Streams.Tests.IO
                 var task = Task.Run(() => inputStream.ReadByte());
 
                 Action block = () => task.Wait(Timeout);
-                block.ShouldThrow<Exception>();
+                block.Should().Throw<Exception>();
 
                 task.Exception.InnerException.Should().Be(ex);
 
@@ -302,7 +302,7 @@ namespace Akka.Streams.Tests.IO
         {
             this.AssertAllStagesStopped(() =>
             {
-                var sys = ActorSystem.Create("dispatcher-testing", Utils.UnboundedMailboxConfig);
+                var sys = ActorSystem.Create("InputStreamSink-testing", Utils.UnboundedMailboxConfig);
                 var materializer = ActorMaterializer.Create(sys);
                 try
                 {
@@ -310,7 +310,7 @@ namespace Akka.Streams.Tests.IO
                     (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                     var children = ExpectMsg<StreamSupervisor.Children>().Refs;
                     var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
-                    Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                    Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                 }
                 finally
                 {
@@ -328,7 +328,7 @@ namespace Akka.Streams.Tests.IO
 
                 var r = ReadN(inputStream, _byteString.Count * 2);
                 r.Item1.Should().Be(_byteString.Count);
-                r.Item2.ShouldBeEquivalentTo(_byteString);
+                r.Item2.Should().BeEquivalentTo(_byteString);
 
                 inputStream.Dispose();
             }, _materializer);
@@ -345,7 +345,7 @@ namespace Akka.Streams.Tests.IO
 
                 Enumerable.Range(1, 5)
                     .Select(_ => inputStream.ReadByte())
-                    .ShouldBeEquivalentTo(new[] { 0, 100, 200, 255, -1 });
+                    .Should().BeEquivalentTo(new[] { 0, 100, 200, 255, -1 });
 
                 inputStream.Dispose();
             }, _materializer);
@@ -355,7 +355,7 @@ namespace Akka.Streams.Tests.IO
         public void InputStreamSink_should_fail_to_materialize_with_zero_sized_input_buffer()
         {
             Action a = () => Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(Timeout).WithAttributes(Attributes.CreateInputBuffer(0, 0)), _materializer);
-            a.ShouldThrow<ArgumentException>();
+            a.Should().Throw<ArgumentException>();
             /*
             With Source.single we test the code path in which the sink
             itself throws an exception when being materialized. If
@@ -372,7 +372,7 @@ namespace Akka.Streams.Tests.IO
             var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
             materializer.Shutdown();
 
-            inputStream.Invoking(i => i.ReadByte()).ShouldThrow<AbruptTerminationException>();
+            inputStream.Invoking(i => i.ReadByte()).Should().Throw<AbruptTerminationException>();
         }
 
         private static ByteString RandomByteString(int size)
@@ -382,11 +382,11 @@ namespace Akka.Streams.Tests.IO
             return ByteString.FromBytes(a);
         }
 
-        private Tuple<int, ByteString> ReadN(Stream s, int n)
+        private (int, ByteString) ReadN(Stream s, int n)
         {
             var buf = new byte[n];
             var r = s.Read(buf, 0, n);
-            return new Tuple<int, ByteString>(r, ByteString.FromBytes(buf, 0, r));
+            return (r, ByteString.FromBytes(buf, 0, r));
         }
 
         private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)

@@ -16,25 +16,20 @@ The Akka.NET library provides an implementation of a circuit breaker called `Akk
 ## What do they do?
 
 * During normal operation, a circuit breaker is in the `Closed` state:
-	* Exceptions or calls exceeding the configured `СallTimeout` increment a
-	  failure counter
-	* Successes reset the failure count to zero
-	* When the failure counter reaches a `MaxFailures` count, the breaker is
-	  tripped into `Open` state
+  * Exceptions or calls exceeding the configured `СallTimeout` increment a failure counter
+  * Successes reset the failure count to zero
+  * When the failure counter reaches a `MaxFailures` count, the breaker is tripped into `Open` state
 * While in `Open` state:
-	* All calls fail-fast with a `OpenCircuitException`
-	* After the configured `ResetTimeout`, the circuit breaker enters a
-	  `Half-Open` state
+  * All calls fail-fast with a `OpenCircuitException`
+  * After the configured `ResetTimeout`, the circuit breaker enters a `Half-Open` state
 * In `Half-Open` state:
-	* The first call attempted is allowed through without failing fast
-	* All other calls fail-fast with an exception just as in `Open` state
-	* If the first call succeeds, the breaker is reset back to `Closed` state
-	* If the first call fails, the breaker is tripped again into the `Open` state
-	  for another full `ResetTimeout`
+  * The first call attempted is allowed through without failing fast
+  * All other calls fail-fast with an exception just as in `Open` state
+  * If the first call succeeds, the breaker is reset back to `Closed` state and the `ResetTimeout` is reset
+  * If the first call fails, the breaker is tripped again into the `Open` state (as for exponential backoff circuit breaker, the `ResetTimeout` is multiplied by the exponential backoff factor)
 * State transition listeners:
-	* Callbacks can be provided for every state entry via `OnOpen`, `OnClose`,
-	  and `OnHalfOpen`
-	* These are executed in the `ExecutionContext` provided.
+  * Callbacks can be provided for every state entry via `OnOpen`, `OnClose`, and `OnHalfOpen`
+  * These are executed in the `ExecutionContext` provided.
 
 ![Circuit breaker states](/images/circuit-breaker-states.png)
 
@@ -47,14 +42,14 @@ Here's how a `CircuitBreaker` would be configured for:
   * a call timeout of 10 seconds
   * a reset timeout of 1 minute
 
-[!code-csharp[Main](../../examples/DocsExamples/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
 
 ### Call Protection
 
 Here's how the `CircuitBreaker` would be used to protect an asynchronous
 call as well as a synchronous one:
 
-[!code-csharp[Main](../../examples/DocsExamples/Utilities/CircuitBreakerDocSpec.cs?name=call-protection)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=call-protection)]
 
 ```csharp
 dangerousActor.Tell("is my middle name");
@@ -74,3 +69,12 @@ dangerousActor.Tell("is my middle name");
 // My CircuitBreaker is now closed
 // This really isn't that dangerous of a call after all
 ```
+
+### Tell Pattern
+
+The above ``Call Protection`` pattern works well when the return from a remote call is wrapped in a ``Future``. However, when a remote call sends back a message or timeout to the caller ``Actor``, the ``Call Protection`` pattern is awkward. CircuitBreaker doesn't support it natively at the moment, so you need to use below low-level power-user APIs, ``succeed``  and  ``fail`` methods, as well as ``isClose``, ``isOpen``, ``isHalfOpen``.
+
+>[!NOTE]
+>The below examples doesn't make a remote call when the state is `HalfOpen`. Using the power-user APIs, it is your responsibility to judge when to make remote calls in `HalfOpen`.
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-tell-pattern)]

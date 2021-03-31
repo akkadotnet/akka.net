@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -75,18 +75,34 @@ namespace Akka.Actor
         public ActorSelection(IActorRef anchor, IEnumerable<string> elements)
         {
             Anchor = anchor;
-            
-            Path = elements
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select<string, SelectionPathElement>(e =>
+
+            var list = new List<SelectionPathElement>();
+            var iter = elements.Iterator();
+            while(!iter.IsEmpty())
+            {
+                var s = iter.Next();
+                switch(s)
                 {
-                    if (e.Contains("?") || e.Contains("*"))
-                        return new SelectChildPattern(e);
-                    if (e == "..")
-                        return new SelectParent();
-                    return new SelectChildName(e);
-                })
-                .ToArray();
+                    case null:
+                    case "":
+                        break;
+                    case "**":
+                        if(!iter.IsEmpty())
+                            throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
+                        list.Add(new SelectChildRecursive());
+                        break;
+                    case string e when e.Contains("?") || e.Contains("*"):
+                        list.Add(new SelectChildPattern(e));
+                        break;
+                    case string e when e == "..":
+                        list.Add(new SelectParent());
+                        break;
+                    default:
+                        list.Add(new SelectChildName(s));
+                        break;
+                }
+            }
+            Path = list.ToArray();
         }
 
         /// <summary>
@@ -212,6 +228,18 @@ namespace Akka.Actor
                                     Rec(child);
                                 }
 
+                                break;
+                            case SelectChildRecursive _:
+                                var allChildren = refWithCell.Children.ToList();
+                                if (allChildren.Count == 0)
+                                    return;
+
+                                var msg = new ActorSelectionMessage(sel.Message, new[] { new SelectChildRecursive() }, true);
+                                foreach (var c in allChildren)
+                                {
+                                    c.Tell(sel.Message, sender);
+                                    DeliverSelection(c as IInternalActorRef, sender, msg);
+                                }
                                 break;
                             case SelectChildPattern pattern:
                                 // fan-out when there is a wildcard
@@ -352,7 +380,7 @@ namespace Akka.Actor
     /// <summary>
     /// Class SelectionPathElement.
     /// </summary>
-    public abstract class SelectionPathElement
+    public abstract class SelectionPathElement 
     {
     }
 
@@ -435,6 +463,24 @@ namespace Akka.Actor
         public override string ToString() => PatternStr;
     }
 
+    public class SelectChildRecursive : SelectionPathElement
+    {
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if(!(obj is SelectChildRecursive)) return false;
+            return true;
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => "**".GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => "**";
+
+    }
 
     /// <summary>
     /// Class SelectParent.

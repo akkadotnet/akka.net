@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Cluster.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,11 +14,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
-using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
+using Akka.Configuration;
 
 namespace Akka.Cluster
 {
@@ -164,7 +164,7 @@ namespace Akka.Cluster
         /// <param name="initialStateMode">
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents"/>, then the events corresponding to the current state
         /// are sent to <paramref name="subscriber"/> to mimic what it would have seen if it were listening to the events when they occurred in the past.
-        /// 
+        ///
         /// If set to <see cref="ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot"/>, then a snapshot of
         /// <see cref="ClusterEvent.CurrentClusterState"/> will be sent to <paramref name="subscriber"/> as the first message.
         /// </param>
@@ -216,7 +216,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Try to join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join.
-        /// 
+        ///
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
@@ -231,16 +231,16 @@ namespace Akka.Cluster
         /// Try to asynchronously join this cluster node specified by <paramref name="address"/>.
         /// A <see cref="Join"/> command is sent to the node to join. Returned task will be completed
         /// once current cluster node will be moved into <see cref="MemberStatus.Up"/> state,
-        /// or cancelled when provided <paramref name="token"/> cancellation triggers. Cancelling this 
-        /// token doesn't prevent current node from joining the cluster, therefore a manuall 
+        /// or cancelled when provided <paramref name="token"/> cancellation triggers. Cancelling this
+        /// token doesn't prevent current node from joining the cluster, therefore a manuall
         /// call to <see cref="Leave"/>/<see cref="LeaveAsync()"/> may still be required in order to
         /// leave the cluster gracefully.
-        /// 
+        ///
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
-        /// 
-        /// Once cluster has been shutdown, <see cref="JoinAsync"/> will always fail until an entire 
+        ///
+        /// Once cluster has been shutdown, <see cref="JoinAsync"/> will always fail until an entire
         /// actor system is manually restarted.
         /// </summary>
         /// <param name="address">The address of the node we want to join.</param>
@@ -274,7 +274,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Joins the specified seed nodes without defining them in config.
         /// Especially useful from tests when Addresses are unknown before startup time.
-        /// 
+        ///
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
@@ -290,16 +290,16 @@ namespace Akka.Cluster
         /// Joins the specified seed nodes without defining them in config.
         /// Especially useful from tests when Addresses are unknown before startup time.
         /// Returns a task, which completes once current cluster node has successfully joined the cluster
-        /// or which cancels, when a cancellation <paramref name="token"/> has been cancelled. Cancelling this 
-        /// token doesn't prevent current node from joining the cluster, therefore a manuall 
+        /// or which cancels, when a cancellation <paramref name="token"/> has been cancelled. Cancelling this
+        /// token doesn't prevent current node from joining the cluster, therefore a manuall
         /// call to <see cref="Leave"/>/<see cref="LeaveAsync()"/> may still be required in order to
         /// leave the cluster gracefully.
-        /// 
+        ///
         /// An actor system can only join a cluster once. Additional attempts will be ignored.
         /// When it has successfully joined it must be restarted to be able to join another
         /// cluster or to join the same cluster again.
-        /// 
-        /// Once cluster has been shutdown, <see cref="JoinSeedNodesAsync"/> will always fail until an entire 
+        ///
+        /// Once cluster has been shutdown, <see cref="JoinSeedNodesAsync"/> will always fail until an entire
         /// actor system is manually restarted.
         /// </summary>
         /// <param name="seedNodes">TBD</param>
@@ -318,9 +318,9 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Sends a command to issue state transition to LEAVING for the node specified by <paramref name="address"/>.
-        /// The member will go through the status changes <see cref="MemberStatus.Leaving"/> (not published to 
+        /// The member will go through the status changes <see cref="MemberStatus.Leaving"/> (not published to
         /// subscribers) followed by <see cref="MemberStatus.Exiting"/> and finally <see cref="MemberStatus.Removed"/>.
-        /// 
+        ///
         /// Note that this command can be issued to any member in the cluster, not necessarily the
         /// one that is leaving. The cluster extension, but not the actor system, of the leaving member will be shutdown after
         /// the leader has changed status of the member to <see cref="MemberStatus.Exiting"/>. Thereafter the member will be
@@ -341,7 +341,7 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Causes the CURRENT node, i.e. the one calling this function, to leave the cluster.
-        /// 
+        ///
         /// Once the returned <see cref="Task"/> completes, it means that the member has successfully been removed
         /// from the cluster.
         /// </summary>
@@ -353,7 +353,7 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Causes the CURRENT node, i.e. the one calling this function, to leave the cluster.
-        /// 
+        ///
         /// Once the returned <see cref="Task"/> completes in completed or cancelled state, it means that the member has successfully been removed
         /// from the cluster or cancellation token cancelled the task.
         /// </summary>
@@ -390,7 +390,7 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Sends a command to DOWN the node specified by <paramref name="address"/>.
-        /// 
+        ///
         /// When a member is considered by the failure detector to be unreachable the leader is not
         /// allowed to perform its duties, such as changing status of new joining members to <see cref="MemberStatus.Up"/>.
         /// The status of the unreachable member must be changed to <see cref="MemberStatus.Down"/>, which can be done with
@@ -415,7 +415,7 @@ namespace Akka.Cluster
 
         /// <summary>
         /// Registers the supplied callback to run once when the current cluster member is <see cref="MemberStatus.Removed"/>.
-        /// 
+        ///
         /// Typically used in combination with <see cref="Leave"/> and <see cref="ActorSystem.Terminate"/>.
         /// </summary>
         /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Down"/></param>
@@ -524,10 +524,10 @@ namespace Akka.Cluster
 
         /// <summary>
         /// INTERNAL API.
-        /// 
+        ///
         /// Shuts down all connections to other members, the cluster daemon and the periodic gossip and cleanup tasks.
         /// This should not be called directly by the user
-        /// 
+        ///
         /// The user can issue a <see cref="Leave"/> command which will tell the node
         /// to go through graceful handoff process <c>LEAVE -> EXITING ->  REMOVED -> SHUTDOWN</c>.
         /// </summary>
@@ -601,7 +601,7 @@ namespace Akka.Cluster
             internal void LogInfo(string template, object arg1)
             {
                 if (_settings.LogInfo)
-                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1);
+                    _log.Info("Cluster Node [{1}] - " + template, arg1, _selfAddress);
             }
 
             /// <summary>
@@ -613,7 +613,20 @@ namespace Akka.Cluster
             internal void LogInfo(string template, object arg1, object arg2)
             {
                 if (_settings.LogInfo)
-                    _log.Info($"Cluster Node [{_selfAddress}] - " + template, arg1, arg2);
+                    _log.Info("Cluster Node [{2}] - " + template, arg1, arg2, _selfAddress);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+            /// </summary>
+            /// <param name="template">The template being rendered and logged.</param>
+            /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
+            /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
+            /// <param name="arg3">The second argument that fills in the corresponding template placeholder.</param>
+            internal void LogInfo(string template, object arg1, object arg2, object arg3)
+            {
+                if (_settings.LogInfo)
+                    _log.Info("Cluster Node [{2}] - " + template, arg1, arg2, arg3, _selfAddress);
             }
         }
 
@@ -645,6 +658,18 @@ namespace Akka.Cluster
         internal void LogInfo(string template, object arg1, object arg2)
         {
             CurrentInfoLogger.LogInfo(template, arg1, arg2);
+        }
+
+        /// <summary>
+        /// Creates an <see cref="Akka.Event.LogLevel.InfoLevel"/> log entry with the specific template and arguments.
+        /// </summary>
+        /// <param name="template">The template being rendered and logged.</param>
+        /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
+        /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
+        /// <param name="arg3">The second argument that fills in the corresponding template placeholder.</param>
+        internal void LogInfo(string template, object arg1, object arg2, object arg3)
+        {
+            CurrentInfoLogger.LogInfo(template, arg1, arg2, arg3);
         }
     }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSharding.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,12 +9,14 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
 
@@ -181,8 +183,7 @@ namespace Akka.Cluster.Sharding
     /// allocation strategy. The default implementation <see cref="LeastShardAllocationStrategy"/>
     /// picks shards for handoff from the <see cref="Sharding.ShardRegion"/> with most number of previously allocated shards.
     /// They will then be allocated to the <see cref="Sharding.ShardRegion"/> with least number of previously allocated shards,
-    /// i.e. new members in the cluster. There is a configurable threshold of how large the difference
-    /// must be to begin the rebalancing. This strategy can be replaced by an application specific
+    /// i.e. new members in the cluster. This strategy can be replaced by an application specific
     /// implementation.
     /// </para>
     /// <para>
@@ -260,7 +261,7 @@ namespace Akka.Cluster.Sharding
             {
                 var guardianName = system.Settings.Config.GetString("akka.cluster.sharding.guardian-name");
                 var dispatcher = system.Settings.Config.GetString("akka.cluster.sharding.use-dispatcher");
-                if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.DefaultDispatcherId;
+                if (string.IsNullOrEmpty(dispatcher)) dispatcher = Dispatchers.InternalDispatcherId;
                 return system.SystemActorOf(Props.Create(() => new ClusterShardingGuardian()).WithDispatcher(dispatcher), guardianName);
             });
         }
@@ -1031,11 +1032,11 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public IActorRef StartProxy(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            Tuple<EntityId, Msg> extractEntityId(Msg msg)
+            Option<(EntityId, Msg)> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
-                return Tuple.Create(entityId, entityMessage);
+                return (entityId, entityMessage);
             };
 
             return StartProxy(typeName, role, extractEntityId, messageExtractor.ShardId);
@@ -1058,11 +1059,11 @@ namespace Akka.Cluster.Sharding
         /// <returns>The actor ref of the <see cref="Sharding.ShardRegion"/> that is to be responsible for the shard.</returns>
         public Task<IActorRef> StartProxyAsync(string typeName, string role, IMessageExtractor messageExtractor)
         {
-            Tuple<EntityId, Msg> extractEntityId(Msg msg)
+            Option<(EntityId, Msg)> extractEntityId(Msg msg)
             {
                 var entityId = messageExtractor.EntityId(msg);
                 var entityMessage = messageExtractor.EntityMessage(msg);
-                return Tuple.Create(entityId, entityMessage);
+                return (entityId, entityMessage);
             };
 
             return StartProxyAsync(typeName, role, extractEntityId, messageExtractor.ShardId);
@@ -1111,11 +1112,22 @@ namespace Akka.Cluster.Sharding
 
         public IShardAllocationStrategy DefaultShardAllocationStrategy(ClusterShardingSettings settings)
         {
-            return new LeastShardAllocationStrategy(
-                Settings.TunningParameters.LeastShardAllocationRebalanceThreshold,
-                Settings.TunningParameters.LeastShardAllocationMaxSimultaneousRebalance);
-        }
 
+            if (settings.TuningParameters.LeastShardAllocationAbsoluteLimit > 0)
+            {
+                // new algorithm
+                var absoluteLimit = settings.TuningParameters.LeastShardAllocationAbsoluteLimit;
+                var relativeLimit = settings.TuningParameters.LeastShardAllocationRelativeLimit;
+                return ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit, relativeLimit);
+            }
+            else
+            {
+                // old algorithm
+                var threshold = settings.TuningParameters.LeastShardAllocationRebalanceThreshold;
+                var maxSimultaneousRebalance = settings.TuningParameters.LeastShardAllocationMaxSimultaneousRebalance;
+                return new LeastShardAllocationStrategy(threshold, maxSimultaneousRebalance);
+            }
+        }
     }
 
     /// <summary>
@@ -1136,7 +1148,7 @@ namespace Akka.Cluster.Sharding
     /// message to support wrapping in message envelope that is unwrapped before
     /// sending to the entity actor.
     /// </summary>
-    public delegate Tuple<EntityId, Msg> ExtractEntityId(Msg message);
+    public delegate Option<(EntityId, Msg)> ExtractEntityId(Msg message);
 
     /// <summary>
     /// Interface of functions to extract entity id,  shard id, and the message to send
@@ -1187,10 +1199,9 @@ namespace Akka.Cluster.Sharding
             ExtractEntityId extractEntityId = msg =>
             {
                 if (self.EntityId(msg) != null)
-                    return Tuple.Create(self.EntityId(msg), self.EntityMessage(msg));
-                //TODO: should we really use tuples?
+                    return (self.EntityId(msg), self.EntityMessage(msg));
 
-                return null;
+                return Option<(string, object)>.None;
             };
 
             return extractEntityId;
@@ -1243,42 +1254,69 @@ namespace Akka.Cluster.Sharding
     /// <see cref="PersistentShardCoordinator"/>. If the process takes longer than the `handOffTimeout` it
     /// also sends <see cref="RebalanceDone"/>.
     /// </summary>
-    internal class RebalanceWorker : ActorBase
+    internal class RebalanceWorker : ActorBase, IWithTimers
     {
+        public class ShardRegionTerminated
+        {
+            public ShardRegionTerminated(IActorRef region)
+            {
+                Region = region;
+            }
+
+            public IActorRef Region { get; }
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
+        /// <param name="shardRegionFrom">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
         /// <returns>TBD</returns>
-        public static Props Props(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
-        {
-            return Actor.Props.Create(() => new RebalanceWorker(shard, @from, handOffTimeout, regions));
-        }
+        public static Props Props(string shard, IActorRef shardRegionFrom, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, bool isRebalance) =>
+            Actor.Props.Create(() => new RebalanceWorker(shard, shardRegionFrom, handOffTimeout, regions, isRebalance));
 
         private readonly ShardId _shard;
-        private readonly IActorRef _from;
+        private readonly IActorRef _shardRegionFrom;
         private readonly ISet<IActorRef> _remaining;
+        private readonly bool _isRebalance;
+        private ILoggingAdapter _log;
+
+        private ILoggingAdapter Log { get { return _log ?? (_log = Context.GetLogger()); } }
+
+        public ITimerScheduler Timers { get; set; }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="shard">TBD</param>
-        /// <param name="from">TBD</param>
+        /// <param name="shardRegionFrom">TBD</param>
         /// <param name="handOffTimeout">TBD</param>
         /// <param name="regions">TBD</param>
-        public RebalanceWorker(string shard, IActorRef @from, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions)
+        /// <param name="isRebalance">TBD</param>
+        public RebalanceWorker(string shard, IActorRef shardRegionFrom, TimeSpan handOffTimeout, IEnumerable<IActorRef> regions, bool isRebalance)
         {
             _shard = shard;
-            _from = @from;
+            _shardRegionFrom = shardRegionFrom;
+            _isRebalance = isRebalance;
 
             _remaining = new HashSet<IActorRef>(regions);
             foreach (var region in _remaining)
+            {
                 region.Tell(new PersistentShardCoordinator.BeginHandOff(shard));
+            }
 
-            Context.System.Scheduler.ScheduleTellOnce(handOffTimeout, Self, ReceiveTimeout.Instance, Self);
+            if (isRebalance)
+                Log.Debug("Rebalance [{0}] from [{1}] regions", shard, regions.Count());
+            else
+                Log.Debug(
+                  "Shutting down shard [{0}] from region [{1}]. Asking [{2}] region(s) to hand-off shard",
+                  shard,
+                  shardRegionFrom,
+                  regions.Count());
+
+            Timers.StartSingleTimer("hand-off-timeout", ReceiveTimeout.Instance, handOffTimeout);
         }
 
         /// <summary>
@@ -1291,18 +1329,40 @@ namespace Akka.Cluster.Sharding
             switch (message)
             {
                 case PersistentShardCoordinator.BeginHandOffAck hoa when _shard == hoa.Shard:
-                    _remaining.Remove(Sender);
-                    if (_remaining.Count == 0)
+                    Log.Debug("BeginHandOffAck for shard [{0}] received from [{1}].", _shard, Sender);
+                    Acked(Sender);
+                    return true;
+                case ShardRegionTerminated t:
+                    if (_remaining.Contains(t.Region))
                     {
-                        _from.Tell(new PersistentShardCoordinator.HandOff(hoa.Shard));
-                        Context.Become(StoppingShard);
+                        Log.Debug("ShardRegion [{0}] terminated while waiting for BeginHandOffAck for shard [{1}].", t.Region, _shard);
                     }
+                    Acked(t.Region);
                     return true;
                 case ReceiveTimeout _:
+                    if (_isRebalance)
+                        Log.Debug("Rebalance of [{0}] from [{1}] timed out", _shard, _shardRegionFrom);
+                    else
+                        Log.Debug("Shutting down [{0}] shard from [{1}] timed out", _shard, _shardRegionFrom);
                     Done(false);
                     return true;
             }
             return false;
+        }
+
+        private void Acked(IActorRef shardRegion)
+        {
+            _remaining.Remove(shardRegion);
+            if (_remaining.Count == 0)
+            {
+                Log.Debug("All shard regions acked, handing off shard [{0}].", _shard);
+                _shardRegionFrom.Tell(new PersistentShardCoordinator.HandOff(_shard));
+                Context.Become(StoppingShard);
+            }
+            else
+            {
+                Log.Debug("Remaining shard regions: {0}", _remaining.Count);
+            }
         }
 
         private bool StoppingShard(object message)
@@ -1314,6 +1374,10 @@ namespace Akka.Cluster.Sharding
                     return true;
                 case ReceiveTimeout _:
                     Done(false);
+                    return true;
+                case ShardRegionTerminated t:
+                    Log.Debug("ShardRegion [{0}] terminated while waiting for ShardStopped for shard [{1}].", t.Region, _shard);
+                    Done(true);
                     return true;
             }
             return false;

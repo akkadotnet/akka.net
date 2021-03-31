@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GCounterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -171,6 +171,16 @@ namespace Akka.DistributedData.Tests
             var c5 = c4.Increment(_node1).PruningCleanup(_node1);
             Assert.False(c5.NeedPruningFrom(_node1));
             Assert.Equal(2UL, c4.Value);
+        }
+
+        [Fact]
+        public void GCounter_equality_must_factor_nodes()
+        {
+            var c1 = new GCounter();
+            var c2 = c1.Increment(_node1);
+            var c3 = c1.Increment(_node2);
+
+            c2.Equals(c3).Should().BeFalse();
         }
     }
 }

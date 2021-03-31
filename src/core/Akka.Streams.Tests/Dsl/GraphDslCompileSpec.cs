@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphDslCompileSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -264,7 +264,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var zip = b.Add(new Zip<int, string>());
                 var unzip = b.Add(new UnZip<int, string>());
-                var sink = Sink.AsPublisher<Tuple<int, string>>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                var sink = Sink.AsPublisher<(int, string)>(false).MapMaterializedValue(_ => NotUsed.Instance);
                 var source =
                     Source.From(new[]
                     {
@@ -291,24 +291,24 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     var zip = builder.Add(new Zip<int, string>());
                     var unzip = builder.Add(new UnZip<int, string>());
-                    var wrongOut = Sink.AsPublisher<Tuple<int, int>>(false).MapMaterializedValue(_ => NotUsed.Instance);
+                    var wrongOut = Sink.AsPublisher<(int, int)>(false).MapMaterializedValue(_ => NotUsed.Instance);
                     var whatever = Sink.AsPublisher<object>(false).MapMaterializedValue(_ => NotUsed.Instance);
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { 1, 2, 3 })).Via(((dynamic)zip).Left).To(wrongOut))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { "a", "b", "c" })).To(((dynamic)zip).Left))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     builder.Invoking(
                         b => ((dynamic)b).From(Source.From(new[] { "a", "b", "c" })).To(zip.Out))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     builder.Invoking(
                         b => ((dynamic)b).From(((dynamic)zip).Left).To(((dynamic)zip).Right))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     var source =
                         Source.From(new[]
@@ -318,13 +318,13 @@ namespace Akka.Streams.Tests.Dsl
                         });
                     builder.Invoking(
                         b => ((dynamic)b).From(source).Via(unzip.In).To(whatever))
-                        .ShouldThrow<RuntimeBinderException>();
+                        .Should().Throw<RuntimeBinderException>();
 
                     return ClosedShape.Instance;
                 }));
             };
 
-            action.ShouldThrow<ArgumentException>();
+            action.Should().Throw<ArgumentException>();
         }
 
         [Fact(Skip = "FIXME Covariance  is not supported")]

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSM.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -206,18 +206,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Normal : Reason
         {
-            /// <summary>
-            /// Obsolete. Use <see cref="Normal.Instance"/> instead.
-            /// </summary>
-            [Obsolete("This constructor is obsoleted. Use Normal.Instance [1.2.0]")]
-            public Normal() { }
+            internal Normal() { }
 
             /// <summary>
             /// Singleton instance of Normal
             /// </summary>
-#pragma warning disable 618
             public static Normal Instance { get; } = new Normal();
-#pragma warning restore 618
         }
 
         /// <summary>
@@ -226,18 +220,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class Shutdown : Reason
         {
-            /// <summary>
-            /// Obsolete. Use <see cref="Shutdown.Instance"/> instead.
-            /// </summary>
-            [Obsolete("This constructor is obsoleted. Use Shutdown.Instance [1.2.0]")]
-            public Shutdown() { }
+            internal Shutdown() { }
 
             /// <summary>
             /// Singleton instance of Shutdown
             /// </summary>
-#pragma warning disable 618
             public static Shutdown Instance { get; } = new Shutdown();
-#pragma warning restore 618
         }
 
         /// <summary>
@@ -270,18 +258,12 @@ namespace Akka.Actor
         /// </summary>
         public sealed class StateTimeout
         {
-            /// <summary>
-            /// Obsolete. Use <see cref="StateTimeout.Instance"/> instead.
-            /// </summary>
-            [Obsolete("This constructor is obsoleted. Use StateTimeout.Instance [1.2.0]")]
-            public StateTimeout() { }
+            internal StateTimeout() { }
 
             /// <summary>
             /// Singleton instance of StateTimeout
             /// </summary>
-#pragma warning disable 618
             public static StateTimeout Instance { get; } = new StateTimeout();
-#pragma warning restore 618
         }
 
         /// <summary>
@@ -322,7 +304,7 @@ namespace Akka.Actor
             /// <param name="generation">TBD</param>
             /// <param name="owner">TBD</param>
             /// <param name="context">TBD</param>
-            public Timer(string name, object message, bool repeat, int generation, IActorRef owner, IActorContext context)
+            public Timer(string name, object message, bool repeat, int generation, ActorBase owner, IActorContext context)
             {
                 Context = context;
                 Generation = generation;
@@ -357,7 +339,7 @@ namespace Akka.Actor
             /// <summary>
             /// TBD
             /// </summary>
-            public IActorRef Owner { get; }
+            public ActorBase Owner { get; }
 
             /// <summary>
             /// TBD
@@ -371,9 +353,11 @@ namespace Akka.Actor
             /// <param name="timeout">TBD</param>
             public void Schedule(IActorRef actor, TimeSpan timeout)
             {
+                var timerMsg = Message is IAutoReceivedMessage ? Message : this;
+
                 _ref = Repeat
-                    ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, this, Context.Self)
-                    : _scheduler.ScheduleTellOnceCancelable(timeout, actor, this, Context.Self);
+                    ? _scheduler.ScheduleTellRepeatedlyCancelable(timeout, timeout, actor, timerMsg, Context.Self)
+                    : _scheduler.ScheduleTellOnceCancelable(timeout, actor, timerMsg, Context.Self);
             }
 
             /// <summary>
@@ -502,7 +486,7 @@ namespace Akka.Actor
             }
 
             /// <summary>
-            /// Modify the state transition descriptor to include a state timeout for the 
+            /// Modify the state transition descriptor to include a state timeout for the
             /// next state. This timeout overrides any default timeout set for the next state.
             /// <remarks>Use <see cref="TimeSpan.MaxValue"/> to cancel a timeout.</remarks>
             /// </summary>
@@ -683,7 +667,7 @@ namespace Akka.Actor
     /// <typeparam name="TData">The state data type</typeparam>
     public abstract class FSM<TState, TData> : FSMBase, IListeners, IInternalSupportsTestFSMRef<TState,TData>
     {
-        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly ILoggingAdapter _log = Context.GetLoggerStartup();
 
         /// <summary>
         /// Initializes a new instance of the FSM class.
@@ -825,8 +809,8 @@ namespace Akka.Actor
             /// <returns>TBD</returns>
             public StateFunction Using(Func<State<TState, TData>, State<TState, TData>> andThen)
             {
-                StateFunction continuedDelegate = @event => andThen.Invoke(Func.Invoke(@event));
-                return continuedDelegate;
+                State<TState, TData> ContinuedDelegate(Event<TData> @event) => andThen.Invoke(Func.Invoke(@event));
+                return ContinuedDelegate;
             }
         }
 
@@ -854,7 +838,7 @@ namespace Akka.Actor
             if (_timers.TryGetValue(name, out var timer))
                 timer.Cancel();
 
-            timer = new Timer(name, msg, repeat, _timerGen.Next(), Self, Context);
+            timer = new Timer(name, msg, repeat, _timerGen.Next(), this, Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
@@ -876,7 +860,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Determines whether the named timer is still active. Returns true 
+        /// Determines whether the named timer is still active. Returns true
         /// unless the timer does not exist, has previously been cancelled, or
         /// if it was a single-shot timer whose message was already received.
         /// </summary>
@@ -1087,7 +1071,7 @@ namespace Akka.Actor
 
         /// <summary>
         /// C# port of Scala's orElse method for partial function chaining.
-        /// 
+        ///
         /// See http://scalachina.com/api/scala/PartialFunction.html
         /// </summary>
         /// <param name="original">The original <see cref="StateFunction"/> to be called</param>
@@ -1095,14 +1079,14 @@ namespace Akka.Actor
         /// <returns>A <see cref="StateFunction"/> which combines both the results of <paramref name="original"/> and <paramref name="fallback"/></returns>
         private static StateFunction OrElse(StateFunction original, StateFunction fallback)
         {
-            StateFunction chained = delegate(Event<TData> @event)
+            State<TState, TData> Chained(Event<TData> @event)
             {
                 var originalResult = original.Invoke(@event);
                 if (originalResult == null) return fallback.Invoke(@event);
                 return originalResult;
-            };
+            }
 
-            return chained;
+            return Chained;
         }
 
         #endregion
@@ -1112,20 +1096,24 @@ namespace Akka.Actor
         /// <inheritdoc/>
         protected override bool Receive(object message)
         {
-            var timeoutMarker = message as TimeoutMarker;
-            if (timeoutMarker != null)
+            switch (message)
             {
-                if (_generation == timeoutMarker.Generation)
+                case TimeoutMarker timeoutMarker:
                 {
-                    ProcessMsg(StateTimeout.Instance, "state timeout");
+                    if (_generation == timeoutMarker.Generation)
+                    {
+                        ProcessMsg(StateTimeout.Instance, "state timeout");
+                    }
+                    return true;
                 }
-                return true;
-            }
-
-            if (message is Timer timer)
-            {
-                if (ReferenceEquals(timer.Owner, Self) && _timers.TryGetValue(timer.Name, out var oldTimer) && oldTimer.Generation == timer.Generation)
+                case Timer timer:
                 {
+                    // if we don't own the timer, don't have a reference to it, or
+                    // if it's an older reference - ignore it.
+                    if (!ReferenceEquals(timer.Owner, this)  
+                        || !_timers.TryGetValue(timer.Name, out var oldTimer) 
+                        || oldTimer.Generation != timer.Generation) 
+                        return true;
                     if (_timeoutFuture != null)
                     {
                         _timeoutFuture.Cancel(false);
@@ -1137,43 +1125,27 @@ namespace Akka.Actor
                         _timers.Remove(timer.Name);
                     }
                     ProcessMsg(timer.Message, timer);
+                    return true;
                 }
-                return true;
-            }
-
-            var subscribeTransitionCallBack = message as SubscribeTransitionCallBack;
-            if (subscribeTransitionCallBack != null)
-            {
-                Context.Watch(subscribeTransitionCallBack.ActorRef);
-                Listeners.Add(subscribeTransitionCallBack.ActorRef);
-                //send the current state back as a reference point
-                subscribeTransitionCallBack.ActorRef.Tell(new CurrentState<TState>(Self, _currentState.StateName));
-                return true;
-            }
-
-            var listen = message as Listen;
-            if (listen != null)
-            {
-                Context.Watch(listen.Listener);
-                Listeners.Add(listen.Listener);
-                listen.Listener.Tell(new CurrentState<TState>(Self, _currentState.StateName));
-                return true;
-            }
-
-            var unsubscribeTransitionCallBack = message as UnsubscribeTransitionCallBack;
-            if (unsubscribeTransitionCallBack != null)
-            {
-                Context.Unwatch(unsubscribeTransitionCallBack.ActorRef);
-                Listeners.Remove(unsubscribeTransitionCallBack.ActorRef);
-                return true;
-            }
-
-            var deafen = message as Deafen;
-            if (deafen != null)
-            {
-                Context.Unwatch(deafen.Listener);
-                Listeners.Remove(deafen.Listener);
-                return true;
+                case SubscribeTransitionCallBack subscribeTransitionCallBack:
+                    Context.Watch(subscribeTransitionCallBack.ActorRef);
+                    Listeners.Add(subscribeTransitionCallBack.ActorRef);
+                    //send the current state back as a reference point
+                    subscribeTransitionCallBack.ActorRef.Tell(new CurrentState<TState>(Self, _currentState.StateName));
+                    return true;
+                case Listen listen:
+                    Context.Watch(listen.Listener);
+                    Listeners.Add(listen.Listener);
+                    listen.Listener.Tell(new CurrentState<TState>(Self, _currentState.StateName));
+                    return true;
+                case UnsubscribeTransitionCallBack unsubscribeTransitionCallBack:
+                    Context.Unwatch(unsubscribeTransitionCallBack.ActorRef);
+                    Listeners.Remove(unsubscribeTransitionCallBack.ActorRef);
+                    return true;
+                case Deafen deafen:
+                    Context.Unwatch(deafen.Listener);
+                    Listeners.Remove(deafen.Listener);
+                    return true;
             }
 
             if (_timeoutFuture != null)
@@ -1225,16 +1197,13 @@ namespace Akka.Actor
 
         private string GetSourceString(object source)
         {
-            var s = source as string;
-            if (s != null)
+            if (source is string s)
                 return s;
 
-            var timer = source as Timer;
-            if (timer != null)
+            if (source is Timer timer)
                 return "timer '" + timer.Name + "'";
 
-            var actorRef = source as IActorRef;
-            if (actorRef != null)
+            if (source is IActorRef actorRef)
                 return actorRef.ToString();
 
             return "unknown";
@@ -1318,7 +1287,7 @@ namespace Akka.Actor
         /// <summary>
         /// Call the <see cref="OnTermination"/> hook if you want to retain this behavior.
         /// When overriding make sure to call base.PostStop();
-        /// 
+        ///
         /// Please note that this method is called by default from <see cref="ActorBase.PreRestart"/> so
         /// override that one if <see cref="OnTermination"/> shall not be called during restart.
         /// </summary>
@@ -1341,8 +1310,7 @@ namespace Akka.Actor
         /// <param name="reason">TBD</param>
         protected virtual void LogTermination(Reason reason)
         {
-            var failure = reason as Failure;
-            if (failure != null)
+            if (reason is Failure failure)
             {
                 if (failure.Cause is Exception)
                 {
@@ -1350,7 +1318,7 @@ namespace Akka.Actor
                 }
                 else
                 {
-                    _log.Error(failure.Cause.ToString());
+                    _log.Error(failure.Cause is null? "null": failure.Cause.ToString());
                 }
             }
         }

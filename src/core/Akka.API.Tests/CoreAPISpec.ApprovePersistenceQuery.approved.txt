@@ -1,19 +1,31 @@
-﻿[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETFramework,Version=v4.5.2", FrameworkDisplayName=".NET Framework 4.5.2")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
 namespace Akka.Persistence.Query
 {
     public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
     {
+        [System.ObsoleteAttribute("For binary compatibility with previous releases")]
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event) { }
+        public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp) { }
         public object Event { get; }
         public Akka.Persistence.Query.Offset Offset { get; }
         public string PersistenceId { get; }
         public long SequenceNr { get; }
+        public long Timestamp { get; }
         public bool Equals(Akka.Persistence.Query.EventEnvelope other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
+    }
+    public interface IAllEventsQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> AllEvents(Akka.Persistence.Query.Offset offset);
+    }
+    public interface ICurrentAllEventsQuery : Akka.Persistence.Query.IReadJournal
+    {
+        Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentAllEvents(Akka.Persistence.Query.Offset offset);
     }
     public interface ICurrentEventsByPersistenceIdQuery : Akka.Persistence.Query.IReadJournal
     {

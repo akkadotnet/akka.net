@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconObject.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -159,7 +159,6 @@ namespace Akka.Configuration.Hocon
             var sb = new StringBuilder();
             foreach (var kvp in Items)
             {
-                if (kvp.Value.AdoptedFromFallback) continue;
                 string key = QuoteIfNeeded(kvp.Key);
                 sb.AppendFormat("{0}{1} : {2}\r\n", i, key, kvp.Value.ToString(indent));
             }
@@ -186,6 +185,7 @@ namespace Akka.Configuration.Hocon
         {
             var thisItems = Items;
             var otherItems = other.Items;
+            var modified = new List<KeyValuePair<string, HoconValue>>();
 
             foreach (var otherItem in otherItems)
             {
@@ -195,14 +195,27 @@ namespace Akka.Configuration.Hocon
                 {
                     //if both values are objects, merge them
                     if (thisItem.IsObject() && otherItem.Value.IsObject())
-                        thisItem.GetObject().Merge(otherItem.Value.GetObject());
+                    {
+                        var newObject = thisItem.GetObject().MergeImmutable(otherItem.Value.GetObject());
+                        var value = new HoconValue();
+                        value.Values.Add(newObject);
+                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, value));
+                    }
+                    else
+                        modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
                 else
                 {
                     //other key was not present in this object, just copy it over
-                    Items.Add(otherItem.Key, otherItem.Value);
+                    modified.Add(new KeyValuePair<string, HoconValue>(otherItem.Key, otherItem.Value));
                 }
             }
+
+            if (modified.Count == 0)
+                return;
+
+            foreach(var kvp in modified)
+                Items[kvp.Key] = kvp.Value;
         }
 
         /// <summary>
@@ -228,6 +241,8 @@ namespace Akka.Configuration.Hocon
                         mergedValue.AppendValue(mergedObject);
                         thisItems[otherItem.Key] = mergedValue;
                     }
+                    else
+                        thisItems[otherItem.Key] = otherItem.Value;
                 }
                 else
                 {
