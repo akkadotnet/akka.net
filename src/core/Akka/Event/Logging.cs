@@ -270,7 +270,7 @@ namespace Akka.Event
         {
             if (!string.IsNullOrEmpty(logLevel))
             {
-                logLevel = logLevel.ToUpper(new System.Globalization.CultureInfo("en-EN"));
+                logLevel = logLevel.ToUpperInvariant();
             }
 
             switch (logLevel)
