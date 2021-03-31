@@ -423,9 +423,9 @@ namespace Akka.Streams.Tests.IO
                     {
                         actor.Tell("a\n");
                         actor.Tell("b\n");
+                        // wait for actor to catch up
+                        Thread.Sleep(300);
 
-                        // wait for flush
-                        Thread.Sleep(100);
                         CheckFileContent(f, "a\nb\n");
 
                         actor.Tell("a\n");
