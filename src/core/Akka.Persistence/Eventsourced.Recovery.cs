@@ -255,6 +255,9 @@ namespace Akka.Persistence
                                 eventSeenInInterval = false;
                             }
                             break;
+                        case RecoveryTick tick when tick.Snapshot:
+                            // snapshot tick, ignore
+                            break;
                         default:
                             StashInternally(message);
                             break;
