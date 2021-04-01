@@ -4654,6 +4654,11 @@ namespace Akka.Serialization
         public bool PreserveObjectReferences { get; }
         public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
     }
+    public sealed class NewtonSoftJsonSerializerSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Action<Newtonsoft.Json.JsonSerializerSettings> ApplySettings { get; }
+        public static Akka.Serialization.NewtonSoftJsonSerializerSetup Create(System.Action<Newtonsoft.Json.JsonSerializerSettings> settings) { }
+    }
     public class NullSerializer : Akka.Serialization.Serializer
     {
         public NullSerializer(Akka.Actor.ExtendedActorSystem system) { }
