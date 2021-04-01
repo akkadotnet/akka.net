@@ -14,7 +14,7 @@
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <PackageReference Include="System.Reflection" Version="4.3.0" />
-    <PackageReference Include="System.Runtime" Version="4.3.0" />
+    <PackageReference Include="System.Runtime" Version="4.3.1" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
     <Reference Include="System" />
