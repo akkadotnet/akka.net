@@ -178,7 +178,19 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    record ClusterResult(Address address, TimeSpan duration, GossipStats clusterStats);
+    internal sealed class ClusterResult
+    {
+        public ClusterResult(Address address, TimeSpan duration, GossipStats clusterStats)
+        {
+            Address = address;
+            Duration = duration;
+            ClusterStats = clusterStats;
+        }
+
+        public Address Address { get; } 
+        public TimeSpan Duration { get; } 
+        public GossipStats ClusterStats { get; }
+    }
 
     class StressSpec
     {
