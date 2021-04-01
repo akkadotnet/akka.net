@@ -36,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void Bugfix4353Spec_Cluster_of_3_must_reach_cnovergence()
+        public void Bugfix4353Spec_Cluster_of_3_must_reach_convergence()
         {
             AwaitClusterUp(First, Second, Third);
             EnterBarrier("after-1");
