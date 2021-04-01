@@ -115,7 +115,7 @@ namespace Akka.Persistence.Tests
         {
             var pref = Sys.ActorOf(Props.Create(() => new DoesNotHandleDeleteFailureActor(Name)));
             Sys.EventStream.Subscribe(TestActor, typeof (Warning));
-            pref.Tell(new DeleteTo(100));
+            pref.Tell(new DeleteTo(long.MaxValue));
             var message = ExpectMsg<Warning>().Message.ToString();
             message.Contains("Failed to DeleteMessages").ShouldBeTrue();
             message.Contains("Boom! Unable to delete events!").ShouldBeTrue();
@@ -126,8 +126,8 @@ namespace Akka.Persistence.Tests
         {
             var pref = Sys.ActorOf(Props.Create(() => new HandlesDeleteFailureActor(Name, TestActor)));
             Sys.EventStream.Subscribe(TestActor, typeof (Warning));
-            pref.Tell(new DeleteTo(100));
-            ExpectMsg<DeleteMessagesFailure>(m => m.ToSequenceNr == 100);
+            pref.Tell(new DeleteTo(long.MaxValue));
+            ExpectMsg<DeleteMessagesFailure>();
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
     }
