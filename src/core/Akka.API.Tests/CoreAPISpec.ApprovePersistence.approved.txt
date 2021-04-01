@@ -113,7 +113,7 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteMessagesFailure : System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
+    public sealed class DeleteMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
     {
         public DeleteMessagesFailure(System.Exception cause, long toSequenceNr) { }
         public System.Exception Cause { get; }
