@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Tests.Pattern
@@ -29,6 +30,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public Child(IActorRef probe)
             {
                 _probe = probe;
@@ -44,6 +46,7 @@ namespace Akka.Tests.Pattern
                     _probe.Tell(msg);
                 });
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
@@ -55,6 +58,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public ManualChild(IActorRef probe)
             {
                 _probe = probe;
@@ -71,6 +75,7 @@ namespace Akka.Tests.Pattern
                     Context.Parent.Tell(BackoffSupervisor.Reset.Instance);
                 });
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
@@ -85,7 +90,7 @@ namespace Akka.Tests.Pattern
         private IActorRef Create(BackoffOptions options) => Sys.ActorOf(BackoffSupervisor.Props(options));
         #endregion
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
         {
             var supervisor = Create(OnStopOptions());
@@ -340,7 +345,7 @@ namespace Akka.Tests.Pattern
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnStop()
         {
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 2));
@@ -389,7 +394,7 @@ namespace Akka.Tests.Pattern
             ExpectTerminated(supervisor);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy on Azure DevOps")]
         public void BackoffSupervisor_must_stop_restarting_the_child_after_reaching_maxNrOfRetries_limit_using_BackOff_OnFailure()
         {
             EventFilter.Exception<TestException>().Expect(3, () =>
@@ -448,14 +453,15 @@ namespace Akka.Tests.Pattern
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
             var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+            var parentSupervisor = CreateTestProbe();
             Watch(c1);
-            Watch(supervisor);
+            parentSupervisor.Watch(supervisor);
 
             supervisor.Tell(stopMessage);
             ExpectMsg("stop");
             c1.Tell(PoisonPill.Instance);
             ExpectTerminated(c1);
-            ExpectTerminated(supervisor);
+            parentSupervisor.ExpectTerminated(supervisor);
         }
 
         [Fact]
@@ -467,7 +473,6 @@ namespace Akka.Tests.Pattern
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
             var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
             Watch(c1);
-            Watch(supervisor);
             supervisorWatcher.Watch(supervisor);
 
             c1.Tell(PoisonPill.Instance);
@@ -476,7 +481,7 @@ namespace Akka.Tests.Pattern
             supervisorWatcher.ExpectNoMsg(TimeSpan.FromMilliseconds(20)); // supervisor must not terminate
 
             supervisor.Tell(stopMessage);
-            ExpectTerminated(supervisor);
+            supervisorWatcher.ExpectTerminated(supervisor);
         }
     }
 }

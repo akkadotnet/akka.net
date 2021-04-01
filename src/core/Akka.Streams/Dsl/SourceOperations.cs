@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SourceOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,12 +9,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Stage;
-using Akka.Streams.Supervision;
 using Akka.Streams.Util;
+using Akka.Util;
+
 // ReSharper disable UnusedMember.Global
 
 namespace Akka.Streams.Dsl
@@ -247,12 +249,12 @@ namespace Akka.Streams.Dsl
         /// are emitted downstream are in the same order as received from upstream.
         /// 
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the <see cref="Task"/> is completed
-        /// with failure and the supervision decision is <see cref="Directive.Stop"/>
+        /// with failure and the supervision decision is <see cref="Supervision.Directive.Stop"/>
         /// the stream will be completed with failure.
         /// 
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the <see cref="Task"/> is completed
-        /// with failure and the supervision decision is <see cref="Directive.Resume"/> or
-        /// <see cref="Directive.Restart"/> the element is dropped and the stream continues.
+        /// with failure and the supervision decision is <see cref="Supervision.Directive.Resume"/> or
+        /// <see cref="Supervision.Directive.Restart"/> the element is dropped and the stream continues.
         /// <para>
         /// Emits when the task returned by the provided function finishes for the next element in sequence
         /// </para>
@@ -290,12 +292,12 @@ namespace Akka.Streams.Dsl
         /// in the same order as received from upstream.
         /// 
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the <see cref="Task"/> is completed
-        /// with failure and the supervision decision is <see cref="Directive.Stop"/>
+        /// with failure and the supervision decision is <see cref="Supervision.Directive.Stop"/>
         /// the stream will be completed with failure.
         /// 
         /// If the group by function <paramref name="asyncMapper"/> throws an exception or if the<see cref="Task"/> is completed
-        /// with failure and the supervision decision is <see cref="Directive.Resume"/> or
-        /// <see cref="Directive.Restart"/> the element is dropped and the stream continues.
+        /// with failure and the supervision decision is <see cref="Supervision.Directive.Resume"/> or
+        /// <see cref="Supervision.Directive.Restart"/> the element is dropped and the stream continues.
         /// <para>
         /// Emits when any of the tasks returned by the provided function complete
         /// </para>
@@ -442,9 +444,38 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Source<TOut1, TMat> flow, Func<TOut1, TOut2> collector)
         {
             return (Source<TOut2, TMat>)InternalFlowOperations.Collect(flow, collector);
+        }
+
+        /// <summary>
+        /// Transform this stream by applying the given function <paramref name="collector"/> to each of the elements
+        /// on which the function is defined (read: <paramref name="isDefined"/> returns true) as they pass through this processing step.
+        /// Non-matching elements are filtered out.
+        /// <para>
+        /// Emits when the provided function <paramref name="collector"/> is defined for the element
+        /// </para>
+        /// Backpressures when the function <paramref name="collector"/> is defined for the element and downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TOut1">TBD</typeparam>
+        /// <typeparam name="TOut2">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="isDefined">TBD</param>
+        /// <param name="collector">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(
+            this Source<TOut1, TMat> flow, 
+            Func<TOut1, bool> isDefined,
+            Func<TOut1, TOut2> collector)
+        {
+            return (Source<TOut2, TMat>)InternalFlowOperations.Collect(flow, isDefined, collector);
         }
 
         /// <summary>
@@ -573,7 +604,7 @@ namespace Akka.Streams.Dsl
         /// emitting the next current value.
         /// 
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
-        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
         /// Emits when the function scanning the element returns a new element
@@ -603,11 +634,11 @@ namespace Akka.Streams.Dsl
         /// emitting a <see cref="Task{TOut}"/> that resolves to the next current value.
         /// 
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
-        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// 
         /// If the function <paramref name="scan"/> throws an exception and the supervision decision is
-        /// <see cref="Directive.Resume"/> current value starts at the previous
+        /// <see cref="Supervision.Directive.Resume"/> current value starts at the previous
         /// current value, or zero when it doesn't have one, and the stream will continue.
         /// <para>
         /// Emits the <see cref="Task{TOut}"/> returned by <paramref name="scan"/> completes
@@ -636,7 +667,7 @@ namespace Akka.Streams.Dsl
         /// yielding the next current value.
         /// 
         /// If the function <paramref name="fold"/> throws an exception and the supervision decision is
-        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
         /// Emits when upstream completes
@@ -665,7 +696,7 @@ namespace Akka.Streams.Dsl
         /// yielding the next current value.
         /// 
         /// If the function <paramref name="fold"/> returns a failure and the supervision decision is
-        /// <see cref="Directive.Restart"/> current value starts at <paramref name="zero"/> again
+        /// <see cref="Supervision.Directive.Restart"/> current value starts at <paramref name="zero"/> again
         /// the stream will continue.
         /// <para>
         /// Emits when upstream completes
@@ -1077,7 +1108,7 @@ namespace Akka.Streams.Dsl
         /// This means that if the upstream is actually faster than the upstream it will be backpressured by the downstream
         /// subscriber.
         /// 
-        /// Expand does not support <see cref="Directive.Restart"/> and <see cref="Directive.Resume"/>.
+        /// Expand does not support <see cref="Supervision.Directive.Restart"/> and <see cref="Supervision.Directive.Resume"/>.
         /// Exceptions from the <paramref name="extrapolate"/> function will complete the stream with failure.
         /// <para>
         /// Emits when downstream stops backpressuring
@@ -1162,9 +1193,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="n">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
+        public static Source<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat> PrefixAndTail<TOut, TMat>(this Source<TOut, TMat> flow, int n)
         {
-            return (Source<Tuple<IImmutableList<TOut>, Source<TOut, NotUsed>>, TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
+            return (Source<(IImmutableList<TOut>, Source<TOut, NotUsed>), TMat>)InternalFlowOperations.PrefixAndTail(flow, n);
         }
 
         /// <summary>
@@ -1179,11 +1210,11 @@ namespace Akka.Streams.Dsl
         /// to consume only one of them.
         /// 
         /// If the group by function <paramref name="groupingFunc"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Stop"/> the stream and substreams will be completed
+        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
         /// with failure.
         /// 
         /// If the group by <paramref name="groupingFunc"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
+        /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
         /// <para>
         /// Emits when an element for which the grouping function returns a group that has not yet been created.
@@ -1242,11 +1273,11 @@ namespace Akka.Streams.Dsl
         /// explicit buffers are filled.
         /// 
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Stop"/> the stream and substreams will be completed
+        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
         /// with failure.
         /// 
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
+        /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
         /// <para>
         /// Emits when an element for which the provided predicate is true, opening and emitting
@@ -1310,11 +1341,11 @@ namespace Akka.Streams.Dsl
         /// operator itself—and thereby all substreams—once all internal or explicit buffers are filled.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Stop"/> the stream and substreams will be completed
+        /// is <see cref="Supervision.Directive.Stop"/> the stream and substreams will be completed
         /// with failure.
         ///
         /// If the split <paramref name="predicate"/> throws an exception and the supervision decision
-        /// is <see cref="Directive.Resume"/> or <see cref="Directive.Restart"/>
+        /// is <see cref="Supervision.Directive.Resume"/> or <see cref="Supervision.Directive.Restart"/>
         /// the element is dropped and the stream and substreams continue.
         /// <para>
         /// Emits when an element passes through.When the provided predicate is true it emits the element
@@ -1417,9 +1448,9 @@ namespace Akka.Streams.Dsl
         /// <para/>
         /// Cancels when downstream cancels
         /// </summary>
-        public static Source<Tuple<TOut1, long>, TMat> ZipWithIndex<TOut1, TMat>(this Source<TOut1, TMat> flow)
+        public static Source<(TOut1, long), TMat> ZipWithIndex<TOut1, TMat>(this Source<TOut1, TMat> flow)
         {
-            return (Source<Tuple<TOut1, long>, TMat>)InternalFlowOperations.ZipWithIndex(flow);
+            return (Source<(TOut1, long), TMat>)InternalFlowOperations.ZipWithIndex(flow);
         }
 
         /// <summary>
@@ -1789,9 +1820,9 @@ namespace Akka.Streams.Dsl
         /// <param name="flow">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<Tuple<T1, T2>, TMat> Zip<T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
+        public static Source<(T1, T2), TMat> Zip<T1, T2, TMat>(this Source<T1, TMat> flow, IGraph<SourceShape<T2>, TMat> other)
         {
-            return (Source<Tuple<T1, T2>, TMat>)InternalFlowOperations.Zip(flow, other);
+            return (Source<(T1, T2), TMat>)InternalFlowOperations.Zip(flow, other);
         }
 
         /// <summary>
@@ -2140,5 +2171,31 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, TMat3> OrElseMaterialized<T, TMat, TMat2, TMat3>(this Source<T, TMat> flow, IGraph<SourceShape<T>, TMat2> secondary, Func<TMat, TMat2, TMat3> materializedFunction)
             => (Source<T, TMat3>)InternalFlowOperations.OrElseMaterialized(flow, secondary, materializedFunction);
+
+        /// <summary>
+        /// Starts a new kind of a source, that is able to keep a context object and propagate it across
+        /// stages. Can be finished with <see cref="SourceWithContext{TCtx,TOut,TMat}.AsSource"/>.
+        /// </summary>
+        /// <param name="flow"></param>
+        /// <param name="fn">Function used to extract context object out of the incoming events.</param>
+        /// <typeparam name="TCtx">Type of a context.</typeparam>
+        /// <typeparam name="TOut">Type of produced events.</typeparam>
+        /// <typeparam name="TMat">Type of materialized value.</typeparam>
+        /// <returns></returns>
+        public static SourceWithContext<TCtx, TOut, TMat> AsSourceWithContext<TCtx, TOut, TMat>(
+            this Source<TOut, TMat> flow, Func<TOut, TCtx> fn) =>
+            new SourceWithContext<TCtx, TOut, TMat>(flow.Select(x => (x, fn(x))));
+      
+        /// <summary>
+        /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated.
+        /// 
+        /// '''Emits when''' upstream emits 
+        /// '''Backpressures when''' downstream backpressures 
+        /// '''Completes when''' upstream completes 
+        /// '''Fails when''' the watched actor terminates 
+        /// '''Cancels when''' downstream cancels
+        /// </summary>
+        public static Source<T, TMat> Watch<T, TMat>(this Source<T, TMat> flow, IActorRef actorRef) =>
+            (Source<T, TMat>)InternalFlowOperations.Watch(flow, actorRef);
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterRoundRobinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,7 @@ using Akka.Remote.Transport;
 using Akka.Routing;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
@@ -162,8 +163,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             var zero = Roles.Select(c => GetAddress(c)).ToDictionary(c => c, c => 0);
             var replays = ReceiveWhile(5.Seconds(), msg =>
             {
-                var routee = msg as ClusterRoundRobinSpecConfig.Reply;
-                if (routee != null && routee.RouteeType.GetType() == routeeType.GetType())
+                if (msg is ClusterRoundRobinSpecConfig.Reply routee && routee.RouteeType.GetType() == routeeType.GetType())
                     return FullAddress(routee.ActorRef);
                 return null;
             }, expectedReplies).Aggregate(zero, (replyMap, address) =>
@@ -241,7 +241,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 });
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router4.Value.Tell("hit");
                 }
@@ -269,7 +269,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 AwaitAssert(() => CurrentRoutees(router1.Value).Count().Should().Be(8));
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router1.Value.Tell("hit");
                 }
@@ -292,7 +292,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 AwaitAssert(() => CurrentRoutees(router4.Value).Count().Should().Be(8));
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router4.Value.Tell("hit");
                 }
@@ -314,7 +314,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 AwaitAssert(() => CurrentRoutees(router3.Value).Count().Should().Be(3));
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router3.Value.Tell("hit");
                 }
@@ -338,7 +338,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 AwaitAssert(() => CurrentRoutees(router5.Value).Count().Should().Be(2));
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router5.Value.Tell("hit");
                 }
@@ -365,7 +365,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 AwaitAssert(() => CurrentRoutees(router2.Value).Count().Should().Be(3));
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router2.Value.Tell("hit");
                 }
@@ -427,8 +427,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
 
                 routees().ForEach(actorRef =>
                 {
-                    var actorRefRoutee = actorRef as ActorRefRoutee;
-                    if (actorRefRoutee != null)
+                    if (actorRef is ActorRefRoutee actorRefRoutee)
                     {
                         Watch(actorRefRoutee.Actor);
                     }
@@ -449,7 +448,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
                 });
 
                 var iterationCount = 10;
-                for (int i = 0; i < iterationCount; i++)
+                for (var i = 0; i < iterationCount; i++)
                 {
                     router2.Value.Tell("hit");
                 }

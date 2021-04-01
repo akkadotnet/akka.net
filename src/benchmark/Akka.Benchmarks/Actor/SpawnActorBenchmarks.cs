@@ -1,7 +1,7 @@
-﻿// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SpawnActorBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,13 +10,12 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Jobs;
 using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks.Actor
 {
-    [Config(typeof(MonitoringConfig))]
-    [SimpleJob(RunStrategy.Monitoring, launchCount: 1, warmupCount: 1, targetCount: 1)]
+    [Config(typeof(MicroBenchmarkConfig))]
+    [SimpleJob(RunStrategy.Throughput, targetCount:10, warmupCount:5, invocationCount: ActorCount)]
     public class SpawnActorBenchmarks
     {
         public const int ActorCount = 100_000;
@@ -36,11 +35,10 @@ namespace Akka.Benchmarks.Actor
             system.Dispose();
         }
 
-        [Benchmark(OperationsPerInvoke = ActorCount)]
-        public async Task Actor_spawn()
+        [Benchmark]
+        public void Actor_spawn()
         {
             var parent = system.ActorOf(Parent.Props);
-            await parent.Ask(StartTest.Instance, timeout);
         }
 
         #region actors

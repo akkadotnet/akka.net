@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Mailbox.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.Dispatch
             /// <summary>
             /// TBD
             /// </summary>
-            public const int Open = 0; // _status is not initialized in AbstractMailbox, so default must be zero! 
+            public const int Open = 0; // _status is not initialized in AbstractMailbox, so default must be zero!
             /// <summary>
             /// TBD
             /// </summary>
@@ -183,7 +183,7 @@ namespace Akka.Dispatch
 
         /// <summary>
         /// INTERNAL API
-        /// 
+        ///
         /// <see cref="Actor"/> must not be visible to user-defined implementations
         /// </summary>
         internal ActorCell Actor => _actor;
@@ -396,7 +396,7 @@ namespace Akka.Dispatch
         /// failure simply drop and go on to the next, because there is nothing to
         /// restart here (failure is in <see cref="ActorCell"/> somewhere …). In case the mailbox
         /// becomes closed (because of processing a <see cref="Terminate"/> message), dump all
-        /// already dequeued message to deadLetters. 
+        /// already dequeued message to deadLetters.
         /// </summary>
         private void ProcessAllSystemMessages()
         {
@@ -409,24 +409,7 @@ namespace Akka.Dispatch
                 msg.Unlink();
                 DebugPrint("{0} processing system message {1} with {2}", Actor.Self, msg, string.Join(",", Actor.GetChildren()));
                 // we know here that SystemInvoke ensures that only "fatal" exceptions get rethrown
-#if UNSAFE_THREADING
-                try
-                {
-                    Actor.SystemInvoke(msg);
-                }
-
-                catch (ThreadInterruptedException ex)
-                // thrown only if thread is explicitly interrupted, which should never happen
-                {
-                    interruption = ex;
-                }
-                catch (ThreadAbortException ex) // can be thrown if dispatchers shutdown / application terminates / etc
-                {
-                    interruption = ex;
-                }
-#else 
                 Actor.SystemInvoke(msg);
-#endif
 
                 // don't ever execute normal message when system message present!
                 if (messageList.IsEmpty && !IsClosed())
@@ -447,17 +430,6 @@ namespace Akka.Dispatch
                 {
                     dlm.SystemEnqueue(Actor.Self, msg);
                 }
-#if UNSAFE_THREADING
-                catch (ThreadInterruptedException ex)
-                // thrown only if thread is explicitly interrupted, which should never happen
-                {
-                    interruption = ex;
-                }
-                catch (ThreadAbortException ex) // can be thrown if dispatchers shutdown / application terminates / etc
-                {
-                    interruption = ex;
-                }
-#endif
                 catch (Exception ex)
                 {
                     Actor.System.EventStream.Publish(new Error(ex, GetType().FullName, GetType(), $"error while enqueuing {msg} to deadletters: {ex.Message}"));
@@ -475,7 +447,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// Overrideable callback to clean up the mailbox, called
         /// when an actor is unregistered.
-        /// 
+        ///
         /// By default it dequeues all system messages + messages and ships them to the owning actor's systems' <see cref="DeadLetterMailbox"/>.
         /// </summary>
         public virtual void CleanUp()
@@ -570,13 +542,13 @@ namespace Akka.Dispatch
     /// </summary>
     /// <remarks>
     /// Possibly important notice.
-    /// 
+    ///
     /// When implementing a custom MailboxType, be aware that there is special semantics attached to
     /// <see cref="ActorSystem.ActorOf"/> in that sending the returned <see cref="IActorRef"/> may, for a short
     /// period of time, enqueue the messages first in a dummy queue. Top-level actors are created in two steps, and only
     /// after the guardian actor ahs performed that second step will all previously sent messages be transferred from the
     /// dummy queue to the real mailbox.
-    /// 
+    ///
     /// Implemented as an abstract class in order to enforce constructor requirements.
     /// </remarks>
     public abstract class MailboxType
@@ -664,7 +636,10 @@ namespace Akka.Dispatch
         /// </exception>
         public BoundedMailbox(Settings settings, Config config) : base(settings, config)
         {
-            Capacity = config.GetInt("mailbox-capacity");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BoundedMailbox>();
+
+            Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));
@@ -796,7 +771,10 @@ namespace Akka.Dispatch
         /// </exception>
         public BoundedDequeBasedMailbox(Settings settings, Config config) : base(settings, config)
         {
-            Capacity = config.GetInt("mailbox-capacity");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<BoundedDequeBasedMailbox>();
+
+            Capacity = config.GetInt("mailbox-capacity", 0);
             PushTimeout = config.GetTimeSpan("mailbox-push-timeout-time", TimeSpan.FromSeconds(-1));
 
             if (Capacity < 0) throw new ArgumentException("The capacity for BoundedMailbox cannot be negative", nameof(config));

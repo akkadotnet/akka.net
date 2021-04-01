@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ThreadPoolBuilder.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,23 +42,6 @@ namespace Akka.Dispatch
                 ThreadType.Foreground : ThreadType.Background;
         }
 
-#if UNSAFE_THREADING
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="cfg">TBD</param>
-        /// <returns>TBD</returns>
-        internal static ApartmentState GetApartmentState(Config cfg)
-        {
-            var s = cfg.GetString("apartment");
-            return string.Compare(s, "sta", StringComparison.OrdinalIgnoreCase) == 0
-                ? ApartmentState.STA
-                : string.Compare(s, "mta", StringComparison.OrdinalIgnoreCase) == 0
-                    ? ApartmentState.MTA
-                    : ApartmentState.Unknown;
-        }
-#endif
-
         /// <summary>
         /// Default settings for <see cref="SingleThreadDispatcher"/> instances.
         /// </summary>
@@ -87,7 +70,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMin
         {
-            get { return _config.GetInt("pool-size-min"); }
+            get { return _config.GetInt("pool-size-min", 0); }
         }
 
         /// <summary>
@@ -95,7 +78,7 @@ namespace Akka.Dispatch
         /// </summary>
         public double PoolSizeFactor
         {
-            get { return _config.GetDouble("pool-size-factor"); }
+            get { return _config.GetDouble("pool-size-factor", 0); }
         }
 
         /// <summary>
@@ -103,7 +86,7 @@ namespace Akka.Dispatch
         /// </summary>
         public int PoolSizeMax
         {
-            get { return _config.GetInt("pool-size-max"); }
+            get { return _config.GetInt("pool-size-max", 0); }
         }
 
         #region Static methods

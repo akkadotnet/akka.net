@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStore.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,9 +38,10 @@ namespace Akka.Persistence.Snapshot
             _publish = extension.Settings.Internal.PublishPluginCommands;
             var config = extension.ConfigFor(Self);
             _breaker = CircuitBreaker.Create(
-                config.GetInt("circuit-breaker.max-failures"),
-                config.GetTimeSpan("circuit-breaker.call-timeout"),
-                config.GetTimeSpan("circuit-breaker.reset-timeout"));
+                Context.System.Scheduler,
+                config.GetInt("circuit-breaker.max-failures", 10),
+                config.GetTimeSpan("circuit-breaker.call-timeout", TimeSpan.FromSeconds(10)),
+                config.GetTimeSpan("circuit-breaker.reset-timeout", TimeSpan.FromSeconds(30)));
         }
 
         /// <inheritdoc/>

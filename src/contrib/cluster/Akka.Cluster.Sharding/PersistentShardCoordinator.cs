@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -810,7 +810,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Result of <see cref="PersistentShardCoordinator.AllocateShard"/> is piped to self with this message.
+        /// Result of <see cref="IShardAllocationStrategy.AllocateShard(IActorRef, ShardId, IImmutableDictionary{IActorRef, IImmutableList{ShardId}})"/> is piped to self with this message.
         /// </summary>
         [Serializable]
         public sealed class AllocateShardResult
@@ -846,7 +846,7 @@ namespace Akka.Cluster.Sharding
         }
 
         /// <summary>
-        /// Result of `rebalance` is piped to self with this message.
+        /// Result of <see cref="IShardAllocationStrategy.Rebalance(IImmutableDictionary{IActorRef, IImmutableList{ShardId}}, IImmutableSet{ShardId})"/> is piped to self with this message.
         /// </summary>
         [Serializable]
         public sealed class RebalanceResult
@@ -1258,6 +1258,7 @@ namespace Akka.Cluster.Sharding
         public ILoggingAdapter Log { get; }
         public ImmutableDictionary<string, ICancelable> UnAckedHostShards { get; set; } = ImmutableDictionary<string, ICancelable>.Empty;
         public ImmutableDictionary<string, ImmutableHashSet<IActorRef>> RebalanceInProgress { get; set; } = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
+        public ImmutableHashSet<IActorRef> RebalanceWorkers { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         // regions that have requested handoff, for graceful shutdown
         public ImmutableHashSet<IActorRef> GracefullShutdownInProgress { get; set; } = ImmutableHashSet<IActorRef>.Empty;
         public ImmutableHashSet<IActorRef> AliveRegions { get; set; } = ImmutableHashSet<IActorRef>.Empty;
@@ -1270,6 +1271,7 @@ namespace Akka.Cluster.Sharding
         IActorRef IShardCoordinator.Self => Self;
         IActorRef IShardCoordinator.Sender => Sender;
         IActorContext IShardCoordinator.Context => Context;
+        IActorRef IShardCoordinator.IgnoreRef => Context.System.IgnoreRef;
 
         /// <summary>
         /// TBD
@@ -1292,12 +1294,12 @@ namespace Akka.Cluster.Sharding
             if (string.IsNullOrEmpty(settings.Role))
                 MinMembers = Cluster.Settings.MinNrOfMembers;
             else
-                MinMembers = Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, Cluster.Settings.MinNrOfMembers);
+                MinMembers = Cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
 
             JournalPluginId = Settings.JournalPluginId;
             SnapshotPluginId = Settings.SnapshotPluginId;
 
-            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TunningParameters.RebalanceInterval, Settings.TunningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
+            RebalanceTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, Self, RebalanceTick.Instance, Self);
 
             Cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
@@ -1310,6 +1312,19 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public override String PersistenceId { get; }
 
+        protected override void PreStart()
+        {
+            switch (AllocationStrategy)
+            {
+                case IStartableAllocationStrategy strategy:
+                    strategy.Start();
+                    break;
+                case IActorSystemDependentAllocationStrategy strategy:
+                    strategy.Start(Context.System);
+                    break;
+            }
+        }
+
         protected override void PostStop()
         {
             base.PostStop();
@@ -1321,7 +1336,7 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        protected override bool ReceiveRecover(Object message)
+        protected override bool ReceiveRecover(object message)
         {
             switch (message)
             {
@@ -1354,8 +1369,7 @@ namespace Akka.Cluster.Sharding
                             return true;
                     }
                     return false;
-                case SnapshotOffer offer when offer.Snapshot is State:
-                    var state = offer.Snapshot as State;
+                case SnapshotOffer offer when offer.Snapshot is State state:
                     Log.Debug("ReceiveRecover SnapshotOffer {0}", state);
                     CurrentState = state.WithRememberEntities(Settings.RememberEntities);
                     // Old versions of the state object may not have unallocatedShard set,
@@ -1397,13 +1411,20 @@ namespace Akka.Cluster.Sharding
 
         private bool WaitingForStateInitialized(object message)
         {
-            if (message is StateInitialized)
+            switch (message)
             {
-                this.StateInitialized();
-                Context.Become(msg => this.Active(msg) || HandleSnapshotResult(msg));
-                return true;
+                case Terminate _:
+                    Log.Debug("Received termination message before state was initialized");
+                    Context.Stop(Self);
+                    return true;
+
+                case StateInitialized _:
+                    this.StateInitialized();
+                    Context.Become(msg => this.Active(msg) || HandleSnapshotResult(msg));
+                    return true;
             }
-            else if (this.ReceiveTerminated(message)) return true;
+
+            if (this.ReceiveTerminated(message)) return true;
             else return HandleSnapshotResult(message);
         }
 
@@ -1414,7 +1435,7 @@ namespace Akka.Cluster.Sharding
             {
                 case SaveSnapshotSuccess m:
                     Log.Debug("Persistent snapshot saved successfully");
-                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TunningParameters.KeepNrOfBatches, Settings.TunningParameters.SnapshotAfter);
+                    InternalDeleteMessagesBeforeSnapshot(m, Settings.TuningParameters.KeepNrOfBatches, Settings.TuningParameters.SnapshotAfter);
                     break;
 
                 case SaveSnapshotFailure m:
@@ -1457,7 +1478,7 @@ namespace Akka.Cluster.Sharding
 
         private void SaveSnapshotWhenNeeded()
         {
-            if (LastSequenceNr % Settings.TunningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
+            if (LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
                 SaveSnapshot(CurrentState);

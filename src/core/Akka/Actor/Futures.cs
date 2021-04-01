@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Futures.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -129,20 +129,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Resolves <see cref="IActorRefProvider"/> for Ask pattern
         /// </summary>
-        /// <param name="self">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="self">Reference to someone we are sending Ask request to</param>
+        /// <returns>Provider used for Ask pattern implementation</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
-            if (ActorCell.Current != null)
-                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
+            if (self is ActorSelection)
+                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
 
             if (self is IInternalActorRef)
                 return self.AsInstanceOf<IInternalActorRef>().Provider;
-
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+            
+            if (ActorCell.Current != null)
+                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
 
             return null;
         }
@@ -176,7 +176,7 @@ namespace Akka.Actor
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef(result, () => { }, path, TaskEx.IsRunContinuationsAsynchronouslyAvailable);
+            var future = new FutureActorRef(result, () => { }, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             var message = messageFactory(future);
@@ -488,7 +488,7 @@ namespace Akka.Actor
             }
         }
 
-        /// <inheritdoc cref="InternalActorRefBase.TellInternal"/>
+        /// <inheritdoc cref="ActorRefBase.TellInternal">InternalActorRefBase.TellInternal</inheritdoc>
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (State is Stopped || State is StoppedWithPath) Provider.DeadLetters.Tell(message);

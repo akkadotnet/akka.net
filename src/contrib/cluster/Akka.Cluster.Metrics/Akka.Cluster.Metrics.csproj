@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\..\common.props" />
+
+    <PropertyGroup>
+        <AssemblyTitle>Akka.Cluster.Metrics</AssemblyTitle>
+        <Description>
+            The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes
+            and to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
+        </Description>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="reference.conf" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
+    </ItemGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
+
+</Project>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,10 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
+using Akka.Streams.Util;
 using Akka.TestKit;
+using Akka.Util;
+using Akka.Util.Extensions;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -164,7 +167,7 @@ namespace Akka.Streams.Tests.Dsl
                 //external cancellation
                 neverPromise.SetException(new Exception("Boom"));
 
-                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>()
+                counterFuture.Invoking(f => f.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>()
                     .WithMessage("Boom");
             }, Materializer);
         }
@@ -206,7 +209,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 5; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.ShouldAllBeEquivalentTo(new[] {0, 1, 2, 3, 4});
+            gotten.Should().BeEquivalentTo(new[] {0, 1, 2, 3, 4});
             outProbe.ExpectComplete();
         }
 
@@ -235,7 +238,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 3; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.ShouldAllBeEquivalentTo(new[] {0, 1, 2});
+            gotten.Should().BeEquivalentTo(new[] {0, 1, 2});
             outProbe.ExpectComplete();
         }
 
@@ -264,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
             var gotten = new List<int>();
             for (var i = 0; i < 2; i++)
                 gotten.Add(outProbe.ExpectNext());
-            gotten.ShouldAllBeEquivalentTo(new[] {0, 1});
+            gotten.Should().BeEquivalentTo(new[] {0, 1});
             outProbe.ExpectComplete();
         }
 
@@ -318,13 +321,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_finite_fibonacci_sequence()
         {
-            Source.Unfold(Tuple.Create(0, 1), tuple =>
+            Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return null;
-                return Tuple.Create(Tuple.Create(b, a + b), a);
+                    return Option<((int, int), int)>.None;
+                
+                return ((b, a + b), a);
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -337,20 +341,21 @@ namespace Akka.Streams.Tests.Dsl
         {
             EventFilter.Exception<Exception>(message: "expected").ExpectOne(() =>
             {
-                var task = Source.Unfold(Tuple.Create(0, 1), tuple =>
+                var task = Source.Unfold((0, 1), tuple =>
                 {
                     var a = tuple.Item1;
                     var b = tuple.Item2;
                     if (a > 10000000)
                         throw new Exception("expected");
-                    return Tuple.Create(Tuple.Create(b, a + b), a);
+                    
+                    return ((b, a + b), a).AsOption();
                 }).RunAggregate(new LinkedList<int>(), (ints, i) =>
                 {
                     ints.AddFirst(i);
                     return ints;
                 }, Materializer);
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<Exception>()
+                    .Should().Throw<Exception>()
                     .WithMessage("expected");
             });
         }
@@ -358,13 +363,14 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_finite_fibonacci_sequence_asynchronously()
         {
-            Source.UnfoldAsync(Tuple.Create(0, 1), tuple =>
+            Source.UnfoldAsync((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
                 if (a > 10000000)
-                    return Task.FromResult<Tuple<Tuple<int, int>, int>>(null);
-                return Task.FromResult(Tuple.Create(Tuple.Create(b, a + b), a));
+                    return Task.FromResult(Option<((int, int), int)>.None);
+                
+                return Task.FromResult(((b, a + b), a).AsOption());
             }).RunAggregate(new LinkedList<int>(), (ints, i) =>
             {
                 ints.AddFirst(i);
@@ -375,11 +381,11 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Unfold_Source_must_generate_a_unboundeed_fibonacci_sequence()
         {
-            Source.Unfold(Tuple.Create(0, 1), tuple =>
+            Source.Unfold((0, 1), tuple =>
             {
                 var a = tuple.Item1;
                 var b = tuple.Item2;
-                return Tuple.Create(Tuple.Create(b, a + b), a);
+                return((b, a + b), a).AsOption();
             })
             .Take(36)
             .RunAggregate(new LinkedList<int>(), (ints, i) =>
@@ -408,7 +414,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(9)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer)
                 .AwaitResult()
-                .ShouldAllBeEquivalentTo(expected);
+                .Should().BeEquivalentTo(expected);
         }
 
         [Fact]
@@ -416,7 +422,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var empty = Enumerable.Empty<int>().GetEnumerator();
             var task = Source.Cycle(()=>empty).RunWith(Sink.First<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -432,7 +438,7 @@ namespace Akka.Streams.Tests.Dsl
                 b = true;
                 return single;
             }).RunWith(Sink.Last<int>(), Materializer);
-            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<ArgumentException>();
+            task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<ArgumentException>();
         }
 
         [Fact]
@@ -454,7 +460,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.ZipN(sources)
                 .RunWith(Sink.Seq<IImmutableList<int>>(), Materializer)
                 .AwaitResult()
-                .ShouldAllBeEquivalentTo(new[]
+                .Should().BeEquivalentTo(new[]
                 {
                     new[] {1, 10, 100},
                     new[] {2, 20, 200},
@@ -475,7 +481,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.ZipWithN(list => list.Sum(), sources)
                 .RunWith(Sink.Seq<int>(), Materializer)
                 .AwaitResult()
-                .ShouldAllBeEquivalentTo(new[] {111, 222, 333});
+                .Should().BeEquivalentTo(new[] {111, 222, 333});
         }
 
         [Fact]
@@ -554,7 +560,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.Empty<int>().MapMaterializedValue<int>(_ => throw new InvalidOperationException("boom"));
 
             Action thrower = () => matValPoweredSource.PreMaterialize(Sys.Materializer());
-            thrower.ShouldThrow<InvalidOperationException>();
+            thrower.Should().Throw<InvalidOperationException>();
         }
     }
 }

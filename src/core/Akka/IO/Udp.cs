@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Udp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -501,8 +501,8 @@ namespace Akka.IO
         public UdpExt(ExtendedActorSystem system, UdpSettings settings)
         {
             var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
-            if (bufferPoolConfig == null)
-                throw new ArgumentNullException(nameof(settings), $"Couldn't find a HOCON config for `{settings.BufferPoolConfigPath}`");
+            if (bufferPoolConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
 
             Setting = settings;
             BufferPool = CreateBufferPool(system, bufferPoolConfig);
@@ -532,7 +532,10 @@ namespace Akka.IO
 
         private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
-            var type = Type.GetType(config.GetString("class"), true);
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
+
+            var type = Type.GetType(config.GetString("class", null), true);
 
             if (!typeof(IBufferPool).IsAssignableFrom(type))
                 throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");

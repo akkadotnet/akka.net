@@ -426,7 +426,7 @@ You may notice two extra parameters here. One of the advantages of Akka.Streams 
 
 - `OverflowStrategy.DropHead` (default) will drop the oldest element. In this mode source works in circular buffer fashion.
 - `OverflowStrategy.DropTail` will cause a current element to replace a one set previously in a buffer.
-- `OverflowStrategy.DropNew` will cause current event to be dropped. This effectivelly will cause dropping any new incoming events until a buffer will get some free space.
+- `OverflowStrategy.DropNew` will cause current event to be dropped. This effectively will cause dropping any new incoming events until a buffer will get some free space.
 - `OverflowStrategy.Fail` will cause a `BufferOverflowException` to be send as an error signal.
 - `OverflowStrategy.DropBuffer` will cause a whole buffer to be cleared once it's limit has been reached.
 

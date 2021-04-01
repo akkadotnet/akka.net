@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FSMActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using static Akka.Actor.FSMBase;
 
@@ -453,7 +454,7 @@ namespace Akka.Tests.Actor
         public void FSMActor_must_log_termination()
         {
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorLogTermination()));
-            var name = actorRef.Path.ToStringWithUid();
+            var name = actorRef.Path.ToString();
             EventFilter.Error("Next state 2 does not exist").ExpectOne(() =>
             {
                 Sys.EventStream.Subscribe(TestActor, typeof(Error));

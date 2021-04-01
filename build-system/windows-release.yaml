@@ -2,7 +2,7 @@
 # See https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema for reference
 
 pool:
-  vmImage: vs2017-win2016
+  vmImage: windows-2019
   demands: Cmd
 
 trigger:
@@ -16,18 +16,26 @@ variables:
   - group: signingSecrets #create this group with SECRET variables `signingUsername` and `signingPassword`
   - group: nugetKeys #create this group with SECRET variables `nugetKey`
   - name: githubConnectionName
-    value: yourConnection #replace this
+    value: AkkaDotNet_Releases
   - name: projectName
-    value: yourProjectName #replace this
+    value: akka.net
   - name: githubRepositoryName
-    value: yourOrganization/yourRepo #replace this
-
+    value: akkadotnet/akka.net
 steps:
+- task: UseDotNet@2
+  displayName: 'Use .NET 5 SDK 5.0.101'
+  inputs:
+    version: 5.0.101
+- task: UseDotNet@2
+  displayName: 'Use .NET Core Runtime 3.1.10'
+  inputs:
+    packageType: runtime
+    version: 3.1.10
 - task: BatchScript@1
   displayName: 'FAKE Build'
   inputs:
     filename: build.cmd
-    arguments: 'All SignClientUser=$(signingUsername) SignClientSecret=$(signingPassword) nugetpublishurl=https://www.nuget.org/api/v2/package nugetkey=$(nugetKey)'
+    arguments: 'nuget nugetpublishurl=https://api.nuget.org/v3/index.json nugetkey=$(nugetKey)'
 
 - task: GitHubRelease@0
   displayName: 'GitHub release (create)'

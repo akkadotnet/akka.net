@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentEventsByPersistenceIdSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace Akka.Persistence.TCK.Query
         protected IReadJournal ReadJournal { get; set; }
 
         protected CurrentEventsByPersistenceIdSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(config, actorSystemName, output)
+            : base(config ?? Config.Empty, actorSystemName, output)
         {
             Materializer = Sys.Materializer();
         }
@@ -164,6 +165,23 @@ namespace Akka.Persistence.TCK.Query
 
             var src = queries.CurrentEventsByPersistenceId("l", 4L, 3L);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
+        }
+        
+                
+        [Fact]
+        public void ReadJournal_CurrentEventsByPersistenceId_should_include_timestamp_in_EventEnvelope()
+        {
+            Setup("m");
+            
+            var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
+            var src = queries.CurrentEventsByPersistenceId("m", 0L, long.MaxValue);
+
+            var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(5);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            probe.ExpectComplete();
         }
 
         private IActorRef Setup(string persistenceId)

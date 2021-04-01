@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HyperionSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -173,9 +173,10 @@ namespace Akka.Serialization
         /// <returns></returns>
         public static HyperionSerializerSettings Create(Config config)
         {
-            if (config == null) throw new ArgumentNullException(nameof(config), "HyperionSerializerSettings require a config, default path: `akka.serializers.hyperion`");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.serializers.hyperion");
 
-            var typeName = config.GetString("known-types-provider");
+            var typeName = config.GetString("known-types-provider", null);
             var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
 
             return new HyperionSerializerSettings(

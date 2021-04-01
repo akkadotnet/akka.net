@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GCounter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,8 +47,6 @@ namespace Akka.DistributedData
         FastMerge<GCounter>,
         IRemovedNodePruning<GCounter>,
         IEquatable<GCounter>,
-        IComparable<GCounter>,
-        IComparable,
         IReplicatedDataSerialization,
         IDeltaReplicatedData<GCounter, GCounter>,
         IReplicatedDelta
@@ -173,8 +171,7 @@ namespace Akka.DistributedData
         /// <returns>TBD</returns>
         public GCounter Prune(UniqueAddress removedNode, UniqueAddress collapseInto)
         {
-            ulong prunedNodeValue;
-            return State.TryGetValue(removedNode, out prunedNodeValue)
+            return State.TryGetValue(removedNode, out var prunedNodeValue)
                 ? new GCounter(State.Remove(removedNode)).Increment(collapseInto, prunedNodeValue)
                 : this;
         }
@@ -190,26 +187,16 @@ namespace Akka.DistributedData
         public override int GetHashCode() => State.GetHashCode();
 
         /// <inheritdoc/>
-        public int CompareTo(object obj) => obj is GCounter ? CompareTo((GCounter)obj) : -1;
-
-        /// <inheritdoc/>
         public bool Equals(GCounter other)
         {
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return Equals(Value, other.Value);
+            return State.SequenceEqual(other.State);
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is GCounter && Equals((GCounter)obj);
-
-        /// <inheritdoc/>
-        public int CompareTo(GCounter other)
-        {
-            if (ReferenceEquals(other, null)) return 1;
-            return Value.CompareTo(other.Value);
-        }
+        public override bool Equals(object obj) => obj is GCounter counter && Equals(counter);
 
         /// <inheritdoc/>
         public override string ToString() => $"GCounter({Value})";

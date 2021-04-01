@@ -7,12 +7,12 @@ title: Akka.Cluster Configuration
 In this section, we'll review the most important and commonly used Cluster configuration options. To see the full list of options, check out the [full Cluster conf file here](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Cluster/Configuration/Cluster.conf).
 
 ## Critical Configuration Options
-Here are the most common options for configuring a [node](cluster-overview.md#key-terms) in the cluster:
+Here are the most common options for configuring a [node](xref:cluster-overview#key-terms) in the cluster:
 
 - **`min-nr-of-members`**: the minimum number of member nodes required to be present in the cluster before the leader marks nodes as `Up`.
     - **`min size per role`**: the minimum number of member nodes for the given role required to be present in the cluster before the role leader marks nodes with the specified role as `Up`.
-- **`seed-nodes`**: The addresses of the [seed nodes](cluster-overview.md#seed-nodes) to join automatically at startup. Comma-separated list of URI strings. A node may list itself as a seed node and "self-join."
-- **`roles`**: the [roles](cluster-overview.md#key-terms) that this node is to fulfill in the cluster.  List of strings, e.g. `roles = ["A", "B"]`.
+- **`seed-nodes`**: The addresses of the [seed nodes](xref:cluster-overview#seed-nodes) to join automatically at startup. Comma-separated list of URI strings. A node may list itself as a seed node and "self-join."
+- **`roles`**: the [roles](xref:cluster-overview#key-terms) that this node is to fulfill in the cluster.  List of strings, e.g. `roles = ["A", "B"]`.
 
 You can see all of these options being used in the following HOCON:
 
@@ -31,6 +31,20 @@ akka {
        role.["crawler"].min-nr-of-members = 3 # crawler role minimum node count
     }
 }
+```
+
+### Cluster Info Logging
+
+You can silence the logging of cluster events at info level with configuration property:
+
+```
+akka.cluster.log-info = off
+```
+
+You can enable verbose logging of cluster events at info level, e.g. for temporary troubleshooting, with configuration property:
+
+```
+akka.cluster.log-info-verbose = on
 ```
 
 ## Specifying Minimum Cluster Sizes
@@ -82,4 +96,4 @@ akka {
 This tells the role leader for `crawlerV1` to not mark any of those nodes as up until at least three nodes with role `crawlerV1` have joined the cluster.
 
 ## Additional Resources
-- [Cluster.conf](../configuration/akka.cluster.md): the full set of configuration options
+- [Cluster.conf](xref:akka-cluster-configuration): the full set of configuration options

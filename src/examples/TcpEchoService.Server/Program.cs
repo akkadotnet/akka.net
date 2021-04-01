@@ -1,19 +1,20 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using Akka.Actor;
 
 namespace TcpEchoService.Server
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             using (var system = ActorSystem.Create("echo-server-system"))
             {
@@ -28,6 +29,9 @@ namespace TcpEchoService.Server
                 Console.WriteLine("TCP server is listening on *:{0}", port);
                 Console.WriteLine("ENTER to exit...");
                 Console.ReadLine();
+                
+                // Close connection to avoid error message in console
+                await actor.Ask(new EchoService.StopServer());
             }
         }
     }

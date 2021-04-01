@@ -1,0 +1,160 @@
+/*
+ * Copyright (C) 2009-2020 Lightbend Inc. <https://www.lightbend.com>
+ * Copyright (C) 2013-2020 Akka.NET project <https://github.com/akkadotnet/akka.net>
+ */
+
+syntax = "proto3";
+
+package Akka.DistributedData.Serialization.Proto.Msg;
+
+option optimize_for = SPEED;
+
+message Get {
+   OtherMessage key = 1;
+   sint32 consistency = 2;
+   uint32 timeout = 3;
+   OtherMessage request = 4;
+   int32 consistencyMinCap = 5;
+   bool hasConsistencyAdditional = 6;
+   int32 consistencyAdditional = 7;
+}
+
+message GetSuccess {
+   OtherMessage key = 1;
+   OtherMessage data = 2;
+   OtherMessage request = 4;
+}
+
+message NotFound {
+   OtherMessage key = 1;
+   OtherMessage request = 2;
+}
+
+message GetFailure {
+   OtherMessage key = 1;
+   OtherMessage request = 2;
+}
+
+message Subscribe {
+   OtherMessage key = 1;
+   string ref = 2;
+}
+
+message Unsubscribe {
+   OtherMessage key = 1;
+   string ref = 2;
+}
+
+message Changed {
+   OtherMessage key = 1;
+   OtherMessage data = 2;
+}
+
+message Write {
+   string key = 1;
+   DataEnvelope envelope = 2;
+   UniqueAddress fromNode = 3;
+}
+
+// message WriteAck, via Empty
+
+message Empty {
+}
+
+message Read {
+   string key = 1;
+   UniqueAddress fromNode = 2;
+}
+
+message ReadResult {
+   DataEnvelope envelope = 1;
+}
+
+message DataEnvelope {
+  message PruningEntry {
+     UniqueAddress removedAddress = 1;
+     UniqueAddress ownerAddress = 2;
+     bool performed = 3;
+    repeated Address seen = 4;
+     sint64 obsoleteTime = 5;
+  } 
+  
+   OtherMessage data = 1;
+  repeated PruningEntry pruning = 2;
+   VersionVector deltaVersions = 3;
+}
+
+message Status {
+  message Entry {
+     string key = 1;
+     bytes digest = 2;
+  }
+  
+   uint32 chunk = 1;
+   uint32 totChunks = 2;
+  repeated Entry entries = 3;
+   sfixed64 toSystemUid = 4;
+   sfixed64 fromSystemUid = 5;
+   bool hasToSystemUid = 6;
+   bool hasFromSystemUid = 7;
+}
+
+message Gossip {
+  message Entry {
+     string key = 1;
+     DataEnvelope envelope = 2;
+  }
+  
+   bool sendBack = 1;
+  repeated Entry entries = 2;
+   sfixed64 toSystemUid = 3;
+   sfixed64 fromSystemUid = 4;
+   bool hasToSystemUid = 5;
+   bool hasFromSystemUid = 6;
+}
+
+message DeltaPropagation {
+  message Entry {
+     string key = 1;
+     DataEnvelope envelope = 2;
+     int64 fromSeqNr = 3;
+     int64 toSeqNr = 4; // if not set then same as fromSequenceNr
+  }
+  
+   UniqueAddress fromNode = 1;
+  repeated Entry entries = 2;
+   bool reply = 3; // no reply if not set
+}
+
+message UniqueAddress {
+   Address address = 1;
+   int64 uid = 2;
+}
+
+message Address {
+   string hostname = 1;
+   int32 port = 2;
+}
+
+message VersionVector {
+  message Entry {
+     UniqueAddress node = 1;
+     int64 version = 2;
+  }
+  repeated Entry entries = 1;
+}
+
+message OtherMessage {
+   bytes enclosedMessage = 1;
+   int32 serializerId = 2;
+   bytes messageManifest = 4;
+}
+
+message StringGSet {
+  repeated string elements = 1;
+}
+
+message DurableDataEnvelope {
+   OtherMessage data = 1;
+  repeated DataEnvelope.PruningEntry pruning = 2;
+}

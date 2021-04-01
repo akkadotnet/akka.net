@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorBase.Lifecycle.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,8 @@ namespace Akka.Actor
         /// <param name="message">The message.</param>
         public virtual void AroundPreRestart(Exception cause, object message)
         {
+            if (this is IWithTimers withTimers)
+                withTimers.Timers?.CancelAll();
             PreRestart(cause, message);
         }
 
@@ -84,6 +86,8 @@ namespace Akka.Actor
         /// </summary>
         public virtual void AroundPostStop()
         {
+            if (this is IWithTimers withTimers)
+                withTimers.Timers?.CancelAll();
             PostStop();
         }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Ops.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -476,13 +476,36 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPush()
             {
-                var result = WithSupervision(() => _stage._func(Grab(_stage.In)));
+                Option<object> result;
+                if (_stage._isDefinedFunc is null)
+                {
+                    // Old faulty behaviour, depends on the collector function
+                    // to return null to signal no processing happened.
+                    // Wrap the function to check for null
+                    result = WithSupervision(() =>
+                    {
+                        var r = _stage._func(Grab(_stage.In));
+                        return r != null ? r : (object)NotApplied.Instance;
+                    });
+                }
+                else
+                {
+                    var input = Grab(_stage.In);
+                    result = WithSupervision(() =>
+                        _stage._isDefinedFunc(input) ? _stage._func(input) : (object)NotApplied.Instance);
+                }
+
                 if (result.HasValue)
                 {
-                    if (result.Value.IsDefaultForType())
-                        Pull(_stage.In);
-                    else
-                        Push(_stage.Out, result.Value);
+                    switch (result.Value)
+                    {
+                        case NotApplied _:
+                            Pull(_stage.In);
+                            break;
+                        case TOut r:
+                            Push(_stage.Out, r);
+                            break;
+                    }
                 }
             }
 
@@ -499,19 +522,31 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!HasBeenPulled(_stage.In))
                     Pull(_stage.In);
             }
+
+            private class NotApplied
+            {
+                public static readonly NotApplied Instance = new NotApplied();
+                private NotApplied() {}
+            }
         }
 
         #endregion
 
+        private readonly Func<TIn, bool> _isDefinedFunc = null;
         private readonly Func<TIn, TOut> _func;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="func">TBD</param>
-        public Collect(Func<TIn, TOut> func)
+        [Obsolete("Deprecated. Please use the .ctor(Func, Func) constructor")]
+        public Collect(Func<TIn, TOut> func) : this(null, func)
+        { }
+
+        public Collect(Func<TIn, bool> isDefined, Func<TIn, TOut> collector)
         {
-            _func = func;
+            _func = collector;
+            _isDefinedFunc = isDefined;
             Shape = new FlowShape<TIn, TOut>(In, Out);
         }
 
@@ -3020,6 +3055,14 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnUpstreamFinish()
             {
                 _finished = true;
+
+                // Fix for issue #4514
+                // Force check if we have a dangling last element because:
+                // OnTimer may close the group just before OnUpstreamFinish is called
+                // (race condition), dropping the last element in the stream.
+                if (IsAvailable(_stage._in))
+                    NextElement(Grab(_stage._in));
+
                 if (_groupEmitted)
                     CompleteStage();
                 else
@@ -3052,8 +3095,11 @@ namespace Akka.Streams.Implementation.Fusing
                     ScheduleRepeatedly(GroupedWithinTimer, _stage._timeout);
                     CloseGroup();
                 }
-                else
+                // Do not pull if we're finished.
+                else if (!_finished)
+                {
                     Pull(_stage._in);
+                }
             }
 
             private void CloseGroup()
@@ -3141,7 +3187,7 @@ namespace Akka.Streams.Implementation.Fusing
         {
             private const string TimerName = "DelayedTimer";
             private readonly Delay<T> _stage;
-            private IBuffer<Tuple<long, T>> _buffer; // buffer has pairs timestamp with upstream element
+            private IBuffer<(long, T)> _buffer; // buffer has pairs timestamp with upstream element
             private readonly int _size;
             private readonly Action _onPushWhenBufferFull;
 
@@ -3190,7 +3236,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private long NextElementWaitTime => (long)_stage._delay.TotalMilliseconds - (DateTime.UtcNow.Ticks - _buffer.Peek().Item1) * 1000 * 10;
 
-            public override void PreStart() => _buffer = Buffer.Create<Tuple<long, T>>(_size, Materializer);
+            public override void PreStart() => _buffer = Buffer.Create<(long, T)>(_size, Materializer);
 
             private void CompleteIfReady()
             {
@@ -3218,7 +3264,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void GrabAndPull()
             {
-                _buffer.Enqueue(new Tuple<long, T>(DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
+                _buffer.Enqueue((DateTime.UtcNow.Ticks, Grab(_stage.Inlet)));
                 if (PullCondition)
                     Pull(_stage.Inlet);
             }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterEvent.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util.Internal;
+using Newtonsoft.Json;
 
 namespace Akka.Cluster
 {
@@ -62,12 +63,12 @@ namespace Akka.Cluster
         /// <summary>
         /// Marker interface for cluster domain events
         /// </summary>
-        public interface IClusterDomainEvent { }
+        public interface IClusterDomainEvent : IDeadLetterSuppression { }
 
         /// <summary>
         /// A snapshot of the current state of the <see cref="Cluster"/>
         /// </summary>
-        public sealed class CurrentClusterState
+        public sealed class CurrentClusterState : INoSerializationVerificationNeeded
         {
             private readonly ImmutableSortedSet<Member> _members;
             private readonly ImmutableHashSet<Member> _unreachable;
@@ -165,6 +166,27 @@ namespace Akka.Cluster
             {
                 return _roleLeaderMap.GetOrElse(role, null);
             }
+
+            /// <summary>
+            /// return `true` if more than one `Version` among the members, which
+            /// indicates that a rolling update is in progress
+            /// </summary>
+            public bool HasMoreThanOneAppVersion
+            {
+                get
+                {
+                    if (Members.IsEmpty)
+                        return false;
+                    else
+                    {
+                        var v = Members.Head().AppVersion;
+                        return Members.Any(i => i.AppVersion != v);
+                    }
+                }
+            }
+
+            internal bool IsMemberUp(Address address) =>
+                Members.Any(m => m.Address.Equals(address) && m.Status == MemberStatus.Up);
 
             /// <summary>
             /// Creates a deep copy of the <see cref="CurrentClusterState"/> and optionally allows you

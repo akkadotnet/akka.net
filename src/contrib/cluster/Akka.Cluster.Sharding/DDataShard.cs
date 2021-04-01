@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DDataShard.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,8 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Scheduler;
+using Akka.Coordination;
 using Akka.DistributedData;
 using Akka.Event;
 using Akka.Util;
@@ -26,7 +28,7 @@ namespace Akka.Cluster.Sharding
     /// responsible for. It is used when `rememberEntities` is enabled and
     /// `state-store-mode=ddata`.
     /// </summary>
-    internal sealed class DDataShard : ActorBase, IShard, IWithUnboundedStash
+    internal sealed class DDataShard : ActorBase, IShard, IWithUnboundedStash, IWithTimers
     {
         IActorContext IShard.Context => Context;
         IActorRef IShard.Self => Self;
@@ -47,10 +49,16 @@ namespace Akka.Cluster.Sharding
         public ImmutableDictionary<IActorRef, string> IdByRef { get; set; } = ImmutableDictionary<IActorRef, string>.Empty;
         public ImmutableDictionary<string, long> LastMessageTimestamp { get; set; } = ImmutableDictionary<string, long>.Empty;
         public ImmutableHashSet<IActorRef> Passivating { get; set; } = ImmutableHashSet<IActorRef>.Empty;
-        public ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<Tuple<object, IActorRef>>>.Empty;
+        public ImmutableDictionary<string, ImmutableList<(object, IActorRef)>> MessageBuffers { get; set; } = ImmutableDictionary<string, ImmutableList<(object, IActorRef)>>.Empty;
         public ICancelable PassivateIdleTask { get; }
 
         private EntityRecoveryStrategy RememberedEntitiesRecoveryStrategy { get; }
+
+        public ITimerScheduler Timers { get; set; }
+        public Lease Lease { get; }
+        public TimeSpan LeaseRetryInterval { get; } = TimeSpan.FromSeconds(5); // won't be used
+
+
         public Cluster Cluster { get; } = Cluster.Get(Context.System);
         public ILoggingAdapter Log { get; } = Context.GetLogger();
         public IActorRef Replicator { get; }
@@ -92,30 +100,71 @@ namespace Akka.Cluster.Sharding
             Replicator = replicator;
             MajorityCap = majorityCap;
 
-            RememberedEntitiesRecoveryStrategy = Settings.TunningParameters.EntityRecoveryStrategy == "constant"
+            RememberedEntitiesRecoveryStrategy = Settings.TuningParameters.EntityRecoveryStrategy == "constant"
                 ? EntityRecoveryStrategy.ConstantStrategy(
                     Context.System,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyFrequency,
-                    Settings.TunningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyFrequency,
+                    Settings.TuningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities)
                 : EntityRecoveryStrategy.AllStrategy;
 
             var idleInterval = TimeSpan.FromTicks(Settings.PassivateIdleEntityAfter.Ticks / 2);
-            PassivateIdleTask = Settings.PassivateIdleEntityAfter > TimeSpan.Zero && !Settings.RememberEntities
+            PassivateIdleTask = Settings.ShouldPassivateIdleEntities
                 ? Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(idleInterval, idleInterval, Self, Shard.PassivateIdleTick.Instance, Self)
                 : null;
 
-            _readConsistency = new ReadMajority(settings.TunningParameters.WaitingForStateTimeout, majorityCap);
-            _writeConsistency = new WriteMajority(settings.TunningParameters.UpdatingStateTimeout, majorityCap);
+            _readConsistency = new ReadMajority(settings.TuningParameters.WaitingForStateTimeout, majorityCap);
+            _writeConsistency = new WriteMajority(settings.TuningParameters.UpdatingStateTimeout, majorityCap);
             _stateKeys = Enumerable.Range(0, NrOfKeys).Select(i => new ORSetKey<EntryId>($"shard-{typeName}-{shardId}-{i}")).ToImmutableArray();
 
-            GetState();
+            if (settings.LeaseSettings != null)
+            {
+                Lease = LeaseProvider.Get(Context.System).GetLease(
+                    $"{Context.System.Name}-shard-{typeName}-{shardId}",
+                    settings.LeaseSettings.LeaseImplementation,
+                    Cluster.Get(Context.System).SelfAddress.HostPort());
+
+                LeaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
+            }
         }
 
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
-        public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
-        
+
+        public void DeliverTo(string id, object message, object payload, IActorRef sender)
+        {
+            var name = Uri.EscapeDataString(id);
+            var child = Context.Child(name);
+            if (child.IsNobody())
+            {
+                if (State.Entries.Contains(id))
+                {
+                    if (MessageBuffers.ContainsKey(id)) // this may happen when entity is stopped without passivation
+                    {
+                        throw new InvalidOperationException($"Message buffers contains id [{id}].");
+                    }
+                    this.GetOrCreateEntity(id).Tell(payload, sender);
+                }
+                else
+                {
+                    // Note; we only do this if remembering, otherwise the buffer is an overhead
+                    MessageBuffers = MessageBuffers.SetItem(id, ImmutableList<(object, IActorRef)>.Empty.Add((message, sender)));
+                    ProcessChange(new Shard.EntityStarted(id), this.SendMessageBuffer);
+                }
+            }
+            else
+            {
+                this.TouchLastMessageTimestamp(id);
+                child.Tell(payload, sender);
+            }
+        }
+
+        protected override void PreStart()
+        {
+            this.AcquireLeaseIfNeeded();
+        }
+
         protected override void PostStop()
         {
+            this.ReleaseLeaseIfNeeded();
             PassivateIdleTask?.Cancel();
             base.PostStop();
         }
@@ -128,9 +177,16 @@ namespace Akka.Cluster.Sharding
             return _stateKeys[i];
         }
 
+        public void OnLeaseAcquired()
+        {
+            Log.Info("Lease Acquired. Getting state from DData");
+            GetState();
+            Context.Become(Receive);
+        }
+
         private void GetState()
         {
-            for (int i = 0; i < NrOfKeys; i++)
+            for (var i = 0; i < NrOfKeys; i++)
             {
                 Replicator.Tell(Dsl.Get(_stateKeys[i], _readConsistency, i));
             }
@@ -155,13 +211,16 @@ namespace Akka.Cluster.Sharding
                     ReceiveOne(i);
                     break;
                 case GetFailure failure:
-                    Log.Error("The DDataShard was unable to get an initial state within 'waiting-for-state-timeout': {0}", Settings.TunningParameters.WaitingForStateTimeout);
+                    Log.Error("The DDataShard was unable to get an initial state within 'waiting-for-state-timeout': {0}", Settings.TuningParameters.WaitingForStateTimeout);
                     Context.Stop(Self);
                     break;
                 case NotFound notFound:
                     ReceiveOne((int)notFound.Request);
                     break;
-                default: Stash.Stash(); break;
+                default:
+                    Log.Debug("Stashing while waiting for DDataShard initial state");
+                    Stash.Stash();
+                    break;
             }
 
             return true;
@@ -169,11 +228,16 @@ namespace Akka.Cluster.Sharding
 
         private void RecoveryCompleted()
         {
-            RestartRememberedEntities();
-            this.Initialized();
             Log.Debug("DDataShard recovery completed shard [{0}] with [{1}] entities", ShardId, State.Entries.Count);
+            Context.Parent.Tell(new ShardInitialized(ShardId));
+            Context.Become(HandleCommands);
+            RestartRememberedEntities();
             Stash.UnstashAll();
-            Context.Become(this.HandleCommand);
+        }
+
+        private bool HandleCommands(object message)
+        {
+            return this.HandleCommand(message);
         }
 
         public void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange
@@ -184,7 +248,7 @@ namespace Akka.Cluster.Sharding
 
         private void SendUpdate(Shard.StateChange e, int retryCount)
         {
-            Replicator.Tell(Dsl.Update(Key(e.EntityId), ORSet<EntryId>.Empty, _writeConsistency, Tuple.Create(e, retryCount),
+            Replicator.Tell(Dsl.Update(Key(e.EntityId), ORSet<EntryId>.Empty, _writeConsistency, (e, retryCount),
                 existing =>
                 {
                     switch (e)
@@ -200,34 +264,44 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
-                case UpdateSuccess success when Equals(((Tuple<Shard.StateChange, int>)success.Request).Item1, e):
+                case UpdateSuccess success when Equals((((Shard.StateChange, int))success.Request).Item1, e):
                     Log.Debug("The DDataShard state was successfully updated with {0}", e);
                     Context.UnbecomeStacked();
                     afterUpdateCallback(e);
                     Stash.UnstashAll();
                     break;
-                case UpdateTimeout timeout when Equals(((Tuple<Shard.StateChange, int>)timeout.Request).Item1, e):
-                    var t = (Tuple<Shard.StateChange, int>)timeout.Request;
+                case UpdateTimeout timeout when Equals((((Shard.StateChange, int))timeout.Request).Item1, e):
+                    var t = ((Shard.StateChange, int))timeout.Request;
                     var retryCount = t.Item2;
                     if (retryCount == MaxUpdateAttempts)
                     {
                         // parent ShardRegion supervisor will notice that it terminated and will start it again, after backoff
                         Log.Error("The DDataShard was unable to update state after {0} attempts, within 'updating-state-timeout'={1}, event={2}. " +
-                            "Shard will be restarted after backoff.", MaxUpdateAttempts, Settings.TunningParameters.UpdatingStateTimeout, e);
+                            "Shard will be restarted after backoff.", MaxUpdateAttempts, Settings.TuningParameters.UpdatingStateTimeout, e);
                         Context.Stop(Self);
                     }
                     else
                     {
                         Log.Error("The DDataShard was unable to update state, attempt {0} of {1}, within 'updating-state-timeout'={2}, event={3}",
-                            retryCount, MaxUpdateAttempts, Settings.TunningParameters.UpdatingStateTimeout, e);
+                            retryCount, MaxUpdateAttempts, Settings.TuningParameters.UpdatingStateTimeout, e);
                         SendUpdate(e, retryCount + 1);
                     }
                     break;
-                case ModifyFailure failure when Equals(((Tuple<Shard.StateChange, int>)failure.Request).Item1, e):
+                case ModifyFailure failure when Equals((((Shard.StateChange, int))failure.Request).Item1, e):
                     Log.Error("The DDataShard was unable to update state with error {0} and event {1}. Shard will be restarted", failure.Cause, e);
                     ExceptionDispatchInfo.Capture(failure.Cause).Throw();
                     break;
-                default: Stash.Stash(); break;
+                case Shard.IShardQuery sq:
+                    this.HandleShardRegionQuery(sq);
+                    break;
+                case var _ when ExtractEntityId(message).HasValue:
+                    this.DeliverMessage(message, Context.Sender);
+                    break;
+                default:
+                    Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
+                        message.GetType(), e);
+                    Stash.Stash();
+                    break;
             }
             return true;
         };

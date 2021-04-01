@@ -1,18 +1,18 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedData.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 
 namespace Akka.DistributedData
 {
@@ -57,16 +57,32 @@ namespace Akka.DistributedData
         {
             system.Settings.InjectTopLevelFallback(DefaultConfig());
             var config = system.Settings.Config.GetConfig("akka.cluster.distributed-data");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<DistributedData>("akka.cluster.distributed-data");
+
             _settings = ReplicatorSettings.Create(config);
             _system = system;
             if (IsTerminated)
             {
-                system.Log.Warning("Replicator points to dead letters: Make sure the cluster node is not terminated and has the proper role!");
+                var log = Logging.GetLogger(_system, GetType());
+                var cluster = Cluster.Cluster.Get(_system);
+                if (cluster.IsTerminated)
+                {
+                    log.Warning("Replicator points to dead letters, because Cluster is terminated.");
+                }
+                else
+                {
+                    log.Warning(
+                        "Replicator points to dead letters. Make sure the cluster node is not terminated and has the proper role. " +
+                        "Node has roles [{0}], Distributed Data is configured for role [{1}]",
+                        string.Join(",", cluster.SelfRoles),
+                        _settings.Role);
+                }
                 Replicator = system.DeadLetters;
             }
             else
             {
-                var name = config.GetString("name");
+                var name = config.GetString("name", null);
                 Replicator = system.ActorOf(Akka.DistributedData.Replicator.Props(_settings), name);
             }
         }

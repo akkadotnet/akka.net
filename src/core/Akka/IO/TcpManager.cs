@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,14 +76,14 @@ namespace Akka.IO
             if (c != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create(() => new TcpOutgoingConnection(_tcp, commander, c)));
+                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local));
                 return true;
             }
             var b = message as Bind;
             if (b != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create(() => new TcpListener(_tcp, commander, b)));
+                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local));
                 return true;
             }
             var dl = message as DeadLetter;
@@ -96,7 +96,9 @@ namespace Akka.IO
                 }
                 return true;
             }
-            throw new ArgumentException("The supplied message type is invalid. Only Connect and Bind messages are supported.", nameof(message));
+            throw new ArgumentException($"The supplied message of type {message.GetType().Name} is invalid. Only Connect and Bind messages are supported. " +
+                                        $"If you are going to manage your connection state, you need to communicate with Tcp.Connected sender actor. " +
+                                        $"See more here: https://getakka.net/articles/networking/io.html", nameof(message));
         }
     }
 }

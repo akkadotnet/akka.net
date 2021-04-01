@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueryExecutor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Data.Common;
@@ -34,8 +35,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
+        /// <param name="offset">TBD</param>
         /// <returns>TBD</returns>
-        Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken);
+        Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken, long offset);
 
         /// <summary>
         /// Asynchronously replays a <paramref name="callback"/> on all selected events for provided
@@ -68,6 +70,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         Task<long> SelectByTagAsync(DbConnection connection, CancellationToken cancellationToken, string tag, long fromOffset, long toOffset, long max, Action<ReplayedTaggedMessage> callback);
 
+        Task<long> SelectAllEventsAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken, 
+            long fromOffset, 
+            long toOffset,
+            long max, 
+            Action<ReplayedEvent> callback);
+
         /// <summary>
         /// Asynchronously returns single number considered as the highest sequence number in current journal for the provided <paramref name="persistenceId"/>.
         /// </summary>
@@ -76,7 +86,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="persistenceId">TBD</param>
         /// <returns>TBD</returns>
         Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken, string persistenceId);
-        
+
+        Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken);
+
         /// <summary>
         /// Asynchronously inserts a collection of events and theirs tags into a journal table.
         /// </summary>
@@ -318,8 +330,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                 e.{Configuration.SerializerIdColumnName} as SerializerId";
 
             AllPersistenceIdsSql = $@"
-                SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as PersistenceId 
-                FROM {Configuration.FullJournalTableName} e;";
+                SELECT DISTINCT u.Id as PersistenceId 
+                FROM (
+                    SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as Id 
+                    FROM {Configuration.FullJournalTableName} e
+                    WHERE e.{Configuration.OrderingColumnName} > @Ordering
+                    UNION
+                    SELECT DISTINCT e.{Configuration.PersistenceIdColumnName} as Id 
+                    FROM {Configuration.FullMetaTableName} e
+                ) as u";
 
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
@@ -358,6 +377,18 @@ namespace Akka.Persistence.Sql.Common.Journal
                 FROM {Configuration.FullJournalTableName} e
                 WHERE e.{Configuration.OrderingColumnName} > @Ordering AND e.{Configuration.TagsColumnName} LIKE @Tag
                 ORDER BY {Configuration.OrderingColumnName} ASC";
+
+            AllEventsSql =
+                $@"
+                SELECT {allEventColumnNames}, e.{Configuration.OrderingColumnName} as Ordering
+                FROM {Configuration.FullJournalTableName} e
+                WHERE e.{Configuration.OrderingColumnName} > @Ordering
+                ORDER BY {Configuration.OrderingColumnName} ASC";
+
+            HighestOrderingSql =
+                $@"
+                SELECT MAX(e.{Configuration.OrderingColumnName}) as Ordering
+                FROM {Configuration.FullJournalTableName} e";
 
             InsertEventSql = $@"
                 INSERT INTO {Configuration.FullJournalTableName} (
@@ -417,6 +448,14 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// TBD
         /// </summary>
+        protected virtual string AllEventsSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        protected virtual string HighestOrderingSql { get; }
+        /// <summary>
+        /// TBD
+        /// </summary>
         protected virtual string InsertEventSql { get; }
         /// <summary>
         /// TBD
@@ -445,19 +484,23 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="connection">TBD</param>
         /// <param name="cancellationToken">TBD</param>
+        /// <param name="offset">TBD</param>
         /// <returns>TBD</returns>
-        public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken)
+        public virtual async Task<ImmutableArray<string>> SelectAllPersistenceIdsAsync(DbConnection connection, CancellationToken cancellationToken, long offset)
         {
             using (var command = GetCommand(connection, AllPersistenceIdsSql))
-            using (var reader = await command.ExecuteReaderAsync(cancellationToken))
             {
-                var builder = ImmutableArray.CreateBuilder<string>();
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    builder.Add(reader.GetString(0));
-                }
+                AddParameter(command, "@Ordering", DbType.Int64, offset);
 
-                return builder.ToImmutable();
+                using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+                {
+                    var builder = ImmutableArray.CreateBuilder<string>();
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        builder.Add(reader.GetString(0));
+                    }
+                    return builder.ToImmutable();
+                }
             }
         }
 
@@ -556,6 +599,45 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
+        public virtual async Task<long> SelectAllEventsAsync(
+            DbConnection connection,
+            CancellationToken cancellationToken, 
+            long fromOffset,
+            long toOffset,
+            long max, 
+            Action<ReplayedEvent> callback)
+        {
+            long maxOrdering;
+            using (var command = GetCommand(connection, HighestOrderingSql))
+            {
+                maxOrdering = (await command.ExecuteScalarAsync(cancellationToken)) as long? ?? 0L;
+            }
+
+            using (var command = GetCommand(connection, AllEventsSql))
+            {
+                var take = Math.Min(toOffset - fromOffset, max);
+
+                AddParameter(command, "@Ordering", DbType.Int64, fromOffset);
+                AddParameter(command, "@Take", DbType.Int64, take);
+
+                var commandBehavior = Configuration.UseSequentialAccess ? 
+                    CommandBehavior.SequentialAccess : 
+                    CommandBehavior.Default;
+
+                using (var reader = await command.ExecuteReaderAsync(commandBehavior, cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                    {
+                        var persistent = ReadEvent(reader);
+                        var ordering = reader.GetInt64(OrderingIndex);
+                        callback(new ReplayedEvent(persistent, ordering));
+                    }
+                }
+            }
+
+            return maxOrdering;
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -569,6 +651,15 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
 
+                var result = await command.ExecuteScalarAsync(cancellationToken);
+                return result is long ? Convert.ToInt64(result) : 0L;
+            }
+        }
+
+        public virtual async Task<long> SelectHighestSequenceNrAsync(DbConnection connection, CancellationToken cancellationToken)
+        {
+            using (var command = GetCommand(connection, HighestOrderingSql))
+            {
                 var result = await command.ExecuteScalarAsync(cancellationToken);
                 return result is long ? Convert.ToInt64(result) : 0L;
             }
@@ -593,7 +684,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                     var evt = entry.Key;
                     var tags = entry.Value;
 
-                    WriteEvent(command, evt, tags);
+                    WriteEvent(command, evt.WithTimestamp(DateTime.UtcNow.Ticks), tags);
                     await command.ExecuteScalarAsync(cancellationToken);
                     command.Parameters.Clear();
                 }
@@ -687,27 +778,36 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <returns>TBD</returns>
         protected virtual void WriteEvent(DbCommand command, IPersistentRepresentation e, IImmutableSet<string> tags)
         {
-            var payloadType = e.Payload.GetType();
-            var serializer = Serialization.FindSerializerForType(payloadType, Configuration.DefaultSerializer);
+            
+            var serializer = Serialization.FindSerializerForType(e.Payload.GetType(), Configuration.DefaultSerializer);
 
-            string manifest = "";
-            if (serializer is SerializerWithStringManifest)
+            // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+            var (binary,manifest) = Akka.Serialization.Serialization.WithTransport(Serialization.System,(e.Payload,serializer) ,(state) =>
             {
-                manifest = ((SerializerWithStringManifest)serializer).Manifest(e.Payload);
-            }
-            else
-            {
-                if (serializer.IncludeManifest)
+                
+                var (thePayload, theSerializer) = state;
+                string thisManifest = "";
+                if (theSerializer is SerializerWithStringManifest stringManifest)
                 {
-                    manifest = e.Payload.GetType().TypeQualifiedName();
+                    thisManifest = stringManifest.Manifest(thePayload);
                 }
-            }
+                else
+                {
+                    if (theSerializer.IncludeManifest)
+                    {
+                        thisManifest = thePayload.GetType().TypeQualifiedName();
+                    }
+                }
 
-            var binary = serializer.ToBinary(e.Payload);
+                return (theSerializer.ToBinary(thePayload),
+                        thisManifest
+                    );
+            });
+           
 
             AddParameter(command, "@PersistenceId", DbType.String, e.PersistenceId);
             AddParameter(command, "@SequenceNr", DbType.Int64, e.SequenceNr);
-            AddParameter(command, "@Timestamp", DbType.Int64, TimestampProvider.GenerateTimestamp(e));
+            AddParameter(command, "@Timestamp", DbType.Int64, e.Timestamp);
             AddParameter(command, "@IsDeleted", DbType.Boolean, false);
             AddParameter(command, "@Manifest", DbType.String, manifest);
             AddParameter(command, "@Payload", DbType.Binary, binary);
@@ -746,15 +846,24 @@ namespace Akka.Persistence.Sql.Common.Journal
                 // Support old writes that did not set the serializer id
                 var type = Type.GetType(manifest, true);
                 var deserializer = Serialization.FindSerializerForType(type, Configuration.DefaultSerializer);
-                deserialized = deserializer.FromBinary((byte[])payload, type);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
+                deserialized = Akka.Serialization.Serialization.WithTransport(
+                    Serialization.System, (deserializer, (byte[])payload, type),
+                    (state) =>
+                    {
+                        return state.deserializer.FromBinary(state.Item2,
+                            state.type);
+                    });
+                //deserialized = Akka.Serialization.Serialization.WithTransport(Serialization.System, () => deserializer.FromBinary((byte[])payload, type) );
             }
             else
             {
                 var serializerId = reader.GetInt32(SerializerIdIndex);
+                // TODO: hack. Replace when https://github.com/akkadotnet/akka.net/issues/3811
                 deserialized = Serialization.Deserialize((byte[])payload, serializerId, manifest);
             }
 
-            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null);
+            return new Persistent(deserialized, sequenceNr, persistenceId, manifest, isDeleted, ActorRefs.NoSender, null, timestamp);
         }
 
         /// <summary>
@@ -772,7 +881,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             parameter.DbType = parameterType;
             parameter.Value = value;
 
+            PreAddParameterToCommand(command, parameter);
+
             command.Parameters.Add(parameter);
         }
+
+        /// <summary>
+        /// Override this to customize <see cref="DbParameter"/> creation used for building database queries
+        /// </summary>
+        /// <param name="command"><see cref="DbCommand"/> used to define a parameter in.</param>
+        /// <param name="param">Parameter to customize</param>
+        protected virtual void PreAddParameterToCommand(DbCommand command, DbParameter param) { }
     }
 }

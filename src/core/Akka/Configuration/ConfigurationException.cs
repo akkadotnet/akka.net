@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConfigurationException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,13 @@ namespace Akka.Configuration
     /// </summary>
     public class ConfigurationException : AkkaException
     {
+        public static ConfigurationException NullOrEmptyConfig<T>(string path = null)
+        {
+            if (!string.IsNullOrWhiteSpace(path))
+                return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration does not contain `{path}` node");
+            return new ConfigurationException($"Failed to instantiate {typeof(T).Name}: Configuration is null or empty.");
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationException"/> class.
         /// </summary>

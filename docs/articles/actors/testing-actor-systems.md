@@ -19,7 +19,7 @@ The minimal setup consists of the test procedure, which provides the desired sti
 
 The `TestKit` class contains a collection of tools which makes this common task easy.
 
-[!code-csharp[IntroSample](../../examples/DocsExamples/Testkit/TestKitSampleTest.cs?range=9-64)]
+[!code-csharp[IntroSample](../../../src/core/Akka.Docs.Tests/Testkit/TestKitSampleTest.cs?name=IntroSample_0)]
 
 The `TestKit` contains an actor named `TestActor` which is the entry point for messages to be examined with the various `ExpectMsg..` assertions detailed below. The `TestActor` may also be passed to other actors as usual, usually subscribing it as notification listener. There is a while set of examination methods, e.g. receiving all consecutive messages matching certain criteria, receiving a while sequence of fixed messages or classes, receiving nothing for some time, etc.
 
@@ -80,7 +80,7 @@ If a number of occurrences is specific --as demonstrated above-- then `intercept
 ## Timing Assertions
 Another important part of functional testing concerns timing: certain events must not happen immediately (like a timer), others need to happen before a deadline. Therefore, all examination methods accept an upper time limit within the positive or negative result must be obtained. Lower time limits need to be checked external to the examination, which is facilitated by a new construct for managing time constraints:
 
-[!code-csharp[WithinSample](../../examples/DocsExamples/Testkit/WithinSampleTest.cs?range=10-18)]
+[!code-csharp[WithinSample](../../../src/core/Akka.Docs.Tests/Testkit/WithinSampleTest.cs?name=WithinSample_0)]
 
 The block in `within` must complete after a `Duration` which is between `min` and `max`, where the former defaults to zero. The deadline calculated by adding the `max` parameter to the block's start time is implicitly available within the block to all examination methods, if you do not specify it, it is inherited from the innermost enclosing `within` block.
 
@@ -107,13 +107,13 @@ You can scale other durations with the same factor by using the `Dilated` method
 
 When the actors under test are supposed to send various messages to different destinations, it may be difficult distinguishing the message streams arriving at the `TestActor` when using the `TestKit` as shown until now. Another approach is to use it for creation of simple probe actors to be inserted in the message flows. The functionality is best explained using a small example:
 
-[!code-csharp[ProbeSample](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=14-40)]
+[!code-csharp[ProbeSample](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ProbeSample_0)]
 
 This simple test verifies an equally simple Forwarder actor by injecting a probe as the forwarder’s target. Another example would be two actors A and B which collaborate by A sending messages to B. In order to verify this message flow, a `TestProbe` could be inserted as target of A, using the forwarding capabilities or auto-pilot described below to include a real B in the test setup.
 
 If you have many test probes, you can name them to get meaningful actor names in test logs and assertions:
 
-[!code-csharp[MultipleProbeSample](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=46-50)]
+[!code-csharp[MultipleProbeSample](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=MultipleProbeSample_0)]
 
 Probes may also be equipped with custom assertions to make your test code even more concise and clear:
 
@@ -140,17 +140,17 @@ A `TestProbe` can register itself for DeathWatch of any other actor:
 ###Replying to Messages Received by Probes
 The probes stores the sender of the last dequeued message (i.e. after its `ExpectMsg*` reception), which may be retrieved using the `GetLastSender()` method. This information can also implicitly be used for having the probe reply to the last received message:
 
-[!code-csharp[ReplyingToProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=48-58)]
+[!code-csharp[ReplyingToProbeMessages](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ReplyingToProbeMessages_0)]
 
 ###Forwarding Messages Received by Probes
 The probe can also forward a received message (i.e. after its `ExpectMsg*` reception), retaining the original sender:
 
-[!code-csharp[ForwardingProbeMessages](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=60-69)]
+[!code-csharp[ForwardingProbeMessages](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ForwardingProbeMessages_0)]
 
 ###Auto-Pilot
 Receiving messages in a queue for later inspection is nice, but in order to keep a test running and verify traces later you can also install an `AutoPilot` in the participating test probes (actually in any `TestKit`) which is invoked before enqueueing to the inspection queue. This code can be used to forward messages, e.g. in a chain `A --> Probe --> B`, as long as a certain protocol is obeyed.
 
-[!code-csharp[ProbeAutopilot](../../examples/DocsExamples/Testkit/ProbeSampleTest.cs?range=71-87)]
+[!code-csharp[ProbeAutopilot](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ProbeAutopilot_0)]
 
 The `run` method must return the auto-pilot for the next message. There are multiple options here:
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
@@ -172,22 +172,27 @@ Conversely, a parent's binding to its child can be lessened as follows:
 
 For example, the structure of the code you want to test may follow this pattern:
 
-[!code-csharp[ParentStructure](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=13-41)]
+[!code-csharp[ParentStructure](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=ParentStructure_0)]
 
 ###Introduce child to its parent
 The first option is to avoid use of the `context.parent` function and create a child with a custom parent by passing an explicit reference to its parent instead.
 
-[!code-csharp[DependentChild](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=44-57)]
+[!code-csharp[DependentChild](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=DependentChild_0)]
+
+###Create the child using the TestProbe
+The `TestProbe` class can directly create child actors using the `ChildActorOf` methods.  
+
+[!code-csharp[TestProbeChild](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=TestProbeChild_0)]
 
 ###Using a fabricated parent
 If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
 
-[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=59-81)]
+[!code-csharp[FabrikatedParent](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=FabrikatedParent_0)]
 
 ###Externalize child making from the parent
 Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
 
-[!code-csharp[FabrikatedParent](../../examples/DocsExamples/Testkit/ParentSampleTest.cs?range=84-103)]
+[!code-csharp[FabrikatedParent](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=FabrikatedParent_1)]
 
 Creating the Props is straightforward and the function may look like this in your test code:
 
@@ -203,7 +208,7 @@ And like this in your application code:
     var parent = Sys.ActorOf(Props.Create<GenericDependentParent>(maker));
 ```
 
-Which of these methods is the best depends on what is most important to test. The most generic option is to create the parent actor by passing it a function that is responsible for the Actor creation, but the fabricated parent is often sufficient.
+Which of these methods is the best depends on what is most important to test. The most generic option is to create the parent actor by passing it a function that is responsible for the Actor creation, but using TestProbe or having a fabricated parent is often sufficient.
 
 ##CallingThreadDispatcher
 

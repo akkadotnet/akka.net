@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffOnRestartSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using System.Threading;
+using FluentAssertions.Extensions;
 
 namespace Akka.Tests.Pattern
 {
@@ -43,6 +44,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly IActorRef _probe;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public TestActor(IActorRef probe)
             {
                 _probe = probe;
@@ -63,13 +65,14 @@ namespace Akka.Tests.Pattern
                     return;
                 });
 
-                Receive<Tuple<string, string>>(str => str.Item1.Equals("TO_PARENT"), msg =>
+                Receive<(string, string)>(str => str.Item1.Equals("TO_PARENT"), msg =>
                 {
                     Context.Parent.Tell(msg.Item2);
                 });
 
                 ReceiveAny(other => _probe.Tell(other));
             }
+#pragma warning restore CS0162
 
             public static Props Props(IActorRef probe)
             {
@@ -99,6 +102,7 @@ namespace Akka.Tests.Pattern
         {
             private readonly TestLatch _latch;
 
+#pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
             public SlowlyFailingActor(TestLatch latch)
             {
                 _latch = latch;
@@ -115,6 +119,7 @@ namespace Akka.Tests.Pattern
                     Sender.Tell("PONG");
                 });
             }
+#pragma warning restore CS0162
 
             protected override void PostStop()
             {
@@ -210,7 +215,7 @@ namespace Akka.Tests.Pattern
             probe.ExpectMsg("STARTED");
             var child = probe.LastSender;
 
-            child.Tell(Tuple.Create("TO_PARENT", "TEST_MESSAGE"));
+            child.Tell(("TO_PARENT", "TEST_MESSAGE"));
             probe.ExpectMsg("TEST_MESSAGE");
         }
 

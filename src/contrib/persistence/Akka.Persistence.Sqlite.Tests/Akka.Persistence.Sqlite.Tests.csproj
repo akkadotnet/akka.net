@@ -1,13 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\..\common.props" />
+  <Import Project="..\..\..\xunitSettings.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.Persistence.Sqlite.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetCoreTestVersion)</TargetFrameworks>
-    <RuntimeIdentifier Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' And '$(OS)' == 'Windows_NT'">win7-x64</RuntimeIdentifier>
+   
   </PropertyGroup>
  
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />

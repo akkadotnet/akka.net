@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Extension.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -113,22 +113,28 @@ namespace Akka.Remote.TestKit
 
         public TestConductorSettings(Config config)
         {
-            _connectTimeout = config.GetTimeSpan("connect-timeout");
-            _clientReconnects = config.GetInt("client-reconnects");
-            _reconnectBackoff = config.GetTimeSpan("reconnect-backoff");
-            _barrierTimeout = config.GetTimeSpan("barrier-timeout");
-            _queryTimeout = config.GetTimeSpan("query-timeout");
-            _packetSplitThreshold = config.GetTimeSpan("packet-split-threshold");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<TestConductorSettings>();
+
+            _connectTimeout = config.GetTimeSpan("connect-timeout", null);
+            _clientReconnects = config.GetInt("client-reconnects", 0);
+            _reconnectBackoff = config.GetTimeSpan("reconnect-backoff", null);
+            _barrierTimeout = config.GetTimeSpan("barrier-timeout", null);
+            _queryTimeout = config.GetTimeSpan("query-timeout", null);
+            _packetSplitThreshold = config.GetTimeSpan("packet-split-threshold", null);
             _serverSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.server-socket-worker-pool"));
             _clientSocketWorkerPoolSize = ComputeWps(config.GetConfig("helios.client-socket-worker-pool"));
         }
 
         public int ComputeWps(Config config)
         {
+            if (config.IsNullOrEmpty())
+                return ThreadPoolConfig.ScaledPoolSize(2, 1.0, 2);
+
             return ThreadPoolConfig.ScaledPoolSize(
-                config.GetInt("pool-size-min"),
-                config.GetDouble("pool-size-factor"),
-                config.GetInt("pool-size-max"));
+                config.GetInt("pool-size-min", 0),
+                config.GetDouble("pool-size-factor", 0),
+                config.GetInt("pool-size-max", 0));
         }
     }
 }

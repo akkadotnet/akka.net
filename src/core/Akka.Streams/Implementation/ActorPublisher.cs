@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -388,7 +388,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public int Cursor { get; private set; }
+        public long Cursor { get; private set; }
 
         long ISubscriptionWithCursor<TIn>.TotalDemand
         {
@@ -407,7 +407,7 @@ namespace Akka.Streams.Implementation
         /// <param name="element">TBD</param>
         public void Dispatch(TIn element) => ReactiveStreamsCompliance.TryOnNext(Subscriber, element);
 
-        int ICursor.Cursor
+        long ICursor.Cursor
         {
             get { return Cursor; }
             set { Cursor = value; }

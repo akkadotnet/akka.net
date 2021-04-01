@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubConfigSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,6 +41,7 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             distributedPubSubSettings.MaxDeltaElements.ShouldBe(3000);
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.pub-sub");
+            Assert.False(config.IsNullOrEmpty());
             config.GetString("name").ShouldBe("distributedPubSubMediator");
             config.GetString("use-dispatcher").ShouldBe(string.Empty);
         }

@@ -2,13 +2,16 @@
   <Import Project="..\..\common.props" />
   <PropertyGroup>
     <AssemblyTitle>Akka.MultiNodeTestRunner.Shared</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkLibVersion);$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <!-- FIX for "<GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>..." build error with the latest VS2019 update-->
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <!-- END FIX-->
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.8" />
+    <PackageReference Include="TeamCity.ServiceMessages" Version="3.0.13" />
   </ItemGroup>
   
   <ItemGroup>

@@ -8,7 +8,7 @@ Snapshots can dramatically reduce recovery times of persistent actors and views.
 
 Persistent actors can save snapshots of internal state by calling the `SaveSnapshot` method. If saving of a snapshot succeeds, the persistent actor receives a `SaveSnapshotSuccess` message, otherwise a `SaveSnapshotFailure` message.
 
-[!code-csharp[Main](../../examples/DocsExamples/Persistence/PersistentActor/Snapshots.cs?range=7-45)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Persistence/PersistentActor/Snapshots.cs?name=Snapshots)]
 
 During recovery, the persistent actor is offered a previously saved snapshot via a `SnapshotOffer` message from which it can initialize internal state.
 

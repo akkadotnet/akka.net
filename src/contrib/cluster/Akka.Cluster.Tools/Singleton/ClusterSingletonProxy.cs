@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Dispatch;
 using Akka.Event;
 
 namespace Akka.Cluster.Tools.Singleton
@@ -70,7 +71,9 @@ namespace Akka.Cluster.Tools.Singleton
         /// <returns>TBD</returns>
         public static Props Props(string singletonManagerPath, ClusterSingletonProxySettings settings)
         {
-            return Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings)).WithDeploy(Deploy.Local);
+            return Actor.Props.Create(() => new ClusterSingletonProxy(singletonManagerPath, settings))
+                .WithDispatcher(Dispatchers.InternalDispatcherId)
+                .WithDeploy(Deploy.Local);
         }
 
         private readonly ClusterSingletonProxySettings _settings;

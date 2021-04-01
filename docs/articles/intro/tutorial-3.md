@@ -86,7 +86,7 @@ is known up front: device groups and device actors are created on-demand. The st
 Now that the steps are defined, we only need to define the messages that we will use to communicate requests and
 their acknowledgment:
 
-[!code-csharp[DeviceManager.scala](../../examples/Tutorials/Tutorial3/DeviceManager.cs?name=device-manager-msgs)]
+[!code-csharp[DeviceManager.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceManager.cs?name=device-manager-msgs)]
 
 As you see, in this case, we have not included a request ID field in the messages. Since registration is usually happening
 once, at the component that connects the system to some network protocol, we will usually have no use for the ID.
@@ -105,7 +105,7 @@ message is preserved in the upper layers.* We will show you in the next section 
 We also add a safeguard against requests that come with a mismatched group or device ID. This is how the resulting
 the code looks like:
 
-[!code-csharp[Device.scala](../../examples/Tutorials/Tutorial3/Device.cs?name=device-with-register)]
+[!code-csharp[Device.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/Device.cs?name=device-with-register)]
 
 We should not leave features untested, so we immediately write two new test cases, one exercising successful
 registration, the other testing the case when IDs don't match:
@@ -116,7 +116,7 @@ and fails if it receives any messages during this period. If no messages are rec
 assertion passes. It is usually a good idea to keep these timeouts low (but not too low) because they add significant
 test execution time otherwise.
 
-[!code-csharp[DeviceSpec.scala](../../examples/Tutorials/Tutorial3/DeviceSpec.cs?name=device-registration-tests)]
+[!code-csharp[DeviceSpec.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceSpec.cs?name=device-registration-tests)]
 
 ## Device Group
 
@@ -129,18 +129,18 @@ by using `Forward` instead of the `Tell` operator. The only difference between t
 sender while `Tell` always sets the sender to be the current actor. Just like with our device actor, we ensure that we don't
 respond to wrong group IDs:
 
-[!code-csharp[DeviceGroup.scala](../../examples/Tutorials/Tutorial3/DeviceGroupInProgress.cs?name=device-group-register)]
+[!code-csharp[DeviceGroup.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceGroupInProgress.cs?name=device-group-register)]
 
 Just as we did with the device, we test this new functionality. We also test that the actors returned for the two
 different IDs are actually different, and we also attempt to record a temperature reading for each of the devices
 to see if the actors are responding.
 
-[!code-csharp[DeviceGroupSpec.scala](../../examples/Tutorials/Tutorial3/DeviceGroupSpec.cs?name=device-group-test-registration)]
+[!code-csharp[DeviceGroupSpec.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceGroupSpec.cs?name=device-group-test-registration)]
 
 It might be, that a device actor already exists for the registration request. In this case, we would like to use
 the existing actor instead of a new one. We have not tested this yet, so we need to fix this:
 
-[!code-csharp[DeviceGroupSpec.scala](../../examples/Tutorials/Tutorial3/DeviceGroupSpec.cs?name=device-group-test3)]
+[!code-csharp[DeviceGroupSpec.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceGroupSpec.cs?name=device-group-test3)]
 
 So far, we have implemented everything for registering device actors in the group. Devices come and go, however, so
 we will need a way to remove those from the `Dictionary<string, IActorRef>`. We will assume that when a device is removed, its corresponding device actor
@@ -165,18 +165,18 @@ its ID, which we need to remove it from the map of existing device to device act
 need to introduce another placeholder, `Dictionary<IActorRef, string>`, that allow us to find out the device ID corresponding to a given `IActorRef`. Putting
 this together the result is:
 
-[!code-csharp[DeviceGroup.scala](../../examples/Tutorials/Tutorial3/DeviceGroupInProgress.cs?name=device-group-remove)]
+[!code-csharp[DeviceGroup.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceGroupInProgress.cs?name=device-group-remove)]
 
 So far we have no means to get what devices the group device actor keeps track of and, therefore, we cannot test our
 new functionality yet. To make it testable, we add a new query capability `RequestDeviceList` that simply lists the currently active
 device IDs:
 
-[!code-csharp[DeviceGroup.scala](../../examples/Tutorials/Tutorial3/DeviceGroup.cs?name=device-group-full)]
+[!code-csharp[DeviceGroup.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceGroup.cs?name=device-group-full)]
 
 We almost have everything to test the removal of devices. What is missing is:
 
  * Stopping a device actor from our test case, from the outside: any actor can be stopped by simply sending a special
-   the built-in message, `PoisonPill`, which instructs the actor to stop.
+   built-in message, `PoisonPill`, which instructs the actor to stop.
  * Be notified once the device actor is stopped: we can use the _Death Watch_ facility for this purpose, too. Thankfully
    the `TestProbe` has two messages that we can easily use, `Watch()` to watch a specific actor, and `ExpectTerminated`
    to assert that the watched actor has been terminated.
@@ -185,14 +185,14 @@ We add two more test cases now. In the first, we just test that we get back the 
 a few devices. The second test case makes sure that the device ID is properly removed after the device actor has
  been stopped:
 
-[!code-csharp[DeviceGroupSpec.scala](../../examples/Tutorials/Tutorial3/DeviceGroupSpec.cs?name=device-group-list-terminate-test)]
+[!code-csharp[DeviceGroupSpec.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceGroupSpec.cs?name=device-group-list-terminate-test)]
 
 ## Device Manager
 
 The only part that remains now is the entry point for our device manager component. This actor is very similar to
 the device group actor, with the only difference that it creates device group actors instead of device actors:
 
-[!code-csharp[DeviceManager.scala](../../examples/Tutorials/Tutorial3/DeviceManager.cs?name=device-manager-full)]
+[!code-csharp[DeviceManager.cs](../../../src/core/Akka.Docs.Tutorials/Tutorial3/DeviceManager.cs?name=device-manager-full)]
 
 We leave tests of the device manager as an exercise as it is very similar to the tests we have written for the group
 actor.

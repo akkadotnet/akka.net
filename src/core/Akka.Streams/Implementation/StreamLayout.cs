@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamLayout.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1242,7 +1242,7 @@ namespace Akka.Streams.Implementation
             IImmutableDictionary<InPort, OutPort> upstreams,
             IImmutableDictionary<InPort, IModule> inOwners, 
             IImmutableDictionary<OutPort, IModule> outOwners,
-            IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> materializedValues,
+            IImmutableList<(IModule, StreamLayout.IMaterializedValueNode)> materializedValues,
             StreamLayout.IMaterializedValueNode materializedValueComputation,
             Attributes attributes)
         {
@@ -1306,7 +1306,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        public IImmutableList<Tuple<IModule, StreamLayout.IMaterializedValueNode>> MaterializedValues { get; }
+        public IImmutableList<(IModule, StreamLayout.IMaterializedValueNode)> MaterializedValues { get; }
 
         /// <summary>
         /// TBD
@@ -2522,7 +2522,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        Tuple<object, object> CreateProcessor();
+        (object, object) CreateProcessor();
     }
 
     /// <summary>
@@ -2534,14 +2534,14 @@ namespace Akka.Streams.Implementation
     [InternalApi]
     public sealed class ProcessorModule<TIn, TOut, TMat> : AtomicModule, IProcessorModule
     {
-        private readonly Func<Tuple<IProcessor<TIn, TOut>, TMat>> _createProcessor;
+        private readonly Func<(IProcessor<TIn, TOut>, TMat)> _createProcessor;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="createProcessor">TBD</param>
         /// <param name="attributes">TBD</param>
-        public ProcessorModule(Func<Tuple<IProcessor<TIn, TOut>, TMat>> createProcessor, Attributes attributes = null)
+        public ProcessorModule(Func<(IProcessor<TIn, TOut>, TMat)> createProcessor, Attributes attributes = null)
         {
             _createProcessor = createProcessor;
             Attributes = attributes ?? DefaultAttributes.Processor;
@@ -2598,10 +2598,10 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public Tuple<object, object> CreateProcessor()
+        public (object, object) CreateProcessor()
         {
             var result = _createProcessor();
-            return Tuple.Create<object, object>(result.Item1, result.Item2);
+            return (result.Item1, result.Item2);
         }
     }
 }

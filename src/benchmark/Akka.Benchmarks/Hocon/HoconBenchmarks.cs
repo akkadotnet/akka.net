@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HoconBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,37 +74,37 @@ namespace Akka.Benchmarks.Hocon
         [Benchmark]
         public string Hocon_parse_resolve_string_value()
         {
-            return fallback2.GetString("akka.actor.provider");
+            return fallback2.GetString("akka.actor.provider", null);
         }
 
         [Benchmark]
         public int Hocon_parse_resolve_int_value()
         {
-            return fallback2.GetInt("akka.remote.dot-netty.tcp.port");
+            return fallback2.GetInt("akka.remote.dot-netty.tcp.port", 0);
         }
 
         [Benchmark]
         public double Hocon_parse_resolve_double_value()
         {
-            return fallback1.GetDouble("akka.actor.branch-factor");
+            return fallback1.GetDouble("akka.actor.branch-factor", 0);
         }
 
         [Benchmark]
         public bool Hocon_parse_resolve_boolean_value()
         {
-            return fallback1.GetBoolean("akka.persistence.journal.sql-server.auto-initialize");
+            return fallback1.GetBoolean("akka.persistence.journal.sql-server.auto-initialize", false);
         }
 
         [Benchmark]
         public TimeSpan Hocon_parse_resolve_TimeSpan_value()
         {
-            return fallback1.GetTimeSpan("akka.actor.ask-timeout");
+            return fallback1.GetTimeSpan("akka.actor.ask-timeout", null);
         }
 
         [Benchmark]
         public IEnumerable<string> Hocon_parse_resolve_string_list_value()
         {
-            return fallback1.GetStringList("akka.cluster.seed-nodes");
+            return fallback1.GetStringList("akka.cluster.seed-nodes", new string[] { });
         }
 
         [Benchmark]

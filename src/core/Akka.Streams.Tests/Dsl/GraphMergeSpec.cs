@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMergeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                 collected.Where(i => i <= 4).ShouldOnlyContainInOrder(1, 2, 3, 4);
                 collected.Where(i => i >= 5).ShouldOnlyContainInOrder(5, 6, 7, 8, 9, 10);
 
-                collected.ShouldBeEquivalentTo(Enumerable.Range(1, 10).ToArray());
+                collected.Should().BeEquivalentTo(Enumerable.Range(1, 10).ToArray());
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 3));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 3));
         }
 
         [Fact]
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                 collected.Add(probe.ExpectNext());
             }
 
-            collected.ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+            collected.Should().BeEquivalentTo(Enumerable.Range(1, 5));
             probe.ExpectComplete();
         }
 
@@ -212,11 +212,11 @@ namespace Akka.Streams.Tests.Dsl
                 var src1 = Source.AsSubscriber<int>();
                 var src2 = Source.AsSubscriber<int>();
 
-                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, Tuple.Create, (b, s1, s2) =>
+                var t = RunnableGraph.FromGraph(GraphDsl.Create(src1, src2, ValueTuple.Create, (b, s1, s2) =>
                 {
                     var merge = b.Add(new Merge<int>(2));
                     var sink = Sink.FromSubscriber(down)
-                        .MapMaterializedValue<Tuple<ISubscriber<int>, ISubscriber<int>>>(_ => null);
+                        .MapMaterializedValue<(ISubscriber<int>, ISubscriber<int>)?>(_ => null);
 
                     b.From(s1.Outlet).To(merge.In(0));
                     b.From(s2.Outlet).To(merge.In(1));

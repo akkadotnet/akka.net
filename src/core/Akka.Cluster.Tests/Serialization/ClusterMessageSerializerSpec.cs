@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using Akka.Util;
 
 namespace Akka.Cluster.Tests.Serialization
 {
@@ -22,9 +23,9 @@ namespace Akka.Cluster.Tests.Serialization
         {
         }
 
-        private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Joining);
-        private static readonly Member b1 = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet.Create("r1"));
-        private static readonly Member c1 = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Leaving, ImmutableHashSet.Create("r2"));
+        private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Joining, appVersion: AppVersion.Create("1.0.0"));
+        private static readonly Member b1 = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet.Create("r1"), appVersion: AppVersion.Create("1.1.0"));
+        private static readonly Member c1 = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Leaving, ImmutableHashSet.Create("r2"), appVersion: AppVersion.Create("1.1.0"));
         private static readonly Member d1 = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552), MemberStatus.Exiting, ImmutableHashSet.Create("r1", "r2"));
         private static readonly Member e1 = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down, ImmutableHashSet.Create("r3"));
 
@@ -93,7 +94,10 @@ namespace Akka.Cluster.Tests.Serialization
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress = new UniqueAddress(address, 17);
-            var message = new InternalClusterAction.Join(uniqueAddress, ImmutableHashSet.Create("foo", "bar"));
+            var message = new InternalClusterAction.Join(uniqueAddress, ImmutableHashSet.Create("foo", "bar"), AppVersion.Zero);
+            AssertEqual(message);
+
+            message = new InternalClusterAction.Join(uniqueAddress, ImmutableHashSet.Create("foo", "bar"), AppVersion.Create("1.2.3"));
             AssertEqual(message);
         }
 

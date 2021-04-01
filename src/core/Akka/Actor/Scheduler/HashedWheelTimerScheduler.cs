@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,11 +24,11 @@ namespace Akka.Actor
     /// with each bucket belonging to a specific time resolution. As the "clock" of the scheduler ticks it advances
     /// to the next bucket in the circle and processes the items in it, and optionally reschedules recurring
     /// tasks into the future into the next relevant bucket.
-    /// 
+    ///
     /// There are `akka.scheduler.ticks-per-wheel` initial buckets (we round up to the nearest power of 2) with 512
     /// being the initial default value. The timings are approximated and are still limited by the ceiling of the operating
     /// system's clock resolution.
-    /// 
+    ///
     /// Further reading: http://www.cs.columbia.edu/~nahum/w6998/papers/sosp87-timing-wheels.pdf
     /// Presentation: http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt
     /// </summary>
@@ -45,8 +45,11 @@ namespace Akka.Actor
         /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
         public HashedWheelTimerScheduler(Config scheduler, ILoggingAdapter log) : base(scheduler, log)
         {
-            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel");
-            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration");
+            if (SchedulerConfig.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<HashedWheelTimerScheduler>();
+
+            var ticksPerWheel = SchedulerConfig.GetInt("akka.scheduler.ticks-per-wheel", 0);
+            var tickDuration = SchedulerConfig.GetTimeSpan("akka.scheduler.tick-duration", null);
             if (tickDuration.TotalMilliseconds < 10.0d)
                 throw new ArgumentOutOfRangeException("minimum supported akka.scheduler.tick-duration on Windows is 10ms");
 
@@ -62,7 +65,7 @@ namespace Akka.Actor
                 throw new ArgumentOutOfRangeException("akka.scheduler.tick-duration", _tickDuration,
                     $"akka.scheduler.tick-duration: {_tickDuration} (expected: 0 < tick-duration in ticks < {long.MaxValue / _wheel.Length}");
 
-            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout");
+            _shutdownTimeout = SchedulerConfig.GetTimeSpan("akka.scheduler.shutdown-timeout", null);
         }
 
         private long _startTime = 0;
@@ -139,15 +142,7 @@ namespace Akka.Actor
 
             while (_startTime == 0)
             {
-#if UNSAFE_THREADING
-                try
-                {
-                    _workerInitialized.Wait();
-                }
-                catch (ThreadInterruptedException) { }
-#else
                 _workerInitialized.Wait();
-#endif
             }
         }
 
@@ -175,7 +170,7 @@ namespace Akka.Actor
                     var bucket = _wheel[idx];
                     TransferRegistrationsToBuckets();
                     bucket.Execute(deadline);
-                    _tick++; // it will take 2^64 * 10ms for this to overflow 
+                    _tick++; // it will take 2^64 * 10ms for this to overflow
 
                     bucket.ClearReschedule(_rescheduleRegistrations);
                     ProcessReschedule();
@@ -226,19 +221,7 @@ namespace Akka.Actor
 
                     }
 
-#if UNSAFE_THREADING
-                    try
-                    {
-                        Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
-                    }
-                    catch (ThreadInterruptedException)
-                    {
-                        if (_workerState == WORKER_STATE_SHUTDOWN)
-                            return long.MinValue;
-                    }
-#else
                     Thread.Sleep(TimeSpan.FromMilliseconds(sleepMs));
-#endif
                 }
             }
         }
@@ -343,7 +326,12 @@ namespace Akka.Actor
         /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
-            InternalSchedule(delay, TimeSpan.Zero, new ActionRunnable(action), cancelable);
+            InternalScheduleOnce(delay, new ActionRunnable(action), cancelable);
+        }
+
+        protected override void InternalScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable)
+        {
+            InternalSchedule(delay, TimeSpan.Zero, action, cancelable);
         }
 
         /// <summary>
@@ -356,6 +344,11 @@ namespace Akka.Actor
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, new ActionRunnable(action), cancelable);
+        }
+
+        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable)
+        {
+            InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
         private AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>>();
@@ -408,7 +401,7 @@ namespace Akka.Actor
                     task.Reset();
                 }
             }
-            
+
             _unprocessedRegistrations.Clear();
         }
 

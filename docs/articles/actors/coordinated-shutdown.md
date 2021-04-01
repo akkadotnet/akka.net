@@ -105,7 +105,7 @@ The default phases are defined in a linear order, but in practice the phases are
 
 ## Registering Tasks to a Phase
 
-For instance, if you're using [Akka.Cluster](../clustering/cluster-overview.md) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
+For instance, if you're using [Akka.Cluster](xref:cluster-overview) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
 
 ```
 var coordShutdown = CoordinatedShutdown.Get(myActorSystem);
@@ -124,16 +124,31 @@ There are a few different ways to start the `CoordinatedShutdown` process.
 
 If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`. 
 
-[!code-csharp[CoordinatedShutdownSpecs.cs](../../examples/DocsExamples/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
+[!code-csharp[CoordinatedShutdownSpecs.cs](../../../src/core/Akka.Docs.Tests/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
 
 It's safe to call this method multiple times as the shutdown process will only be run once and will return the same completion task each time. The `Task<Done>` will complete once all phases have run successfully, or a phase with `recover = off` failed.
 
+> [!NOTE] 
 > It's possible to subclass the `CoordinatedShutdown.Reason` type and pass in a custom implementation which includes custom properties and data. This data is accessible inside the shutdown phases themselves via the [`CoordinatedShutdown.ShutdownReason` property](/api/Akka.Actor.CoordinatedShutdown.html#Akka_Actor_CoordinatedShutdown_ShutdownReason).
 
 ### Automatic `ActorSystem` and Process Termination
-By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. However, the CLR process will still be running even though the `ActorSystem` has been terminated.
+By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. This behaviour can be changed by setting the following HOCON value in your configuration:
 
-If you'd like to automatically terminate the process running your `ActorSystem`, you can set the following HOCON value in your configuration:
+```
+akka.coordinated-shutdown.terminate-actor-system = off
+```
+If this setting is disabled (it is enabled b default), the `ActorSystem` will not be terminated as the final phase of the `CoordinatedShutdown` phases.
+
+`CoordinatedShutdown` phases, by default, are also executed when the `ActorSystem` is terminated. You can change this behavior by disabling this HOCON value in your configuration:
+
+```
+akka.coordinated-shutdown.run-by-actor-system-terminate = off
+```
+
+> [!NOTE]
+> It is illegal to have _run-by-actor-system-terminate_ enabled and have _terminate-actor-system_ disabled. Having these configuration combination will raise a `ConfigurationException` during `ActorSystem` startup.
+
+The CLR process will still be running, even when the `ActorSystem` is terminated by the `CoordinatedShutdown`. If you'd like to automatically terminate the process running your `ActorSystem`, you can set the following HOCON value in your configuration:
 
 ```
 akka.coordinated-shutdown.exit-clr = on
@@ -153,7 +168,7 @@ By default, this graceful leave action will by triggered whenever the `Coordinat
 `CoordinatedShutdown.Run()` will also be executed if a node is removed via `Cluster.Down` (non-graceful exit), but this can be disabled by changing the following Akka.Cluster HOCON setting:
 
 ```
-akka.cluster.run-coordinated-shutdown-when-down = off 
+akka.cluster.run-coordinated-shutdown-when-down = off
 ```
 
 ### Invoking `CoordinatedShutdown.Run()` on Process Exit

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl.Internal;
@@ -17,6 +18,8 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
+using Akka.Util;
+using Akka.Util.Extensions;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
 
@@ -161,6 +164,49 @@ namespace Akka.Streams.Dsl
         public Source<TOut, TMat> Async() => AddAttributes(new Attributes(Attributes.AsyncBoundary.Instance));
 
         /// <summary>
+        /// Use the `ask` pattern to send a request-reply message to the target <paramref name="actorRef"/>.
+        /// If any of the asks times out it will fail the stream with a <see cref="AskTimeoutException"/>.
+        /// 
+        /// Parallelism limits the number of how many asks can be "in flight" at the same time.
+        /// Please note that the elements emitted by this operator are in-order with regards to the asks being issued
+        /// (i.e. same behaviour as <see cref="SourceOperations.SelectAsync{TIn,TOut,TMat}"/>).
+        /// 
+        /// The operator fails with an <see cref="WatchedActorTerminatedException"/> if the target actor is terminated,
+        /// or with an <see cref="TimeoutException"/> in case the ask exceeds the timeout passed in.
+        /// 
+        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// 
+        /// '''Emits when''' the futures (in submission order) created by the ask pattern internally are completed. 
+        /// '''Backpressures when''' the number of futures reaches the configured parallelism and the downstream backpressures. 
+        /// '''Completes when''' upstream completes and all futures have been completed and all elements have been emitted. 
+        /// '''Fails when''' the passed in actor terminates, or a timeout is exceeded in any of the asks performed. 
+        /// '''Cancels when''' downstream cancels.
+        /// </summary>
+        public Source<TOut2, TMat> Ask<TOut2>(IActorRef actorRef, TimeSpan timeout, int parallelism = 2)
+        {
+            // I know this is not a place for it, but since Ask<T> generic param must be supplied, it's better
+            // if it remain alone in generic params list (no need to provide types that will be infered)
+            var askFlow = Flow.Create<TOut>()
+                .Watch(actorRef)
+                .SelectAsync(parallelism, async e => {
+                    var reply = await actorRef.Ask(e, timeout: timeout);
+                    switch (reply)
+                    {
+                        case TOut2 a: return a;
+                        case Status.Success s when s.Status is TOut2 a: return a;
+                        case Status.Failure f:
+                            ExceptionDispatchInfo.Capture(f.Cause).Throw();
+                            return default(TOut2);
+                        default:
+                            throw new InvalidOperationException($"Expected to receive response of type {nameof(TOut2)}, but got: {reply}");
+                    }
+                })
+                .Named("ask");
+
+            return ViaMaterialized(askFlow, Keep.Left);
+        }
+
+        /// <summary>
         /// Transform this <see cref="IFlow{T,TMat}"/> by appending the given processing steps.
         /// The <paramref name="combine"/> function is used to compose the materialized values of this flow and that
         /// flow into the materialized value of the resulting Flow.
@@ -240,10 +286,10 @@ namespace Akka.Streams.Dsl
         /// <param name="materializer">The materializer.</param>
         /// <returns>A tuple containing the (1) materialized value and (2) a new <see cref="Source"/>
         ///  that can be used to consume elements from the newly materialized <see cref="Source"/>.</returns>
-        public Tuple<TMat, Source<TOut, NotUsed>> PreMaterialize(IMaterializer materializer)
+        public (TMat, Source<TOut, NotUsed>) PreMaterialize(IMaterializer materializer)
         {
             var tup = ToMaterialized(Sink.AsPublisher<TOut>(fanout: true), Keep.Both).Run(materializer);
-            return Tuple.Create(tup.Item1, Source.FromPublisher(tup.Item2));
+            return (tup.Item1, Source.FromPublisher(tup.Item2));
         }
 
         /// <summary>
@@ -505,8 +551,8 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> Repeat<T>(T element)
         {
-            var next = new Tuple<T, T>(element, element);
-            return Unfold(element, _ => next).WithAttributes(DefaultAttributes.Repeat);
+            var next = (element, element);
+            return Unfold(element, _ => next.AsOption()).WithAttributes(DefaultAttributes.Repeat);
         }
 
         /// <summary>
@@ -527,7 +573,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
+        public static Source<TElem, NotUsed> Unfold<TState, TElem>(TState state, Func<TState, Option<(TState, TElem)>> unfold)
             => FromGraph(new Unfold<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.Unfold);
 
         /// <summary>
@@ -550,7 +596,7 @@ namespace Akka.Streams.Dsl
         /// <param name="state">TBD</param>
         /// <param name="unfoldAsync">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Tuple<TState, TElem>>> unfoldAsync)
+        public static Source<TElem, NotUsed> UnfoldAsync<TState, TElem>(TState state, Func<TState, Task<Option<(TState, TElem)>>> unfoldAsync)
             => FromGraph(new UnfoldAsync<TState, TElem>(state, unfoldAsync)).WithAttributes(DefaultAttributes.UnfoldAsync);
 
         /// <summary>
@@ -569,12 +615,9 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TElem">TBD</typeparam>
         /// <param name="state">TBD</param>
         /// <param name="unfold">TBD</param>
-        /// <exception cref="NotImplementedException">TBD</exception>
         /// <returns>TBD</returns>
-        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, Tuple<TState, TElem>> unfold)
-        {
-            throw new NotImplementedException();
-        }
+        public static Source<TElem, NotUsed> UnfoldInfinite<TState, TElem>(TState state, Func<TState, (TState, TElem)> unfold)
+            => FromGraph(new UnfoldInfinite<TState, TElem>(state, unfold)).WithAttributes(DefaultAttributes.UnfoldInf);
 
         /// <summary>
         /// A <see cref="Source{TOut,TMat}"/> with no elements, i.e. an empty stream that is completed immediately for every connected <see cref="Sink{TIn,TMat}"/>.

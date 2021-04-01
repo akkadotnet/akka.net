@@ -1,5 +1,5 @@
 ---
-layout: docs.hbs
+uid: dispatchers
 title: Dispatchers
 ---
 
@@ -70,6 +70,7 @@ system.ActorOf(Props.Create<MyActor>().WithDispatcher("my-dispatcher"), "my-acto
 Some dispatcher configurations are available out-of-the-box for convenience. You can use them during actor deployment, [as described above](#configuring-dispatchers).
 
 * **default-dispatcher** - A configuration that uses the [ThreadPoolDispatcher](#threadpooldispatcher). As the name says, this is the default dispatcher configuration used by the global dispatcher, and you don't need to define anything during deployment to use it.
+* **internal-dispatcher** - To protect the internal Actors that is spawned by the various Akka modules, a separate internal dispatcher is used by default.
 * **task-dispatcher** - A configuration that uses the [TaskDispatcher](#taskdispatcher).
 * **default-fork-join-dispatcher** - A configuration that uses the [ForkJoinDispatcher](#forkjoindispatcher).
 * **synchronized-dispatcher** - A configuration that uses the [SynchronizedDispatcher](#synchronizeddispatcher).
@@ -174,3 +175,10 @@ The following configuration keys are available for any dispatcher configuration:
 
 > [!NOTE]
 > The throughput-deadline-time is used as a *best effort*, not as a *hard limit*. This means that if a message takes more time than the deadline allows, Akka.NET won't interrupt the process. Instead it will wait for it to finish before giving turn to the next actor.
+
+## Dispatcher aliases
+
+When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block, 
+the lookup will treat it as an alias, and follow that string to an alternate location for a dispatcher config.
+If the dispatcher config is referenced both through an alias and through the absolute path only one dispatcher will
+be used and shared among the two ids.

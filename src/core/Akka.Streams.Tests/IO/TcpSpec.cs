@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,6 +20,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 using Tcp = Akka.Streams.Dsl.Tcp;
@@ -29,7 +30,7 @@ namespace Akka.Streams.Tests.IO
     public class TcpSpec : TcpHelper
     {
         public TcpSpec(ITestOutputHelper helper) : base(@"
-            akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
+akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
         }
 
@@ -72,7 +73,7 @@ namespace Akka.Streams.Tests.IO
 
             var serverConnection = server.WaitAccept();
             serverConnection.Read(256);
-            serverConnection.WaitRead().ShouldBeEquivalentTo(expectedOutput);
+            serverConnection.WaitRead().Should().BeEquivalentTo(expectedOutput);
         }
         
         [Fact]
@@ -120,7 +121,7 @@ namespace Akka.Streams.Tests.IO
                         .Run(Materializer);
 
                 task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<Exception>()
+                    .Should().Throw<Exception>()
                     .And.Message.Should()
                     .Contain("Connection failed");
             }, Materializer);
@@ -145,7 +146,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 tcpWriteProbe.Write(testData);
                 serverConnection.Read(5);
-                serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+                serverConnection.WaitRead().Should().BeEquivalentTo(testData);
 
                 // Close client side write
                 tcpWriteProbe.Close();
@@ -153,7 +154,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                tcpReadProbe.Read(5).ShouldBeEquivalentTo(testData);
+                tcpReadProbe.Read(5).Should().BeEquivalentTo(testData);
 
                 // Close server side write
                 serverConnection.ConfirmedClose();
@@ -182,7 +183,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                tcpReadProbe.Read(5).ShouldBeEquivalentTo(testData);
+                tcpReadProbe.Read(5).Should().BeEquivalentTo(testData);
 
                 // Close server side write
                 serverConnection.ConfirmedClose();
@@ -191,7 +192,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 tcpWriteProbe.Write(testData);
                 serverConnection.Read(5);
-                serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+                serverConnection.WaitRead().Should().BeEquivalentTo(testData);
 
                 // Close client side write
                 tcpWriteProbe.Close();
@@ -218,7 +219,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                tcpReadProbe.Read(5).ShouldBeEquivalentTo(testData);
+                tcpReadProbe.Read(5).Should().BeEquivalentTo(testData);
 
                 // Close client side read
                 tcpReadProbe.TcpReadSubscription.Value.Cancel();
@@ -226,7 +227,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 tcpWriteProbe.Write(testData);
                 serverConnection.Read(5);
-                serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+                serverConnection.WaitRead().Should().BeEquivalentTo(testData);
 
                 // Close client side write
                 tcpWriteProbe.Close();
@@ -260,7 +261,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                tcpReadProbe.Read(5).ShouldBeEquivalentTo(testData);
+                tcpReadProbe.Read(5).Should().BeEquivalentTo(testData);
 
                 // Close client side read
                 tcpReadProbe.TcpReadSubscription.Value.Cancel();
@@ -268,7 +269,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 tcpWriteProbe.Write(testData);
                 serverConnection.Read(5);
-                serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+                serverConnection.WaitRead().Should().BeEquivalentTo(testData);
 
                 serverConnection.ConfirmedClose();
 
@@ -297,12 +298,12 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                tcpReadProbe.Read(5).ShouldBeEquivalentTo(testData);
+                tcpReadProbe.Read(5).Should().BeEquivalentTo(testData);
                 
                 // Client can still write
                 tcpWriteProbe.Write(testData);
                 serverConnection.Read(5);
-                serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+                serverConnection.WaitRead().Should().BeEquivalentTo(testData);
 
                 // Cause error
                 tcpWriteProbe.TcpWriteSubscription.Value.SendError(new IllegalStateException("test"));
@@ -331,7 +332,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                tcpReadProbe.Read(5).ShouldBeEquivalentTo(testData);
+                tcpReadProbe.Read(5).Should().BeEquivalentTo(testData);
 
                 // Close remote side write
                 serverConnection.ConfirmedClose();
@@ -340,7 +341,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 tcpWriteProbe.Write(testData);
                 serverConnection.Read(5);
-                serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+                serverConnection.WaitRead().Should().BeEquivalentTo(testData);
                 
                 tcpWriteProbe.TcpWriteSubscription.Value.SendError(new IllegalStateException("test"));
                 serverConnection.ExpectClosed(c => c.IsErrorClosed);
@@ -440,7 +441,7 @@ namespace Akka.Streams.Tests.IO
                 var result = t.Item2;
 
                 result.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-                result.Result.ShouldBeEquivalentTo(ByteString.FromString("Early response"));
+                result.Result.Should().BeEquivalentTo(ByteString.FromString("Early response"));
 
                 promise.SetResult(null); // close client upstream, no more data
                 binding.Unbind();
@@ -473,7 +474,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_handle_when_connection_actor_terminates_unexpectedly()
         {
-            var system2 = ActorSystem.Create("system2");
+            var system2 = ActorSystem.Create("system2", Sys.Settings.Config);
             InitializeLogger(system2);
             var mat2 = ActorMaterializer.Create(system2);
 
@@ -491,7 +492,7 @@ namespace Akka.Streams.Tests.IO
 
             // Getting rid of existing connection actors by using a blunt instrument
             system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
-            result.Invoking(r => r.Wait()).ShouldThrow<StreamTcpException>();
+            result.Invoking(r => r.Wait()).Should().Throw<StreamTcpException>();
 
             await binding.Result.Unbind();
             await system2.Terminate();
@@ -500,7 +501,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
         {
-            var sys2 = ActorSystem.Create("shutdown-test-system");
+            var sys2 = ActorSystem.Create("shutdown-test-system", Sys.Settings.Config);
             var mat2 = sys2.Materializer();
 
             try
@@ -528,9 +529,9 @@ namespace Akka.Streams.Tests.IO
         {
             serverConnection.Write(testData);
             serverConnection.Read(5);
-            readProbe.Read(5).ShouldBeEquivalentTo(testData);
+            readProbe.Read(5).Should().BeEquivalentTo(testData);
             writeProbe.Write(testData);
-            serverConnection.WaitRead().ShouldBeEquivalentTo(testData);
+            serverConnection.WaitRead().Should().BeEquivalentTo(testData);
         }
         
         private Sink<Tcp.IncomingConnection, Task> EchoHandler() =>
@@ -559,7 +560,7 @@ namespace Akka.Streams.Tests.IO
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
             
-            result.ShouldBeEquivalentTo(expectedOutput);
+            result.Should().BeEquivalentTo(expectedOutput);
             await binding.Unbind();
             await echoServerFinish;
         }
@@ -592,7 +593,7 @@ namespace Akka.Streams.Tests.IO
                 .Via(echoConnection)
                 .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer);
             
-            result.ShouldBeEquivalentTo(expectedOutput);
+            result.Should().BeEquivalentTo(expectedOutput);
             await binding.Unbind();
             await echoServerFinish;
         }
@@ -620,8 +621,8 @@ namespace Akka.Streams.Tests.IO
                 var binding3F = bind.To(Sink.FromSubscriber(probe3)).Run(Materializer);
                 probe3.ExpectSubscriptionAndError().Should().BeOfType<BindFailedException>();
                 
-                binding2F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<BindFailedException>();
-                binding3F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<BindFailedException>();
+                binding2F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).Should().Throw<BindFailedException>();
+                binding3F.Invoking(x => x.Wait(TimeSpan.FromSeconds(3))).Should().Throw<BindFailedException>();
                 
                 // Now unbind first
                 binding1.Unbind().Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
@@ -706,7 +707,7 @@ namespace Akka.Streams.Tests.IO
                 total.Wait(TimeSpan.FromSeconds(10)).Should().BeTrue();
                 total.Result.Should().Be(100);
 
-                rejected.Invoking(x => x.Wait(5.Seconds())).ShouldThrow<StreamTcpException>();
+                rejected.Invoking(x => x.Wait(5.Seconds())).Should().Throw<StreamTcpException>();
             }, Materializer);
         }
     }

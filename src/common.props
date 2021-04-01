@@ -1,39 +1,43 @@
 <Project>
   <PropertyGroup>
-    <Copyright>Copyright © 2013-2019 Akka.NET Team</Copyright>
+    <Copyright>Copyright © 2013-2021 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.4.0</VersionPrefix>
-    <PackageIconUrl>http://getakka.net/images/akkalogo.png</PackageIconUrl>
+    <VersionPrefix>1.4.18</VersionPrefix>
+    <PackageIconUrl>https://getakka.net/images/akkalogo.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
   </PropertyGroup>
   <PropertyGroup>
-    <XunitVersion>2.3.1</XunitVersion>
-    <TestSdkVersion>15.9.0</TestSdkVersion>
-    <HyperionVersion>0.9.8</HyperionVersion>
-    <NBenchVersion>1.2.2</NBenchVersion>
-    <NewtonsoftJsonVersion>9.0.1</NewtonsoftJsonVersion>
-    <NetCoreTestVersion>netcoreapp2.1</NetCoreTestVersion>
-    <NetFrameworkTestVersion>net461</NetFrameworkTestVersion>
+    <XunitVersion>2.4.1</XunitVersion>
+    <TestSdkVersion>16.9.1</TestSdkVersion>
+    <HyperionVersion>0.9.17</HyperionVersion>
+    <NewtonsoftJsonVersion>13.0.1</NewtonsoftJsonVersion>
+    <NBenchVersion>2.0.1</NBenchVersion>
+    <ProtobufVersion>3.15.6</ProtobufVersion>
+    <NetCoreTestVersion>netcoreapp3.1</NetCoreTestVersion>
+    <NetTestVersion>net5.0</NetTestVersion>
+    <NetFrameworkTestVersion>net471</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
-    <NetFrameworkLibVersion>net452</NetFrameworkLibVersion>
-    <FluentAssertionsVersion>4.14.0</FluentAssertionsVersion>
-    <FsCheckVersion>2.9.0</FsCheckVersion>
+    <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
+    <FsCheckVersion>2.15.1</FsCheckVersion>
+    <HoconVersion>2.0.3</HoconVersion>
+    <ConfigurationManagerVersion>4.7.0</ConfigurationManagerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
+    <PackageReleaseNotes>Placeholder for Nightlies**</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19351-01" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <!--<PublishRepositoryUrl>true</PublishRepositoryUrl>-->
+    <RepositoryUrl>https://github.com/akkadotnet/akka.net</RepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->

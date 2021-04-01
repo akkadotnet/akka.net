@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentFSMBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -128,7 +128,7 @@ namespace Akka.Persistence.Fsm
         /// <returns>TBD</returns>
         public State<TState, TData, TEvent> Stop(FSMBase.Reason reason, TData stateData)
         {
-            return Stay().Using(stateData).WithStopReason(reason);
+            return Stay().Copy(stateData: stateData, stopReason: reason);
         }
 
         /// <summary>
@@ -189,7 +189,7 @@ namespace Akka.Persistence.Fsm
                 oldTimer.Cancel();
             }
 
-            var timer = new FSMBase.Timer(name, msg, repeat, _timerGen.Next(), Self, Context);
+            var timer = new FSMBase.Timer(name, msg, repeat, _timerGen.Next(), this, Context);
             timer.Schedule(Self, timeout);
             _timers[name] = timer;
         }
@@ -439,7 +439,7 @@ namespace Akka.Persistence.Fsm
 
             if (message is FSMBase.Timer t)
             {
-                if (_timers.TryGetValue(t.Name, out FSMBase.Timer timer) && timer.Generation == t.Generation)
+                if (ReferenceEquals(t.Owner, this) && _timers.TryGetValue(t.Name, out var timer) && timer.Generation == t.Generation)
                 {
                     if (_timeoutFuture != null)
                     {
@@ -591,7 +591,7 @@ namespace Akka.Persistence.Fsm
         /// <summary>
         /// Call the <see cref="OnTermination"/> hook if you want to retain this behavior.
         /// When overriding make sure to call base.PostStop();
-        /// 
+        ///
         /// Please note that this method is called by default from <see cref="ActorBase.PreRestart"/> so
         /// override that one if <see cref="OnTermination"/> shall not be called during restart.
         /// </summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LoggingBus.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -91,6 +91,7 @@ namespace Akka.Event
             var logLevel = Logging.LogLevelFor(system.Settings.LogLevel);
             var loggerTypes = system.Settings.Loggers;
             var timeout = system.Settings.LoggerStartTimeout;
+            var asyncStart = system.Settings.LoggerAsyncStart;
             var shouldRemoveStandardOutLogger = true;
 
             foreach (var strLoggerType in loggerTypes)
@@ -106,14 +107,29 @@ namespace Akka.Event
                     shouldRemoveStandardOutLogger = false;
                     continue;
                 }
-                
-                try
+
+                if (asyncStart)
                 {
-                    AddLogger(system, loggerType, logLevel, logName, timeout);
+                    // Not awaiting for result, and not depending on current thread context
+                    Task.Run(() => AddLogger(system, loggerType, logLevel, logName, timeout))
+                        .ContinueWith(t =>
+                        {
+                            if (t.Exception != null)
+                            {
+                                Console.WriteLine($"Logger [{strLoggerType}] specified in config cannot be loaded: {t.Exception}");
+                            }
+                        });
                 }
-                catch (Exception e)
+                else
                 {
-                    throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {e}", e);
+                    try
+                    {
+                        AddLogger(system, loggerType, logLevel, logName, timeout);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ConfigurationException($"Logger [{strLoggerType}] specified in config cannot be loaded: {ex}", ex);
+                    }
                 }
             }
 

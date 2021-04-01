@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TaskEx.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,9 +18,6 @@ namespace Akka.Util.Internal
     /// </summary>
     internal static class TaskEx
     {
-        private const int RunContinuationsAsynchronously = 64;
-        public static readonly bool IsRunContinuationsAsynchronouslyAvailable = Enum.IsDefined(typeof(TaskCreationOptions), RunContinuationsAsynchronously);
-
         /// <summary>
         /// Creates a new <see cref="TaskCompletionSource{TResult}"/> which will run in asynchronous,
         /// non-blocking fashion upon calling <see cref="TaskCompletionSource{TResult}.TrySetResult"/>.
@@ -31,14 +28,7 @@ namespace Akka.Util.Internal
         /// </summary>
         public static TaskCompletionSource<T> NonBlockingTaskCompletionSource<T>()
         {
-            if (IsRunContinuationsAsynchronouslyAvailable)
-            {
-                return new TaskCompletionSource<T>((TaskCreationOptions)RunContinuationsAsynchronously);
-            }
-            else
-            {
-                return new TaskCompletionSource<T>();
-            }
+            return new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <summary>
@@ -48,10 +38,7 @@ namespace Akka.Util.Internal
         /// </summary>
         public static void NonBlockingTrySetResult<T>(this TaskCompletionSource<T> taskCompletionSource, T value)
         {
-            if (IsRunContinuationsAsynchronouslyAvailable)
-                taskCompletionSource.TrySetResult(value);
-            else
-                Task.Run(() => taskCompletionSource.TrySetResult(value));
+            taskCompletionSource.TrySetResult(value);
         }
 
         /// <summary>
@@ -61,10 +48,7 @@ namespace Akka.Util.Internal
         /// </summary>
         public static void NonBlockingTrySetException<T>(this TaskCompletionSource<T> taskCompletionSource, Exception exception)
         {
-            if (IsRunContinuationsAsynchronouslyAvailable)
-                taskCompletionSource.TrySetException(exception);
-            else
-                Task.Run(() => taskCompletionSource.TrySetException(exception));
+            taskCompletionSource.TrySetException(exception);
         }
 
         /// <summary>
@@ -79,9 +63,7 @@ namespace Akka.Util.Internal
         /// <returns>A failed task.</returns>
         public static Task FromException(Exception ex)
         {
-            var c = new TaskCompletionSource<Done>();
-            c.SetException(ex);
-            return c.Task;
+            return Task.FromException(ex);
         }
 
         /// <summary>
@@ -92,9 +74,7 @@ namespace Akka.Util.Internal
         /// <typeparam name="T">The type of <see cref="Task{T}"/></typeparam>
         public static Task<T> FromException<T>(Exception ex)
         {
-            var c = new TaskCompletionSource<T>();
-            c.SetException(ex);
-            return c.Task;
+            return Task.FromException<T>(ex);
         }
     }
 }

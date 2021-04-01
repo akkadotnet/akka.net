@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SplitBrainResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -23,8 +23,10 @@ namespace Akka.Cluster
         {
             _clusterSettings = Cluster.Get(system).Settings;
             var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolver>("akka.cluster.split-brain-resolver");
 
-            StableAfter = config.GetTimeSpan("stable-after");
+            StableAfter = config.GetTimeSpan("stable-after", null);
             Strategy = ResolveSplitBrainStrategy(config);
         }
 
@@ -36,7 +38,7 @@ namespace Akka.Cluster
 
         private ISplitBrainStrategy ResolveSplitBrainStrategy(Config config)
         {
-            var activeStrategy = config.GetString("active-strategy");
+            var activeStrategy = config.GetString("active-strategy", null);
             switch (activeStrategy)
             {
                 case "static-quorum": return new StaticQuorum(config.GetConfig("static-quorum"));
@@ -85,11 +87,12 @@ namespace Akka.Cluster
         IEnumerable<Member> Apply(NetworkPartitionContext context);
     }
 
+    // TODO: Can quorum size be 0 and role be null?
     internal sealed class StaticQuorum : ISplitBrainStrategy
     {
         public StaticQuorum(Config config) : this(
-           quorumSize: config.GetInt("quorum-size"),
-           role: config.GetString("role"))
+           quorumSize: config.GetInt("quorum-size", 0),
+           role: config.GetString("role", null))
         { }
 
         public StaticQuorum(int quorumSize, string role)
@@ -117,7 +120,7 @@ namespace Akka.Cluster
     internal sealed class KeepMajority : ISplitBrainStrategy
     {
         public KeepMajority(Config config) : this(
-            role: config.GetString("role"))
+            role: config.GetString("role", null))
         { }
 
         public KeepMajority(string role = null)
@@ -154,7 +157,7 @@ namespace Akka.Cluster
     {
         public KeepOldest(Config config) : this(
             downIfAlone: config.GetBoolean("down-if-alone", true),
-            role: config.GetString("role"))
+            role: config.GetString("role", null))
         { }
 
         public KeepOldest(bool downIfAlone, string role = null)
@@ -180,7 +183,7 @@ namespace Akka.Cluster
             if (remaining.Contains(oldest))
             {
                 return DownIfAlone && context.Remaining.Count == 1 && context.Unreachable.Count > 0 // oldest is current node, and it's alone, but not the only node in the cluster
-                    ? context.Remaining 
+                    ? context.Remaining
                     : context.Unreachable;
             }
             if (DownIfAlone && context.Unreachable.Count == 1) // oldest is unreachable, but it's alone
@@ -194,13 +197,13 @@ namespace Akka.Cluster
             ? members
             : members.Where(m => m.HasRole(Role)).ToImmutableSortedSet();
 
-        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: '{Role})'";
+        public override string ToString() => $"KeepOldest(downIfAlone: {DownIfAlone}, role: '{Role}')";
     }
 
     internal sealed class KeepReferee : ISplitBrainStrategy
     {
         public KeepReferee(Config config) : this(
-            address: Address.Parse(config.GetString("address")),
+            address: Address.Parse(config.GetString("address", null)),
             downAllIfLessThanNodes: config.GetInt("down-all-if-less-than-nodes", 1))
         { }
 
@@ -219,7 +222,7 @@ namespace Akka.Cluster
             var isRefereeReachable = context.Remaining.Any(m => m.Address == Address);
 
             if (!isRefereeReachable) return context.Remaining; // referee is unreachable
-            else if (context.Remaining.Count < DownAllIfLessThanNodes) return context.Remaining.Union(context.Unreachable); // referee is reachable but there are too few remaining nodes 
+            else if (context.Remaining.Count < DownAllIfLessThanNodes) return context.Remaining.Union(context.Unreachable); // referee is reachable but there are too few remaining nodes
             else return context.Unreachable;
         }
 
@@ -238,7 +241,7 @@ namespace Akka.Cluster
 
         #endregion
 
-        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy) => 
+        public static Actor.Props Props(TimeSpan stableAfter, ISplitBrainStrategy strategy) =>
             Actor.Props.Create(() => new SplitBrainDecider(stableAfter, strategy)).WithDeploy(Deploy.Local);
 
         private readonly Cluster _cluster;

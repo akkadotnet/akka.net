@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -35,12 +35,12 @@ namespace Akka.TestKit.Internal
             var number = _uniqueNameNumber.GetAndIncrement();
             return "$$" + number.Base64Encode();
             //Looking at the scala code, this might not be obvious that the name starts with $$
-            //object TestActorRef (TestActorRef.scala) contain this code: 
+            //object TestActorRef (TestActorRef.scala) contain this code:
             //    private[testkit] def randomName: String = {
             //      val l = number.getAndIncrement()
             //      "$" + akka.util.Helpers.base64(l)
             //    }
-            //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default 
+            //So it adds one $. The second is added by akka.util.Helpers.base64(l) which by default
             //creates a StringBuilder and adds adds $. Hence, 2 $$
         }
         private InternalTestActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, IInternalActorRef supervisor, ActorPath path)
@@ -227,7 +227,7 @@ namespace Akka.TestKit.Internal
             /// TBD
             /// </summary>
             /// <param name="envelope">TBD</param>
-            protected override void AutoReceiveMessage(Envelope envelope)
+            protected internal override void AutoReceiveMessage(Envelope envelope)
             {
                 if (envelope.Message is InternalGetActor)
                     Sender.Tell(Actor, Self);

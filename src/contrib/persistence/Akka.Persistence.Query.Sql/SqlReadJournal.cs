@@ -1,27 +1,30 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SqlReadJournal.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Reactive.Streams;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Streams.Dsl;
-using Akka.Util.Internal;
+using Akka.Streams;
 
 namespace Akka.Persistence.Query.Sql
 {
-    public class SqlReadJournal : IReadJournal,
+    public class SqlReadJournal : 
         IPersistenceIdsQuery,
         ICurrentPersistenceIdsQuery,
         IEventsByPersistenceIdQuery,
         ICurrentEventsByPersistenceIdQuery,
         IEventsByTagQuery,
-        ICurrentEventsByTagQuery
+        ICurrentEventsByTagQuery,
+        IAllEventsQuery,
+        ICurrentAllEventsQuery
     {
         public static string Identifier = "akka.persistence.query.journal.sql";
 
@@ -37,12 +40,20 @@ namespace Akka.Persistence.Query.Sql
         private readonly TimeSpan _refreshInterval;
         private readonly string _writeJournalPluginId;
         private readonly int _maxBufferSize;
+        private readonly ExtendedActorSystem _system;
+
+        private readonly object _lock = new object();
+        private IPublisher<string> _persistenceIdsPublisher;
 
         public SqlReadJournal(ExtendedActorSystem system, Config config)
         {
-            _refreshInterval = config.GetTimeSpan("refresh-interval");
-            _writeJournalPluginId = config.GetString("write-plugin");
-            _maxBufferSize = config.GetInt("max-buffer-size");
+            _refreshInterval = config.GetTimeSpan("refresh-interval", null);
+            _writeJournalPluginId = config.GetString("write-plugin", null);
+            _maxBufferSize = config.GetInt("max-buffer-size", 0);
+            _system = system;
+
+            _lock = new ReaderWriterLockSlim();
+            _persistenceIdsPublisher = null;
         }
 
         /// <summary>
@@ -65,20 +76,45 @@ namespace Akka.Persistence.Query.Sql
         /// backend journal.
         /// </para>
         /// </summary>
-        public Source<string, NotUsed> PersistenceIds() => 
-            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(true, _writeJournalPluginId))
-            .MapMaterializedValue(_ => NotUsed.Instance)
-            .Named("AllPersistenceIds") as Source<string, NotUsed>;
+        public Source<string, NotUsed> PersistenceIds()
+        {
+            lock (_lock)
+            {
+                if (_persistenceIdsPublisher is null)
+                {
+                    var graph =
+                        Source.ActorPublisher<string>(
+                                LivePersistenceIdsPublisher.Props(
+                                    _refreshInterval,
+                                    _writeJournalPluginId))
+                            .ToMaterialized(Sink.DistinctRetainingFanOutPublisher<string>(PersistenceIdsShutdownCallback), Keep.Right);
+
+                    _persistenceIdsPublisher = graph.Run(_system.Materializer());
+                }
+                return Source.FromPublisher(_persistenceIdsPublisher)
+                    .MapMaterializedValue(_ => NotUsed.Instance)
+                    .Named("AllPersistenceIds");
+            }
+
+        }
+
+        private void PersistenceIdsShutdownCallback()
+        {
+            lock (_lock)
+            {
+                _persistenceIdsPublisher = null;
+            }
+        }
 
         /// <summary>
         /// Same type of query as <see cref="PersistenceIds"/> but the stream
         /// is completed immediately when it reaches the end of the "result set". Persistent
         /// actors that are created after the query is completed are not included in the stream.
         /// </summary>
-        public Source<string, NotUsed> CurrentPersistenceIds() => 
-            Source.ActorPublisher<string>(AllPersistenceIdsPublisher.Props(false, _writeJournalPluginId))
-            .MapMaterializedValue(_ => NotUsed.Instance)
-            .Named("CurrentPersistenceIds") as Source<string, NotUsed>;
+        public Source<string, NotUsed> CurrentPersistenceIds()
+            => Source.ActorPublisher<string>(CurrentPersistenceIdsPublisher.Props(_writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentPersistenceIds");
 
         /// <summary>
         /// <see cref="EventsByPersistenceId"/> is used for retrieving events for a specific
@@ -109,7 +145,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
                 Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
-                    .Named("EventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
+                    .Named("EventsByPersistenceId-" + persistenceId);
 
         /// <summary>
         /// Same type of query as <see cref="EventsByPersistenceId"/> but the event stream
@@ -119,7 +155,7 @@ namespace Akka.Persistence.Query.Sql
         public Source<EventEnvelope, NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) =>
                 Source.ActorPublisher<EventEnvelope>(EventsByPersistenceIdPublisher.Props(persistenceId, fromSequenceNr, toSequenceNr, null, _maxBufferSize, _writeJournalPluginId))
                     .MapMaterializedValue(_ => NotUsed.Instance)
-                    .Named("CurrentEventsByPersistenceId-" + persistenceId) as Source<EventEnvelope, NotUsed>;
+                    .Named("CurrentEventsByPersistenceId-" + persistenceId);
 
         /// <summary>
         /// <see cref="EventsByTag"/> is used for retrieving events that were marked with
@@ -195,6 +231,48 @@ namespace Akka.Persistence.Query.Sql
                 default:
                     throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
             }
+        }
+
+        public Source<EventEnvelope, NotUsed> AllEvents(Offset offset = null)
+        {
+            Sequence seq;
+            switch (offset)
+            {
+                case null:
+                case NoOffset _:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = s;
+                    break;
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("AllEvents");
+        }
+
+        public Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset)
+        {
+            Sequence seq;
+            switch (offset)
+            {
+                case null:
+                case NoOffset _:
+                    seq = new Sequence(0L);
+                    break;
+                case Sequence s:
+                    seq = s;
+                    break;
+                default:
+                    throw new ArgumentException($"SqlReadJournal does not support {offset.GetType().Name} offsets");
+            }
+
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(seq.Value, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentAllEvents");
         }
     }
 }

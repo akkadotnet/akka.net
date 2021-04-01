@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSpecExtensions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -51,7 +51,10 @@ namespace Akka.TestKit
         /// <param name="other">TBD</param>
         public static void ShouldBe<T>(this IEnumerable<T> self, IEnumerable<T> other)
         {
-            Assert.True(self.SequenceEqual(other), "Expected " + other.Select(i => string.Format("'{0}'", i)).Join(",") + " got " + self.Select(i => string.Format("'{0}'", i)).Join(","));
+            var expected = string.Join(",", other.Select(i => string.Format("'{0}'", i)));
+            var actual = string.Join(",", self.Select(i => string.Format("'{0}'", i)));
+
+            Assert.True(self.SequenceEqual(other), "Expected " + expected + " got " + actual);
         }
 
         /// <summary>
@@ -87,7 +90,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public static void ShouldBeSame<T>(this T self, T expected, string message = null)
         {
-            Assert.Same(expected, self);
+            Assert.Equal(expected, self);
         }
 
         /// <summary>
@@ -99,7 +102,7 @@ namespace Akka.TestKit
         /// <param name="message">TBD</param>
         public static void ShouldNotBeSame<T>(this T self, T expected, string message = null)
         {
-            Assert.NotSame(expected, self);
+            Assert.NotEqual(expected, self);
         }
 
         /// <summary>

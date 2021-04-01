@@ -7,13 +7,10 @@ title: Distributed Data
 Akka.DistributedData plugin can be used as in-memory, highly-available, distributed key-value store, where values conform to so called [Conflict-Free Replicated Data Types](http://hal.upmc.fr/inria-00555588/document) (CRDT). Those data types can have replicas across multiple nodes in the cluster, where DistributedData plugin has been initialized. We are free to perform concurrent updates on replicas with the same corresponding key without need of coordination (distributed locks or transactions) - all state changes will eventually converge with conflicts being automatically resolved, thanks to the nature of CRDTs. To use distributed data plugin, simply install it via NuGet:
 
 ```
-install-package Akka.DistributedData -pre
+install-package Akka.DistributedData
 ```
 
-Keep in mind, that CRDTs are indended for high-availability, non-blocking read/write scenarios. However they are not a good fit, when you need strong consistency or are operating on big data. If you want to have millions of data entries, this is NOT a way to go. Keep in mind, that all data is kept in memory and, as state-based CRDTs, whole object state is replicated remotelly across the nodes, when an update happens. A more efficient implementations (delta-based CRDTs) are considered for the future implementations.
-
-> [!WARNING]
->  At the present moment, Akka.DistributedData plugin is in state of flux. This means, that its API is unstable and the performance is yet to improve.
+Keep in mind, that CRDTs are intended for high-availability, non-blocking read/write scenarios. However they are not a good fit, when you need strong consistency or are operating on big data. If you want to have millions of data entries, this is NOT a way to go. Keep in mind, that all data is kept in memory and, as state-based CRDTs, whole object state is replicated remotely across the nodes, when an update happens. A more efficient implementations (delta-based CRDTs) are considered for the future implementations.
 
 ## Basic operations
 
@@ -155,7 +152,7 @@ Akka.DistributedData specifies several data types, sharing the same `IReplicated
 - `PNCounter` allows for both increments and decrements. A total value of the counter is a sum of increments across all replicas decreased by the sum of all decrements.
 - `GSet` is an add-only set, which disallows to remove elements once added to it. Merges of GSets are simple unions of their elements. This data type doesn't produce any garbage.
 - `ORSet` is implementation of an observed remove add-wins set. It allows to both add and remove its elements any number of times. In case of conflicts when merging replicas, added elements always wins over removed ones.
-- `ORDictionary` (also knowns as OR-Map or Observed Remove Map) has similar semantics to OR-Set, however it allows to merge values (which must be CRDTs themselves) in case of concurrent updates.
+- `ORDictionary` (also known as OR-Map or Observed Remove Map) has similar semantics to OR-Set, however it allows to merge values (which must be CRDTs themselves) in case of concurrent updates.
 - `ORMultiDictionary` is a multi-map implementation based on `ORDictionary`, where values are represented as OR-Sets. Use `AddItem` or `RemoveItem` to add or remove elements to the bucket under specified keys.
 - `PNCounterDictionary` is a dictionary implementation based on `ORDictionary`, where values are represented as PN-Counters.
 - `LWWRegister` (Last Write Wins Register) is a cell for any data type, that implements CRDT semantics. Each modification updates register's timestamp (timestamp generation can be customized, by default it's using UTC date time ticks). In case of merge conflicts, the value with highest update timestamp always wins.

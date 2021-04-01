@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ namespace Akka.Remote
     /// </summary>
     internal class DefaultMessageDispatcher : IInboundMessageDispatcher
     {
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ILoggingAdapter _log;
         private readonly IInternalActorRef _remoteDaemon;
@@ -62,7 +62,7 @@ namespace Akka.Remote
         /// <param name="system">TBD</param>
         /// <param name="provider">TBD</param>
         /// <param name="log">TBD</param>
-        public DefaultMessageDispatcher(ActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
+        public DefaultMessageDispatcher(ExtendedActorSystem system, IRemoteActorRefProvider provider, ILoggingAdapter log)
         {
             _system = system;
             _provider = provider;
@@ -82,7 +82,7 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(_system, message);
-            Type payloadClass = payload?.GetType();
+            var payloadClass = payload?.GetType();
             var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
 
@@ -362,14 +362,14 @@ namespace Akka.Remote
         }
     }
 
-#endregion
+    #endregion
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
     internal class ReliableDeliverySupervisor : ReceiveActor
     {
-#region Internal message classes
+        #region Internal message classes
 
         /// <summary>
         /// TBD
@@ -407,7 +407,7 @@ namespace Akka.Remote
             private TooLongIdle() { }
         }
 
-#endregion
+        #endregion
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
@@ -497,17 +497,13 @@ namespace Akka.Remote
 
                 _log.Warning("Association with remote system {0} has failed; address is now gated for {1} ms. Reason is: [{2}]", _remoteAddress, _settings.RetryGateClosedFor.TotalMilliseconds, ex);
                 UidConfirmed = false; // Need confirmation of UID again
-                if (_bufferWasInUse)
-                {
-                    if ((_resendBuffer.Nacked.Any() || _resendBuffer.NonAcked.Any()) && _bailoutAt == null)
-                        _bailoutAt = Deadline.Now + _settings.InitialSysMsgDeliveryTimeout;
-                    Become(() => Gated(writerTerminated: false, earlyUngateRequested: false));
-                    _currentHandle = null;
-                    Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
-                    return Directive.Stop;
-                }
 
-                return Directive.Escalate;
+                if ((_resendBuffer.Nacked.Any() || _resendBuffer.NonAcked.Any()) && _bailoutAt == null)
+                    _bailoutAt = Deadline.Now + _settings.InitialSysMsgDeliveryTimeout;
+                Become(() => Gated(writerTerminated: false, earlyUngateRequested: false));
+                _currentHandle = null;
+                Context.Parent.Tell(new EndpointWriter.StoppedReading(Self));
+                return Directive.Stop;
             });
         }
 
@@ -516,8 +512,6 @@ namespace Akka.Remote
         private AckedSendBuffer<EndpointManager.Send> _resendBuffer;
         private long _seqCounter;
 
-        private bool _bufferWasInUse;
-
         private IActorRef _writer;
 
         private void Reset()
@@ -525,7 +519,6 @@ namespace Akka.Remote
             _resendBuffer = new AckedSendBuffer<EndpointManager.Send>(_settings.SysMsgBufferSize);
             _seqCounter = 0L;
             _bailoutAt = null;
-            _bufferWasInUse = false;
         }
 
         private SeqNo NextSeq()
@@ -535,7 +528,7 @@ namespace Akka.Remote
             return new SeqNo(tmp);
         }
 
-#region ActorBase methods and Behaviors
+        #region ActorBase methods and Behaviors
 
         /// <summary>
         /// TBD
@@ -552,8 +545,9 @@ namespace Akka.Remote
             {
                 Context.System.DeadLetters.Tell(msg.Copy(opt: null));
             }
-            EndpointManager.ResendState value;
-            _receiveBuffers.TryRemove(new EndpointManager.Link(_localAddress, _remoteAddress), out value);
+
+            _log.Info("Removing receive buffers for [{0}]->[{1}]", _localAddress, _remoteAddress);
+            _receiveBuffers.TryRemove(new EndpointManager.Link(_localAddress, _remoteAddress), out _);
             _autoResendTimer.Cancel();
             _maxSilenceTimer?.Cancel();
         }
@@ -635,7 +629,7 @@ namespace Akka.Remote
 
         private void GoToIdle()
         {
-            if (_bufferWasInUse && _maxSilenceTimer == null)
+            if (_maxSilenceTimer == null)
                 _maxSilenceTimer =
                     Context.System.Scheduler.ScheduleTellOnceCancelable(_settings.QuarantineSilentSystemTimeout, Self,
                         TooLongIdle.Instance, Self);
@@ -760,9 +754,9 @@ namespace Akka.Remote
             ReceiveAny(o => { }); // ignore
         }
 
-#endregion
+        #endregion
 
-#region Static methods and Internal Message Types
+        #region Static methods and Internal Message Types
 
         /// <summary>
         /// TBD
@@ -833,7 +827,7 @@ namespace Akka.Remote
                     .WithDispatcher(dispatcher);
         }
 
-#endregion
+        #endregion
 
         // Extracted this method to solve a compiler issue with `Receive<TooLongIdle>`
         private void HandleTooLongIdle()
@@ -875,7 +869,6 @@ namespace Akka.Remote
             try
             {
                 _resendBuffer = _resendBuffer.Buffer(s);
-                _bufferWasInUse = true;
             }
             catch (Exception ex)
             {
@@ -883,7 +876,7 @@ namespace Akka.Remote
             }
         }
 
-#region Writer create
+        #region Writer create
 
         private IActorRef CreateWriter()
         {
@@ -898,7 +891,7 @@ namespace Akka.Remote
             return writer;
         }
 
-#endregion
+        #endregion
 
     }
 
@@ -952,7 +945,7 @@ namespace Akka.Remote
             Settings = settings;
         }
 
-#region Event publishing methods
+        #region Event publishing methods
 
         /// <summary>
         /// TBD
@@ -984,7 +977,7 @@ namespace Akka.Remote
             }
         }
 
-#endregion
+        #endregion
 
     }
 
@@ -1020,7 +1013,7 @@ namespace Akka.Remote
             _refuseUid = refuseUid;
             _codec = codec;
             _reliableDeliverySupervisor = reliableDeliverySupervisor;
-            _system = Context.System;
+            _system = Context.System.AsInstanceOf<ExtendedActorSystem>();
             _provider = RARP.For(Context.System).Provider;
             _msgDispatcher = new DefaultMessageDispatcher(_system, _provider, _log);
             _receiveBuffers = receiveBuffers;
@@ -1043,7 +1036,7 @@ namespace Akka.Remote
         private readonly int? _refuseUid;
         private readonly AkkaPduCodec _codec;
         private readonly IActorRef _reliableDeliverySupervisor;
-        private readonly ActorSystem _system;
+        private readonly ExtendedActorSystem _system;
         private readonly IRemoteActorRefProvider _provider;
         private readonly ConcurrentDictionary<EndpointManager.Link, EndpointManager.ResendState> _receiveBuffers;
         private DisassociateInfo _stopReason = DisassociateInfo.Unknown;
@@ -1069,7 +1062,7 @@ namespace Akka.Remote
 
         private readonly IRemoteMetrics _remoteMetrics;
 
-#region ActorBase methods
+        #region ActorBase methods
 
         /// <summary>
         /// TBD
@@ -1148,9 +1141,9 @@ namespace Akka.Remote
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
 
-#endregion
+        #endregion
 
-#region Receives
+        #region Receives
 
         private void Initializing()
         {
@@ -1285,9 +1278,9 @@ namespace Akka.Remote
             }
         }
 
-#endregion
+        #endregion
 
-#region Internal methods
+        #region Internal methods
 
         private Deadline NewAckDeadline()
         {
@@ -1481,11 +1474,11 @@ namespace Akka.Remote
                   send.Message.GetType());
                 return true;
             }
-            catch(ArgumentException ex)
+            catch (ArgumentException ex)
             {
                 _log.Error(
                   ex,
-                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
                   send.Message.GetType());
                 return true;
             }
@@ -1589,9 +1582,9 @@ namespace Akka.Remote
             ScheduleBackoffTimer();
         }
 
-#endregion
+        #endregion
 
-#region Static methods and Internal messages
+        #region Static methods and Internal messages
 
         // These settings are not configurable because wrong configuration will break the auto-tuning
         private const int SendBufferBatchSize = 5;
@@ -1815,7 +1808,7 @@ namespace Akka.Remote
 
         private const string AckIdleTimerName = "AckIdleTimer";
 
-#endregion
+        #endregion
 
     }
 
@@ -1870,7 +1863,7 @@ namespace Akka.Remote
         private readonly IRemoteActorRefProvider _provider;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
 
-#region ActorBase overrides
+        #region ActorBase overrides
 
         /// <summary>
         /// TBD
@@ -1879,8 +1872,11 @@ namespace Akka.Remote
         {
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
-                _ackedReceiveBuffer = resendState.Buffer;
-                DeliverAndAck();
+                if(resendState.Uid == _uid)
+                {
+                    _ackedReceiveBuffer = resendState.Buffer;
+                    DeliverAndAck();
+                }
             }
         }
 
@@ -1894,7 +1890,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
+           
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;
@@ -1931,18 +1927,19 @@ namespace Akka.Remote
                             {
                                 LogTransientSerializationError(ackAndMessage.MessageOption, e);
                             }
-                            catch(ArgumentException e)
+                            catch (ArgumentException e)
                             {
                                 LogTransientSerializationError(ackAndMessage.MessageOption, e);
                             }
-                            catch(Exception e)
+                            catch (Exception e)
                             {
-                                throw e;
+                                throw;
                             }
                         }
                     }
                 }
             });
+            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 SaveState();
@@ -1975,53 +1972,41 @@ namespace Akka.Remote
             ReceiveAny(o => { }); // ignore
         }
 
-#endregion
+        #endregion
 
 
 
-#region Lifecycle event handlers
+        #region Lifecycle event handlers
 
         private void SaveState()
         {
-            var key = new EndpointManager.Link(LocalAddress, RemoteAddress);
-            _receiveBuffers.TryGetValue(key, out var previousValue);
-            UpdateSavedState(key, previousValue);
-        }
+            EndpointManager.ResendState Merge(EndpointManager.ResendState current,
+                EndpointManager.ResendState oldState)
+            {
+                if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
+                return current;
+            }
 
-        private EndpointManager.ResendState Merge(EndpointManager.ResendState current,
-            EndpointManager.ResendState oldState)
-        {
-            if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
-            return current;
-        }
-
-        private void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
-        {
-            while (true)
+            void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
             {
                 if (expectedState == null)
                 {
-                    if (_receiveBuffers.ContainsKey(key))
+                    if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
                     {
-                        var updatedValue = new EndpointManager.ResendState(_uid, _ackedReceiveBuffer);
-                        _receiveBuffers.AddOrUpdate(key, updatedValue, (link, state) => updatedValue);
-                        expectedState = updatedValue;
-                        continue;
+                        _receiveBuffers.TryGetValue(key, out var prevValue);
+                        UpdateSavedState(key, prevValue);
                     }
                 }
-                else
+                else if (!_receiveBuffers.TryUpdate(key,
+                    Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
                 {
-                    if (_receiveBuffers.TryGetValue(key, out var resendState) && resendState.Equals(expectedState))
-                        _receiveBuffers[key] = Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState);
-                    else
-                    {
-                        _receiveBuffers.TryGetValue(key, out var previousValue);
-                        expectedState = previousValue;
-                        continue;
-                    }
+                    _receiveBuffers.TryGetValue(key, out var prevValue);
+                    UpdateSavedState(key, prevValue);
                 }
-                break;
             }
+
+            var k = new EndpointManager.Link(LocalAddress, RemoteAddress);
+            UpdateSavedState(k, !_receiveBuffers.TryGetValue(k, out var previousValue) ? null : previousValue);
         }
 
         private void HandleDisassociated(DisassociateInfo info)
@@ -2042,7 +2027,7 @@ namespace Akka.Remote
 
         private void DeliverAndAck()
         {
-            var deliverable = _ackedReceiveBuffer.ExtractDeliverable;
+            var deliverable = _ackedReceiveBuffer.ExtractDeliverable();
             _ackedReceiveBuffer = deliverable.Buffer;
 
             // Notify writer that some messages can be acked
@@ -2062,9 +2047,9 @@ namespace Akka.Remote
             }
         }
 
-#endregion
+        #endregion
 
-#region Static members
+        #region Static members
 
         /// <summary>
         /// TBD
@@ -2100,6 +2085,6 @@ namespace Akka.Remote
                             .WithDispatcher(settings.Dispatcher);
         }
 
-#endregion
+        #endregion
     }
 }

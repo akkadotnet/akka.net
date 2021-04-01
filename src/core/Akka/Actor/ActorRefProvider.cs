@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,18 +10,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// The Actor Reference Provider API.
+    ///
+    /// The factory used to produce and create <see cref="IActorRef"/> instances used inside an <see cref="ActorSystem"/>.
     /// </summary>
     public interface IActorRefProvider
     {
@@ -48,6 +52,8 @@ namespace Akka.Actor
 
         /// <summary>Gets the dead letters.</summary>
         IActorRef DeadLetters { get; }
+
+        IActorRef IgnoreRef { get; }
 
         /// <summary>
         /// Gets the root path for all actors within this actor system, not including any remote address information.
@@ -133,6 +139,12 @@ namespace Akka.Actor
 
         /// <summary>Gets the external address of the default transport. </summary>
         Address DefaultAddress { get; }
+
+        /// <summary>
+        /// INTERNAL API.
+        /// </summary>
+        [InternalApi]
+        Information SerializationInformation { get; }
     }
 
     /// <summary>
@@ -189,6 +201,8 @@ namespace Akka.Actor
             if (deadLettersFactory == null)
                 deadLettersFactory = p => new DeadLetterActorRef(this, p, _eventStream);
             _deadLetters = deadLettersFactory(_rootPath / "deadLetters");
+            IgnoreRef = new IgnoreActorRef(this);
+
             _tempNumber = new AtomicCounterLong(1);
             _tempNode = _rootPath / "temp";
 
@@ -200,6 +214,8 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         public IActorRef DeadLetters { get { return _deadLetters; } }
+
+        public IActorRef IgnoreRef { get; }
 
         /// <summary>
         /// TBD
@@ -246,7 +262,7 @@ namespace Akka.Actor
         /// </summary>
         public EventStream EventStream { get { return _eventStream; } }
 
-        private MessageDispatcher DefaultDispatcher { get { return _system.Dispatchers.DefaultGlobalDispatcher; } }
+        private MessageDispatcher InternalDispatcher => _system.Dispatchers.InternalDispatcher;
 
         private SupervisorStrategy UserGuardianSupervisorStrategy { get { return _userGuardianStrategyConfigurator.Create(); } }
 
@@ -286,7 +302,7 @@ namespace Akka.Actor
                 return Directive.Stop;
             });
             var props = Props.Create<GuardianActor>(rootGuardianStrategy);
-            var rootGuardian = new RootGuardianActorRef(system, props, DefaultDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
+            var rootGuardian = new RootGuardianActorRef(system, props, InternalDispatcher, _defaultMailbox, supervisor, _rootPath, _deadLetters, _extraNames);
             return rootGuardian;
         }
 
@@ -304,9 +320,30 @@ namespace Akka.Actor
         {
             var cell = rootGuardian.Cell;
             cell.ReserveChild(name);
-            var props = Props.Create<GuardianActor>(UserGuardianSupervisorStrategy);
+            // make user provided guardians not run on internal dispatcher
+            MessageDispatcher dispatcher;
+            if (_system.GuardianProps.IsEmpty)
+            {
+                dispatcher = InternalDispatcher;
+            }
+            else
+            {
+                var props = _system.GuardianProps.Value;
+                var dispatcherId =
+                    props.Deploy.Dispatcher == Deploy.DispatcherSameAsParent
+                        ? Dispatchers.DefaultDispatcherId
+                        : props.Dispatcher;
+                dispatcher = _system.Dispatchers.Lookup(dispatcherId);
+            }
 
-            var userGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            var userGuardian = new LocalActorRef(
+                _system,
+                _system.GuardianProps.GetOrElse(Props.Create<GuardianActor>(UserGuardianSupervisorStrategy)),
+                dispatcher,
+                _defaultMailbox,
+                rootGuardian,
+                RootPath / name);
+
             cell.InitChild(userGuardian);
             userGuardian.Start();
             return userGuardian;
@@ -318,7 +355,7 @@ namespace Akka.Actor
             cell.ReserveChild(name);
             var props = Props.Create(() => new SystemGuardianActor(userGuardian), _systemGuardianStrategy);
 
-            var systemGuardian = new LocalActorRef(_system, props, DefaultDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
+            var systemGuardian = new LocalActorRef(_system, props, InternalDispatcher, _defaultMailbox, rootGuardian, RootPath / name);
             cell.InitChild(systemGuardian);
             systemGuardian.Start();
             return systemGuardian;
@@ -350,9 +387,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Initializes the ActorRefProvider
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The concrete ActorSystem implementation.</param>
         public void Init(ActorSystemImpl system)
         {
             _system = system;
@@ -404,7 +441,7 @@ namespace Akka.Actor
             //{
             //    if(actorPath.Elements.Head() == "temp")
             //    {
-            //        //skip ""/"temp", 
+            //        //skip ""/"temp",
             //        string[] parts = actorPath.Elements.Drop(1).ToArray();
             //        return _tempContainer.GetChild(parts);
             //    }
@@ -572,12 +609,30 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// The default address of the current <see cref="ActorSystem"/>.
         /// </summary>
         public Address DefaultAddress { get { return _rootPath.Address; } }
 
+        private Information _serializationInformationCache;
+
+        public Information SerializationInformation
+        {
+            get
+            {
+                if (_serializationInformationCache != null)
+                    return _serializationInformationCache;
+
+                if (_system == null)
+                    throw new InvalidOperationException("Too early access of SerializationInformation");
+
+                var info = new Information(_rootPath.Address, _system);
+                _serializationInformationCache = info;
+                return info;
+            }
+        }
+
         /// <summary>
-        /// TBD
+        /// The built-in logger for the ActorRefProvider
         /// </summary>
         public ILoggingAdapter Log { get { return _log; } }
     }

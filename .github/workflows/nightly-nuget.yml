@@ -1,0 +1,25 @@
+name: Publish Nightly Package
+on: 
+  schedule:
+    # Once a day at 8 AM
+   - cron: 0 8 * * *
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'     
+        required: true
+        default: 'local testing'
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET 5
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.101
+        source-url: https://nuget.pkg.github.com/akkadotnet/index.json
+      env:
+        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+    - name: Build Packages
+      run: ./build.cmd Nuget nugetprerelease=dev nugetpublishurl="https://nuget.pkg.github.com/akkadotnet/index.json" nugetkey=${{secrets.GITHUB_TOKEN}}

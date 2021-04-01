@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="WildcardTree.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,8 +15,10 @@ namespace Akka.Util
     /// A searchable nested dictionary, represents a searchable tree structure underneath
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    public sealed class WildcardTree<T> where T:class
+    internal sealed class WildcardTree<T> where T:class
     {
+        public bool IsEmpty => Data == null && Children.Count == 0;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -65,19 +67,33 @@ namespace Akka.Util
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="elements">TBD</param>
-        /// <returns>TBD</returns>
-        public WildcardTree<T> Find(IEnumerator<string> elements)
+        public WildcardTree<T> FindWithSingleWildcard(IEnumerator<string> elements)
         {
             if (!elements.MoveNext()) return this;
+
+            if(Children.TryGetValue(elements.Current, out var next))
+                return next.FindWithSingleWildcard(elements);
             else
-            {
-                var next = Children.GetOrElse(elements.Current, Children.GetOrElse("*", null));
-                return next == null ? Empty : next.Find(elements);
-            }
+                if (Children.TryGetValue("*", out next))
+                    return next.FindWithSingleWildcard(elements);
+                else
+                    return Empty;
+        }
+
+        public WildcardTree<T> FindWithTerminalDoubleWildcard(IEnumerator<string> elements, WildcardTree<T> alt)
+        {
+            if (!elements.MoveNext()) return this;
+            if (alt == null) alt = Empty;
+
+            var newAlt = Children.GetOrElse("**", alt);
+
+            if (Children.TryGetValue(elements.Current, out var next))
+                return next.FindWithTerminalDoubleWildcard(elements, newAlt);
+            else
+                if (Children.TryGetValue("*", out next))
+                    return next.FindWithTerminalDoubleWildcard(elements, newAlt);
+                else
+                    return newAlt;
         }
 
         /// <inheritdoc/>

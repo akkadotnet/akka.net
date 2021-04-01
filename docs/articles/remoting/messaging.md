@@ -1,10 +1,10 @@
 ---
-layout: docs.hbs
+uid: remote-messaging
 title: Remote Messaging
 ---
 
 # Sending Messages to Remote Actors
-Once you [form an association between two `ActorSystem`s](index.md#how-to-form-associations-between-remote-systems), you can now send messages transparently between actors regardless of where they are on the network.
+Once you [form an association between two `ActorSystem`s](xref:remote-overview#how-to-form-associations-between-remote-systems), you can now send messages transparently between actors regardless of where they are on the network.
 
 ## Serialization
 [Serialization of messages in Akka.NET is transparent](xref:serialization), but in order to achieve that transparency there are some practices you need to observe in how you design your project.
@@ -12,11 +12,11 @@ Once you [form an association between two `ActorSystem`s](index.md#how-to-form-a
 * **Akka.NET serialization is strongly typed** - if you serialize a message of type `Foo.FooMessage.MyMessage, Foo.dll` (this is a [Fully Qualified Type Name (FQN)](https://msdn.microsoft.com/en-us/library/yfsftwz6.aspx)) then Akka.NET will look for *that exact type* when it attempts to deserialize your message. If that type isn't found, deserialization fails.
 * **Therefore, all of your network messages should be defined in shared assemblies** that are referenced by all of the applications running Akka.NET `ActorSystem`s who will be communicating remotely.
 
-## Initiating Remote Messaging with `ActorSelection`s
-When your `ActorSystem` boots, it won't have any associations to other remote systems - so you have to establish one by sending a message to a remote actor via `ActorSelection` initially which you can do by sending a message to an [actor's remote `ActorPath`](index.md#addressing-a-remote-actorsystem).
+## Initiating Remote Messaging with ActorSelections
+When your `ActorSystem` boots, it won't have any associations to other remote systems - so you have to establish one by sending a message to a remote actor via `ActorSelection` initially which you can do by sending a message to an [actor's remote `ActorPath`](xref:remote-overview#addressing-a-remote-actorsystem).
 
 > [!NOTE]
-> You can also establish an association by [deploying actors onto a remote `ActorSystem`](xref:remote-deployment).
+> You can also establish an association by [deploying actors onto a remote ActorSystem](xref:remote-deployment).
 
 Let's consider the following two actors and some message classes.
 
@@ -68,8 +68,9 @@ What's really going on there?
 The `Sender`, an `IActorRef`, is actually an `Akka.Remote.RemoteActorRef`! But the fact that this actor reference resides elsewhere on the network is a detail that's transparent to the actor code you wrote!
 
 In essence, minus the initial `ActorSelection` used to start remote communication between the two `ActorSystem`s, any actor in either `ActorSystem` could reply to each other without knowing or caring that they exist elsewhere on the network. That's pretty cool! 
-## `RemoteActorRef` and Location Transparency
-What `RemoteActorRef` gives us is a magical property called [Location Transparency](/concepts/location-transparency.md).
+
+## RemoteActorRef and Location Transparency
+What `RemoteActorRef` gives us is a magical property called [Location Transparency](xref:location-transparency).
 
 > [!NOTE]
 > What location transparency means is that whenever you send a message to an actor, you don't need to know where they are within an actor system, which might span hundreds of computers. You just have to know that actors' address.
@@ -82,7 +83,7 @@ Regardless of where the actor actually resides, it doesn't affect your code one 
 
 Therefore, many of the code samples in *Akka.NET Remoting* won't look very "networky." That's on purpose. That's Akka.NET taking care of the heavy lifting for us!
 
-## How `RemoteActorRef` Actually Works
+## How RemoteActorRef Actually Works
 So how does the `RemoteActorRef` class provide location transparency for us?
 
 ![How RemoteActorRef actually works](/images/how-remoteactoref-works.png)

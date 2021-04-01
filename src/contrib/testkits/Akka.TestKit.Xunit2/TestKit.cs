@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKit.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit.Xunit2.Internals;
@@ -40,6 +41,19 @@ namespace Akka.TestKit.Xunit2
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
             : base(Assertions, system)
+        {
+            Output = output;
+            InitializeLogger(Sys);
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TestKit"/> class.
+        /// </summary>
+        /// <param name="config">The <see cref="Setup"/> to use for configuring the ActorSystem.</param>
+        /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
+        /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
+        public TestKit(ActorSystemSetup config, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(Assertions, config, actorSystemName)
         {
             Output = output;
             InitializeLogger(Sys);
