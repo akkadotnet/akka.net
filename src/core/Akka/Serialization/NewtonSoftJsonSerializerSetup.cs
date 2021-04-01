@@ -19,14 +19,14 @@ namespace Akka.Serialization
     /// </summary>
     public sealed class NewtonSoftJsonSerializerSetup : Setup
     {
-        public static NewtonSoftJsonSerializerSetup Create(Func<JsonSerializerSettings> settingsFactory)
-            => new NewtonSoftJsonSerializerSetup(settingsFactory);
+        public static NewtonSoftJsonSerializerSetup Create(Action<JsonSerializerSettings> settings)
+            => new NewtonSoftJsonSerializerSetup(settings);
 
-        public Func<JsonSerializerSettings>  CreateSettings { get; }
+        public Action<JsonSerializerSettings>  ApplySettings { get; }
 
-        private NewtonSoftJsonSerializerSetup(Func<JsonSerializerSettings> settingsFactory)
+        private NewtonSoftJsonSerializerSetup(Action<JsonSerializerSettings> settings)
         {
-            CreateSettings = settingsFactory;
+            ApplySettings = settings;
         }
     }
 }

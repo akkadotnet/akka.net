@@ -143,23 +143,24 @@ namespace Akka.Serialization
         public NewtonSoftJsonSerializer(ExtendedActorSystem system, NewtonSoftJsonSerializerSettings settings)
             : base(system)
         {
-            var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
-                .GetOrElse(NewtonSoftJsonSerializerSetup.Create(() => new JsonSerializerSettings
-                {
-                    PreserveReferencesHandling = settings.PreserveObjectReferences 
-                        ? PreserveReferencesHandling.Objects 
-                        : PreserveReferencesHandling.None,
-                    NullValueHandling = NullValueHandling.Ignore,
-                    DefaultValueHandling = DefaultValueHandling.Ignore,
-                    MissingMemberHandling = MissingMemberHandling.Ignore,
-                    ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                    TypeNameHandling = settings.EncodeTypeNames
-                        ? TypeNameHandling.All 
-                        : TypeNameHandling.None,
-                    ContractResolver = new AkkaContractResolver()
-                }));
+            Settings = new JsonSerializerSettings
+            {
+                PreserveReferencesHandling = settings.PreserveObjectReferences
+                    ? PreserveReferencesHandling.Objects
+                    : PreserveReferencesHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                TypeNameHandling = settings.EncodeTypeNames
+                    ? TypeNameHandling.All
+                    : TypeNameHandling.None,
+            };
 
-            Settings = settingsSetup.CreateSettings();
+            var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
+                .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
+
+            settingsSetup.ApplySettings(Settings);
 
             var converters = settings.Converters
                 .Select(type => CreateConverter(type, system))
