@@ -23,15 +23,15 @@ namespace Akka.Tests.Serialization
         internal class DummyContractResolver : DefaultContractResolver
         { }
 
-        public static NewtonSoftJsonSerializerSetup SerializationSettings = NewtonSoftJsonSerializerSetup.Create(() 
-            => new JsonSerializerSettings
+        public static NewtonSoftJsonSerializerSetup SerializationSettings = NewtonSoftJsonSerializerSetup.Create(
+            settings =>
             {
-                ReferenceLoopHandling = ReferenceLoopHandling.Error,
-                MissingMemberHandling = MissingMemberHandling.Error,
-                NullValueHandling = NullValueHandling.Include,
-                Converters = new List<JsonConverter> { new DummyConverter() },
-                ObjectCreationHandling = ObjectCreationHandling.Auto,
-                ContractResolver = new DummyContractResolver()
+                settings.ReferenceLoopHandling = ReferenceLoopHandling.Error;
+                settings.MissingMemberHandling = MissingMemberHandling.Error;
+                settings.NullValueHandling = NullValueHandling.Include;
+                settings.Converters = new List<JsonConverter> { new DummyConverter() };
+                settings.ObjectCreationHandling = ObjectCreationHandling.Auto;
+                settings.ContractResolver = new DummyContractResolver();
             });
 
         public static readonly BootstrapSetup Bootstrap = BootstrapSetup.Create().WithConfig(TestConfigs.DefaultConfig);
