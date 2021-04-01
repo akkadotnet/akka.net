@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.IO
                         var completion = Source.From(_testByteStrings)
                             .RunWith(FileIO.ToFile(f), _materializer);
 
-                        completion.Wait(Remaining).Should().BeTrue();
+                        completion.AwaitResult(Remaining);
                         var result = completion.Result;
                         result.Count.Should().Be(6006);
 
@@ -85,7 +85,7 @@ namespace Akka.Streams.Tests.IO
                     var completion = Source.From(_testByteStrings)
                         .RunWith(FileIO.ToFile(f), _materializer);
 
-                    completion.Wait(Remaining).Should().BeTrue();
+                    completion.AwaitResult(Remaining);
                     var result = completion.Result;
                     result.Count.Should().Be(6006);
                     AwaitAssert(
@@ -107,14 +107,14 @@ namespace Akka.Streams.Tests.IO
                         .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
                     var completion1 = Write(_testLines);
-                    completion1.Wait(Remaining).Should().BeTrue();
+                    completion1.AwaitResult(Remaining);
 
                     var lastWrite = new string[100];
                     for (var i = 0; i < 100; i++)
                         lastWrite[i] = "x";
 
                     var completion2 = Write(lastWrite);
-                    completion2.Wait(Remaining).Should().BeTrue();
+                    completion2.AwaitResult(Remaining);
                     var result = completion2.Result;
 
                     var lastWriteString = new string(lastWrite.SelectMany(x => x).ToArray());
@@ -356,6 +356,9 @@ namespace Akka.Streams.Tests.IO
                     actor.Tell("b\n");
 
                     actor.Tell(new Status.Success(NotUsed.Instance));
+
+                    // We still have to wait for the task to complete, because the signal
+                    // came from the FileSink actor, not the source actor.
                     task.AwaitResult(Remaining);
                     ExpectTerminated(actor, Remaining);
 
