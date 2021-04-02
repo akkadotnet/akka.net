@@ -448,11 +448,19 @@ namespace Akka.Persistence
         /// Permanently deletes all persistent messages with sequence numbers less than or equal <paramref name="toSequenceNr"/>.
         /// If the delete is successful a <see cref="DeleteMessagesSuccess"/> will be sent to the actor.
         /// If the delete fails a <see cref="DeleteMessagesFailure"/> will be sent to the actor.
+        ///
+        /// The given <paramref name="toSequenceNr"/> must be less than or equal to <see cref="Eventsourced.LastSequenceNr"/>, otherwise
+        /// <see cref="DeleteMessagesFailure"/> is sent to the actor without performing the delete. All persistent
+        /// messages may be deleted without specifying the actual sequence number by using <see cref="long.MaxValue"/>
+        /// as the <paramref name="toSequenceNr"/>.
         /// </summary>
         /// <param name="toSequenceNr">Upper sequence number bound of persistent messages to be deleted.</param>
         public void DeleteMessages(long toSequenceNr)
         {
-            Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr, Self));
+            if (toSequenceNr == long.MaxValue || toSequenceNr <= LastSequenceNr)
+                Journal.Tell(new DeleteMessagesTo(PersistenceId, toSequenceNr == long.MaxValue ? LastSequenceNr : toSequenceNr, Self));
+            else
+                Self.Tell(new DeleteMessagesFailure(new InvalidOperationException($"toSequenceNr [{toSequenceNr}] must be less than or equal to LastSequenceNr [{LastSequenceNr}]"), toSequenceNr));
         }
 
         /// <summary>

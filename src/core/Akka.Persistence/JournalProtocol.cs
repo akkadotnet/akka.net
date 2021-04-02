@@ -70,7 +70,7 @@ namespace Akka.Persistence
     /// Reply message to failed <see cref="Eventsourced.DeleteMessages"/> request.
     /// </summary>
     [Serializable]
-    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>
+    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>, INoSerializationVerificationNeeded //serialization verification temporary disabled because of Cause serialization issues
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteMessagesFailure"/> class.
@@ -134,7 +134,7 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="DeleteMessagesTo"/> class.
         /// </summary>
         /// <param name="persistenceId">Requesting persistent actor id.</param>
-        /// <param name="toSequenceNr">Sequence number where replay should end (inclusive).</param>
+        /// <param name="toSequenceNr">Sequence number where replay should end (inclusive). <see cref="long.MaxValue"/> may be used to delete all persistent messages.</param>
         /// <param name="persistentActor">Requesting persistent actor.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="persistenceId"/> is undefined.
