@@ -1156,35 +1156,39 @@ namespace Akka.Cluster
             // ExitingCompleted sent via CoordinatedShutdown to continue the leaving process.
             _exitingTasksInProgress = false;
 
-            // mark as seen
-            _latestGossip = _latestGossip.Seen(SelfUniqueAddress);
-            AssertLatestGossip();
-            Publish(_latestGossip);
-
-            // Let others know (best effort) before shutdown. Otherwise they will not see
-            // convergence of the Exiting state until they have detected this node as
-            // unreachable and the required downing has finished. They will still need to detect
-            // unreachable, but Exiting unreachable will be removed without downing, i.e.
-            // normally the leaving of a leader will be graceful without the need
-            // for downing. However, if those final gossip messages never arrive it is
-            // alright to require the downing, because that is probably caused by a
-            // network failure anyway.
-            SendGossipRandom(NumberOfGossipsBeforeShutdownWhenLeaderExits);
-
-            // send ExitingConfirmed to two potential leaders
-            var membersWithoutSelf = _latestGossip.Members.Where(m => !m.UniqueAddress.Equals(SelfUniqueAddress))
-                .ToImmutableSortedSet();
-            var leader = _latestGossip.LeaderOf(membersWithoutSelf, SelfUniqueAddress);
-            if (leader != null)
+            // status Removed also before joining
+            if (_latestGossip.GetMember(SelfUniqueAddress).Status != MemberStatus.Removed)
             {
-                ClusterCore(leader.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
-                var leader2 =
-                    _latestGossip.LeaderOf(
-                        membersWithoutSelf.Where(x => !x.UniqueAddress.Equals(leader)).ToImmutableSortedSet(),
-                        SelfUniqueAddress);
-                if (leader2 != null)
+                // mark as seen
+                _latestGossip = _latestGossip.Seen(SelfUniqueAddress);
+                AssertLatestGossip();
+                Publish(_latestGossip);
+
+                // Let others know (best effort) before shutdown. Otherwise they will not see
+                // convergence of the Exiting state until they have detected this node as
+                // unreachable and the required downing has finished. They will still need to detect
+                // unreachable, but Exiting unreachable will be removed without downing, i.e.
+                // normally the leaving of a leader will be graceful without the need
+                // for downing. However, if those final gossip messages never arrive it is
+                // alright to require the downing, because that is probably caused by a
+                // network failure anyway.
+                SendGossipRandom(NumberOfGossipsBeforeShutdownWhenLeaderExits);
+
+                // send ExitingConfirmed to two potential leaders
+                var membersWithoutSelf = _latestGossip.Members.Where(m => !m.UniqueAddress.Equals(SelfUniqueAddress))
+                    .ToImmutableSortedSet();
+                var leader = _latestGossip.LeaderOf(membersWithoutSelf, SelfUniqueAddress);
+                if (leader != null)
                 {
-                    ClusterCore(leader2.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
+                    ClusterCore(leader.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
+                    var leader2 =
+                        _latestGossip.LeaderOf(
+                            membersWithoutSelf.Where(x => !x.UniqueAddress.Equals(leader)).ToImmutableSortedSet(),
+                            SelfUniqueAddress);
+                    if (leader2 != null)
+                    {
+                        ClusterCore(leader2.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
+                    }
                 }
             }
 
