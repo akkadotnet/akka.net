@@ -157,10 +157,13 @@ namespace Akka.Serialization
                     : TypeNameHandling.None,
             };
 
-            var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
-                .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
+            if (system != null)
+            {
+                var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
+                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
 
-            settingsSetup.ApplySettings(Settings);
+                settingsSetup.ApplySettings(Settings);
+            }
 
             var converters = settings.Converters
                 .Select(type => CreateConverter(type, system))
