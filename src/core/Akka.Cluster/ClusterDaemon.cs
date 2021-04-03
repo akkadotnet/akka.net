@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1156,35 +1156,39 @@ namespace Akka.Cluster
             // ExitingCompleted sent via CoordinatedShutdown to continue the leaving process.
             _exitingTasksInProgress = false;
 
-            // mark as seen
-            _latestGossip = _latestGossip.Seen(SelfUniqueAddress);
-            AssertLatestGossip();
-            Publish(_latestGossip);
-
-            // Let others know (best effort) before shutdown. Otherwise they will not see
-            // convergence of the Exiting state until they have detected this node as
-            // unreachable and the required downing has finished. They will still need to detect
-            // unreachable, but Exiting unreachable will be removed without downing, i.e.
-            // normally the leaving of a leader will be graceful without the need
-            // for downing. However, if those final gossip messages never arrive it is
-            // alright to require the downing, because that is probably caused by a
-            // network failure anyway.
-            SendGossipRandom(NumberOfGossipsBeforeShutdownWhenLeaderExits);
-
-            // send ExitingConfirmed to two potential leaders
-            var membersWithoutSelf = _latestGossip.Members.Where(m => !m.UniqueAddress.Equals(SelfUniqueAddress))
-                .ToImmutableSortedSet();
-            var leader = _latestGossip.LeaderOf(membersWithoutSelf, SelfUniqueAddress);
-            if (leader != null)
+            // status Removed also before joining
+            if (_latestGossip.GetMember(SelfUniqueAddress).Status != MemberStatus.Removed)
             {
-                ClusterCore(leader.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
-                var leader2 =
-                    _latestGossip.LeaderOf(
-                        membersWithoutSelf.Where(x => !x.UniqueAddress.Equals(leader)).ToImmutableSortedSet(),
-                        SelfUniqueAddress);
-                if (leader2 != null)
+                // mark as seen
+                _latestGossip = _latestGossip.Seen(SelfUniqueAddress);
+                AssertLatestGossip();
+                Publish(_latestGossip);
+
+                // Let others know (best effort) before shutdown. Otherwise they will not see
+                // convergence of the Exiting state until they have detected this node as
+                // unreachable and the required downing has finished. They will still need to detect
+                // unreachable, but Exiting unreachable will be removed without downing, i.e.
+                // normally the leaving of a leader will be graceful without the need
+                // for downing. However, if those final gossip messages never arrive it is
+                // alright to require the downing, because that is probably caused by a
+                // network failure anyway.
+                SendGossipRandom(NumberOfGossipsBeforeShutdownWhenLeaderExits);
+
+                // send ExitingConfirmed to two potential leaders
+                var membersWithoutSelf = _latestGossip.Members.Where(m => !m.UniqueAddress.Equals(SelfUniqueAddress))
+                    .ToImmutableSortedSet();
+                var leader = _latestGossip.LeaderOf(membersWithoutSelf, SelfUniqueAddress);
+                if (leader != null)
                 {
-                    ClusterCore(leader2.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
+                    ClusterCore(leader.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
+                    var leader2 =
+                        _latestGossip.LeaderOf(
+                            membersWithoutSelf.Where(x => !x.UniqueAddress.Equals(leader)).ToImmutableSortedSet(),
+                            SelfUniqueAddress);
+                    if (leader2 != null)
+                    {
+                        ClusterCore(leader2.Address).Tell(new InternalClusterAction.ExitingConfirmed(SelfUniqueAddress));
+                    }
                 }
             }
 
@@ -1747,6 +1751,17 @@ namespace Akka.Cluster
                 UpdateLatestGossip(newGossip);
 
                 Publish(_latestGossip);
+
+                if (address == _cluster.SelfAddress)
+                {
+                    // spread the word quickly, without waiting for next gossip tick
+                    SendGossipRandom(MaxGossipsBeforeShuttingDownMyself);
+                }
+                else
+                {
+                    // try to gossip immediately to downed node, as a STONITH signal
+                    GossipTo(member.UniqueAddress);
+                }
             }
             else if (member != null)
             {
@@ -1994,6 +2009,12 @@ namespace Akka.Cluster
                 _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
             }
 
+            if (selfStatus == MemberStatus.Down && localGossip.GetMember(SelfUniqueAddress).Status != MemberStatus.Down)
+            {
+                _log.Warning("Received gossip where this member has been downed, from [{0}]", from.Address);
+                ShutdownSelfWhenDown();
+            }
+
             if (talkback)
             {
                 // send back gossip to sender() when sender() had different view, i.e. merge, or sender() had
@@ -2032,7 +2053,8 @@ namespace Akka.Cluster
         /// </summary>
         public bool IsGossipSpeedupNeeded()
         {
-            return _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
+            return _latestGossip.Members.Any(m => m.Status == MemberStatus.Down) ||
+                _latestGossip.Overview.Seen.Count < _latestGossip.Members.Count / 2;
         }
 
         private void SendGossipRandom(int n)
@@ -2541,8 +2563,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         public bool ValidNodeForGossip(UniqueAddress node)
         {
-            return !node.Equals(SelfUniqueAddress) && _latestGossip.HasMember(node) &&
-                    _latestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(node);
+            return !node.Equals(SelfUniqueAddress) && _latestGossip.Overview.Reachability.IsReachable(SelfUniqueAddress, node);
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldFlowSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -147,7 +147,7 @@ namespace Akka.Streams.Tests.Dsl
                 pub.EnsureSubscription();
                 snk.EnsureSubscription();
                 sub.Cancel();
-                snk.ExpectNoMsg(_timeout - TimeSpan.FromMilliseconds(50));
+                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
@@ -165,7 +165,7 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 sub.Cancel();
                 snk.Request(1);
-                snk.ExpectNoMsg(_timeout - TimeSpan.FromMilliseconds(50));
+                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
@@ -247,7 +247,7 @@ namespace Akka.Streams.Tests.Dsl
                 pub.EnsureSubscription();
                 snk.EnsureSubscription();
                 sub.Cancel();
-                snk.ExpectNoMsg(_timeout - TimeSpan.FromMilliseconds(50));
+                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 pub.SendComplete();
                 snk.ExpectComplete();
             }
@@ -346,7 +346,7 @@ namespace Akka.Streams.Tests.Dsl
                 pub.EnsureSubscription();
                 snk.EnsureSubscription();
                 sub.Cancel();
-                snk.ExpectNoMsg(_timeout - TimeSpan.FromMilliseconds(50));
+                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
@@ -364,7 +364,7 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 sub.Cancel();
                 snk.Request(1);
-                snk.ExpectNoMsg(_timeout - TimeSpan.FromMilliseconds(50));
+                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
@@ -445,7 +445,7 @@ namespace Akka.Streams.Tests.Dsl
                 pub.EnsureSubscription();
                 snk.EnsureSubscription();
                 sub.Cancel();
-                snk.ExpectNoMsg(_timeout - TimeSpan.FromMilliseconds(50));
+                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 pub.SendComplete();
                 snk.ExpectComplete();
             }
@@ -477,6 +477,14 @@ namespace Akka.Streams.Tests.Dsl
                 pub.SendComplete();
                 snk.ExpectComplete();
             }
+        }
+    }
+
+    public static class TimeSpanExtensions
+    {
+        public static TimeSpan DivideBy(this TimeSpan timeSpan, int divisor)
+        {
+            return TimeSpan.FromTicks(timeSpan.Ticks / divisor);
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
@@ -97,15 +98,15 @@ namespace Akka.Actor
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup
     {
-        internal BootstrapSetup() 
+        internal BootstrapSetup()
             : this(
-                Option<Config>.None, 
+                Option<Config>.None,
                 Option<ProviderSelection>.None)
         {
         }
 
         internal BootstrapSetup(
-            Option<Config> config, 
+            Option<Config> config,
             Option<ProviderSelection> actorRefProvider)
         {
             Config = config;
@@ -142,6 +143,11 @@ namespace Akka.Actor
         {
             return new BootstrapSetup(config, ActorRefProvider);
         }
+
+        public BootstrapSetup WithConfigFallback(Config config)
+            => Config.HasValue
+                ? new BootstrapSetup(Config.Value.SafeWithFallback(config), ActorRefProvider)
+                : WithConfig(config);
     }
 
     /// <summary>
@@ -185,6 +191,8 @@ namespace Akka.Actor
         /// </summary>
         /// <value>The dead letters.</value>
         public abstract IActorRef DeadLetters { get; }
+
+        public abstract IActorRef IgnoreRef { get; }
 
         /// <summary>Gets the dispatchers.</summary>
         /// <value>The dispatchers.</value>
@@ -339,7 +347,7 @@ namespace Akka.Actor
         /// <para>
         /// If `akka.coordinated-shutdown.run-by-actor-system-terminate` is configured to `off`
         /// it will not run `CoordinatedShutdown`, but the `ActorSystem` and its actors
-        /// will still be terminated.        
+        /// will still be terminated.
         /// </para>
         /// <para>
         /// Terminates this actor system. This will stop the guardian actor, which in turn will recursively stop

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -131,16 +131,19 @@ namespace Akka.TestKit
 
             if (system == null)
             {
-                var boostrap = config.Get<BootstrapSetup>();
-                var configWithDefaultFallback = boostrap.HasValue
-                    ? boostrap.Value.Config.Select(c => c == _defaultConfig ? c : c.WithFallback(_defaultConfig))
+                var bootstrap = config.Get<BootstrapSetup>();
+                var configWithDefaultFallback = bootstrap.HasValue
+                    ? bootstrap.Value.Config.Select(c => c == _defaultConfig ? c : c.WithFallback(_defaultConfig))
                     : _defaultConfig;
 
-                var newBootstrap = BootstrapSetup.Create().WithConfig(configWithDefaultFallback.Value);
-                if (boostrap.FlatSelect(x => x.ActorRefProvider).HasValue)
+                var newBootstrap = BootstrapSetup.Create().WithConfig(
+                    configWithDefaultFallback.HasValue 
+                        ? configWithDefaultFallback.Value 
+                        : _defaultConfig);
+                if (bootstrap.FlatSelect(x => x.ActorRefProvider).HasValue)
                 {
                     newBootstrap =
-                        newBootstrap.WithActorRefProvider(boostrap.FlatSelect(x => x.ActorRefProvider).Value);
+                        newBootstrap.WithActorRefProvider(bootstrap.FlatSelect(x => x.ActorRefProvider).Value);
                 }
                 system = ActorSystem.Create(actorSystemName ?? "test", config.WithSetup(newBootstrap));
             }

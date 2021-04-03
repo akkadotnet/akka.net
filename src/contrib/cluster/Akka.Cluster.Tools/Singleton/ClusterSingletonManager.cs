@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -623,7 +623,7 @@ namespace Akka.Cluster.Tools.Singleton
         private bool _oldestChangedReceived = true;
         private bool _selfExited;
 
-        // started when when self member is Up
+        // started when self member is Up
         private IActorRef _oldestChangedBuffer;
         // keep track of previously removed members
         private ImmutableDictionary<UniqueAddress, Deadline> _removed = ImmutableDictionary<UniqueAddress, Deadline>.Empty;
@@ -744,7 +744,7 @@ namespace Akka.Cluster.Tools.Singleton
             if(_removed.TryGetValue(node, out _))
             {
                 _removed = _removed.SetItem(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
-            } 
+            }
             else
             {
                 _removed = _removed.Add(node, Deadline.Now + TimeSpan.FromMinutes(15.0));
@@ -896,6 +896,9 @@ namespace Akka.Cluster.Tools.Singleton
                                 ? GoTo(ClusterSingletonState.BecomingOldest).Using(new BecomingOldestData(initialOldestState.Oldest.FindAll(u => !u.Equals(_selfUniqueAddress))))
                                 : GoTo(ClusterSingletonState.Younger).Using(new YoungerData(initialOldestState.Oldest.FindAll(u => !u.Equals(_selfUniqueAddress))));
                         }
+                    case HandOverToMe _:
+                        // nothing to hand over in start
+                        return Stay();
                     default:
                         return null;
                 }

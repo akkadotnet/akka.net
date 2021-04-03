@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowIdleInjectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                result.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                result.Result.ShouldAllBeEquivalentTo(
+                result.Result.Should().BeEquivalentTo(
                     Enumerable.Range(1, 5).Concat(new[] {0, 0, 0}).Concat(Enumerable.Range(6, 5)));
             }, Materializer);
         }
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(10);
-            downstream.ExpectNextN(10).ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+            downstream.ExpectNextN(10).Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
             downstream.Request(1);
 

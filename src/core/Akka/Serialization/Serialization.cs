@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serialization.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -186,15 +186,10 @@ namespace Akka.Serialization
             }
 
             // Add any serializers that are registered via the SerializationSetup
+            // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
             {
                 AddSerializer(details.Alias, details.Serializer);
-
-                // populate the serialization map
-                foreach (var t in details.UseFor)
-                {
-                    AddSerializationMap(t, details.Serializer);
-                }
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -210,17 +205,24 @@ namespace Akka.Serialization
                     continue;
                 }
 
-
                 if (!_serializersByName.TryGetValue(serializerName, out var serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
-
                 AddSerializationMap(messageType, serializer);
             }
 
-            
+            // Add any serializer bindings that are registered via the SerializationSetup
+            // This has to be done here because SerializationSetup ALWAYS win.
+            foreach (var details in _serializerDetails)
+            {
+                // populate the serialization map
+                foreach (var t in details.UseFor)
+                {
+                    AddSerializationMap(t, details.Serializer);
+                }
+            }
         }
 
         private Information SerializationInfo => System.Provider.SerializationInformation;
@@ -248,6 +250,38 @@ namespace Akka.Serialization
             {
                 CurrentTransportInformation = info;
                 return action();
+            }
+            finally
+            {
+                CurrentTransportInformation = oldInfo;
+            }
+        }
+
+        /// <summary>
+        /// Performs the requested serialization function while also setting
+        /// the <see cref="CurrentTransportInformation"/> based on available data
+        /// from the <see cref="ActorSystem"/>. Useful when serializing <see cref="IActorRef"/>s.
+        /// </summary>
+        /// <typeparam name="T">The type of message being serialized.</typeparam>
+        /// <typeparam name="TState">The type of caller input state to be used in the function</typeparam>
+        /// <param name="system">The <see cref="ActorSystem"/> performing serialization.</param>
+        /// <param name="state">the other input state to be passed in to the serialization function</param>
+        /// <param name="action">The serialization function.</param>
+        /// <returns>The serialization output.</returns>
+        public static T WithTransport<TState, T>(ExtendedActorSystem system, TState state, Func<TState, T> action)
+        {
+            var info = system.Provider.SerializationInformation;
+            if (CurrentTransportInformation == info)
+            {
+                // already set
+                return action(state);
+            }
+
+            var oldInfo = CurrentTransportInformation;
+            try
+            {
+                CurrentTransportInformation = info;
+                return action(state);
             }
             finally
             {

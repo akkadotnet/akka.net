@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -65,14 +65,14 @@ namespace Akka.IO
             if (b != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create(() => new UdpListener(_udp, commander, b)));
+                Context.ActorOf(Props.Create(() => new UdpListener(_udp, commander, b)).WithDeploy(Deploy.Local));
                 return true;
             }
             var s = message as Udp.SimpleSender;
             if (s != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create(() => new UdpSender(_udp, commander, s.Options)));
+                Context.ActorOf(Props.Create(() => new UdpSender(_udp, commander, s.Options)).WithDeploy(Deploy.Local));
                 return true;
             }
             throw new ArgumentException($"The supplied message of type {message.GetType().Name} is invalid. Only Connect and Bind messages are supported. " +

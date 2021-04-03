@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreInterceptorsSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,13 +18,13 @@ namespace Akka.Persistence.TestKit.Tests
         public void noop_must_do_nothing()
             => SnapshotStoreInterceptors.Noop.Instance
                 .Awaiting(x => x.InterceptAsync(null, null))
-                .ShouldNotThrow();
+                .Should().NotThrow();
 
         [Fact]
         public void failure_must_always_throw_exception()
             => SnapshotStoreInterceptors.Failure.Instance
                 .Awaiting(x => x.InterceptAsync(null, null))
-                .ShouldThrowExactly<TestSnapshotStoreFailureException>();
+                .Should().ThrowExactly<TestSnapshotStoreFailureException>();
 
         [Fact]
         public async Task delay_must_call_next_interceptor_after_specified_delay()

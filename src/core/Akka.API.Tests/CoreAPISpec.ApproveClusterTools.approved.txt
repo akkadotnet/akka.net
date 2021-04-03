@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("5cf8a8be-b634-473f-bb01-eba878746bd4")]
@@ -197,19 +198,23 @@ namespace Akka.Cluster.Tools.PublishSubscribe
     {
         public DistributedPubSubMediator(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
         public Akka.Event.ILoggingAdapter Log { get; }
-        public System.Collections.Generic.IDictionary<Akka.Actor.Address, long> OwnVersions { get; }
+        public System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, long> OwnVersions { get; }
         protected override void PostStop() { }
         protected override void PreStart() { }
         public static Akka.Actor.Props Props(Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings settings) { }
     }
     public sealed class DistributedPubSubSettings : Akka.Actor.INoSerializationVerificationNeeded
     {
+        [System.ObsoleteAttribute("Obsolete - please us the full constructor instead. This constructor only exists f" +
+            "or backwards API compatibility.")]
         public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements) { }
+        public DistributedPubSubSettings(string role, Akka.Routing.RoutingLogic routingLogic, System.TimeSpan gossipInterval, System.TimeSpan removedTimeToLive, int maxDeltaElements, bool sendToDeadLettersWhenNoSubscribers) { }
         public System.TimeSpan GossipInterval { get; }
         public int MaxDeltaElements { get; }
         public System.TimeSpan RemovedTimeToLive { get; }
         public string Role { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
+        public bool SendToDeadLettersWhenNoSubscribers { get; }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings Create(Akka.Configuration.Config config) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithGossipInterval(System.TimeSpan gossipInterval) { }
@@ -217,13 +222,14 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRemovedTimeToLive(System.TimeSpan removedTtl) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRole(string role) { }
         public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithRoutingLogic(Akka.Routing.RoutingLogic routingLogic) { }
+        public Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubSettings WithSendToDeadLettersWhenNoSubscribers(bool sendToDeadLetterWhenNoSubscribers) { }
     }
     public sealed class GetTopics
     {
         public static Akka.Cluster.Tools.PublishSubscribe.GetTopics Instance { get; }
     }
     public interface IDistributedPubSubMessage { }
-    public sealed class Publish : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
+    public sealed class Publish : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Publish>
     {
         public Publish(string topic, object message, bool sendOneMessageToEachGroup = False) { }
         public object Message { get; }
@@ -252,7 +258,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class Send : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Send>
+    public sealed class Send : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.Send>
     {
         public Send(string path, object message, bool localAffinity = False) { }
         public bool LocalAffinity { get; }
@@ -263,7 +269,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class SendToAll : Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SendToAll>
+    public sealed class SendToAll : Akka.Actor.IWrappedMessage, Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, System.IEquatable<Akka.Cluster.Tools.PublishSubscribe.SendToAll>
     {
         public SendToAll(string path, object message, bool excludeSelf = False) { }
         public bool ExcludeSelf { get; }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowLimitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.ShouldAllBeEquivalentTo(input);
+            future.Result.Should().BeEquivalentTo(input);
         }
 
         [Fact]
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
             future.Wait(RemainingOrDefault).Should().BeTrue();
-            future.Result.ShouldAllBeEquivalentTo(input);
+            future.Result.Should().BeEquivalentTo(input);
         }
 
         [Fact]
@@ -78,7 +78,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            future.Invoking(f => f.Wait(RemainingOrDefault)).ShouldThrow<StreamLimitReachedException>();
+            future.Invoking(f => f.Wait(RemainingOrDefault)).Should().Throw<StreamLimitReachedException>();
         }
     }
 }

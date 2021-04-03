@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphZipWithSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscription = probe.ExpectSubscription();
 
                 subscription.Request(5);
-                probe.ExpectNext().ShouldBeEquivalentTo(new Person("Caplin", "Capybara", 55));
+                probe.ExpectNext().Should().BeEquivalentTo(new Person("Caplin", "Capybara", 55));
 
                 probe.ExpectComplete();
             }, Materializer);

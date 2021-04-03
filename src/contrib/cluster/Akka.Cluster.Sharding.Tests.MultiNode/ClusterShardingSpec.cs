@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,8 +78,8 @@ namespace Akka.Cluster.Sharding.Tests
                             number-of-entities = 1
                         }}
                         least-shard-allocation-strategy {{
-                            rebalance-threshold = 1
-                            max-simultaneous-rebalance = 1
+                            rebalance-absolute-limit = 1
+                            rebalance-relative-limit = 1.0
                         }}
                         distributed-data.durable.lmdb {{
                           dir = ""target/ClusterShardingSpec/sharding-ddata""
@@ -482,7 +482,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         private Props CoordinatorProps(string typeName, bool rebalanceEntities, bool rememberEntities)
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
+
             var config = ConfigurationFactory.ParseString(string.Format(@"
                 handoff-timeout = 10s
                 shard-start-timeout = 10s

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BuiltInActors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,9 +41,9 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if(message is Terminated)
+            if (message is Terminated)
                 Context.Stop(Self);
-            else if(message is StopChild)
+            else if (message is StopChild)
                 Context.Stop(((StopChild)message).Child);
             else
                 Context.System.DeadLetters.Tell(new DeadLetter(message, Sender, Self), Sender);
@@ -60,8 +60,8 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// System guardian. 
-    /// 
+    /// System guardian.
+    ///
     /// Root actor for all actors under the /system path.
     /// </summary>
     public class SystemGuardianActor : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
@@ -87,16 +87,16 @@ namespace Akka.Actor
         protected override bool Receive(object message)
         {
             var terminated = message as Terminated;
-            if(terminated != null)
+            if (terminated != null)
             {
                 var terminatedActor = terminated.ActorRef;
-                if(_userGuardian.Equals(terminatedActor))
+                if (_userGuardian.Equals(terminatedActor))
                 {
                     // time for the systemGuardian to stop, but first notify all the
                     // termination hooks, they will reply with TerminationHookDone
                     // and when all are done the systemGuardian is stopped
                     Context.Become(Terminating);
-                    foreach(var terminationHook in _terminationHooks)
+                    foreach (var terminationHook in _terminationHooks)
                     {
                         terminationHook.Tell(TerminationHook.Instance);
                     }
@@ -110,17 +110,17 @@ namespace Akka.Actor
                 }
                 return true;
             }
-            
+
             var stopChild = message as StopChild;
-            if(stopChild != null)
+            if (stopChild != null)
             {
                 Context.Stop(stopChild.Child);
                 return true;
             }
             var sender = Sender;
-            
+
             var registerTerminationHook = message as RegisterTerminationHook;
-            if(registerTerminationHook != null && !ReferenceEquals(sender, Context.System.DeadLetters))
+            if (registerTerminationHook != null && !ReferenceEquals(sender, Context.System.DeadLetters))
             {
                 _terminationHooks.Add(sender);
                 Context.Watch(sender);
@@ -133,7 +133,7 @@ namespace Akka.Actor
         private bool Terminating(object message)
         {
             var terminated = message as Terminated;
-            if(terminated != null)
+            if (terminated != null)
             {
                 StopWhenAllTerminationHooksDone(terminated.ActorRef);
                 return true;
@@ -141,7 +141,7 @@ namespace Akka.Actor
             var sender = Sender;
 
             var terminationHookDone = message as TerminationHookDone;
-            if(terminationHookDone != null)
+            if (terminationHookDone != null)
             {
                 StopWhenAllTerminationHooksDone(sender);
                 return true;
@@ -158,7 +158,7 @@ namespace Akka.Actor
 
         private void StopWhenAllTerminationHooksDone()
         {
-            if(_terminationHooks.Count == 0)
+            if (_terminationHooks.Count == 0)
             {
                 var actorSystem = Context.System;
                 actorSystem.EventStream.StopDefaultLoggers(actorSystem);
@@ -175,6 +175,25 @@ namespace Akka.Actor
         {
             //Guardian MUST NOT lose its children during restart
             //Intentionally left blank
+        }
+    }
+
+    /// <summary>
+    /// Message envelopes may implement this trait for better logging, such as logging of
+    /// message class name of the wrapped message instead of the envelope class name.
+    /// </summary>
+    public interface IWrappedMessage
+    {
+        object Message { get; }
+    }
+
+    public static class WrappedMessage
+    {
+        public static object Unwrap(object message)
+        {
+            if (message is IWrappedMessage wm)
+                return Unwrap(wm.Message);
+            return message;
         }
     }
 

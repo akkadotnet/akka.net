@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorPublisherSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -282,7 +282,7 @@ my-dispatcher1 {
         }
 
         [Fact]
-        public void ActorPublisher_should_work_together_with_Flow_and_ActorSubscriber()
+        public void ActorPublisher_should_work_together_with_Flow_and_ActorSubscriber_using_old_Collect_behaviour()
         {
             var materializer = Sys.Materializer();
             this.AssertAllStagesStopped(() =>
@@ -302,7 +302,7 @@ my-dispatcher1 {
 
                 for (var i = 1; i <= 3; i++)
                     snd.Tell(i);
-                probe.ExpectMsg("elem-2");
+                probe.ExpectMsg("elem-2", TimeSpan.FromMinutes(10));
 
                 for (var n = 4; n <= 500; n++)
                 {
@@ -320,6 +320,42 @@ my-dispatcher1 {
             }, materializer);
         }
 
+        [Fact]
+        public void ActorPublisher_should_work_together_with_Flow_and_ActorSubscriber()
+        {
+            var materializer = Sys.Materializer();
+            this.AssertAllStagesStopped(() =>
+            {
+                var probe = CreateTestProbe();
+                var source = Source.ActorPublisher<int>(Sender.Props);
+                var sink = Sink.ActorSubscriber<string>(Receiver.Props(probe.Ref));
+
+                var t = source.Collect(
+                    n => n % 2 == 0, 
+                    n => "elem-" + n)
+                    .ToMaterialized(sink, Keep.Both).Run(materializer);
+                var snd = t.Item1;
+                var rcv = t.Item2;
+
+                for (var i = 1; i <= 3; i++)
+                    snd.Tell(i);
+                probe.ExpectMsg("elem-2", TimeSpan.FromMinutes(10));
+
+                for (var n = 4; n <= 500; n++)
+                {
+                    if (n % 19 == 0)
+                        Thread.Sleep(50); // simulate bursts
+                    snd.Tell(n);
+                }
+
+                for (var n = 4; n <= 500; n += 2)
+                    probe.ExpectMsg("elem-" + n);
+
+                Watch(snd);
+                rcv.Tell(PoisonPill.Instance);
+                ExpectTerminated(snd);
+            }, materializer);
+        }
 
         [Fact]
         public void ActorPublisher_should_work_in_a_GraphDsl()

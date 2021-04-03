@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -24,9 +24,6 @@ using Akka.MultiNodeTestRunner.Shared.Persistence;
 using Akka.MultiNodeTestRunner.Shared.Reporting;
 using Akka.MultiNodeTestRunner.Shared.Sinks;
 using Akka.Remote.TestKit;
-using Akka.Util;
-using JetBrains.TeamCity.ServiceMessages.Write.Special;
-using JetBrains.TeamCity.ServiceMessages.Write.Special.Impl;
 using Xunit;
 #if CORECLR
 using System.Runtime.Loader;
@@ -44,7 +41,8 @@ namespace Akka.MultiNodeTestRunner
         private static HashSet<string> _validNetCorePlatform = new HashSet<string>
         {
             "net",
-            "netcore"
+            "netcore",
+            "net5"
         };
         
         protected static ActorSystem TestRunSystem;
@@ -125,7 +123,9 @@ namespace Akka.MultiNodeTestRunner
         {
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
             FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
-            TestRunSystem = ActorSystem.Create("TestRunnerLogging");
+            
+            string logLevel = CommandLine.GetPropertyOrDefault("multinode.loglevel", "WARNING");
+            TestRunSystem = ActorSystem.Create("TestRunnerLogging", $"akka.loglevel={logLevel}");
 
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");
@@ -275,6 +275,7 @@ namespace Akka.MultiNodeTestRunner
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         break;
                                     case "netcore":
+                                    case "net5":
                                         fileName = "dotnet";
                                         sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
                                         sbArguments.Insert(0, ntrNetCorePath);
@@ -310,7 +311,7 @@ namespace Akka.MultiNodeTestRunner
                                 var nodeRole = nodeTest.Role;
 
 #if CORECLR
-                            if (platform == "netcore")
+                            if (platform == "netcore" || platform == "net5")
                             {
                                 process.StartInfo.FileName = "dotnet";
                                 process.StartInfo.Arguments = ntrNetCorePath + " " + process.StartInfo.Arguments;
@@ -369,7 +370,7 @@ namespace Akka.MultiNodeTestRunner
                                     // Dump aggregated timeline to file for this test
                                     timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
                                     // Print aggregated timeline into the console
-                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole())
+                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole(logLevel))
                                 };
 
                                 if (specFailed)

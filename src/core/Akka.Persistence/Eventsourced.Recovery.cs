@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -208,8 +208,9 @@ namespace Akka.Persistence
                         case RecoverySuccess success:
                             timeoutCancelable.Cancel();
                             OnReplaySuccess();
-                            _sequenceNr = success.HighestSequenceNr;
-                            LastSequenceNr = success.HighestSequenceNr;
+                            var highestSeqNr = Math.Max(success.HighestSequenceNr, LastSequenceNr);
+                            _sequenceNr = highestSeqNr;
+                            LastSequenceNr = highestSeqNr;
                             recoveryRunning = false;
                             try
                             {
@@ -254,6 +255,9 @@ namespace Akka.Persistence
                             {
                                 eventSeenInInterval = false;
                             }
+                            break;
+                        case RecoveryTick tick when tick.Snapshot:
+                            // snapshot tick, ignore
                             break;
                         default:
                             StashInternally(message);

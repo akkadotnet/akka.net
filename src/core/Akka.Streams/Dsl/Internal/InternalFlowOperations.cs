@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -472,9 +472,38 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
+        }
+
+        /// <summary>
+        /// Transform this stream by applying the given function <paramref name="collector"/> to each of the elements
+        /// on which the function is defined (read: <paramref name="isDefined"/> returns true) as they pass through this processing step.
+        /// Non-matching elements are filtered out.
+        /// <para>
+        /// Emits when the provided function <paramref name="collector"/> is defined for the element
+        /// </para>
+        /// Backpressures when the function <paramref name="collector"/> is defined for the element and downstream backpressures
+        /// <para>
+        /// Completes when upstream completes
+        /// </para>
+        /// Cancels when downstream cancels
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="isDefined">TBD</param>
+        /// <param name="collector">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(
+            this IFlow<TIn, TMat> flow, 
+            Func<TIn, bool> isDefined, 
+            Func<TIn, TOut> collector)
+        {
+            return flow.Via(new Fusing.Collect<TIn, TOut>(isDefined, collector));
         }
 
         /// <summary>

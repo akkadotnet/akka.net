@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
@@ -384,6 +385,54 @@ namespace Akka.Cluster.Routing
         public bool AllowLocalRoutees { get; }
         public int TotalInstances { get; }
         public string UseRole { get; }
+    }
+}
+namespace Akka.Cluster.SBR
+{
+    public sealed class KeepOldestSettings
+    {
+        public KeepOldestSettings(bool downIfAlone, string role) { }
+        public bool DownIfAlone { get; }
+        public string Role { get; }
+    }
+    public sealed class LeaseMajoritySettings
+    {
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role) { }
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role, string leaseName) { }
+        public System.TimeSpan AcquireLeaseDelayForMinority { get; }
+        public string LeaseImplementation { get; }
+        public string LeaseName { get; }
+        public string Role { get; }
+        public string SafeLeaseName(string systemName) { }
+    }
+    public class SplitBrainResolverProvider : Akka.Cluster.IDowningProvider
+    {
+        public SplitBrainResolverProvider(Akka.Actor.ActorSystem system) { }
+        public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Actor.Props DowningActorProps { get; }
+    }
+    public sealed class SplitBrainResolverSettings
+    {
+        public static readonly System.Collections.Immutable.ImmutableHashSet<string> AllStrategyNames;
+        public const string DownAllName = "down-all";
+        public const string KeepMajorityName = "keep-majority";
+        public const string KeepOldestName = "keep-oldest";
+        public const string LeaseMajorityName = "lease-majority";
+        public const string StaticQuorumName = "static-quorum";
+        public SplitBrainResolverSettings(Akka.Configuration.Config config) { }
+        public System.TimeSpan DownAllWhenUnstable { get; }
+        public System.TimeSpan DowningStableAfter { get; }
+        public string DowningStrategy { get; }
+        public string KeepMajorityRole { get; }
+        public Akka.Cluster.SBR.KeepOldestSettings KeepOldestSettings { get; }
+        public Akka.Cluster.SBR.LeaseMajoritySettings LeaseMajoritySettings { get; }
+        public Akka.Cluster.SBR.StaticQuorumSettings StaticQuorumSettings { get; }
+    }
+    public sealed class StaticQuorumSettings
+    {
+        public StaticQuorumSettings(int size, string role) { }
+        public string Role { get; }
+        public int Size { get; }
     }
 }
 namespace Akka.Cluster.Serialization

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EmptyLocalActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,8 +59,7 @@ namespace Akka.Actor
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (message == null) throw new InvalidMessageException("Message is null");
-            var d = message as DeadLetter;
-            if (d != null) SpecialHandle(d.Message, d.Sender);
+            if (message is DeadLetter d) SpecialHandle(d.Message, d.Sender);
             else if (!SpecialHandle(message, sender))
             {
                 _eventStream.Publish(new DeadLetter(message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
@@ -85,8 +84,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
-            var watch = message as Watch;
-            if (watch != null)
+            if (message is Watch watch)
             {
                 if (watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
                 {
@@ -97,37 +95,45 @@ namespace Akka.Actor
             if (message is Unwatch)
                 return true;    //Just ignore
 
-            var identify = message as Identify;
-            if (identify != null)
+            if (message is Identify identify)
             {
                 sender.Tell(new ActorIdentity(identify.MessageId, null));
                 return true;
             }
 
-            var actorSelectionMessage = message as ActorSelectionMessage;
-            if (actorSelectionMessage != null)
+            if (message is ActorSelectionMessage actorSelectionMessage)
             {
-                var selectionIdentify = actorSelectionMessage.Message as Identify;
-                if (selectionIdentify != null)
+                if (actorSelectionMessage.Message is Identify selectionIdentify)
                 {
                     if (!actorSelectionMessage.WildCardFanOut)
                         sender.Tell(new ActorIdentity(selectionIdentify.MessageId, null));
                 }
                 else
                 {
-                    _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                    if (actorSelectionMessage.Message is IDeadLetterSuppression selectionDeadLetterSuppression)
+                    {
+                        PublishSupressedDeadLetter(selectionDeadLetterSuppression, sender);
+                    }
+                    else
+                    {
+                        _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                    }
                 }
                 return true;
             }
 
-            var deadLetterSuppression = message as IDeadLetterSuppression;
-            if (deadLetterSuppression != null)
+            if (message is IDeadLetterSuppression deadLetterSuppression)
             {
-                _eventStream.Publish(new SuppressedDeadLetter(deadLetterSuppression, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                PublishSupressedDeadLetter(deadLetterSuppression, sender);
                 return true;
             }
 
             return false;
+        }
+
+        private void PublishSupressedDeadLetter(IDeadLetterSuppression msg, IActorRef sender)
+        {
+            _eventStream.Publish(new SuppressedDeadLetter(msg, sender.IsNobody() ? _provider.DeadLetters : sender, this));
         }
     }
 }

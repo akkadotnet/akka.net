@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSumSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
                     return x;
                 }).RunSum((i, i1) => 0, Materializer);
 
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>().WithMessage("test");
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
             }, Materializer);
         }
 
@@ -127,7 +127,7 @@ namespace Akka.Streams.Tests.Dsl
                     return x + y;
                 }, Materializer);
 
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<TestException>().WithMessage("test");
+                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<TestException>().WithMessage("test");
             }, Materializer);
         }
 
@@ -178,7 +178,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var result = Source.Empty<int>().RunSum((i, i1) => i + i1, Materializer);
                 result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<NoSuchElementException>()
+                    .Should().Throw<NoSuchElementException>()
                     .And.Message.Should()
                     .Contain("empty stream");
             }, Materializer);
@@ -193,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Via(SumFlow)
                     .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
                 result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<NoSuchElementException>()
+                    .Should().Throw<NoSuchElementException>()
                     .And.Message.Should()
                     .Contain("empty stream");
             }, Materializer);
@@ -207,7 +207,7 @@ namespace Akka.Streams.Tests.Dsl
                 var result = Source.Empty<int>()
                     .RunWith(SumSink, Materializer);
                 result.Invoking(t => t.Wait(TimeSpan.FromSeconds(3)))
-                    .ShouldThrow<NoSuchElementException>()
+                    .Should().Throw<NoSuchElementException>()
                     .And.Message.Should()
                     .Contain("empty stream");
             }, Materializer);

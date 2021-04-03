@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SinkRefImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,7 +13,9 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Streams.Dsl;
+using Akka.Streams.Serialization;
 using Akka.Streams.Stage;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
@@ -21,7 +23,7 @@ namespace Akka.Streams.Implementation.StreamRef
     /// Abstract class defined serialization purposes of <see cref="SinkRefImpl{T}"/>.
     /// </summary>
     [InternalApi]
-    internal abstract class SinkRefImpl
+    internal abstract class SinkRefImpl : ISurrogated
     {
         public static SinkRefImpl Create(Type eventType, IActorRef initialPartnerRef)
         {
@@ -36,6 +38,8 @@ namespace Akka.Streams.Implementation.StreamRef
 
         public IActorRef InitialPartnerRef { get; }
         public abstract Type EventType { get; }
+
+        public abstract ISurrogate ToSurrogate(ActorSystem system);
     }
 
     [InternalApi]
@@ -43,6 +47,8 @@ namespace Akka.Streams.Implementation.StreamRef
     {
         public SinkRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
         public override Type EventType => typeof(T);
+        public override ISurrogate ToSurrogate(ActorSystem system) => SerializationTools.ToSurrogate(this);
+
         public Sink<T, NotUsed> Sink => Dsl.Sink.FromGraph(new SinkRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
     }
 

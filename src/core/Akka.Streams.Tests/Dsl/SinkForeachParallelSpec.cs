@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SinkForeachParallelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy due to timing on Azure DevOps")]
         public void A_ForeachParallel_must_produce_elements_in_the_order_they_are_ready()
         {
             this.AssertAllStagesStopped(() =>
@@ -46,16 +46,16 @@ namespace Akka.Streams.Tests.Dsl
                     probe.Ref.Tell(n);
                 }), Materializer);
                 latch[2].CountDown();
-                probe.ExpectMsg(2);
+                probe.ExpectMsg(2, TimeSpan.FromSeconds(5));
                 latch[4].CountDown();
-                probe.ExpectMsg(4);
+                probe.ExpectMsg(4, TimeSpan.FromSeconds(5));
                 latch[3].CountDown();
-                probe.ExpectMsg(3);
+                probe.ExpectMsg(3, TimeSpan.FromSeconds(5));
 
                 p.IsCompleted.Should().BeFalse();
 
                 latch[1].CountDown();
-                probe.ExpectMsg(1);
+                probe.ExpectMsg(1, TimeSpan.FromSeconds(5));
 
                 p.Wait(TimeSpan.FromSeconds(4)).Should().BeTrue();
                 p.IsCompleted.Should().BeTrue();
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
                 latch.CountDown();
                 probe.ExpectMsgAllOf(1, 2);
 
-                var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).ShouldThrow<AggregateException>().Which;
+                var ex = p.Invoking(t => t.Wait(TimeSpan.FromSeconds(1))).Should().Throw<AggregateException>().Which;
                 ex.Flatten().InnerException.Should().BeOfType<TestException>();
                 ex.Flatten().InnerException.Message.Should().Be("err2");
 

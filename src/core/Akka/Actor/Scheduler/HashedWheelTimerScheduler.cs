@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="HashedWheelTimerScheduler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -326,7 +326,12 @@ namespace Akka.Actor
         /// <param name="cancelable">TBD</param>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
-            InternalSchedule(delay, TimeSpan.Zero, new ActionRunnable(action), cancelable);
+            InternalScheduleOnce(delay, new ActionRunnable(action), cancelable);
+        }
+
+        protected override void InternalScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable)
+        {
+            InternalSchedule(delay, TimeSpan.Zero, action, cancelable);
         }
 
         /// <summary>
@@ -339,6 +344,11 @@ namespace Akka.Actor
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable)
         {
             InternalSchedule(initialDelay, interval, new ActionRunnable(action), cancelable);
+        }
+
+        protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable)
+        {
+            InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
         private AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>>();
