@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Configuration;
@@ -235,6 +236,27 @@ namespace Akka.Cluster.Tests.MultiNode
             _title = title;
             _expectedResults = expectedResults;
             _settings = settings;
+        }
+    }
+
+    internal readonly struct PhiValue : IComparable<PhiValue>
+    {
+        public PhiValue(Address address, int countAboveOne, int count, double max)
+        {
+            Address = address;
+            CountAboveOne = countAboveOne;
+            Count = count;
+            Max = max;
+        }
+
+        public Address Address { get; }
+        public int CountAboveOne { get; }
+        public int Count { get; }
+        public double Max { get; }
+
+        public int CompareTo(PhiValue other)
+        {
+            return Address.Comparer.Compare(Address, other.Address);
         }
     }
 
