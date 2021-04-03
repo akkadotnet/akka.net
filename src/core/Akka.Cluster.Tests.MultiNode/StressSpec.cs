@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Remote.TestKit;
+using Akka.Util;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -190,6 +194,48 @@ namespace Akka.Cluster.Tests.MultiNode
         public Address Address { get; } 
         public TimeSpan Duration { get; } 
         public GossipStats ClusterStats { get; }
+    }
+
+    internal sealed class AggregatedClusterResult
+    {
+        public AggregatedClusterResult(string title, TimeSpan duration, GossipStats clusterStats)
+        {
+            Title = title;
+            Duration = duration;
+            ClusterStats = clusterStats;
+        }
+
+        public string Title { get; }
+
+        public TimeSpan Duration { get; }
+
+        public GossipStats ClusterStats { get; }
+    }
+
+    /// <summary>
+    /// Central aggregator of cluster statistics and metrics.
+    ///
+    /// Reports the result via log periodically and when all
+    /// expected results has been collected. It shuts down
+    /// itself when expected results has been collected.
+    /// </summary>
+    internal class ClusterResultAggregator : ReceiveActor
+    {
+        private readonly string _title;
+        private readonly int _expectedResults;
+        private readonly StressSpecConfig.Settings _settings;
+
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        private Option<IActorRef> _reportTo = Option<IActorRef>.None;
+        private ImmutableList<ClusterResult> _results = ImmutableList<ClusterResult>.Empty;
+
+        public ClusterResultAggregator(string title, int expectedResults, StressSpecConfig.Settings settings)
+        {
+            _title = title;
+            _expectedResults = expectedResults;
+            _settings = settings;
+        }
     }
 
     class StressSpec
