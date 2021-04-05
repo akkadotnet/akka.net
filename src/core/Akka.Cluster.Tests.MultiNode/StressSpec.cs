@@ -1,14 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Remote.TestKit;
+using Akka.Remote.Transport;
+using Akka.TestKit;
 using Akka.Util;
 using Google.Protobuf.WellKnownTypes;
+using Environment = System.Environment;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -194,8 +201,8 @@ namespace Akka.Cluster.Tests.MultiNode
             ClusterStats = clusterStats;
         }
 
-        public Address Address { get; } 
-        public TimeSpan Duration { get; } 
+        public Address Address { get; }
+        public TimeSpan Duration { get; }
         public GossipStats ClusterStats { get; }
     }
 
@@ -232,9 +239,9 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private Option<IActorRef> _reportTo = Option<IActorRef>.None;
         private ImmutableList<ClusterResult> _results = ImmutableList<ClusterResult>.Empty;
-        private ImmutableSortedDictionary<Address, ImmutableSortedSet<PhiValue>> _phiValuesObservedByNode = 
+        private ImmutableSortedDictionary<Address, ImmutableSortedSet<PhiValue>> _phiValuesObservedByNode =
             ImmutableSortedDictionary<Address, ImmutableSortedSet<PhiValue>>.Empty.WithComparers(Member.AddressOrdering);
-        private ImmutableSortedDictionary<Address, ClusterEvent.CurrentInternalStats> _clusterStatsObservedByNode = 
+        private ImmutableSortedDictionary<Address, ClusterEvent.CurrentInternalStats> _clusterStatsObservedByNode =
             ImmutableSortedDictionary<Address, ClusterEvent.CurrentInternalStats>.Empty.WithComparers(Member.AddressOrdering);
 
         public static readonly string FormatPhiHeader = "[Monitor]\t[Subject]\t[count]\t[count phi > 1.0]\t[max phi]";
@@ -271,8 +278,8 @@ namespace Akka.Cluster.Tests.MultiNode
                     $"{stats.SeenBy.VersionSize}, {stats.SeenBy.SeenLatest})";
             }
 
-            return string.Join(Environment.NewLine, "ClusterStats(gossip, merge, same, newer, older, vclockSize, seenLatest)"+ 
-                                                    Environment.NewLine + 
+            return string.Join(Environment.NewLine, "ClusterStats(gossip, merge, same, newer, older, vclockSize, seenLatest)" +
+                                                    Environment.NewLine +
                                                     _clusterStatsObservedByNode.Select(x => $"{x.Key}\t{F(x.Value)}"));
         }
 
@@ -326,6 +333,11 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
+    /// <summary>
+    /// Keeps cluster statistics and metrics reported by <see cref="ClusterResultAggregator"/>.
+    ///
+    /// Logs the list of historical results when a new <see cref="AggregatedClusterResult"/> is received.
+    /// </summary>
     internal class ClusterResultHistory : ReceiveActor
     {
         private ILoggingAdapter _log = Context.GetLogger();
@@ -541,7 +553,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             Receive<Terminated>(t =>
             {
-                if(_reportTo.HasValue)
+                if (_reportTo.HasValue)
                     _reportTo = Option<IActorRef>.None;
             });
 
@@ -569,31 +581,31 @@ namespace Akka.Cluster.Tests.MultiNode
     internal sealed class Begin
     {
         public static readonly Begin Instance = new Begin();
-        private Begin(){}
+        private Begin() { }
     }
 
     internal sealed class End
     {
         public static readonly End Instance = new End();
-        private End(){}
+        private End() { }
     }
 
     internal sealed class RetryTick
     {
         public static readonly RetryTick Instance = new RetryTick();
-        private RetryTick(){}
+        private RetryTick() { }
     }
 
     internal sealed class ReportTick
     {
         public static readonly ReportTick Instance = new ReportTick();
-        private ReportTick(){}
+        private ReportTick() { }
     }
 
     internal sealed class PhiTick
     {
         public static readonly PhiTick Instance = new PhiTick();
-        private PhiTick(){}
+        private PhiTick() { }
     }
 
     internal sealed class ReportTo
@@ -622,7 +634,7 @@ namespace Akka.Cluster.Tests.MultiNode
     internal sealed class Reset
     {
         public static readonly Reset Instance = new Reset();
-        private Reset(){}
+        private Reset() { }
     }
 
     internal class MeasureDurationUntilDown : ReceiveActor
@@ -652,7 +664,393 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    class StressSpec
+    public abstract class StressSpec : MultiNodeClusterSpec
     {
+        public StressSpecConfig.Settings Settings { get; }
+        public TestProbe IdentifyProbe;
+
+        protected override TimeSpan ShutdownTimeout => Dilated(TimeSpan.FromSeconds(30));
+
+        public int Step = 0;
+        public int NbrUsedRoles = 0;
+
+        protected StressSpec(StressSpecConfig config) : base(config, typeof(StressSpec))
+        {
+            Settings = new StressSpecConfig.Settings(Sys.Settings.Config, config.TotalNumberOfNodes);
+            ClusterResultHistory = new Lazy<IActorRef>(() =>
+            {
+                if (Settings.Infolog)
+                    return Sys.ActorOf(Props.Create(() => new ClusterResultHistory()), "resultHistory");
+                return Sys.DeadLetters;
+            });
+
+            PhiObserver = new Lazy<IActorRef>(() =>
+            {
+                return Sys.ActorOf(Props.Create(() => new PhiObserver()), "phiObserver");
+            });
+
+            StatsObserver = new Lazy<IActorRef>(() =>
+            {
+                return Sys.ActorOf(Props.Create(() => new StatsObserver()), "statsObserver");
+            });
+        }
+
+        protected override void AtStartup()
+        {
+            IdentifyProbe = CreateTestProbe();
+            base.AtStartup();
+        }
+
+        public string ClrInfo()
+        {
+            var sb = new StringBuilder();
+            sb.Append("Operating System: ")
+                .Append(Environment.OSVersion.Platform)
+                .Append(", ")
+                .AppendLine(RuntimeInformation.ProcessArchitecture.ToString())
+                .Append(", ")
+                .Append(Environment.OSVersion.VersionString)
+                .AppendLine();
+
+            sb.Append("CLR: ")
+                .Append(RuntimeInformation.FrameworkDescription)
+                .AppendLine();
+
+            sb.Append("Processors: ").Append(Environment.ProcessorCount)
+                .AppendLine()
+                .Append("Load average: ").Append("can't be easily measured on .NET Core") // TODO: fix
+                .AppendLine()
+                .Append("Thread count: ")
+                .Append(Process.GetCurrentProcess().Threads.Count)
+                .AppendLine();
+
+            sb.Append("Memory: ")
+                .Append(Process.GetCurrentProcess().VirtualMemorySize64 / 1024 / 1024)
+                .Append("MB [allocated virtual memory]")
+                .AppendLine()
+                .Append(" (")
+                .Append(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024)
+                .Append(" - ")
+                .Append(Process.GetCurrentProcess().PeakWorkingSet64 / 1024 / 1024)
+                .Append(") MB [working set / peak working set]");
+
+            sb.AppendLine("Args: ").Append(string.Join(Environment.NewLine, Environment.GetCommandLineArgs()))
+                .AppendLine();
+
+            return sb.ToString();
+        }
+
+        public ImmutableList<RoleName> SeedNodes => Roles.Take(Settings.NumberOfSeedNodes).ToImmutableList();
+
+        internal GossipStats LatestGossipStats => Cluster.ReadView.LatestStats.GossipStats;
+
+        public Lazy<IActorRef> ClusterResultHistory { get; }
+
+        public Lazy<IActorRef> PhiObserver { get; }
+
+        public Lazy<IActorRef> StatsObserver { get; }
+
+        public Option<IActorRef> ClusterResultAggregator()
+        {
+            Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
+                .Tell(new Identify(Step), IdentifyProbe.Ref);
+            return new Option<IActorRef>(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
+        }
+
+        public void CreateResultAggregator(string title, int expectedResults, bool includeInHistory)
+        {
+            RunOn(() =>
+                {
+                    var aggregator = Sys.ActorOf(
+                        Props.Create(() => new ClusterResultAggregator(title, expectedResults, Settings))
+                            .WithDeploy(Deploy.Local), "result" + Step);
+
+                    if (includeInHistory && Settings.Infolog)
+                    {
+                        aggregator.Tell(new ReportTo(new Option<IActorRef>(ClusterResultHistory.Value)));
+                    }
+                    else
+                    {
+                        aggregator.Tell(new ReportTo(Option<IActorRef>.None));
+                    }
+                },
+                Roles.First());
+            EnterBarrier("result-aggregator-created-" + Step);
+
+            RunOn(() =>
+            {
+                var resultAggregator = ClusterResultAggregator();
+                PhiObserver.Value.Tell(new ReportTo(resultAggregator));
+                StatsObserver.Value.Tell(Reset.Instance);
+                StatsObserver.Value.Tell(new ReportTo(resultAggregator));
+            }, Roles.Take(NbrUsedRoles).ToArray());
+
+        }
+
+        public void AwaitClusterResult()
+        {
+            RunOn(() =>
+            {
+                ClusterResultAggregator().OnSuccess(r =>
+                {
+                    Watch(r);
+                    ExpectMsg<Terminated>(t => t.ActorRef.Path == r.Path);
+                });
+            }, Roles.First());
+            EnterBarrier("cluster-result-done-" + Step);
+        }
+
+        public void JoinOneByOne(int numberOfNodes)
+        {
+            foreach (var i in Enumerable.Range(0, numberOfNodes))
+            {
+                JoinOne();
+                NbrUsedRoles += 1;
+                Step += 1;
+            }
+        }
+
+        public TimeSpan ConvergenceWithin(TimeSpan baseDuration, int nodes)
+        {
+            return TimeSpan.FromMilliseconds(baseDuration.TotalMilliseconds * Settings.ConvergenceWithinFactor * nodes);
+        }
+
+        public void JoinOne()
+        {
+            Within(TimeSpan.FromSeconds(5) + ConvergenceWithin(TimeSpan.FromSeconds(2), NbrUsedRoles + 1), () =>
+            {
+                var currentRoles = Roles.Take(NbrUsedRoles + 1).ToArray();
+                var title = $"join one to {NbrUsedRoles} nodes cluster";
+                CreateResultAggregator(title, expectedResults: currentRoles.Length, includeInHistory: true);
+                RunOn(() =>
+                {
+                    ReportResult(() =>
+                    {
+                        RunOn(() =>
+                        {
+                            Cluster.Join(GetAddress(Roles.First()));
+                        }, currentRoles.Last());
+                        AwaitMembersUp(currentRoles.Length, timeout: RemainingOrDefault);
+                        return true;
+                    });
+                }, currentRoles);
+                AwaitClusterResult();
+                EnterBarrier("join-one-" + Step);
+            });
+        }
+
+        public void JoinSeveral(int numberOfNodes, bool toSeedNodes)
+        {
+            string FormatSeedJoin()
+            {
+                return toSeedNodes ? "seed nodes" : "one node";
+            }
+
+            Within(TimeSpan.FromSeconds(10) + ConvergenceWithin(TimeSpan.FromSeconds(3), NbrUsedRoles + numberOfNodes),
+                () =>
+                {
+                    var currentRoles = Roles.Take(NbrUsedRoles + numberOfNodes).ToArray();
+                    var joiningRoles = currentRoles.Skip(NbrUsedRoles).ToArray();
+                    var title = $"join {numberOfNodes} to {FormatSeedJoin()}, in {NbrUsedRoles} nodes cluster";
+                    CreateResultAggregator(title, expectedResults: currentRoles.Length, true);
+                    RunOn(() =>
+                    {
+                        ReportResult<bool>(() =>
+                        {
+                            RunOn(() =>
+                            {
+                                if (toSeedNodes)
+                                {
+                                    Cluster.JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
+                                }
+                                else
+                                {
+                                    Cluster.Join(GetAddress(Roles.First()));
+                                }
+                            }, joiningRoles);
+                            AwaitMembersUp(currentRoles.Length, timeout: RemainingOrDefault);
+                            return true;
+                        });
+                    }, currentRoles);
+                    AwaitClusterResult();
+                    EnterBarrier("join-several-" + Step);
+                });
+        }
+
+        public void RemoveOneByOne(int numberOfNodes, bool shutdown)
+        {
+            foreach (var i in Enumerable.Range(0, numberOfNodes))
+            {
+                RemoveOne(shutdown);
+                NbrUsedRoles -= 1;
+                Step += 1;
+            }
+        }
+
+        public void RemoveOne(bool shutdown)
+        {
+            string FormatNodeLeave()
+            {
+                return shutdown ? "shutdown" : "remove";
+            }
+
+            Within(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(3), NbrUsedRoles - 1), ()
+                =>
+            {
+                var currentRoles = Roles.Take(NbrUsedRoles - 1).ToArray();
+                var title = $"{FormatNodeLeave()} one from {NbrUsedRoles} nodes cluster";
+                CreateResultAggregator(title, expectedResults:currentRoles.Length, true);
+                var removeRole = Roles[NbrUsedRoles - 1];
+                var removeAddress = GetAddress(removeRole);
+
+                RunOn(() =>
+                {
+                    var watchee = Sys.ActorOf(Props.Create(() => new Watchee()), "watchee");
+                    if(!shutdown)
+                        Cluster.Leave(GetAddress(Myself));
+                }, removeRole);
+
+                EnterBarrier("watchee-created-" + Step);
+
+                RunOn(() =>
+                {
+                    Sys.ActorSelection(Node(removeRole) / "user" / "watchee").Tell(new Identify("watchee"), IdentifyProbe.Ref);
+                    var watchee = IdentifyProbe.ExpectMsg<ActorIdentity>().Subject;
+                    Watch(watchee);
+                }, Roles.First());
+                EnterBarrier("watchee-established-" + Step);
+
+                RunOn(() =>
+                {
+                    ReportResult(() =>
+                    {
+                        RunOn(() =>
+                        {
+                            if (shutdown)
+                            {
+                                if (Settings.Infolog)
+                                {
+                                    Log.Info("Shutting down [{0}]", removeAddress);
+                                }
+
+                                TestConductor.Exit(removeRole, 0).Wait(RemainingOrDefault);
+                            }
+                        }, Roles.First());
+
+                        AwaitMembersUp(currentRoles.Length, timeout: RemainingOrDefault);
+                        AwaitAllReachable();
+                        return true;
+                    });
+                }, currentRoles);
+
+                RunOn(() =>
+                {
+                    var expectedPath = new RootActorPath(removeAddress) / "user" / "watchee";
+                    ExpectMsg<Terminated>(t => t.ActorRef.Path == expectedPath);
+                }, Roles.First());
+
+                EnterBarrier("watch-verified-" + Step);
+
+                AwaitClusterResult();
+                EnterBarrier("remove-one-" + Step);
+            });
+        }
+
+        public void RemoveSeveral(int numberOfNodes, bool shutdown)
+        {
+            string FormatNodeLeave()
+            {
+                return shutdown ? "shutdown" : "remove";
+            }
+
+            Within(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(5), NbrUsedRoles - numberOfNodes),
+                () =>
+                {
+                    var currentRoles = Roles.Take(NbrUsedRoles - numberOfNodes).ToArray();
+                    var removeRoles = Roles.Skip(currentRoles.Length).Take(numberOfNodes).ToArray();
+                    var title = $"{FormatNodeLeave()} {numberOfNodes} in {NbrUsedRoles} nodes cluster";
+                    CreateResultAggregator(title, expectedResults: currentRoles.Length, includeInHistory: true);
+
+                    RunOn(() =>
+                    {
+                        if (!shutdown)
+                        {
+                            Cluster.Leave(GetAddress(Myself));
+                        }
+                    }, removeRoles);
+
+                    RunOn(() =>
+                    {
+                        ReportResult<bool>(() =>
+                        {
+                            RunOn(() =>
+                            {
+                                if (shutdown)
+                                {
+                                    foreach (var role in removeRoles)
+                                    {
+                                        if (Settings.Infolog)
+                                            Log.Info("Shutting down [{0}]", GetAddress(role));
+                                        TestConductor.Exit(role, 0).Wait(RemainingOrDefault);
+                                    }
+                                }
+                            }, Roles.First());
+                            AwaitMembersUp(currentRoles.Length, timeout: RemainingOrDefault);
+                            AwaitAllReachable();
+                            return true;
+                        });
+                    }, currentRoles);
+
+                    AwaitClusterResult();
+                    EnterBarrier("remove-several-" + Step);
+                });
+        }
+
+        public void PartitionSeveral(int numberOfNodes)
+        {
+            Within(TimeSpan.FromSeconds(25) + ConvergenceWithin(TimeSpan.FromSeconds(5), NbrUsedRoles - numberOfNodes),
+                () =>
+                {
+                    var currentRoles = Roles.Take(NbrUsedRoles - numberOfNodes).ToArray();
+                    var removeRoles = Roles.Skip(currentRoles.Length).Take(numberOfNodes).ToArray();
+                    var title = $"partition {numberOfNodes} in {NbrUsedRoles} nodes cluster";
+                    CreateResultAggregator(title, expectedResults: currentRoles.Length, includeInHistory: true);
+
+                    RunOn(() =>
+                    {
+                        foreach (var x in currentRoles)
+                        {
+                            foreach (var y in removeRoles)
+                            {
+                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both);
+                            }
+                        }
+                    }, Roles.First());
+                    EnterBarrier("partition-several-blackhole");
+
+                    RunOn(() =>
+                    {
+                        ReportResult<bool>(() =>
+                        {
+                            var startTime = MonotonicClock.ElapsedTicks;
+                        });
+                    }, currentRoles);
+                });
+        }
+
+        public T ReportResult<T>(Func<T> thunk)
+        {
+            var startTime = MonotonicClock.GetTicks();
+            var startStats = ClusterView.LatestStats.GossipStats;
+
+            var returnValue = thunk();
+
+            ClusterResultAggregator().OnSuccess(r =>
+            {
+                r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
+            });
+
+            return returnValue;
+        }
     }
 }
