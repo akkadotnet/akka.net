@@ -290,7 +290,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             return string.Join(Environment.NewLine, "ClusterStats(gossip, merge, same, newer, older, vclockSize, seenLatest)" +
                                                     Environment.NewLine +
-                                                    _clusterStatsObservedByNode.Select(x => $"{x.Key}\t{F(x.Value)}"));
+                                                    string.Join(Environment.NewLine, _clusterStatsObservedByNode.Select(x => $"{x.Key}\t{F(x.Value)}")));
         }
 
         public ClusterResultAggregator(string title, int expectedResults, StressSpecConfig.Settings settings)
@@ -1204,6 +1204,22 @@ namespace Akka.Cluster.Tests.MultiNode
             IncrementStep();
             MustJoinSeedNodes();
             IncrementStep();
+            MustJoinSeedNodesOneByOneToSmallCluster();
+            IncrementStep();
+            MustJoinSeveralNodesToOneNode();
+            IncrementStep();
+            MustJoinSeveralNodesToSeedNodes();
+            IncrementStep();
+            MustJoinNodesOneByOneToLargeCluster();
+            IncrementStep();
+            MustExerciseJoinRemoveJoinRemove();
+            IncrementStep();
+            MustGossipWhenIdle();
+            IncrementStep();
+            MustDownPartitionedNodes();
+            IncrementStep();
+            MustLeaveNodesOneByOneFromLargeCluster();
+            IncrementStep();
         }
 
         public void MustLogSettings()
@@ -1243,6 +1259,60 @@ namespace Akka.Cluster.Tests.MultiNode
                 NbrUsedRoles += size;
                 EnterBarrier("after-" + Step);
             });
+        }
+
+        public void MustJoinSeedNodesOneByOneToSmallCluster()
+        {
+            JoinOneByOne(Settings.NumberOfNodesJoiningOneByOneSmall);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinSeveralNodesToOneNode()
+        {
+            JoinSeveral(Settings.NumberOfNodesJoiningToOneNode, false);
+            NbrUsedRoles += Settings.NumberOfNodesJoiningToOneNode;
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinSeveralNodesToSeedNodes()
+        {
+            if (Settings.NumberOfNodesJoiningToSeedNodes > 0)
+            {
+                JoinSeveral(Settings.NumberOfNodesJoiningToSeedNodes, true);
+                NbrUsedRoles += Settings.NumberOfNodesJoiningToSeedNodes;
+            }
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinNodesOneByOneToLargeCluster()
+        {
+            JoinOneByOne(Settings.NumberOfNodesJoiningOneByOneLarge);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustExerciseJoinRemoveJoinRemove()
+        {
+            ExerciseJoinRemove("exercise join/remove", Settings.JoinRemoveDuration);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustGossipWhenIdle()
+        {
+            IdleGossip("idle gossip");
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustDownPartitionedNodes()
+        {
+            PartitionSeveral(Settings.NumberOfNodesPartition);
+            NbrUsedRoles += Settings.NumberOfNodesPartition;
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLeaveNodesOneByOneFromLargeCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneLarge, shutdown:false);
+            EnterBarrier("after-" + Step);
         }
     }
 }
