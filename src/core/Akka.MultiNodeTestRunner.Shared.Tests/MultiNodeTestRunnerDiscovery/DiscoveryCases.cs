@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Linq;
 using Akka.Remote.TestKit;
 
 namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
@@ -129,6 +130,30 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
         public class FloodyChildSpec3 : FloodyBaseSpec
         {
             public FloodyChildSpec3(FloodyConfig config) : base(config)
+            {
+            }
+        }
+
+        public class NoReflectionConfig : MultiNodeConfig
+        {
+            public NoReflectionConfig()
+            {
+                foreach(var i in Enumerable.Range(1, 10))
+                {
+                    Role("node-" + i);
+                }
+            }
+        }
+
+        public class NoReflectionSpec
+        {
+            public NoReflectionSpec(NoReflectionConfig config) 
+            {
+
+            }
+
+            [MultiNodeFact(Skip = "Only for discovery tests")]
+            public void Dummy()
             {
             }
         }

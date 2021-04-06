@@ -53,11 +53,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
             Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count);
         }
 
-        [Fact(DisplayName = "Only public props and fields are considered when looking for RoleNames")]
-        public void Public_props_and_fields_are_considered()
+        [Fact(DisplayName = "Only the MultiNodeConfig.Roles property is used to compute the number of Roles in MultiNodeFact")]
+        public void Only_MultiNodeConfig_role_count_used()
         {
             var discoveredSpecs = DiscoverSpecs();
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DiverseSpec))].Select(c => c.Role), new[] {"RoleProp", "RoleField"});
+            Assert.Equal(10, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.NoReflectionSpec))].Select(c => c.Role).Count());
         }
 
         private static Dictionary<string, List<NodeTest>> DiscoverSpecs()
