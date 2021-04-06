@@ -68,8 +68,8 @@ namespace Akka.Cluster.Tests.MultiNode
     }
     akka.actor.provider = cluster
     akka.cluster {
-      failure-detector.acceptable-heartbeat-pause =  3s
-      downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster""
+      failure-detector.acceptable-heartbeat-pause = 3s
+      downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
       split-brain-resolver {
           active-strategy = keep-majority #TODO: remove this once it's been made default
           stable-after = 10s
@@ -917,6 +917,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 var currentRoles = Roles.Take(NbrUsedRoles - 1).ToArray();
                 var title = $"{FormatNodeLeave()} one from {NbrUsedRoles} nodes cluster";
                 CreateResultAggregator(title, expectedResults:currentRoles.Length, true);
+                Console.WriteLine("Preparing to remove role [{0}] out of [{1}]", NbrUsedRoles-1, Roles.Count);
                 var removeRole = Roles[NbrUsedRoles - 1];
                 var removeAddress = GetAddress(removeRole);
 
@@ -1041,7 +1042,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         {
                             foreach (var y in removeRoles)
                             {
-                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both);
+                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both).Wait();
                             }
                         }
                     }, Roles.First());
@@ -1307,7 +1308,7 @@ namespace Akka.Cluster.Tests.MultiNode
         public void MustDownPartitionedNodes()
         {
             PartitionSeveral(Settings.NumberOfNodesPartition);
-            NbrUsedRoles += Settings.NumberOfNodesPartition;
+            NbrUsedRoles -= Settings.NumberOfNodesPartition;
             EnterBarrier("after-" + Step);
         }
 
