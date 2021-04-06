@@ -261,7 +261,7 @@ namespace Akka.DistributedData
     /// </list>
     /// </para>
     /// </summary>
-    internal sealed class Replicator : ReceiveActor
+    internal sealed class Replicator : ReceiveActor, IWithUnboundedStash
     {
         public static Props Props(ReplicatorSettings settings) =>
             Actor.Props.Create(() => new Replicator(settings)).WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
@@ -294,9 +294,14 @@ namespace Akka.DistributedData
         private ImmutableHashSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
 
         /// <summary>
-        /// Cluster weaklyUp nodes, doesn't contain selfAddress
+        /// Cluster weaklyUp nodes, doesn't contain joining and not selfAddress
         /// </summary>
         private ImmutableHashSet<Address> _weaklyUpNodes = ImmutableHashSet<Address>.Empty;
+
+        /// <summary>
+        /// cluster joining nodes, doesn't contain selfAddress
+        /// </summary>
+        private ImmutableHashSet<Address> _joiningNodes = ImmutableHashSet<Address>.Empty;
 
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
         private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
@@ -307,6 +312,9 @@ namespace Akka.DistributedData
         /// </summary>
         private ImmutableSortedSet<Member> _leader = ImmutableSortedSet<Member>.Empty.WithComparer(Member.LeaderStatusOrdering);
         private bool IsLeader => !_leader.IsEmpty && _leader.First().Address == _selfAddress;
+
+        private bool IsKnownNode(Address node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
+                                                  _joiningNodes.Contains(node) || _selfAddress == node;
 
         /// <summary>
         /// For pruning timeouts are based on clock that is only increased when all nodes are reachable.
@@ -386,7 +394,7 @@ namespace Akka.DistributedData
             _durableWildcards = durableWildcardsBuilder.ToImmutable();
 
             _durableStore = _hasDurableKeys
-                ? Context.Watch(Context.ActorOf(_settings.DurableStoreProps, "durableStore"))
+                ? Context.Watch(Context.ActorOf(_settings.DurableStoreProps.WithDeploy(Deploy.Local), "durableStore"))
                 : Context.System.DeadLetters;
 
             _deltaPropagationSelector = new ReplicatorDeltaPropagationSelector(this);
@@ -399,8 +407,8 @@ namespace Akka.DistributedData
                 TimeSpan.TicksPerMillisecond * 200));
             _deltaPropagationTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(deltaPropagationInterval, deltaPropagationInterval, Self, DeltaPropagationTick.Instance, Self);
 
-            if (_hasDurableKeys) Load();
-            else NormalReceive();
+            if (_hasDurableKeys) Become(Load);
+            else Become(NormalReceive);
         }
 
         protected override void PreStart()
@@ -441,8 +449,6 @@ namespace Akka.DistributedData
             var startTime = DateTime.UtcNow;
             var count = 0;
 
-            NormalReceive();
-
             Receive<LoadData>(load =>
             {
                 count += load.Data.Count;
@@ -461,6 +467,7 @@ namespace Akka.DistributedData
                 _log.Debug("Loading {0} entries from durable store took {1} ms", count,
                     (DateTime.UtcNow - startTime).TotalMilliseconds);
                 Become(NormalReceive);
+                Stash.UnstashAll();
                 Self.Tell(FlushChanges.Instance);
             });
             Receive<GetReplicaCount>(_ =>
@@ -479,35 +486,91 @@ namespace Akka.DistributedData
             Receive(new Action<Write>(IgnoreDebug));
             Receive(new Action<Status>(IgnoreDebug));
             Receive(new Action<Gossip>(IgnoreDebug));
+
+            Receive<ClusterEvent.IClusterDomainEvent>(msg =>
+            {
+                if(!NormalReceive(msg))
+                    Unhandled(msg);
+            });
+
+            ReceiveAny(_ => Stash.Stash());
         }
 
-        private void NormalReceive()
+        private bool NormalReceive(object message)
         {
-            Receive<Get>(g => ReceiveGet(g.Key, g.Consistency, g.Request));
-            Receive<Update>(msg => ReceiveUpdate(msg.Key, msg.Modify, msg.Consistency, msg.Request));
-            Receive<Read>(r => ReceiveRead(r.Key));
-            Receive<Write>(w => ReceiveWrite(w.Key, w.Envelope));
-            Receive<ReadRepair>(rr => ReceiveReadRepair(rr.Key, rr.Envelope));
-            Receive<DeltaPropagation>(msg => ReceiveDeltaPropagation(msg.FromNode, msg.ShouldReply, msg.Deltas));
-            Receive<FlushChanges>(_ => ReceiveFlushChanges());
-            Receive<DeltaPropagationTick>(_ => ReceiveDeltaPropagationTick());
-            Receive<GossipTick>(_ => ReceiveGossipTick());
-            Receive<ClockTick>(c => ReceiveClockTick());
-            Receive<Internal.Status>(s => ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks));
-            Receive<Gossip>(g => ReceiveGossip(g.UpdatedData, g.SendBack));
-            Receive<Subscribe>(s => ReceiveSubscribe(s.Key, s.Subscriber));
-            Receive<Unsubscribe>(u => ReceiveUnsubscribe(u.Key, u.Subscriber));
-            Receive<Terminated>(t => ReceiveTerminated(t.ActorRef));
-            Receive<ClusterEvent.MemberWeaklyUp>(m => ReceiveMemberWeaklyUp(m.Member));
-            Receive<ClusterEvent.MemberUp>(m => ReceiveMemberUp(m.Member));
-            Receive<ClusterEvent.MemberRemoved>(m => ReceiveMemberRemoved(m.Member));
-            Receive<ClusterEvent.IMemberEvent>(m => ReceiveOtherMemberEvent(m.Member));
-            Receive<ClusterEvent.UnreachableMember>(u => ReceiveUnreachable(u.Member));
-            Receive<ClusterEvent.ReachableMember>(r => ReceiveReachable(r.Member));
-            Receive<GetKeyIds>(_ => ReceiveGetKeyIds());
-            Receive<Delete>(d => ReceiveDelete(d.Key, d.Consistency, d.Request));
-            Receive<RemovedNodePruningTick>(r => ReceiveRemovedNodePruningTick());
-            Receive<GetReplicaCount>(_ => ReceiveGetReplicaCount());
+            switch (message)
+            {
+                case IDestinationSystemUid msg:
+                    if (msg.ToSystemUid.HasValue && msg.ToSystemUid != _selfUniqueAddress.Uid)
+                    {
+                        // When restarting a node with same host:port it is possible that a Replicator on another node
+                        // is sending messages to the restarted node even if it hasn't joined the same cluster.
+                        // Therefore we check that the message was intended for this incarnation and otherwise
+                        // it is discarded.
+                        _log.Info("Ignoring message [{0}] from [{1}] intended for system uid [{2}], self uid is [{3}]",
+                            Logging.SimpleName(msg),
+                            Sender,
+                            msg.ToSystemUid,
+                            _selfUniqueAddress.Uid);
+                    }
+                    else
+                    {
+                        switch (msg)
+                        {
+                            case Status s:
+                                ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks); return true;
+                            case Gossip g : 
+                                ReceiveGossip(g.UpdatedData, g.SendBack); return true;
+                        }
+                    }
+                    return true;
+
+                case ISendingSystemUid msg:
+                    if (msg.FromNode != null && !IsKnownNode(msg.FromNode.Address))
+                    {
+                        // When restarting a node with same host:port it is possible that a Replicator on another node
+                        // is sending messages to the restarted node even if it hasn't joined the same cluster.
+                        // Therefore we check that the message was from a known cluster member
+                        _log.Info("Ignoring message [{0}] from [{1}] unknown node [{2}]", Logging.SimpleName(msg), Sender, msg.FromNode);
+                    }
+                    else
+                    {
+                        switch (msg)
+                        {
+                            case Read r : ReceiveRead(r.Key); return true;
+                            case Write w : ReceiveWrite(w.Key, w.Envelope); return true;
+                            case DeltaPropagation d : ReceiveDeltaPropagation(msg.FromNode, d.ShouldReply, d.Deltas); return true;
+                        }
+                    }
+                    return true;
+
+                case Get g : ReceiveGet(g.Key, g.Consistency, g.Request); return true;
+                case Update msg : ReceiveUpdate(msg.Key, msg.Modify, msg.Consistency, msg.Request); return true;
+                case ReadRepair rr : ReceiveReadRepair(rr.Key, rr.Envelope); return true;
+                case FlushChanges _ : ReceiveFlushChanges(); return true;
+                case DeltaPropagationTick _ : ReceiveDeltaPropagationTick(); return true;
+                case GossipTick _ : ReceiveGossipTick(); return true;
+                case ClockTick c : ReceiveClockTick(); return true;
+                case Subscribe s : ReceiveSubscribe(s.Key, s.Subscriber); return true;
+                case Unsubscribe u : ReceiveUnsubscribe(u.Key, u.Subscriber); return true;
+                case Terminated t : ReceiveTerminated(t.ActorRef); return true;
+
+                case ClusterEvent.MemberJoined m : ReceiveMemberJoining(m.Member); return true;
+                case ClusterEvent.MemberWeaklyUp m : ReceiveMemberWeaklyUp(m.Member); return true;
+                case ClusterEvent.MemberUp m : ReceiveMemberUp(m.Member); return true;
+                case ClusterEvent.MemberRemoved m : ReceiveMemberRemoved(m.Member); return true;
+
+                case ClusterEvent.IMemberEvent m : ReceiveOtherMemberEvent(m.Member); return true;
+                case ClusterEvent.UnreachableMember u : ReceiveUnreachable(u.Member); return true;
+                case ClusterEvent.ReachableMember r : ReceiveReachable(r.Member); return true;
+
+                case GetKeyIds _ : ReceiveGetKeyIds(); return true;
+                case Delete d : ReceiveDelete(d.Key, d.Consistency, d.Request); return true;
+                case RemovedNodePruningTick r : ReceiveRemovedNodePruningTick(); return true;
+                case GetReplicaCount _ : ReceiveGetReplicaCount(); return true;
+            }
+
+            return false;
         }
 
         private void IgnoreDebug<T>(T msg)
@@ -1185,11 +1248,18 @@ namespace Akka.DistributedData
             }
         }
 
+        private void ReceiveMemberJoining(Member m)
+        {
+            if (MatchingRole(m) && m.Address != _selfAddress)
+                _joiningNodes = _joiningNodes.Add(m.Address);
+        }
+
         private void ReceiveMemberWeaklyUp(Member m)
         {
             if (MatchingRole(m) && m.Address != _selfAddress)
             {
                 _weaklyUpNodes = _weaklyUpNodes.Add(m.Address);
+                _joiningNodes = _joiningNodes.Remove(m.Address);
             }
         }
 
@@ -1202,6 +1272,7 @@ namespace Akka.DistributedData
                 {
                     _nodes = _nodes.Add(m.Address);
                     _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
+                    _joiningNodes = _joiningNodes.Remove(m.Address);
                 }
             }
         }
@@ -1218,6 +1289,7 @@ namespace Akka.DistributedData
 
                 _nodes = _nodes.Remove(m.Address);
                 _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
+                _joiningNodes = _joiningNodes.Remove(m.Address);
                 
                 _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
                 _unreachable = _unreachable.Remove(m.Address);
@@ -1448,5 +1520,7 @@ namespace Akka.DistributedData
         }
 
         #endregion
+
+        public IStash Stash { get; set; }
     }
 }
