@@ -59,14 +59,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             FailureMessages = new List<string>();
             FailureStackTraces = new List<string>();
             FailureExceptionTypes = new List<string>();
-            Timestamp = DateTime.UtcNow;
         }
 
         public IList<string> FailureMessages { get; private set; }
         public IList<string> FailureStackTraces { get; private set; }
         public IList<string> FailureExceptionTypes { get; private set; }
-
-        public DateTime Timestamp { get; }
 
         public override string ToString()
         {
