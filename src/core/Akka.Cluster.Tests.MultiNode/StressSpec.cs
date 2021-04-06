@@ -727,7 +727,7 @@ namespace Akka.Cluster.Tests.MultiNode
             sb.Append("Operating System: ")
                 .Append(Environment.OSVersion.Platform)
                 .Append(", ")
-                .AppendLine(RuntimeInformation.ProcessArchitecture.ToString())
+                .Append(RuntimeInformation.ProcessArchitecture.ToString())
                 .Append(", ")
                 .Append(Environment.OSVersion.VersionString)
                 .AppendLine();
@@ -745,9 +745,6 @@ namespace Akka.Cluster.Tests.MultiNode
                 .AppendLine();
 
             sb.Append("Memory: ")
-                .Append(Process.GetCurrentProcess().VirtualMemorySize64 / 1024 / 1024)
-                .Append("MB [allocated virtual memory]")
-                .AppendLine()
                 .Append(" (")
                 .Append(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024)
                 .Append(" - ")
