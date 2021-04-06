@@ -684,8 +684,10 @@ namespace Akka.Cluster.Tests.MultiNode
         public int Step = 0;
         public int NbrUsedRoles = 0;
 
-        protected virtual void MuteLog(ActorSystem sys)
+        public override void MuteLog(ActorSystem sys = null)
         {
+            sys ??= Sys;
+            base.MuteLog(sys);
             Sys.EventStream.Publish(new Mute(new ErrorFilter(typeof(ApplicationException), new ContainsString("Simulated exception"))));
             MuteDeadLetters(sys, typeof(AggregatedClusterResult), typeof(StatsResult), typeof(PhiResult), typeof(RetryTick));
         }

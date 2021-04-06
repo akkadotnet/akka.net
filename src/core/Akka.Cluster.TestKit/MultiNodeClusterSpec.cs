@@ -175,7 +175,7 @@ namespace Akka.Cluster.TestKit
 
         //TODO: ExpectedTestDuration?
 
-        void MuteLog(ActorSystem sys = null)
+        public virtual void MuteLog(ActorSystem sys = null)
         {
             if (sys == null) sys = Sys;
             if (!sys.Log.IsDebugEnabled)
