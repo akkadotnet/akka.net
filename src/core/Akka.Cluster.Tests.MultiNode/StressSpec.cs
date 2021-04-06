@@ -283,9 +283,9 @@ namespace Akka.Cluster.Tests.MultiNode
             string F(ClusterEvent.CurrentInternalStats stats)
             {
                 return
-                    $"CurrentClusterStats({stats.GossipStats.ReceivedGossipCount}, {stats.GossipStats.MergeCount}, " +
-                    $"{stats.GossipStats.SameCount}, {stats.GossipStats.NewerCount}, {stats.GossipStats.OlderCount}," +
-                    $"{stats.SeenBy.VersionSize}, {stats.SeenBy.SeenLatest})";
+                    $"CurrentClusterStats({stats.GossipStats?.ReceivedGossipCount}, {stats.GossipStats?.MergeCount}, " +
+                    $"{stats.GossipStats?.SameCount}, {stats.GossipStats?.NewerCount}, {stats.GossipStats?.OlderCount}," +
+                    $"{stats.SeenBy?.VersionSize}, {stats.SeenBy?.SeenLatest})";
             }
 
             return string.Join(Environment.NewLine, "ClusterStats(gossip, merge, same, newer, older, vclockSize, seenLatest)" +
