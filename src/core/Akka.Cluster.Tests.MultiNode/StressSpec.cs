@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -13,7 +14,11 @@ using Akka.Remote;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
+using Akka.TestKit.Internal;
+using Akka.TestKit.Internal.StringMatcher;
+using Akka.TestKit.TestEvent;
 using Akka.Util;
+using FluentAssertions;
 using Google.Protobuf.WellKnownTypes;
 using Environment = System.Environment;
 
@@ -29,6 +34,9 @@ namespace Akka.Cluster.Tests.MultiNode
 
         public StressSpecConfig()
         {
+            foreach (var i in Enumerable.Range(1, TotalNumberOfNodes))
+                Role("node-" + i);
+
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.test.cluster-stress-spec {
       infolog = off
@@ -62,6 +70,7 @@ namespace Akka.Cluster.Tests.MultiNode
       failure-detector.acceptable-heartbeat-pause =  3s
       downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster""
       split-brain-resolver {
+          active-strategy = keep-majority #TODO: remove this once it's been made default
           stable-after = 10s
       }
       publish-stats-interval = 1s
@@ -674,6 +683,12 @@ namespace Akka.Cluster.Tests.MultiNode
         public int Step = 0;
         public int NbrUsedRoles = 0;
 
+        protected virtual void MuteLog(ActorSystem sys)
+        {
+            Sys.EventStream.Publish(new Mute(new ErrorFilter(typeof(ApplicationException), new ContainsString("Simulated exception"))));
+            MuteDeadLetters(sys, typeof(AggregatedClusterResult), typeof(StatsResult), typeof(PhiResult), typeof(RetryTick));
+        }
+
         protected StressSpec(StressSpecConfig config) : base(config, typeof(StressSpec))
         {
             Settings = new StressSpecConfig.Settings(Sys.Settings.Config, config.TotalNumberOfNodes);
@@ -1032,9 +1047,25 @@ namespace Akka.Cluster.Tests.MultiNode
                     {
                         ReportResult<bool>(() =>
                         {
-                            var startTime = MonotonicClock.ElapsedTicks;
+                            var startTime = MonotonicClock.GetTicks();
+                            AwaitMembersUp(currentRoles.Length, timeout:RemainingOrDefault);
+                            Sys.Log.Info("Removed [{0}] members after [{0} ms]",
+                                removeRoles.Length, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime).TotalMilliseconds);
+                            AwaitAllReachable();
+                            return true;
                         });
                     }, currentRoles);
+
+                    RunOn(() =>
+                    {
+                        Sys.ActorOf(Props.Create<MeasureDurationUntilDown>());
+                        AwaitAssert(() =>
+                        {
+                            Cluster.IsTerminated.Should().BeTrue();
+                        });
+                    }, removeRoles);
+                    AwaitClusterResult();
+                    EnterBarrier("partition-several-" + Step);
                 });
         }
 
@@ -1051,6 +1082,164 @@ namespace Akka.Cluster.Tests.MultiNode
             });
 
             return returnValue;
+        }
+
+        public void ExerciseJoinRemove(string title, TimeSpan duration)
+        {
+            var activeRoles = Roles.Take(Settings.NumberOfNodesJoinRemove).ToArray();
+            var loopDuration = TimeSpan.FromSeconds(10) +
+                               ConvergenceWithin(TimeSpan.FromSeconds(4), NbrUsedRoles + activeRoles.Length);
+            var rounds = (int)Math.Max(1.0d, (duration - loopDuration).TotalMilliseconds / loopDuration.TotalMilliseconds);
+            var usedRoles = Roles.Take(NbrUsedRoles).ToArray();
+            var usedAddresses = usedRoles.Select(x => GetAddress(x)).ToImmutableHashSet();
+
+            Option<ActorSystem> Loop(int counter, Option<ActorSystem> previousAs,
+                ImmutableHashSet<Address> allPreviousAddresses)
+            {
+                if (counter > rounds) return previousAs;
+
+                var t = title + " round " + counter;
+                RunOn(() =>
+                {
+                    PhiObserver.Value.Tell(Reset.Instance);
+                    StatsObserver.Value.Tell(Reset.Instance);
+                }, usedRoles);
+                CreateResultAggregator(t, expectedResults:NbrUsedRoles, includeInHistory:true);
+
+                var nextAs = Option<ActorSystem>.None;
+                var nextAddresses = ImmutableHashSet<Address>.Empty;
+                Within(loopDuration, () =>
+                {
+                   var (nextAsy, nextAddr) = ReportResult(() =>
+                    {
+                        Option<ActorSystem> nextAs;
+
+                        if (activeRoles.Contains(Myself))
+                        {
+                            previousAs.OnSuccess(s =>
+                            {
+                                Shutdown(s);
+                            });
+
+                            var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+                            MuteLog(sys);
+                            Akka.Cluster.Cluster.Get(sys).JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
+                            nextAs = new Option<ActorSystem>(sys);
+                        }
+                        else
+                        {
+                            nextAs = previousAs;
+                        }
+
+                        RunOn(() =>
+                        {
+                            AwaitMembersUp(NbrUsedRoles + activeRoles.Length, 
+                                canNotBePartOfMemberRing: allPreviousAddresses,
+                                timeout: RemainingOrDefault);
+                            AwaitAllReachable();
+                        }, usedRoles);
+
+                        nextAddresses = ClusterView.Members.Select(x => x.Address).ToImmutableHashSet()
+                            .Except(usedAddresses);
+
+                        RunOn(() =>
+                        {
+                            nextAddresses.Count.Should().Be(Settings.NumberOfNodesJoinRemove);
+                        }, usedRoles);
+
+                        return (nextAs, nextAddresses);
+                    });
+
+                   nextAs = nextAsy;
+                   nextAddresses = nextAddr;
+                });
+
+                AwaitClusterResult();
+                Step += 1;
+                return Loop(counter + 1, nextAs, nextAddresses);
+            }
+
+            Loop(1, Option<ActorSystem>.None, ImmutableHashSet<Address>.Empty).OnSuccess(aSys =>
+            {
+                Shutdown(aSys);
+            });
+
+            Within(loopDuration, () =>
+            {
+                RunOn(() =>
+                {
+                    AwaitMembersUp(NbrUsedRoles, timeout: RemainingOrDefault);
+                    AwaitAllReachable();
+                    PhiObserver.Value.Tell(Reset.Instance);
+                    StatsObserver.Value.Tell(Reset.Instance);
+                }, usedRoles);
+            });
+            EnterBarrier("join-remove-shutdown-" + Step);
+        }
+
+        public void IdleGossip(string title)
+        {
+            CreateResultAggregator(title, expectedResults: NbrUsedRoles, includeInHistory: true);
+            ReportResult(() =>
+            {
+                ClusterView.Members.Count.Should().Be(NbrUsedRoles);
+                Thread.Sleep(Settings.IdleGossipDuration);
+                ClusterView.Members.Count.Should().Be(NbrUsedRoles);
+                return true;
+            });
+            AwaitClusterResult();
+        }
+
+        public void IncrementStep()
+        {
+            Step += 1;
+        }
+
+        [MultiNodeFact]
+        public void Cluster_under_stress()
+        {
+            MustLogSettings();
+            IncrementStep();
+
+        }
+
+        public void MustLogSettings()
+        {
+            if (Settings.Infolog)
+            {
+                Log.Info("StressSpec CLR:" + Environment.NewLine + ClrInfo());
+                RunOn(() =>
+                {
+                    Log.Info("StressSpec settings:" + Environment.NewLine + Settings);
+                });
+            }
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinSeedNodes()
+        {
+            Within(TimeSpan.FromSeconds(30), () =>
+            {
+                var otherNodesJoiningSeedNodes = Roles.Skip(Settings.NumberOfSeedNodes)
+                    .Take(Settings.NumberOfNodesJoiningToSeedNodesInitially).ToArray();
+                var size = SeedNodes.Count + otherNodesJoiningSeedNodes.Length;
+
+                CreateResultAggregator("join seed nodes", expectedResults: size, includeInHistory: true);
+
+                RunOn(() =>
+                {
+                    ReportResult(() =>
+                    {
+                        Cluster.JoinSeedNodes(SeedNodes.Select(x => GetAddress(x)));
+                        AwaitMembersUp(size, timeout: RemainingOrDefault);
+                        return true;
+                    });
+                }, SeedNodes.AddRange(otherNodesJoiningSeedNodes).ToArray());
+
+                AwaitClusterResult();
+                NbrUsedRoles += size;
+                EnterBarrier("after-" + Step);
+            });
         }
     }
 }
