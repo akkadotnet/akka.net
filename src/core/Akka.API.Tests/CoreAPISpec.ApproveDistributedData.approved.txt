@@ -1030,10 +1030,10 @@ namespace Akka.DistributedData.Internal
     public sealed class DeltaPropagation : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Internal.DeltaPropagation>
     {
         public readonly System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> Deltas;
-        public readonly Akka.Cluster.UniqueAddress FromNode;
         public static readonly Akka.DistributedData.IReplicatedDelta NoDeltaPlaceholder;
         public readonly bool ShouldReply;
         public DeltaPropagation(Akka.Cluster.UniqueAddress fromNode, bool shouldReply, System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> deltas) { }
+        public Akka.Cluster.UniqueAddress FromNode { get; }
         public bool Equals(Akka.DistributedData.Internal.DeltaPropagation other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
