@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="StressSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -1223,6 +1230,17 @@ namespace Akka.Cluster.Tests.MultiNode
             IncrementStep();
             MustLeaveNodesOneByOneFromLargeCluster();
             IncrementStep();
+            MustShutdownNodesOneByOneFromLargeCluster();
+            IncrementStep();
+            MustLeaveSeveralNodes();
+            IncrementStep();
+            MustShutdownSeveralNodes();
+            IncrementStep();
+            MustShutdownNodesOneByOneFromSmallCluster();
+            IncrementStep();
+            MustLeaveNodesOneByOneFromSmallCluster();
+            IncrementStep();
+            MustLogClrInfo();
         }
 
         public void MustLogSettings()
@@ -1315,6 +1333,45 @@ namespace Akka.Cluster.Tests.MultiNode
         public void MustLeaveNodesOneByOneFromLargeCluster()
         {
             RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneLarge, shutdown:false);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustShutdownNodesOneByOneFromLargeCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneLarge, shutdown: true);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLeaveSeveralNodes()
+        {
+            RemoveSeveral(Settings.NumberOfNodesLeaving, shutdown: false);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustShutdownSeveralNodes()
+        {
+            RemoveSeveral(Settings.NumberOfNodesShutdown, shutdown: true);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustShutdownNodesOneByOneFromSmallCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneSmall, true);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLeaveNodesOneByOneFromSmallCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneSmall, false);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLogClrInfo()
+        {
+            if (Settings.Infolog)
+            {
+                Log.Info("StressSpec CLR: " + Environment.NewLine + "{0}", ClrInfo());
+            }
             EnterBarrier("after-" + Step);
         }
     }
