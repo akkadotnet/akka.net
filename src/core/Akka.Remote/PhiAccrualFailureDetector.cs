@@ -90,12 +90,13 @@ namespace Akka.Remote
             _acceptableHeartbeatPause = config.GetTimeSpan("acceptable-heartbeat-pause", null);
             _firstHeartbeatEstimate = config.GetTimeSpan("heartbeat-interval", null);
             state = new State(FirstHeartBeat, null);
+            EventStream = ev ?? Option<EventStream>.None;
         }
 
         /// <summary>
-        /// TBD
+        /// Protected constructor to be used for sub-classing only.
         /// </summary>
-        /// <param name="clock">TBD</param>
+        /// <param name="clock">The clock used fo marking time.</param>
         protected PhiAccrualFailureDetector(Clock clock)
         {
             _clock = clock ?? DefaultClock;
@@ -115,6 +116,13 @@ namespace Akka.Remote
                 return HeartbeatHistory.Apply(_maxSampleSize) + (mean - stdDeviation) + (mean + stdDeviation);
             }
         }
+
+        private Option<EventStream> EventStream { get; }
+
+        /// <summary>
+        /// Address introduced as a mutable property in order to avoid shuffling around API signatures
+        /// </summary>
+        public string Address { get; set; } = "N/A";
 
         /// <summary>
         /// Uses volatile memory and immutability for lockless concurrency.
@@ -187,7 +195,15 @@ namespace Akka.Remote
                 //this is a known connection
                 var interval = timestamp - oldState.TimeStamp.Value;
                 //don't use the first heartbeat after failure for the history, since a long pause will skew the stats
-                if (IsTimeStampAvailable(timestamp)) newHistory = (oldState.History + interval);
+                if (IsTimeStampAvailable(timestamp))
+                {
+                    if (interval >= (AcceptableHeartbeatPauseMillis / 3 * 2) && EventStream.HasValue)
+                    {
+                        EventStream.Value.Publish(new Warning(ToString(), GetType(),
+                            $"heartbeat interval is growing too large for address {Address}: {interval} millis"));
+                    }
+                    newHistory = (oldState.History + interval);
+                }
                 else newHistory = oldState.History;
             }
 

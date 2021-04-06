@@ -2099,6 +2099,11 @@ namespace Akka.Annotations
     {
         public ApiMayChangeAttribute() { }
     }
+    [System.AttributeUsageAttribute(System.AttributeTargets.Class | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
+    public sealed class DoNotInheritAttribute : System.Attribute
+    {
+        public DoNotInheritAttribute() { }
+    }
     [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
     public sealed class InternalApiAttribute : System.Attribute
     {
@@ -4653,6 +4658,11 @@ namespace Akka.Serialization
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }
         public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
+    }
+    public sealed class NewtonSoftJsonSerializerSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Action<Newtonsoft.Json.JsonSerializerSettings> ApplySettings { get; }
+        public static Akka.Serialization.NewtonSoftJsonSerializerSetup Create(System.Action<Newtonsoft.Json.JsonSerializerSettings> settings) { }
     }
     public class NullSerializer : Akka.Serialization.Serializer
     {
