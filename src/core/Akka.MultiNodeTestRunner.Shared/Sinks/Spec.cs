@@ -28,6 +28,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             TestDisplayName = testDisplayName;
             NodeIndex = nodeIndex;
             NodeRole = nodeRole;
+            Timestamp = DateTime.UtcNow;
         }
 
         public int NodeIndex { get; private set; }
@@ -35,9 +36,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         public string TestDisplayName { get; private set; }
 
+        public DateTime Timestamp { get; }
+
         public override string ToString()
         {
-            return string.Format("[Node{0}:{1}][PASS] {2}", NodeIndex, NodeRole, TestDisplayName);
+            return $"[Node{NodeIndex}:{NodeRole}][{Timestamp}][PASS] {TestDisplayName}";
         }
     }
 
