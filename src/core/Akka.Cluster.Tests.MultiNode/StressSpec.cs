@@ -546,7 +546,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         return gossipStats;
                     }
 
-                    return _startStats.Value - gossipStats;
+                    return gossipStats -_startStats.Value;
                 }
 
                 var diff = MatchStats();
@@ -1031,6 +1031,8 @@ namespace Akka.Cluster.Tests.MultiNode
                     var currentRoles = Roles.Take(NbrUsedRoles - numberOfNodes).ToArray();
                     var removeRoles = Roles.Skip(currentRoles.Length).Take(numberOfNodes).ToArray();
                     var title = $"partition {numberOfNodes} in {NbrUsedRoles} nodes cluster";
+                    Console.WriteLine(title);
+                    Console.WriteLine("[{0}] are blackholing [{1}]", string.Join(",", currentRoles.Select(x => x.ToString())), string.Join(",", removeRoles.Select(x => x.ToString())));
                     CreateResultAggregator(title, expectedResults: currentRoles.Length, includeInHistory: true);
 
                     RunOn(() =>
