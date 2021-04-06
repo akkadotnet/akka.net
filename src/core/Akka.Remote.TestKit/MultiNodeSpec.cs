@@ -168,7 +168,7 @@ namespace Akka.Remote.TestKit
             return deployments == null ? _allDeploy : deployments.AddRange(_allDeploy);
         }
 
-        internal ImmutableList<RoleName> Roles
+        public ImmutableList<RoleName> Roles
         {
             get { return _roles; }
         }
