@@ -138,15 +138,15 @@ namespace Akka.Event
             catch (FormatException)
             {
                 /*
-                 * If we've reached this point, the `logEvent` itself is informatted incorrectly. 
+                 * If we've reached this point, the `logEvent` itself is formatted incorrectly. 
                  * Therefore we have to treat the data inside the `logEvent` as suspicious and avoid throwing
                  * a second FormatException.
                  */
                 var sb = new StringBuilder();
                 sb.AppendFormat("[ERROR][{0}][Thread {1}][StandardOutLogger] ", logEvent.Timestamp, 0);
-                sb.AppendFormat("Encoutered System.FormatException while recording log: [" +
+                sb.AppendFormat("Encountered System.FormatException while recording log: [" +
                                 logEvent.LogLevel().PrettyNameFor() + "]")
-                    .AppendFormat("[" + logEvent.LogSource + "][" + logEvent.Message + "]");
+                    .Append("[" + logEvent.LogSource + "][" + logEvent.Message + "]");
 
                 string msg;
                 switch (logEvent.Message)
