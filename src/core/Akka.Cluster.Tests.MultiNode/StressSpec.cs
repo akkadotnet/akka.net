@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="StressSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -68,8 +75,8 @@ namespace Akka.Cluster.Tests.MultiNode
     }
     akka.actor.provider = cluster
     akka.cluster {
-      failure-detector.acceptable-heartbeat-pause =  3s
-      downing-provider-class = ""Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster""
+      failure-detector.acceptable-heartbeat-pause = 3s
+      downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
       split-brain-resolver {
           active-strategy = keep-majority #TODO: remove this once it's been made default
           stable-after = 10s
@@ -266,8 +273,7 @@ namespace Akka.Cluster.Tests.MultiNode
             if (_phiValuesObservedByNode.IsEmpty) return string.Empty;
             else
             {
-                //var lines = _phiValuesObservedByNode.Select(
-                //    x => x.Value.SelectMany(y => FormatPhiLine(x.Key, y.Address, y)));
+
                 var lines = (from mon in _phiValuesObservedByNode from phi in mon.Value select FormatPhiLine(mon.Key, phi.Address, phi));
                 return FormatPhiHeader + Environment.NewLine + string.Join(Environment.NewLine, lines);
             }
@@ -917,25 +923,35 @@ namespace Akka.Cluster.Tests.MultiNode
                 var currentRoles = Roles.Take(NbrUsedRoles - 1).ToArray();
                 var title = $"{FormatNodeLeave()} one from {NbrUsedRoles} nodes cluster";
                 CreateResultAggregator(title, expectedResults:currentRoles.Length, true);
+               
                 var removeRole = Roles[NbrUsedRoles - 1];
                 var removeAddress = GetAddress(removeRole);
-
+                Console.WriteLine($"Preparing to {FormatNodeLeave()}[{removeAddress}] role [{removeRole.Name}] out of [{Roles.Count}]");
                 RunOn(() =>
                 {
                     var watchee = Sys.ActorOf(Props.Create(() => new Watchee()), "watchee");
-                    if(!shutdown)
-                        Cluster.Leave(GetAddress(Myself));
+                    Console.WriteLine("Created watchee [{0}]", watchee);
                 }, removeRole);
 
                 EnterBarrier("watchee-created-" + Step);
 
                 RunOn(() =>
                 {
-                    Sys.ActorSelection(Node(removeRole) / "user" / "watchee").Tell(new Identify("watchee"), IdentifyProbe.Ref);
-                    var watchee = IdentifyProbe.ExpectMsg<ActorIdentity>().Subject;
-                    Watch(watchee);
+                    AwaitAssert(() =>
+                    {
+                        Sys.ActorSelection(new RootActorPath(removeAddress) / "user" / "watchee").Tell(new Identify("watchee"), IdentifyProbe.Ref);
+                        var watchee = IdentifyProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(1)).Subject;
+                        Watch(watchee);
+                    }, interval:TimeSpan.FromSeconds(1.25d));
+                   
                 }, Roles.First());
                 EnterBarrier("watchee-established-" + Step);
+
+                RunOn(() =>
+                {
+                    if (!shutdown)
+                        Cluster.Leave(GetAddress(Myself));
+                }, removeRole);
 
                 RunOn(() =>
                 {
@@ -950,7 +966,7 @@ namespace Akka.Cluster.Tests.MultiNode
                                     Log.Info("Shutting down [{0}]", removeAddress);
                                 }
 
-                                TestConductor.Exit(removeRole, 0).Wait(RemainingOrDefault);
+                                TestConductor.Exit(removeRole, 0).Wait();
                             }
                         }, Roles.First());
 
@@ -1041,7 +1057,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         {
                             foreach (var y in removeRoles)
                             {
-                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both);
+                                TestConductor.Blackhole(x, y, ThrottleTransportAdapter.Direction.Both).Wait();
                             }
                         }
                     }, Roles.First());
@@ -1222,6 +1238,17 @@ namespace Akka.Cluster.Tests.MultiNode
             IncrementStep();
             MustLeaveNodesOneByOneFromLargeCluster();
             IncrementStep();
+            MustShutdownNodesOneByOneFromLargeCluster();
+            IncrementStep();
+            MustLeaveSeveralNodes();
+            IncrementStep();
+            MustShutdownSeveralNodes();
+            IncrementStep();
+            MustShutdownNodesOneByOneFromSmallCluster();
+            IncrementStep();
+            MustLeaveNodesOneByOneFromSmallCluster();
+            IncrementStep();
+            MustLogClrInfo();
         }
 
         public void MustLogSettings()
@@ -1307,13 +1334,54 @@ namespace Akka.Cluster.Tests.MultiNode
         public void MustDownPartitionedNodes()
         {
             PartitionSeveral(Settings.NumberOfNodesPartition);
-            NbrUsedRoles += Settings.NumberOfNodesPartition;
+            NbrUsedRoles -= Settings.NumberOfNodesPartition;
             EnterBarrier("after-" + Step);
         }
 
         public void MustLeaveNodesOneByOneFromLargeCluster()
         {
             RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneLarge, shutdown:false);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustShutdownNodesOneByOneFromLargeCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneLarge, shutdown: true);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLeaveSeveralNodes()
+        {
+            RemoveSeveral(Settings.NumberOfNodesLeaving, shutdown: false);
+            NbrUsedRoles -= Settings.NumberOfNodesLeaving;
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustShutdownSeveralNodes()
+        {
+            RemoveSeveral(Settings.NumberOfNodesShutdown, shutdown: true);
+            NbrUsedRoles -= Settings.NumberOfNodesShutdown;
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustShutdownNodesOneByOneFromSmallCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesShutdownOneByOneSmall, true);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLeaveNodesOneByOneFromSmallCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneSmall, false);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLogClrInfo()
+        {
+            if (Settings.Infolog)
+            {
+                Log.Info("StressSpec CLR: " + Environment.NewLine + "{0}", ClrInfo());
+            }
             EnterBarrier("after-" + Step);
         }
     }
