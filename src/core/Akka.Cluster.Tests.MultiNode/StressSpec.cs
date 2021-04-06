@@ -40,7 +40,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.test.cluster-stress-spec {
-      infolog = off
+      infolog = on
       # scale the nr-of-nodes* settings with this factor
       nr-of-nodes-factor = 1
       # not scaled
