@@ -348,6 +348,7 @@ Target "MultiNodeTests" (fun _ ->
 
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
+        setEnvironVar "akka.cluster.assert" "on" // needed to enable assert invariants for Akka.Cluster
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
 
         let projects =
@@ -388,6 +389,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 )
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
+        setEnvironVar "akka.cluster.assert" "on" // needed to enable assert invariants for Akka.Cluster
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
 
         let projects =
