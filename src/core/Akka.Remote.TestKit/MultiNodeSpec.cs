@@ -508,7 +508,6 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public void RunOn(Action thunk, params RoleName[] nodes)
         {
-            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) thunk();
         }
 
@@ -518,7 +517,6 @@ namespace Akka.Remote.TestKit
         /// </summary>
         public async Task RunOnAsync(Func<Task> thunkAsync, params RoleName[] nodes)
         {
-            if (nodes.Length == 0) throw new ArgumentException("No node given to run on.");
             if (IsNode(nodes)) await thunkAsync();
         }
 

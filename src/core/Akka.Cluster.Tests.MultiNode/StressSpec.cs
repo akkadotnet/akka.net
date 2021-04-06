@@ -40,7 +40,7 @@ namespace Akka.Cluster.Tests.MultiNode
 
             CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.test.cluster-stress-spec {
-      infolog = off
+      infolog = on
       # scale the nr-of-nodes* settings with this factor
       nr-of-nodes-factor = 1
       # not scaled
@@ -283,14 +283,14 @@ namespace Akka.Cluster.Tests.MultiNode
             string F(ClusterEvent.CurrentInternalStats stats)
             {
                 return
-                    $"CurrentClusterStats({stats.GossipStats.ReceivedGossipCount}, {stats.GossipStats.MergeCount}, " +
-                    $"{stats.GossipStats.SameCount}, {stats.GossipStats.NewerCount}, {stats.GossipStats.OlderCount}," +
-                    $"{stats.SeenBy.VersionSize}, {stats.SeenBy.SeenLatest})";
+                    $"CurrentClusterStats({stats.GossipStats?.ReceivedGossipCount}, {stats.GossipStats?.MergeCount}, " +
+                    $"{stats.GossipStats?.SameCount}, {stats.GossipStats?.NewerCount}, {stats.GossipStats?.OlderCount}," +
+                    $"{stats.SeenBy?.VersionSize}, {stats.SeenBy?.SeenLatest})";
             }
 
             return string.Join(Environment.NewLine, "ClusterStats(gossip, merge, same, newer, older, vclockSize, seenLatest)" +
                                                     Environment.NewLine +
-                                                    _clusterStatsObservedByNode.Select(x => $"{x.Key}\t{F(x.Value)}"));
+                                                    string.Join(Environment.NewLine, _clusterStatsObservedByNode.Select(x => $"{x.Key}\t{F(x.Value)}")));
         }
 
         public ClusterResultAggregator(string title, int expectedResults, StressSpecConfig.Settings settings)
@@ -546,7 +546,7 @@ namespace Akka.Cluster.Tests.MultiNode
                         return gossipStats;
                     }
 
-                    return _startStats.Value - gossipStats;
+                    return gossipStats -_startStats.Value;
                 }
 
                 var diff = MatchStats();
@@ -727,7 +727,7 @@ namespace Akka.Cluster.Tests.MultiNode
             sb.Append("Operating System: ")
                 .Append(Environment.OSVersion.Platform)
                 .Append(", ")
-                .AppendLine(RuntimeInformation.ProcessArchitecture.ToString())
+                .Append(RuntimeInformation.ProcessArchitecture.ToString())
                 .Append(", ")
                 .Append(Environment.OSVersion.VersionString)
                 .AppendLine();
@@ -745,9 +745,6 @@ namespace Akka.Cluster.Tests.MultiNode
                 .AppendLine();
 
             sb.Append("Memory: ")
-                .Append(Process.GetCurrentProcess().VirtualMemorySize64 / 1024 / 1024)
-                .Append("MB [allocated virtual memory]")
-                .AppendLine()
                 .Append(" (")
                 .Append(Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024)
                 .Append(" - ")
@@ -1034,6 +1031,8 @@ namespace Akka.Cluster.Tests.MultiNode
                     var currentRoles = Roles.Take(NbrUsedRoles - numberOfNodes).ToArray();
                     var removeRoles = Roles.Skip(currentRoles.Length).Take(numberOfNodes).ToArray();
                     var title = $"partition {numberOfNodes} in {NbrUsedRoles} nodes cluster";
+                    Console.WriteLine(title);
+                    Console.WriteLine("[{0}] are blackholing [{1}]", string.Join(",", currentRoles.Select(x => x.ToString())), string.Join(",", removeRoles.Select(x => x.ToString())));
                     CreateResultAggregator(title, expectedResults: currentRoles.Length, includeInHistory: true);
 
                     RunOn(() =>
@@ -1207,6 +1206,22 @@ namespace Akka.Cluster.Tests.MultiNode
             IncrementStep();
             MustJoinSeedNodes();
             IncrementStep();
+            MustJoinSeedNodesOneByOneToSmallCluster();
+            IncrementStep();
+            MustJoinSeveralNodesToOneNode();
+            IncrementStep();
+            MustJoinSeveralNodesToSeedNodes();
+            IncrementStep();
+            MustJoinNodesOneByOneToLargeCluster();
+            IncrementStep();
+            MustExerciseJoinRemoveJoinRemove();
+            IncrementStep();
+            MustGossipWhenIdle();
+            IncrementStep();
+            MustDownPartitionedNodes();
+            IncrementStep();
+            MustLeaveNodesOneByOneFromLargeCluster();
+            IncrementStep();
         }
 
         public void MustLogSettings()
@@ -1246,6 +1261,60 @@ namespace Akka.Cluster.Tests.MultiNode
                 NbrUsedRoles += size;
                 EnterBarrier("after-" + Step);
             });
+        }
+
+        public void MustJoinSeedNodesOneByOneToSmallCluster()
+        {
+            JoinOneByOne(Settings.NumberOfNodesJoiningOneByOneSmall);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinSeveralNodesToOneNode()
+        {
+            JoinSeveral(Settings.NumberOfNodesJoiningToOneNode, false);
+            NbrUsedRoles += Settings.NumberOfNodesJoiningToOneNode;
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinSeveralNodesToSeedNodes()
+        {
+            if (Settings.NumberOfNodesJoiningToSeedNodes > 0)
+            {
+                JoinSeveral(Settings.NumberOfNodesJoiningToSeedNodes, true);
+                NbrUsedRoles += Settings.NumberOfNodesJoiningToSeedNodes;
+            }
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustJoinNodesOneByOneToLargeCluster()
+        {
+            JoinOneByOne(Settings.NumberOfNodesJoiningOneByOneLarge);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustExerciseJoinRemoveJoinRemove()
+        {
+            ExerciseJoinRemove("exercise join/remove", Settings.JoinRemoveDuration);
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustGossipWhenIdle()
+        {
+            IdleGossip("idle gossip");
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustDownPartitionedNodes()
+        {
+            PartitionSeveral(Settings.NumberOfNodesPartition);
+            NbrUsedRoles += Settings.NumberOfNodesPartition;
+            EnterBarrier("after-" + Step);
+        }
+
+        public void MustLeaveNodesOneByOneFromLargeCluster()
+        {
+            RemoveOneByOne(Settings.NumberOfNodesLeavingOneByOneLarge, shutdown:false);
+            EnterBarrier("after-" + Step);
         }
     }
 }
