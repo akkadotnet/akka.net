@@ -29,7 +29,8 @@ namespace Akka.Cluster.Tests.MultiNode
         public int TotalNumberOfNodes => Environment.GetEnvironmentVariable("MultiNode.Akka.Cluster.Stress.NrOfNodes") switch
         {
             string e when string.IsNullOrEmpty(e) => 13,
-            string val => int.Parse(val)
+            string val => int.Parse(val),
+            _ => 13
         };
 
         public StressSpecConfig()
@@ -673,7 +674,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
     }
 
-    public abstract class StressSpec : MultiNodeClusterSpec
+    public class StressSpec : MultiNodeClusterSpec
     {
         public StressSpecConfig.Settings Settings { get; }
         public TestProbe IdentifyProbe;
@@ -688,6 +689,8 @@ namespace Akka.Cluster.Tests.MultiNode
             Sys.EventStream.Publish(new Mute(new ErrorFilter(typeof(ApplicationException), new ContainsString("Simulated exception"))));
             MuteDeadLetters(sys, typeof(AggregatedClusterResult), typeof(StatsResult), typeof(PhiResult), typeof(RetryTick));
         }
+
+        public StressSpec() : this(new StressSpecConfig()){ }
 
         protected StressSpec(StressSpecConfig config) : base(config, typeof(StressSpec))
         {
@@ -1200,7 +1203,8 @@ namespace Akka.Cluster.Tests.MultiNode
         {
             MustLogSettings();
             IncrementStep();
-
+            MustJoinSeedNodes();
+            IncrementStep();
         }
 
         public void MustLogSettings()
