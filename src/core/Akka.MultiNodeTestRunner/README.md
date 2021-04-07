@@ -37,8 +37,8 @@ C:> Akka.MultiNodeTestRunner.exe [assembly name]
 - __-Dmultinode.reporter__ : The report type this runner should export in. Valid values are `trx`, `teamcity`, and `console`. Note that report files are exported to the current directory for `trx`. Default value is `console`.
 - __-Dmultinode.clear-output__ : This flag will clear the output folder before any test is run when it is set to 1. Default value is 0.
 - __-Dmultinode.spec__ : Apply a filter to the test class names within the dll. Any fully qualified test class name that contains this string will run. Default value is (all).
-- __-Dmultinode.include__ : A "`,`" (comma) separted list of wildcard pattern to be matched and included in the tests. Default value is `*` (all). The filter is applied on the complete name of the test `Namespace.Class+MethodName`
-- __-Dmultinode.exclude__ : A "`,`" (comma) separted list of wildcard pattern to be matched and excluded in the tests. Default value is (none). The filter is applied on the complete name of the test `Namespace.Class+MethodName`
+- __-Dmultinode.include__ : A "`,`" (comma) separted list of wildcard pattern to be matched and included in the tests. Default value is `*` (all). The filter is applied on the name of the test method.
+- __-Dmultinode.exclude__ : A "`,`" (comma) separted list of wildcard pattern to be matched and excluded in the tests. Default value is (none). The filter is applied on the name of the test method.
 
 ## Deprecated Commandline Arguments
 - __-Dmultinode.teamcity__ : This argument is no longer processed. Use __-Dmultinode.reporter__ with `teamcity` value instead.

@@ -254,18 +254,16 @@ namespace Akka.MultiNodeTestRunner
                                 continue;
                             }
 
-                            var fullName = $"{node.TypeName}+{node.MethodName}";
-
                             // include filter
-                            if (!include.IsMatch(fullName))
+                            if (!include.IsMatch(node.MethodName))
                             {
-                                PublishRunnerMessage($"Skipping [{fullName}] (Include filter)");
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Include filter)");
                                 continue;
                             }
 
-                            if (exclude.IsMatch(fullName))
+                            if (exclude.IsMatch(node.MethodName))
                             {
-                                PublishRunnerMessage($"Skipping [{fullName}] (Exclude filter)");
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Exclude filter)");
                                 continue;
                             }
 
