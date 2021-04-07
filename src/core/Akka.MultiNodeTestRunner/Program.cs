@@ -117,6 +117,20 @@ namespace Akka.MultiNodeTestRunner
         ///             otherwise all tests will be executed
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.include={include filter}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which matches the comma separated wildcard
+        ///             filter will be executed, otherwise all tests will be executed
+        ///     </description>
+        /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.exclude={exclude filter}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which does not match the comma separated
+        ///             wildcard filter will be executed, otherwise all tests will be executed
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
