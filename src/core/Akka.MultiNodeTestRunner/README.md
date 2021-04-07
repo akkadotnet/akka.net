@@ -15,7 +15,17 @@ Right now the only options for running the `MultiNodeTestRunner` is to build fro
 ## Commandline Arguments
 
 ```
-C:> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.output-directory={dir-path}] [-Dmultinode.failed-specs-directory={folder-name}] [-Dmultinode.loglevel={DEBUG|INFO|WARNING|ERROR}] [-Dmultinode.listen-address={ip-address}] [-Dmultinode.listen-port={ip-port}] [-Dmultinode.reporter={trx|teamcity|console}] [-Dmultinode.clear-output={0|1}] [-Dmultinode.spec={spec-filter}] [-Dmultinode.include={include-filter}] [-Dmultinode.exclude={exclude-filter}] 
+C:> Akka.MultiNodeTestRunner.exe [assembly name] 
+    [-Dmultinode.output-directory={dir-path}] 
+    [-Dmultinode.failed-specs-directory={folder-name}] 
+    [-Dmultinode.loglevel={DEBUG|INFO|WARNING|ERROR}] 
+    [-Dmultinode.listen-address={ip-address}] 
+    [-Dmultinode.listen-port={ip-port}] 
+    [-Dmultinode.reporter={trx|teamcity|console}] 
+    [-Dmultinode.clear-output={0|1}] 
+    [-Dmultinode.spec={spec-filter}] 
+    [-Dmultinode.include={include-filter}] 
+    [-Dmultinode.exclude={exclude-filter}] 
 ```
 
 - __assembly name__ : The full path or name of the assembly containing `MultiNodeSpec` tests.
@@ -27,8 +37,8 @@ C:> Akka.MultiNodeTestRunner.exe [assembly name] [-Dmultinode.output-directory={
 - __-Dmultinode.reporter__ : The report type this runner should export in. Valid values are `trx`, `teamcity`, and `console`. Note that report files are exported to the current directory for `trx`. Default value is `console`.
 - __-Dmultinode.clear-output__ : This flag will clear the output folder before any test is run when it is set to 1. Default value is 0.
 - __-Dmultinode.spec__ : Apply a filter to the test class names within the dll. Any fully qualified test class name that contains this string will run. Default value is (all).
-- __-Dmultinode.include__ : a "`,`" (comma) separted list of wildcard pattern to be matched and included in the tests. Default value is `*` (all). The filter is applied on the complete name of the test `Namespace.Class+MethodName`
-- __-Dmultinode.exclude__ : a "`,`" (comma) separted list of wildcard pattern to be matched and excluded in the tests. Default value is (none). The filter is applied on the complete name of the test `Namespace.Class+MethodName`
+- __-Dmultinode.include__ : A "`,`" (comma) separted list of wildcard pattern to be matched and included in the tests. Default value is `*` (all). The filter is applied on the complete name of the test `Namespace.Class+MethodName`
+- __-Dmultinode.exclude__ : A "`,`" (comma) separted list of wildcard pattern to be matched and excluded in the tests. Default value is (none). The filter is applied on the complete name of the test `Namespace.Class+MethodName`
 
 ## Deprecated Commandline Arguments
 - __-Dmultinode.teamcity__ : This argument is no longer processed. Use __-Dmultinode.reporter__ with `teamcity` value instead.
