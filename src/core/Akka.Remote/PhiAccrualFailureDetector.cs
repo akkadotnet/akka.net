@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -35,12 +36,12 @@ namespace Akka.Remote
     /// </summary>
     public class PhiAccrualFailureDetector : FailureDetector
     {
-        private double _threshold;
-        private int _maxSampleSize;
+        private readonly double _threshold;
+        private readonly int _maxSampleSize;
         private TimeSpan _minStdDeviation;
         private TimeSpan _acceptableHeartbeatPause;
         private TimeSpan _firstHeartbeatEstimate;
-        private Clock _clock;
+        private readonly Clock _clock;
 
         /// <summary>
         /// Procedural constructor for PhiAccrualDetector
@@ -182,7 +183,7 @@ namespace Akka.Remote
         {
             var timestamp = _clock();
             var oldState = state;
-            HeartbeatHistory newHistory = null;
+            HeartbeatHistory newHistory;
 
             if (!oldState.TimeStamp.HasValue)
             {
@@ -275,14 +276,14 @@ namespace Akka.Remote
                 return -Math.Log10(1.0d - 1.0d/(1.0d + e));
         }
 
-        private long MinStdDeviationMillis
+        private double MinStdDeviationMillis
         {
-            get { return (long)_minStdDeviation.TotalMilliseconds; }
+            get { return _minStdDeviation.TotalMilliseconds; }
         }
 
-        private long AcceptableHeartbeatPauseMillis
+        private double AcceptableHeartbeatPauseMillis
         {
-            get { return (long)_acceptableHeartbeatPause.TotalMilliseconds; }
+            get { return _acceptableHeartbeatPause.TotalMilliseconds; }
         }
 
         private double EnsureValidStdDeviation(double stdDeviation)
@@ -300,20 +301,20 @@ namespace Akka.Remote
     /// The stats (mean, variance, stdDeviation) are not defined for empty
     /// <see cref="HeartbeatHistory"/>, i.e. throws Exception
     /// </summary>
-    internal class HeartbeatHistory
+    internal readonly struct HeartbeatHistory
     {
-        private int _maxSampleSize;
-        private List<long> _intervals;
-        private long _intervalSum;
-        private long _squaredIntervalSum;
+        private readonly int _maxSampleSize;
+        private readonly ImmutableList<long> _intervals;
+        private readonly long _intervalSum;
+        private readonly long _squaredIntervalSum;
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="HeartbeatHistory"/> instance.
         /// </summary>
-        /// <param name="maxSampleSize">TBD</param>
-        /// <param name="intervals">TBD</param>
-        /// <param name="intervalSum">TBD</param>
-        /// <param name="squaredIntervalSum">TBD</param>
+        /// <param name="maxSampleSize">The maximum number of samples to retain. Older ones are dropped once intervals exceeds this value.</param>
+        /// <param name="intervals">The range of recorded time intervals.</param>
+        /// <param name="intervalSum">The sum of the recorded time intervals.</param>
+        /// <param name="squaredIntervalSum">The squared sum of the intervals.</param>
         /// <exception cref="ArgumentOutOfRangeException">
         /// This exception is thrown for the following reasons:
         /// <ul>
@@ -322,7 +323,7 @@ namespace Akka.Remote
         /// <li>The specified <paramref name="squaredIntervalSum"/> is less than zero.</li>
         /// </ul>
         /// </exception>
-        public HeartbeatHistory(int maxSampleSize, List<long> intervals, long intervalSum, long squaredIntervalSum)
+        public HeartbeatHistory(int maxSampleSize, ImmutableList<long> intervals, long intervalSum, long squaredIntervalSum)
         {
             _maxSampleSize = maxSampleSize;
             _intervals = intervals;
@@ -337,29 +338,11 @@ namespace Akka.Remote
                 throw new ArgumentOutOfRangeException(nameof(squaredIntervalSum), $"squaredIntervalSum must be >= 0, got {squaredIntervalSum}");
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public double Mean
-        {
-            get { return ((double)_intervalSum / _intervals.Count); }
-        }
+        public double Mean => ((double)_intervalSum / _intervals.Count);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public double Variance
-        {
-            get { return ((double)_squaredIntervalSum / _intervals.Count) - (Mean * Mean); }
-        }
+        public double Variance => ((double)_squaredIntervalSum / _intervals.Count) - (Mean * Mean);
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public double StdDeviation
-        {
-            get { return Math.Sqrt(Variance); }
-        }
+        public double StdDeviation => Math.Sqrt(Variance);
 
         /// <summary>
         /// Increments the <see cref="HeartbeatHistory"/>.
@@ -371,7 +354,7 @@ namespace Akka.Remote
         {
             if (history._intervals.Count < history._maxSampleSize)
             {
-                return new HeartbeatHistory(history._maxSampleSize, history._intervals.Concat(new[] { interval }).ToList(),
+                return new HeartbeatHistory(history._maxSampleSize, history._intervals.Add(interval),
                     history._intervalSum + interval, history._squaredIntervalSum + Pow2(interval));
             }
             else
@@ -382,7 +365,8 @@ namespace Akka.Remote
 
         private static HeartbeatHistory DropOldest(HeartbeatHistory history)
         {
-            return new HeartbeatHistory(history._maxSampleSize, history._intervals.Skip(1).ToList(), history._intervalSum - history._intervals.First(), history._squaredIntervalSum - Pow2(history._intervals.First()));
+            return new HeartbeatHistory(history._maxSampleSize, history._intervals.RemoveAt(0), history._intervalSum - history._intervals.First(), 
+                history._squaredIntervalSum - Pow2(history._intervals.First()));
         }
 
         private static long Pow2(long x)
@@ -398,11 +382,11 @@ namespace Akka.Remote
         /// The stats (mean, variance, stdDeviation) are not defined for empty
         /// HeartbeatHistory and will throw DivideByZero exceptions
         /// </summary>
-        /// <param name="maxSampleSize">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="maxSampleSize">The maximum number of samples to include in this history.</param>
+        /// <returns>A new <see cref="HeartbeatHistory"/> instance.</returns>
         public static HeartbeatHistory Apply(int maxSampleSize)
         {
-            return new HeartbeatHistory(maxSampleSize, new List<long>(), 0L, 0L);
+            return new HeartbeatHistory(maxSampleSize, ImmutableList<long>.Empty, 0L, 0L);
         }
 
         #endregion
