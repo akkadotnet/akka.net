@@ -130,7 +130,7 @@ namespace Akka.MultiNodeTestRunner
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
-                throw new ArgumentException("Invalid argument provided for -Dteamcity");
+                throw new ArgumentException("Invalid argument provided for -Dmultinode.teamcity");
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
@@ -142,6 +142,9 @@ namespace Akka.MultiNodeTestRunner
             var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
             if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))
                 Directory.Delete(OutputDirectory, true);
+
+            var include = new WildcardPatterns(CommandLine.GetPropertyOrDefault("multinode.include", null), true);
+            var exclude = new WildcardPatterns(CommandLine.GetPropertyOrDefault("multinode.exclude", null), false);
 
             Props coordinatorProps;
             switch (reporter.ToLowerInvariant())
@@ -221,25 +224,41 @@ namespace Akka.MultiNodeTestRunner
                     {
                         foreach (var test in discovery.Tests.Reverse())
                         {
-                            if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                            var node = test.Value.First();
+                            if (!string.IsNullOrEmpty(node.SkipReason))
                             {
-                                PublishRunnerMessage($"Skipping test {test.Value.First().MethodName}. Reason - {test.Value.First().SkipReason}");
+                                PublishRunnerMessage($"Skipping test {node.MethodName}. Reason - {node.SkipReason}");
                                 continue;
                             }
 
                             if (!string.IsNullOrWhiteSpace(specName) &&
-                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
+                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(node.TestName,
                                     specName,
                                     CompareOptions.IgnoreCase) < 0)
                             {
-                                PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Filtering)");
+                                continue;
+                            }
+
+                            var fullName = $"{node.TypeName}+{node.MethodName}";
+
+                            // include filter
+                            if (!include.IsMatch(fullName))
+                            {
+                                PublishRunnerMessage($"Skipping [{fullName}] (Include filter)");
+                                continue;
+                            }
+
+                            if (exclude.IsMatch(fullName))
+                            {
+                                PublishRunnerMessage($"Skipping [{fullName}] (Exclude filter)");
                                 continue;
                             }
 
                             var processes = new List<Process>();
 
-                            PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
-                            Console.Out.WriteLine($"Starting test {test.Value.First().MethodName}");
+                            PublishRunnerMessage($"Starting test {node.MethodName}");
+                            Console.Out.WriteLine($"Starting test {node.MethodName}");
 
                             StartNewSpec(test.Value);
 #if CORECLR
