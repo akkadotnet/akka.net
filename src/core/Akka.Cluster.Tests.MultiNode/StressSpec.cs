@@ -273,8 +273,7 @@ namespace Akka.Cluster.Tests.MultiNode
             if (_phiValuesObservedByNode.IsEmpty) return string.Empty;
             else
             {
-                //var lines = _phiValuesObservedByNode.Select(
-                //    x => x.Value.SelectMany(y => FormatPhiLine(x.Key, y.Address, y)));
+
                 var lines = (from mon in _phiValuesObservedByNode from phi in mon.Value select FormatPhiLine(mon.Key, phi.Address, phi));
                 return FormatPhiHeader + Environment.NewLine + string.Join(Environment.NewLine, lines);
             }
