@@ -26,7 +26,7 @@ namespace Akka.Cluster
     ///     - Unreachable if any observer node considers it as Unreachable
     ///     - Reachable otherwise, i.e. no observer node considers it as Unreachable
     /// </summary>
-    internal class Reachability //TODO: ISerializable?
+    internal class Reachability
     {
         /// <summary>
         ///     TBD

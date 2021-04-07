@@ -510,7 +510,9 @@ namespace Akka.Cluster
             foreach (var r in removedReceivers)
             {
                 if (FailureDetector.IsAvailable(r.Address))
+                {
                     FailureDetector.Remove(r.Address);
+                }
                 else
                 {
                     adjustedOldReceiversNowUnreachable = adjustedOldReceiversNowUnreachable.Add(r);
@@ -674,7 +676,7 @@ namespace Akka.Cluster
                 var (remaining, slice1) = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
-                    ? slice1 // or, wrap0around
+                    ? slice1 // or, wrap-around
                     : take(remaining, NodeRing().TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
 
                 return slice.ToImmutableHashSet();
@@ -743,8 +745,8 @@ namespace Akka.Cluster
             /// <inheritdoc/>
             public int Compare(UniqueAddress x, UniqueAddress y)
             {
-                var ha = x.GetHashCode();
-                var hb = y.GetHashCode();
+                var ha = x.Uid;
+                var hb = y.Uid;
                 var c = ha.CompareTo(hb);
                 return c == 0 ? Member.AddressOrdering.Compare(x.Address, y.Address) : c;
             }

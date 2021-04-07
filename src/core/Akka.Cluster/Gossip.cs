@@ -516,9 +516,6 @@ namespace Akka.Cluster
     /// </summary>
     class GossipEnvelope : IClusterMessage
     {
-        //TODO: Serialization?
-        //TODO: ser stuff?
-
         readonly UniqueAddress _from;
         readonly UniqueAddress _to;
 

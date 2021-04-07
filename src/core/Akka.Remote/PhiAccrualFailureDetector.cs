@@ -209,8 +209,7 @@ namespace Akka.Remote
             }
 
             var newState = new State(newHistory, timestamp);
-            Console.WriteLine("Replacing state with timestamp [{0}] with timestamp [{1}] for node {2}", oldState.TimeStamp, newState.TimeStamp, Address);
-            
+
             //if we won the race then update else try again
             if(!_state.CompareAndSet(oldState, newState)) HeartBeat();
         }
@@ -250,8 +249,6 @@ namespace Akka.Remote
                     var history = oldState.History;
                     var mean = history.Mean;
                     var stdDeviation = EnsureValidStdDeviation(history.StdDeviation);
-                    if(timeDiff > (mean * 2))
-                        Console.WriteLine("About to process very large timeDiff: {0} vs mean: {1} for node {2}", timeDiff, mean, Address);
                     return Phi(timeDiff, mean + AcceptableHeartbeatPauseMillis, stdDeviation);
                 }
             }
