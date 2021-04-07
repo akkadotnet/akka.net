@@ -122,6 +122,7 @@ namespace Akka.Remote
                 }
                 break;
             }
+            Console.WriteLine("Removed heartbeats to {0}", resource);
         }
 
         /// <summary>
