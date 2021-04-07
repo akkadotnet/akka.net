@@ -507,7 +507,7 @@ namespace Akka.Cluster
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
         {
-            return Uid;
+            return MurmurHash.ByteHash(BitConverter.GetBytes(Uid));
         }
 
         /// <summary>

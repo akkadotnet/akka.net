@@ -426,8 +426,22 @@ namespace Akka.Cluster.Tests.MultiNode
                 {
                     var previous = PhiByNodeDefault(node);
                     var p = Phi(node);
+
                     if (p > 0 || _cluster.FailureDetector.IsMonitoring(node))
                     {
+                        if (double.IsInfinity(p))
+                        {
+                            _log.Warning("Detected phi value of infinity for [{0}] - ", node);
+                            var (history, time) = _cluster.FailureDetector.GetFailureDetector(node) switch
+                            {
+                                PhiAccrualFailureDetector fd => (fd.state.History, fd.state.TimeStamp),
+                                _ => (HeartbeatHistory.Apply(1), null)
+                            };
+                            _log.Warning("PhiValues: (Timestamp={0}, Mean={1}, Variance={2}, StdDeviation={3}, Intervals=[{4}])",time, 
+                                history.Mean, history.Variance, history.StdDeviation,
+                                string.Join(",", history.Intervals));
+                        }
+
                         var aboveOne = !double.IsInfinity(p) && p > 1.0d ? 1 : 0;
                         _phiByNode = _phiByNode.SetItem(node, new PhiValue(node,
                             previous.CountAboveOne + aboveOne,
@@ -483,8 +497,6 @@ namespace Akka.Cluster.Tests.MultiNode
             _checkPhiTask.Cancel();
             base.PostStop();
         }
-
-        public ITimerScheduler Timers { get; set; }
     }
 
     internal readonly struct PhiValue : IComparable<PhiValue>
