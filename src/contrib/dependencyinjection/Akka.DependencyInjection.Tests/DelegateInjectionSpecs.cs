@@ -44,13 +44,16 @@ namespace Akka.DependencyInjection.Tests
         }
 
         [Fact]
-        public void DI_should_be_able_to_retrieve_singleton_using_delegate()
+        public async Task DI_should_be_able_to_retrieve_singleton_using_delegate()
         {
             var actor = _serviceProvider.GetRequiredService<EchoActorProvider>()();
 
             var task = actor.Ask("echo");
             task.Wait(TimeSpan.FromSeconds(3));
             task.Result.ShouldBe("echo");
+
+            var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
+            await sys.Terminate();
         }
 
         internal class EchoActor : ReceiveActor
