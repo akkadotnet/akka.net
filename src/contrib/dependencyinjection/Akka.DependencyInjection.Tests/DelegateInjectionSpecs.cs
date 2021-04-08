@@ -56,6 +56,38 @@ namespace Akka.DependencyInjection.Tests
             await sys.Terminate();
         }
 
+        [Fact]
+        public async Task DI_should_be_able_to_retrieve_singleton_using_delegate_from_inside_actor()
+        {
+            var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
+            var actor = system.ActorOf(ParentActor.Props(system));
+            
+            var task = actor.Ask("echo");
+            task.Wait(TimeSpan.FromSeconds(3));
+            task.Result.ShouldBe("echo");
+
+            var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
+            await sys.Terminate();
+        }
+
+        internal class ParentActor : UntypedActor
+        {
+            public static Props Props(ActorSystem system) =>
+                ServiceProvider.For(system).Props<ParentActor>();
+
+            private readonly IActorRef _echoActor;
+
+            public ParentActor(IServiceProvider provider)
+            {
+                _echoActor = provider.GetRequiredService<EchoActorProvider>()();
+            }
+
+            protected override void OnReceive(object message)
+            {
+                _echoActor.Forward(message);
+            }
+        }
+
         internal class EchoActor : ReceiveActor
         {
             public static Props Props() => Akka.Actor.Props.Create<EchoActor>();
