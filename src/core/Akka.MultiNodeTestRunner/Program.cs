@@ -117,6 +117,20 @@ namespace Akka.MultiNodeTestRunner
         ///             otherwise all tests will be executed
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.include={include filter}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which matches the comma separated wildcard
+        ///             filter will be executed, otherwise all tests will be executed
+        ///     </description>
+        /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.exclude={exclude filter}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which does not match the comma separated
+        ///             wildcard filter will be executed, otherwise all tests will be executed
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
@@ -130,7 +144,7 @@ namespace Akka.MultiNodeTestRunner
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
-                throw new ArgumentException("Invalid argument provided for -Dteamcity");
+                throw new ArgumentException("Invalid argument provided for -Dmultinode.teamcity");
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
@@ -142,6 +156,9 @@ namespace Akka.MultiNodeTestRunner
             var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
             if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))
                 Directory.Delete(OutputDirectory, true);
+
+            var include = new WildcardPatterns(CommandLine.GetPropertyOrDefault("multinode.include", null), true);
+            var exclude = new WildcardPatterns(CommandLine.GetPropertyOrDefault("multinode.exclude", null), false);
 
             Props coordinatorProps;
             switch (reporter.ToLowerInvariant())
@@ -221,25 +238,39 @@ namespace Akka.MultiNodeTestRunner
                     {
                         foreach (var test in discovery.Tests.Reverse())
                         {
-                            if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                            var node = test.Value.First();
+                            if (!string.IsNullOrEmpty(node.SkipReason))
                             {
-                                PublishRunnerMessage($"Skipping test {test.Value.First().MethodName}. Reason - {test.Value.First().SkipReason}");
+                                PublishRunnerMessage($"Skipping test {node.MethodName}. Reason - {node.SkipReason}");
                                 continue;
                             }
 
                             if (!string.IsNullOrWhiteSpace(specName) &&
-                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
+                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(node.TestName,
                                     specName,
                                     CompareOptions.IgnoreCase) < 0)
                             {
-                                PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Filtering)");
+                                continue;
+                            }
+
+                            // include filter
+                            if (!include.IsMatch(node.MethodName))
+                            {
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Include filter)");
+                                continue;
+                            }
+
+                            if (exclude.IsMatch(node.MethodName))
+                            {
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Exclude filter)");
                                 continue;
                             }
 
                             var processes = new List<Process>();
 
-                            PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
-                            Console.Out.WriteLine($"Starting test {test.Value.First().MethodName}");
+                            PublishRunnerMessage($"Starting test {node.MethodName}");
+                            Console.Out.WriteLine($"Starting test {node.MethodName}");
 
                             StartNewSpec(test.Value);
 #if CORECLR
