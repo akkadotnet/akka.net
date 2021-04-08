@@ -102,6 +102,32 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectSubscription();
             probe.ToStrict(TimeSpan.FromSeconds(1)).Aggregate((s, s1) => s + s1).Should().Be("[1]");
         }
+        
+        [Fact]
+        public void A_Intersperse_must_not_surround_empty_stream_with_null_start_and_stop()
+        {
+            var probe =
+                Source.From(new int[0])
+                    .Select(x => x.ToString())
+                    .Intersperse(",")
+                    .RunWith(this.SinkProbe<string>(), Materializer);
+
+            probe.ExpectSubscription();
+            probe.ToStrict(TimeSpan.FromSeconds(1)).Count().Should().Be(0);
+        }
+        
+        [Fact]
+        public void A_Intersperse_must_not_surround_single_element_stream_with_null_start_and_stop()
+        {
+            var probe =
+                Source.From(new int[]{1})
+                    .Select(x => x.ToString())
+                    .Intersperse(",")
+                    .RunWith(this.SinkProbe<string>(), Materializer);
+
+            probe.ExpectSubscription();
+            probe.ToStrict(TimeSpan.FromSeconds(1)).Aggregate((s, s1) => s + s1).Should().Be("1");
+        }
 
         [Fact]
         public void A_Intersperse_must__complete_the_stage_when_the_Source_has_been_completed()

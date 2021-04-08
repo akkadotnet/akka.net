@@ -1518,7 +1518,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFinish()
             {
-                _logic.EmitMultiple(_stage.Outlet, new[] { _stage._start, _stage._end });
+                if (_stage.InjectStartEnd) _logic.EmitMultiple(_stage.Outlet, new[] { _stage._start, _stage._end });
                 _logic.CompleteStage();
             }
         }
