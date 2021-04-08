@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using Akka.Configuration;
 
@@ -30,7 +31,23 @@ namespace Akka.Remote.TestKit
         private static readonly Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
         {
             var dictionary = new StringDictionary();
-            foreach (var arg in Environment.GetCommandLineArgs())
+
+            // Detect and fix PowerShell command line input.
+            // PowerShell splits command line arguments on '.'
+            var args = Environment.GetCommandLineArgs();
+            var fixedArgs = new List<string>();
+            for (var i = 1; i < args.Length - 1; ++i)
+            {
+                if (args[i].Equals("-Dmultinode") && args[i + 1].StartsWith("."))
+                {
+                    fixedArgs.Add(args[i] + args[i+1]);
+                    ++i;
+                }
+            }
+            if(fixedArgs.Count == 0)
+                fixedArgs.AddRange(args);
+
+            foreach (var arg in fixedArgs)
             {
                 if (!arg.StartsWith("-D")) continue;
                 var tokens = arg.Substring(2).Split('=');
