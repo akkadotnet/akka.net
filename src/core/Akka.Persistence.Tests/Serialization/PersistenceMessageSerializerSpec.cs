@@ -47,6 +47,23 @@ namespace Akka.Persistence.Tests.Serialization
         }
 
         [Fact]
+        public void MessageSerializer_should_serialize_events_with_no_manifest_and_null_type()
+        {
+            var p1 = new Persistent(new MyPayload("a"), sender: TestActor);
+            var bytes = _serializer.ToBinary(p1);
+            var back = _serializer.FromBinary(bytes, null);
+
+            back.Should().BeOfType<Persistent>();
+            var persisted = (Persistent)back;
+            persisted.Payload.Should().BeOfType<MyPayload>();
+            persisted.Sender.Should().BeEquivalentTo(TestActor);
+            var payload = (MyPayload)persisted.Payload;
+
+            // Yes, the data isn't "a" but ".a.", the custom serializer added these dots.
+            payload.Data.ShouldBe(".a."); 
+        }
+
+        [Fact]
         public void MessageSerializer_should_serialize_state_change_event()
         {
             var p1 = new Persistent(new PersistentFSM.StateChangeEvent("a", TimeSpan.FromSeconds(10)), sender: TestActor);
