@@ -150,6 +150,7 @@ namespace Akka.Persistence.Serialization
 
         public override object FromBinary(byte[] bytes, Type type)
         {
+            if(type == null) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
             if (type == typeof(Persistent)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
             if (type == typeof(IPersistentRepresentation)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
             if (type == typeof(AtomicWrite)) return GetAtomicWrite(bytes);
