@@ -60,13 +60,11 @@ namespace Akka.Serialization
                 preserveObjectReferences: config.GetBoolean(
                     "preserve-object-references", true),
                 converters: GetConverterTypes(config),
-                config.GetBoolean("use-pooled-string-builder", true),
-                (int)Math.Min(
-                    config.GetByteSize("pooled-string-builder-minsize", 2048) ??
-                    2048, int.MaxValue),
-                (int)Math.Min(
-                    config.GetByteSize("pooled-string-builder-maxsize",
-                        32768) ?? 32768, int.MaxValue)
+                usePooledStringBuilder: config.GetBoolean("use-pooled-string-builder", true),
+                stringBuilderMinSize:config.GetInt("pooled-string-builder-minsize", 2048),
+                stringBuilderMaxSize:
+                    config.GetInt("pooled-string-builder-maxsize",
+                        32768)
             );
         }
 
@@ -297,12 +295,13 @@ namespace Akka.Serialization
             try
             {
                 sb = _sbPool.Get();
-                var ser = JsonSerializer.CreateDefault(Settings);
-                using (var tw = new StringWriter(sb))
+                
+                using (var tw = new StringWriter(sb, CultureInfo.InvariantCulture))
                 {
+                    var ser = JsonSerializer.CreateDefault(Settings);
+                    ser.Formatting = Formatting.None;
                     using (var jw = new JsonTextWriter(tw))
                     {
-                        ser.Formatting = Formatting.None;
                         ser.Serialize(jw, obj);
                     }
                     return Encoding.UTF8.GetBytes(tw.ToString());

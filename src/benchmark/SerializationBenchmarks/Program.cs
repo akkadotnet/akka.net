@@ -71,11 +71,11 @@ serialization-settings {{
         private ActorSystem _sys_pool;
         private Serializer _noPoolSer;
         private Serializer _poolSer;
-
+        private const int _numIters = 10000; 
         [Benchmark]
         public void Pooling()
         {
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < _numIters; i++)
             {
                 _poolSer.ToBinary(testObj);
             }
@@ -83,7 +83,7 @@ serialization-settings {{
         [Benchmark]
         public void NoPooling()
         {
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < _numIters; i++)
             {
                 _noPoolSer.ToBinary(testObj);
             }
