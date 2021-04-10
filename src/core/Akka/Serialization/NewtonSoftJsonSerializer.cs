@@ -186,17 +186,7 @@ namespace Akka.Serialization
                             settings.StringBuilderMaxSize
                     });
             }
-            Settings = CreateInternalSettings(system, settings,this);
-            var settingsNoFormat = CreateInternalSettings(system, settings,this);
-            settingsNoFormat.Formatting = Formatting.None;
-            _serializer = JsonSerializer.Create(Settings);
-            _formattingNoneSerializer = JsonSerializer.Create(settingsNoFormat);
-        }
-
-        private static JsonSerializerSettings CreateInternalSettings(
-            ExtendedActorSystem system, NewtonSoftJsonSerializerSettings settings, NewtonSoftJsonSerializer surrogateParent)
-        {
-            var newSettings = new JsonSerializerSettings
+            Settings = new JsonSerializerSettings
             {
                 PreserveReferencesHandling = settings.PreserveObjectReferences
                     ? PreserveReferencesHandling.Objects
@@ -217,29 +207,32 @@ namespace Akka.Serialization
                     .Get<NewtonSoftJsonSerializerSetup>()
                     .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => { }));
 
-                settingsSetup.ApplySettings(newSettings);
+                settingsSetup.ApplySettings(Settings);
             }
 
             var converters = settings.Converters
                 .Select(type => CreateConverter(type, system))
                 .ToList();
 
-            converters.Add(new SurrogateConverter(surrogateParent));
+            converters.Add(new SurrogateConverter(this));
             converters.Add(new DiscriminatedUnionConverter());
 
             foreach (var converter in converters)
             {
-                newSettings.Converters.Add(converter);
+                Settings.Converters.Add(converter);
             }
 
-            newSettings.ObjectCreationHandling =
+            Settings.ObjectCreationHandling =
                 ObjectCreationHandling
                     .Replace; //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
-            newSettings.ContractResolver = new AkkaContractResolver();
-            return newSettings;
+            Settings.ContractResolver = new AkkaContractResolver();
+            
+            _serializer = JsonSerializer.Create(Settings);
+            _formattingNoneSerializer = JsonSerializer.CreateDefault(Settings);
+            _formattingNoneSerializer.Formatting = Formatting.None;
         }
 
-         
+
 
         private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
         {
