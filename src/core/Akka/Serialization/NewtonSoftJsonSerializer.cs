@@ -57,12 +57,17 @@ namespace Akka.Serialization
 
             return new NewtonSoftJsonSerializerSettings(
                 encodeTypeNames: config.GetBoolean("encode-type-names", true),
-                preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
+                preserveObjectReferences: config.GetBoolean(
+                    "preserve-object-references", true),
                 converters: GetConverterTypes(config),
-                config.GetBoolean("use-pooled-string-builder",true),
-                config.GetInt("pooled-string-builder-minsize",2048),
-                config.GetInt("pooled-string-builder-maxsize", 32768)
-                );
+                config.GetBoolean("use-pooled-string-builder", true),
+                (int)Math.Min(
+                    config.GetByteSize("pooled-string-builder-minsize", 2048) ??
+                    2048, int.MaxValue),
+                (int)Math.Min(
+                    config.GetByteSize("pooled-string-builder-maxsize",
+                        32768) ?? 32768, int.MaxValue)
+            );
         }
 
         private static IEnumerable<Type> GetConverterTypes(Config config)
@@ -181,15 +186,15 @@ namespace Akka.Serialization
                             settings.StringBuilderMaxSize
                     });
             }
-            Settings = createInternalSettings(system, settings);
-            var settingsNoFormat = createInternalSettings(system, settings);
+            Settings = CreateInternalSettings(system, settings,this);
+            var settingsNoFormat = CreateInternalSettings(system, settings,this);
             settingsNoFormat.Formatting = Formatting.None;
             _serializer = JsonSerializer.Create(Settings);
             _formattingNoneSerializer = JsonSerializer.Create(settingsNoFormat);
         }
 
-        private JsonSerializerSettings createInternalSettings(
-            ExtendedActorSystem system, NewtonSoftJsonSerializerSettings settings)
+        private static JsonSerializerSettings CreateInternalSettings(
+            ExtendedActorSystem system, NewtonSoftJsonSerializerSettings settings, NewtonSoftJsonSerializer surrogateParent)
         {
             var newSettings = new JsonSerializerSettings
             {
@@ -212,14 +217,14 @@ namespace Akka.Serialization
                     .Get<NewtonSoftJsonSerializerSetup>()
                     .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => { }));
 
-                settingsSetup.ApplySettings(Settings);
+                settingsSetup.ApplySettings(newSettings);
             }
 
             var converters = settings.Converters
                 .Select(type => CreateConverter(type, system))
                 .ToList();
 
-            converters.Add(new SurrogateConverter(this));
+            converters.Add(new SurrogateConverter(surrogateParent));
             converters.Add(new DiscriminatedUnionConverter());
 
             foreach (var converter in converters)
@@ -231,10 +236,6 @@ namespace Akka.Serialization
                 ObjectCreationHandling
                     .Replace; //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
             newSettings.ContractResolver = new AkkaContractResolver();
-            if (settings.UsePooledStringBuilder)
-            {
-                
-            }
             return newSettings;
         }
 
