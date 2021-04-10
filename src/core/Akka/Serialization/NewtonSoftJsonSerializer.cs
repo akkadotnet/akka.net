@@ -147,7 +147,7 @@ namespace Akka.Serialization
     public class NewtonSoftJsonSerializer : Serializer
     {
         private readonly JsonSerializer _serializer;
-        private readonly JsonSerializer _formattingNoneSerializer;
+        
         private readonly ObjectPool<StringBuilder> _sbPool;
         /// <summary>
         /// TBD
@@ -178,13 +178,8 @@ namespace Akka.Serialization
         {
             if (settings.UsePooledStringBuilder)
             {
-                _sbPool = new DefaultObjectPool<StringBuilder>(
-                    new StringBuilderPooledObjectPolicy()
-                    {
-                        InitialCapacity = settings.StringBuilderMinSize,
-                        MaximumRetainedCapacity =
-                            settings.StringBuilderMaxSize
-                    });
+                _sbPool = new DefaultObjectPoolProvider()
+                    .CreateStringBuilderPool(settings.StringBuilderMinSize,settings.StringBuilderMaxSize);
             }
             Settings = new JsonSerializerSettings
             {
@@ -194,8 +189,7 @@ namespace Akka.Serialization
                 NullValueHandling = NullValueHandling.Ignore,
                 DefaultValueHandling = DefaultValueHandling.Ignore,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
-                ConstructorHandling =
-                    ConstructorHandling.AllowNonPublicDefaultConstructor,
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 TypeNameHandling = settings.EncodeTypeNames
                     ? TypeNameHandling.All
                     : TypeNameHandling.None,
@@ -203,9 +197,8 @@ namespace Akka.Serialization
 
             if (system != null)
             {
-                var settingsSetup = system.Settings.Setup
-                    .Get<NewtonSoftJsonSerializerSetup>()
-                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => { }));
+                var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
+                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
 
                 settingsSetup.ApplySettings(Settings);
             }
@@ -222,14 +215,10 @@ namespace Akka.Serialization
                 Settings.Converters.Add(converter);
             }
 
-            Settings.ObjectCreationHandling =
-                ObjectCreationHandling
-                    .Replace; //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
+            Settings.ObjectCreationHandling = ObjectCreationHandling.Replace; //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
             Settings.ContractResolver = new AkkaContractResolver();
-            
+
             _serializer = JsonSerializer.Create(Settings);
-            _formattingNoneSerializer = JsonSerializer.CreateDefault(Settings);
-            _formattingNoneSerializer.Formatting = Formatting.None;
         }
 
 
@@ -308,10 +297,14 @@ namespace Akka.Serialization
             try
             {
                 sb = _sbPool.Get();
+                var ser = JsonSerializer.CreateDefault(Settings);
                 using (var tw = new StringWriter(sb))
-                using (var jw = new JsonTextWriter(tw))
                 {
-                    _formattingNoneSerializer.Serialize(jw,obj);
+                    using (var jw = new JsonTextWriter(tw))
+                    {
+                        ser.Formatting = Formatting.None;
+                        ser.Serialize(jw, obj);
+                    }
                     return Encoding.UTF8.GetBytes(tw.ToString());
                 }
             }
