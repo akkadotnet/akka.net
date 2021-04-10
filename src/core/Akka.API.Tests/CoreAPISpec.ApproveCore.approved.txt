@@ -4657,8 +4657,8 @@ namespace Akka.Serialization
         public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }
-        public int StringBuilderMinSize { get; }
         public int StringBuilderMaxSize { get; }
+        public int StringBuilderMinSize { get; }
         public bool UsePooledStringBuilder { get; }
         public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
     }
