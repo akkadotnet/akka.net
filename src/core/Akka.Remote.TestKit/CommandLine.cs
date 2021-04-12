@@ -28,9 +28,11 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public class CommandLine
     {
-        private static readonly Lazy<StringDictionary> Values = new Lazy<StringDictionary>(() =>
+        private static readonly StringDictionary Values;
+
+        static CommandLine()
         {
-            var dictionary = new StringDictionary();
+            Values = new StringDictionary();
 
             // Detect and fix PowerShell command line input.
             // PowerShell splits command line arguments on '.'
@@ -49,29 +51,46 @@ namespace Akka.Remote.TestKit
 
             foreach (var arg in fixedArgs)
             {
-                if (!arg.StartsWith("-D")) continue;
+                if (!arg.StartsWith("-D"))
+                {
+                    var a = arg.Trim().ToLowerInvariant();
+                    if (a.Equals("-h") || a.Equals("--help"))
+                    {
+                        ShowHelp = true;
+                        return;
+                    }
+                    if (a.Equals("-v") || a.Equals("--version"))
+                    {
+                        ShowVersion = true;
+                        return;
+                    }
+                    continue;
+                }
+
                 var tokens = arg.Substring(2).Split('=');
 
                 if (tokens.Length == 2)
                 {
-                    dictionary.Add(tokens[0], tokens[1]);
+                    Values.Add(tokens[0], tokens[1]);
                 }
                 else
                 {
                     throw new ConfigurationException($"Command line parameter '{arg}' should follow the pattern [-Dmultinode.<key>=<value>].");
                 }
             }
-            return dictionary;
-        });
+        }
+
+        public static bool ShowHelp { get; private set; }
+        public static bool ShowVersion { get; private set; }
 
         public static string GetProperty(string key)
         {
-            return Values.Value[key];
+            return Values[key];
         }
 
         public static string GetPropertyOrDefault(string key, string defaultStr)
         {
-            return Values.Value.ContainsKey(key) ? Values.Value[key] : defaultStr;
+            return Values.ContainsKey(key) ? Values[key] : defaultStr;
         }
 
         public static int GetInt32(string key)
@@ -81,7 +100,7 @@ namespace Akka.Remote.TestKit
 
         public static int GetInt32OrDefault(string key, int defaultInt)
         {
-            return Values.Value.ContainsKey(key) ? GetInt32(key) : defaultInt;
+            return Values.ContainsKey(key) ? GetInt32(key) : defaultInt;
         }
     }
 }
