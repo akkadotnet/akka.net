@@ -106,7 +106,7 @@ namespace Akka.Cluster.Serialization
         private static InternalClusterAction.Join JoinFrom(byte[] bytes)
         {
             var join = Proto.Msg.Join.Parser.ParseFrom(bytes);
-            AppVersion ver = join.HasAppVersion ? AppVersion.Create(join.AppVersion) : AppVersion.Zero;
+            var ver = !string.IsNullOrEmpty(join.AppVersion) ? AppVersion.Create(join.AppVersion) : AppVersion.Zero;
             return new InternalClusterAction.Join(UniqueAddressFrom(join.Node), join.Roles.ToImmutableHashSet(), ver);
         }
 
