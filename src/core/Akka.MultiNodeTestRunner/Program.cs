@@ -135,6 +135,21 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         static void Main(string[] args)
         {
+            // Force load the args
+            CommandLine.GetPropertyOrDefault("force load", null);
+            if (CommandLine.ShowHelp)
+            {
+                PrintHelp();
+                return;
+            }
+
+            if (CommandLine.ShowVersion)
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                Console.WriteLine($"Version: {version}");
+                return;
+            }
+            
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
             FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
             
@@ -521,6 +536,49 @@ namespace Akka.MultiNodeTestRunner
         private static void PublishToAllSinks(string message)
         {
             SinkCoordinator.Tell(message, ActorRefs.NoSender);
+        }
+
+        private static void PrintHelp()
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            Console.WriteLine($@"Akka.NET Multi Node Test Runner ({version})
+Usage: MultiNodeTestRunner [path-to-test-dll] [runtime-options]
+
+Run a compiled Akka.NET multi node test
+
+runtime-options:
+  -Dmultinode.output-directory=<path>
+      Folder where the test report will be exported.
+      Default value : current working directory.
+  -Dmultinode.failed-specs-directory=<folder-name>
+      Folder name inside the output directory where failed test log will be exported, if a test should fail.
+      Default value : FAILED_SPECS_LOG.
+  -Dmultinode.loglevel=<debug-level>
+      Sets the minimum reported log level used within the test.
+      Valid values : DEBUG, INFO, WARNING, ERROR.
+      Default value: WARNING.
+  -Dmultinode.listen-address=<host|ip-address>
+      The TCP/IP address or host name the multi node test runner should listen for test node reports/logs.
+      Default value: 127.0.0.1.
+  -Dmultinode.listen-port=<port>
+      The TCP/IP port the multi node test runner should listen for test node reports/logs.
+      Default value: 6577.
+  -Dmultinode.reporter=<reporter>
+      The report type this runner should export in. Note that report files are exported to the current directory for trx. 
+      Valid values : trx, teamcity, console.
+      Default value: console.
+  -Dmultinode.clear-output=<0|1>
+      This flag will clear the output folder before any test is run when it is set to 1.
+      Default value: 0.
+  -Dmultinode.spec=<spec-name>
+      Apply a filter to the test class names within the dll. Any fully qualified test class name that contains this string will run. 
+      Default value: (all).
+  -Dmultinode.include=<filter>
+      A comma separated list of wildcard pattern to be matched and included in the tests. The filter is applied on the name of the test method.
+      Default value: * (all). 
+  -Dmultinode.exclude=<filter>
+      A comma separated list of wildcard pattern to be matched and excluded in the tests. The filter is applied on the name of the test method.
+      Default value: (none).");
         }
     }
 
