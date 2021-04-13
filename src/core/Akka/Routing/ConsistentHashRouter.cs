@@ -47,7 +47,7 @@ namespace Akka.Routing
     /// This class represents a <see cref="RouterEnvelope"/> that can be wrapped around a message in order to make
     /// it hashable for use with <see cref="ConsistentHashingGroup"/> or <see cref="ConsistentHashingPool"/> routers.
     /// </summary>
-    public sealed class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable
+    public sealed class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable, IWrappedMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashableEnvelope"/> class.

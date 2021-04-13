@@ -130,10 +130,19 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var byteString = (ByteString) next.Element;
                         var bytes = byteString.ToArray();
-                        _chan.Write(bytes, 0, bytes.Length);
-                        _bytesWritten += bytes.Length;
-                        if(_autoFlush)
-                            _chan.Flush(true);
+                        try
+                        {
+                            _chan.Write(bytes, 0, bytes.Length);
+                            _bytesWritten += bytes.Length;
+                            if (_autoFlush)
+                                _chan.Flush(true);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.Error(ex, $"Tearing down FileSink({_f.FullName}) due to write error.");
+                            _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                            Context.Stop(Self);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -161,7 +170,16 @@ namespace Akka.Streams.Implementation.IO
                     return true;
 
                 case var msg when _flushCommand != null && ReferenceEquals(_flushCommand, msg):
-                    _chan.Flush();
+                    try
+                    {
+                        _chan.Flush();
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error(ex, $"Tearing down FileSink({_f.FullName}). File flush failed.");
+                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                        Context.Stop(Self);
+                    }
                     return true;
             }
 

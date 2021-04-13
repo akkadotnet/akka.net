@@ -270,7 +270,7 @@ namespace Akka.Event
         {
             if (!string.IsNullOrEmpty(logLevel))
             {
-                logLevel = logLevel.ToUpper();
+                logLevel = logLevel.ToUpperInvariant();
             }
 
             switch (logLevel)

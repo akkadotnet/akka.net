@@ -320,7 +320,7 @@ namespace Akka.Actor
         public void Tell(object message, Akka.Actor.IActorRef sender = null) { }
         public override string ToString() { }
     }
-    public class ActorSelectionMessage : Akka.Actor.IAutoReceivedMessage, Akka.Actor.IPossiblyHarmful
+    public class ActorSelectionMessage : Akka.Actor.IAutoReceivedMessage, Akka.Actor.IPossiblyHarmful, Akka.Actor.IWrappedMessage
     {
         public ActorSelectionMessage(object message, Akka.Actor.SelectionPathElement[] elements, bool wildCardFanOut = False) { }
         public Akka.Actor.SelectionPathElement[] Elements { get; }
@@ -1145,6 +1145,10 @@ namespace Akka.Actor
         Akka.Actor.ITimerScheduler Timers { get; set; }
     }
     public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
+    public interface IWrappedMessage
+    {
+        object Message { get; }
+    }
     public sealed class Identify : Akka.Actor.IAutoReceivedMessage, Akka.Actor.INotInfluenceReceiveTimeout
     {
         public Identify(object messageId) { }
@@ -1797,6 +1801,10 @@ namespace Akka.Actor
         protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
     }
     public delegate void UntypedReceive(object message);
+    public class static WrappedMessage
+    {
+        public static object Unwrap(object message) { }
+    }
 }
 namespace Akka.Actor.Dsl
 {
@@ -2090,6 +2098,11 @@ namespace Akka.Annotations
     public sealed class ApiMayChangeAttribute : System.Attribute
     {
         public ApiMayChangeAttribute() { }
+    }
+    [System.AttributeUsageAttribute(System.AttributeTargets.Class | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
+    public sealed class DoNotInheritAttribute : System.Attribute
+    {
+        public DoNotInheritAttribute() { }
     }
     [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
     public sealed class InternalApiAttribute : System.Attribute
@@ -2879,7 +2892,7 @@ namespace Akka.Event
     {
         protected ActorEventBus() { }
     }
-    public abstract class AllDeadLetters
+    public abstract class AllDeadLetters : Akka.Actor.IWrappedMessage
     {
         protected AllDeadLetters(object message, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
         public object Message { get; }
@@ -2932,6 +2945,12 @@ namespace Akka.Event
         public DefaultLogger() { }
         protected virtual void Print(Akka.Event.LogEvent logEvent) { }
         protected override bool Receive(object message) { }
+    }
+    public sealed class Dropped : Akka.Event.AllDeadLetters
+    {
+        public Dropped(object message, string reason, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
+        public Dropped(object message, string reason, Akka.Actor.IActorRef recipient) { }
+        public string Reason { get; }
     }
     public class DummyClassForStringSources
     {
@@ -3155,12 +3174,9 @@ namespace Akka.Event
         public TraceLogger() { }
         protected override void OnReceive(object message) { }
     }
-    public sealed class UnhandledMessage
+    public sealed class UnhandledMessage : Akka.Event.AllDeadLetters, Akka.Actor.IWrappedMessage
     {
         public UnhandledMessage(object message, Akka.Actor.IActorRef sender, Akka.Actor.IActorRef recipient) { }
-        public object Message { get; }
-        public Akka.Actor.IActorRef Recipient { get; }
-        public Akka.Actor.IActorRef Sender { get; }
     }
     public class Warning : Akka.Event.LogEvent
     {
@@ -4088,7 +4104,7 @@ namespace Akka.Routing
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    public sealed class ConsistentHashableEnvelope : Akka.Routing.RouterEnvelope, Akka.Routing.IConsistentHashable
+    public sealed class ConsistentHashableEnvelope : Akka.Routing.RouterEnvelope, Akka.Actor.IWrappedMessage, Akka.Routing.IConsistentHashable
     {
         public ConsistentHashableEnvelope(object message, object hashKey) { }
         public object ConsistentHashKey { get; }
@@ -4642,6 +4658,11 @@ namespace Akka.Serialization
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }
         public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
+    }
+    public sealed class NewtonSoftJsonSerializerSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Action<Newtonsoft.Json.JsonSerializerSettings> ApplySettings { get; }
+        public static Akka.Serialization.NewtonSoftJsonSerializerSetup Create(System.Action<Newtonsoft.Json.JsonSerializerSettings> settings) { }
     }
     public class NullSerializer : Akka.Serialization.Serializer
     {

@@ -538,10 +538,7 @@ namespace Akka.Cluster
                 LogInfo("Shutting down...");
                 System.Stop(_clusterDaemons);
 
-                if (_readView != null)
-                {
-                    _readView.Dispose();
-                }
+                _readView?.Dispose();
 
                 LogInfo("Successfully shut down");
             }
@@ -581,6 +578,27 @@ namespace Akka.Cluster
                 _log = log;
                 _settings = settings;
                 _selfAddress = selfAddress;
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.DebugLevel"/> log entry with the specific message.
+            /// </summary>
+            /// <param name="message">The message being logged.</param>
+            internal void LogDebug(string message)
+            {
+                if (_log.IsDebugEnabled)
+                    _log.Debug("Cluster Node [{0}] - {1}", _selfAddress, message);
+            }
+
+            /// <summary>
+            /// Creates an <see cref="Akka.Event.LogLevel.DebugLevel"/> log entry with the specific template and arguments.
+            /// </summary>
+            /// <param name="template">The template being rendered and logged.</param>
+            /// <param name="arg1">The argument that fills in the template placeholder.</param>
+            internal void LogDebug(string template, object arg1)
+            {
+                if (_log.IsDebugEnabled)
+                    _log.Debug("Cluster Node [{1}] - " + template, arg1, _selfAddress);
             }
 
             /// <summary>
