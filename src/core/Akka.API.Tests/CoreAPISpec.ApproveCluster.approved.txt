@@ -437,11 +437,12 @@ namespace Akka.Cluster.SBR
 }
 namespace Akka.Cluster.Serialization
 {
-    public class ClusterMessageSerializer : Akka.Serialization.Serializer
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
 }

@@ -95,33 +95,19 @@ namespace Akka.DependencyInjection.Tests
 
         public AkkaDiFixture()
         {
-            Host = CreateHostBuilder().Build();
-            Host.Start();
-            Provider = Host.Services;
-        }
-
-        public IHostBuilder CreateHostBuilder()
-            => Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
-                .ConfigureServices((context, services) =>
-                {
-                    // <DiFixture>
-                    // register some default services
-                    services.AddSingleton<ISingletonDependency, Singleton>()
+            var services = new ServiceCollection();
+            services.AddSingleton<ISingletonDependency, Singleton>()
                         .AddScoped<IScopedDependency, Scoped>()
                         .AddTransient<ITransientDependency, Transient>();
-                    // </DiFixture>
-                });
 
-        private IHost Host { get; set; }
-
+            Provider = services.BuildServiceProvider();
+        }
+        
         public IServiceProvider Provider { get; private set; }
 
         public void Dispose()
         {
-            Host?.StopAsync().GetAwaiter().GetResult();
-
             Provider = null;
-            Host = null;
         }
     }
 }
