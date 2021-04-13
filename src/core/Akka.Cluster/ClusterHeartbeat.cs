@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Remote;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Cluster
@@ -21,33 +22,53 @@ namespace Akka.Cluster
     /// 
     /// Receives <see cref="ClusterHeartbeatSender.Heartbeat"/> messages and replies.
     /// </summary>
-    internal sealed class ClusterHeartbeatReceiver : ReceiveActor
+    internal sealed class ClusterHeartbeatReceiver : UntypedActor
     {
-        private readonly Lazy<ClusterHeartbeatSender.HeartbeatRsp> _selfHeartbeatRsp;
+        // Important - don't use Cluster.Get(Context.System) in constructor because that would
+        // cause deadlock. See startup sequence in ClusterDaemon.
+        private readonly Lazy<Cluster> _cluster;
+
+        public bool VerboseHeartbeat => _cluster.Value.Settings.VerboseHeartbeatLogging;
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ClusterHeartbeatReceiver()
+        public ClusterHeartbeatReceiver(Func<Cluster> getCluster)
         {
-            // Important - don't use Cluster.Get(Context.System) in constructor because that would
-            // cause deadlock. See startup sequence in ClusterDaemon.
-            _selfHeartbeatRsp = new Lazy<ClusterHeartbeatSender.HeartbeatRsp>(() =>
-                new ClusterHeartbeatSender.HeartbeatRsp(Cluster.Get(Context.System).SelfUniqueAddress));
-
-            Receive<ClusterHeartbeatSender.Heartbeat>(heartbeat => Sender.Tell(_selfHeartbeatRsp.Value));
+            _cluster = new Lazy<Cluster>(getCluster);
         }
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
+            {
+                case ClusterHeartbeatSender.Heartbeat hb:
+                    // TODO log the sequence nr once serializer is enabled
+                    if(VerboseHeartbeat) _cluster.Value.CurrentInfoLogger.LogDebug("Heartbeat from [{0}]", hb.From);
+                    Sender.Tell(new ClusterHeartbeatSender.HeartbeatRsp(_cluster.Value.SelfUniqueAddress,
+                        hb.SequenceNr, hb.CreationTimeNanos));
+                    break;
+                default:
+                    Unhandled(message);
+                    break;
+            }
+        }
+
+        public static Props Props(Func<Cluster> getCluster)
+        {
+            return Akka.Actor.Props.Create(() => new ClusterHeartbeatReceiver(getCluster));
+        }
+
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class ClusterHeartbeatSender : ReceiveActor
+    internal class ClusterHeartbeatSender : ReceiveActor
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly Cluster _cluster;
         private readonly IFailureDetectorRegistry<Address> _failureDetector;
-        private readonly Heartbeat _selfHeartbeat;
         private ClusterHeartbeatSenderState _state;
         private readonly ICancelable _heartbeatTask;
 
@@ -65,8 +86,6 @@ namespace Akka.Cluster
 
             // the failureDetector is only updated by this actor, but read from other places
             _failureDetector = _cluster.FailureDetector;
-
-            _selfHeartbeat = new Heartbeat(_cluster.SelfAddress);
 
             _state = new ClusterHeartbeatSenderState(
                 ring: new HeartbeatNodeRing(
@@ -86,6 +105,13 @@ namespace Akka.Cluster
                 Self);
 
             Initializing();
+        }
+
+        private long _seqNo;
+        private Heartbeat SelfHeartbeat()
+        {
+            _seqNo += 1;
+            return new Heartbeat(_cluster.SelfAddress, _seqNo, MonotonicClock.GetNanos());
         }
 
         /// <summary>
@@ -112,7 +138,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Looks up and returns the remote cluster heartbeat connection for the specific address.
         /// </summary>
-        private ActorSelection HeartbeatReceiver(Address address)
+        protected virtual ActorSelection HeartbeatReceiver(Address address)
         {
             return Context.ActorSelection(new RootActorPath(address) / "system" / "cluster" / "heartbeatReceiver");
         }
@@ -133,7 +159,7 @@ namespace Akka.Cluster
         private void Active()
         {
             Receive<HeartbeatTick>(tick => DoHeartbeat());
-            Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp.From));
+            Receive<HeartbeatRsp>(rsp => DoHeartbeatRsp(rsp));
             Receive<ClusterEvent.MemberRemoved>(removed => RemoveMember(removed.Member));
             Receive<ClusterEvent.IMemberEvent>(evt => AddMember(evt.Member));
             Receive<ClusterEvent.UnreachableMember>(m => UnreachableMember(m.Member));
@@ -204,7 +230,7 @@ namespace Akka.Cluster
                         new ExpectedFirstHeartbeat(to),
                         Self);
                 }
-                HeartbeatReceiver(to.Address).Tell(_selfHeartbeat);
+                HeartbeatReceiver(to.Address).Tell(SelfHeartbeat());
             }
 
             CheckTickInterval();
@@ -227,13 +253,14 @@ namespace Akka.Cluster
             _tickTimestamp = DateTime.UtcNow;
         }
 
-        private void DoHeartbeatRsp(UniqueAddress from)
+        private void DoHeartbeatRsp(HeartbeatRsp rsp)
         {
             if (_cluster.Settings.VerboseHeartbeatLogging)
             {
-                _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, from.Address);
+                // TODO: log response time and validate sequence nrs once serialisation of sendTime is released
+                _log.Debug("Cluster Node [{0}] - Heartbeat response from [{1}]", _cluster.SelfAddress, rsp.From.Address);
             }
-            _state = _state.HeartbeatRsp(from);
+            _state = _state.HeartbeatRsp(rsp.From);
         }
 
         private void TriggerFirstHeart(UniqueAddress from)
@@ -253,70 +280,85 @@ namespace Akka.Cluster
         /// <summary>
         /// Sent at regular intervals for failure detection
         /// </summary>
-        internal sealed class Heartbeat : IClusterMessage, IPriorityMessage, IDeadLetterSuppression
+        internal sealed class Heartbeat : IClusterMessage, IPriorityMessage, IDeadLetterSuppression, IEquatable<Heartbeat>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="from">TBD</param>
-            public Heartbeat(Address from)
+            public Heartbeat(Address from, long sequenceNr, long creationTimeNanos)
             {
                 From = from;
+                SequenceNr = sequenceNr;
+                CreationTimeNanos = creationTimeNanos;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
             public Address From { get; }
 
-#pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-#pragma warning restore 659
+            public long SequenceNr { get; }
+
+            public long CreationTimeNanos { get; }
+
+            public bool Equals(Heartbeat other)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                return obj is Heartbeat && Equals((Heartbeat)obj);
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return From.Equals(other.From) && SequenceNr == other.SequenceNr && CreationTimeNanos == other.CreationTimeNanos;
             }
 
-            private bool Equals(Heartbeat other)
+            public override bool Equals(object obj)
             {
-                return Equals(From, other.From);
+                return ReferenceEquals(this, obj) || obj is Heartbeat other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = From.GetHashCode();
+                    hashCode = (hashCode * 397) ^ SequenceNr.GetHashCode();
+                    hashCode = (hashCode * 397) ^ CreationTimeNanos.GetHashCode();
+                    return hashCode;
+                }
             }
         }
 
         /// <summary>
         /// Sends replies to <see cref="Heartbeat"/> messages
         /// </summary>
-        internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage, IDeadLetterSuppression
+        internal sealed class HeartbeatRsp : IClusterMessage, IPriorityMessage, IDeadLetterSuppression, IEquatable<HeartbeatRsp>
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="from">TBD</param>
-            public HeartbeatRsp(UniqueAddress from)
+            public HeartbeatRsp(UniqueAddress from, long sequenceNr, long creationTimeNanos)
             {
                 From = from;
+                SequenceNr = sequenceNr;
+                CreationTimeNanos = creationTimeNanos;
             }
 
-            /// <summary>
-            /// TBD
-            /// </summary>
             public UniqueAddress From { get; }
 
-#pragma warning disable 659 //there might very well be multiple heartbeats from the same address. overriding GetHashCode may have uninteded side effects
-            /// <inheritdoc/>
-            public override bool Equals(object obj)
-#pragma warning restore 659
+            public long SequenceNr { get; }
+
+            public long CreationTimeNanos { get; }
+
+            public bool Equals(HeartbeatRsp other)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                return obj is HeartbeatRsp && Equals((HeartbeatRsp)obj);
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return From.Equals(other.From) && SequenceNr == other.SequenceNr 
+                                               && CreationTimeNanos == other.CreationTimeNanos;
             }
 
-            private bool Equals(HeartbeatRsp other)
+            public override bool Equals(object obj)
             {
-                return Equals(From, other.From);
+                return ReferenceEquals(this, obj) || obj is HeartbeatRsp other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = From.GetHashCode();
+                    hashCode = (hashCode * 397) ^ SequenceNr.GetHashCode();
+                    hashCode = (hashCode * 397) ^ CreationTimeNanos.GetHashCode();
+                    return hashCode;
+                }
             }
         }
 
