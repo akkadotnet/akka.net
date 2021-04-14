@@ -37,13 +37,14 @@ akka.actor {
                 .WithPreserveObjectReference(true)
                 .WithKnownTypeProvider<NoKnownTypes>();
             var settings =
-                new HyperionSerializerSettings(false, false, typeof(DummyTypesProvider), new Func<string, string>[] { s => s });
+                new HyperionSerializerSettings(false, false, typeof(DummyTypesProvider), new Func<string, string>[] { s => $"{s}.." });
             var appliedSettings = setup.ApplySettings(settings);
 
-            appliedSettings.PreserveObjectReferences.Should().BeTrue();
-            appliedSettings.VersionTolerance.Should().BeFalse();
-            appliedSettings.KnownTypesProvider.Should().Be(typeof(NoKnownTypes));
-            appliedSettings.PackageNameOverrides.Count().Should().Be(1);
+            appliedSettings.PreserveObjectReferences.Should().BeTrue(); // overriden
+            appliedSettings.VersionTolerance.Should().BeFalse(); // default
+            appliedSettings.KnownTypesProvider.Should().Be(typeof(NoKnownTypes)); // overriden
+            appliedSettings.PackageNameOverrides.Count().Should().Be(1); // from settings
+            appliedSettings.PackageNameOverrides.First()("a").Should().Be("a..");
         }
 
         [Fact]
