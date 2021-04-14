@@ -14,8 +14,10 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Serialization.Hyperion;
 using Akka.Util;
 using Hyperion;
+using HySerializer = Hyperion.Serializer;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.Serialization
@@ -30,7 +32,7 @@ namespace Akka.Serialization
         /// </summary>
         public readonly HyperionSerializerSettings Settings;
 
-        private readonly Hyperion.Serializer _serializer;
+        private readonly HySerializer _serializer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
@@ -68,14 +70,22 @@ namespace Akka.Serialization
 
             var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
 
+            if (system != null)
+            {
+                var settingsSetup = system.Settings.Setup.Get<HyperionSerializerSetup>()
+                    .GetOrElse(HyperionSerializerSetup.Empty);
+
+                settingsSetup.ApplySettings(Settings);
+            }
+
             _serializer =
-                new Hyperion.Serializer(new SerializerOptions(
+                new HySerializer(new SerializerOptions(
                     preserveObjectReferences: settings.PreserveObjectReferences,
                     versionTolerance: settings.VersionTolerance,
                     surrogates: new[] { akkaSurrogate },
                     knownTypes: provider.GetKnownTypes(),
-                    ignoreISerializable:true));
-                    // packageNameOverrides: settings.PackageNameOverrides));
+                    ignoreISerializable:true,
+                    packageNameOverrides: settings.PackageNameOverrides));
         }
 
         /// <summary>
@@ -159,7 +169,8 @@ namespace Akka.Serialization
         public static readonly HyperionSerializerSettings Default = new HyperionSerializerSettings(
             preserveObjectReferences: true,
             versionTolerance: true,
-            knownTypesProvider: typeof(NoKnownTypes));
+            knownTypesProvider: typeof(NoKnownTypes), 
+            packageNameOverrides: new List<Func<string, string>>());
 
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
@@ -191,18 +202,21 @@ namespace Akka.Serialization
             else
                 frameworkKey = "net";
 
-            List<CrossPlatformPackageNameOverride> packageNameOverrides = null;
-
+            var packageNameOverrides = new List<Func<string, string>>();
             var overrideConfigs = config.GetValue($"cross-platform-package-name-overrides.{frameworkKey}");
             if (overrideConfigs != null)
             {
-                var configs = overrideConfigs.GetArray();
-                packageNameOverrides = new List<CrossPlatformPackageNameOverride>(configs
-                    .Select(value => value.GetObject())
-                    .Select(obj => new CrossPlatformPackageNameOverride(
-                        fingerprint: obj.GetKey("fingerprint").GetString(), 
-                        @from: obj.GetKey("rename-from").GetString(), 
-                        to: obj.GetKey("rename-to").GetString())));
+                var configs = overrideConfigs.GetArray().Select(value => value.GetObject());
+                foreach (var obj in configs)
+                {
+                    var fingerprint = obj.GetKey("fingerprint").GetString();
+                    var renameFrom = obj.GetKey("rename-from").GetString();
+                    var renameTo = obj.GetKey("rename-to").GetString();
+                    packageNameOverrides.Add(packageName => 
+                        packageName.Contains(fingerprint) 
+                            ? packageName.Replace(renameFrom, renameTo) 
+                            : packageName);
+                }
             }
 
             return new HyperionSerializerSettings(
@@ -234,7 +248,23 @@ namespace Akka.Serialization
         /// </summary>
         public readonly Type KnownTypesProvider;
 
-        public readonly List<CrossPlatformPackageNameOverride> PackageNameOverrides;
+        /// <summary>
+        /// A list of lambda functions, used to transform incoming deserialized
+        /// package names before they are instantiated
+        /// </summary>
+        public readonly IEnumerable<Func<string, string>> PackageNameOverrides;
+
+        /// <summary>
+        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
+        /// </summary>
+        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
+        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
+        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
+        /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        [Obsolete]
+        public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>())
+        { }
 
         /// <summary>
         /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
@@ -244,7 +274,11 @@ namespace Akka.Serialization
         /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
         /// <param name="packageNameOverrides">TBD</param>
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
-        public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider, List<CrossPlatformPackageNameOverride> packageNameOverrides = null)
+        public HyperionSerializerSettings(
+            bool preserveObjectReferences, 
+            bool versionTolerance, 
+            Type knownTypesProvider, 
+            IEnumerable<Func<string, string>> packageNameOverrides)
         {
             knownTypesProvider = knownTypesProvider ?? typeof(NoKnownTypes);
             if (!typeof(IKnownTypesProvider).IsAssignableFrom(knownTypesProvider))
@@ -254,21 +288,6 @@ namespace Akka.Serialization
             VersionTolerance = versionTolerance;
             KnownTypesProvider = knownTypesProvider;
             PackageNameOverrides = packageNameOverrides;
-        }
-
-        // This will be replaced with the class from the Hyperion package when it is released
-        public class CrossPlatformPackageNameOverride
-        {
-            public CrossPlatformPackageNameOverride(string fingerprint, string @from, string to)
-            {
-                Fingerprint = fingerprint;
-                RenameFrom = @from;
-                RenameTo = to;
-            }
-
-            public string Fingerprint { get; }
-            public string RenameFrom { get; }
-            public string RenameTo { get; }
         }
     }
 }
