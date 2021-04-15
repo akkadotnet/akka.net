@@ -39,6 +39,13 @@ namespace Akka.Persistence.Tests
                     throw new ArgumentNullException("Received DeleteMessagesSuccess without anyone asking for delete!");
                 AskedForDelete.Tell(message);
             }
+            else if (message is DeleteMessagesFailure)
+            {
+                if (AskedForDelete == null)
+                    throw new ArgumentNullException("Received DeleteMessagesSuccess without anyone asking for delete!");
+                AskedForDelete.Tell(message);
+            }
+
             else return false;
             return true;
         }
@@ -144,7 +151,7 @@ namespace Akka.Persistence.Tests
                 if (message is Evt)
                     Events = Events.AddFirst((message as Evt).Data);
                 else if (message is IActorRef)
-                    AskedForDelete = (IActorRef) message;
+                    AskedForDelete = (IActorRef)message;
                 else
                     return false;
                 return true;
@@ -292,7 +299,7 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) return true;
-                
+
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
@@ -324,7 +331,7 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (CommonBehavior(message)) return true;
-                
+
                 if (message is Cmd)
                 {
                     var cmd = message as Cmd;
@@ -607,7 +614,7 @@ namespace Akka.Persistence.Tests
         internal class AsyncPersistAndPersistMixedSyncAsyncActor : ExamplePersistentActor
         {
             private int _counter = 0;
-            
+
             public AsyncPersistAndPersistMixedSyncAsyncActor(string name)
                 : base(name)
             {
@@ -883,7 +890,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     Persist(s + "-outer-1", outer =>
                     {
@@ -915,7 +922,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-outer-1", outer =>
                     {
@@ -947,7 +954,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     Persist(s + "-outer-1", outer =>
                     {
@@ -979,7 +986,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-outer-async-1", outer =>
                     {
@@ -1011,7 +1018,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-outer-async", outer =>
                     {
@@ -1069,7 +1076,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     Persist(s + "-1", WeMustGoDeeper);
                     return true;
@@ -1113,7 +1120,7 @@ namespace Akka.Persistence.Tests
             {
                 if (message is string)
                 {
-                    var s = (string) message;
+                    var s = (string)message;
                     _probe.Tell(s);
                     PersistAsync(s + "-1", WeMustGoDeeper);
                     return true;

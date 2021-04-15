@@ -100,14 +100,8 @@ namespace Akka.MultiNodeTestRunner
             var ctorWithConfig = FindConfigConstructor(specType);
             var configType = ctorWithConfig.GetParameters().First().ParameterType;
             var args = ConfigConstructorParamValues(configType);
-            var configInstance = Activator.CreateInstance(configType, args);
-            var roleType = typeof(RoleName);
-            var configProps = configType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
-            var roleProps = configProps.Where(p => p.PropertyType == roleType && p.Name != "Myself").Select(p => (RoleName)p.GetValue(configInstance));
-            var configFields = configType.GetFields(BindingFlags.Instance | BindingFlags.Public);
-            var roleFields = configFields.Where(f => f.FieldType == roleType && f.Name != "Myself").Select(f => (RoleName)f.GetValue(configInstance));
-            var roles = roleProps.Concat(roleFields).Distinct();
-            return roles;
+            var configInstance = (MultiNodeConfig)Activator.CreateInstance(configType, args);
+            return configInstance.Roles;
         }
 
         internal static ConstructorInfo FindConfigConstructor(Type configUser)

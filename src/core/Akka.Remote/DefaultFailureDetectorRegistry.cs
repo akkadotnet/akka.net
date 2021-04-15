@@ -89,6 +89,14 @@ namespace Akka.Remote
                     else
                     {
                         var newDetector = _factory();
+
+                        switch (newDetector)
+                        {
+                            case PhiAccrualFailureDetector phi:
+                                phi.Address = resource.ToString();
+                                break;
+                        }
+
                         newDetector.HeartBeat();
                         oldTable.Add(resource, newDetector);
                         ResourceToFailureDetector = oldTable;

@@ -179,6 +179,19 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
+### Programatically change NewtonSoft JSON serializer settings
+You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
+
+Note that, while we try to keep everything to be compatible, there are no guarantee that your specific serializer settings use case is compatible with the rest of
+Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
+
+There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
+in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+object respectively.
+
 ### Serializer with String Manifest
 The `Serializer` illustrated above supports a class-based manifest (type hint). 
 For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 

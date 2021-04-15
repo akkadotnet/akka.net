@@ -42,7 +42,25 @@ namespace Akka.Annotations
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Enum | AttributeTargets.Interface | AttributeTargets.Constructor | AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method | AttributeTargets.Module, Inherited = true, AllowMultiple = false)]
     public sealed class ApiMayChangeAttribute : Attribute
+    {        
+    }
+
+    /// <summary>
+    /// <para>
+    /// Marks APIs that are designed under a closed-world assumption for and are NOT meant to be
+    /// extended by user-code. It is fine to extend these classes within Akka itself however.
+    /// </para>
+    /// <para>
+    /// This is most useful for binary compatibility purposes when a set of classes and interfaces
+    /// assume a "closed world" between them, and gain the ability to add methods to the interfaces
+    /// without breaking binary compatibility for users of this code. Specifically this assumption may be
+    /// understood intuitively: as all classes that implement this interface are in this compilation unit
+    /// artifact, it is impossible to obtain a "old" class with a "new" interface, as they are part of
+    /// the same dependency.
+    /// </para>
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, Inherited = true, AllowMultiple = false)]
+    public sealed class DoNotInheritAttribute: Attribute
     {
-        
     }
 }

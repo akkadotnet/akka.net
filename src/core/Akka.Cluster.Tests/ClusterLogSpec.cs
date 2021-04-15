@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -56,9 +57,12 @@ namespace Akka.Cluster.Tests
         /// </summary>
         protected void Join(string expected)
         {
-            EventFilter
-                .Info(contains: expected)
-                .ExpectOne(() => _cluster.Join(_selfAddress));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                EventFilter
+                    .Info(contains: expected)
+                    .ExpectOne(() => _cluster.Join(_selfAddress));
+            });
         }
 
         /// <summary>

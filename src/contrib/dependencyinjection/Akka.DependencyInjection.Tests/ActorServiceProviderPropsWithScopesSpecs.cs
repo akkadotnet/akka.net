@@ -147,8 +147,13 @@ namespace Akka.DependencyInjection.Tests
                 scoped1.Tell(new Crash());
             });
 
-            // all previous SCOPED dependencies should be disposed
-            deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+            AwaitAssert(() =>
+            {
+                // all previous SCOPED dependencies should eventually be disposed
+                deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+            }, 
+                duration: TimeSpan.FromMilliseconds(300),
+                interval: TimeSpan.FromMilliseconds(100));
 
             // singletons should not be disposed
             deps1.Dependencies.Where(x => (x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeFalse();
