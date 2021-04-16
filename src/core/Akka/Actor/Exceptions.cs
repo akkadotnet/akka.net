@@ -121,6 +121,16 @@ namespace Akka.Actor
         /// <param name="message">TBD</param>
         /// <param name="cause">TBD</param>
         public ActorInterruptedException(string message = null, Exception cause = null) : base(message, cause) { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ActorInterruptedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected ActorInterruptedException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -333,8 +343,6 @@ namespace Akka.Actor
     /// </summary>
     public class DeathPactException : AkkaException
     {
-        private readonly IActorRef _deadActor;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="DeathPactException"/> class.
         /// </summary>
@@ -342,7 +350,7 @@ namespace Akka.Actor
         public DeathPactException(IActorRef deadActor)
             : base("Monitored actor [" + deadActor + "] terminated")
         {
-            _deadActor = deadActor;
+            DeadActor = deadActor;
         }
 
         /// <summary>
@@ -353,15 +361,20 @@ namespace Akka.Actor
         protected DeathPactException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            DeadActor = (IActorRef)info.GetValue("DeadActor", typeof(IActorRef));
+        }
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("DeadActor", DeadActor);
+            base.GetObjectData(info, context);
         }
 
         /// <summary>
         /// Retrieves the actor that has been terminated.
         /// </summary>
-        public IActorRef DeadActor
-        {
-            get { return _deadActor; }
-        }
+        public IActorRef DeadActor { get; }
     }
 
     /// <summary>
@@ -372,12 +385,10 @@ namespace Akka.Actor
     /// hence it is only visible as log entry on the event stream.
     /// </note>
     /// </summary>
-    public class PreRestartException : AkkaException
+    public class PreRestartException : ActorInitializationException
     {
-        private IActorRef Actor;
-        private Exception e; //TODO: what is this?
-        private Exception exception;
-        private object optionalMessage;
+        public Exception RestartException { get; } //TODO: what is this?
+        public object OptionalMessage { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PreRestartException"/> class.
@@ -387,11 +398,11 @@ namespace Akka.Actor
         /// <param name="cause">The exception which caused the restart in the first place.</param>
         /// <param name="optionalMessage">The message which was optionally passed into <see cref="ActorBase.PreRestart"/>.</param>
         public PreRestartException(IActorRef actor, Exception restartException, Exception cause, object optionalMessage)
+        :base(actor,"Exception pre restart (" + (restartException == null ?"null" : restartException.GetType().ToString()) + ")", cause)
         {
             Actor = actor;
-            e = restartException;
-            exception = cause;
-            this.optionalMessage = optionalMessage;
+            RestartException = restartException;
+            OptionalMessage = optionalMessage;
         }
 
         /// <summary>
@@ -402,7 +413,18 @@ namespace Akka.Actor
         protected PreRestartException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            RestartException = (Exception)info.GetValue("RestartException", typeof(Exception));
+            OptionalMessage = info.GetValue("OptionalMessage", typeof(object));
         }
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("RestartException", RestartException);
+            info.AddValue("OptionalMessage", OptionalMessage);
+            base.GetObjectData(info, context);
+        }
+
     }
 
     /// <summary>
@@ -411,8 +433,6 @@ namespace Akka.Actor
     /// </summary>
     public class PostRestartException : ActorInitializationException
     {
-        private readonly Exception _originalCause;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="PostRestartException"/> class.
         /// </summary>
@@ -422,7 +442,7 @@ namespace Akka.Actor
         public PostRestartException(IActorRef actor, Exception cause, Exception originalCause)
             :base(actor,"Exception post restart (" + (originalCause == null ?"null" : originalCause.GetType().ToString()) + ")", cause)
         {
-            _originalCause = originalCause;
+            OriginalCause = originalCause;
         }
 
         /// <summary>
@@ -433,12 +453,20 @@ namespace Akka.Actor
         protected PostRestartException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            OriginalCause = (Exception)info.GetValue("OriginalCause", typeof(Exception));
+        }
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("OriginalCause", OriginalCause);
+            base.GetObjectData(info, context);
         }
 
         ///<summary>
         /// Retrieves the exception which caused the restart in the first place.
         /// </summary>
-        public Exception OriginalCause { get { return _originalCause; } }
+        public Exception OriginalCause { get; }
     }
 
     /// <summary>

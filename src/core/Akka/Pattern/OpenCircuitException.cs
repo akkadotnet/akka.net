@@ -90,6 +90,15 @@ namespace Akka.Pattern
         protected OpenCircuitException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
+            var duration = (string)info.GetValue("RemainingDuration", typeof(string));
+            RemainingDuration = TimeSpan.Parse(duration);
+        }
+
+        public override void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            if (info == null) throw new ArgumentNullException(nameof(info));
+            info.AddValue("RemainingDuration", RemainingDuration);
+            base.GetObjectData(info, context);
         }
     }
 }
