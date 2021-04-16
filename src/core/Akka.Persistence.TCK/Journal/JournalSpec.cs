@@ -13,6 +13,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -330,6 +331,35 @@ namespace Akka.Persistence.TCK.Journal
         {
             if (!SupportsRejectingNonSerializableObjects) return;
 
+            // Test that JSON actually fail
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(NotSerializableEvent));
+            if (!(serializer is NewtonSoftJsonSerializer))
+            {
+                Output.WriteLine("[SKIP] This test only works with NewtonSoftJsonSerializer.");
+                return;
+            }
+
+            var serializerFailed = false;
+            try
+            {
+                var serialized = serializer.ToBinary(new NotSerializableEvent(true));
+                var deserialized = serializer.FromBinary<NotSerializableEvent>(serialized);
+                if (!(deserialized is NotSerializableEvent))
+                    throw new Exception();
+            }
+            catch (Exception)
+            {
+                serializerFailed = true;
+            }
+
+            if (!serializerFailed)
+            {
+                Output.WriteLine("[SKIP] This test assumes that the serializer will fail, but it doesn't.");
+                return;
+            }
+            // End test
+
+            // Start of actual test
             var msgs = Enumerable.Range(6, 3).Select(i =>
             {
                 var evt = i == 7 ? (object) new NotSerializableEvent(false) : "b-" + i;
