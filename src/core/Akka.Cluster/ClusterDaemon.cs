@@ -1964,8 +1964,11 @@ namespace Akka.Cluster
             // for all new joining nodes we remove them from the failure detector
             foreach (var node in _latestGossip.Members)
             {
-                if (node.Status == MemberStatus.Joining && !localGossip.Members.Contains(node))
+                if (!localGossip.Members.Contains(node))
+                {
                     _cluster.FailureDetector.Remove(node.Address);
+                }
+                    
             }
 
             _log.Debug("Cluster Node [{0}] - Receiving gossip from [{1}]", _cluster.SelfAddress, from);

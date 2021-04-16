@@ -502,7 +502,7 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="object.Equals(object)"/>
-        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress)obj);
+        public override bool Equals(object obj) => obj is UniqueAddress address && Equals(address);
 
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()
