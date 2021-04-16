@@ -21,9 +21,7 @@ using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
-#if CORECLR
 using System.Runtime.InteropServices;
-#endif
 
 namespace Akka.Tests.IO
 {
@@ -172,14 +170,10 @@ namespace Akka.Tests.IO
         public void The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
         {
             // Aaronontheweb, 9/2/2017 - POSIX-based OSES are still having trouble with IPV6 DNS resolution
-#if CORECLR
-            if(!System.Runtime.InteropServices.RuntimeInformation
+            if(!RuntimeInformation
                 .IsOSPlatform(OSPlatform.Windows) && family == AddressFamily.InterNetworkV6)
-            return;
-#else
-            if (RuntimeDetector.IsMono && family == AddressFamily.InterNetworkV6) // same as above
                 return;
-#endif
+
             var serverHandler = CreateTestProbe();
             var bindCommander = CreateTestProbe();
             bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 

@@ -256,14 +256,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                 throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
             var connectionString = config.GetString("connection-string", null);
-#if CONFIGURATION
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager
                     .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]?
                     .ConnectionString;
             }
-#endif
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ConfigurationException("No connection string for Sql Event Journal was specified");
