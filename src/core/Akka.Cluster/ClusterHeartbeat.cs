@@ -749,8 +749,8 @@ namespace Akka.Cluster
             /// <inheritdoc/>
             public int Compare(UniqueAddress x, UniqueAddress y)
             {
-                var ha = x.GetHashCode();
-                var hb = y.GetHashCode();
+                var ha = x.Uid;
+                var hb = y.Uid;
                 var c = ha.CompareTo(hb);
                 return c == 0 ? Member.AddressOrdering.Compare(x.Address, y.Address) : c;
             }
