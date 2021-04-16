@@ -510,7 +510,9 @@ namespace Akka.Cluster
             foreach (var r in removedReceivers)
             {
                 if (FailureDetector.IsAvailable(r.Address))
+                {
                     FailureDetector.Remove(r.Address);
+                }
                 else
                 {
                     adjustedOldReceiversNowUnreachable = adjustedOldReceiversNowUnreachable.Add(r);
@@ -649,11 +651,12 @@ namespace Akka.Cluster
                 {
                     if (iter.MoveNext() == false || n == 0)
                     {
+                        iter.Dispose(); // dispose enumerator
                         return (n, acc);
                     }
                     else
                     {
-                        UniqueAddress next = iter.Current;
+                        var next = iter.Current;
                         var isUnreachable = Unreachable.Contains(next);
                         if (isUnreachable && acc.Count >= MonitoredByNumberOfNodes)
                         {
@@ -670,13 +673,11 @@ namespace Akka.Cluster
                     }
                 };
 
-                var tuple = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
-                var remaining = tuple.Item1;
-                var slice1 = tuple.Item2;
+                var (remaining, slice1) = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
-                    ? slice1 
-                    : take(remaining, NodeRing().Until(sender).Where(c => !c.Equals(sender)).GetEnumerator(), slice1).Item2;
+                    ? slice1 // or, wrap-around
+                    : take(remaining, NodeRing().TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
 
                 return slice.ToImmutableHashSet();
             }
@@ -729,7 +730,9 @@ namespace Akka.Cluster
 
         #region Comparer
         /// <summary>
-        /// TBD
+        /// Data structure for picking heartbeat receivers. The node ring is
+        /// shuffled by deterministic hashing to avoid picking physically co-located
+        /// neighbors.
         /// </summary>
         internal class RingComparer : IComparer<UniqueAddress>
         {
@@ -742,12 +745,10 @@ namespace Akka.Cluster
             /// <inheritdoc/>
             public int Compare(UniqueAddress x, UniqueAddress y)
             {
-                var result = Member.AddressOrdering.Compare(x.Address, y.Address);
-                if (result == 0)
-                    if (x.Uid < y.Uid) return -1;
-                    else if (x.Uid == y.Uid) return 0;
-                    else return 1;
-                return result;
+                var ha = x.Uid;
+                var hb = y.Uid;
+                var c = ha.CompareTo(hb);
+                return c == 0 ? Member.AddressOrdering.Compare(x.Address, y.Address) : c;
             }
         }
         #endregion

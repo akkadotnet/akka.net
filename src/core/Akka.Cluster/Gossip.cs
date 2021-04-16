@@ -156,25 +156,33 @@ namespace Akka.Cluster
 
         private void AssertInvariants()
         {
-            if (_members.Any(m => m.Status == MemberStatus.Removed))
+            void IfTrueThrow(bool func, string expected, string actual)
             {
-                var members = string.Join(", ", _members.Where(m => m.Status == MemberStatus.Removed).Select(m => m.ToString()));
-                throw new ArgumentException($"Live members must not have status [Removed], got {members}", nameof(_members));
+                if (func) throw new ArgumentException($"{expected}, but found [{actual}]");
             }
+
+
+            IfTrueThrow(_members.Any(m => m.Status == MemberStatus.Removed),
+                expected: "Live members must not have status [Removed]",
+                actual: string.Join(", ",
+                    _members.Where(m => m.Status == MemberStatus.Removed).Select(m => m.ToString())));
+
 
             var inReachabilityButNotMember = _overview.Reachability.AllObservers.Except(_members.Select(m => m.UniqueAddress));
-            if (!inReachabilityButNotMember.IsEmpty)
-            {
-                var inreachability = string.Join(", ", inReachabilityButNotMember.Select(a => a.ToString()));
-                throw new ArgumentException($"Nodes not part of cluster in reachability table, got {inreachability}", nameof(_overview));
-            }
+            IfTrueThrow(!inReachabilityButNotMember.IsEmpty,
+                expected: "Nodes not part of cluster in reachability table",
+                actual: string.Join(", ", inReachabilityButNotMember.Select(a => a.ToString())));
+
+            var inReachabilityVersionsButNotMember =
+                _overview.Reachability.Versions.Keys.Except(Members.Select(x => x.UniqueAddress)).ToImmutableHashSet();
+            IfTrueThrow(!inReachabilityVersionsButNotMember.IsEmpty,
+                expected: "Nodes not part of cluster in reachability versions table",
+                actual: string.Join(", ", inReachabilityVersionsButNotMember.Select(a => a.ToString())));
 
             var seenButNotMember = _overview.Seen.Except(_members.Select(m => m.UniqueAddress));
-            if (!seenButNotMember.IsEmpty)
-            {
-                var seen = string.Join(", ", seenButNotMember.Select(a => a.ToString()));
-                throw new ArgumentException($"Nodes not part of cluster have marked the Gossip as seen, got {seen}", nameof(_overview));
-            }
+            IfTrueThrow(!seenButNotMember.IsEmpty,
+                expected: "Nodes not part of cluster have marked the Gossip as seen",
+                actual: string.Join(", ", seenButNotMember.Select(a => a.ToString())));
         }
 
         //TODO: Serializer should ignore
@@ -274,7 +282,7 @@ namespace Akka.Cluster
             var mergedMembers = EmptyMembers.Union(Member.PickHighestPriority(this._members, that._members));
 
             // 3. merge reachability table by picking records with highest version
-            var mergedReachability = this._overview.Reachability.Merge(mergedMembers.Select(m => m.UniqueAddress),
+            var mergedReachability = _overview.Reachability.Merge(mergedMembers.Select(m => m.UniqueAddress),
                 that._overview.Reachability);
 
             // 4. Nobody can have seen this new gossip yet
@@ -448,7 +456,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Represents the overview of the cluster, holds the cluster convergence table and set with unreachable nodes.
     /// </summary>
-    class GossipOverview
+    internal class GossipOverview
     {
         readonly ImmutableHashSet<UniqueAddress> _seen;
         readonly Reachability _reachability;
@@ -508,9 +516,6 @@ namespace Akka.Cluster
     /// </summary>
     class GossipEnvelope : IClusterMessage
     {
-        //TODO: Serialization?
-        //TODO: ser stuff?
-
         readonly UniqueAddress _from;
         readonly UniqueAddress _to;
 
