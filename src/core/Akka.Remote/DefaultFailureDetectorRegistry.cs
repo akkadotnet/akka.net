@@ -112,6 +112,7 @@ namespace Akka.Remote
         /// <param name="resource">TBD</param>
         public void Remove(T resource)
         {
+            Console.WriteLine("Attempting to remove heartbeats to {0}", resource);
             while (true)
             {
                 var oldTable = ResourceToFailureDetector;

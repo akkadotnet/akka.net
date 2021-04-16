@@ -1620,6 +1620,7 @@ namespace Akka.Cluster
                 else
                 {
                     // remove the node from the failure detector
+                    _cluster.LogInfo("Removing {0} from failure detector due to joining", node.Address); // TODO: remove me
                     _cluster.FailureDetector.Remove(node.Address);
 
                     // add joining node as Joining
@@ -1965,7 +1966,11 @@ namespace Akka.Cluster
             foreach (var node in _latestGossip.Members)
             {
                 if (node.Status == MemberStatus.Joining && !localGossip.Members.Contains(node))
+                {
+                    _log.Info("Removing {0} from failure detector due to gossip", node.Address); // TODO: remove me
                     _cluster.FailureDetector.Remove(node.Address);
+                }
+                    
             }
 
             _log.Debug("Cluster Node [{0}] - Receiving gossip from [{1}]", _cluster.SelfAddress, from);
