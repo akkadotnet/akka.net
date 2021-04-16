@@ -154,7 +154,7 @@ namespace Akka.Remote
 
         private AtomicReference<State> _state;
 
-        private State state
+        internal State state
         {
             get { return _state; }
             set { _state = value; }
@@ -209,6 +209,7 @@ namespace Akka.Remote
             }
 
             var newState = new State(newHistory, timestamp);
+
             //if we won the race then update else try again
             if(!_state.CompareAndSet(oldState, newState)) HeartBeat();
         }
@@ -304,7 +305,6 @@ namespace Akka.Remote
     internal readonly struct HeartbeatHistory
     {
         private readonly int _maxSampleSize;
-        private readonly ImmutableList<long> _intervals;
         private readonly long _intervalSum;
         private readonly long _squaredIntervalSum;
 
@@ -326,7 +326,7 @@ namespace Akka.Remote
         public HeartbeatHistory(int maxSampleSize, ImmutableList<long> intervals, long intervalSum, long squaredIntervalSum)
         {
             _maxSampleSize = maxSampleSize;
-            _intervals = intervals;
+            Intervals = intervals;
             _intervalSum = intervalSum;
             _squaredIntervalSum = squaredIntervalSum;
 
@@ -338,11 +338,13 @@ namespace Akka.Remote
                 throw new ArgumentOutOfRangeException(nameof(squaredIntervalSum), $"squaredIntervalSum must be >= 0, got {squaredIntervalSum}");
         }
 
-        public double Mean => ((double)_intervalSum / _intervals.Count);
+        public double Mean => ((double)_intervalSum / Intervals.Count);
 
-        public double Variance => ((double)_squaredIntervalSum / _intervals.Count) - (Mean * Mean);
+        public double Variance => ((double)_squaredIntervalSum / Intervals.Count) - (Mean * Mean);
 
         public double StdDeviation => Math.Sqrt(Variance);
+
+        public ImmutableList<long> Intervals { get; }
 
         /// <summary>
         /// Increments the <see cref="HeartbeatHistory"/>.
@@ -352,9 +354,9 @@ namespace Akka.Remote
         /// <returns>A new heartbeat history instance with the added interval.</returns>
         public static HeartbeatHistory operator +(HeartbeatHistory history, long interval)
         {
-            if (history._intervals.Count < history._maxSampleSize)
+            if (history.Intervals.Count < history._maxSampleSize)
             {
-                return new HeartbeatHistory(history._maxSampleSize, history._intervals.Add(interval),
+                return new HeartbeatHistory(history._maxSampleSize, history.Intervals.Add(interval),
                     history._intervalSum + interval, history._squaredIntervalSum + Pow2(interval));
             }
             else
@@ -365,8 +367,8 @@ namespace Akka.Remote
 
         private static HeartbeatHistory DropOldest(HeartbeatHistory history)
         {
-            return new HeartbeatHistory(history._maxSampleSize, history._intervals.RemoveAt(0), history._intervalSum - history._intervals.First(), 
-                history._squaredIntervalSum - Pow2(history._intervals.First()));
+            return new HeartbeatHistory(history._maxSampleSize, history.Intervals.RemoveAt(0), history._intervalSum - history.Intervals.First(), 
+                history._squaredIntervalSum - Pow2(history.Intervals.First()));
         }
 
         private static long Pow2(long x)
