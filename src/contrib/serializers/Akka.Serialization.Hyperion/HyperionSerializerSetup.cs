@@ -41,13 +41,13 @@ namespace Akka.Serialization.Hyperion
         /// When true, it tells <see cref="HyperionSerializer"/> to keep
         /// track of references in serialized/deserialized object graph.
         /// </summary>
-        public readonly Option<bool> PreserveObjectReferences;
+        public Option<bool> PreserveObjectReferences { get; }
 
         /// <summary>
         /// When true, it tells <see cref="HyperionSerializer"/> to encode
         /// a list of currently serialized fields into type manifest.
         /// </summary>
-        public readonly Option<bool> VersionTolerance;
+        public Option<bool> VersionTolerance { get; }
 
         /// <summary>
         /// A type implementing <see cref="IKnownTypesProvider"/>, that will
@@ -57,13 +57,13 @@ namespace Akka.Serialization.Hyperion
         /// provide either a default constructor or a constructor taking
         /// <see cref="ExtendedActorSystem"/> as its only parameter.
         /// </summary>
-        public readonly Type KnownTypesProvider;
+        public Type KnownTypesProvider { get; }
 
         /// <summary>
         /// A list of lambda functions, used to transform incoming deserialized
         /// package names before they are instantiated
         /// </summary>
-        public readonly IEnumerable<Func<string, string>> PackageNameOverrides;
+        public IEnumerable<Func<string, string>> PackageNameOverrides { get; }
 
         internal HyperionSerializerSettings ApplySettings(HyperionSerializerSettings settings)
             => new HyperionSerializerSettings(
