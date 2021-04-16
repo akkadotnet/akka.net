@@ -63,13 +63,29 @@ namespace Akka.Cluster
             return system.WithExtension<Cluster, ClusterExtension>();
         }
 
+        static Cluster()
+        {
+            bool GetAssertInvariants()
+            {
+                var isOn = Environment.GetEnvironmentVariable("akka.cluster.assert")?.ToLowerInvariant();
+                switch (isOn)
+                {
+                    case "on":
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            IsAssertInvariantsEnabled = GetAssertInvariants();
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
         internal static bool IsAssertInvariantsEnabled
         {
-            //TODO: Consequences of this?
-            get { return false; }
+            get;
         }
 
         /// <summary>
