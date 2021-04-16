@@ -345,6 +345,7 @@ namespace Akka.Cluster.Tools.Singleton
     public sealed class ClusterSingletonManagerIsStuckException : Akka.Actor.AkkaException
     {
         public ClusterSingletonManagerIsStuckException(string message) { }
+        public ClusterSingletonManagerIsStuckException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class ClusterSingletonManagerSettings : Akka.Actor.INoSerializationVerificationNeeded
     {

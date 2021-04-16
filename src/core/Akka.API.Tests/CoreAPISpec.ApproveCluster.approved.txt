@@ -175,6 +175,7 @@ namespace Akka.Cluster
     public class ClusterJoinFailedException : Akka.Actor.AkkaException
     {
         public ClusterJoinFailedException(string message) { }
+        protected ClusterJoinFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ClusterScope : Akka.Actor.Scope
     {
