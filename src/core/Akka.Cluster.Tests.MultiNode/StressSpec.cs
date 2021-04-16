@@ -33,7 +33,7 @@ namespace Akka.Cluster.Tests.MultiNode
 {
     public class StressSpecConfig : MultiNodeConfig
     {
-        public int TotalNumberOfNodes => Environment.GetEnvironmentVariable("MultiNode.Akka.Cluster.Stress.NrOfNodes") switch
+        public int TotalNumberOfNodes => Environment.GetEnvironmentVariable("STRESS_NR_NODES") switch
         {
             string e when string.IsNullOrEmpty(e) => 13,
             string val => int.Parse(val),
