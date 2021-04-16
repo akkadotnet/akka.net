@@ -512,12 +512,10 @@ namespace Akka.Cluster
             {
                 if (FailureDetector.IsAvailable(r.Address))
                 {
-                    Console.WriteLine("{0} removing {1} due to membership change", SelfAddress.Address, r.Address);
                     FailureDetector.Remove(r.Address);
                 }
                 else
                 {
-                    Console.WriteLine("{0} NOT REMOVING {1} due to membership change, but this node is unreachable", SelfAddress.Address, r.Address);
                     adjustedOldReceiversNowUnreachable = adjustedOldReceiversNowUnreachable.Add(r);
                 }
             }
@@ -539,7 +537,6 @@ namespace Akka.Cluster
                     //back from unreachable, ok to stop heartbeating to it
                     if (!Ring.MyReceivers.Value.Contains(from))
                     {
-                        Console.WriteLine("{0} removing {1} due to unreachable -> reachable", SelfAddress.Address, from.Address);
                         FailureDetector.Remove(from.Address);
                     }
                     return Copy(oldReceiversNowUnreachable: OldReceiversNowUnreachable.Remove(from));
