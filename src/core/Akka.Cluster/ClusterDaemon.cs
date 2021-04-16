@@ -1620,7 +1620,6 @@ namespace Akka.Cluster
                 else
                 {
                     // remove the node from the failure detector
-                    _cluster.LogInfo("Removing {0} from failure detector due to joining", node.Address); // TODO: remove me
                     _cluster.FailureDetector.Remove(node.Address);
 
                     // add joining node as Joining

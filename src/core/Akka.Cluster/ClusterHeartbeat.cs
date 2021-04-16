@@ -190,7 +190,6 @@ namespace Akka.Cluster
             }
             else
             {
-                _log.Info("removing member {0} from heartbeats", m.Address);
                 _state = _state.RemoveMember(m.UniqueAddress);
             }
         }
@@ -677,7 +676,7 @@ namespace Akka.Cluster
                 var (remaining, slice1) = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
-                    ? slice1 // or, wrap0around
+                    ? slice1 // or, wrap-around
                     : take(remaining, NodeRing().TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
 
                 return slice.ToImmutableHashSet();
