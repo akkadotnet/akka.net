@@ -588,13 +588,14 @@ namespace Akka.Cluster
         {
             SelfAddress = selfAddress;
             Nodes = nodes;
+            NodeRing = nodes.ToImmutableSortedSet(RingComparer.Instance);
             Unreachable = unreachable;
             MonitoredByNumberOfNodes = monitoredByNumberOfNodes;
 
             if (!nodes.Contains(selfAddress))
                 throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
 
-            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing().Count - 1);
+            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
             MyReceivers = new Lazy<ImmutableHashSet<UniqueAddress>>(() => Receivers(SelfAddress));
         }
 
@@ -618,10 +619,7 @@ namespace Akka.Cluster
         /// </summary>
         public int MonitoredByNumberOfNodes { get; }
 
-        private ImmutableSortedSet<UniqueAddress> NodeRing()
-        {
-            return Nodes.ToImmutableSortedSet(RingComparer.Instance);
-        }
+        public ImmutableSortedSet<UniqueAddress> NodeRing { get; }
 
         /// <summary>
         /// Receivers for <see cref="SelfAddress"/>. Cached for subsequent access.
@@ -637,7 +635,7 @@ namespace Akka.Cluster
         {
             if (_useAllAsReceivers)
             {
-                return NodeRing().Remove(sender).ToImmutableHashSet();
+                return NodeRing.Remove(sender).ToImmutableHashSet();
             }
             else
             {
@@ -672,11 +670,11 @@ namespace Akka.Cluster
                     }
                 }
 
-                var (remaining, slice1) = Take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
+                var (remaining, slice1) = Take(MonitoredByNumberOfNodes, NodeRing.From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
                     ? slice1 // or, wrap-around
-                    : Take(remaining, NodeRing().TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
+                    : Take(remaining, NodeRing.TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
 
                 return slice.ToImmutableHashSet();
             }
