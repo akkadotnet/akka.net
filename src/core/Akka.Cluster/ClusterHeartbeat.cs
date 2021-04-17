@@ -569,6 +569,7 @@ namespace Akka.Cluster
     internal sealed class HeartbeatNodeRing
     {
         private readonly bool _useAllAsReceivers;
+        private Option<ImmutableHashSet<UniqueAddress>> _myReceivers;
 
         /// <summary>
         /// TBD
@@ -596,7 +597,7 @@ namespace Akka.Cluster
                 throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
 
             _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
-            MyReceivers = new Lazy<ImmutableHashSet<UniqueAddress>>(() => Receivers(SelfAddress));
+            _myReceivers = Option<ImmutableHashSet<UniqueAddress>>.None;
         }
 
         /// <summary>
@@ -624,7 +625,18 @@ namespace Akka.Cluster
         /// <summary>
         /// Receivers for <see cref="SelfAddress"/>. Cached for subsequent access.
         /// </summary>
-        public readonly Lazy<ImmutableHashSet<UniqueAddress>> MyReceivers;
+        public Option<ImmutableHashSet<UniqueAddress>> MyReceivers
+        {
+            get
+            {
+                if (_myReceivers.IsEmpty)
+                {
+                    _myReceivers = Receivers(SelfAddress);
+                }
+
+                return _myReceivers;
+            }
+        }
 
         /// <summary>
         /// The set of Akka.Cluster nodes designated for receiving heartbeats from this node.
@@ -694,7 +706,7 @@ namespace Akka.Cluster
                 selfAddress ?? SelfAddress,
                 nodes ?? Nodes,
                 unreachable ?? Unreachable,
-                monitoredByNumberOfNodes.HasValue ? monitoredByNumberOfNodes.Value : MonitoredByNumberOfNodes);
+                monitoredByNumberOfNodes ?? MonitoredByNumberOfNodes);
         }
 
         #region Operators
