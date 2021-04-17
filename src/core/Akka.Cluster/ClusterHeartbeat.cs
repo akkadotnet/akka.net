@@ -429,7 +429,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly ImmutableHashSet<UniqueAddress> ActiveReceivers;
+        public readonly IImmutableSet<UniqueAddress> ActiveReceivers;
 
         /// <summary>
         /// TBD
@@ -569,7 +569,7 @@ namespace Akka.Cluster
     internal sealed class HeartbeatNodeRing
     {
         private readonly bool _useAllAsReceivers;
-        private Option<ImmutableHashSet<UniqueAddress>> _myReceivers;
+        private Option<IImmutableSet<UniqueAddress>> _myReceivers;
 
         /// <summary>
         /// TBD
@@ -597,7 +597,7 @@ namespace Akka.Cluster
                 throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
 
             _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
-            _myReceivers = Option<ImmutableHashSet<UniqueAddress>>.None;
+            _myReceivers = Option<IImmutableSet<UniqueAddress>>.None;
         }
 
         /// <summary>
@@ -625,13 +625,13 @@ namespace Akka.Cluster
         /// <summary>
         /// Receivers for <see cref="SelfAddress"/>. Cached for subsequent access.
         /// </summary>
-        public Option<ImmutableHashSet<UniqueAddress>> MyReceivers
+        public Option<IImmutableSet<UniqueAddress>> MyReceivers
         {
             get
             {
                 if (_myReceivers.IsEmpty)
                 {
-                    _myReceivers = Receivers(SelfAddress);
+                    _myReceivers = new Option<IImmutableSet<UniqueAddress>>(Receivers(SelfAddress));
                 }
 
                 return _myReceivers;
@@ -643,11 +643,11 @@ namespace Akka.Cluster
         /// </summary>
         /// <param name="sender">The node sending heartbeats.</param>
         /// <returns>An organized ring of unique nodes.</returns>
-        public ImmutableHashSet<UniqueAddress> Receivers(UniqueAddress sender)
+        public IImmutableSet<UniqueAddress> Receivers(UniqueAddress sender)
         {
             if (_useAllAsReceivers)
             {
-                return NodeRing.Remove(sender).ToImmutableHashSet();
+                return NodeRing.Remove(sender);
             }
             else
             {
@@ -688,7 +688,7 @@ namespace Akka.Cluster
                     ? slice1 // or, wrap-around
                     : Take(remaining, NodeRing.TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
 
-                return slice.ToImmutableHashSet();
+                return slice;
             }
         }
 

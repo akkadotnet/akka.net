@@ -38,7 +38,7 @@ namespace Akka.Benchmarks.Cluster
         private static void MyReceivers(HeartbeatNodeRing ring)
         {
             var r = new HeartbeatNodeRing(ring.SelfAddress, ring.Nodes, ImmutableHashSet<UniqueAddress>.Empty, ring.MonitoredByNumberOfNodes);
-            r.MyReceivers.Value.IsEmpty.Should().BeFalse();
+            r.MyReceivers.Value.Count.Should().BeGreaterThan(0);
         }
 
         [Benchmark]
