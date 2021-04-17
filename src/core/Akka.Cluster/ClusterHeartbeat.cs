@@ -552,7 +552,7 @@ namespace Akka.Cluster
         /// <param name="oldReceiversNowUnreachable">TBD</param>
         /// <param name="failureDetector">TBD</param>
         /// <returns>TBD</returns>
-        public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing ring = null, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
+        public ClusterHeartbeatSenderState Copy(HeartbeatNodeRing? ring = null, ImmutableHashSet<UniqueAddress> oldReceiversNowUnreachable = null, IFailureDetectorRegistry<Address> failureDetector = null)
         {
             return new ClusterHeartbeatSenderState(ring ?? Ring, oldReceiversNowUnreachable ?? OldReceiversNowUnreachable, failureDetector ?? FailureDetector);
         }
@@ -566,7 +566,7 @@ namespace Akka.Cluster
     /// 
     /// It is immutable, i.e. the methods all return new instances.
     /// </summary>
-    internal sealed class HeartbeatNodeRing
+    internal struct HeartbeatNodeRing
     {
         private readonly bool _useAllAsReceivers;
         private Option<IImmutableSet<UniqueAddress>> _myReceivers;
@@ -656,37 +656,40 @@ namespace Akka.Cluster
                 // The reason for not limiting it to strictly monitoredByNrOfMembers is that the leader must
                 // be able to continue its duties (e.g. removal of downed nodes) when many nodes are shutdown
                 // at the same time and nobody in the remaining cluster is monitoring some of the shutdown nodes.
-                (int, ImmutableSortedSet<UniqueAddress>) Take(int n, IEnumerator<UniqueAddress> iter, ImmutableSortedSet<UniqueAddress> acc)
+                (int, ImmutableSortedSet<UniqueAddress>) Take(int n, IEnumerator<UniqueAddress> iter, ImmutableSortedSet<UniqueAddress> acc, ImmutableHashSet<UniqueAddress> unreachable, int monitoredByNumberOfNodes)
                 {
-                    if (iter.MoveNext() == false || n == 0)
+                    while (true)
                     {
-                        iter.Dispose(); // dispose enumerator
-                        return (n, acc);
-                    }
-                    else
-                    {
-                        var next = iter.Current;
-                        var isUnreachable = Unreachable.Contains(next);
-                        if (isUnreachable && acc.Count >= MonitoredByNumberOfNodes)
+                        if (iter.MoveNext() == false || n == 0)
                         {
-                            return Take(n, iter, acc); // skip the unreachable, since we have already picked `MonitoredByNumberOfNodes`
-                        }
-                        else if (isUnreachable)
-                        {
-                            return Take(n, iter, acc.Add(next)); // include the unreachable, but don't count it
+                            iter.Dispose(); // dispose enumerator
+                            return (n, acc);
                         }
                         else
                         {
-                            return Take(n - 1, iter, acc.Add(next)); // include the reachable
+                            var next = iter.Current;
+                            var isUnreachable = unreachable.Contains(next);
+                            if (isUnreachable && acc.Count >= monitoredByNumberOfNodes)
+                            {
+                            }
+                            else if (isUnreachable)
+                            {
+                                acc = acc.Add(next);
+                            }
+                            else
+                            {
+                                n = n - 1;
+                                acc = acc.Add(next);
+                            }
                         }
                     }
                 }
 
-                var (remaining, slice1) = Take(MonitoredByNumberOfNodes, NodeRing.From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
+                var (remaining, slice1) = Take(MonitoredByNumberOfNodes, NodeRing.From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty, Unreachable, MonitoredByNumberOfNodes);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
                     ? slice1 // or, wrap-around
-                    : Take(remaining, NodeRing.TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
+                    : Take(remaining, NodeRing.TakeWhile(x => x != sender).GetEnumerator(), slice1, Unreachable, MonitoredByNumberOfNodes).Item2;
 
                 return slice;
             }
