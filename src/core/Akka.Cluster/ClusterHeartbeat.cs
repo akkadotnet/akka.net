@@ -627,10 +627,10 @@ namespace Akka.Cluster
         public readonly Lazy<ImmutableHashSet<UniqueAddress>> MyReceivers;
 
         /// <summary>
-        /// TBD
+        /// The set of Akka.Cluster nodes designated for receiving heartbeats from this node.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="sender">The node sending heartbeats.</param>
+        /// <returns>An organized ring of unique nodes.</returns>
         public ImmutableHashSet<UniqueAddress> Receivers(UniqueAddress sender)
         {
             if (_useAllAsReceivers)
