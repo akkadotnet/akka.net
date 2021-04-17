@@ -66,7 +66,7 @@ namespace Akka.Cluster
         {
             bool GetAssertInvariants()
             {
-                var isOn = Environment.GetEnvironmentVariable("akka.cluster.assert")?.ToLowerInvariant();
+                var isOn = Environment.GetEnvironmentVariable("AKKA_CLUSTER_ASSERT")?.ToLowerInvariant();
                 switch (isOn)
                 {
                     case "on":
