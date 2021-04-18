@@ -110,7 +110,7 @@ namespace Akka.Cluster
                         return TimeSpan.FromSeconds(7); // for backwards compatibility when it wasn't a duration
                     default:
                         var val = clusterConfig.GetTimeSpan(cKey, TimeSpan.FromSeconds(7));
-                        if (val < TimeSpan.FromSeconds(7))
+                        if(!(val > TimeSpan.Zero))
                             throw new ConfigurationException($"Valid settings for [akka.cluster.{cKey}] are 'off', 'on', or a timespan greater than 0s. Received [{val}]");
                         return val;
                 }
