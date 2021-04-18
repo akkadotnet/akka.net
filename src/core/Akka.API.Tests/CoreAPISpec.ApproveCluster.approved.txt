@@ -220,6 +220,7 @@ namespace Akka.Cluster
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
+        public System.TimeSpan WeaklyUpAfter { get; }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
