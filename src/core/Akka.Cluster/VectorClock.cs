@@ -419,6 +419,8 @@ namespace Akka.Cluster
                     return compareNext(nt1, NextOrElse(i2, CmpEndMarker), Ordering.Before);
                 };
 
+            using(i1)
+            using(i2)
             return compareNext(NextOrElse(i1, CmpEndMarker), NextOrElse(i2, CmpEndMarker), Ordering.Same);
         }
 
