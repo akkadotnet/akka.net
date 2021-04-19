@@ -40,7 +40,7 @@ namespace Akka.Cluster
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is VectorClock && Equals((VectorClock) obj);
+            return obj is VectorClock vc && Equals(vc);
         }
 
         public override int GetHashCode()
@@ -368,7 +368,7 @@ namespace Akka.Cluster
         /// <returns>The true ordering based on the contents of the vectorclock.</returns>
         internal Ordering CompareOnlyTo(VectorClock that, Ordering order)
         {
-            if (ReferenceEquals(this, that) || Versions.Equals(that.Versions)) return Ordering.Same;
+            if (ReferenceEquals(this, that) || ReferenceEquals(this.Versions, that.Versions)) return Ordering.Same;
 
             return Compare(_versions.GetEnumerator(), that._versions.GetEnumerator(), order == Ordering.Concurrent ? Ordering.FullOrder : order);
         }
