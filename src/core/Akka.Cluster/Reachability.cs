@@ -467,10 +467,10 @@ namespace Akka.Cluster
             {
                 if (records.IsEmpty)
                 {
-                    ObserverRowMap = ImmutableDictionary
-                        .Create<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>();
-                    AllTerminated = ImmutableHashSet.Create<UniqueAddress>();
-                    AllUnreachable = ImmutableHashSet.Create<UniqueAddress>();
+                    ObserverRowMap = ImmutableDictionary<UniqueAddress, ImmutableDictionary<UniqueAddress, Record>>
+                        .Empty;
+                    AllTerminated = ImmutableHashSet<UniqueAddress>.Empty;
+                    AllUnreachable = ImmutableHashSet<UniqueAddress>.Empty;
                 }
                 else
                 {
@@ -483,10 +483,7 @@ namespace Akka.Cluster
                         ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out m)
                             ? m.SetItem(r.Subject, r)
                             //TODO: Other collections take items for Create. Create unnecessary array here
-                            : ImmutableDictionary.CreateRange(new[]
-                            {
-                                new KeyValuePair<UniqueAddress, Record>(r.Subject, r)
-                            });
+                            : ImmutableDictionary<UniqueAddress, Record>.Empty.Add(r.Subject, r);
 
 
                         mapBuilder.AddOrSet(r.Observer, m);
@@ -514,12 +511,12 @@ namespace Akka.Cluster
             }
 
             /// <summary>
-            ///     TBD
+            /// Contains all nodes that have been observed as Terminated by at least one other node.
             /// </summary>
             public ImmutableHashSet<UniqueAddress> AllTerminated { get; }
 
             /// <summary>
-            ///     TBD
+            ///  Contains all nodes that have been observed as Unreachable by at least one other node.
             /// </summary>
             public ImmutableHashSet<UniqueAddress> AllUnreachable { get; }
 
