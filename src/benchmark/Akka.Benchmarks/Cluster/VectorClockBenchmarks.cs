@@ -14,7 +14,7 @@ namespace Akka.Benchmarks.Cluster
     [Config(typeof(MicroBenchmarkConfig))]
     public class VectorClockBenchmarks
     {
-        [Params(100, 500, 1000)]
+        [Params(100)]
         public int ClockSize;
 
         [Params(1000)]
