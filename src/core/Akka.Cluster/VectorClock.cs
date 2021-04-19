@@ -342,7 +342,7 @@ namespace Akka.Cluster
             return left.IsConcurrentWith(right);
         }
 
-        private static readonly KeyValuePair<Node, long> CmpEndMarker = new KeyValuePair<Node, long>(Node.Create("endmarker"), Timestamp.EndMarker);
+        private static readonly (Node, long) CmpEndMarker = (Node.Create("endmarker"), Timestamp.EndMarker);
 
         /// <summary>
         /// <para>
@@ -370,13 +370,13 @@ namespace Akka.Cluster
         {
             if (ReferenceEquals(this, that) || ReferenceEquals(this.Versions, that.Versions)) return Ordering.Same;
 
-            return Compare(_versions.GetEnumerator(), that._versions.GetEnumerator(), order == Ordering.Concurrent ? Ordering.FullOrder : order);
+            return Compare(_versions.Select(x => (x.Key, x.Value)).GetEnumerator(), that._versions.Select(y => (y.Key, y.Value)).GetEnumerator(), order == Ordering.Concurrent ? Ordering.FullOrder : order);
         }
 
-        private static Ordering Compare(IEnumerator<KeyValuePair<Node, long>> i1, IEnumerator<KeyValuePair<Node, long>> i2, Ordering requestedOrder)
+        private static Ordering Compare(IEnumerator<(Node, long)> i1, IEnumerator<(Node, long)> i2, Ordering requestedOrder)
         {
             //TODO: Tail recursion issues?
-            Ordering CompareNext(KeyValuePair<Node, long> nt1, KeyValuePair<Node, long> nt2, Ordering currentOrder)
+            Ordering CompareNext((Node, long) nt1, (Node, long) nt2, Ordering currentOrder)
             {
                 if (requestedOrder != Ordering.FullOrder && currentOrder != Ordering.Same && currentOrder != requestedOrder) return currentOrder;
                 if (nt1.Equals(CmpEndMarker) && nt2.Equals(CmpEndMarker)) return currentOrder;
@@ -385,13 +385,13 @@ namespace Akka.Cluster
                 // i2 is empty but i1 is not, so i1 can only be After
                 if (nt2.Equals(CmpEndMarker)) return currentOrder == Ordering.Before ? Ordering.Concurrent : Ordering.After;
                 // compare the nodes
-                var nc = nt1.Key.CompareTo(nt2.Key);
+                var nc = nt1.Item1.CompareTo(nt2.Item1);
                 if (nc == 0)
                 {
                     // both nodes exist compare the timestamps
                     // same timestamp so just continue with the next nodes   
-                    if (nt1.Value == nt2.Value) return CompareNext(NextOrElse(i1, CmpEndMarker), NextOrElse(i2, CmpEndMarker), currentOrder);
-                    if (nt1.Value < nt2.Value)
+                    if (nt1.Item2 == nt2.Item2) return CompareNext(NextOrElse(i1, CmpEndMarker), NextOrElse(i2, CmpEndMarker), currentOrder);
+                    if (nt1.Item2 < nt2.Item2)
                     {
                         // t1 is less than t2, so i1 can only be Before
                         if (currentOrder == Ordering.After) return Ordering.Concurrent;
