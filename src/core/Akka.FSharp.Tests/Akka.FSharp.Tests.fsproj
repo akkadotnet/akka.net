@@ -22,7 +22,7 @@
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+
   </ItemGroup>
 
   <ItemGroup>
