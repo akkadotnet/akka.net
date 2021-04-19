@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#if FSCHECK
 using System;
 using Microsoft.FSharp.Core;
 
@@ -38,4 +37,3 @@ namespace Akka.Tests.Shared.Internals.Helpers
         }
     }
 }
-#endif

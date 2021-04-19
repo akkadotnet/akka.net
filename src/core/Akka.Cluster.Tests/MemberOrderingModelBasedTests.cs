@@ -5,15 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#if FSCHECK
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Tests.Shared.Internals.Helpers;
+using Akka.Util;
 using Akka.Util.Internal;
 using FsCheck;
 using FsCheck.Experimental;
@@ -90,7 +88,7 @@ namespace Akka.Cluster.Tests
                 // filter out any duplicates
                 _members =
                     addresses.Distinct()
-                        .Select(x => new Member(x, int.MaxValue, MemberStatus.Up, ImmutableHashSet<string>.Empty))
+                        .Select(x => new Member(x, int.MaxValue, MemberStatus.Up, ImmutableHashSet<string>.Empty, AppVersion.Zero))
                         .ToArray();
             }
 
@@ -199,7 +197,7 @@ namespace Akka.Cluster.Tests
             {
                 var members = actual.Members;
                 actual.Members = members.Add(new Member(_address, int.MaxValue, MemberStatus.Up,
-                    ImmutableHashSet<string>.Empty));
+                    ImmutableHashSet<string>.Empty, AppVersion.Zero));
 
                 var except = actual.Members.SymmetricExcept(model.AllMembers.Values);
 
@@ -212,7 +210,7 @@ namespace Akka.Cluster.Tests
             {
                 return
                     model.UpdateMember(new Member(_address, int.MaxValue, MemberStatus.Up,
-                        ImmutableHashSet<string>.Empty));
+                        ImmutableHashSet<string>.Empty, AppVersion.Zero));
             }
 
             public override string ToString()
@@ -249,4 +247,3 @@ namespace Akka.Cluster.Tests
         }
     }
 }
-#endif

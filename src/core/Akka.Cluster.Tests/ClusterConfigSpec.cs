@@ -42,6 +42,7 @@ namespace Akka.Cluster.Tests
             settings.LeaderActionsInterval.Should().Be(1.Seconds());
             settings.UnreachableNodesReaperInterval.Should().Be(1.Seconds());
             settings.AllowWeaklyUpMembers.Should().BeTrue();
+            settings.WeaklyUpAfter.Should().Be(7.Seconds());
             settings.PublishStatsInterval.Should().NotHaveValue();
             settings.AutoDownUnreachableAfter.Should().NotHaveValue();
             settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
