@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private readonly RestartFirstSeedNodeSpecConfig _config;
         private Address _missedSeed;
-        private static Address _seedNode1Address;
+        private static volatile Address _seedNode1Address;
 
         private Lazy<ActorSystem> seed1System;
         private Lazy<ActorSystem> restartedSeed1System;
