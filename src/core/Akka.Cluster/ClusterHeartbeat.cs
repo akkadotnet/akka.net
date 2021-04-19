@@ -429,7 +429,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly ImmutableHashSet<UniqueAddress> ActiveReceivers;
+        public readonly IImmutableSet<UniqueAddress> ActiveReceivers;
 
         /// <summary>
         /// TBD
@@ -569,6 +569,7 @@ namespace Akka.Cluster
     internal sealed class HeartbeatNodeRing
     {
         private readonly bool _useAllAsReceivers;
+        private Option<IImmutableSet<UniqueAddress>> _myReceivers;
 
         /// <summary>
         /// TBD
@@ -588,14 +589,15 @@ namespace Akka.Cluster
         {
             SelfAddress = selfAddress;
             Nodes = nodes;
+            NodeRing = nodes.ToImmutableSortedSet(RingComparer.Instance);
             Unreachable = unreachable;
             MonitoredByNumberOfNodes = monitoredByNumberOfNodes;
 
             if (!nodes.Contains(selfAddress))
                 throw new ArgumentException($"Nodes [${string.Join(", ", nodes)}] must contain selfAddress [{selfAddress}]");
 
-            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing().Count - 1);
-            MyReceivers = new Lazy<ImmutableHashSet<UniqueAddress>>(() => Receivers(SelfAddress));
+            _useAllAsReceivers = MonitoredByNumberOfNodes >= (NodeRing.Count - 1);
+            _myReceivers = Option<IImmutableSet<UniqueAddress>>.None;
         }
 
         /// <summary>
@@ -618,26 +620,34 @@ namespace Akka.Cluster
         /// </summary>
         public int MonitoredByNumberOfNodes { get; }
 
-        private ImmutableSortedSet<UniqueAddress> NodeRing()
-        {
-            return Nodes.ToImmutableSortedSet(RingComparer.Instance);
-        }
+        public ImmutableSortedSet<UniqueAddress> NodeRing { get; }
 
         /// <summary>
         /// Receivers for <see cref="SelfAddress"/>. Cached for subsequent access.
         /// </summary>
-        public readonly Lazy<ImmutableHashSet<UniqueAddress>> MyReceivers;
+        public Option<IImmutableSet<UniqueAddress>> MyReceivers
+        {
+            get
+            {
+                if (_myReceivers.IsEmpty)
+                {
+                    _myReceivers = new Option<IImmutableSet<UniqueAddress>>(Receivers(SelfAddress));
+                }
+
+                return _myReceivers;
+            }
+        }
 
         /// <summary>
-        /// TBD
+        /// The set of Akka.Cluster nodes designated for receiving heartbeats from this node.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <returns>TBD</returns>
-        public ImmutableHashSet<UniqueAddress> Receivers(UniqueAddress sender)
+        /// <param name="sender">The node sending heartbeats.</param>
+        /// <returns>An organized ring of unique nodes.</returns>
+        public IImmutableSet<UniqueAddress> Receivers(UniqueAddress sender)
         {
             if (_useAllAsReceivers)
             {
-                return NodeRing().Remove(sender).ToImmutableHashSet();
+                return NodeRing.Remove(sender);
             }
             else
             {
@@ -646,8 +656,7 @@ namespace Akka.Cluster
                 // The reason for not limiting it to strictly monitoredByNrOfMembers is that the leader must
                 // be able to continue its duties (e.g. removal of downed nodes) when many nodes are shutdown
                 // at the same time and nobody in the remaining cluster is monitoring some of the shutdown nodes.
-                Func<int, IEnumerator<UniqueAddress>, ImmutableSortedSet<UniqueAddress>, (int, ImmutableSortedSet<UniqueAddress>)> take = null;
-                take = (n, iter, acc) =>
+                (int, ImmutableSortedSet<UniqueAddress>) Take(int n, IEnumerator<UniqueAddress> iter, ImmutableSortedSet<UniqueAddress> acc)
                 {
                     if (iter.MoveNext() == false || n == 0)
                     {
@@ -660,26 +669,26 @@ namespace Akka.Cluster
                         var isUnreachable = Unreachable.Contains(next);
                         if (isUnreachable && acc.Count >= MonitoredByNumberOfNodes)
                         {
-                            return take(n, iter, acc); // skip the unreachable, since we have already picked `MonitoredByNumberOfNodes`
+                            return Take(n, iter, acc); // skip the unreachable, since we have already picked `MonitoredByNumberOfNodes`
                         }
                         else if (isUnreachable)
                         {
-                            return take(n, iter, acc.Add(next)); // include the unreachable, but don't count it
+                            return Take(n, iter, acc.Add(next)); // include the unreachable, but don't count it
                         }
                         else
                         {
-                            return take(n - 1, iter, acc.Add(next)); // include the reachable
+                            return Take(n - 1, iter, acc.Add(next)); // include the reachable
                         }
                     }
-                };
+                }
 
-                var (remaining, slice1) = take(MonitoredByNumberOfNodes, NodeRing().From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
+                var (remaining, slice1) = Take(MonitoredByNumberOfNodes, NodeRing.From(sender).Skip(1).GetEnumerator(), ImmutableSortedSet<UniqueAddress>.Empty);
 
                 IImmutableSet<UniqueAddress> slice = remaining == 0 
                     ? slice1 // or, wrap-around
-                    : take(remaining, NodeRing().TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
+                    : Take(remaining, NodeRing.TakeWhile(x => x != sender).GetEnumerator(), slice1).Item2;
 
-                return slice.ToImmutableHashSet();
+                return slice;
             }
         }
 
@@ -697,7 +706,7 @@ namespace Akka.Cluster
                 selfAddress ?? SelfAddress,
                 nodes ?? Nodes,
                 unreachable ?? Unreachable,
-                monitoredByNumberOfNodes.HasValue ? monitoredByNumberOfNodes.Value : MonitoredByNumberOfNodes);
+                monitoredByNumberOfNodes ?? MonitoredByNumberOfNodes);
         }
 
         #region Operators

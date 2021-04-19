@@ -2174,7 +2174,7 @@ namespace Akka.Cluster
                 {
                     _leaderActionCounter += 1;
 
-                    if (_cluster.Settings.AllowWeaklyUpMembers && _leaderActionCounter >= 3)
+                    if (_cluster.Settings.AllowWeaklyUpMembers && (_leaderActionCounter * _cluster.Settings.LeaderActionsInterval.TotalMilliseconds) >= _cluster.Settings.WeaklyUpAfter.TotalMilliseconds)
                         MoveJoiningToWeaklyUp();
 
                     if (_leaderActionCounter == firstNotice || _leaderActionCounter % periodicNotice == 0)
