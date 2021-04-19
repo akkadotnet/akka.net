@@ -337,7 +337,7 @@ namespace Akka.Cluster
         public ImmutableHashSet<UniqueAddress> AllUnreachableFrom(UniqueAddress observer)
         {
             var observerRows = ObserverRows(observer);
-            if (observerRows == null) return ImmutableHashSet.Create<UniqueAddress>();
+            if (observerRows == null) return ImmutableHashSet<UniqueAddress>.Empty;
             return
                 ImmutableHashSet.CreateRange(
                     observerRows.Where(p => p.Value.Status == ReachabilityStatus.Unreachable).Select(p => p.Key));
@@ -351,16 +351,18 @@ namespace Akka.Cluster
         public ImmutableList<Record> RecordsFrom(UniqueAddress observer)
         {
             var rows = ObserverRows(observer);
-            if (rows == null) return ImmutableList.Create<Record>();
+            if (rows == null) return ImmutableList<Record>.Empty;
             return rows.Values.ToImmutableList();
         }
 
+        /// only used for testing
         /// <inheritdoc />
         public override int GetHashCode()
         {
             return Versions.GetHashCode();
         }
 
+        /// only used for testing
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
@@ -480,13 +482,12 @@ namespace Akka.Cluster
 
                     foreach (var r in records)
                     {
-                        ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out m)
-                            ? m.SetItem(r.Subject, r)
-                            //TODO: Other collections take items for Create. Create unnecessary array here
+                        ImmutableDictionary<UniqueAddress, Record> m = mapBuilder.TryGetValue(r.Observer, out var mR)
+                            ? mR.SetItem(r.Subject, r)
                             : ImmutableDictionary<UniqueAddress, Record>.Empty.Add(r.Subject, r);
 
 
-                        mapBuilder.AddOrSet(r.Observer, m);
+                        mapBuilder[r.Observer] = m;
 
                         if (r.Status == ReachabilityStatus.Unreachable) unreachableBuilder.Add(r.Subject);
                         else if (r.Status == ReachabilityStatus.Terminated) terminatedBuilder.Add(r.Subject);
