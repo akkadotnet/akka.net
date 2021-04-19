@@ -23,6 +23,16 @@ namespace Akka.Persistence
     public interface IJournalRequest : IJournalMessage { }
 
     /// <summary>
+    /// Marker for batched write operations
+    /// </summary>
+    public interface IJournalWrite : IJournalRequest { }
+
+    /// <summary>
+    /// Marker for batched read operations
+    /// </summary>
+    public interface IJournalRead : IJournalRequest { }
+
+    /// <summary>
     /// Internal journal acknowledgement
     /// </summary>
     public interface IJournalResponse : IJournalMessage { }
@@ -128,7 +138,7 @@ namespace Akka.Persistence
     /// Request to delete all persistent messages with sequence numbers up to `toSequenceNr` (inclusive).  
     /// </summary>
     [Serializable]
-    public sealed class DeleteMessagesTo : IJournalRequest, IEquatable<DeleteMessagesTo>
+    public sealed class DeleteMessagesTo : IJournalRequest, IEquatable<DeleteMessagesTo>, IJournalWrite
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteMessagesTo"/> class.
@@ -198,7 +208,7 @@ namespace Akka.Persistence
     /// Request to write messages.
     /// </summary>
     [Serializable]
-    public sealed class WriteMessages : IJournalRequest, INoSerializationVerificationNeeded, IEquatable<WriteMessages>
+    public sealed class WriteMessages : IJournalRequest, INoSerializationVerificationNeeded, IEquatable<WriteMessages>, IJournalWrite
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WriteMessages"/> class.
@@ -590,7 +600,7 @@ namespace Akka.Persistence
     /// Request to replay messages to the <see cref="PersistentActor"/>.
     /// </summary>
     [Serializable]
-    public sealed class ReplayMessages : IJournalRequest, IEquatable<ReplayMessages>
+    public sealed class ReplayMessages : IJournalRequest, IEquatable<ReplayMessages>, IJournalRead
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayMessages"/> class.

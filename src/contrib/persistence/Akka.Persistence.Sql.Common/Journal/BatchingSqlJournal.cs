@@ -22,6 +22,7 @@ using Akka.Pattern;
 using Akka.Persistence.Journal;
 using Akka.Serialization;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -536,7 +537,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Buffer for requests that are waiting to be served when next DB connection will be released.
         /// This object access is NOT thread safe.
         /// </summary>
-        protected readonly Queue<IJournalRequest> Buffer;
+        protected Queue<IJournalRequest> Buffer { get; private set; }
+
+        private readonly object _lock = new object();
 
         private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
@@ -686,6 +689,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
+        // WARNING:
+        // Make sure that all processed messages that inherits IJournalRequest must also
+        // inherit either IJournalRead or IJournalWrite so that it can be properly sorted
+        // by the DequeueChunk method.
         protected sealed override bool Receive(object message)
         {
             switch (message)
@@ -825,6 +832,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Tries to add incoming <paramref name="message"/> to <see cref="Buffer"/>.
         /// Also checks if any DB connection has been released and next batch can be processed.
+        ///
+        /// WARNING:
+        /// Make sure that all processed messages that inherits IJournalRequest must also
+        /// inherit either IJournalRead or IJournalWrite so that it can be properly sorted:
+        /// - Read operations are marked using the IJournalRead interface
+        /// - Write operations are marked using the IJournalWrite interface
         /// </summary>
         /// <param name="message">TBD</param>
         protected void BatchRequest(IJournalRequest message)
@@ -889,6 +902,8 @@ namespace Akka.Persistence.Sql.Common.Journal
             {
                 await connection.OpenAsync();
 
+                // In the grand scheme of thing, using a transaction in an all read batch operation
+                // should not hurt performance by much, because it is done only once at the start.
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
@@ -897,10 +912,10 @@ namespace Akka.Persistence.Sql.Common.Journal
                     try
                     {
                         stopwatch.Start();
-                        for (int i = 0; i < chunk.Requests.Length; i++)
+                        // This looks dangerous at a glance, but we have separated read and write operations
+                        // in the DequeueChunk method. 
+                        foreach (var req in chunk.Requests)
                         {
-                            var req = chunk.Requests[i];
-
                             switch (req)
                             {
                                 case WriteMessages msg:
@@ -927,15 +942,16 @@ namespace Akka.Persistence.Sql.Common.Journal
                             }
                         }
 
-                        tx.Commit();
-
                         if (CanPublish)
                         {
-                            for (int i = 0; i < chunk.Requests.Length; i++)
+                            // TODO: should an exception in this block also trigger a rollback or should it be wrapped in its own try...catch outside the transaction try...catch?
+                            foreach (var request in chunk.Requests)
                             {
-                                context.System.EventStream.Publish(chunk.Requests[i]);
+                                context.System.EventStream.Publish(request);
                             }
                         }
+
+                        tx.Commit();
                     }
                     catch (Exception e)
                     {
@@ -1388,17 +1404,59 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="param">Parameter to customize</param>
         protected virtual void PreAddParameterToCommand(TCommand command, DbParameter param) { }
         
+        /// <summary>
+        /// Scan the buffer and create a chunk of read or write requests based on the type of the first
+        /// request on the queue.
+        ///
+        /// FIX NOTE:
+        /// It is a lot more efficient to sort the requests in the BatchRequest method and
+        /// separate them into two different queues, but we're forced to do this awkward
+        /// conversion because Buffer access level was set as protected and there is
+        /// no guarantee that no concrete implementation is using them.
+        /// -- Greg
+        /// </summary>
         private RequestChunk DequeueChunk(int chunkId)
         {
-            var operationsCount = Math.Min(Buffer.Count, Setup.MaxBatchSize);
-            var array = new IJournalRequest[operationsCount];
-            for (int i = 0; i < operationsCount; i++)
+            // Need a lock here to ensure that buffer doesn't change during this operation
+            lock (_lock)
             {
-                var req = Buffer.Dequeue();
-                array[i] = req;
-            }
+                var requestList = new List<IJournalRequest>(Buffer);
+                var maxOperations = Setup.MaxBatchSize;
+                var operations = new List<IJournalRequest>();
+                switch (requestList[0])
+                {
+                    case IJournalRead _:
+                        foreach (var request in requestList.OfType<IJournalRead>())
+                        {
+                            operations.Add(request);
+                            if (operations.Count >= maxOperations)
+                                break;
+                        }
+                        break;
 
-            return new RequestChunk(chunkId, array);
+                    case IJournalWrite _:
+                        foreach (var request in requestList.OfType<IJournalWrite>())
+                        {
+                            operations.Add(request);
+                            if (operations.Count >= maxOperations)
+                                break;
+                        }
+                        break;
+                    default:
+                        throw new Exception($"Unknown Read/Write operation for type {requestList[0].GetType()}. Expected a class that inherits either an IJournalRead or IJournalWrite.");
+                }
+
+                foreach (var request in operations)
+                {
+                    requestList.Remove(request);
+                }
+
+                // NOTE: this seemed like a very dangerous thing to do, will the lock be enough to
+                // prevent Buffer from being changed so that it remains consistent?
+                Buffer = new Queue<IJournalRequest>(requestList);
+            
+                return new RequestChunk(chunkId, operations.ToArray());
+            }
         }
 
         private void CompleteBatch(BatchComplete msg)
