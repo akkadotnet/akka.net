@@ -127,13 +127,13 @@ namespace Akka.Benchmarks.Cluster
         [Benchmark]
         public void VectorClock_comparisons_should_compare_After_middle()
         {
-            CheckThunkFor(_vcAfterMiddle, _vcBaseMiddle, (clock, vectorClock) => CompareTo(clock, vectorClock, Ordering.Before), Iterations);
+            CheckThunkFor(_vcAfterMiddle, _vcBaseMiddle, (clock, vectorClock) => CompareTo(clock, vectorClock, Ordering.After), Iterations);
         }
 
         [Benchmark]
         public void VectorClock_comparisons_should_compare_Concurrent_middle()
         {
-            CheckThunkFor(_vcAfterMiddle, _vcConcurrentMiddle, (clock, vectorClock) => CompareTo(clock, vectorClock, Ordering.Before), Iterations);
+            CheckThunkFor(_vcAfterMiddle, _vcConcurrentMiddle, (clock, vectorClock) => CompareTo(clock, vectorClock, Ordering.Concurrent), Iterations);
         }
 
         [Benchmark]
