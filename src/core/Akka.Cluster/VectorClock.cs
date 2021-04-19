@@ -171,7 +171,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Timestamp used by the <see cref="VectorClock"/>.
         /// </summary>
-        internal class Timestamp
+        internal static class Timestamp
         {
             /// <summary>
             /// TBD
@@ -342,7 +342,7 @@ namespace Akka.Cluster
             return left.IsConcurrentWith(right);
         }
 
-        private static readonly KeyValuePair<Node, long> CmpEndMarker = new KeyValuePair<Node, long>(Node.Create("endmarker"), long.MinValue);
+        private static readonly KeyValuePair<Node, long> CmpEndMarker = new KeyValuePair<Node, long>(Node.Create("endmarker"), Timestamp.EndMarker);
 
         /// <summary>
         /// <para>
