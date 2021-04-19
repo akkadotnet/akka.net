@@ -13,7 +13,7 @@ namespace Akka.Benchmarks.Cluster
     [Config(typeof(MicroBenchmarkConfig))]
     public class ReachabilityBenchmarks
     {
-        [Params(10, 100, 250)]
+        [Params(100)]
         public int NodesSize;
 
         [Params(100)]
