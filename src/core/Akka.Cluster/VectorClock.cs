@@ -119,12 +119,16 @@ namespace Akka.Cluster
             {
                 return new Node(hash);
             }
+            
+            // TODO: replace with Murmur3 or SHA512, some other consistent hash algorithm for FIPS complaince and no collisions in Akka.NET v1.5 or 2.0
+            [ThreadStatic] // underlying algorithm isn't thread-safe. Has to be made `ThreadStatic` in order to guarantee safety.
+            private static readonly System.Security.Cryptography.MD5 HashAlgo = System.Security.Cryptography.MD5.Create();
 
             private static Node Hash(string name)
             {
-                var md5 = System.Security.Cryptography.MD5.Create();
+                
                 var inputBytes = Encoding.UTF8.GetBytes(name);
-                var hash = md5.ComputeHash(inputBytes);
+                var hash = HashAlgo.ComputeHash(inputBytes);
 
 
                 var sb = new StringBuilder();
