@@ -35,7 +35,7 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = DebugConfig(on: false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.remote.retry-gate-closed-for = 3s
-                    akka.cluster.allow-weakly-up-members = on"))
+                    akka.cluster.allow-weakly-up-members = 3s"))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             TestTransport = true;
