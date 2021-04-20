@@ -135,11 +135,11 @@ namespace Akka.Actor
         /// <returns>Provider used for Ask pattern implementation</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+            if (self is ActorSelection sel)
+                return ResolveProvider(sel.Anchor);
 
-            if (self is IInternalActorRef)
-                return self.AsInstanceOf<IInternalActorRef>().Provider;
+            if (self is IInternalActorRef iRef)
+                return iRef.Provider;
             
             if (ActorCell.Current != null)
                 return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
