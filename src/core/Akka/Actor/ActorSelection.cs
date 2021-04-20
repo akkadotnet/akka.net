@@ -237,7 +237,7 @@ namespace Akka.Actor
                                 if (allChildren.Count == 0)
                                     return;
 
-                                var msg = new ActorSelectionMessage(sel.Message, new[] { new SelectChildRecursive() }, true);
+                                var msg = new ActorSelectionMessage(sel.Message, new SelectionPathElement[] { SelectChildRecursive.Instance }, true);
                                 foreach (var c in allChildren)
                                 {
                                     c.Tell(sel.Message, sender);
