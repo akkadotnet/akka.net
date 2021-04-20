@@ -6,12 +6,26 @@
 //-----------------------------------------------------------------------
 
 using System.Text;
+using Akka.Annotations;
+using Microsoft.Extensions.ObjectPool;
 
 namespace Akka.Util
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    ///
+    /// Used to help reduce memory allocations.
     /// </summary>
+    internal static class PooledObject
+    {
+        public static readonly ObjectPool<StringBuilder> StringBuilderPool =
+            new DefaultObjectPoolProvider().CreateStringBuilderPool(512, 2048);
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
     public static class Base64Encoding
     {
         /// <summary>
@@ -24,7 +38,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="value">TBD</param>
         /// <returns>TBD</returns>
-        public static string Base64Encode(this long value) => Base64Encode(value, new StringBuilder()).ToString();
+        public static string Base64Encode(this long value) => Base64Encode(value, PooledObject.StringBuilderPool.Get()).ToString();
 
         /// <summary>
         /// TBD
@@ -32,16 +46,24 @@ namespace Akka.Util
         /// <param name="value">TBD</param>
         /// <param name="sb">TBD</param>
         /// <returns>TBD</returns>
-        public static StringBuilder Base64Encode(this long value, StringBuilder sb)
+        public static string Base64Encode(this long value, StringBuilder sb)
         {
-            var next = value;
-            do
+            try
             {
-                var index = (int)(next & 63);
-                sb.Append(Base64Chars[index]);
-                next = next >> 6;
-            } while (next != 0);
-            return sb;
+                var next = value;
+                do
+                {
+                    var index = (int)(next & 63);
+                    sb.Append(Base64Chars[index]);
+                    next = next >> 6;
+                } while (next != 0);
+
+                return sb.ToString();
+            }
+            finally
+            {
+                PooledObject.StringBuilderPool.Return(sb);
+            }
         }
 
         /// <summary>

@@ -134,7 +134,7 @@ namespace Akka.Actor
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
             var sb = new StringBuilder(prefix);
-            return id.Base64Encode(sb).ToString();
+            return id.Base64Encode(sb);
         }
 
         /// <summary>
