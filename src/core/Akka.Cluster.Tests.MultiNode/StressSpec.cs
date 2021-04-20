@@ -319,7 +319,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 if (_settings.Infolog)
                 {
-                    _log.Info("[{0}] in progress" + Environment.NewLine + "{1}" + Environment.NewLine + "{2}", _title,
+                    _log.Info("BEGIN CLUSTER OPERATION: [{0}] in progress" + Environment.NewLine + "{1}" + Environment.NewLine + "{2}", _title,
                         FormatPhi(), FormatStats());
                 }
             });
@@ -332,7 +332,7 @@ namespace Akka.Cluster.Tests.MultiNode
                     var aggregated = new AggregatedClusterResult(_title, MaxDuration, TotalGossipStats);
                     if (_settings.Infolog)
                     {
-                        _log.Info("[{0}] completed in [{1}] ms" + Environment.NewLine + "{2}" +
+                        _log.Info("END CLUSTER OPERATION: [{0}] completed in [{1}] ms" + Environment.NewLine + "{2}" +
                                   Environment.NewLine + "{3}" + Environment.NewLine + "{4}", _title, aggregated.Duration.TotalMilliseconds,
                         aggregated.ClusterStats, FormatPhi(), FormatStats());
                     }
