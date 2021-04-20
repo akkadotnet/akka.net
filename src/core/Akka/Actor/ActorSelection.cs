@@ -197,10 +197,12 @@ namespace Akka.Actor
                 {
                     if (actorRef is ActorRefWithCell refWithCell)
                     {
-                        var emptyRef = new EmptyLocalActorRef(
-                            provider: refWithCell.Provider,
-                            path: anchor.Path / sel.Elements.Select(el => el.ToString()),
-                            eventStream: refWithCell.Underlying.System.EventStream);
+                        EmptyLocalActorRef EmptyRef(){
+                            return new EmptyLocalActorRef(
+                                provider: refWithCell.Provider,
+                                path: anchor.Path / sel.Elements.Select(el => el.ToString()),
+                                eventStream: refWithCell.Underlying.System.EventStream);
+                        }
 
                         switch (iter.Next())
                         {
@@ -220,7 +222,7 @@ namespace Akka.Actor
                                 {
                                     // don't send to emptyRef after wildcard fan-out
                                     if (!sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
+                                        EmptyRef().Tell(sel, sender);
                                 }
                                 else if (iter.IsEmpty())
                                 {
@@ -253,7 +255,7 @@ namespace Akka.Actor
                                 if (iter.IsEmpty())
                                 {
                                     if (matchingChildren.Count == 0 && !sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
+                                        EmptyRef().Tell(sel, sender);
                                     else
                                     {
                                         for (var i = 0; i < matchingChildren.Count; i++)
@@ -264,7 +266,7 @@ namespace Akka.Actor
                                 {
                                     // don't send to emptyRef after wildcard fan-out
                                     if (matchingChildren.Count == 0 && !sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
+                                        EmptyRef().Tell(sel, sender);
                                     else
                                     {
                                         var message = new ActorSelectionMessage(
