@@ -74,7 +74,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         where TConnection : System.Data.Common.DbConnection
         where TCommand : System.Data.Common.DbCommand
     {
-        protected readonly System.Collections.Generic.Queue<Akka.Persistence.IJournalRequest> Buffer;
         protected readonly bool CanPublish;
         protected const int IsDeletedIndex = 3;
         protected readonly Akka.Event.ILoggingAdapter Log;
@@ -88,6 +87,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected BatchingSqlJournal(Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup setup) { }
         protected virtual string AllEventsSql { get; }
         protected virtual string AllPersistenceIdsSql { get; }
+        protected System.Collections.Generic.Queue<Akka.Persistence.IJournalRequest> Buffer { get; }
         protected virtual string ByPersistenceIdSql { get; }
         protected virtual string ByTagSql { get; }
         protected virtual string DeleteBatchSql { get; }
@@ -224,7 +224,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public string FullMetaTableName { get; }
         public bool UseSequentialAccess { get; }
     }
-    public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    public sealed class ReplayAllEvents : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRead, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
         public readonly long FromOffset;
         public readonly long Max;
@@ -242,7 +242,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public ReplayFilterSettings(Akka.Persistence.Journal.ReplayFilterMode mode, int windowSize, int maxOldWriters, bool isDebug) { }
         public bool IsEnabled { get; }
     }
-    public sealed class ReplayTaggedMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    public sealed class ReplayTaggedMessages : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRead, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
         public readonly long FromOffset;
         public readonly long Max;
@@ -264,7 +264,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly string Tag;
         public ReplayedTaggedMessage(Akka.Persistence.IPersistentRepresentation persistent, string tag, long offset) { }
     }
-    public sealed class SelectCurrentPersistenceIds : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    public sealed class SelectCurrentPersistenceIds : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRead, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
     {
         public SelectCurrentPersistenceIds(long offset, Akka.Actor.IActorRef replyTo) { }
         public long Offset { get; }
