@@ -80,9 +80,10 @@ namespace Akka.Serialization
 
             _serializer =
                 new HySerializer(new SerializerOptions(
-                    preserveObjectReferences: settings.PreserveObjectReferences,
                     versionTolerance: settings.VersionTolerance,
+                    preserveObjectReferences: settings.PreserveObjectReferences,
                     surrogates: new[] { akkaSurrogate },
+                    serializerFactories: null,
                     knownTypes: provider.GetKnownTypes(),
                     ignoreISerializable:true,
                     packageNameOverrides: settings.PackageNameOverrides));
