@@ -65,7 +65,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     }
 
     [Serializable]
-    public sealed class SelectCurrentPersistenceIds : IJournalRequest, IJournalRead
+    public sealed class SelectCurrentPersistenceIds : IJournalRequest
     {
         public IActorRef ReplyTo { get; }
         public long Offset { get; }
@@ -173,7 +173,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ReplayAllEvents : IJournalRequest, IJournalRead
+    public sealed class ReplayAllEvents : IJournalRequest
     {
         /// <summary>
         /// TBD
@@ -320,7 +320,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ReplayTaggedMessages : IJournalRequest, IJournalRead
+    public sealed class ReplayTaggedMessages : IJournalRequest
     {
         /// <summary>
         /// TBD
