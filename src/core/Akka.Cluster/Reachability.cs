@@ -55,7 +55,6 @@ namespace Akka.Cluster
         public static readonly Reachability Empty =
             new Reachability(ImmutableList.Create<Record>(), ImmutableDictionary.Create<UniqueAddress, long>());
 
-        //TODO: Serialization should ignore
         private readonly Lazy<Cache> _cache;
 
         /// <summary>
@@ -79,11 +78,6 @@ namespace Akka.Cluster
         ///     TBD
         /// </summary>
         public ImmutableDictionary<UniqueAddress, long> Versions { get; }
-
-        /*
-         *  def isReachable(observer: UniqueAddress, subject: UniqueAddress): Boolean =
-            status(observer, subject) == Reachable
-         */
 
         /// <summary>
         ///     TBD
@@ -178,7 +172,11 @@ namespace Akka.Cluster
             var newVersions = Versions.SetItem(observer, v);
             var newRecord = new Record(observer, subject, status, v);
             var oldObserverRows = ObserverRows(observer);
+
+            // don't record Reachable observation if nothing has been noted so far
             if (oldObserverRows == null && status == ReachabilityStatus.Reachable) return this;
+
+            // otherwise, create new instance including this first observation
             if (oldObserverRows == null) return new Reachability(Records.Add(newRecord), newVersions);
 
             if (!oldObserverRows.TryGetValue(subject, out var oldRecord))
@@ -206,7 +204,7 @@ namespace Akka.Cluster
         /// <param name="allowed">TBD</param>
         /// <param name="other">TBD</param>
         /// <returns>TBD</returns>
-        public Reachability Merge(IEnumerable<UniqueAddress> allowed, Reachability other)
+        public Reachability Merge(IImmutableSet<UniqueAddress> allowed, Reachability other)
         {
             var recordBuilder = ImmutableList.CreateBuilder<Record>();
             //TODO: Size hint somehow?
