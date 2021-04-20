@@ -537,7 +537,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Buffer for requests that are waiting to be served when next DB connection will be released.
         /// This object access is NOT thread safe.
         /// </summary>
-        protected Queue<IJournalRequest> Buffer { get; private set; }
+        protected readonly Queue<IJournalRequest> Buffer;
 
         private readonly object _lock = new object();
 
@@ -689,10 +689,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
-        // WARNING:
-        // Make sure that all processed messages that inherits IJournalRequest must also
-        // inherit either IJournalRead or IJournalWrite so that it can be properly sorted
-        // by the DequeueChunk method.
         protected sealed override bool Receive(object message)
         {
             switch (message)
@@ -866,12 +862,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// Tries to add incoming <paramref name="message"/> to <see cref="Buffer"/>.
         /// Also checks if any DB connection has been released and next batch can be processed.
-        ///
-        /// WARNING:
-        /// Make sure that all processed messages that inherits IJournalRequest must also
-        /// inherit either IJournalRead or IJournalWrite so that it can be properly sorted:
-        /// - Read operations are marked using the IJournalRead interface
-        /// - Write operations are marked using the IJournalWrite interface
         /// </summary>
         /// <param name="message">TBD</param>
         protected void BatchRequest(IJournalRequest message)
@@ -1381,6 +1371,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// Scan the buffer and create a chunk of read or write requests based on the type of the first
         /// request on the queue.
         ///
+        /// The idea here is to prevent write operations (update/insert/delete) from
+        /// read operations (queries) to exist in the same transaction batch for sanity reasons.
+        /// 
         /// FIX NOTE:
         /// It is a lot more efficient to sort the requests in the BatchRequest method and
         /// separate them into two different queues, but we're forced to do this awkward
@@ -1398,25 +1391,29 @@ namespace Akka.Persistence.Sql.Common.Journal
                 var operations = new List<IJournalRequest>();
                 switch (requestList[0])
                 {
-                    case IJournalRead _:
-                        foreach (var request in requestList.OfType<IJournalRead>())
+                    case WriteMessages _:
+                    case DeleteMessagesTo _:
+                        foreach (var request in requestList)
                         {
-                            operations.Add(request);
-                            if (operations.Count >= maxOperations)
-                                break;
-                        }
-                        break;
-
-                    case IJournalWrite _:
-                        foreach (var request in requestList.OfType<IJournalWrite>())
-                        {
-                            operations.Add(request);
-                            if (operations.Count >= maxOperations)
-                                break;
+                            if (request is WriteMessages || request is DeleteMessagesTo)
+                            {
+                                operations.Add(request);
+                                if (operations.Count >= maxOperations)
+                                    break;
+                            }
                         }
                         break;
                     default:
-                        throw new Exception($"Unknown Read/Write operation for type {requestList[0].GetType()}. Expected a class that inherits either an IJournalRead or IJournalWrite.");
+                        foreach (var request in requestList)
+                        {
+                            if (!(request is WriteMessages) && !(request is DeleteMessagesTo))
+                            {
+                                operations.Add(request);
+                                if (operations.Count >= maxOperations)
+                                    break;
+                            }
+                        }
+                        break;
                 }
 
                 foreach (var request in operations)
@@ -1424,10 +1421,17 @@ namespace Akka.Persistence.Sql.Common.Journal
                     requestList.Remove(request);
                 }
 
-                // NOTE: this seemed like a very dangerous thing to do, will the lock be enough to
-                // prevent Buffer from being changed so that it remains consistent?
-                Buffer = new Queue<IJournalRequest>(requestList);
-            
+                // NOTE: This seemed like a very dangerous thing to do, will the lock be enough to
+                // prevent Buffer from being changed and remains consistent during the shuffle? -- Greg
+
+                // NOTE: If in the future we found that requests seemed to be missing then this
+                // is the first place you should look into. -- Greg
+                Buffer.Clear();
+                foreach (var request in requestList)
+                {
+                    Buffer.Enqueue(request);
+                }
+                
                 return new RequestChunk(chunkId, operations.ToArray());
             }
         }
