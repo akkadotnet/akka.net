@@ -133,8 +133,7 @@ namespace Akka.Actor
         private string GetRandomActorName(string prefix = "$")
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
-            var sb = new StringBuilder(prefix);
-            return id.Base64Encode(sb);
+            return id.Base64Encode(prefix);
         }
 
         /// <summary>

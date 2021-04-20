@@ -7,7 +7,11 @@
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,6 +22,7 @@
       <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="5.0.5" />
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
+    <PackageReference Include="System.Memory" Version="4.5.4" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Text;
 using Akka.Annotations;
 using Microsoft.Extensions.ObjectPool;
@@ -37,33 +38,32 @@ namespace Akka.Util
         /// TBD
         /// </summary>
         /// <param name="value">TBD</param>
+        /// <param name="prefix"></param>
         /// <returns>TBD</returns>
-        public static string Base64Encode(this long value) => Base64Encode(value, PooledObject.StringBuilderPool.Get()).ToString();
+        public static string Base64Encode(this long value, string prefix = null){
+            Span<char> encodedBytes = stackalloc char[12 + prefix?.Length ?? 0];            
+            var writeIndex = 0;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="value">TBD</param>
-        /// <param name="sb">TBD</param>
-        /// <returns>TBD</returns>
-        public static string Base64Encode(this long value, StringBuilder sb)
-        {
-            try
-            {
-                var next = value;
-                do
-                {
-                    var index = (int)(next & 63);
-                    sb.Append(Base64Chars[index]);
-                    next = next >> 6;
-                } while (next != 0);
+            if(prefix != null){
+               for(; writeIndex < prefix.Length; writeIndex++)
+                    encodedBytes[writeIndex] = prefix[writeIndex];
+            }
 
-                return sb.ToString();
-            }
-            finally
+            var next = value;
+            do
+            {		
+                var index = (int)(next & 63);
+                encodedBytes[writeIndex]= Base64Chars[index];
+                next = next >> 6;	
+                writeIndex++;
+            } while (next != 0);
+
+            unsafe
             {
-                PooledObject.StringBuilderPool.Return(sb);
-            }
+                fixed (char* p1 = encodedBytes.Slice(0, writeIndex)) {
+                    return new string(p1);
+                }		
+            }	
         }
 
         /// <summary>
