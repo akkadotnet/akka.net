@@ -68,33 +68,28 @@ system.ActorOf(DemoActor.Props(42), "demo");
 
 Another good practice is to declare local messages (messages that are sent in process) within the Actor, which makes it easier to know what messages are generally being sent over the wire vs in process.:
 ```csharp
-public class DemoActor : UntypedActor
+public class DemoActor : ReceiveActor
 {
-    protected override void OnReceive(object message)
+    public DemoActor()
     {
-        switch (message)
+        Receive<DemoActor.DemoActorLocalMessage1>(x =>
         {
-            case DemoActorLocalMessages.DemoActorLocalMessage1 msg1:
-                // Handle message here...
-                break;
-            case DemoActorLocalMessages.DemoActorLocalMessage2 msg2:
-                // Handle message here...
-                break;
-            default:
-                break;
-                }
-            }
+            // Handle message here...
+        });
 
-    class DemoActorLocalMessages
+        Receive<DemoActor.DemoActorLocalMessage2>(x =>
         {
-            public class DemoActorLocalMessage1
-            {
-            }
+            // Handle message here...
+        });
+    }
 
-            public class DemoActorLocalMessage2
-            {
-            }
-        }
+    public class DemoActorLocalMessage1
+    {
+    }
+
+    public class DemoActorLocalMessage2
+    {
+    }
 }
 ```
 
@@ -502,32 +497,6 @@ ReceiveAny(o => Console.WriteLine("Received object: " + o);
 Receive<object>(0 => Console.WriteLine("Received object: " + o);
 ```
 
-### Non generic overloads
-Receive has non generic overloads:
-```csharp
-Receive(typeof(string), obj => Console.WriteLine(obj.ToString()) );
-```
-Predicates can go before or after the handler:
-
-```csharp
-Receive(typeof(string), obj => ((string) obj).Length > 5, obj => Console.WriteLine(obj.ToString()) );
-Receive(typeof(string), obj => Console.WriteLine(obj.ToString()), obj => ((string) obj).Length > 5 );
-```
-And the non generic Func
-
-```csharp
-Receive(typeof(string), obj =>
-  {
-    var s = (string)obj;
-    if (s.Length > 5)
-    {
-      Console.WriteLine("1: " + s);
-      return true;
-    }
-    return false;
-  });
-```
-
 ## Reply to messages
 If you want to have a handle for replying to a message, you can use `Sender`, which gives you an `IActorRef`. You can reply by sending to that `IActorRef` with `Sender.Tell(replyMsg, Self)`. You can also store the `IActorRef` for replying later, or passing on to other actors. If there is no sender (a message was sent without an actor or task context) then the sender defaults to a 'dead-letter' actor ref.
 
@@ -703,7 +672,7 @@ public class HotSwapActor : ReceiveActor
         });
     }
 
-    private void Angry(object message)
+    private void Angry()
     {
         Receive<string>(s => s.Equals("foo"), msg =>
         {
@@ -716,7 +685,7 @@ public class HotSwapActor : ReceiveActor
         });
     }
 
-    private void Happy(object message)
+    private void Happy()
     {
         Receive<string>(s => s.Equals("foo"), msg =>
         {
@@ -834,8 +803,10 @@ Use `Kill` like this:
 victim.Tell(Akka.Actor.Kill.Instance, ActorRefs.NoSender);
 ```
 
-## Actors and exceptions
-It can happen that while a message is being processed by an actor, that some kind of exception is thrown, e.g. a database exception.
+## Actors and Exceptions
+An exception can be thrown while a message is being processed by an actor, e.g. a database exception or some other type of runtime exception.
+
+When this occurs and the exception is not handled via a `try` / `catch` block, the actor's parent will be notified that its child failed with a specific exception type and will use its [supervision strategy](xref:supervision#what-supervision-means) to restart that child.
 
 ### What happens to the Message
 If an exception is thrown while a message is being processed (i.e. taken out of its mailbox and handed over to the current behavior), then this message will be lost. It is important to understand that it is not put back on the mailbox. So if you want to retry processing of a message, you need to deal with it yourself by catching the exception and retry your flow. Make sure that you put a bound on the number of retries since you don't want a system to livelock (so consuming a lot of cpu cycles without making progress).
