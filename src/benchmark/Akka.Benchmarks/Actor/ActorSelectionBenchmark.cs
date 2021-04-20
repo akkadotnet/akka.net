@@ -13,7 +13,8 @@ namespace Akka.Benchmarks.Actor
     [Config(typeof(MicroBenchmarkConfig))] // need memory diagnosis
     public class ActorSelectionBenchmark
     {
-        public const int Operations = 1_000_000;
+        [Params(10000)]
+        public int Iterations { get; set; }
         private TimeSpan _timeout;
         private ActorSystem _system;
         private IActorRef _echo;
@@ -33,13 +34,15 @@ namespace Akka.Benchmarks.Actor
         [Benchmark]
         public async Task RequestResponseActorSelection()
         {
-            await _actorSelection.Ask("foo", _timeout);
+            for(var i = 0; i < Iterations; i++)
+                await _actorSelection.Ask("foo", _timeout);
         }
 
         [Benchmark]
         public void CreateActorSelection()
         {
-            _system.ActorSelection("/user/echo");
+            for (var i = 0; i < Iterations; i++)
+                _system.ActorSelection("/user/echo");
         }
 
         [GlobalCleanup]
