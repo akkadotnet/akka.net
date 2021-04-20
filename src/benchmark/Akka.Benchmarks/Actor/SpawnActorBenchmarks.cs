@@ -22,16 +22,16 @@ namespace Akka.Benchmarks.Actor
         public int ActorCount { get;set; }
         private ActorSystem system;
 
-        [GlobalSetup]
+        [IterationSetup]
         public void Setup()
         {
             system = ActorSystem.Create("system");
         }
 
-        [GlobalCleanup]
-        public async Task Cleanup()
+        [IterationCleanup]
+        public void Cleanup()
         {
-            await system.Terminate();
+           system.Terminate().Wait();
         }
 
         [Benchmark]
