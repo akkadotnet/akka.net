@@ -77,31 +77,34 @@ namespace Akka.Actor
             Anchor = anchor;
 
             var list = new List<SelectionPathElement>();
-            var iter = elements.Iterator();
-            while (!iter.IsEmpty())
+            var count = elements.Count(); // shouldn't have a multiple enumeration issue\
+            var i = 0;
+            foreach (var s in elements)
             {
-                var s = iter.Next();
                 switch (s)
                 {
                     case null:
                     case "":
                         break;
                     case "**":
-                        if (!iter.IsEmpty())
+                        if (i < count-1)
                             throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
-                        list.Add(new SelectChildRecursive());
+                        list.Add(SelectChildRecursive.Instance);
                         break;
                     case string e when e.Contains("?") || e.Contains("*"):
                         list.Add(new SelectChildPattern(e));
                         break;
                     case string e when e == "..":
-                        list.Add(new SelectParent());
+                        list.Add(SelectParent.Instance);
                         break;
                     default:
                         list.Add(new SelectChildName(s));
                         break;
                 }
+
+                i++;
             }
+
             Path = list.ToArray();
         }
 
@@ -474,6 +477,11 @@ namespace Akka.Actor
             return true;
         }
 
+        /// <summary>
+        ///  Use this instead of calling the default constructor
+        /// </summary>
+        public static readonly SelectChildRecursive Instance = new SelectChildRecursive();
+
         /// <inheritdoc/>
         public override int GetHashCode() => "**".GetHashCode();
 
@@ -487,6 +495,11 @@ namespace Akka.Actor
     /// </summary>
     public class SelectParent : SelectionPathElement
     {
+        /// <summary>
+        ///  Use this instead of calling the default constructor
+        /// </summary>
+        public static readonly SelectParent Instance = new SelectParent();
+
         /// <inheritdoc/>
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;
 
