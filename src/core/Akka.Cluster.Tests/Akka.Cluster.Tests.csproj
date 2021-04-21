@@ -6,7 +6,7 @@
     <AssemblyTitle>Akka.Cluster.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
