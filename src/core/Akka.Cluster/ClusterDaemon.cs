@@ -2183,7 +2183,7 @@ namespace Akka.Cluster
                     {
                         _cluster.LogInfo(
                             "Leader can currently not perform its duties, reachability status: [{0}], member status: [{1}]",
-                            LatestGossip.ReachabilityExcludingDownedObservers,
+                            _membershipState.DcReachabilityExcludingDownedObservers,
                             string.Join(", ", LatestGossip.Members
                                 .Select(m => string.Format("${0} ${1} seen=${2}",
                                     m.Address,
@@ -2210,7 +2210,7 @@ namespace Akka.Cluster
 
             bool IsJoiningToWeaklyUp(Member m) => m.Status == MemberStatus.Joining
                                                   && enoughMembers
-                                                  && LatestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(m.UniqueAddress);
+                                                  && _membershipState.DcReachabilityExcludingDownedObservers.IsReachable(m.UniqueAddress);
 
             var changedMembers = localMembers
                 .Where(IsJoiningToWeaklyUp)
