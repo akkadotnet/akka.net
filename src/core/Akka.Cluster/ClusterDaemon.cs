@@ -2453,7 +2453,7 @@ namespace Akka.Cluster
                         newReachability1,
                         (reachability, m) => reachability.Reachable(SelfUniqueAddress, m.UniqueAddress));
 
-                    if (!newReachability2.Equals(localOverview.Reachability))
+                    if (!ReferenceEquals(newReachability2, localOverview.Reachability))
                     {
                         var newOverview = localOverview.Copy(reachability: newReachability2);
                         var newGossip = localGossip.Copy(overview: newOverview);
