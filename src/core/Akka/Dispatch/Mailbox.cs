@@ -382,7 +382,7 @@ namespace Akka.Dispatch
                 // not going to bother catching ThreadAbortExceptions here, since they'll get rethrown anyway
                 Actor.Invoke(next);
                 ProcessAllSystemMessages();
-                if (left > 1 && (Dispatcher.ThroughputDeadlineTime.HasValue == false || (MonotonicClock.GetTicks() - deadlineTicks) < 0))
+                if (left > 0 && (Dispatcher.ThroughputDeadlineTime.HasValue == false || (MonotonicClock.GetTicks() - deadlineTicks) < 0))
                 {
                     left = left - 1;
                     continue;
