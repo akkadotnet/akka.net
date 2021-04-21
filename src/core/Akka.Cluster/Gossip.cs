@@ -282,7 +282,7 @@ namespace Akka.Cluster
             var mergedMembers = EmptyMembers.Union(Member.PickHighestPriority(this._members, that._members));
 
             // 3. merge reachability table by picking records with highest version
-            var mergedReachability = _overview.Reachability.Merge(mergedMembers.Select(m => m.UniqueAddress),
+            var mergedReachability = _overview.Reachability.Merge(mergedMembers.Select(m => m.UniqueAddress).ToImmutableSortedSet(),
                 that._overview.Reachability);
 
             // 4. Nobody can have seen this new gossip yet

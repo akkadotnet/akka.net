@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
 using Akka.Actor;
@@ -13,7 +14,7 @@ namespace Akka.Benchmarks.Cluster
     [Config(typeof(MicroBenchmarkConfig))]
     public class ReachabilityBenchmarks
     {
-        [Params(10, 100, 250)]
+        [Params(100)]
         public int NodesSize;
 
         [Params(100)]
@@ -51,7 +52,7 @@ namespace Akka.Benchmarks.Cluster
         internal Reachability Reachability1;
         internal Reachability Reachability2;
         internal Reachability Reachability3;
-        internal HashSet<UniqueAddress> Allowed;
+        internal ImmutableHashSet<UniqueAddress> Allowed;
 
         [GlobalSetup]
         public void Setup()
@@ -59,7 +60,7 @@ namespace Akka.Benchmarks.Cluster
             Reachability1 = CreateReachabilityOfSize(Reachability.Empty, NodesSize);
             Reachability2 = CreateReachabilityOfSize(Reachability1, NodesSize);
             Reachability3 = AddUnreachable(Reachability1, NodesSize / 2);
-            Allowed =  Reachability1.Versions.Keys.ToHashSet();
+            Allowed =  Reachability1.Versions.Keys.ToImmutableHashSet();
         }
 
         private void CheckThunkFor(Reachability r1, Reachability r2, Action<Reachability, Reachability> thunk,

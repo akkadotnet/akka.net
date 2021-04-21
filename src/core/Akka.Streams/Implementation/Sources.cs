@@ -441,6 +441,7 @@ namespace Akka.Streams.Implementation
                         switch (directive)
                         {
                             case Directive.Stop:
+                                _open = false;
                                 _stage._close(_blockingStream);
                                 FailStage(ex);
                                 stop = true;
@@ -467,6 +468,7 @@ namespace Akka.Streams.Implementation
 
             private void RestartState()
             {
+                _open = false;
                 _stage._close(_blockingStream);
                 _blockingStream = _stage._create();
                 _open = true;

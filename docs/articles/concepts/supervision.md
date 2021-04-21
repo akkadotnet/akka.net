@@ -7,6 +7,8 @@ title: Supervision
 
 This document outlines the concept behind supervision and what that means for your Akka.NET actors at run-time.
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/CC2XdYlpmvo" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
 ## What Supervision Means
 As described in [Actor Systems](xref:actor-systems) supervision describes a dependency relationship between actors: the supervisor delegates tasks to subordinates and therefore must respond to their failures. When a subordinate detects a failure (i.e. throws an exception), it suspends itself and all its subordinates and sends a message to its supervisor, signaling failure. Depending on the nature of the work to be supervised and the nature of the failure, the supervisor has a choice of the following four options:
 
