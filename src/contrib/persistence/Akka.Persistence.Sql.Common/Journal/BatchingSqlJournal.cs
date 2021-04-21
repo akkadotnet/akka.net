@@ -533,17 +533,17 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected readonly ILoggingAdapter Log;
 
+        private readonly Queue<(IJournalRequest request, long id)>[] _buffers;
+
         /// <summary>
         /// Buffer for write requests that are waiting to be served when next DB connection will be released.
-        /// This object access is NOT thread safe.
         /// </summary>
-        private readonly Queue<(IJournalRequest request, long id)> _writeBuffer;
+        private Queue<(IJournalRequest request, long id)> WriteBuffer => _buffers[0];
 
         /// <summary>
         /// Buffer for read requests that are waiting to be served when next DB connection will be released.
-        /// This object access is NOT thread safe.
         /// </summary>
-        private readonly Queue<(IJournalRequest request, long id)> _readBuffer;
+        private Queue<(IJournalRequest request, long id)> ReadBuffer => _buffers[1];
 
         private readonly AtomicCounterLong _bufferIdCounter;
 
@@ -569,8 +569,11 @@ namespace Akka.Persistence.Sql.Common.Journal
             _newEventSubscriber = new HashSet<IActorRef>();
 
             _remainingOperations = Setup.MaxConcurrentOperations;
-            _writeBuffer = new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize);
-            _readBuffer = new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize);
+            _buffers = new[]
+            {
+                new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize),
+                new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize)
+            };
             _bufferIdCounter = new AtomicCounterLong(0);
 
             _serialization = Context.System.Serialization;
@@ -875,7 +878,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="message">TBD</param>
         protected void BatchRequest(IJournalRequest message)
         {
-            if (_writeBuffer.Count + _readBuffer.Count > Setup.MaxBufferSize)
+            if (WriteBuffer.Count + ReadBuffer.Count > Setup.MaxBufferSize)
             {
                 OnBufferOverflow(message);
             }
@@ -885,9 +888,9 @@ namespace Akka.Persistence.Sql.Common.Journal
                 // Enqueue writes and delete operation requests into the write queue,
                 // else if they are query operations, enqueue them into the read queue
                 if (message is WriteMessages || message is DeleteMessagesTo)
-                    _writeBuffer.Enqueue((message, id));
+                    WriteBuffer.Enqueue((message, id));
                 else
-                    _readBuffer.Enqueue((message, id));
+                    ReadBuffer.Enqueue((message, id));
             }
 
             TryProcess();
@@ -926,7 +929,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void TryProcess()
         {
-            if (_remainingOperations > 0 && (_writeBuffer.Count > 0 || _readBuffer.Count > 0))
+            if (_remainingOperations > 0 && (WriteBuffer.Count > 0 || ReadBuffer.Count > 0))
             {
                 _remainingOperations--;
 
@@ -1392,20 +1395,35 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         private RequestChunk DequeueChunk(int chunkId)
         {
-            var currentBuffer =
-                _readBuffer.Count == 0 ? _writeBuffer : 
-                    _writeBuffer.Count == 0 ? _readBuffer : 
-                        _writeBuffer.Peek().id < _readBuffer.Peek().id ? _writeBuffer : _readBuffer;
+            var currentBuffer = _buffers
+                .Where(q => q.Count > 0)
+                .OrderBy(q => q.Peek().id).First();
 
-            var maxOperations = Math.Min(currentBuffer.Count, Setup.MaxBatchSize);
-            var operations = new IJournalRequest[maxOperations];
-
-            for (var i = 0; i < maxOperations; ++i)
+            var operations = new List<IJournalRequest>();
+            if (ReferenceEquals(currentBuffer, WriteBuffer))
             {
-                operations[i] = currentBuffer.Dequeue().request;
+                // Stop dequeuing when we encounter another type of write operation request
+                // We don't batch delete and writes in the same batch, reason being a database
+                // can be deadlocked if write and delete happens in the same transaction
+                var writeType = currentBuffer.Peek().request.GetType();
+                while(currentBuffer.Count > 0 && currentBuffer.Peek().request.GetType() == writeType)
+                {
+                    operations.Add(currentBuffer.Dequeue().request);
+                    if (operations.Count == Setup.MaxBatchSize)
+                        break;
+                }
             }
-                
-            return new RequestChunk(chunkId, operations);
+            else
+            {
+                while(currentBuffer.Count > 0)
+                {
+                    operations.Add(currentBuffer.Dequeue().request);
+                    if (operations.Count == Setup.MaxBatchSize)
+                        break;
+                }
+            }
+            
+            return new RequestChunk(chunkId, operations.ToArray());
         }
 
         private void CompleteBatch(BatchComplete msg)
