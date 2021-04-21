@@ -346,6 +346,18 @@ namespace Akka.Cluster
                 return new Gossip(Members, Overview, newVersion);
         }
 
+        public Gossip MarkAsDown(Member member)
+        {
+            // replace member (changed status)
+            var newMembers = Members.Remove(member).Add(member.Copy(MemberStatus.Down));
+            // remove nodes marked as DOWN from the 'seen' table
+            var newSeen = Overview.Seen.Remove(member.UniqueAddress);
+
+            //update gossip overview
+            var newOverview = Overview.Copy(seen: newSeen);
+            return Copy(newMembers, overview: newOverview);
+        }
+
         /// <inheritdoc/>
         public override string ToString()
         {

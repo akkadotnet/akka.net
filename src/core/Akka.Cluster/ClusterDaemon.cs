@@ -1742,14 +1742,8 @@ namespace Akka.Cluster
                 else
                     _cluster.LogInfo("Marking unreachable node [{0}] as [{1}]", member.Address, MemberStatus.Down);
 
-                // replace member (changed status)
-                var newMembers = localMembers.Remove(member).Add(member.Copy(MemberStatus.Down));
-                // remove nodes marked as DOWN from the 'seen' table
-                var newSeen = localSeen.Remove(member.UniqueAddress);
 
-                //update gossip overview
-                var newOverview = localOverview.Copy(seen: newSeen);
-                var newGossip = localGossip.Copy(members: newMembers, overview: newOverview); //update gossip
+                var newGossip = localGossip.MarkAsDown(member); //update gossip
                 UpdateLatestGossip(newGossip);
 
                 PublishMembershipState();
