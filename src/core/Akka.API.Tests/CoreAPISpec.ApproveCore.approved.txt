@@ -3985,6 +3985,13 @@ namespace Akka.Pattern
         public OpenCircuitException(System.Exception cause, System.TimeSpan remainingDuration) { }
         public System.TimeSpan RemainingDuration { get; }
     }
+    public class static RetrySupport
+    {
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, int randomFactor, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan delay, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.Func<int, Akka.Util.Option<System.TimeSpan>> delayFunction, Akka.Actor.IScheduler scheduler) { }
+    }
     public class UserCalledFailException : Akka.Actor.AkkaException
     {
         public UserCalledFailException() { }
