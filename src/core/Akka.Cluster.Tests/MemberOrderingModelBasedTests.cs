@@ -59,7 +59,7 @@ namespace Akka.Cluster.Tests
         }
     }
 
-    public class MembershipMachine : Machine<MembershipState, MembershipModel>
+    public class MembershipMachine : Machine<MemberOrderingState, MembershipModel>
     {
         public MembershipMachine()
         {
@@ -67,19 +67,19 @@ namespace Akka.Cluster.Tests
             Arb.Register<ClusterGenerators>();
         }
 
-        public override Gen<Operation<MembershipState, MembershipModel>> Next(MembershipModel model)
+        public override Gen<Operation<MemberOrderingState, MembershipModel>> Next(MembershipModel model)
         {
             if (model.AllMembers.Count == 0)
                 return AddNewMember.Generator();
             return Gen.OneOf(ChangeMemberStatus.Generator(model.AllMembers.Keys), AddNewMember.Generator());
         }
 
-        public override Arbitrary<Setup<MembershipState, MembershipModel>> Setup => Arb.From(Arb.Generate<MembershipSetup>()
-            .Select(x => (Setup<MembershipState, MembershipModel>)x)); // compiler ceremony :(
+        public override Arbitrary<Setup<MemberOrderingState, MembershipModel>> Setup => Arb.From(Arb.Generate<MembershipSetup>()
+            .Select(x => (Setup<MemberOrderingState, MembershipModel>)x)); // compiler ceremony :(
 
         #region Setup
 
-        public class MembershipSetup : Setup<MembershipState, MembershipModel>
+        public class MembershipSetup : Setup<MemberOrderingState, MembershipModel>
         {
             private readonly Member[] _members;
 
@@ -92,9 +92,9 @@ namespace Akka.Cluster.Tests
                         .ToArray();
             }
 
-            public override MembershipState Actual()
+            public override MemberOrderingState Actual()
             {
-                return new MembershipState() { Members = ImmutableSortedSet<Member>.Empty.Union(_members) };
+                return new MemberOrderingState() { Members = ImmutableSortedSet<Member>.Empty.Union(_members) };
             }
 
             public override MembershipModel Model()
@@ -112,12 +112,12 @@ namespace Akka.Cluster.Tests
 
         #region Operations
 
-        public class ChangeMemberStatus : Operation<MembershipState, MembershipModel>
+        public class ChangeMemberStatus : Operation<MemberOrderingState, MembershipModel>
         {
-            public static Gen<Operation<MembershipState, MembershipModel>> Generator(IEnumerable<Address> addresses)
+            public static Gen<Operation<MemberOrderingState, MembershipModel>> Generator(IEnumerable<Address> addresses)
             {
                 var statusGen = ClusterGenerators.MemberStatusGenerator().Generator;
-                Func<Address, MemberStatus, Operation<MembershipState, MembershipModel>> generator =
+                Func<Address, MemberStatus, Operation<MemberOrderingState, MembershipModel>> generator =
                     (address, status) => new ChangeMemberStatus(address, status);
 
                 var producer = FsharpDelegateHelper.Create(generator);
@@ -143,7 +143,7 @@ namespace Akka.Cluster.Tests
                 return Member.AllowedTransitions[m.Status].Contains(NewStatus);
             }
 
-            public override Property Check(MembershipState actual, MembershipModel model)
+            public override Property Check(MemberOrderingState actual, MembershipModel model)
             {
                 var members = actual.Members;
 
@@ -169,11 +169,11 @@ namespace Akka.Cluster.Tests
             }
         }
 
-        public class AddNewMember : Operation<MembershipState, MembershipModel>
+        public class AddNewMember : Operation<MemberOrderingState, MembershipModel>
         {
-            public static Gen<Operation<MembershipState, MembershipModel>> Generator()
+            public static Gen<Operation<MemberOrderingState, MembershipModel>> Generator()
             {
-                return Arb.Generate<AddNewMember>().Select(x => (Operation<MembershipState, MembershipModel>)x);
+                return Arb.Generate<AddNewMember>().Select(x => (Operation<MemberOrderingState, MembershipModel>)x);
             }
 
             private readonly UniqueAddress _address;
@@ -193,7 +193,7 @@ namespace Akka.Cluster.Tests
                 return !member.UniqueAddress.Equals(_address);
             }
 
-            public override Property Check(MembershipState actual, MembershipModel model)
+            public override Property Check(MemberOrderingState actual, MembershipModel model)
             {
                 var members = actual.Members;
                 actual.Members = members.Add(new Member(_address, int.MaxValue, MemberStatus.Up,
@@ -222,7 +222,7 @@ namespace Akka.Cluster.Tests
         #endregion
     }
 
-    public class MembershipState
+    public class MemberOrderingState
     {
         public ImmutableSortedSet<Member> Members { get; set; }
     }

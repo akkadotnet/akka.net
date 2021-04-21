@@ -370,7 +370,7 @@ namespace Akka.Cluster
                 else
                 {
                     var m = g.First();
-                    if (!Gossip.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
+                    if (!MembershipState.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
                 }
             }
             return acc.ToImmutableHashSet();
