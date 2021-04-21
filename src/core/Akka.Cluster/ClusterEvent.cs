@@ -839,13 +839,10 @@ namespace Akka.Cluster
                 return ImmutableList<UnreachableMember>.Empty;
             }
 
-            var oldGossip = oldState.LatestGossip;
-            var newGossip = newState.LatestGossip;
-
-            var oldUnreachableNodes = oldGossip.Overview.Reachability.AllUnreachableOrTerminated;
-            return newGossip.Overview.Reachability.AllUnreachableOrTerminated
+            var oldUnreachableNodes = oldState.Overview.Reachability.AllUnreachableOrTerminated;
+            return newState.Overview.Reachability.AllUnreachableOrTerminated
                     .Where(node => !oldUnreachableNodes.Contains(node) && !node.Equals(newState.SelfUniqueAddress))
-                    .Select(node => new UnreachableMember(newGossip.GetMember(node)))
+                    .Select(node => new UnreachableMember(newState.LatestGossip.GetMember(node)))
                     .ToImmutableList();
         }
 
@@ -859,13 +856,10 @@ namespace Akka.Cluster
                 return ImmutableList<ReachableMember>.Empty;
             }
 
-            var oldGossip = oldState.LatestGossip;
-            var newGossip = newState.LatestGossip;
-
             return oldState.Overview.Reachability.AllUnreachable
-                    .Where(node => newGossip.HasMember(node) && newGossip.Overview.Reachability.IsReachable(node) 
+                    .Where(node => newState.LatestGossip.HasMember(node) && newState.Overview.Reachability.IsReachable(node) 
                                                              && !node.Equals(newState.SelfUniqueAddress))
-                    .Select(node => new ReachableMember(newGossip.GetMember(node)))
+                    .Select(node => new ReachableMember(newState.LatestGossip.GetMember(node)))
                     .ToImmutableList();
         }
 

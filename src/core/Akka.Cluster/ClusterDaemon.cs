@@ -1673,7 +1673,7 @@ namespace Akka.Cluster
             else
             {
                 _cluster.LogInfo("Welcome from [{0}]", from.Address);
-                _membershipState = _membershipState.Seen();
+                _membershipState = _membershipState.Copy(gossip).Seen();
                 AssertLatestGossip();
                 PublishMembershipState();
                 if (!from.Equals(SelfUniqueAddress))
@@ -1731,7 +1731,7 @@ namespace Akka.Cluster
             var localMembers = localGossip.Members;
             var localOverview = localGossip.Overview;
             var localSeen = localOverview.Seen;
-            var localReachability = localOverview.Reachability;
+            var localReachability = _membershipState.DcReachability;
 
             // check if the node to DOWN is in the 'members' set
             var member = localMembers.FirstOrDefault(m => m.Address == address);
