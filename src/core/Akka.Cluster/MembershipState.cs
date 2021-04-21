@@ -1,8 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿//-----------------------------------------------------------------------
+// <copyright file="MembershipState.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using Akka.Annotations;
 using Akka.Util;
 
@@ -12,7 +17,7 @@ namespace Akka.Cluster
     /// INTERNAL API
     /// </summary>
     [InternalApi]
-    internal sealed class MembershipState
+    internal sealed class MembershipState : IEquatable<MembershipState>
     {
         private static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
             ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
@@ -77,9 +82,9 @@ namespace Akka.Cluster
             return LatestGossip.ReachabilityExcludingDownedObservers.Value.IsReachable(toAddress);
         }
 
-        public Option<UniqueAddress> Leader => LeaderOf(Members);
+        public UniqueAddress Leader => LeaderOf(Members);
 
-        public Option<UniqueAddress> LeaderOf(IImmutableSet<Member> mbrs)
+        public UniqueAddress LeaderOf(IImmutableSet<Member> mbrs)
         {
             var reachability = DcReachability;
             var reachableMembers = (reachability.IsAllReachable
@@ -88,7 +93,7 @@ namespace Akka.Cluster
                         .Where(m => m.Status != MemberStatus.Down && reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == SelfUniqueAddress))
                 .ToImmutableSortedSet();
 
-            if (!reachableMembers.Any()) return Option<UniqueAddress>.None;
+            if (!reachableMembers.Any()) return null;
 
             var member = reachableMembers.FirstOrDefault(m => LeaderMemberStatus.Contains(m.Status)) ??
                          reachableMembers.Min(Member.LeaderStatusOrdering);
@@ -98,10 +103,10 @@ namespace Akka.Cluster
 
         public bool IsLeader(UniqueAddress node)
         {
-            return Leader.HasValue && Leader.Value.Equals(node);
+            return Leader != null && Leader.Equals(node);
         }
 
-        public Option<UniqueAddress> RoleLeader(string role)
+        public UniqueAddress RoleLeader(string role)
         {
             return LeaderOf(Members.Where(x => x.HasRole(role)).ToImmutableHashSet());
         }
@@ -151,6 +156,26 @@ namespace Akka.Cluster
         public MembershipState Copy(Gossip gossip = null, UniqueAddress selfUniqueAddress = null)
         {
             return new MembershipState(gossip ?? LatestGossip, selfUniqueAddress ?? SelfUniqueAddress);
+        }
+
+        public bool Equals(MembershipState other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return SelfUniqueAddress.Equals(other.SelfUniqueAddress) && LatestGossip.Equals(other.LatestGossip);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ReferenceEquals(this, obj) || obj is MembershipState other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (LatestGossip.GetHashCode() * 397) ^ SelfUniqueAddress.GetHashCode();
+            }
         }
     }
 }
