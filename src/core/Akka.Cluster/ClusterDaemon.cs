@@ -1160,7 +1160,7 @@ namespace Akka.Cluster
             _exitingTasksInProgress = false;
 
             // status Removed also before joining
-            if (LatestGossip.GetMember(SelfUniqueAddress).Status != MemberStatus.Removed)
+            if (_membershipState.SelfMember.Status != MemberStatus.Removed)
             {
                 // mark as seen
                 _membershipState = _membershipState.Seen();
@@ -2062,7 +2062,7 @@ namespace Akka.Cluster
             {
                 var localGossip = LatestGossip;
                 var possibleTargets =
-                    localGossip.Members.Where(m => ValidNodeForGossip(m.UniqueAddress))
+                    localGossip.Members.Where(m => _membershipState.ValidNodeForGossip(m.UniqueAddress))
                         .Select(m => m.UniqueAddress)
                         .ToList();
                 var randomTargets = possibleTargets.Count <= n ? possibleTargets : possibleTargets.Shuffle().Slice(0, n);
@@ -2085,8 +2085,8 @@ namespace Akka.Cluster
                 {
                     // If it's time to try to gossip to some nodes with a different view
                     // gossip to a random alive member with preference to a member with older gossip version
-                    preferredGossipTarget = ImmutableList.CreateRange(localGossip.Members.Where(m => !localGossip.SeenByNode(m.UniqueAddress) &&
-                                                   ValidNodeForGossip(m.UniqueAddress)).Select(m => m.UniqueAddress));
+                    preferredGossipTarget = ImmutableList.CreateRange(localGossip.Members.Where(m => !localGossip.SeenByNode(m.UniqueAddress) 
+                        && _membershipState.ValidNodeForGossip(m.UniqueAddress)).Select(m => m.UniqueAddress));
                 }
                 else
                 {
@@ -2105,7 +2105,7 @@ namespace Akka.Cluster
                     var peer =
                         SelectRandomNode(
                             ImmutableList.CreateRange(
-                                localGossip.Members.Where(m => ValidNodeForGossip(m.UniqueAddress))
+                                localGossip.Members.Where(m => _membershipState.ValidNodeForGossip(m.UniqueAddress))
                                     .Select(m => m.UniqueAddress)));
 
                     if (peer != null)
@@ -2500,6 +2500,11 @@ namespace Akka.Cluster
             get { return LatestGossip.IsSingletonCluster; }
         }
 
+        public UniqueAddress SelfUniqueAddress1
+        {
+            get { return SelfUniqueAddress; }
+        }
+
         /// <summary>
         /// needed for tests
         /// </summary>
@@ -2519,7 +2524,7 @@ namespace Akka.Cluster
         /// <param name="node">The address of the node we want to send gossip to.</param>
         public void GossipTo(UniqueAddress node)
         {
-            if (ValidNodeForGossip(node))
+            if (_membershipState.ValidNodeForGossip(node))
                 ClusterCore(node.Address).Tell(new GossipEnvelope(SelfUniqueAddress, node, LatestGossip));
         }
 
@@ -2530,7 +2535,7 @@ namespace Akka.Cluster
         /// <param name="destination">TBD</param>
         public void GossipTo(UniqueAddress node, IActorRef destination)
         {
-            if (ValidNodeForGossip(node))
+            if (_membershipState.ValidNodeForGossip(node))
                 destination.Tell(new GossipEnvelope(SelfUniqueAddress, node, LatestGossip));
         }
 
@@ -2540,7 +2545,7 @@ namespace Akka.Cluster
         /// <param name="node">TBD</param>
         public void GossipStatusTo(UniqueAddress node)
         {
-            if (ValidNodeForGossip(node))
+            if (_membershipState.ValidNodeForGossip(node))
                 ClusterCore(node.Address).Tell(new GossipStatus(SelfUniqueAddress, LatestGossip.Version));
         }
 
@@ -2551,18 +2556,8 @@ namespace Akka.Cluster
         /// <param name="destination">TBD</param>
         public void GossipStatusTo(UniqueAddress node, IActorRef destination)
         {
-            if (ValidNodeForGossip(node))
+            if (_membershipState.ValidNodeForGossip(node))
                 destination.Tell(new GossipStatus(SelfUniqueAddress, LatestGossip.Version));
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
-        public bool ValidNodeForGossip(UniqueAddress node)
-        {
-            return !node.Equals(SelfUniqueAddress) && _membershipState.IsReachableExcludingDownedObservers(node);
         }
 
         /// <summary>
@@ -2576,7 +2571,8 @@ namespace Akka.Cluster
             if (exitingMembers.Any())
             {
                 var roles = exitingMembers.SelectMany(m => m.Roles);
-                var membersSortedByAge = latestGossip.Members.OrderBy(m => m, Member.AgeOrdering);
+                var membersSortedByAge = latestGossip.Members
+                    .OrderBy(m => m, Member.AgeOrdering).ToImmutableHashSet();
                 var targets = new HashSet<Member>();
 
                 var t = membersSortedByAge.Take(2).ToArray(); // 2 oldest of all nodes

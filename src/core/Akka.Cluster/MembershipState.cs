@@ -43,6 +43,21 @@ namespace Akka.Cluster
             SelfUniqueAddress = selfUniqueAddress;
         }
 
+        private Member _selfMember = null;
+
+        public Member SelfMember
+        {
+            get
+            {
+                if (_selfMember == null)
+                {
+                    _selfMember = LatestGossip.GetMember(SelfUniqueAddress);
+                }
+
+                return _selfMember;
+            }
+        }
+
         public Gossip LatestGossip { get; }
 
         public UniqueAddress SelfUniqueAddress { get; }
@@ -176,6 +191,19 @@ namespace Akka.Cluster
             {
                 return (LatestGossip.GetHashCode() * 397) ^ SelfUniqueAddress.GetHashCode();
             }
+        }
+
+        /// <summary>
+        /// Never gossip to self and not to node marked as unreachable by self (heartbeat
+        /// messages are not getting through so no point in trying to gossip).
+        ///
+        ///  Nodes marked as unreachable by others are still valid targets for gossip.
+        /// </summary>
+        /// <param name="node">The node to check for gossip validity.</param>
+        /// <returns><c>true</c> if we can gossip to this node, <c>false</c> otherwise.</returns>
+        public bool ValidNodeForGossip(UniqueAddress node)
+        {
+            return !node.Equals(SelfUniqueAddress) && Overview.Reachability.IsReachable(node);
         }
     }
 }
