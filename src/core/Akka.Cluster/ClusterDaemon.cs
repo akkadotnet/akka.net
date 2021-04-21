@@ -2627,7 +2627,7 @@ namespace Akka.Cluster
             // shutting down singleton actors. This delays removal of the member until
             // the exiting tasks have been completed.
             var newGossip = PickLatest();
-            _membershipState.Copy(newGossip);
+            _membershipState = _membershipState.Copy(newGossip);
             AssertLatestGossip();
         }
 
