@@ -534,12 +534,18 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected readonly ILoggingAdapter Log;
 
         /// <summary>
-        /// Buffer for requests that are waiting to be served when next DB connection will be released.
+        /// Buffer for write requests that are waiting to be served when next DB connection will be released.
         /// This object access is NOT thread safe.
         /// </summary>
-        protected readonly Queue<IJournalRequest> Buffer;
+        private readonly Queue<(IJournalRequest request, long id)> _writeBuffer;
 
-        private readonly object _lock = new object();
+        /// <summary>
+        /// Buffer for read requests that are waiting to be served when next DB connection will be released.
+        /// This object access is NOT thread safe.
+        /// </summary>
+        private readonly Queue<(IJournalRequest request, long id)> _readBuffer;
+
+        private readonly AtomicCounterLong _bufferIdCounter;
 
         private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
@@ -563,7 +569,10 @@ namespace Akka.Persistence.Sql.Common.Journal
             _newEventSubscriber = new HashSet<IActorRef>();
 
             _remainingOperations = Setup.MaxConcurrentOperations;
-            Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
+            _writeBuffer = new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize);
+            _readBuffer = new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize);
+            _bufferIdCounter = new AtomicCounterLong(0);
+
             _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
@@ -866,10 +875,20 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="message">TBD</param>
         protected void BatchRequest(IJournalRequest message)
         {
-            if (Buffer.Count > Setup.MaxBufferSize)
+            if (_writeBuffer.Count + _readBuffer.Count > Setup.MaxBufferSize)
+            {
                 OnBufferOverflow(message);
+            }
             else
-                Buffer.Enqueue(message);
+            {
+                var id = _bufferIdCounter.GetAndIncrement();
+                // Enqueue writes and delete operation requests into the write queue,
+                // else if they are query operations, enqueue them into the read queue
+                if (message is WriteMessages || message is DeleteMessagesTo)
+                    _writeBuffer.Enqueue((message, id));
+                else
+                    _readBuffer.Enqueue((message, id));
+            }
 
             TryProcess();
         }
@@ -907,7 +926,7 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void TryProcess()
         {
-            if (_remainingOperations > 0 && Buffer.Count > 0)
+            if (_remainingOperations > 0 && (_writeBuffer.Count > 0 || _readBuffer.Count > 0))
             {
                 _remainingOperations--;
 
@@ -1368,72 +1387,25 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual void PreAddParameterToCommand(TCommand command, DbParameter param) { }
         
         /// <summary>
-        /// Scan the buffer and create a chunk of read or write requests based on the type of the first
-        /// request on the queue.
-        ///
-        /// The idea here is to prevent write operations (update/insert/delete) from
-        /// read operations (queries) to exist in the same transaction batch for sanity reasons.
-        /// 
-        /// FIX NOTE:
-        /// It is a lot more efficient to sort the requests in the BatchRequest method and
-        /// separate them into two different queues, but we're forced to do this awkward
-        /// conversion because Buffer access level was set as protected and there is
-        /// no guarantee that no concrete implementation is using them.
-        /// -- Greg
+        /// Select the buffer that has the smallest id on its first item, retrieve a maximum Setup.MaxBatchSize
+        /// items from it, and return it as a chunk that needs to be batched
         /// </summary>
         private RequestChunk DequeueChunk(int chunkId)
         {
-            // Need a lock here to ensure that buffer doesn't change during this operation
-            lock (_lock)
+            var currentBuffer =
+                _readBuffer.Count == 0 ? _writeBuffer : 
+                    _writeBuffer.Count == 0 ? _readBuffer : 
+                        _writeBuffer.Peek().id < _readBuffer.Peek().id ? _writeBuffer : _readBuffer;
+
+            var maxOperations = Math.Min(currentBuffer.Count, Setup.MaxBatchSize);
+            var operations = new IJournalRequest[maxOperations];
+
+            for (var i = 0; i < maxOperations; ++i)
             {
-                var requestList = new List<IJournalRequest>(Buffer);
-                var maxOperations = Setup.MaxBatchSize;
-                var operations = new List<IJournalRequest>();
-                switch (requestList[0])
-                {
-                    case WriteMessages _:
-                    case DeleteMessagesTo _:
-                        foreach (var request in requestList)
-                        {
-                            if (request is WriteMessages || request is DeleteMessagesTo)
-                            {
-                                operations.Add(request);
-                                if (operations.Count >= maxOperations)
-                                    break;
-                            }
-                        }
-                        break;
-                    default:
-                        foreach (var request in requestList)
-                        {
-                            if (!(request is WriteMessages) && !(request is DeleteMessagesTo))
-                            {
-                                operations.Add(request);
-                                if (operations.Count >= maxOperations)
-                                    break;
-                            }
-                        }
-                        break;
-                }
-
-                foreach (var request in operations)
-                {
-                    requestList.Remove(request);
-                }
-
-                // NOTE: This seemed like a very dangerous thing to do, will the lock be enough to
-                // prevent Buffer from being changed and remains consistent during the shuffle? -- Greg
-
-                // NOTE: If in the future we found that requests seemed to be missing then this
-                // is the first place you should look into. -- Greg
-                Buffer.Clear();
-                foreach (var request in requestList)
-                {
-                    Buffer.Enqueue(request);
-                }
-                
-                return new RequestChunk(chunkId, operations.ToArray());
+                operations[i] = currentBuffer.Dequeue().request;
             }
+                
+            return new RequestChunk(chunkId, operations);
         }
 
         private void CompleteBatch(BatchComplete msg)
