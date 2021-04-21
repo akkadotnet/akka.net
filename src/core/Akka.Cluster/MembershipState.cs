@@ -203,7 +203,7 @@ namespace Akka.Cluster
         /// <returns><c>true</c> if we can gossip to this node, <c>false</c> otherwise.</returns>
         public bool ValidNodeForGossip(UniqueAddress node)
         {
-            return !node.Equals(SelfUniqueAddress) && Overview.Reachability.IsReachable(node);
+            return !node.Equals(SelfUniqueAddress) && Overview.Reachability.IsReachable(SelfUniqueAddress, node);
         }
     }
 }

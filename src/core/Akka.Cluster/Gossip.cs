@@ -116,7 +116,7 @@ namespace Akka.Cluster
 
             ReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
             {
-                var downed = Members.Where(m => m.Status == MemberStatus.Down).ToList();
+                var downed = Members.Where(m => m.Status == MemberStatus.Down);
                 return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
             });
 
