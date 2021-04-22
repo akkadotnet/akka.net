@@ -519,10 +519,16 @@ namespace Akka.Actor
             if (unwrapped is INoSerializationVerificationNeeded)
                 return envelope;
 
-            if(unwrapped.GetType().Namespace?.StartsWith("System.Net.Sockets") ?? false)
-                return envelope;
+            object deserializedMsg;
+            try
+            {
+                deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+            }
+            catch (Exception e)
+            {
+                throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}]", e);
+            }
 
-            var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
             if (deadLetter != null)
                 return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
             return new Envelope(deserializedMsg, envelope.Sender);
@@ -543,10 +549,6 @@ namespace Akka.Actor
 
                 var manifest = Serialization.Serialization.ManifestFor(serializer, obj);
                 return _systemImpl.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
-            }
-            catch (Exception e)
-            {
-                throw new SerializationException($"Failed to serialize and deserialize payload object {obj.GetType()}", e);
             }
             finally
             {
