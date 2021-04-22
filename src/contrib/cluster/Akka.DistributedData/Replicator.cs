@@ -261,7 +261,7 @@ namespace Akka.DistributedData
     /// </list>
     /// </para>
     /// </summary>
-    internal sealed class Replicator : ReceiveActor, IWithUnboundedStash
+    internal sealed class Replicator : UntypedActor, IWithUnboundedStash
     {
         public static Props Props(ReplicatorSettings settings) =>
             Actor.Props.Create(() => new Replicator(settings)).WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
@@ -354,6 +354,9 @@ namespace Akka.DistributedData
         private readonly ICancelable _deltaPropagationTask;
         private readonly int _maxDeltaSize;
 
+        private int _count;
+        private DateTime _startTime;
+
         public Replicator(ReplicatorSettings settings)
         {
             _settings = settings;
@@ -407,7 +410,12 @@ namespace Akka.DistributedData
                 TimeSpan.TicksPerMillisecond * 200));
             _deltaPropagationTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(deltaPropagationInterval, deltaPropagationInterval, Self, DeltaPropagationTick.Instance, Self);
 
-            if (_hasDurableKeys) Become(Load);
+            if (_hasDurableKeys)
+            {
+                _count = 0;
+                _startTime = DateTime.UtcNow;
+                Become(Load);
+            }
             else Become(NormalReceive);
         }
 
@@ -444,56 +452,63 @@ namespace Akka.DistributedData
             else return Actor.SupervisorStrategy.DefaultDecider.Decide(e);
         });
 
-        private void Load()
+        private bool Load(object message)
         {
-            var startTime = DateTime.UtcNow;
-            var count = 0;
-
-            Receive<LoadData>(load =>
+            switch (message)
             {
-                count += load.Data.Count;
-                foreach (var entry in load.Data)
-                {
-                    var envelope = entry.Value.DataEnvelope;
-                    var newEnvelope = Write(entry.Key, envelope);
-                    if (!ReferenceEquals(newEnvelope, envelope))
+                case LoadData load:
+                    _count += load.Data.Count;
+                    foreach (var entry in load.Data)
                     {
-                        _durableStore.Tell(new Store(entry.Key, new DurableDataEnvelope(newEnvelope), null));
+                        var envelope = entry.Value.DataEnvelope;
+                        var newEnvelope = Write(entry.Key, envelope);
+                        if (!ReferenceEquals(newEnvelope, envelope))
+                        {
+                            _durableStore.Tell(new Store(entry.Key, new DurableDataEnvelope(newEnvelope), null));
+                        }
                     }
-                }
-            });
-            Receive<LoadAllCompleted>(_ =>
-            {
-                _log.Debug("Loading {0} entries from durable store took {1} ms", count,
-                    (DateTime.UtcNow - startTime).TotalMilliseconds);
-                Become(NormalReceive);
-                Stash.UnstashAll();
-                Self.Tell(FlushChanges.Instance);
-            });
-            Receive<GetReplicaCount>(_ =>
-            {
-                // 0 until durable data has been loaded, used by test
-                Sender.Tell(new ReplicaCount(0));
-            });
+                    return true;
 
-            // ignore scheduled ticks when loading durable data
-            Receive(new Action<RemovedNodePruningTick>(Ignore));
-            Receive(new Action<FlushChanges>(Ignore));
-            Receive(new Action<GossipTick>(Ignore));
+                case LoadAllCompleted _:
+                    _log.Debug("Loading {0} entries from durable store took {1} ms", _count,
+                        (DateTime.UtcNow - _startTime).TotalMilliseconds);
+                    Become(NormalReceive);
+                    Stash.UnstashAll();
+                    Self.Tell(FlushChanges.Instance);
+                    return true;
 
-            // ignore gossip and replication when loading durable data
-            Receive(new Action<Read>(IgnoreDebug));
-            Receive(new Action<Write>(IgnoreDebug));
-            Receive(new Action<Status>(IgnoreDebug));
-            Receive(new Action<Gossip>(IgnoreDebug));
+                case GetReplicaCount _:
+                    // 0 until durable data has been loaded, used by test
+                    Sender.Tell(new ReplicaCount(0));
+                    return true;
 
-            Receive<ClusterEvent.IClusterDomainEvent>(msg =>
-            {
-                if(!NormalReceive(msg))
-                    Unhandled(msg);
-            });
+                // ignore scheduled ticks when loading durable data
+                case RemovedNodePruningTick _:
+                case FlushChanges _:
+                case GossipTick _:
+                    // Ignored
+                    return true;
 
-            ReceiveAny(_ => Stash.Stash());
+                // ignore gossip and replication when loading durable data
+                case Read _:
+                case Write _:
+                case Status _:
+                case Gossip _:
+                    _log.Debug("ignoring message [{0}] when loading durable data", message.GetType());
+                    return true;
+
+                case ClusterEvent.IClusterDomainEvent msg:
+                    return NormalReceive(msg);
+
+                default:
+                    Stash.Stash();
+                    return true;
+            }
+        }
+
+        protected override void OnReceive(object message)
+        {
+            throw new NotImplementedException();
         }
 
         private bool NormalReceive(object message)
@@ -572,13 +587,6 @@ namespace Akka.DistributedData
 
             return false;
         }
-
-        private void IgnoreDebug<T>(T msg)
-        {
-            _log.Debug("ignoring message [{0}] when loading durable data", typeof(T));
-        }
-
-        private static void Ignore<T>(T msg) { }
 
         private void ReceiveGet(IKey key, IReadConsistency consistency, object req)
         {
