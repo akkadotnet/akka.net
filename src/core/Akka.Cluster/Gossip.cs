@@ -68,24 +68,6 @@ namespace Akka.Cluster
             return Empty.Copy(members: members);
         }
 
-        private static readonly ImmutableHashSet<MemberStatus> LeaderMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
-
-        private static readonly ImmutableHashSet<MemberStatus> ConvergenceMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Up, MemberStatus.Leaving);
-
-        /// <summary>
-        /// If there are unreachable members in the cluster with any of these statuses, they will be skipped during convergence checks.
-        /// </summary>
-        public static readonly ImmutableHashSet<MemberStatus> ConvergenceSkipUnreachableWithMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
-
-        /// <summary>
-        /// If there are unreachable members in the cluster with any of these statuses, they will be pruned from the local gossip
-        /// </summary>
-        public static readonly ImmutableHashSet<MemberStatus> RemoveUnreachableWithMemberStatus =
-            ImmutableHashSet.Create(MemberStatus.Down, MemberStatus.Exiting);
-
         readonly ImmutableSortedSet<Member> _members;
         readonly GossipOverview _overview;
         readonly VectorClock _version;
@@ -134,7 +116,7 @@ namespace Akka.Cluster
 
             ReachabilityExcludingDownedObservers = new Lazy<Reachability>(() =>
             {
-                var downed = Members.Where(m => m.Status == MemberStatus.Down).ToList();
+                var downed = Members.Where(m => m.Status == MemberStatus.Down);
                 return Overview.Reachability.RemoveObservers(downed.Select(m => m.UniqueAddress).ToImmutableHashSet());
             });
 
@@ -291,91 +273,10 @@ namespace Akka.Cluster
             return new Gossip(mergedMembers, new GossipOverview(mergedSeen, mergedReachability), mergedVClock);
         }
 
-
-        /// <summary>
-        /// First check that:
-        ///   1. we don't have any members that are unreachable, or
-        ///   2. all unreachable members in the set have status DOWN or EXITING
-        /// Else we can't continue to check for convergence. When that is done 
-        /// we check that all members with a convergence status is in the seen 
-        /// table and has the latest vector clock version.
-        /// </summary>
-        /// <param name="selfUniqueAddress">The unique address of the node checking for convergence.</param>
-        /// <param name="exitingConfirmed">The set of nodes who have been confirmed to be exiting.</param>
-        /// <returns><c>true</c> if convergence has been achieved. <c>false</c> otherwise.</returns>
-        public bool Convergence(UniqueAddress selfUniqueAddress, HashSet<UniqueAddress> exitingConfirmed)
-        {
-            var unreachable = ReachabilityExcludingDownedObservers.Value.AllUnreachableOrTerminated
-                .Where(node => node != selfUniqueAddress && !exitingConfirmed.Contains(node))
-                .Select(GetMember);
-
-            return unreachable.All(m => ConvergenceSkipUnreachableWithMemberStatus.Contains(m.Status))
-                && !_members.Any(m => ConvergenceMemberStatus.Contains(m.Status) 
-                && !(SeenByNode(m.UniqueAddress) || exitingConfirmed.Contains(m.UniqueAddress)));
-        }
-
         /// <summary>
         /// TBD
         /// </summary>
         public Lazy<Reachability> ReachabilityExcludingDownedObservers { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        public bool IsLeader(UniqueAddress node, UniqueAddress selfUniqueAddress)
-        {
-            return Leader(selfUniqueAddress) == node && node != null;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        public UniqueAddress Leader(UniqueAddress selfUniqueAddress)
-        {
-            return LeaderOf(_members, selfUniqueAddress);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="role">TBD</param>
-        /// <param name="selfUniqueAddress">TBD</param>
-        /// <returns>TBD</returns>
-        public UniqueAddress RoleLeader(string role, UniqueAddress selfUniqueAddress)
-        {
-            var roleMembers = _members
-                .Where(m => m.HasRole(role))
-                .ToImmutableSortedSet();
-
-            return LeaderOf(roleMembers, selfUniqueAddress);
-        }
-
-        /// <summary>
-        /// Determine which node is the leader of the given range of members.
-        /// </summary>
-        /// <param name="mbrs">All members in the cluster.</param>
-        /// <param name="selfUniqueAddress">The address of the current node.</param>
-        /// <returns><c>null</c> if <paramref name="mbrs"/> is empty. The <see cref="UniqueAddress"/> of the leader otherwise.</returns>
-        public UniqueAddress LeaderOf(ImmutableSortedSet<Member> mbrs, UniqueAddress selfUniqueAddress)
-        {
-            var reachableMembers = (_overview.Reachability.IsAllReachable
-                ? mbrs.Where(m => m.Status != MemberStatus.Down)
-                : mbrs
-                    .Where(m => m.Status != MemberStatus.Down && _overview.Reachability.IsReachable(m.UniqueAddress) || m.UniqueAddress == selfUniqueAddress))
-                    .ToImmutableSortedSet();
-
-            if (!reachableMembers.Any()) return null;
-
-            var member = reachableMembers.FirstOrDefault(m => LeaderMemberStatus.Contains(m.Status)) ??
-                         reachableMembers.Min(Member.LeaderStatusOrdering);
-
-            return member.UniqueAddress;
-        }
 
         /// <summary>
         /// TBD
@@ -443,6 +344,18 @@ namespace Akka.Cluster
                 return this;
             else
                 return new Gossip(Members, Overview, newVersion);
+        }
+
+        public Gossip MarkAsDown(Member member)
+        {
+            // replace member (changed status)
+            var newMembers = Members.Remove(member).Add(member.Copy(MemberStatus.Down));
+            // remove nodes marked as DOWN from the 'seen' table
+            var newSeen = Overview.Seen.Remove(member.UniqueAddress);
+
+            //update gossip overview
+            var newOverview = Overview.Copy(seen: newSeen);
+            return Copy(newMembers, overview: newOverview);
         }
 
         /// <inheritdoc/>
