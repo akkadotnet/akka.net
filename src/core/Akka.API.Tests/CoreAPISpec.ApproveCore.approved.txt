@@ -1621,6 +1621,7 @@ namespace Akka.Actor
     }
     public class SelectChildRecursive : Akka.Actor.SelectionPathElement
     {
+        public static readonly Akka.Actor.SelectChildRecursive Instance;
         public SelectChildRecursive() { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -1628,6 +1629,7 @@ namespace Akka.Actor
     }
     public class SelectParent : Akka.Actor.SelectionPathElement
     {
+        public static readonly Akka.Actor.SelectParent Instance;
         public SelectParent() { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -3982,6 +3984,13 @@ namespace Akka.Pattern
         public OpenCircuitException(System.Exception cause) { }
         public OpenCircuitException(System.Exception cause, System.TimeSpan remainingDuration) { }
         public System.TimeSpan RemainingDuration { get; }
+    }
+    public class static RetrySupport
+    {
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, int randomFactor, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan delay, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.Func<int, Akka.Util.Option<System.TimeSpan>> delayFunction, Akka.Actor.IScheduler scheduler) { }
     }
     public class UserCalledFailException : Akka.Actor.AkkaException
     {

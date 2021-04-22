@@ -97,14 +97,14 @@ namespace Akka.Cluster.Tests
         public void ClusterHeartbeatSenderState_must_return_empty_active_set_when_no_nodes()
         {
             _emptyState
-                .ActiveReceivers.IsEmpty.Should().BeTrue();
+                .ActiveReceivers.Count.Should().Be(0);
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_init_with_empty()
         {
             _emptyState.Init(ImmutableHashSet<UniqueAddress>.Empty, ImmutableHashSet<UniqueAddress>.Empty)
-                .ActiveReceivers.IsEmpty.Should().BeTrue();
+                .ActiveReceivers.Count.Should().Be(0);
         }
 
         [Fact]

@@ -103,12 +103,7 @@ namespace Akka.Util.Internal
         /// <returns>TBD</returns>
         internal static IEnumerable<T> From<T>(this IEnumerable<T> items, T startingItem)
         {
-            var itemsAsList = items.ToList();
-            var indexOf = itemsAsList.IndexOf(startingItem);
-            if (indexOf == -1) return new List<T>();
-            if (indexOf == 0) return itemsAsList;
-            var itemCount = (itemsAsList.Count - indexOf);
-            return itemsAsList.Slice(indexOf, itemCount);
+            return items.SkipWhile(x => !x.Equals(startingItem));
         }
 
         /// <summary>

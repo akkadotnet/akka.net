@@ -30,7 +30,7 @@ import "ContainerFormats.proto";
 message Join {
   UniqueAddress node = 1;
   repeated string roles = 2;
-  optional string appVersion = 3;
+  string appVersion = 3;
 }
 
 // Welcome, reply to Join
@@ -59,14 +59,28 @@ message Welcome {
  ****************************************/
 
 /**
+ * Prior to version 1.4.19
  * Heartbeat
  * Sends an Address
+ * Version 1.4.19 can deserialize this message but does not send it
  */
+ message Heartbeat {
+  Akka.Remote.Serialization.Proto.Msg.AddressData from = 1;
+  int64 sequenceNr = 2;
+  sint64 creationTime = 3;
+}
 
 /**
+ * Prior to version 1.4.19
  * HeartbeatRsp
  * Sends an UniqueAddress
+ * Version 1.4.19 can deserialize this message but does not send it
  */
+ message HeartBeatResponse {
+  UniqueAddress from = 1;
+  int64 sequenceNr = 2;
+  int64 creationTime = 3;
+}
 
 /****************************************
  * Cluster Gossip Messages
@@ -138,7 +152,7 @@ message Member {
   int32 upNumber = 2;
   MemberStatus status = 3;
   repeated int32 rolesIndexes = 4 [packed = true];
-  optional int32 appVersionIndex = 5;
+  int32 appVersionIndex = 5;
 }
 
 // Vector Clock

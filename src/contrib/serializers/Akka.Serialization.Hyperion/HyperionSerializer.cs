@@ -6,14 +6,18 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Serialization.Hyperion;
 using Akka.Util;
 using Hyperion;
+using HySerializer = Hyperion.Serializer;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.Serialization
@@ -28,7 +32,7 @@ namespace Akka.Serialization
         /// </summary>
         public readonly HyperionSerializerSettings Settings;
 
-        private readonly Hyperion.Serializer _serializer;
+        private readonly HySerializer _serializer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HyperionSerializer"/> class.
@@ -57,7 +61,7 @@ namespace Akka.Serialization
         public HyperionSerializer(ExtendedActorSystem system, HyperionSerializerSettings settings)
             : base(system)
         {
-            this.Settings = settings;
+            Settings = settings;
             var akkaSurrogate =
                 Surrogate
                 .Create<ISurrogated, ISurrogate>(
@@ -66,13 +70,23 @@ namespace Akka.Serialization
 
             var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
 
+            if (system != null)
+            {
+                var settingsSetup = system.Settings.Setup.Get<HyperionSerializerSetup>()
+                    .GetOrElse(HyperionSerializerSetup.Empty);
+
+                settingsSetup.ApplySettings(Settings);
+            }
+
             _serializer =
-                new Hyperion.Serializer(new SerializerOptions(
-                    preserveObjectReferences: settings.PreserveObjectReferences,
+                new HySerializer(new SerializerOptions(
                     versionTolerance: settings.VersionTolerance,
+                    preserveObjectReferences: settings.PreserveObjectReferences,
                     surrogates: new[] { akkaSurrogate },
+                    serializerFactories: null,
                     knownTypes: provider.GetKnownTypes(),
-                    ignoreISerializable:true));
+                    ignoreISerializable:true,
+                    packageNameOverrides: settings.PackageNameOverrides));
         }
 
         /// <summary>
@@ -156,7 +170,8 @@ namespace Akka.Serialization
         public static readonly HyperionSerializerSettings Default = new HyperionSerializerSettings(
             preserveObjectReferences: true,
             versionTolerance: true,
-            knownTypesProvider: typeof(NoKnownTypes));
+            knownTypesProvider: typeof(NoKnownTypes), 
+            packageNameOverrides: new List<Func<string, string>>());
 
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
@@ -174,15 +189,42 @@ namespace Akka.Serialization
         public static HyperionSerializerSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
-                throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.serializers.hyperion");
+                throw ConfigurationException.NullOrEmptyConfig<HyperionSerializerSettings>("akka.actor.serialization-settings.hyperion");
 
             var typeName = config.GetString("known-types-provider", null);
             var type = !string.IsNullOrEmpty(typeName) ? Type.GetType(typeName, true) : null;
 
+            var framework = RuntimeInformation.FrameworkDescription;
+            string frameworkKey;
+            if (framework.Contains(".NET Framework"))
+                frameworkKey = "netfx";
+            else if (framework.Contains(".NET Core"))
+                frameworkKey = "netcore";
+            else
+                frameworkKey = "net";
+
+            var packageNameOverrides = new List<Func<string, string>>();
+            var overrideConfigs = config.GetValue($"cross-platform-package-name-overrides.{frameworkKey}");
+            if (overrideConfigs != null)
+            {
+                var configs = overrideConfigs.GetArray().Select(value => value.GetObject());
+                foreach (var obj in configs)
+                {
+                    var fingerprint = obj.GetKey("fingerprint").GetString();
+                    var renameFrom = obj.GetKey("rename-from").GetString();
+                    var renameTo = obj.GetKey("rename-to").GetString();
+                    packageNameOverrides.Add(packageName => 
+                        packageName.Contains(fingerprint) 
+                            ? packageName.Replace(renameFrom, renameTo) 
+                            : packageName);
+                }
+            }
+
             return new HyperionSerializerSettings(
                 preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
                 versionTolerance: config.GetBoolean("version-tolerance", true),
-                knownTypesProvider: type);
+                knownTypesProvider: type,
+                packageNameOverrides: packageNameOverrides);
         }
 
         /// <summary>
@@ -208,13 +250,36 @@ namespace Akka.Serialization
         public readonly Type KnownTypesProvider;
 
         /// <summary>
+        /// A list of lambda functions, used to transform incoming deserialized
+        /// package names before they are instantiated
+        /// </summary>
+        public readonly IEnumerable<Func<string, string>> PackageNameOverrides;
+
+        /// <summary>
         /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
         /// </summary>
         /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
         /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
         /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        [Obsolete]
         public HyperionSerializerSettings(bool preserveObjectReferences, bool versionTolerance, Type knownTypesProvider)
+            : this(preserveObjectReferences, versionTolerance, knownTypesProvider, new List<Func<string, string>>())
+        { }
+
+        /// <summary>
+        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
+        /// </summary>
+        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
+        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
+        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
+        /// <param name="packageNameOverrides">TBD</param>
+        /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        public HyperionSerializerSettings(
+            bool preserveObjectReferences, 
+            bool versionTolerance, 
+            Type knownTypesProvider, 
+            IEnumerable<Func<string, string>> packageNameOverrides)
         {
             knownTypesProvider = knownTypesProvider ?? typeof(NoKnownTypes);
             if (!typeof(IKnownTypesProvider).IsAssignableFrom(knownTypesProvider))
@@ -223,6 +288,7 @@ namespace Akka.Serialization
             PreserveObjectReferences = preserveObjectReferences;
             VersionTolerance = versionTolerance;
             KnownTypesProvider = knownTypesProvider;
+            PackageNameOverrides = packageNameOverrides;
         }
     }
 }
