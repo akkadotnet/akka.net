@@ -823,9 +823,9 @@ namespace Akka.DistributedData.Internal
 
     public sealed class Delta : IEquatable<Delta>
     {
-        public readonly DataEnvelope DataEnvelope;
-        public readonly long FromSeqNr;
-        public readonly long ToSeqNr;
+        public DataEnvelope DataEnvelope { get; }
+        public long FromSeqNr { get; }
+        public long ToSeqNr { get; }
 
         public Delta(DataEnvelope dataEnvelope, long fromSeqNr, long toSeqNr)
         {
@@ -889,8 +889,8 @@ namespace Akka.DistributedData.Internal
         public static readonly IReplicatedDelta NoDeltaPlaceholder = NoDelta.Instance;
 
         public UniqueAddress FromNode { get; }
-        public readonly bool ShouldReply;
-        public readonly ImmutableDictionary<string, Delta> Deltas;
+        public bool ShouldReply { get; }
+        public ImmutableDictionary<string, Delta> Deltas { get; }
 
         public DeltaPropagation(UniqueAddress fromNode, bool shouldReply, ImmutableDictionary<string, Delta> deltas)
         {
