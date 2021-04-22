@@ -35,15 +35,25 @@ namespace Akka.Cluster.Tests
         static readonly Member dUp = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552), MemberStatus.Up, ImmutableHashSet.Create("GRP"));
 
         static readonly Gossip g0 = new Gossip(ImmutableSortedSet.Create(aUp)).Seen(aUp.UniqueAddress);
+        static readonly MembershipState state0 = new MembershipState(g0, aUp.UniqueAddress);
         static readonly Gossip g1 = new Gossip(ImmutableSortedSet.Create(aUp, cJoining)).Seen(aUp.UniqueAddress).Seen(cJoining.UniqueAddress);
+        static readonly MembershipState state1 = new MembershipState(g1, aUp.UniqueAddress);
         static readonly Gossip g2 = new Gossip(ImmutableSortedSet.Create(aUp, bExiting, cUp)).Seen(aUp.UniqueAddress);
+        static readonly MembershipState state2 = new MembershipState(g2, aUp.UniqueAddress);
         static readonly Gossip g3 = g2.Seen(bExiting.UniqueAddress).Seen(cUp.UniqueAddress);
+        static readonly MembershipState state3 = new MembershipState(g3, aUp.UniqueAddress);
         static readonly Gossip g4 = new Gossip(ImmutableSortedSet.Create(a51Up, aUp, bExiting, cUp)).Seen(aUp.UniqueAddress);
+        static readonly MembershipState state4 = new MembershipState(g4, aUp.UniqueAddress);
         static readonly Gossip g5 = new Gossip(ImmutableSortedSet.Create(a51Up, aUp, bExiting, cUp)).Seen(aUp.UniqueAddress).Seen(bExiting.UniqueAddress).Seen(cUp.UniqueAddress);
+        static readonly MembershipState state5 = new MembershipState(g5, aUp.UniqueAddress);
         static readonly Gossip g6 = new Gossip(ImmutableSortedSet.Create(aLeaving, bExiting, cUp)).Seen(aUp.UniqueAddress);
+        static readonly MembershipState state6 = new MembershipState(g6, aUp.UniqueAddress);
         static readonly Gossip g7 = new Gossip(ImmutableSortedSet.Create(aExiting, bExiting, cUp)).Seen(aUp.UniqueAddress);
+        static readonly MembershipState state7 = new MembershipState(g7, aUp.UniqueAddress);
         static readonly Gossip g8 = new Gossip(ImmutableSortedSet.Create(aUp, bExiting, cUp, dUp), new GossipOverview(Reachability.Empty.Unreachable(aUp.UniqueAddress, dUp.UniqueAddress))).Seen(aUp.UniqueAddress);
+        static readonly MembershipState state8 = new MembershipState(g8, aUp.UniqueAddress);
 
+        static readonly MembershipState _emptyMembershipState = new MembershipState(Gossip.Empty, aUp.UniqueAddress);
         readonly TestProbe _memberSubscriber;
 
         public ClusterDomainEventPublisherSpec() : base(Config)
@@ -54,7 +64,7 @@ namespace Akka.Cluster.Tests
             Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.ClusterShuttingDown));
 
             _publisher = Sys.ActorOf(Props.Create<ClusterDomainEventPublisher>());
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g0));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state0));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(aUp));
             _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(aUp.Address));
         }
@@ -62,15 +72,15 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void ClusterDomainEventPublisher_must_publish_MemberJoined()
         {
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g1));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state1));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberJoined(cJoining));
         }
 
         [Fact]
         public void ClusterDomainEventPublisher_must_publish_MemberUp()
         {
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g2));
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state2));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state3));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
         }
@@ -78,7 +88,7 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void ClusterDomainEventPublisher_must_publish_leader_changed()
         {
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g4));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state4));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(a51Up));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
@@ -89,17 +99,17 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void ClusterDomainEventPublisher_must_publish_leader_changed_when_old_leader_leaves_and_is_removed()
         {
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state3));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g6));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state6));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberLeft(aLeaving));
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g7));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state7));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(aExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(cUp.Address));
             _memberSubscriber.ExpectNoMsg(500.Milliseconds());
             // at the removed member a an empty gossip is the last thing
-            _publisher.Tell(new InternalClusterAction.PublishChanges(Gossip.Empty));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(_emptyMembershipState));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(aRemoved, MemberStatus.Exiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(bRemoved, MemberStatus.Exiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberRemoved(cRemoved, MemberStatus.Up));
@@ -109,13 +119,13 @@ namespace Akka.Cluster.Tests
         [Fact]
         public void ClusterDomainEventPublisher_must_not_publish_leader_changed_when_same_leader()
         {
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g4));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state4));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(a51Up));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(cUp));
             _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(a51Up.Address));
 
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g5));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state5));
             _memberSubscriber.ExpectNoMsg(500.Milliseconds());
         }
 
@@ -125,9 +135,9 @@ namespace Akka.Cluster.Tests
             var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.RoleLeaderChanged))));
             subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
-            _publisher.Tell(new InternalClusterAction.PublishChanges(new Gossip(ImmutableSortedSet.Create(cJoining, dUp))));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(new MembershipState(new Gossip(ImmutableSortedSet.Create(cJoining, dUp)), dUp.UniqueAddress)));
             subscriber.ExpectMsg(new ClusterEvent.RoleLeaderChanged("GRP", dUp.Address));
-            _publisher.Tell(new InternalClusterAction.PublishChanges(new Gossip(ImmutableSortedSet.Create(cUp, dUp))));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(new MembershipState(new Gossip(ImmutableSortedSet.Create(cUp, dUp)), dUp.UniqueAddress)));
             subscriber.ExpectMsg(new ClusterEvent.RoleLeaderChanged("GRP", cUp.Address));
         }
 
@@ -145,7 +155,7 @@ namespace Akka.Cluster.Tests
         public void ClusterDomainEventPublisher_must_send_events_corresponding_to_current_state_when_subscribe()
         {
             var subscriber = CreateTestProbe();
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g8));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state8));
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, ImmutableHashSet.Create(typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.ReachabilityEvent))));
 
             subscriber.ReceiveN(4).Should().BeEquivalentTo(
@@ -165,7 +175,7 @@ namespace Akka.Cluster.Tests
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.IMemberEvent))));
             subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
             _publisher.Tell(new InternalClusterAction.Unsubscribe(subscriber.Ref, typeof(ClusterEvent.IMemberEvent)));
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state3));
             subscriber.ExpectNoMsg(500.Milliseconds());
             // but memberSubscriber is still subscriber
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberExited(bExiting));
@@ -178,10 +188,10 @@ namespace Akka.Cluster.Tests
             var subscriber = CreateTestProbe();
             _publisher.Tell(new InternalClusterAction.Subscribe(subscriber.Ref, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsSnapshot, ImmutableHashSet.Create(typeof(ClusterEvent.SeenChanged))));
             subscriber.ExpectMsg<ClusterEvent.CurrentClusterState>();
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g2));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state2));
             subscriber.ExpectMsg<ClusterEvent.SeenChanged>();
             subscriber.ExpectNoMsg(500.Milliseconds());
-            _publisher.Tell(new InternalClusterAction.PublishChanges(g3));
+            _publisher.Tell(new InternalClusterAction.PublishChanges(state3));
             subscriber.ExpectMsg<ClusterEvent.SeenChanged>();
             subscriber.ExpectNoMsg(500.Milliseconds());
         }
