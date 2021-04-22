@@ -131,9 +131,9 @@ namespace Akka.IO
             }
         }
 
-        private struct SocketEvent : INoSerializationVerificationNeeded
+        private readonly struct SocketEvent : INoSerializationVerificationNeeded
         {
-            public SocketAsyncEventArgs Args;
+            public readonly SocketAsyncEventArgs Args;
 
             public SocketEvent(SocketAsyncEventArgs args)
             {
