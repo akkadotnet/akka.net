@@ -483,7 +483,7 @@ namespace Akka.Actor
                 catch (Exception e)
                 {
                     throw new SerializationException(
-                        $"Failed to serialize and deserialize actor props argument of type {propArgument?.GetType()}",
+                        $"Failed to serialize and deserialize actor props argument of type {propArgument?.GetType()} for actor type [{props.Type}].",
                         e);
                 }
                 finally

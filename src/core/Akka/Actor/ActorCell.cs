@@ -526,7 +526,7 @@ namespace Akka.Actor
             }
             catch (Exception e)
             {
-                throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}]", e);
+                throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}], Actor type: [{Actor.GetType()}]", e);
             }
 
             if (deadLetter != null)
