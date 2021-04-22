@@ -992,9 +992,16 @@ namespace Akka.Persistence.Sql.Common.Journal
                         }
                         tx.Commit();
                     }
-                    catch (Exception)
+                    catch (Exception e1)
                     {
-                        tx.Rollback();
+                        try
+                        {
+                            tx.Rollback();
+                        }
+                        catch (Exception e2)
+                        {
+                            throw new AggregateException(e2, e1);
+                        }
                         throw;
                     }
                     finally
