@@ -24,6 +24,8 @@ namespace Akka.Tests.IO
 
         public UdpConnectedIntegrationSpec(ITestOutputHelper output)
             : base(@"
+                    akka.actor.serialize-creators = on
+                    akka.actor.serialize-messages = on
                     akka.io.udp-connected.nr-of-selectors = 1
                     akka.io.udp-connected.direct-buffer-pool-limit = 100
                     akka.io.udp-connected.direct-buffer-size = 1024
