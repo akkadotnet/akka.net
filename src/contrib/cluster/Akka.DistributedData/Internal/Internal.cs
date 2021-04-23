@@ -85,11 +85,21 @@ namespace Akka.DistributedData.Internal
         public override string ToString() => "ClockTick";
     }
 
+    internal interface ISendingSystemUid
+    {
+        UniqueAddress FromNode { get; }
+    }
+
+    internal interface IDestinationSystemUid
+    {
+        long? ToSystemUid { get; }
+    }
+
     /// <summary>
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class Write : IReplicatorMessage, IEquatable<Write>
+    internal sealed class Write : IReplicatorMessage, IEquatable<Write>, ISendingSystemUid
     {
         /// <summary>
         /// TBD
@@ -205,7 +215,7 @@ namespace Akka.DistributedData.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class Read : IReplicatorMessage, IEquatable<Read>
+    internal sealed class Read : IReplicatorMessage, IEquatable<Read>, ISendingSystemUid
     {
         /// <summary>
         /// TBD
@@ -651,7 +661,7 @@ namespace Akka.DistributedData.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class Status : IReplicatorMessage, IEquatable<Status>
+    internal sealed class Status : IReplicatorMessage, IEquatable<Status>, IDestinationSystemUid
     {
         /// <summary>
         /// TBD
@@ -738,7 +748,7 @@ namespace Akka.DistributedData.Internal
     /// TBD
     /// </summary>
     [Serializable]
-    internal sealed class Gossip : IReplicatorMessage, IEquatable<Gossip>
+    internal sealed class Gossip : IReplicatorMessage, IEquatable<Gossip>, IDestinationSystemUid
     {
         /// <summary>
         /// TBD
@@ -813,9 +823,9 @@ namespace Akka.DistributedData.Internal
 
     public sealed class Delta : IEquatable<Delta>
     {
-        public readonly DataEnvelope DataEnvelope;
-        public readonly long FromSeqNr;
-        public readonly long ToSeqNr;
+        public DataEnvelope DataEnvelope { get; }
+        public long FromSeqNr { get; }
+        public long ToSeqNr { get; }
 
         public Delta(DataEnvelope dataEnvelope, long fromSeqNr, long toSeqNr)
         {
@@ -850,7 +860,7 @@ namespace Akka.DistributedData.Internal
         }
     }
 
-    public sealed class DeltaPropagation : IReplicatorMessage, IEquatable<DeltaPropagation>
+    public sealed class DeltaPropagation : IReplicatorMessage, IEquatable<DeltaPropagation>, ISendingSystemUid
     {
         private sealed class NoDelta : IDeltaReplicatedData<IReplicatedData, IReplicatedDelta>, IRequireCausualDeliveryOfDeltas
         {
@@ -878,9 +888,9 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         public static readonly IReplicatedDelta NoDeltaPlaceholder = NoDelta.Instance;
 
-        public readonly UniqueAddress FromNode;
-        public readonly bool ShouldReply;
-        public readonly ImmutableDictionary<string, Delta> Deltas;
+        public UniqueAddress FromNode { get; }
+        public bool ShouldReply { get; }
+        public ImmutableDictionary<string, Delta> Deltas { get; }
 
         public DeltaPropagation(UniqueAddress fromNode, bool shouldReply, ImmutableDictionary<string, Delta> deltas)
         {
