@@ -5,15 +5,81 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
 using Akka.Actor;
 using TQueue = System.Collections.Concurrent.ConcurrentQueue<Akka.Actor.Envelope>;
 
 namespace Akka.Dispatch.MessageQueues
 {
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Similar to SysMsg queue.
+    /// </summary>
+    internal class LockFreeQueue<T>
+    {
+        internal sealed class Node
+        {
+            public T Value;
+            public Node Next;
+
+            public Node Unlink()
+            {
+                Next = null;
+                Value = default;
+                return this;
+            }
+        }
+
+        public Node Head;
+        public Node Tail;
+
+        public bool IsEmpty => Head.Next == null;
+
+        public int Count => SizeInner(Head.Next, 0);
+
+        internal static int SizeInner(Node head, int acc)
+        {
+            while (true)
+            {
+                if (head == null) return acc;
+                head = head.Next;
+                acc += 1;
+            }
+        }
+
+        public LockFreeQueue()
+        {
+            Head = Tail = new Node();
+        }
+
+        public bool TryDequeue(out T value)
+        {
+            if (Head.Next != null)
+            {
+                Head = Head.Next;
+                value = Head.Value;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        public void Enqueue(T value)
+        {
+            var node = new Node();
+            node.Value = value;
+
+            var oldTail = Interlocked.Exchange(ref Tail, node);
+            oldTail.Next = node;
+        }
+    }
+
     /// <summary> An unbounded mailbox message queue. </summary>
     public class UnboundedMessageQueue : IMessageQueue, IUnboundedMessageQueueSemantics
     {
-        private readonly TQueue _queue = new TQueue();
+        private readonly LockFreeQueue<Envelope> _queue = new LockFreeQueue<Envelope>();
 
         /// <inheritdoc cref="IMessageQueue"/>
         public bool HasMessages
