@@ -750,7 +750,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             _remainingOperations++;
             var cause = message.Cause;
-            Log.Error(cause, "An error occurred during event batch processing (chunkId: {0})", message.ChunkId);
+            Log.Error(cause, "An error occurred during event batch processing. ChunkId: [{0}], batched requests: [{1}]", message.ChunkId, message.Requests.Length);
             
             foreach (var request in message.Requests)
             {
