@@ -93,7 +93,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Core boostrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
+    /// Core bootstrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
     /// on this class.
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup
