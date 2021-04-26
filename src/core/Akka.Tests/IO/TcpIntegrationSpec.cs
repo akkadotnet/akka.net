@@ -45,6 +45,8 @@ namespace Akka.Tests.IO
         
         public TcpIntegrationSpec(ITestOutputHelper output)
             : base($@"akka.loglevel = DEBUG
+                     akka.actor.serialize-creators = on
+                     akka.actor.serialize-messages = on
                      akka.io.tcp.trace-logging = true
                      akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
@@ -190,7 +192,7 @@ namespace Akka.Tests.IO
             var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
             var clientHandler = CreateTestProbe();
             Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
-            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromMinutes(10));
+            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromSeconds(3));
             var clientEp = clientHandler.Sender;
             clientEp.Tell(new Tcp.Register(clientHandler));
             serverHandler.ExpectMsg<Tcp.Connected>();

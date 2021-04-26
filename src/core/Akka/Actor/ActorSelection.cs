@@ -77,31 +77,34 @@ namespace Akka.Actor
             Anchor = anchor;
 
             var list = new List<SelectionPathElement>();
-            var iter = elements.Iterator();
-            while (!iter.IsEmpty())
+            var count = elements.Count(); // shouldn't have a multiple enumeration issue\
+            var i = 0;
+            foreach (var s in elements)
             {
-                var s = iter.Next();
                 switch (s)
                 {
                     case null:
                     case "":
                         break;
                     case "**":
-                        if (!iter.IsEmpty())
+                        if (i < count-1)
                             throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
-                        list.Add(new SelectChildRecursive());
+                        list.Add(SelectChildRecursive.Instance);
                         break;
                     case string e when e.Contains("?") || e.Contains("*"):
                         list.Add(new SelectChildPattern(e));
                         break;
                     case string e when e == "..":
-                        list.Add(new SelectParent());
+                        list.Add(SelectParent.Instance);
                         break;
                     default:
                         list.Add(new SelectChildName(s));
                         break;
                 }
+
+                i++;
             }
+
             Path = list.ToArray();
         }
 
@@ -194,10 +197,12 @@ namespace Akka.Actor
                 {
                     if (actorRef is ActorRefWithCell refWithCell)
                     {
-                        var emptyRef = new EmptyLocalActorRef(
-                            provider: refWithCell.Provider,
-                            path: anchor.Path / sel.Elements.Select(el => el.ToString()),
-                            eventStream: refWithCell.Underlying.System.EventStream);
+                        EmptyLocalActorRef EmptyRef(){
+                            return new EmptyLocalActorRef(
+                                provider: refWithCell.Provider,
+                                path: anchor.Path / sel.Elements.Select(el => el.ToString()),
+                                eventStream: refWithCell.Underlying.System.EventStream);
+                        }
 
                         switch (iter.Next())
                         {
@@ -217,7 +222,7 @@ namespace Akka.Actor
                                 {
                                     // don't send to emptyRef after wildcard fan-out
                                     if (!sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
+                                        EmptyRef().Tell(sel, sender);
                                 }
                                 else if (iter.IsEmpty())
                                 {
@@ -234,7 +239,7 @@ namespace Akka.Actor
                                 if (allChildren.Count == 0)
                                     return;
 
-                                var msg = new ActorSelectionMessage(sel.Message, new[] { new SelectChildRecursive() }, true);
+                                var msg = new ActorSelectionMessage(sel.Message, new SelectionPathElement[] { SelectChildRecursive.Instance }, true);
                                 foreach (var c in allChildren)
                                 {
                                     c.Tell(sel.Message, sender);
@@ -250,7 +255,7 @@ namespace Akka.Actor
                                 if (iter.IsEmpty())
                                 {
                                     if (matchingChildren.Count == 0 && !sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
+                                        EmptyRef().Tell(sel, sender);
                                     else
                                     {
                                         for (var i = 0; i < matchingChildren.Count; i++)
@@ -261,7 +266,7 @@ namespace Akka.Actor
                                 {
                                     // don't send to emptyRef after wildcard fan-out
                                     if (matchingChildren.Count == 0 && !sel.WildCardFanOut)
-                                        emptyRef.Tell(sel, sender);
+                                        EmptyRef().Tell(sel, sender);
                                     else
                                     {
                                         var message = new ActorSelectionMessage(
@@ -474,6 +479,11 @@ namespace Akka.Actor
             return true;
         }
 
+        /// <summary>
+        ///  Use this instead of calling the default constructor
+        /// </summary>
+        public static readonly SelectChildRecursive Instance = new SelectChildRecursive();
+
         /// <inheritdoc/>
         public override int GetHashCode() => "**".GetHashCode();
 
@@ -487,6 +497,11 @@ namespace Akka.Actor
     /// </summary>
     public class SelectParent : SelectionPathElement
     {
+        /// <summary>
+        ///  Use this instead of calling the default constructor
+        /// </summary>
+        public static readonly SelectParent Instance = new SelectParent();
+
         /// <inheritdoc/>
         public override bool Equals(object obj) => !ReferenceEquals(obj, null) && obj is SelectParent;
 

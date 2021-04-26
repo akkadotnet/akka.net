@@ -21,6 +21,8 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("6c995bf6-1f8d-40ee-b608-68e36ea6a6f8")]
 
+[assembly: InternalsVisibleTo("Akka.Serialization.Hyperion.Tests")]
+
 // Version information for an assembly consists of the following four values:
 //
 //      Major Version

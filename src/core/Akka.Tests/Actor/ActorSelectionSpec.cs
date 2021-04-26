@@ -486,6 +486,9 @@ namespace Akka.Tests.Actor
             // nothing under /user/a/b2/c1/d
             Sys.ActorSelection("/user/a/b2/c1/d/**").Tell(new Identify(3), probe.Ref);
             probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
+
+            Action illegalDoubleWildCard = () => Sys.ActorSelection("/user/a/**/d").Tell(new Identify(4), probe.Ref);
+            illegalDoubleWildCard.Should().Throw<IllegalActorNameException>();
         }
 
         [Fact]

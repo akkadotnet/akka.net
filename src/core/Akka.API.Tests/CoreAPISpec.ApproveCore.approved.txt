@@ -1621,6 +1621,7 @@ namespace Akka.Actor
     }
     public class SelectChildRecursive : Akka.Actor.SelectionPathElement
     {
+        public static readonly Akka.Actor.SelectChildRecursive Instance;
         public SelectChildRecursive() { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -1628,6 +1629,7 @@ namespace Akka.Actor
     }
     public class SelectParent : Akka.Actor.SelectionPathElement
     {
+        public static readonly Akka.Actor.SelectParent Instance;
         public SelectParent() { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -3254,7 +3256,7 @@ namespace Akka.IO
         public static Akka.IO.Dns.Resolved Cached(string name, Akka.Actor.ActorSystem system) { }
         public override Akka.IO.DnsExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.IO.Dns.Resolved ResolveName(string name, Akka.Actor.ActorSystem system, Akka.Actor.IActorRef sender) { }
-        public abstract class Command
+        public abstract class Command : Akka.Actor.INoSerializationVerificationNeeded
         {
             protected Command() { }
         }
@@ -3683,7 +3685,7 @@ namespace Akka.IO
         {
             protected Event() { }
         }
-        public abstract class Message
+        public abstract class Message : Akka.Actor.INoSerializationVerificationNeeded
         {
             protected Message() { }
         }
@@ -3790,7 +3792,7 @@ namespace Akka.IO
         {
             protected Event() { }
         }
-        public abstract class Message
+        public abstract class Message : Akka.Actor.INoSerializationVerificationNeeded
         {
             protected Message() { }
         }
@@ -3825,7 +3827,7 @@ namespace Akka.IO
             public static readonly Akka.IO.UdpConnected.SuspendReading Instance;
         }
     }
-    public class UdpConnectedExt : Akka.IO.IOExtension
+    public class UdpConnectedExt : Akka.IO.IOExtension, Akka.Actor.INoSerializationVerificationNeeded
     {
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system) { }
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system, Akka.IO.UdpSettings settings) { }
@@ -3982,6 +3984,13 @@ namespace Akka.Pattern
         public OpenCircuitException(System.Exception cause) { }
         public OpenCircuitException(System.Exception cause, System.TimeSpan remainingDuration) { }
         public System.TimeSpan RemainingDuration { get; }
+    }
+    public class static RetrySupport
+    {
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, int randomFactor, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan delay, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.Func<int, Akka.Util.Option<System.TimeSpan>> delayFunction, Akka.Actor.IScheduler scheduler) { }
     }
     public class UserCalledFailException : Akka.Actor.AkkaException
     {

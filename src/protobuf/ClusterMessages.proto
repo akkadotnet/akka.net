@@ -59,14 +59,28 @@ message Welcome {
  ****************************************/
 
 /**
+ * Prior to version 1.4.19
  * Heartbeat
  * Sends an Address
+ * Version 1.4.19 can deserialize this message but does not send it
  */
+ message Heartbeat {
+  Akka.Remote.Serialization.Proto.Msg.AddressData from = 1;
+  int64 sequenceNr = 2;
+  sint64 creationTime = 3;
+}
 
 /**
+ * Prior to version 1.4.19
  * HeartbeatRsp
  * Sends an UniqueAddress
+ * Version 1.4.19 can deserialize this message but does not send it
  */
+ message HeartBeatResponse {
+  UniqueAddress from = 1;
+  int64 sequenceNr = 2;
+  int64 creationTime = 3;
+}
 
 /****************************************
  * Cluster Gossip Messages
