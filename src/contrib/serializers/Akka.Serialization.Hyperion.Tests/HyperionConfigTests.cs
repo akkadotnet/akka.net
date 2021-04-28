@@ -105,6 +105,61 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.Equal(typeof(DummyTypesProvider), serializer.Settings.KnownTypesProvider);
             }
         }
+
+        [Fact]
+        public void Hyperion_serializer_should_read_cross_platform_package_name_override_settings()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor {
+                    serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                    serialization-bindings {
+                        ""System.Object"" = hyperion
+                    }
+                    serialization-settings.hyperion {
+                        cross-platform-package-name-overrides = {
+                            netfx = [
+                            {
+                                fingerprint = ""a"",
+                                rename-from = ""b"",
+                                rename-to = ""c""
+                            }]
+                            netcore = [
+                            {
+                                fingerprint = ""d"",
+                                rename-from = ""e"",
+                                rename-to = ""f""
+                            }]
+                            net = [
+                            {
+                                fingerprint = ""g"",
+                                rename-from = ""h"",
+                                rename-to = ""i""
+                            }]
+                        }
+                    }
+                }
+            ");
+            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
+            {
+                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var overrides = serializer.Settings.PackageNameOverrides.ToList();
+                Assert.NotEmpty(overrides);
+                var @override = overrides[0];
+
+#if NET471
+                Assert.Equal("acc", @override("abc"));
+                Assert.Equal("bcd", @override("bcd"));
+#elif NETCOREAPP3_1
+                Assert.Equal("dff", @override("def"));
+                Assert.Equal("efg", @override("efg"));
+#elif NET5_0
+                Assert.Equal("gii", @override("ghi"));
+                Assert.Equal("hij", @override("hij"));
+#else
+                throw new Exception("Test can not be completed because no proper compiler directive is set for this test build");
+#endif
+            }
+        }
     }
 
     class DummyTypesProvider : IKnownTypesProvider

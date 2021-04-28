@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics.Tests
     {
         private readonly ClusterMetrics _extension;
         private readonly ClusterMetricsView _metricsView;
-        private TimeSpan _sampleInterval;
+        private readonly TimeSpan _sampleInterval;
         
         private int MetricsNodeCount => _metricsView.ClusterMetrics.Count;
         private int MetricsHistorySize => _metricsView.MetricsHistory.Count;
@@ -65,43 +65,31 @@ namespace Akka.Cluster.Metrics.Tests
             MetricsHistorySize.Should().BeGreaterOrEqualTo(beforeStop);
         }
 
-        [Fact(Skip = "Racy")]
+        [Fact]
         public async Task Metrics_extension_Should_control_collector_on_off_state()
         {
-            int size2 = 0, size3 = 0, size4 = 0;
-            for (var i = 0; i < 3; ++i)
+            // store initial size
+            var sizeBefore = MetricsHistorySize;
+            
+            // start collecting
+            _extension.Supervisor.Tell(ClusterMetricsSupervisorMetadata.CollectionStartMessage.Instance);
+            
+            // some metrics should be collected
+            await AwaitAssertAsync(() =>
             {
-                var size1 = MetricsHistorySize;
-                await AwaitSampleAsync();
-                await AwaitAssertAsync(() =>
-                {
-                    size2 = MetricsHistorySize;
-                    size1.Should().Be(size2);
-                }, SampleCollectTimeout);
+                MetricsHistorySize.Should().BeGreaterThan(sizeBefore);
+            }, TimeSpan.FromSeconds(30));
             
-                _extension.Supervisor.Tell(ClusterMetricsSupervisorMetadata.CollectionStartMessage.Instance);
-                await AwaitSampleAsync();
-                await AwaitAssertAsync(() =>
-                {
-                    size3 = MetricsHistorySize;
-                    size3.Should().BeGreaterThan(size2);
-                }, SampleCollectTimeout);
+            // stop collection
+            _extension.Supervisor.Tell(ClusterMetricsSupervisorMetadata.CollectionStopMessage.Instance);
             
-                _extension.Supervisor.Tell(ClusterMetricsSupervisorMetadata.CollectionStopMessage.Instance);
-                await AwaitSampleAsync();
-                await AwaitAssertAsync(() =>
-                {
-                    size4 = MetricsHistorySize;
-                    size4.Should().BeGreaterOrEqualTo(size3);
-                }, SampleCollectTimeout);
-
-                await AwaitSampleAsync();
-                await AwaitAssertAsync(() =>
-                {
-                    var size5 = MetricsHistorySize;
-                    size5.Should().Be(size4);
-                }, SampleCollectTimeout);
-            }
+            // wait for collection to be stopped
+            await AwaitSampleAsync();
+            
+            // make sure collection does not proceed after sampling period
+            var sizeAfter = MetricsHistorySize;
+            await AwaitSampleAsync();
+            MetricsHistorySize.Should().Be(sizeAfter);
         }
 
         private Task AwaitSampleAsync(double? timeMs = null)

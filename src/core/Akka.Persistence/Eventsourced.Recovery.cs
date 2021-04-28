@@ -208,8 +208,9 @@ namespace Akka.Persistence
                         case RecoverySuccess success:
                             timeoutCancelable.Cancel();
                             OnReplaySuccess();
-                            _sequenceNr = success.HighestSequenceNr;
-                            LastSequenceNr = success.HighestSequenceNr;
+                            var highestSeqNr = Math.Max(success.HighestSequenceNr, LastSequenceNr);
+                            _sequenceNr = highestSeqNr;
+                            LastSequenceNr = highestSeqNr;
                             recoveryRunning = false;
                             try
                             {
@@ -254,6 +255,9 @@ namespace Akka.Persistence
                             {
                                 eventSeenInInterval = false;
                             }
+                            break;
+                        case RecoveryTick tick when tick.Snapshot:
+                            // snapshot tick, ignore
                             break;
                         default:
                             StashInternally(message);

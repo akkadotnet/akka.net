@@ -34,7 +34,7 @@ namespace Akka.IO
     {
         #region internal connection messages
 
-        internal abstract class SocketCompleted { }
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded { }
 
         internal sealed class SocketSent : SocketCompleted
         {
@@ -104,7 +104,7 @@ namespace Akka.IO
         }
 
         /// <summary>The common interface for <see cref="Command"/> and <see cref="Event"/>.</summary>
-        public abstract class Message { }
+        public abstract class Message : INoSerializationVerificationNeeded { }
 
         /// <summary>The common type of all commands supported by the UDP implementation.</summary>
         public abstract class Command : Message

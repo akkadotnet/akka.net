@@ -13,6 +13,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Akka.Serialization;
 using Akka.Util;
 using Assert = System.Diagnostics.Debug;
@@ -518,7 +519,16 @@ namespace Akka.Actor
             if (unwrapped is INoSerializationVerificationNeeded)
                 return envelope;
 
-            var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+            object deserializedMsg;
+            try
+            {
+                deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+            }
+            catch (Exception e)
+            {
+                throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}], Actor type: [{Actor.GetType()}]", e);
+            }
+
             if (deadLetter != null)
                 return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
             return new Envelope(deserializedMsg, envelope.Sender);

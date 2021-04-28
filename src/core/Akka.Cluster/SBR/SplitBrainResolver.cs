@@ -178,7 +178,7 @@ namespace Akka.Cluster.SBR
                     if (unreachableBefore == 0 && unreachableAfter > 0)
                         Log.Info(
                             "SBR found unreachable members, waiting for stable-after = {0} ms before taking downing decision. " +
-                            "Now {1} unreachable members found. Downing decision will not be made before {3}.",
+                            "Now {1} unreachable members found. Downing decision will not be made before {2}.",
                             StableAfter.TotalMilliseconds,
                             unreachableAfter,
                             EarliestTimeOfDecision());

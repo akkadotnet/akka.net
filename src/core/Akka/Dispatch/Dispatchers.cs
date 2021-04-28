@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -88,6 +89,86 @@ namespace Akka.Dispatch
         /// <param name="id">TBD</param>
         public PartialTrustThreadPoolExecutorService(string id) : base(id)
         {
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Used to power <see cref="ChannelExecutorConfigurator"/>
+    /// </summary>
+    internal sealed class FixedConcurrencyTaskScheduler : TaskScheduler
+    {
+
+        [ThreadStatic]
+        private static bool _threadRunning = false;
+        private ConcurrentQueue<Task> _tasks = new ConcurrentQueue<Task>();
+
+        private int _readers = 0;
+
+        public FixedConcurrencyTaskScheduler(int degreeOfParallelism)
+        {
+            MaximumConcurrencyLevel = degreeOfParallelism;
+        }
+
+
+        public override int MaximumConcurrencyLevel { get; }
+
+        /// <summary>
+        /// ONLY USED IN DEBUGGER - NO PERF IMPACT.
+        /// </summary>
+        protected override IEnumerable<Task> GetScheduledTasks()
+        {
+            return _tasks;
+        }
+
+        protected override bool TryDequeue(Task task)
+        {
+            return false;
+        }
+
+        protected override void QueueTask(Task task)
+        {
+            _tasks.Enqueue(task);
+            if (_readers < MaximumConcurrencyLevel)
+            {
+                var initial = _readers;
+                var newVale = _readers + 1;
+                if (initial == Interlocked.CompareExchange(ref _readers, newVale, initial))
+                {
+                    // try to start a new worker
+                    ThreadPool.UnsafeQueueUserWorkItem(_ => ReadChannel(), null);
+                }
+            }
+        }
+
+        protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
+        {
+            // If this thread isn't already processing a task, we don't support inlining
+            if (!_threadRunning) return false;
+            return TryExecuteTask(task);
+        }
+
+        public void ReadChannel()
+        {
+            _threadRunning = true;
+            try
+            {
+                while (_tasks.TryDequeue(out var runnable))
+                {
+                    base.TryExecuteTask(runnable);
+                }
+            }
+            catch
+            {
+                // suppress exceptions
+            }
+            finally
+            {
+                Interlocked.Decrement(ref _readers);
+
+                _threadRunning = false;
+            }
         }
     }
 
@@ -273,7 +354,7 @@ namespace Akka.Dispatch
         internal MessageDispatcher InternalDispatcher { get; }
 
         /// <summary>
-        /// The <see cref="Hocon.Config"/> for the default dispatcher.
+        /// The <see cref="Configuration.Config"/> for the default dispatcher.
         /// </summary>
         public Config DefaultDispatcherConfig
         {
@@ -336,7 +417,7 @@ namespace Akka.Dispatch
         private MessageDispatcherConfigurator LookupConfigurator(string id)
         {
             var depth = 0;
-            while(depth < MaxDispatcherAliasDepth)
+            while (depth < MaxDispatcherAliasDepth)
             {
                 if (_dispatcherConfigurators.TryGetValue(id, out var configurator))
                     return configurator;
@@ -374,7 +455,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// INTERNAL API
         /// 
-        /// Creates a dispatcher from a <see cref="Hocon.Config"/>. Internal test purpose only.
+        /// Creates a dispatcher from a <see cref="Configuration.Config"/>. Internal test purpose only.
         /// <code>
         /// From(Config.GetConfig(id));
         /// </code>

@@ -52,35 +52,32 @@ namespace Akka.DistributedData
 
             if (durableKeys.Count != 0)
             {
-                Type durableStoreType;
                 if (string.IsNullOrEmpty(durableStoreTypeName))
                 {
                     throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` must be set when `akka.cluster.distributed-data.durable.keys` have been configured.");
                 }
 
-                durableStoreType = Type.GetType(durableStoreTypeName);
+                var durableStoreType = Type.GetType(durableStoreTypeName);
                 if (durableStoreType is null)
                 {
-                    throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` is set to an invalid class {durableStoreType}.");
+                    throw new ArgumentException($"`akka.cluster.distributed-data.durable.store-actor-class` is set to an invalid class {durableStoreTypeName}.");
                 }
                 durableStoreProps = Props.Create(durableStoreType, durableConfig).WithDispatcher(dispatcher);
             }
 
-            // TODO: This constructor call fails when these fields are not populated inside the Config object:
-            // TODO: `pruning-marker-time-to-live` key depends on Config.GetTimeSpan() to return a TimeSpan.Zero default.
             return new ReplicatorSettings(
-                role: config.GetString("role"),
-                gossipInterval: config.GetTimeSpan("gossip-interval"),
-                notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval"),
-                maxDeltaElements: config.GetInt("max-delta-elements"),
+                role: config.GetString("role", string.Empty),
+                gossipInterval: config.GetTimeSpan("gossip-interval", TimeSpan.FromSeconds(2)),
+                notifySubscribersInterval: config.GetTimeSpan("notify-subscribers-interval", TimeSpan.FromMilliseconds(500)),
+                maxDeltaElements: config.GetInt("max-delta-elements", 500),
                 dispatcher: dispatcher,
-                pruningInterval: config.GetTimeSpan("pruning-interval"),
-                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination"),
+                pruningInterval: config.GetTimeSpan("pruning-interval", TimeSpan.FromSeconds(120)),
+                maxPruningDissemination: config.GetTimeSpan("max-pruning-dissemination", TimeSpan.FromSeconds(300)),
                 durableKeys: durableKeys.ToImmutableHashSet(),
                 durableStoreProps: durableStoreProps,
-                pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", null),
-                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live"),
-                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size"));
+                pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromHours(6)),
+                durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromDays(10)),
+                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50));
         }
 
         /// <summary>
