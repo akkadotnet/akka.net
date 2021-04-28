@@ -116,6 +116,26 @@ namespace Akka.Dispatch
         public IDispatcherPrerequisites Prerequisites { get; private set; }
     }
 
+    internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
+    {
+        public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+        {
+            var fje = config.GetConfig("fork-join-executor");
+            MaxParallelism = ThreadPoolConfig.ScaledPoolSize(
+                        fje.GetInt("parallelism-min"), 
+                        fje.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
+                        fje.GetInt("parallelism-max"));
+        }
+
+        public int MaxParallelism {get;}
+
+        public override ExecutorService Produce(string id)
+        {
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[id]", typeof(FixedConcurrencyTaskScheduler), $"Launched Dispatcher [{id}] with MaxParallelism=[{MaxParallelism}]"));
+            return new TaskSchedulerExecutor(id, new FixedConcurrencyTaskScheduler(MaxParallelism));
+        }
+    }
+
     /// <summary>
     /// INTERNAL API
     /// 
@@ -306,6 +326,8 @@ namespace Akka.Dispatch
                     return new CurrentSynchronizationContextExecutorServiceFactory(Config, Prerequisites);
                 case "task-executor":
                     return new DefaultTaskSchedulerExecutorConfigurator(Config, Prerequisites);
+                case "channel-executor":
+                    return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)
