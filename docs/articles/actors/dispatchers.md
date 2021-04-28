@@ -171,7 +171,7 @@ In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecut
 
 During its initial development and benchmarks, we observed the following:
 
-1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today. However, **in order for this setting to be effective `ThreadPool.SetMin(0,0)` must also be set**. We are considering doing this inside the `ActorSystem.Create` method, but if you those settings don't work for you you can easily override them by simply calling `ThreadPool.SetMin(yourValue, yourValue)` again after `ActorSystem.Create` has exited.
+1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today. However, **in order for this setting to be effective `ThreadPool.SetMin(0,0)` must also be set**. We are considering doing this inside the `ActorSystem.Create` method, those settings don't work for you you can easily override them by simply calling `ThreadPool.SetMin(yourValue, yourValue)` again after `ActorSystem.Create` has exited.
 2. The `ChannelExecutor` actually beat the `ForkJoinDispatcher` and others on performance even in environments like Docker and bare metal on Windows.
 
 > [!NOTE]
@@ -201,7 +201,7 @@ akka.actor.internal-dispatcher = {
 
 akka.remote.default-remote-dispatcher {
     type = Dispatcher
-	  executor = channel-executor
+    executor = channel-executor
     fork-join-executor {
       parallelism-min = 2
       parallelism-factor = 0.5
