@@ -45,4 +45,17 @@ namespace Akka.Tests.Performance.Dispatch
             return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
         }
     }
+
+    public class ChannelDispatcherExecutorThroughputSpec : WarmDispatcherThroughputSpecBase
+    {
+        public static Config DispatcherConfiguration => ConfigurationFactory.ParseString(@"
+                    id = PerfTest
+                    executor = channel-executor
+        ");
+
+        protected override MessageDispatcherConfigurator Configurator()
+        {
+            return new DispatcherConfigurator(DispatcherConfiguration, Prereqs);
+        }
+    }
 }
