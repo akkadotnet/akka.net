@@ -8,6 +8,7 @@
 using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -57,10 +58,11 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
             serializer.Should().BeOfType<PrimitiveSerializers>();
             var serializedBytes = serializer.ToBinary(message);
-            return (T)serializer.FromBinary(serializedBytes, typeof(T));
+            var manifest = serializer.Manifest(message);
+            return (T)serializer.FromBinary(serializedBytes, manifest);
         }
 
         private void AssertEqual<T>(T message)
