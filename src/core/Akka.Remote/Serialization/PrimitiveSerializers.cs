@@ -19,6 +19,16 @@ namespace Akka.Remote.Serialization
         internal const string Int32Manifest = "I";
         internal const string Int64Manifest = "L";
 
+        // .Net Core manifests
+        internal const string StringManifestNetCore = "System.String, System.Private.CoreLib";
+        internal const string Int32ManifestNetCore = "System.Int32, System.Private.CoreLib";
+        internal const string Int64ManifestNetCore = "System.Int64, System.Private.CoreLib";
+
+        // .Net Framework manifests
+        internal const string StringManifestNetFx = "System.String, mscorlib";
+        internal const string Int32ManifestNetFx = "System.Int32, mscorlib";
+        internal const string Int64ManifestNetFx = "System.Int64, mscorlib";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PrimitiveSerializers" /> class.
         /// </summary>
@@ -49,10 +59,16 @@ namespace Akka.Remote.Serialization
             switch (manifest)
             {
                 case StringManifest:
+                case StringManifestNetCore:
+                case StringManifestNetFx:
                     return Encoding.UTF8.GetString(bytes);
                 case Int32Manifest:
+                case Int32ManifestNetCore:
+                case Int32ManifestNetFx:
                     return BitConverter.ToInt32(bytes, 0);
                 case Int64Manifest:
+                case Int64ManifestNetCore:
+                case Int64ManifestNetFx:
                     return BitConverter.ToInt64(bytes, 0);
                 default:
                     throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [${GetType()}]");
