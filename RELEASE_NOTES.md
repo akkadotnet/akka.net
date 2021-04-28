@@ -76,7 +76,48 @@ akka.remote.backoff-remote-dispatcher {
 
 **We are looking for feedback on how well the `ChannelExecutor` works in real world applications here: https://github.com/akkadotnet/akka.net/discussions/4983**
 
-To see the [full set of fixes in Akka.NET v1.4.19, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/47).
+**Hyperion v0.10 and Improvements**
+We also released [Hyperion v0.10.0](https://github.com/akkadotnet/Hyperion/releases/tag/0.10.0) and [v0.10.1](https://github.com/akkadotnet/Hyperion/releases/tag/0.10.1) as part of the Akka.NET v1.4.19 sprint, and this includes some useful changes for Akka.NET users who are trying to build cross-platform (.NET Framework + .NET Core / .NET 5) applications and need to handle all of the idiosyncrasies those platforms introduced by changing the default namespaces on primitive types such as `string` and `int`.
+
+We have also introduced a [new `Setup` type](https://getakka.net/articles/concepts/configuration.html#programmatic-configuration-with-setup) designed to make it easy to resolve some of these "cross platform" serialization concerns programmatically when configuring Hyperion for use inside Akka.NET:
+
+```csharp
+#if NETFRAMEWORK
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("System.Private.CoreLib,%core%")
+            ? str.Replace("System.Private.CoreLib,%core%", "mscorlib,%core%") : str
+    }
+#elif NETCOREAPP
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("mscorlib,%core%")
+            ? str.Replace("mscorlib,%core%", "System.Private.CoreLib,%core%") : str
+    }
+#endif
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+See the full documentation for this feature here: https://getakka.net/articles/networking/serialization.html#cross-platform-serialization-compatibility-in-hyperion
+
+To see the [full set of fixes in Akka.NET v1.4.19, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/49).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |             
+| --- | --- | --- | --- |                      
+| 38 | 6092 | 4422 | Aaron Stannard |          
+| 13 | 2231 | 596 | Gregorius Soedharmo |      
+| 10 | 15 | 14 | dependabot-preview[bot] |     
+| 3 | 512 | 306 | zbynek001 |                  
+| 3 | 417 | 1 | Ismael Hamed |                 
+| 1 | 5 | 5 | Erik Følstad |                   
+| 1 | 5 | 19 | Arjen Smits |                   
+| 1 | 27 | 1 | Anton V. Ilyin |                
+| 1 | 21 | 33 | Igor |                         
+| 1 | 1 | 1 | Cagatay YILDIZOGLU |             
 
 #### 1.4.18 March 23 2021 ####
 **Maintenance Release for Akka.NET 1.4**
