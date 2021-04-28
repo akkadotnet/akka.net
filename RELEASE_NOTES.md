@@ -1,5 +1,123 @@
-#### 1.4.19 March 23 2021 ####
-**Placeholder for nightlies**
+#### 1.4.19 April 28 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.19 is a _substantial_ release that includes a number of critical Akka.Cluster fixes, baseline Akka.NET performance improvements, and entirely new dispatcher that has shown to improve performance when used across all of the major actor groups that run both inside the `/user` hierarchy and the `/system` actor hierarchy as well.
+
+**Akka.Cluster Improvements**
+One of the most demanding issues of the v1.4.19 release was "[Akka.Cluster: quarantining / reachability changes appear to be extremely sensitive](https://github.com/akkadotnet/akka.net/issues/4849)" - and this is because debugging this issue touched so many different parts of Akka.Cluster.
+
+We ultimately solved the problem - it is now quite feasible to rapidly scale an Akka.NET cluster from ~10 nodes to 50+ nodes without having a huge number of quarantines, accidentally downed nodes, and so on. 
+
+Here's the full set of fixes that went into resolving this issue:
+
+* [Added `PhiAccrualFailureDetector` warning logging for slow heartbeats](https://github.com/akkadotnet/akka.net/pull/4897)
+* [measure Akka.Cluster heartbeat timings, hardened Akka.Cluster serialization](https://github.com/akkadotnet/akka.net/pull/4934)
+* [`ClusterStressSpec` and Cluster Failure Detector Cleanup](https://github.com/akkadotnet/akka.net/pull/4940)
+* [Akka.Cluster: improve `HeartbeatNodeRing` performance](https://github.com/akkadotnet/akka.net/pull/4943)
+* [Akka.Cluster: Turned `HeatbeatNodeRing` into `struct`](https://github.com/akkadotnet/akka.net/pull/4944)
+* [Akka.Cluster: Configure duration for applying `MemberStatus.WeaklyUp`  to joining nodes](https://github.com/akkadotnet/akka.net/pull/4946)
+* [Akka.Cluster: Performance optimize `VectorClock`](https://github.com/akkadotnet/akka.net/pull/4952)
+* [Akka.Cluster: Refactored `Gossip` into `MembershipState`](https://github.com/akkadotnet/akka.net/pull/4968)
+* [Akka.Remote: Clean up bad outbound ACKs in Akka.Remote](https://github.com/akkadotnet/akka.net/pull/4963)
+
+Akka.Cluster is now much more robust, faster, and capable of scaling up and down much more efficiently than in previous releases.
+
+**`ChannelExecutor` and Akka Performance Improvements**
+In addition to improving Akka.Cluster, we also made substantial improvements to constructs found inside Akka.NET core itself:
+
+* [Perf optimize `ActorSelection`](https://github.com/akkadotnet/akka.net/pull/4962) - 20% throughput improvement, 25% memory consumption improvement
+* [fixed N-1 error inside `Mailbox`](https://github.com/akkadotnet/akka.net/pull/4964)
+* [Introduce `ChannelExecutor`](https://github.com/akkadotnet/akka.net/pull/4882)
+
+In Akka.NET v1.4.19 we introduce an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
+
+In order to get the most use out of the `ChannelExecutor`, the default actor dispatcher, the internal dispatcher, and the Akka.Remote dispatchers all need to run on it - and you can see the latest configuration settings and guidance for that here in our documentation: https://getakka.net/articles/actors/dispatchers.html#channelexecutor
+
+But a copy of today's configuration is included below - you can enable this feature inside your Akka.NET applications via the following HOCON:
+
+```
+akka.actor.default-dispatcher = {
+    executor = channel-executor
+    fork-join-executor { #channelexecutor will re-use these settings
+      parallelism-min = 2
+      parallelism-factor = 1
+      parallelism-max = 64
+    }
+}
+
+akka.actor.internal-dispatcher = {
+    executor = channel-executor
+    throughput = 5
+    fork-join-executor {
+      parallelism-min = 4
+      parallelism-factor = 1.0
+      parallelism-max = 64
+    }
+}
+
+akka.remote.default-remote-dispatcher {
+    type = Dispatcher
+    executor = channel-executor
+    fork-join-executor {
+      parallelism-min = 2
+      parallelism-factor = 0.5
+      parallelism-max = 16
+    }
+}
+
+akka.remote.backoff-remote-dispatcher {
+  executor = channel-executor
+  fork-join-executor {
+    parallelism-min = 2
+    parallelism-max = 2
+  }
+}
+```
+
+**We are looking for feedback on how well the `ChannelExecutor` works in real world applications here: https://github.com/akkadotnet/akka.net/discussions/4983**
+
+**Hyperion v0.10 and Improvements**
+We also released [Hyperion v0.10.0](https://github.com/akkadotnet/Hyperion/releases/tag/0.10.0) and [v0.10.1](https://github.com/akkadotnet/Hyperion/releases/tag/0.10.1) as part of the Akka.NET v1.4.19 sprint, and this includes some useful changes for Akka.NET users who are trying to build cross-platform (.NET Framework + .NET Core / .NET 5) applications and need to handle all of the idiosyncrasies those platforms introduced by changing the default namespaces on primitive types such as `string` and `int`.
+
+We have also introduced a [new `Setup` type](https://getakka.net/articles/concepts/configuration.html#programmatic-configuration-with-setup) designed to make it easy to resolve some of these "cross platform" serialization concerns programmatically when configuring Hyperion for use inside Akka.NET:
+
+```csharp
+#if NETFRAMEWORK
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("System.Private.CoreLib,%core%")
+            ? str.Replace("System.Private.CoreLib,%core%", "mscorlib,%core%") : str
+    }
+#elif NETCOREAPP
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("mscorlib,%core%")
+            ? str.Replace("mscorlib,%core%", "System.Private.CoreLib,%core%") : str
+    }
+#endif
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+See the full documentation for this feature here: https://getakka.net/articles/networking/serialization.html#cross-platform-serialization-compatibility-in-hyperion
+
+To see the [full set of fixes in Akka.NET v1.4.19, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/49).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |             
+| --- | --- | --- | --- |                      
+| 38 | 6092 | 4422 | Aaron Stannard |          
+| 13 | 2231 | 596 | Gregorius Soedharmo |      
+| 10 | 15 | 14 | dependabot-preview[bot] |     
+| 3 | 512 | 306 | zbynek001 |                  
+| 3 | 417 | 1 | Ismael Hamed |                 
+| 1 | 5 | 5 | Erik Følstad |                   
+| 1 | 5 | 19 | Arjen Smits |                   
+| 1 | 27 | 1 | Anton V. Ilyin |                
+| 1 | 21 | 33 | Igor |                         
+| 1 | 1 | 1 | Cagatay YILDIZOGLU |             
 
 #### 1.4.18 March 23 2021 ####
 **Maintenance Release for Akka.NET 1.4**
