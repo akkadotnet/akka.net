@@ -491,6 +491,10 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
             var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
                 .WithRememberEntities(rememberEntities);
+            var majorityMinCap = Sys.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap");
+            if (IsDDataMode)
+                return DDataShardCoordinator.Props(typeName, settings, allocationStrategy, ReplicatorRef,
+                    majorityMinCap, rememberEntities);
             return PersistentShardCoordinator.Props(typeName, settings, allocationStrategy);
         }
 
