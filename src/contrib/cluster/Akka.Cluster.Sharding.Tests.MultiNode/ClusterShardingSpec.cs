@@ -379,6 +379,8 @@ namespace Akka.Cluster.Sharding.Tests
     public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         // must use different unique name for some tests than the one used in API tests
+        public static string TestCounterShardingTypeName => $"Test{Counter.ShardingTypeName}";
+
         #region Setup
 
         private readonly Lazy<IActorRef> _region;
@@ -397,7 +399,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             _config = config;
 
-            _region = new Lazy<IActorRef>(() => CreateRegion("counter", false));
+            _region = new Lazy<IActorRef>(() => CreateRegion(TestCounterShardingTypeName, false));
             _rebalancingRegion = new Lazy<IActorRef>(() => CreateRegion("rebalancingCounter", false));
 
             _persistentEntitiesRegion = new Lazy<IActorRef>(() => CreateRegion("RememberCounterEntities", true));
@@ -454,7 +456,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             var typeNames = new[]
             {
-                "counter", "rebalancingCounter", "RememberCounterEntities", "AnotherRememberCounter",
+                TestCounterShardingTypeName, "rebalancingCounter", "RememberCounterEntities", "AnotherRememberCounter",
                 "RememberCounter", "RebalancingRememberCounter", "AutoMigrateRememberRegionTest"
             };
 
@@ -489,10 +491,6 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
             var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
                 .WithRememberEntities(rememberEntities);
-            var majorityMinCap = Sys.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap");
-            if (IsDDataMode)
-                return DDataShardCoordinator.Props(typeName, settings, allocationStrategy, ReplicatorRef,
-                    majorityMinCap, rememberEntities);
             return PersistentShardCoordinator.Props(typeName, settings, allocationStrategy);
         }
 
@@ -636,7 +634,7 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.EntityEnvelope(2, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(2));
                     ExpectMsg(3);
-                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / "counterRegion" / "2" / "2");
+                    LastSender.Path.Should().Be(Node(_config.Second) / "user" / $"{TestCounterShardingTypeName}Region" / "2" / "2");
 
                     r.Tell(new Counter.Get(11));
                     ExpectMsg(1);
@@ -696,9 +694,9 @@ namespace Akka.Cluster.Sharding.Tests
 
                     var settings = ClusterShardingSettings.Create(cfg, Sys.Settings.Config.GetConfig("akka.cluster.singleton"));
                     var proxy = Sys.ActorOf(ShardRegion.ProxyProps(
-                        typeName: "counter",
+                        typeName: TestCounterShardingTypeName,
                         settings: settings,
-                        coordinatorPath: $"/user/counterCoordinator/singleton/coordinator",
+                        coordinatorPath: $"/user/{TestCounterShardingTypeName}Coordinator/singleton/coordinator",
                         extractEntityId: Counter.ExtractEntityId,
                         extractShardId: Counter.ExtractShardId,
                         replicator: Sys.DeadLetters,
@@ -797,12 +795,12 @@ namespace Akka.Cluster.Sharding.Tests
                     r.Tell(new Counter.EntityEnvelope(3, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(3));
                     ExpectMsg(11);
-                    LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
+                    LastSender.Path.Should().Be(Node(_config.Third) / "user" / $"{TestCounterShardingTypeName}Region" / "3" / "3");
 
                     r.Tell(new Counter.EntityEnvelope(4, Counter.Increment.Instance));
                     r.Tell(new Counter.Get(4));
                     ExpectMsg(21);
-                    LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
+                    LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / $"{TestCounterShardingTypeName}Region" / "4" / "4");
                 }, _config.First);
                 EnterBarrier("first-update");
 
@@ -845,7 +843,7 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(new Counter.Get(3), probe3.Ref);
                             probe3.ExpectMsg(11);
-                            probe3.LastSender.Path.Should().Be(Node(_config.Third) / "user" / "counterRegion" / "3" / "3");
+                            probe3.LastSender.Path.Should().Be(Node(_config.Third) / "user" / $"{TestCounterShardingTypeName}Region" / "3" / "3");
                         });
                     });
 
@@ -856,7 +854,7 @@ namespace Akka.Cluster.Sharding.Tests
                         {
                             _region.Value.Tell(new Counter.Get(4), probe4.Ref);
                             probe4.ExpectMsg(21);
-                            probe4.LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / "counterRegion" / "4" / "4");
+                            probe4.LastSender.Path.Should().Be(Node(_config.Fourth) / "user" / $"{TestCounterShardingTypeName}Region" / "4" / "4");
                         });
                     });
                 }, _config.Fifth);
