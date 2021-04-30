@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
 using Akka.Serialization;
@@ -52,6 +53,18 @@ namespace Akka.Persistence.TCK.Journal
         protected JournalSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null)
             : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "JournalSpec", output)
         {
+        }
+
+        protected JournalSpec(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(setup, actorSystemName ?? "SnapshotStoreSpec", output)
+        {
+            _senderProbe = CreateTestProbe();
+        }
+
+        protected JournalSpec(ActorSystem system = null, ITestOutputHelper output = null)
+            : base(system, output)
+        {
+            _senderProbe = CreateTestProbe();
         }
 
         protected override bool SupportsSerialization => true;

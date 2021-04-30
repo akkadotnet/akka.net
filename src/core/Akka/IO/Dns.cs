@@ -59,7 +59,7 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public abstract class Command
+        public abstract class Command : INoSerializationVerificationNeeded
         { }
 
         /// <summary>

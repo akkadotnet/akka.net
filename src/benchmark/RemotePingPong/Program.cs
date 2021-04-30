@@ -44,7 +44,7 @@ namespace RemotePingPong
         public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
-                akka {
+            akka {
               actor.provider = remote
               loglevel = ERROR
               suppress-json-serializer-warning = on
@@ -57,6 +57,7 @@ namespace RemotePingPong
                     port = 0
                     hostname = ""localhost""
                 }
+                
               }
             }");
 

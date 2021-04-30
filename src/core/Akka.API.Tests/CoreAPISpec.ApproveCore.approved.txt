@@ -3281,7 +3281,7 @@ namespace Akka.IO
         public static Akka.IO.Dns.Resolved Cached(string name, Akka.Actor.ActorSystem system) { }
         public override Akka.IO.DnsExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.IO.Dns.Resolved ResolveName(string name, Akka.Actor.ActorSystem system, Akka.Actor.IActorRef sender) { }
-        public abstract class Command
+        public abstract class Command : Akka.Actor.INoSerializationVerificationNeeded
         {
             protected Command() { }
         }
@@ -3710,7 +3710,7 @@ namespace Akka.IO
         {
             protected Event() { }
         }
-        public abstract class Message
+        public abstract class Message : Akka.Actor.INoSerializationVerificationNeeded
         {
             protected Message() { }
         }
@@ -3817,7 +3817,7 @@ namespace Akka.IO
         {
             protected Event() { }
         }
-        public abstract class Message
+        public abstract class Message : Akka.Actor.INoSerializationVerificationNeeded
         {
             protected Message() { }
         }
@@ -3852,7 +3852,7 @@ namespace Akka.IO
             public static readonly Akka.IO.UdpConnected.SuspendReading Instance;
         }
     }
-    public class UdpConnectedExt : Akka.IO.IOExtension
+    public class UdpConnectedExt : Akka.IO.IOExtension, Akka.Actor.INoSerializationVerificationNeeded
     {
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system) { }
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system, Akka.IO.UdpSettings settings) { }
