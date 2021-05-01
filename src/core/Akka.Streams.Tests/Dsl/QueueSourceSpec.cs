@@ -338,11 +338,12 @@ namespace Akka.Streams.Tests.Dsl
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
-                queue.WatchCompletionAsync().ContinueWith(t => "done").PipeTo(TestActor);
+                queue.WatchCompletionAsync().ContinueWith(t => Done.Instance).PipeTo(TestActor);
                 sub.Cancel();
-                ExpectMsg("done");
+                ExpectMsg(Done.Instance);
 
-                queue.OfferAsync(1).ContinueWith(t => t.Exception.Should().BeOfType<IllegalStateException>());
+                var exception = Record.ExceptionAsync(async () => await queue.OfferAsync(1)).Result;
+                exception.Should().BeOfType<StreamDetachedException>();
             }, _materializer);
         }
 
