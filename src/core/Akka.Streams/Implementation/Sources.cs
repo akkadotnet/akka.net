@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -15,7 +14,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -170,14 +168,13 @@ namespace Akka.Streams.Implementation
 
             public override void PostStop()
             {
+                var exception = new AbruptStageTerminationException(this);
+                _completion.TrySetException(exception);
                 StopCallback(input =>
                 {
-                    var offer = input as Offer<TOut>;
-                    if (offer != null)
-                    {
-                        var promise = offer.CompletionSource;
-                        promise.NonBlockingTrySetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
-                    }
+                    if (!(input is Offer<TOut> offer)) return;
+                    var promise = offer.CompletionSource;
+                    promise.NonBlockingTrySetException(exception);
                 });
             }
 
