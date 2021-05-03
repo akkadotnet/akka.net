@@ -900,6 +900,10 @@ namespace Akka.Streams
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
+    public class StreamDetachedException : System.Exception
+    {
+        public static readonly Akka.Streams.StreamDetachedException Instance;
+    }
     public class StreamLimitReachedException : System.Exception
     {
         public StreamLimitReachedException(long max) { }
