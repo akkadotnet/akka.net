@@ -45,6 +45,22 @@ namespace Akka.Streams
     }
 
     /// <summary>
+    /// This exception signals that materialized value is already detached from stream. This usually happens
+    /// when stream is completed and an ActorSystem is shut down while materialized object is still available.
+    /// </summary>
+    public class StreamDetachedException : Exception
+    {
+        /// <summary>
+        /// Initializes a single instance of the <see cref="StreamDetachedException"/> class.
+        /// </summary>
+        public static readonly StreamDetachedException Instance = new StreamDetachedException();
+
+        private StreamDetachedException() : base("Stream is terminated. Materialized value is detached.")
+        {
+        }
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     public class BindFailedException : StreamTcpException
