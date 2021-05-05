@@ -100,6 +100,11 @@ namespace Akka.Benchmarks.DData
             (vc1 == vc2).Should().BeFalse();
         }
 
+        private void Merge(VersionVector vc1, VersionVector vc2)
+        {
+            vc1.Merge(vc2);
+        }
+
         [Benchmark]
         public void VectorClock_comparisons_should_compare_same()
         {
@@ -158,6 +163,12 @@ namespace Akka.Benchmarks.DData
         public void VectorClock_comparisons_should_compare_notEquals_Concurrent_Middle()
         {
             CheckThunkFor(_vcAfterMiddle, _vcConcurrentMiddle, (clock, vectorClock) => NotEqual(clock, vectorClock), Iterations);
+        }
+
+        [Benchmark]
+        public void VersionVector_merge_Multi_Multi()
+        {
+            CheckThunkFor(_vcBefore, _vcAfterLast, (vector, versionVector) => Merge(vector, versionVector), Iterations);
         }
     }
 }
