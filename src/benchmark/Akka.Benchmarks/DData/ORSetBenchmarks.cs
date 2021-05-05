@@ -13,10 +13,10 @@ namespace Akka.Benchmarks.DData
     [Config(typeof(MicroBenchmarkConfig))]
     public class ORSetBenchmarks
     {
-        [Params(10, 25)]
+        [Params(25)]
         public int NumElements;
 
-        [Params(3, 10)]
+        [Params(10)]
         public int NumNodes;
 
         private UniqueAddress[] _nodes;
