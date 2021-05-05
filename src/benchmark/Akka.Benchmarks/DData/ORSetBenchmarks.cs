@@ -19,6 +19,9 @@ namespace Akka.Benchmarks.DData
         [Params(10)]
         public int NumNodes;
 
+        [Params(100)]
+        public int Iterations;
+
         private UniqueAddress[] _nodes;
         private string[] _elements;
 
@@ -73,34 +76,54 @@ namespace Akka.Benchmarks.DData
         [Benchmark]
         public void Should_add_node_to_ORSet()
         {
-            var init = ORSet<string>.Empty;
-            foreach(var node in _nodes){
-                init = init.Add(node, _elements[0]);
+            for (var i = 0; i < Iterations; i++)
+            {
+                var init = ORSet<string>.Empty;
+                foreach (var node in _nodes)
+                {
+                    init = init.Add(node, _elements[0]);
+                }
             }
+            
         }
 
         [Benchmark]
         public void Should_add_elements_for_Same_node()
         {
-             var init = ORSet<string>.Empty;
-            foreach(var element in _elements){
-                init = init.Add(_nodes[0], element);
+            for (var i = 0; i < Iterations; i++)
+            {
+                var init = ORSet<string>.Empty;
+                foreach (var element in _elements)
+                {
+                    init = init.Add(_nodes[0], element);
+                }
             }
         }
 
         [Benchmark]
         public void Should_merge_in_new_Elements_from_other_nodes(){
-            var c4 = _c1.Merge(_c2);
+            for (var i = 0; i < Iterations; i++)
+            {
+                var c4 = _c1.Merge(_c2);
+            }
+            
         }
 
         [Benchmark]
         public void Should_merge_in_removed_Elements_from_other_nodes(){
-            var c4 = _c1.Merge(_c3);
+            for (var i = 0; i < Iterations; i++)
+            {
+                var c4 = _c1.Merge(_c3);
+            }
+            
         }
 
         [Benchmark]
         public void Should_merge_in_add_and_removed_Elements_from_other_nodes(){
-            var c4 = _c1.Merge(_c2).Merge(_c3);
+            for (var i = 0; i < Iterations; i++)
+            {
+                var c4 = _c1.Merge(_c2).Merge(_c3);
+            }
         }
     }
 }

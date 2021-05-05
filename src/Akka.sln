@@ -240,9 +240,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.DependencyInjection.Te
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AspNetCore", "AspNetCore", "{162F5991-EA57-4221-9B70-F9B6FEC18036}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Akka.AspNetCore", "examples\AspNetCore\Samples.Akka.AspNetCore\Samples.Akka.AspNetCore.csproj", "{D62F4AD6-318F-4ECC-B875-83FA9933A81B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Akka.AspNetCore", "examples\AspNetCore\Samples.Akka.AspNetCore\Samples.Akka.AspNetCore.csproj", "{D62F4AD6-318F-4ECC-B875-83FA9933A81B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SerializationBenchmarks", "benchmark\SerializationBenchmarks\SerializationBenchmarks.csproj", "{2E4B9584-42CC-4D17-B719-9F462B16C94D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerializationBenchmarks", "benchmark\SerializationBenchmarks\SerializationBenchmarks.csproj", "{2E4B9584-42CC-4D17-B719-9F462B16C94D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DDataStressTest", "examples\Cluster\DData\DDataStressTest\DDataStressTest.csproj", "{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1123,6 +1125,18 @@ Global
 		{2E4B9584-42CC-4D17-B719-9F462B16C94D}.Release|x64.Build.0 = Release|Any CPU
 		{2E4B9584-42CC-4D17-B719-9F462B16C94D}.Release|x86.ActiveCfg = Release|Any CPU
 		{2E4B9584-42CC-4D17-B719-9F462B16C94D}.Release|x86.Build.0 = Release|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Debug|x64.Build.0 = Debug|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Debug|x86.Build.0 = Debug|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Release|x64.ActiveCfg = Release|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Release|x64.Build.0 = Release|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Release|x86.ActiveCfg = Release|Any CPU
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1230,6 +1244,7 @@ Global
 		{162F5991-EA57-4221-9B70-F9B6FEC18036} = {D3AF8295-AEB5-4324-AA82-FCC0014AC310}
 		{D62F4AD6-318F-4ECC-B875-83FA9933A81B} = {162F5991-EA57-4221-9B70-F9B6FEC18036}
 		{2E4B9584-42CC-4D17-B719-9F462B16C94D} = {73108242-625A-4D7B-AA09-63375DBAE464}
+		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50} = {C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
