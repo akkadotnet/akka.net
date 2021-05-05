@@ -54,6 +54,7 @@ namespace Akka.Remote
             TimeSpan heartbeatExpectedResponseAfter)
         {
             return Actor.Props.Create(() => new RemoteWatcher(failureDetector, heartbeatInterval, unreachableReaperInterval, heartbeatExpectedResponseAfter))
+                .WithDispatcher(Dispatchers.InternalDispatcherId)
                 .WithDeploy(Deploy.Local);
         }
 
