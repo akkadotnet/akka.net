@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using Akka.Actor;
-using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
@@ -29,10 +26,13 @@ akka.stdout-loglevel = DEBUG");
         [Fact]
         public void TestOutputLogger_WithBadFormattingMustNotThrow()
         {
+            // Need to wait until TestOutputLogger initializes
+            Thread.Sleep(200);
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
 
             Sys.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
             ExpectMsg<Error>().Cause.Should().BeOfType<FakeException>();
+            ExpectMsg<Error>().Cause.Should().BeOfType<AggregateException>();
 
             Sys.Log.Warning(Case.t, Case.p);
             ExpectMsg<Warning>();
