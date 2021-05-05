@@ -8,6 +8,7 @@
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
+using Akka.Dispatch;
 using Akka.Util.Internal;
 
 namespace Akka.Event
@@ -176,7 +177,7 @@ namespace Akka.Event
         /// <param name="debug">TBD</param>
         public void Start(ActorSystemImpl system, EventStream eventStream, bool debug)
         {
-            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug),
+            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug).WithDispatcher(Dispatchers.InternalDispatcherId),
                 string.Format("EventStreamUnsubscriber-{0}", _unsubscribersCounter.IncrementAndGet()));
         }
     }
