@@ -52,13 +52,19 @@ namespace Akka.DistributedData
         /// <summary>
         /// Marker to signal that we have reached the end of a version vector.
         /// </summary>
-        private static readonly KeyValuePair<UniqueAddress, long> EndMarker = new KeyValuePair<UniqueAddress, long>(null, long.MinValue);
+        private static readonly (UniqueAddress addr, long version) EndMarker = (null, long.MinValue);
 
         public abstract bool IsEmpty { get; }
 
         public abstract int Count { get; }
 
         public abstract IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator { get; }
+
+        internal abstract IEnumerable<(UniqueAddress addr, long version)> InternalVersions { get; }
+
+        internal IEnumerator<(UniqueAddress addr, long version)> InternalVersionEnumerator =>
+            InternalVersions.GetEnumerator();
+
         public static readonly VersionVector Empty = new MultiVersionVector(ImmutableDictionary<UniqueAddress, long>.Empty);
 
         /// <summary>
@@ -156,15 +162,15 @@ namespace Akka.DistributedData
         {
             if (ReferenceEquals(this, other)) return Ordering.Same;
 
-            return Compare(VersionEnumerator, other.VersionEnumerator,
+            return Compare(InternalVersionEnumerator, other.InternalVersionEnumerator,
                 order == Ordering.Concurrent ? Ordering.FullOrder : order);
         }
 
-        private T NextOrElse<T>(IEnumerator<T> enumerator, T defaultValue) =>
+        private static T NextOrElse<T>(IEnumerator<T> enumerator, T defaultValue) =>
             enumerator.MoveNext() ? enumerator.Current : defaultValue;
 
-        private Ordering Compare(IEnumerator<KeyValuePair<UniqueAddress, long>> i1,
-            IEnumerator<KeyValuePair<UniqueAddress, long>> i2, Ordering requestedOrder)
+        private Ordering Compare(IEnumerator<(UniqueAddress addr, long version)> i1,
+            IEnumerator<(UniqueAddress addr, long version)> i2, Ordering requestedOrder)
         {
             var nt1 = NextOrElse(i1, EndMarker);
             var nt2 = NextOrElse(i2, EndMarker);
@@ -177,15 +183,15 @@ namespace Akka.DistributedData
                 else if (Equals(nt2, EndMarker)) return currentOrder == Ordering.Before ? Ordering.Concurrent : Ordering.After;
                 else
                 {
-                    var nc = nt1.Key.CompareTo(nt2.Key);
+                    var nc = nt1.addr.CompareTo(nt2.addr);
                     if (nc == 0)
                     {
-                        if (nt1.Value < nt2.Value)
+                        if (nt1.version < nt2.version)
                         {
                             if (currentOrder == Ordering.After) return Ordering.Concurrent;
                             currentOrder = Ordering.Before;
                         }
-                        else if (nt1.Value > nt2.Value)
+                        else if (nt1.version > nt2.version)
                         {
                             if (currentOrder == Ordering.Before) return Ordering.Concurrent;
                             currentOrder = Ordering.After;
@@ -258,6 +264,15 @@ namespace Akka.DistributedData
         public override bool IsEmpty => false;
         public override int Count => 1;
         public override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => new Enumerator(Node, Version);
+
+        internal override IEnumerable<(UniqueAddress addr, long version)> InternalVersions
+        {
+            get
+            {
+                yield return (Node, Version);
+            }
+        }
+
         public override VersionVector Increment(UniqueAddress node)
         {
             var v = Counter.GetAndIncrement();
@@ -337,6 +352,10 @@ namespace Akka.DistributedData
         public override bool IsEmpty => Versions.IsEmpty;
         public override int Count => Versions.Count;
         public override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => Versions.GetEnumerator();
+
+        internal override IEnumerable<(UniqueAddress addr, long version)> InternalVersions =>
+            Versions.Select(x => (x.Key, x.Value));
+
         public override VersionVector Increment(UniqueAddress node) =>
             new MultiVersionVector(Versions.SetItem(node, Counter.GetAndIncrement()));
 
