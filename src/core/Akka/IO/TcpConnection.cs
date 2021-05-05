@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -314,7 +314,12 @@ namespace Akka.IO
                         AcknowledgeSent();
                         
                         // If there is something to send - send it
-                        DoWrite(info, GetAllowedPendingWrite());
+                        var pendingWrite = GetAllowedPendingWrite();
+                        if (pendingWrite.HasValue)
+                        {
+                            SetStatus(ConnectionStatus.Sending);
+                            DoWrite(info, pendingWrite);
+                        }
                         
                         // If message is fully sent, notify sender who sent ResumeWriting command
                         if (!IsWritePending && _interestedInResume != null)
@@ -619,11 +624,11 @@ namespace Akka.IO
             if (ReceiveArgs != null) throw new InvalidOperationException($"Cannot acquire receive SocketAsyncEventArgs. It's already has been initialized");
             if (SendArgs != null) throw new InvalidOperationException($"Cannot acquire send SocketAsyncEventArgs. It's already has been initialized");
 
-            ReceiveArgs = Tcp.SocketEventArgsPool.Acquire(Self);
+            ReceiveArgs = CreateSocketEventArgs(Self);
             var buffer = Tcp.BufferPool.Rent();
             ReceiveArgs.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
 
-            SendArgs = Tcp.SocketEventArgsPool.Acquire(Self);
+            SendArgs = CreateSocketEventArgs(Self);
         }
 
         private void ReleaseSocketAsyncEventArgs()
@@ -631,17 +636,71 @@ namespace Akka.IO
             if (ReceiveArgs != null)
             {
                 var buffer = new ByteBuffer(ReceiveArgs.Buffer, ReceiveArgs.Offset, ReceiveArgs.Count);
-                Tcp.SocketEventArgsPool.Release(ReceiveArgs);
-                //TODO: there is potential risk, that socket was working while released. In that case releasing buffer may not be safe.
+                ReleaseSocketEventArgs(ReceiveArgs);
+                // TODO: When using DirectBufferPool as a pool impelementation, there is potential risk,
+                // that socket was working while released. In that case releasing buffer may not be safe.
                 Tcp.BufferPool.Release(buffer);
                 ReceiveArgs = null;
             }
 
             if (SendArgs != null)
             {
-                Tcp.SocketEventArgsPool.Release(SendArgs);
+                ReleaseSocketEventArgs(SendArgs);
                 SendArgs = null;
             }
+        }
+
+        protected SocketAsyncEventArgs CreateSocketEventArgs(IActorRef onCompleteNotificationsReceiver)
+        {
+            SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
+            {
+                switch (e.LastOperation)
+                {
+                    case SocketAsyncOperation.Receive:
+                    case SocketAsyncOperation.ReceiveFrom:
+                    case SocketAsyncOperation.ReceiveMessageFrom:
+                        return SocketReceived.Instance;
+                    case SocketAsyncOperation.Send:
+                    case SocketAsyncOperation.SendTo:
+                    case SocketAsyncOperation.SendPackets:
+                        return SocketSent.Instance;
+                    case SocketAsyncOperation.Accept:
+                        return SocketAccepted.Instance;
+                    case SocketAsyncOperation.Connect:
+                        return SocketConnected.Instance;
+                    default:
+                        throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
+                }
+            }
+            
+            var args = new SocketAsyncEventArgs();
+            args.UserToken = onCompleteNotificationsReceiver;
+            args.Completed += (sender, e) =>
+            {
+                var actorRef = e.UserToken as IActorRef;
+                var completeMsg = ResolveMessage(e);
+                actorRef?.Tell(completeMsg);
+            };
+
+            return args;
+        }
+        
+        protected void ReleaseSocketEventArgs(SocketAsyncEventArgs e)
+        {
+            e.UserToken = null;
+            e.AcceptSocket = null;
+
+            try
+            {
+                e.SetBuffer(null, 0, 0);
+                if (e.BufferList != null)
+                    e.BufferList = null;
+            }
+            // it can be that for some reason socket is in use and haven't closed yet
+            catch (InvalidOperationException) { }
+
+            e.Dispose();
+            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,4 +1,5 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
@@ -112,7 +113,7 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class DeleteMessagesFailure : System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
+    public sealed class DeleteMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
     {
         public DeleteMessagesFailure(System.Exception cause, long toSequenceNr) { }
         public System.Exception Cause { get; }
@@ -293,10 +294,12 @@ namespace Akka.Persistence
         string PersistenceId { get; }
         Akka.Actor.IActorRef Sender { get; }
         long SequenceNr { get; }
+        long Timestamp { get; }
         string WriterGuid { get; }
         Akka.Persistence.IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, Akka.Actor.IActorRef sender, string writerGuid);
         Akka.Persistence.IPersistentRepresentation WithManifest(string manifest);
         Akka.Persistence.IPersistentRepresentation WithPayload(object payload);
+        Akka.Persistence.IPersistentRepresentation WithTimestamp(long timestamp);
     }
     public interface ISnapshotMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage { }
     public interface ISnapshotRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage { }
@@ -413,13 +416,14 @@ namespace Akka.Persistence
     [Akka.Annotations.InternalApiAttribute()]
     public class Persistent : Akka.Persistence.IPersistentRepresentation, Akka.Persistence.Serialization.IMessage, System.IEquatable<Akka.Persistence.IPersistentRepresentation>
     {
-        public Persistent(object payload, long sequenceNr = 0, string persistenceId = null, string manifest = null, bool isDeleted = False, Akka.Actor.IActorRef sender = null, string writerGuid = null) { }
+        public Persistent(object payload, long sequenceNr = 0, string persistenceId = null, string manifest = null, bool isDeleted = False, Akka.Actor.IActorRef sender = null, string writerGuid = null, long timestamp = 0) { }
         public bool IsDeleted { get; }
         public string Manifest { get; }
         public object Payload { get; }
         public string PersistenceId { get; }
         public Akka.Actor.IActorRef Sender { get; }
         public long SequenceNr { get; }
+        public long Timestamp { get; }
         public static string Undefined { get; }
         public string WriterGuid { get; }
         public bool Equals(Akka.Persistence.IPersistentRepresentation other) { }
@@ -430,46 +434,12 @@ namespace Akka.Persistence
         public Akka.Persistence.IPersistentRepresentation Update(long sequenceNr, string persistenceId, bool isDeleted, Akka.Actor.IActorRef sender, string writerGuid) { }
         public Akka.Persistence.IPersistentRepresentation WithManifest(string manifest) { }
         public Akka.Persistence.IPersistentRepresentation WithPayload(object payload) { }
+        public Akka.Persistence.IPersistentRepresentation WithTimestamp(long newTimestamp) { }
     }
     public abstract class PersistentActor : Akka.Persistence.Eventsourced
     {
         protected PersistentActor() { }
         protected override bool Receive(object message) { }
-    }
-    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
-        "0]")]
-    public abstract class PersistentView : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithUnboundedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>, Akka.Persistence.IPersistenceRecovery, Akka.Persistence.IPersistentIdentity, Akka.Persistence.ISnapshotter
-    {
-        protected readonly Akka.Persistence.PersistenceExtension Extension;
-        protected PersistentView() { }
-        public virtual System.TimeSpan AutoUpdateInterval { get; }
-        public virtual long AutoUpdateReplayMax { get; }
-        public virtual bool IsAutoUpdate { get; }
-        public bool IsPersistent { get; }
-        public bool IsRecovering { get; }
-        public bool IsRecoveryFinished { get; }
-        public Akka.Actor.IActorRef Journal { get; }
-        public string JournalPluginId { get; set; }
-        public long LastSequenceNr { get; }
-        public abstract string PersistenceId { get; }
-        public virtual Akka.Persistence.Recovery Recovery { get; }
-        public string SnapshotPluginId { get; set; }
-        public long SnapshotSequenceNr { get; }
-        public Akka.Actor.IActorRef SnapshotStore { get; }
-        public string SnapshotterId { get; }
-        public Akka.Actor.IStash Stash { get; set; }
-        public abstract string ViewId { get; }
-        public override void AroundPreStart() { }
-        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
-        public void DeleteSnapshot(long sequenceNr) { }
-        public void DeleteSnapshots(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
-        public void LoadSnapshot(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, long toSequenceNr) { }
-        protected virtual void OnReplayError(System.Exception cause) { }
-        protected override void PostStop() { }
-        protected override void PreRestart(System.Exception reason, object message) { }
-        protected override void PreStart() { }
-        public void SaveSnapshot(object snapshot) { }
-        protected override void Unhandled(object message) { }
     }
     public abstract class ReceivePersistentActor : Akka.Persistence.UntypedPersistentActor, Akka.Actor.Internal.IInitializableActor
     {
@@ -601,13 +571,6 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
-        "0]")]
-    public sealed class ScheduledUpdate
-    {
-        public ScheduledUpdate(long replayMax) { }
-        public long ReplayMax { get; }
-    }
     public sealed class SelectedSnapshot : System.IEquatable<Akka.Persistence.SelectedSnapshot>
     {
         public SelectedSnapshot(Akka.Persistence.SnapshotMetadata metadata, object snapshot) { }
@@ -706,17 +669,6 @@ namespace Akka.Persistence
         protected virtual bool ReceiveCommand(object message) { }
         protected virtual bool ReceiveRecover(object message) { }
     }
-    [System.ObsoleteAttribute("PersistentView was deprecated and will be removed in the next major version [1.3." +
-        "0]")]
-    public sealed class Update
-    {
-        public Update() { }
-        public Update(bool isAwait) { }
-        [Newtonsoft.Json.JsonConstructorAttribute()]
-        public Update(bool isAwait, long replayMax) { }
-        public bool IsAwait { get; }
-        public long ReplayMax { get; }
-    }
     public sealed class WriteMessageFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessageFailure>
     {
         public WriteMessageFailure(Akka.Persistence.IPersistentRepresentation persistent, System.Exception cause, int actorInstanceId) { }
@@ -762,8 +714,12 @@ namespace Akka.Persistence
     }
     public sealed class WriteMessagesFailed : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.WriteMessagesFailed>
     {
+        [System.ObsoleteAttribute("Deprecated since Akka 1.4.11, use the overloaded one which accepts the number of " +
+            "failed atomic writes instead.")]
         public WriteMessagesFailed(System.Exception cause) { }
+        public WriteMessagesFailed(System.Exception cause, int writeCount) { }
         public System.Exception Cause { get; }
+        public int WriteCount { get; }
         public bool Equals(Akka.Persistence.WriteMessagesFailed other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }

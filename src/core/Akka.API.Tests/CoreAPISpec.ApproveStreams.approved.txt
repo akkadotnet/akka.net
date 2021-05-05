@@ -1,4 +1,7 @@
-﻿[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Query.Sql")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.TCK")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Streams.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
@@ -17,9 +20,25 @@ namespace Akka.Streams
     }
     public class static ActorAttributes
     {
+        public static Akka.Streams.ActorAttributes.Dispatcher IODispatcher { get; }
+        public static Akka.Streams.Attributes CreateDebugLogging(bool enabled) { }
         public static Akka.Streams.Attributes CreateDispatcher(string dispatcherName) { }
+        public static Akka.Streams.Attributes CreateFuzzingMode(bool enabled) { }
+        public static Akka.Streams.Attributes CreateMaxFixedBufferSize(int size) { }
+        public static Akka.Streams.Attributes CreateOutputBurstLimit(int limit) { }
+        public static Akka.Streams.Attributes CreateStreamSubscriptionTimeout(System.TimeSpan timeout, Akka.Streams.StreamSubscriptionTimeoutTerminationMode mode) { }
         public static Akka.Streams.Attributes CreateSupervisionStrategy(Akka.Streams.Supervision.Decider strategy) { }
-        public sealed class Dispatcher : Akka.Streams.Attributes.IAttribute, System.IEquatable<Akka.Streams.ActorAttributes.Dispatcher>
+        public static Akka.Streams.Attributes CreateSyncProcessingLimit(int limit) { }
+        public sealed class DebugLogging : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.DebugLogging>
+        {
+            public DebugLogging(bool enabled) { }
+            public bool Enabled { get; }
+            public bool Equals(Akka.Streams.ActorAttributes.DebugLogging other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class Dispatcher : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.Dispatcher>
         {
             public readonly string Name;
             public Dispatcher(string name) { }
@@ -28,10 +47,56 @@ namespace Akka.Streams
             public override int GetHashCode() { }
             public override string ToString() { }
         }
-        public sealed class SupervisionStrategy : Akka.Streams.Attributes.IAttribute
+        public sealed class FuzzingMode : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.FuzzingMode>
+        {
+            public FuzzingMode(bool enabled) { }
+            public bool Enabled { get; }
+            public bool Equals(Akka.Streams.ActorAttributes.FuzzingMode other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class MaxFixedBufferSize : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.MaxFixedBufferSize>
+        {
+            public MaxFixedBufferSize(int size) { }
+            public int Size { get; }
+            public bool Equals(Akka.Streams.ActorAttributes.MaxFixedBufferSize other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class OutputBurstLimit : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.OutputBurstLimit>
+        {
+            public OutputBurstLimit(int limit) { }
+            public int Limit { get; }
+            public bool Equals(Akka.Streams.ActorAttributes.OutputBurstLimit other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class StreamSubscriptionTimeout : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.StreamSubscriptionTimeout>
+        {
+            public StreamSubscriptionTimeout(System.TimeSpan timeout, Akka.Streams.StreamSubscriptionTimeoutTerminationMode mode) { }
+            public Akka.Streams.StreamSubscriptionTimeoutTerminationMode Mode { get; }
+            public System.TimeSpan Timeout { get; }
+            public bool Equals(Akka.Streams.ActorAttributes.StreamSubscriptionTimeout other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class SupervisionStrategy : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute
         {
             public readonly Akka.Streams.Supervision.Decider Decider;
             public SupervisionStrategy(Akka.Streams.Supervision.Decider decider) { }
+            public override string ToString() { }
+        }
+        public sealed class SyncProcessingLimit : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.ActorAttributes.SyncProcessingLimit>
+        {
+            public SyncProcessingLimit(int limit) { }
+            public int Limit { get; }
+            public bool Equals(Akka.Streams.ActorAttributes.SyncProcessingLimit other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
             public override string ToString() { }
         }
     }
@@ -77,12 +142,14 @@ namespace Akka.Streams
         public readonly int SyncProcessingLimit;
         public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Dsl.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
+        public override bool Equals(object obj) { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
         public Akka.Streams.ActorMaterializerSettings WithDispatcher(string dispatcher) { }
         public Akka.Streams.ActorMaterializerSettings WithFuzzingMode(bool isFuzzingMode) { }
         public Akka.Streams.ActorMaterializerSettings WithInputBuffer(int initialSize, int maxSize) { }
         public Akka.Streams.ActorMaterializerSettings WithMaxFixedBufferSize(int maxFixedBufferSize) { }
+        public Akka.Streams.ActorMaterializerSettings WithOutputBurstLimit(int limit) { }
         public Akka.Streams.ActorMaterializerSettings WithStreamRefSettings(Akka.Streams.Dsl.StreamRefSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSubscriptionTimeoutSettings(Akka.Streams.StreamSubscriptionTimeoutSettings settings) { }
         public Akka.Streams.ActorMaterializerSettings WithSupervisionStrategy(Akka.Streams.Supervision.Decider decider) { }
@@ -116,10 +183,14 @@ namespace Akka.Streams
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
         public System.Collections.Generic.IEnumerable<TAttr> GetAttributeList<TAttr>()
             where TAttr : Akka.Streams.Attributes.IAttribute { }
+        [System.ObsoleteAttribute("Attributes should always be most specific, use GetAttribute<TAttr>()")]
         public TAttr GetFirstAttribute<TAttr>(TAttr defaultIfNotFound)
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
+        [System.ObsoleteAttribute("Attributes should always be most specific, use GetAttribute<TAttr>()")]
         public TAttr GetFirstAttribute<TAttr>()
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
+        public TAttr GetMandatoryAttribute<TAttr>()
+            where TAttr :  class, Akka.Streams.Attributes.IMandatoryAttribute { }
         public string GetNameLifted() { }
         public string GetNameOrDefault(string defaultIfNotFound = "unknown-operation") { }
         public override string ToString() { }
@@ -130,8 +201,33 @@ namespace Akka.Streams
             public override bool Equals(object obj) { }
             public override string ToString() { }
         }
+        public sealed class CancellationStrategy : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute
+        {
+            public CancellationStrategy(Akka.Streams.Attributes.CancellationStrategy.IStrategy strategy) { }
+            public Akka.Streams.Attributes.CancellationStrategy.IStrategy Strategy { get; }
+            public class AfterDelay : Akka.Streams.Attributes.CancellationStrategy.IStrategy
+            {
+                public AfterDelay(System.TimeSpan delay, Akka.Streams.Attributes.CancellationStrategy.IStrategy strategy) { }
+                public System.TimeSpan Delay { get; }
+                public Akka.Streams.Attributes.CancellationStrategy.IStrategy Strategy { get; }
+            }
+            public class CompleteStage : Akka.Streams.Attributes.CancellationStrategy.IStrategy
+            {
+                public CompleteStage() { }
+            }
+            public class FailStage : Akka.Streams.Attributes.CancellationStrategy.IStrategy
+            {
+                public FailStage() { }
+            }
+            public interface IStrategy { }
+            public class PropagateFailure : Akka.Streams.Attributes.CancellationStrategy.IStrategy
+            {
+                public PropagateFailure() { }
+            }
+        }
         public interface IAttribute { }
-        public sealed class InputBuffer : Akka.Streams.Attributes.IAttribute, System.IEquatable<Akka.Streams.Attributes.InputBuffer>
+        public interface IMandatoryAttribute : Akka.Streams.Attributes.IAttribute { }
+        public sealed class InputBuffer : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute, System.IEquatable<Akka.Streams.Attributes.InputBuffer>
         {
             public readonly int Initial;
             public readonly int Max;
@@ -603,7 +699,7 @@ namespace Akka.Streams
     {
         System.Threading.Tasks.Task<Akka.Util.Option<T>> PullAsync();
     }
-    public interface ISinkRef<TIn>
+    public interface ISinkRef<TIn> : Akka.Util.ISurrogated
     {
         Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Sink { get; }
     }
@@ -794,18 +890,56 @@ namespace Akka.Streams
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
+    public class StreamDetachedException : System.Exception
+    {
+        public static readonly Akka.Streams.StreamDetachedException Instance;
+    }
     public class StreamLimitReachedException : System.Exception
     {
         public StreamLimitReachedException(long max) { }
     }
     public class static StreamRefAttributes
     {
+        public static Akka.Streams.Attributes CreateBufferCapacity(int capacity) { }
+        public static Akka.Streams.Attributes CreateDemandRedeliveryInterval(System.TimeSpan timeout) { }
+        public static Akka.Streams.Attributes CreateFinalTerminationSignalDeadline(System.TimeSpan timeout) { }
         public static Akka.Streams.Attributes CreateSubscriptionTimeout(System.TimeSpan timeout) { }
+        public sealed class BufferCapacity : Akka.Streams.Attributes.IAttribute, Akka.Streams.StreamRefAttributes.IStreamRefAttribute, System.IEquatable<Akka.Streams.StreamRefAttributes.BufferCapacity>
+        {
+            public BufferCapacity(int capacity) { }
+            public int Capacity { get; }
+            public bool Equals(Akka.Streams.StreamRefAttributes.BufferCapacity other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class DemandRedeliveryInterval : Akka.Streams.Attributes.IAttribute, Akka.Streams.StreamRefAttributes.IStreamRefAttribute, System.IEquatable<Akka.Streams.StreamRefAttributes.DemandRedeliveryInterval>
+        {
+            public DemandRedeliveryInterval(System.TimeSpan timeout) { }
+            public System.TimeSpan Timeout { get; }
+            public bool Equals(Akka.Streams.StreamRefAttributes.DemandRedeliveryInterval other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public sealed class FinalTerminationSignalDeadline : Akka.Streams.Attributes.IAttribute, Akka.Streams.StreamRefAttributes.IStreamRefAttribute, System.IEquatable<Akka.Streams.StreamRefAttributes.FinalTerminationSignalDeadline>
+        {
+            public FinalTerminationSignalDeadline(System.TimeSpan timeout) { }
+            public System.TimeSpan Timeout { get; }
+            public bool Equals(Akka.Streams.StreamRefAttributes.FinalTerminationSignalDeadline other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
         public interface IStreamRefAttribute : Akka.Streams.Attributes.IAttribute { }
-        public sealed class SubscriptionTimeout : Akka.Streams.Attributes.IAttribute, Akka.Streams.StreamRefAttributes.IStreamRefAttribute
+        public sealed class SubscriptionTimeout : Akka.Streams.Attributes.IAttribute, Akka.Streams.StreamRefAttributes.IStreamRefAttribute, System.IEquatable<Akka.Streams.StreamRefAttributes.SubscriptionTimeout>
         {
             public SubscriptionTimeout(System.TimeSpan timeout) { }
             public System.TimeSpan Timeout { get; }
+            public bool Equals(Akka.Streams.StreamRefAttributes.SubscriptionTimeout other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
         }
     }
     public sealed class StreamRefSubscriptionTimeoutException : Akka.Pattern.IllegalStateException
@@ -1132,7 +1266,7 @@ namespace Akka.Streams.Dsl
     public class static FileIO
     {
         public static Akka.Streams.Dsl.Source<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromFile(System.IO.FileInfo f, int chunkSize = 8192, long startPosition = 0) { }
-        public static Akka.Streams.Dsl.Sink<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> ToFile(System.IO.FileInfo f, System.Nullable<System.IO.FileMode> fileMode = null, long startPosition = 0) { }
+        public static Akka.Streams.Dsl.Sink<Akka.IO.ByteString, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> ToFile(System.IO.FileInfo f, System.Nullable<System.IO.FileMode> fileMode = null, long startPosition = 0, bool autoFlush = False) { }
     }
     public class FixedDelay<T> : Akka.Streams.Dsl.IDelayStrategy<T>
     {
@@ -1163,7 +1297,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Batch<TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> BatchWeighted<TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Buffer<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Collect<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> CompletionTimeout<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Concat<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> ConcatMany<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
@@ -1694,6 +1830,8 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Cancelled<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> Combine<TIn, TOut, TMat>(System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanOutShape<TIn, TOut>, TMat>> strategy, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> first, Akka.Streams.Dsl.Sink<TOut, Akka.NotUsed> second, params Akka.Streams.Dsl.Sink<, >[] rest) { }
         public static Akka.Streams.Dsl.Sink<TIn, object> Create<TIn>(Reactive.Streams.ISubscriber<TIn> subscriber) { }
+        [Akka.Annotations.InternalApiAttribute()]
+        public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> DistinctRetainingFanOutPublisher<TIn>(System.Action onTerminated = null) { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> FanoutPublisher<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> First<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> FirstOrDefault<TIn>() { }
@@ -1779,7 +1917,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Batch<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> BatchWeighted<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Buffer<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(isDefined, collector) instead")]
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.Source<TOut2, TMat> Collect<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMatOut> CombineMaterialized<T, TOut2, TMat1, TMat2, TMatOut>(this Akka.Streams.Dsl.Source<T, TMat1> flow, Akka.Streams.Dsl.Source<T, TMat2> other, System.Func<int, Akka.Streams.IGraph<Akka.Streams.UniformFanInShape<T, TOut2>, Akka.NotUsed>> strategy, System.Func<TMat1, TMat2, TMatOut> combineMaterializers) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> CompletionTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> Concat<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
@@ -2508,7 +2648,7 @@ namespace Akka.Streams.Implementation
     public class ActorSubscriptionWithCursor<TIn> : Akka.Streams.Implementation.ActorSubscription<TIn>, Akka.Streams.Implementation.ICursor, Reactive.Streams.ISubscription
     {
         public ActorSubscriptionWithCursor(Akka.Actor.IActorRef implementor, Reactive.Streams.ISubscriber<TIn> subscriber) { }
-        public int Cursor { get; }
+        public long Cursor { get; }
         public bool IsActive { get; }
         public long TotalDemand { get; }
         public void Dispatch(object element) { }
@@ -2625,6 +2765,12 @@ namespace Akka.Streams.Implementation
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
+    }
+    public class DistinctRetainingMultiReaderBuffer<T> : Akka.Streams.Implementation.RetainingMultiReaderBuffer<T>
+    {
+        public DistinctRetainingMultiReaderBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public override string ToString() { }
+        public override bool Write(T value) { }
     }
     public sealed class EmptyModule : Akka.Streams.Implementation.Module
     {
@@ -2838,7 +2984,7 @@ namespace Akka.Streams.Implementation
     public interface IActorSubscription : Reactive.Streams.ISubscription { }
     public interface ICursor
     {
-        int Cursor { get; set; }
+        long Cursor { get; set; }
     }
     public interface ICursors
     {
@@ -3196,19 +3342,36 @@ namespace Akka.Streams.Implementation
     public class ResizableMultiReaderRingBuffer<T>
     {
         protected readonly Akka.Streams.Implementation.ICursors Cursors;
-        public ResizableMultiReaderRingBuffer(int initialSize, int maxSize, Akka.Streams.Implementation.ICursors cursors) { }
-        public int CapacityLeft { get; }
-        public int ImmediatelyAvailable { get; }
+        public ResizableMultiReaderRingBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public long AvailableData { get; }
+        public long CapacityLeft { get; }
+        public long ImmediatelyAvailable { get; }
         public bool IsEmpty { get; }
-        public int Length { get; }
+        public long Length { get; }
         public bool NonEmpty { get; }
-        protected object[] UnderlyingArray { get; }
-        public int Count(Akka.Streams.Implementation.ICursor cursor) { }
+        protected T[] UnderlyingArray { get; }
+        public long Count(Akka.Streams.Implementation.ICursor cursor) { }
         public void InitCursor(Akka.Streams.Implementation.ICursor cursor) { }
         public void OnCursorRemoved(Akka.Streams.Implementation.ICursor cursor) { }
         public T Read(Akka.Streams.Implementation.ICursor cursor) { }
         public override string ToString() { }
         public bool Write(T value) { }
+    }
+    public class RetainingMultiReaderBuffer<T>
+    {
+        protected readonly Akka.Streams.Implementation.ICursors Cursors;
+        public RetainingMultiReaderBuffer(long initialSize, long maxSize, Akka.Streams.Implementation.ICursors cursors) { }
+        public long AvailableData { get; }
+        protected T[] Buffer { get; }
+        public long CapacityLeft { get; }
+        public bool IsEmpty { get; }
+        public long Length { get; }
+        public long Count(Akka.Streams.Implementation.ICursor cursor) { }
+        public void InitCursor(Akka.Streams.Implementation.ICursor cursor) { }
+        public void OnCursorRemoved(Akka.Streams.Implementation.ICursor cursor) { }
+        public T Read(Akka.Streams.Implementation.ICursor cursor) { }
+        public override string ToString() { }
+        public virtual bool Write(T value) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class SeqStage<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<T>>>
@@ -3669,7 +3832,9 @@ namespace Akka.Streams.Implementation.Fusing
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class Collect<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
+        [System.ObsoleteAttribute("Deprecated. Please use the .ctor(Func, Func) constructor")]
         public Collect(System.Func<TIn, TOut> func) { }
+        public Collect(System.Func<TIn, bool> isDefined, System.Func<TIn, TOut> collector) { }
         public Akka.Streams.Inlet<TIn> In { get; }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public Akka.Streams.Outlet<TOut> Out { get; }

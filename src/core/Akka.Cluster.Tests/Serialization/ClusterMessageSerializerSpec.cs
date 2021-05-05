@@ -1,17 +1,21 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterMessageSerializerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Cluster.Routing;
+using Akka.Cluster.Serialization;
 using Akka.Routing;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using Akka.Util;
+using Google.Protobuf;
 
 namespace Akka.Cluster.Tests.Serialization
 {
@@ -22,9 +26,9 @@ namespace Akka.Cluster.Tests.Serialization
         {
         }
 
-        private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Joining);
-        private static readonly Member b1 = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet.Create("r1"));
-        private static readonly Member c1 = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Leaving, ImmutableHashSet.Create("r2"));
+        private static readonly Member a1 = TestMember.Create(new Address("akka.tcp", "sys", "a", 2552), MemberStatus.Joining, appVersion: AppVersion.Create("1.0.0"));
+        private static readonly Member b1 = TestMember.Create(new Address("akka.tcp", "sys", "b", 2552), MemberStatus.Up, ImmutableHashSet.Create("r1"), appVersion: AppVersion.Create("1.1.0"));
+        private static readonly Member c1 = TestMember.Create(new Address("akka.tcp", "sys", "c", 2552), MemberStatus.Leaving, ImmutableHashSet.Create("r2"), appVersion: AppVersion.Create("1.1.0"));
         private static readonly Member d1 = TestMember.Create(new Address("akka.tcp", "sys", "d", 2552), MemberStatus.Exiting, ImmutableHashSet.Create("r1", "r2"));
         private static readonly Member e1 = TestMember.Create(new Address("akka.tcp", "sys", "e", 2552), MemberStatus.Down, ImmutableHashSet.Create("r3"));
 
@@ -32,8 +36,22 @@ namespace Akka.Cluster.Tests.Serialization
         public void Can_serialize_Heartbeat()
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
-            var message = new ClusterHeartbeatSender.Heartbeat(address);
+            var message = new ClusterHeartbeatSender.Heartbeat(address, -1, -1);
             AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_Hearbeatv1419_later()
+        {
+            var hb = new Akka.Cluster.Serialization.Proto.Msg.Heartbeat()
+            {
+                From = Akka.Cluster.Serialization.ClusterMessageSerializer.AddressToProto(a1.Address),
+                CreationTime = 2,
+                SequenceNr = 1
+            }.ToByteArray();
+
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat));
+            serializer.FromBinary(hb, Akka.Cluster.Serialization.ClusterMessageSerializer.HeartBeatManifest);
         }
 
         [Fact]
@@ -41,8 +59,22 @@ namespace Akka.Cluster.Tests.Serialization
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress = new UniqueAddress(address, 17);
-            var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress);
+            var message = new ClusterHeartbeatSender.HeartbeatRsp(uniqueAddress, -1, -1);
             AssertEqual(message);
+        }
+
+        [Fact]
+        public void Can_serialize_HearbeatRspv1419_later()
+        {
+            var hb = new Akka.Cluster.Serialization.Proto.Msg.HeartBeatResponse()
+            {
+                From = Akka.Cluster.Serialization.ClusterMessageSerializer.UniqueAddressToProto(a1.UniqueAddress),
+                CreationTime = 2,
+                SequenceNr = 1
+            }.ToByteArray();
+
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(ClusterHeartbeatSender.Heartbeat));
+            serializer.FromBinary(hb, Akka.Cluster.Serialization.ClusterMessageSerializer.HeartBeatRspManifest);
         }
 
         [Fact]
@@ -93,7 +125,10 @@ namespace Akka.Cluster.Tests.Serialization
         {
             var address = new Address("akka.tcp", "system", "some.host.org", 4711);
             var uniqueAddress = new UniqueAddress(address, 17);
-            var message = new InternalClusterAction.Join(uniqueAddress, ImmutableHashSet.Create("foo", "bar"));
+            var message = new InternalClusterAction.Join(uniqueAddress, ImmutableHashSet.Create("foo", "bar"), AppVersion.Zero);
+            AssertEqual(message);
+
+            message = new InternalClusterAction.Join(uniqueAddress, ImmutableHashSet.Create("foo", "bar"), AppVersion.Create("1.2.3"));
             AssertEqual(message);
         }
 
@@ -187,6 +222,7 @@ namespace Akka.Cluster.Tests.Serialization
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
+            serializer.Should().BeOfType<ClusterMessageSerializer>();
             return serializer.FromBinary<T>(serialized);
         }
 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -58,7 +58,11 @@ namespace Akka.Dispatch
         /// <param name="scheduler">TBD</param>
         /// <param name="settings">TBD</param>
         /// <param name="mailboxes">TBD</param>
-        public DefaultDispatcherPrerequisites(EventStream eventStream, IScheduler scheduler, Settings settings, Mailboxes mailboxes)
+        public DefaultDispatcherPrerequisites(
+            EventStream eventStream, 
+            IScheduler scheduler, 
+            Settings settings, 
+            Mailboxes mailboxes)
         {
             Mailboxes = mailboxes;
             Settings = settings;
@@ -110,6 +114,26 @@ namespace Akka.Dispatch
         /// The system prerequisites needed for this dispatcher to do its job
         /// </summary>
         public IDispatcherPrerequisites Prerequisites { get; private set; }
+    }
+
+    internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
+    {
+        public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+        {
+            var fje = config.GetConfig("fork-join-executor");
+            MaxParallelism = ThreadPoolConfig.ScaledPoolSize(
+                        fje.GetInt("parallelism-min"), 
+                        fje.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
+                        fje.GetInt("parallelism-max"));
+        }
+
+        public int MaxParallelism {get;}
+
+        public override ExecutorService Produce(string id)
+        {
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[id]", typeof(FixedConcurrencyTaskScheduler), $"Launched Dispatcher [{id}] with MaxParallelism=[{MaxParallelism}]"));
+            return new TaskSchedulerExecutor(id, new FixedConcurrencyTaskScheduler(MaxParallelism));
+        }
     }
 
     /// <summary>
@@ -168,7 +192,7 @@ namespace Akka.Dispatch
         public ForkJoinExecutorServiceFactory(Config config, IDispatcherPrerequisites prerequisites)
             : base(config, prerequisites)
         {
-            _threadPoolConfiguration = ConfigureSettings(config);
+            _threadPoolConfiguration = ConfigureSettings(Config);
         }
 
         /// <summary>
@@ -185,22 +209,27 @@ namespace Akka.Dispatch
         {
             var dtp = config.GetConfig("dedicated-thread-pool");
             var fje = config.GetConfig("fork-join-executor");
-            if ((dtp == null || dtp.IsEmpty) && (fje == null || fje.IsEmpty)) throw new ConfigurationException(
+            if (dtp.IsNullOrEmpty() && fje.IsNullOrEmpty()) throw new ConfigurationException(
                 $"must define section 'dedicated-thread-pool' OR 'fork-join-executor' for fork-join-executor {config.GetString("id", "unknown")}");
 
-            if (dtp != null && !dtp.IsEmpty)
+            if (!dtp.IsNullOrEmpty())
             {
-                var settings = new DedicatedThreadPoolSettings(dtp.GetInt("thread-count"),
-                    DedicatedThreadPoolConfigHelpers.ConfigureThreadType(dtp.GetString("threadtype",
-                        ThreadType.Background.ToString())),
+                var settings = new DedicatedThreadPoolSettings(
+                    dtp.GetInt("thread-count"),
+                    DedicatedThreadPoolConfigHelpers.ConfigureThreadType(
+                        dtp.GetString("threadtype", ThreadType.Background.ToString())),
                     config.GetString("id"),
                     DedicatedThreadPoolConfigHelpers.GetSafeDeadlockTimeout(dtp));
                 return settings;
             }
             else
             {
-                var settings = new DedicatedThreadPoolSettings(ThreadPoolConfig.ScaledPoolSize(fje.GetInt("parallelism-min"), 1.0, fje.GetInt("parallelism-max")),
-                     name:config.GetString("id"));
+                var settings = new DedicatedThreadPoolSettings(
+                    ThreadPoolConfig.ScaledPoolSize(
+                        fje.GetInt("parallelism-min"), 
+                        1.0, 
+                        fje.GetInt("parallelism-max")),
+                        name:config.GetString("id"));
                 return settings;
             }
             
@@ -213,9 +242,7 @@ namespace Akka.Dispatch
     /// </summary>
     internal sealed class ThreadPoolExecutorServiceFactory : ExecutorServiceConfigurator
     {
-#if APPDOMAIN
         private static readonly bool IsFullTrusted = AppDomain.CurrentDomain.IsFullyTrusted;
-#endif
 
         /// <summary>
         /// TBD
@@ -224,10 +251,9 @@ namespace Akka.Dispatch
         /// <returns>TBD</returns>
         public override ExecutorService Produce(string id)
         {
-#if APPDOMAIN
             if (IsFullTrusted)
                 return new FullThreadPoolExecutorServiceImpl(id);
-#endif
+
             return new PartialTrustThreadPoolExecutorService(id);
         }
 
@@ -286,7 +312,7 @@ namespace Akka.Dispatch
         /// <returns>The requested <see cref="ExecutorServiceConfigurator"/> instance.</returns>
         protected ExecutorServiceConfigurator ConfigureExecutor()
         {
-            var executor = Config.GetString("executor");
+            var executor = Config.GetString("executor", null);
             switch (executor)
             {
                 case null:
@@ -300,11 +326,14 @@ namespace Akka.Dispatch
                     return new CurrentSynchronizationContextExecutorServiceFactory(Config, Prerequisites);
                 case "task-executor":
                     return new DefaultTaskSchedulerExecutorConfigurator(Config, Prerequisites);
+                case "channel-executor":
+                    return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)
                     {
-                        throw new ConfigurationException($"Could not resolve executor service configurator type {executor} for path {Config.GetString("id")}");
+                        throw new ConfigurationException(
+                            $"Could not resolve executor service configurator type {executor} for path {Config.GetString("id", "unknown")}");
                     }
                     var args = new object[] { Config, Prerequisites };
                     return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);

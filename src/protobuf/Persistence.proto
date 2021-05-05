@@ -14,6 +14,7 @@ message PersistentMessage {
   string sender = 11; // not stored in journal, needed for remote serialization 
   string manifest = 12;
   string writerGuid = 13;
+  sint64 timestamp = 14;
 }
 
 message PersistentPayload {

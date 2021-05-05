@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.Children.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,8 +10,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Threading;
 using Akka.Actor.Internal;
+using Akka.Dispatch.SysMsg;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -452,6 +454,7 @@ namespace Akka.Actor
             if (_systemImpl.Settings.SerializeAllCreators && !systemService && !(props.Deploy.Scope is LocalScope))
             {
                 var oldInfo = Serialization.Serialization.CurrentTransportInformation;
+                object propArgument = null;
                 try
                 {
                     if (oldInfo == null)
@@ -465,31 +468,23 @@ namespace Akka.Actor
                         {
                             if (argument != null && !(argument is INoSerializationVerificationNeeded))
                             {
+                                propArgument = argument;
                                 var serializer = ser.FindSerializerFor(argument);
                                 var bytes = serializer.ToBinary(argument);
-                                if (serializer is SerializerWithStringManifest manifestSerializer)
-                                {
-                                    var manifest = manifestSerializer.Manifest(argument);
-                                    if (ser.Deserialize(bytes, manifestSerializer.Identifier, manifest) == null)
-                                    {
-                                        throw new ArgumentException(
-                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
-                                            nameof(name));
-                                    }
-                                }
-                                else
-                                {
-                                    if (ser.Deserialize(bytes, serializer.Identifier,
-                                            argument.GetType().TypeQualifiedName()) == null)
-                                    {
-                                        throw new ArgumentException(
-                                            $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
-                                            nameof(name));
-                                    }
-                                }
+                                var ms = Serialization.Serialization.ManifestFor(serializer, argument);
+                                if (ser.Deserialize(bytes, serializer.Identifier, ms) == null)
+                                    throw new ArgumentException(
+                                        $"Pre-creation serialization check failed at [${_self.Path}/{name}]",
+                                        nameof(name));
                             }
                         }
                     }
+                }
+                catch (Exception e)
+                {
+                    throw new SerializationException(
+                        $"Failed to serialize and deserialize actor props argument of type {propArgument?.GetType()} for actor type [{props.Type}].",
+                        e);
                 }
                 finally
                 {

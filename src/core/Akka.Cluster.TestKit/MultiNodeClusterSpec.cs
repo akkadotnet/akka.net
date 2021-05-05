@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -175,7 +175,7 @@ namespace Akka.Cluster.TestKit
 
         //TODO: ExpectedTestDuration?
 
-        void MuteLog(ActorSystem sys = null)
+        public virtual void MuteLog(ActorSystem sys = null)
         {
             if (sys == null) sys = Sys;
             if (!sys.Log.IsDebugEnabled)

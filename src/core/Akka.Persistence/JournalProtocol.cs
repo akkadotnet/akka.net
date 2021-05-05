@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JournalProtocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ namespace Akka.Persistence
     /// Reply message to failed <see cref="Eventsourced.DeleteMessages"/> request.
     /// </summary>
     [Serializable]
-    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>
+    public sealed class DeleteMessagesFailure : IEquatable<DeleteMessagesFailure>, INoSerializationVerificationNeeded //serialization verification temporary disabled because of Cause serialization issues
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DeleteMessagesFailure"/> class.
@@ -134,7 +134,7 @@ namespace Akka.Persistence
         /// Initializes a new instance of the <see cref="DeleteMessagesTo"/> class.
         /// </summary>
         /// <param name="persistenceId">Requesting persistent actor id.</param>
-        /// <param name="toSequenceNr">Sequence number where replay should end (inclusive).</param>
+        /// <param name="toSequenceNr">Sequence number where replay should end (inclusive). <see cref="long.MaxValue"/> may be used to delete all persistent messages.</param>
         /// <param name="persistentActor">Requesting persistent actor.</param>
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="persistenceId"/> is undefined.
@@ -287,18 +287,35 @@ namespace Akka.Persistence
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
+        [Obsolete("Deprecated since Akka 1.4.11, use the overloaded one which accepts the number of failed atomic writes instead.")]
         public WriteMessagesFailed(Exception cause)
         {
-            if (cause == null)
-                throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
+        }
 
-            Cause = cause;
+        /// <summary>
+        /// Initializes a new instance of the <see cref="WriteMessagesFailed"/> class.
+        /// </summary>
+        /// <param name="cause">The cause of the failed <see cref="WriteMessages"/> request.</param>
+        /// <param name="writeCount">The number of atomic writes that failed.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
+        /// </exception>
+        public WriteMessagesFailed(Exception cause, int writeCount)
+        {
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessagesFailed cause exception cannot be null");
+            WriteCount = writeCount;
         }
 
         /// <summary>
         /// The cause of the failed <see cref="WriteMessages"/> request.
         /// </summary>
         public Exception Cause { get; }
+
+        /// <summary>
+        /// The number of atomic writes that failed.
+        /// </summary>
+        public int WriteCount { get; }
 
         /// <inheritdoc/>
         public bool Equals(WriteMessagesFailed other)

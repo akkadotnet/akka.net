@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Eventsourced.Recovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -96,11 +96,26 @@ namespace Akka.Persistence
                             {
                                 var offer = new SnapshotOffer(res.Snapshot.Metadata, res.Snapshot.Snapshot);
                                 var seqNr = LastSequenceNr;
-                                LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
-                                if (!base.AroundReceive(RecoveryBehavior, offer))
+                                try
                                 {
-                                    LastSequenceNr = seqNr;
-                                    Unhandled(offer);
+                                    LastSequenceNr = res.Snapshot.Metadata.SequenceNr;
+                                    if (!base.AroundReceive(RecoveryBehavior, offer))
+                                    {
+                                        LastSequenceNr = seqNr;
+                                        Unhandled(offer);
+                                    }
+                                }
+                                catch(Exception ex)
+                                {
+                                    try
+                                    {
+                                        OnRecoveryFailure(ex);
+                                    }
+                                    finally
+                                    {
+                                        Context.Stop(Self);
+                                    }
+                                    ReturnRecoveryPermit();
                                 }
                             }
 
@@ -193,8 +208,9 @@ namespace Akka.Persistence
                         case RecoverySuccess success:
                             timeoutCancelable.Cancel();
                             OnReplaySuccess();
-                            _sequenceNr = success.HighestSequenceNr;
-                            LastSequenceNr = success.HighestSequenceNr;
+                            var highestSeqNr = Math.Max(success.HighestSequenceNr, LastSequenceNr);
+                            _sequenceNr = highestSeqNr;
+                            LastSequenceNr = highestSeqNr;
                             recoveryRunning = false;
                             try
                             {
@@ -239,6 +255,9 @@ namespace Akka.Persistence
                             {
                                 eventSeenInInterval = false;
                             }
+                            break;
+                        case RecoveryTick tick when tick.Snapshot:
+                            // snapshot tick, ignore
                             break;
                         default:
                             StashInternally(message);
@@ -447,9 +466,9 @@ namespace Akka.Persistence
                     _isWriteInProgress = false;
                     FlushJournalBatch();
                     break;
-                case WriteMessagesFailed _:
-                    _isWriteInProgress = false;
-                    // it will be stopped by the first WriteMessageFailure message
+                case WriteMessagesFailed failed:
+                    // if writeCount > 0 then WriteMessageFailure will follow that will stop the actor
+                    if (failed.WriteCount == 0) _isWriteInProgress = false;
                     break;
                 case RecoveryTick _:
                     // we may have one of these in the mailbox before the scheduled timeout

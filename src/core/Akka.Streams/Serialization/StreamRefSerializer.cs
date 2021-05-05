@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamRefSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -170,13 +170,7 @@ namespace Akka.Streams.Serialization
         {
             var payload = onNext.Payload;
             var serializer = _serialization.FindSerializerFor(payload);
-            string manifest = null;
-            if (serializer.IncludeManifest)
-            {
-                manifest = serializer is SerializerWithStringManifest s
-                    ? s.Manifest(payload)
-                    : payload.GetType().TypeQualifiedName();
-            }
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, payload);
 
             var p = new Payload
             {

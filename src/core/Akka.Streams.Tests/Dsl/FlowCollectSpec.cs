@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowCollectSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,21 +30,38 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void An_old_behaviour_Collect_must_collect()
+        {
+            var random = new Random();
+            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
+            {
+                var x = random.Next(0, 10000);
+                return ((ICollection<int>)new[] { x },
+                    (x & 1) == 0 ? (ICollection<string>)new[] { (x * x).ToString() } : (ICollection<string>)new string[] { });
+            }).ToArray());
+
+            RandomTestRange(Sys).ForEach(_ => RunScript(script, Materializer.Settings, flow => flow.Collect(x => x % 2 == 0 ? (x * x).ToString() : null)));
+        }
+
+        [Fact]
         public void A_Collect_must_collect()
         {
             var random = new Random();
-            Script<int,string> script = Script.Create(RandomTestRange(Sys).Select(_ =>
+            var script = Script.Create(RandomTestRange(Sys).Select(_ =>
             {
                 var x = random.Next(0, 10000);
                 return ((ICollection<int>)new[] { x },
                         (x & 1) == 0 ? (ICollection<string>)new[] { (x*x).ToString() } : (ICollection<string>)new string[] {});
             }).ToArray());
 
-            RandomTestRange(Sys).ForEach(_=>RunScript(script, Materializer.Settings,flow => flow.Collect(x => x%2 == 0 ? (x*x).ToString() : null)));
+            RandomTestRange(Sys).ForEach(_=>RunScript(
+                script, 
+                Materializer.Settings,
+                flow => flow.Collect(x => x % 2 == 0, x =>  (x*x).ToString())));
         }
 
         [Fact]
-        public void A_Collect_must_restart_when_Collect_throws()
+        public void An_old_behaviour_Collect_must_restart_when_Collect_throws()
         {
             Func<int, int> throwOnTwo = x =>
             {
@@ -56,6 +73,24 @@ namespace Akka.Streams.Tests.Dsl
             var probe =
                 Source.From(Enumerable.Range(1, 3))
                     .Collect(throwOnTwo)
+                    .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
+                    .RunWith(this.SinkProbe<int>(), Materializer);
+            probe.Request(1);
+            probe.ExpectNext(1);
+            probe.Request(1);
+            probe.ExpectNext(3);
+            probe.Request(1);
+            probe.ExpectComplete();
+        }
+
+        [Fact]
+        public void A_Collect_must_restart_when_Collect_throws()
+        {
+            bool ThrowOnTwo(int x) => x == 2 ? throw new TestException("") : true;
+
+            var probe =
+                Source.From(Enumerable.Range(1, 3))
+                    .Collect(ThrowOnTwo, x => x)
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                     .RunWith(this.SinkProbe<int>(), Materializer);
             probe.Request(1);

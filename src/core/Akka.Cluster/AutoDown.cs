@@ -1,15 +1,16 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AutoDown.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Immutable;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Event;
+using Akka.Configuration;
+using static Akka.Cluster.MembershipState;
 
 namespace Akka.Cluster
 {
@@ -140,7 +141,7 @@ namespace Akka.Cluster
     internal abstract class AutoDownBase : UntypedActor
     {
         private readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
-            Gossip.ConvergenceSkipUnreachableWithMemberStatus;
+           ConvergenceSkipUnreachableWithMemberStatus;
 
         private ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
             ImmutableDictionary.Create<UniqueAddress, ICancelable>();

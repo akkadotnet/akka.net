@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PrimitiveSerializersSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -16,7 +17,7 @@ namespace Akka.Remote.Tests.Serialization
 {
     public class PrimitiveSerializersSpec : AkkaSpec
     {
-        public PrimitiveSerializersSpec() : base(ConfigurationFactory.ParseString("").WithFallback(RemoteConfigFactory.Default()))
+        public PrimitiveSerializersSpec() : base(RemoteConfigFactory.Default())
         {
         }
 
@@ -57,15 +58,28 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
             serializer.Should().BeOfType<PrimitiveSerializers>();
             var serializedBytes = serializer.ToBinary(message);
-            return (T)serializer.FromBinary(serializedBytes, typeof(T));
+            var manifest = serializer.Manifest(message);
+            return (T)serializer.FromBinary(serializedBytes, manifest);
+        }
+
+        private T AssertCrossPlatformAndReturn<T>(T message)
+        {
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
+            serializer.Should().BeOfType<PrimitiveSerializers>();
+            var serializedBytes = serializer.ToBinary(message);
+            // GetType() will make sure that each namespace is compatible with the serializer
+            // as the test is run on each platform.
+            return (T)serializer.FromBinary(serializedBytes, message.GetType());
         }
 
         private void AssertEqual<T>(T message)
         {
             var deserialized = AssertAndReturn(message);
+            Assert.Equal(message, deserialized);
+            deserialized = AssertCrossPlatformAndReturn(message);
             Assert.Equal(message, deserialized);
         }
     }

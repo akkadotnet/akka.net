@@ -1,0 +1,91 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+namespace Akka.Discovery.Aggregate
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public class AggregateServiceDiscovery : Akka.Discovery.ServiceDiscovery
+    {
+        public AggregateServiceDiscovery(Akka.Actor.ExtendedActorSystem system) { }
+        public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup query, System.TimeSpan resolveTimeout) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public sealed class AggregateServiceDiscoverySettings
+    {
+        public AggregateServiceDiscoverySettings(Akka.Configuration.Config config) { }
+        public System.Collections.Generic.List<string> DiscoveryMethods { get; }
+    }
+}
+namespace Akka.Discovery.Config
+{
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ConfigServiceDiscovery : Akka.Discovery.ServiceDiscovery
+    {
+        public ConfigServiceDiscovery(Akka.Actor.ExtendedActorSystem system) { }
+        public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup lookup, System.TimeSpan resolveTimeout) { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ConfigServicesParser
+    {
+        public ConfigServicesParser() { }
+        public static System.Collections.Generic.Dictionary<string, Akka.Discovery.ServiceDiscovery.Resolved> Parse(Akka.Configuration.Config config) { }
+    }
+}
+namespace Akka.Discovery
+{
+    public class Discovery : Akka.Actor.IExtension
+    {
+        public Discovery(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Discovery.ServiceDiscovery Default { get; }
+        public static Akka.Discovery.Discovery Get(Akka.Actor.ActorSystem system) { }
+        public Akka.Discovery.ServiceDiscovery LoadServiceDiscovery(string method) { }
+    }
+    public class DiscoveryProvider : Akka.Actor.ExtensionIdProvider<Akka.Discovery.Discovery>
+    {
+        public DiscoveryProvider() { }
+        public override Akka.Discovery.Discovery CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+        public static Akka.Configuration.Config DefaultConfiguration() { }
+    }
+    public class Lookup : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Discovery.Lookup>
+    {
+        public Lookup(string serviceName, string portName = null, string protocol = null) { }
+        public string PortName { get; }
+        public string Protocol { get; }
+        public string ServiceName { get; }
+        public Akka.Discovery.Lookup Copy(string serviceName = null, string portName = null, string protocol = null) { }
+        public bool Equals(Akka.Discovery.Lookup other) { }
+        public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
+        public static bool IsValid(string srv) { }
+        public static Akka.Discovery.Lookup ParseSrv(string srv) { }
+        public override string ToString() { }
+        public Akka.Discovery.Lookup WithPortName(string portName) { }
+        public Akka.Discovery.Lookup WithProtocol(string protocol) { }
+    }
+    public abstract class ServiceDiscovery
+    {
+        protected ServiceDiscovery() { }
+        public abstract System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup lookup, System.TimeSpan resolveTimeout);
+        public System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(string serviceName, System.TimeSpan resolveTimeout) { }
+        public class Resolved : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Discovery.ServiceDiscovery.Resolved>
+        {
+            public Resolved(string serviceName, System.Collections.Generic.IEnumerable<Akka.Discovery.ServiceDiscovery.ResolvedTarget> addresses) { }
+            public System.Collections.Immutable.ImmutableList<Akka.Discovery.ServiceDiscovery.ResolvedTarget> Addresses { get; }
+            public string ServiceName { get; }
+            public bool Equals(Akka.Discovery.ServiceDiscovery.Resolved other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+        public class ResolvedTarget : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Discovery.ServiceDiscovery.ResolvedTarget>
+        {
+            public ResolvedTarget(string host, System.Nullable<int> port = null, System.Net.IPAddress address = null) { }
+            public System.Net.IPAddress Address { get; }
+            public string Host { get; }
+            public System.Nullable<int> Port { get; }
+            public bool Equals(Akka.Discovery.ServiceDiscovery.ResolvedTarget other) { }
+            public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
+            public override string ToString() { }
+        }
+    }
+}

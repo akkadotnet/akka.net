@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,6 +109,14 @@ namespace Akka.NodeTestRunner
                             specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
                             specFail.FailureMessages.Add(ex.Message);
                             specFail.FailureStackTraces.Add(ex.StackTrace);
+                            var innerEx = ex.InnerException;
+                            while (innerEx != null)
+                            {
+                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
+                                specFail.FailureMessages.Add(innerEx.Message);
+                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                                innerEx = innerEx.InnerException;
+                            }
                             _logger.Tell(specFail.ToString());
                             Console.WriteLine(specFail);
 

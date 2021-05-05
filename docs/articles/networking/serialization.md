@@ -61,6 +61,54 @@ subtype of the other, a warning will be issued.
 
 Akka.NET provides serializers for POCO's (Plain Old C# Objects) and for `Google.Protobuf.IMessage` by default, so you don't usually need to add configuration for that.
 
+### Configuring Serialization Bindings Programmatically
+As of Akka.NET v1.4 it is now possible to bind serializers to their target types programmatically using the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup).
+
+First, we define a set of messages that all implement a common protocol and will be handled by the same serializer:
+
+[!code-csharp[SerializationProtocol](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Protocol)]
+
+And then a custom [`SerializerWithStringManifest` implementation](xref:Akka.Serialization.SerializerWithStringManifest) to perform the serialization:
+
+[!code-csharp[CustomSerializer](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Serializer)]
+
+With our application protocol and serializer defined we can now create some serialization bindings - these tell Akka.NET which serializer to use whenever we make any calls to serialize messages.
+
+This is where we can use the [`SerializationSetup` class](xref:Akka.Serialization.SerializationSetup) to create statically typed serialization bindings that can be checked by the compiler, rather than defining them through HOCON.
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=SerializerSetup)]
+
+The `SerializationSetup` takes a function with the following signature:
+
+```csharp
+Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>
+```
+
+The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a construtor argument.
+
+For each serialization binding you wish to create, you need to create [a `SerializerDetails` object](xref:Akka.Serialization.SerializerDetails) using the `SerializerDetails.Create` method:
+
+```csharp
+public static SerializerDetails Create(string alias, Serializer serializer, ImmutableHashSet<Type> useFor)
+```
+
+The `string alias` is the same alias you'd configure in HOCON's `akka.actor.serializers` section - and the serializer configured via `SerializationSetup` can be consumed by other parts of Akka.NET by referencing this alias, so make sure you pick a unique name.
+
+The `ImmutableHashSet<Type> useFor` is where you define your serialization type bindings - in this case, we bound the serializer to the `IAppProtocol` interface: any type that implements this interface will be handled by the `AppProtocolSerializer`.
+
+Now that we've created our `SerializationSetup`, we need to actually pass this into our `ActorSystem` - to do this we will want to combine our `SerializationSetup` with a [`BootstrapSetup` instance that holds the rest of our HOCON configuration](xref:Akka.Actor.BootstrapSetup):
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=MergedSetup)]
+
+And using the `ActorSystemSetup` produced by merged the `BootstrapSetup` and `SerializationSetup` together, we can create our `ActorSystem` and verify that the serialization bindings were configured correctly:
+
+[!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Verification)]
+
+And that's how you can configure Akka.NET serialization programmatically.
+
+> [!NOTE]
+> There are other parts of Akka.NET that are possible to configure programmatically via `ActorSystemSetup`. [Read more about them here](xref:configuration).
+
 ### Verification
 Normally, messages sent between local actors (i.e. same CLR) do not undergo serialization.
 For testing, it may be desirable to force serialization on all messages, both remote and local. 
@@ -125,24 +173,37 @@ So, to create a custom serializer, all that is needed is a class that inherits f
 ### Creating new Serializers
 A custom `Serializer` has to inherit from `Akka.Serialization.Serializer` and can be defined like this:
 
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/CreateCustomSerializer.cs?range=7-42)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/CreateCustomSerializer.cs?name=CustomSerialization)]
 
 The only thing left to do for this class would be to fill in the serialization logic in the ``ToBinary(object)`` method and the deserialization logic in the ``FromBinary(byte[], Type)``. 
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
+### Programatically change NewtonSoft JSON serializer settings
+You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
+
+Note that, while we try to keep everything to be compatible, there are no guarantee that your specific serializer settings use case is compatible with the rest of
+Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
+
+There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
+in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+object respectively.
+
 ### Serializer with String Manifest
 The `Serializer` illustrated above supports a class-based manifest (type hint). 
-For serialization of data that need to evolve over time, the `SerializerWithStringManifest` is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
+For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
 This means that the class can be moved/removed and the serializer can still deserialize old data by matching on the String. 
 This is especially useful for `Persistence`.
 
 The manifest string can also encode a version number that can be used in `FromBinary` to deserialize in different ways to migrate old data to new domain objects.
 
-If the data was originally serialized with `Serializer`, and in a later version of the system you change to `SerializerWithStringManifest`, the manifest string will be the full class name if you used `IncludeManifest=true`, otherwise it will be the empty string.
+If the data was originally serialized with `Serializer`, and in a later version of the system you change to [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest), the manifest string will be the full class name if you used `IncludeManifest=true`, otherwise it will be the empty string.
 
 This is how a `SerializerWithStringManifest` looks:
-[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/MyOwnSerializer2.cs?range=9-66)]
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/MyOwnSerializer2.cs?name=CustomSerialization)]
 
 You must also bind it to a name in your `Configuration` and then list which classes that should be serialized using it.
 
@@ -242,3 +303,80 @@ akka {
   }
 }
 ```
+
+## Cross platform serialization compatibility in Hyperion
+There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
+Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.
+
+There are two ways to set this up, one through the HOCON configuration file, and the other by using the `HyperionSerializerSetup` class.
+
+> [!NOTE]
+> Only the first successful name transformation is applied, the rest are ignored. 
+> If you are matching several similar names, make sure that you order them from the most specific match to the least specific one.
+
+### HOCON
+HOCON example:
+```
+akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides = {
+  netfx = [
+    {
+      fingerprint = "System.Private.CoreLib,%core%",
+      rename-from = "System.Private.CoreLib,%core%",
+      rename-to = "mscorlib,%core%"
+   }]
+  netcore = [
+    {
+      fingerprint = "mscorlib,%core%",
+      rename-from = "mscorlib,%core%",
+      rename-to = "System.Private.CoreLib,%core%"
+    }]
+  net = [
+    {
+      fingerprint = "mscorlib,%core%",
+      rename-from = "mscorlib,%core%",
+      rename-to = "System.Private.CoreLib,%core%"
+    }]
+}
+```
+
+In the example above, we're addressing the classic case where the core library name was changed between `mscorlib` in .NET Framework to `System.Private.CoreLib` in .NET Core.
+This transform is already included inside Hyperion as the default cross platform support, and used here as an illustration only. 
+
+The HOCON configuration section is composed of three object arrays named `netfx`, `netcore`, and `net`, each corresponds, respectively, to .NET Framework, .NET Core, and the new .NET 5.0 and beyond.
+The Hyperion serializer will automatically detects the platform it is running on currently and uses the correct array to use inside its deserializer. For example, if Hyperion detects 
+that it is running under .NET framework, then it will use the `netfx` array to do its deserialization transformation.
+
+The way it works that when the serializer detects that the type name contains the `fingerprint` string, it will replace the string declared in the `rename-from`
+property into the string declared in the `rename-to`.
+
+In code, we can write this behaviour as:
+```csharp
+if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
+```
+
+### HyperionSerializerSetup
+
+This behaviour can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+
+```csharp
+#if NETFRAMEWORK
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("System.Private.CoreLib,%core%")
+            ? str.Replace("System.Private.CoreLib,%core%", "mscorlib,%core%") : str
+    }
+#elif NETCOREAPP
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("mscorlib,%core%")
+            ? str.Replace("mscorlib,%core%", "System.Private.CoreLib,%core%") : str
+    }
+#endif
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+In the example above, we're using compiler directives to make sure that the correct name transform are used during compilation. 

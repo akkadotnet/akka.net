@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DotNettySslSupportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -120,8 +120,8 @@ namespace Akka.Remote.Tests.Transport
 
         private string Thumbprint { get; set; }
 
-        
-        
+
+
         [Fact]
         public void Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
@@ -131,8 +131,12 @@ namespace Akka.Remote.Tests.Transport
             Setup(ValidCertPath, Password);
 
             var probe = CreateTestProbe();
-            Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-            probe.ExpectMsg("hello");
+
+            AwaitAssert(() =>
+            {
+                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                probe.ExpectMsg("hello", TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
 
         [Fact]
@@ -145,8 +149,15 @@ namespace Akka.Remote.Tests.Transport
                 SetupThumbprint(ValidCertPath, Password);
 
                 var probe = CreateTestProbe();
-                Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
-                probe.ExpectMsg("hello");
+
+                Within(TimeSpan.FromSeconds(12), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        Sys.ActorSelection(echoPath).Tell("hello", probe.Ref);
+                        probe.ExpectMsg("hello", TimeSpan.FromMilliseconds(100));
+                    }, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
+                });
             }
             finally
             {
@@ -168,7 +179,7 @@ namespace Akka.Remote.Tests.Transport
         }
 
         #region helper classes / methods
-        
+
 
         protected override void Dispose(bool disposing)
         {
@@ -182,8 +193,7 @@ namespace Akka.Remote.Tests.Transport
 
         private void InstallCert()
         {
-            var store = new X509Store("My", StoreLocation.CurrentUser);
-            try
+            using (var store = new X509Store("My", StoreLocation.CurrentUser))
             {
                 store.Open(OpenFlags.ReadWrite);
 
@@ -192,25 +202,12 @@ namespace Akka.Remote.Tests.Transport
                 Thumbprint = cert.Thumbprint;
                 store.Add(cert);
             }
-            finally
-            {
-#if NET452 //netstandard 1.6 doesn't have close on store
-                store.Close();
-#else
-#endif
-            }
-
         }
-
 
         private void RemoveCert()
         {
-            var store = new X509Store("My", StoreLocation.CurrentUser);
-            try
+            using (var store = new X509Store("My", StoreLocation.CurrentUser))
             {
-
-
-                
                 store.Open(OpenFlags.ReadWrite);
                 var certs = store.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
                 if (certs.Count > 0)
@@ -218,14 +215,8 @@ namespace Akka.Remote.Tests.Transport
                     store.Remove(certs[0]);
                 }
             }
-            finally
-            {
-#if NET452 //NetStandard1.6 doesn't have close on store.
-                store.Close();
-#else
-#endif
-            }
         }
+
         public class Echo : ReceiveActor
         {
             public Echo()

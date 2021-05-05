@@ -1,0 +1,26 @@
+﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
+[assembly: System.Runtime.InteropServices.GuidAttribute("3cbd3880-0655-44cc-ad81-77e8cadfcc3e")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
+namespace Akka.Persistence.Query.Sql
+{
+    public class SqlReadJournal : Akka.Persistence.Query.IAllEventsQuery, Akka.Persistence.Query.ICurrentAllEventsQuery, Akka.Persistence.Query.ICurrentEventsByPersistenceIdQuery, Akka.Persistence.Query.ICurrentEventsByTagQuery, Akka.Persistence.Query.ICurrentPersistenceIdsQuery, Akka.Persistence.Query.IEventsByPersistenceIdQuery, Akka.Persistence.Query.IEventsByTagQuery, Akka.Persistence.Query.IPersistenceIdsQuery, Akka.Persistence.Query.IReadJournal
+    {
+        public static string Identifier;
+        public SqlReadJournal(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> AllEvents(Akka.Persistence.Query.Offset offset = null) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentAllEvents(Akka.Persistence.Query.Offset offset) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> CurrentEventsByTag(string tag, Akka.Persistence.Query.Offset offset = null) { }
+        public Akka.Streams.Dsl.Source<string, Akka.NotUsed> CurrentPersistenceIds() { }
+        public static Akka.Configuration.Config DefaultConfiguration() { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> EventsByPersistenceId(string persistenceId, long fromSequenceNr, long toSequenceNr) { }
+        public Akka.Streams.Dsl.Source<Akka.Persistence.Query.EventEnvelope, Akka.NotUsed> EventsByTag(string tag, Akka.Persistence.Query.Offset offset = null) { }
+        public Akka.Streams.Dsl.Source<string, Akka.NotUsed> PersistenceIds() { }
+    }
+    public class SqlReadJournalProvider : Akka.Persistence.Query.IReadJournalProvider
+    {
+        public SqlReadJournalProvider(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public Akka.Persistence.Query.IReadJournal GetReadJournal() { }
+    }
+}

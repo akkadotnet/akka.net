@@ -48,6 +48,8 @@
     href: actors/dispatchers.md
   - name: Mailboxes
     href: actors/mailboxes.md
+  - name: Scheduling Future and Recurring Messages
+    href: actors/schedulers.md
   - name: Inbox
     href: actors/inbox.md
   - name: Finite State Machines
@@ -62,6 +64,10 @@
     href: actors/testing-actor-systems.md
   - name: Coordinated Shutdown
     href: actors/coordinated-shutdown.md
+- name: HOCON
+  items:
+  - name: HOCON Syntax and Practices in Akka.NET
+    href: hocon/index.md
 - name: Persistence
   items: 
   - name: Architecture
@@ -148,6 +154,8 @@
     href: remoting/deathwatch.md
   - name: Network Security
     href: remoting/security.md
+  - name: Performance Optimization
+    href: remoting/performance.md
 - name: Clustering
   items:
   - name: Overview
@@ -166,6 +174,10 @@
     href: clustering/cluster-client.md
   - name: Cluster Sharding
     href: clustering/cluster-sharding.md
+  - name: Sharded Daemon Process
+    href: clustering/cluster-sharded-daemon-process.md
+  - name: Cluster Metrics
+    href: clustering/cluster-metrics.md
   - name: Distributed Data
     href: clustering/distributed-data.md
   - name: Split Brain Resolver
@@ -174,6 +186,8 @@
   items:
   - name: Multi-Node Testing Distributed Akka.NET Applications
     href: testing/multi-node-testing.md
+- name: Service Discovery
+  href: discovery/toc.yml
 - name: Utilities
   items:
   - name: Event Bus

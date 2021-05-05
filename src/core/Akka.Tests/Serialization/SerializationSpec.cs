@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SerializationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -408,7 +408,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_serialize_Config()
         {
-            var message = ConfigurationFactory.Default();
+            var message = ConfigurationFactory.Empty;
             var serializer = Sys.Serialization.FindSerializerFor(message);
             var serialized = serializer.ToBinary(message);
             var deserialized = (Config)serializer.FromBinary(serialized, typeof(Config));
@@ -515,9 +515,6 @@ namespace Akka.Tests.Serialization
             Assert.Equal(decider.DefaultDirective, sdecider.DefaultDirective);
         }
 
-
-        //TODO: find out why this fails on build server
-
         [Fact]
         public void Can_serialize_FutureActorRef()
         {
@@ -556,7 +553,7 @@ namespace Akka.Tests.Serialization
 
             var dummy2 = (DummyConfigurableSerializer) Sys.Serialization.GetSerializerById(-7);
             dummy2.Config.ShouldNotBe(null);
-            dummy2.Config.GetString("test-key").ShouldBe("test value");
+            dummy2.Config.GetString("test-key", null).ShouldBe("test value");
         }
 
 

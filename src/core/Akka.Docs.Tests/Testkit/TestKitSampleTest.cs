@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKitSampleTest.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Xunit;
@@ -6,6 +13,7 @@ using Xunit;
 namespace DocsExamples.Testkit
 {
 
+#region IntroSample_0
     public class SomeActor : ReceiveActor
     {
         IActorRef target = null;
@@ -63,4 +71,6 @@ namespace DocsExamples.Testkit
             }, EpsilonValueForWithins);
         }
     }
+#endregion IntroSample_0
+
 }

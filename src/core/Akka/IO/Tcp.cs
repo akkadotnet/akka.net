@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Tcp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ namespace Akka.IO
 
         #region internal connection messages
         
-        internal abstract class SocketCompleted { }
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded { }
 
         internal sealed class SocketSent : SocketCompleted
         {
@@ -1025,7 +1025,7 @@ namespace Akka.IO
                     {
                         context.System.EventStream.Publish(new Debug(child.Path.ToString(), GetType(), "Closed after handler termination"));
                     }
-                    catch (Exception _) { }
+                    catch (Exception) { }
                 }
                 else base.LogFailure(context, child, cause, directive);
             }
@@ -1044,13 +1044,13 @@ namespace Akka.IO
         internal TcpExt(ExtendedActorSystem system, TcpSettings settings)
         {
             var bufferPoolConfig = system.Settings.Config.GetConfig(settings.BufferPoolConfigPath);
-            if (bufferPoolConfig == null)
-                throw new ArgumentNullException(nameof(settings), $"Couldn't find a HOCON config for `{settings.BufferPoolConfigPath}`");
+
+            if (bufferPoolConfig.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve TCP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
 
             Settings = settings;
             FileIoDispatcher = system.Dispatchers.Lookup(Settings.FileIODispatcher);
             BufferPool = CreateBufferPool(system, bufferPoolConfig);
-            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(settings.InitialSocketAsyncEventArgs, OnComplete);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new TcpManager(this)).WithDispatcher(Settings.ManagementDispatcher).WithDeploy(Deploy.Local),
                 name: "IO-TCP");
@@ -1074,16 +1074,14 @@ namespace Akka.IO
         /// <summary>
         /// TBD
         /// </summary>
-        internal ISocketEventArgsPool SocketEventArgsPool { get; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
         internal MessageDispatcher FileIoDispatcher { get; }
 
         private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
-            var type = Type.GetType(config.GetString("class"), true);
+            if (config.IsNullOrEmpty())
+                throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
+
+            var type = Type.GetType(config.GetString("class", null), true);
 
             if (!typeof(IBufferPool).IsAssignableFrom(type))
                 throw new ArgumentException($"Buffer pool of type {type} doesn't implement {nameof(IBufferPool)} interface");
@@ -1097,35 +1095,6 @@ namespace Akka.IO
             {
                 // try to construct via `BufferPool(ExtendedActorSystem)` ctor
                 return (IBufferPool)Activator.CreateInstance(type, system);
-            }
-        }
-
-        private static void OnComplete(object sender, SocketAsyncEventArgs e)
-        {
-            var actorRef = e.UserToken as IActorRef;
-            actorRef?.Tell(ResolveMessage(e));
-        }
-
-        // Disabled pending resolution: https://github.com/akkadotnet/akka.net/issues/3092
-        // [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Tcp.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
-        {
-            switch (e.LastOperation)
-            {
-                case SocketAsyncOperation.Receive:
-                case SocketAsyncOperation.ReceiveFrom:
-                case SocketAsyncOperation.ReceiveMessageFrom:
-                    return Tcp.SocketReceived.Instance;
-                case SocketAsyncOperation.Send:
-                case SocketAsyncOperation.SendTo:
-                case SocketAsyncOperation.SendPackets:
-                    return Tcp.SocketSent.Instance;
-                case SocketAsyncOperation.Accept:
-                    return Tcp.SocketAccepted.Instance;
-                case SocketAsyncOperation.Connect:
-                    return Tcp.SocketConnected.Instance;
-                default:
-                    throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
             }
         }
     }

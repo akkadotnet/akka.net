@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterReadView.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Akka.Cluster
 {
     /// <summary>
     /// INTERNAL API
-    /// 
+    ///
     /// Read view of the cluster's state, updated via subscription of
     /// cluster events published on the <see cref="EventBus{TEvent,TClassifier,TSubscriber}"/>.
     /// </summary>
@@ -153,6 +153,12 @@ namespace Akka.Cluster
                             readView._latestStats = stats;
                         })
                         .With<ClusterEvent.ClusterShuttingDown>(_ => { });
+
+                    // once captured, optional verbose logging of event
+                    if (!(clusterDomainEvent is ClusterEvent.SeenChanged) && _cluster.Settings.LogInfoVerbose)
+                    {
+                        _cluster.LogInfo("event {0}", clusterDomainEvent.GetType().Name);
+                    }
                 });
 
                 Receive<ClusterEvent.CurrentClusterState>(state =>
@@ -164,7 +170,7 @@ namespace Akka.Cluster
             protected override void PreStart()
             {
                 //subscribe to all cluster domain events
-                _cluster.Subscribe(Self, new []{ typeof(ClusterEvent.IClusterDomainEvent) });
+                _cluster.Subscribe(Self, new[] { typeof(ClusterEvent.IClusterDomainEvent) });
             }
 
             protected override void PostStop()
@@ -182,7 +188,7 @@ namespace Akka.Cluster
             get
             {
                 return _state.Members.SingleOrDefault(member => member.UniqueAddress == _cluster.SelfUniqueAddress)
-                        ?? Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles).Copy(MemberStatus.Removed);
+                        ?? Member.Create(_cluster.SelfUniqueAddress, _cluster.SelfRoles, _cluster.Settings.AppVersion).Copy(MemberStatus.Removed);
             }
         }
 
@@ -209,7 +215,7 @@ namespace Akka.Cluster
 
         /// <summary>
         /// <see cref="MemberStatus"/> for this node.
-        /// 
+        ///
         /// NOTE: If the node has been removed from the cluster (and shut down) then it's status is set to the 'REMOVED' tombstone state
         /// and is no longer present in the node ring or any other part of the gossiping state. However in order to maintain the
         /// model and the semantics the user would expect, this method will in this situation return <see cref="MemberStatus.Removed"/>.
@@ -279,9 +285,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
+        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a
         /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
+        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only
         /// unmanaged resources can be disposed.</param>
         protected virtual void Dispose(bool disposing)
         {

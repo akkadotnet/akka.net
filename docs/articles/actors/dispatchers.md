@@ -70,9 +70,11 @@ system.ActorOf(Props.Create<MyActor>().WithDispatcher("my-dispatcher"), "my-acto
 Some dispatcher configurations are available out-of-the-box for convenience. You can use them during actor deployment, [as described above](#configuring-dispatchers).
 
 * **default-dispatcher** - A configuration that uses the [ThreadPoolDispatcher](#threadpooldispatcher). As the name says, this is the default dispatcher configuration used by the global dispatcher, and you don't need to define anything during deployment to use it.
+* **internal-dispatcher** - To protect the internal Actors that is spawned by the various Akka modules, a separate internal dispatcher is used by default.
 * **task-dispatcher** - A configuration that uses the [TaskDispatcher](#taskdispatcher).
 * **default-fork-join-dispatcher** - A configuration that uses the [ForkJoinDispatcher](#forkjoindispatcher).
 * **synchronized-dispatcher** - A configuration that uses the [SynchronizedDispatcher](#synchronizeddispatcher).
+* **channel-executor** - new as of v1.4.19, the [`ChannelExecutor`](#channelexecutor) is used to run on top of the .NET `ThreadPool` and allow Akka.NET to dynamically scale thread usage up and down with demand in exchange for better CPU and throughput performance.
 
 ## Built-in Dispatchers
 
@@ -164,6 +166,63 @@ private void Form1_Load(object sender, System.EventArgs e)
 }
 ```
 
+### `ChannelExecutor`
+In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
+
+During its initial development and benchmarks, we observed the following:
+
+1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today. However, **in order for this setting to be effective `ThreadPool.SetMin(0,0)` must also be set**. We are considering doing this inside the `ActorSystem.Create` method, those settings don't work for you you can easily override them by simply calling `ThreadPool.SetMin(yourValue, yourValue)` again after `ActorSystem.Create` has exited.
+2. The `ChannelExecutor` actually beat the `ForkJoinDispatcher` and others on performance even in environments like Docker and bare metal on Windows.
+
+> [!NOTE]
+> We are in the process of gathering data from users on how well `ChannelExecutor` performs in the real world. If you are interested in trying out the `ChannelExecutor`, please read the directions in this document and then comment on [the "Akka.NET v1.4.19: ChannelExecutor performance data" discussion thread](https://github.com/akkadotnet/akka.net/discussions/4983).
+
+The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecutor` to determine its effective upper and lower parallelism limits, and you can configure the `ChannelExecutor` to run inside your `ActorSystem` via the following HOCON configuration:
+
+```
+akka.actor.default-dispatcher = {
+    executor = channel-executor
+    fork-join-executor { #channelexecutor will re-use these settings
+      parallelism-min = 2
+      parallelism-factor = 1
+      parallelism-max = 64
+    }
+}
+
+akka.actor.internal-dispatcher = {
+    executor = channel-executor
+    throughput = 5
+    fork-join-executor {
+      parallelism-min = 4
+      parallelism-factor = 1.0
+      parallelism-max = 64
+    }
+}
+
+akka.remote.default-remote-dispatcher {
+    type = Dispatcher
+    executor = channel-executor
+    fork-join-executor {
+      parallelism-min = 2
+      parallelism-factor = 0.5
+      parallelism-max = 16
+    }
+}
+
+akka.remote.backoff-remote-dispatcher {
+  executor = channel-executor
+  fork-join-executor {
+    parallelism-min = 2
+    parallelism-max = 2
+  }
+}
+```
+
+This will enable the `ChannelExecutor` to run everywhere and all Akka.NET loads, with the exception of anything you manually allocate onto a `ForkJoinDispatcher` or `PinnedDispatcher`, will be managed by the `ThreadPool`.
+
+> [!IMPORTANT]
+> As of Akka.NET v1.4.19, we call `ThreadPool.SetMinThreads(0,0)` inside the `ActorSystem.Create` method as we've found that the default `ThreadPool` minimum values have a negative impact on performance. However, if this causes undesireable side effects for you inside your application you can always override those settings by calling `ThreadPool.SetMinThreads(yourValue, yourValue)` again after you've created your `ActorSystem`.
+
 #### Common Dispatcher Configuration
 
 The following configuration keys are available for any dispatcher configuration:
@@ -174,3 +233,10 @@ The following configuration keys are available for any dispatcher configuration:
 
 > [!NOTE]
 > The throughput-deadline-time is used as a *best effort*, not as a *hard limit*. This means that if a message takes more time than the deadline allows, Akka.NET won't interrupt the process. Instead it will wait for it to finish before giving turn to the next actor.
+
+## Dispatcher aliases
+
+When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block, 
+the lookup will treat it as an alias, and follow that string to an alternate location for a dispatcher config.
+If the dispatcher config is referenced both through an alias and through the absolute path only one dispatcher will
+be used and shared among the two ids.

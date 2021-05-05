@@ -1,21 +1,24 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serialization.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
+using Akka.Configuration;
 
 namespace Akka.Serialization
 {
@@ -78,6 +81,28 @@ namespace Akka.Serialization
     public class Serialization
     {
         /// <summary>
+        /// Used to determine the manifest for a message, if applicable.
+        /// </summary>
+        /// <param name="s">The serializer we want to use on the message.</param>
+        /// <param name="msg">The message payload.</param>
+        /// <returns>A populated string is applicable; <see cref="string.Empty"/> otherwise.</returns>
+        /// <remarks>
+        /// WARNING: if you change this method it's likely that the DaemonMsgCreateSerializer and other calls will need changes too.
+        /// </remarks>
+        public static string ManifestFor(Serializer s, object msg)
+        {
+            switch (s)
+            {
+                case SerializerWithStringManifest s2:
+                    return s2.Manifest(msg);
+                case Serializer s3 when s3.IncludeManifest:
+                    return msg.GetType().TypeQualifiedName();
+                default:
+                    return string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
         [ThreadStatic]
@@ -121,6 +146,8 @@ namespace Akka.Serialization
         private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
         private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
 
+        private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
+
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
         /// locating a Serializer for a particular class as defined in the mapping in the configuration.
@@ -136,6 +163,9 @@ namespace Akka.Serialization
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
             var serializerSettingsConfig = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
 
+            _serializerDetails = system.Settings.Setup.Get<SerializationSetup>()
+                .Select(x => x.CreateSerializers(system)).GetOrElse(ImmutableHashSet<SerializerDetails>.Empty);
+
             foreach (var kvp in serializersConfig)
             {
                 var serializerTypeName = kvp.Value.GetString();
@@ -148,11 +178,18 @@ namespace Akka.Serialization
 
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
-                var serializer = serializerConfig != null
+                var serializer = !serializerConfig.IsNullOrEmpty()
                     ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
                     : (Serializer)Activator.CreateInstance(serializerType, system);
 
                 AddSerializer(kvp.Key, serializer);
+            }
+
+            // Add any serializers that are registered via the SerializationSetup
+            // This has to be done here because SerializationSetup ALWAYS win.
+            foreach (var details in _serializerDetails)
+            {
+                AddSerializer(details.Alias, details.Serializer);
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -168,14 +205,23 @@ namespace Akka.Serialization
                     continue;
                 }
 
-
                 if (!_serializersByName.TryGetValue(serializerName, out var serializer))
                 {
                     system.Log.Warning("Serialization binding to non existing serializer: '{0}'", serializerName);
                     continue;
                 }
-
                 AddSerializationMap(messageType, serializer);
+            }
+
+            // Add any serializer bindings that are registered via the SerializationSetup
+            // This has to be done here because SerializationSetup ALWAYS win.
+            foreach (var details in _serializerDetails)
+            {
+                // populate the serialization map
+                foreach (var t in details.UseFor)
+                {
+                    AddSerializationMap(t, details.Serializer);
+                }
             }
         }
 
@@ -204,6 +250,38 @@ namespace Akka.Serialization
             {
                 CurrentTransportInformation = info;
                 return action();
+            }
+            finally
+            {
+                CurrentTransportInformation = oldInfo;
+            }
+        }
+
+        /// <summary>
+        /// Performs the requested serialization function while also setting
+        /// the <see cref="CurrentTransportInformation"/> based on available data
+        /// from the <see cref="ActorSystem"/>. Useful when serializing <see cref="IActorRef"/>s.
+        /// </summary>
+        /// <typeparam name="T">The type of message being serialized.</typeparam>
+        /// <typeparam name="TState">The type of caller input state to be used in the function</typeparam>
+        /// <param name="system">The <see cref="ActorSystem"/> performing serialization.</param>
+        /// <param name="state">the other input state to be passed in to the serialization function</param>
+        /// <param name="action">The serialization function.</param>
+        /// <returns>The serialization output.</returns>
+        public static T WithTransport<TState, T>(ExtendedActorSystem system, TState state, Func<TState, T> action)
+        {
+            var info = system.Provider.SerializationInformation;
+            if (CurrentTransportInformation == info)
+            {
+                // already set
+                return action(state);
+            }
+
+            var oldInfo = CurrentTransportInformation;
+            try
+            {
+                CurrentTransportInformation = info;
+                return action(state);
             }
             finally
             {

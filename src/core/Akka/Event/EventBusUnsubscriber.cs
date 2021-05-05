@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EventBusUnsubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
+using Akka.Dispatch;
 using Akka.Util.Internal;
 
 namespace Akka.Event
@@ -176,7 +177,7 @@ namespace Akka.Event
         /// <param name="debug">TBD</param>
         public void Start(ActorSystemImpl system, EventStream eventStream, bool debug)
         {
-            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug),
+            system.SystemActorOf(Props.Create<EventStreamUnsubscriber>(eventStream, system, debug).WithDispatcher(Dispatchers.InternalDispatcherId),
                 string.Format("EventStreamUnsubscriber-{0}", _unsubscribersCounter.IncrementAndGet()));
         }
     }

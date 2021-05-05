@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGracefulShutdownSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ namespace Akka.Cluster.Sharding.Tests
     public class DDataClusterShardingGracefulShutdownSpec : ClusterShardingGracefulShutdownSpec
     {
         public DDataClusterShardingGracefulShutdownSpec() : this(new DDataClusterShardingGracefulShutdownSpecConfig()) { }
-        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(PersistentClusterShardingGracefulShutdownSpec)) { }
+        protected DDataClusterShardingGracefulShutdownSpec(DDataClusterShardingGracefulShutdownSpecConfig config) : base(config, typeof(DDataClusterShardingGracefulShutdownSpec)) { }
     }
     public abstract class ClusterShardingGracefulShutdownSpec : MultiNodeClusterSpec
     {
@@ -124,7 +124,7 @@ namespace Akka.Cluster.Sharding.Tests
             _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Sharding.Tests
             EnterBarrier("startup");
         }
         protected bool IsDDataMode { get; }
-        
+
         protected override void AfterTermination()
         {
             base.AfterTermination();
@@ -154,16 +154,16 @@ namespace Akka.Cluster.Sharding.Tests
             RunOn(() =>
             {
                 Cluster.Join(GetAddress(to));
-                StartSharding();
+                StartSharding("Entity");
             }, from);
             EnterBarrier(from.Name + "-joined");
         }
 
-        private void StartSharding()
+        private IActorRef StartSharding(string typeName)
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
-            ClusterSharding.Get(Sys).Start(
-                typeName: "Entity",
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
+            return ClusterSharding.Get(Sys).Start(
+                typeName: typeName,
                 entityProps: Props.Create<Entity>(),
                 settings: ClusterShardingSettings.Create(Sys),
                 extractEntityId: extractEntityId,
@@ -280,15 +280,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 RunOn(() =>
                 {
-                    var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
-                    var regionEmpty = ClusterSharding.Get(Sys).Start(
-                        typeName: "EntityEmpty",
-                        entityProps: Props.Create<Entity>(),
-                        settings: ClusterShardingSettings.Create(Sys),
-                        extractEntityId: extractEntityId,
-                        extractShardId: extractShardId,
-                        allocationStrategy: allocationStrategy,
-                        handOffStopMessage: StopEntity.Instance);
+                    var regionEmpty = StartSharding(typeName: "EntityEmpty");
 
                     Watch(regionEmpty);
                     regionEmpty.Tell(GracefulShutdown.Instance);

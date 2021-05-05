@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorsLeakSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
@@ -26,7 +27,7 @@ namespace Akka.Remote.Tests
     {
         public static readonly Config Confg = ConfigurationFactory.ParseString(@"
             akka.actor.provider = remote
-            akka.loglevel = DEBUG
+            akka.loglevel = INFO
             akka.remote.dot-netty.tcp.applied-adapters = [trttl]
             akka.remote.dot-netty.tcp.hostname = 127.0.0.1
             akka.remote.log-lifecycle-events = on
@@ -148,9 +149,11 @@ namespace Akka.Remote.Tests
                     Sys.ActorSelection(new RootActorPath(remoteAddress) / "user" / "stoppable").Tell(new Identify(1));
                     ExpectMsg<ActorIdentity>().Subject.ShouldNotBe(null);
 
-                    var afterQuarantineActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
-
-                    AssertActors(beforeQuarantineActors, afterQuarantineActors);
+                    AwaitAssert(() =>
+                    {
+                        var afterQuarantineActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
+                        AssertActors(beforeQuarantineActors, afterQuarantineActors);
+                    }, TimeSpan.FromSeconds(10));
                 }
                 finally
                 {

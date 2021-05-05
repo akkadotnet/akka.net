@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowScanAsyncSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,7 +68,7 @@ namespace Akka.Streams.Tests.Dsl
             eventualActual.AwaitResult().ShouldBe(expectedSum);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void A_ScanAsync_must_work_with_slow_tasks()
         {
             var delay = TimeSpan.FromMilliseconds(500);

@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PluginSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
@@ -27,9 +28,25 @@ namespace Akka.Persistence.TCK
             WriterGuid = Guid.NewGuid().ToString();
         }
 
+        protected PluginSpec(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(setup, actorSystemName, output)
+        {
+            Extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
+            Pid = "p-" + Counter.IncrementAndGet();
+            WriterGuid = Guid.NewGuid().ToString();
+        }
+
+        protected PluginSpec(ActorSystem system = null, ITestOutputHelper output = null)
+            : base(system, output)
+        {
+            Extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
+            Pid = "p-" + Counter.IncrementAndGet();
+            WriterGuid = Guid.NewGuid().ToString();
+        }
+
         protected static Config FromConfig(Config config = null)
         {
-            return config == null
+            return config.IsNullOrEmpty()
                 ? Persistence.DefaultConfig()
                 : config.WithFallback(Persistence.DefaultConfig());
         }

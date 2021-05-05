@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorModelSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,12 +21,17 @@ using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor.Dispatch
 {
     public abstract class ActorModelSpec : AkkaSpec
     {
-        protected ActorModelSpec(Config hocon) : base(hocon) { }
+        private readonly ITestOutputHelper _testOutputHelper;
+        protected ActorModelSpec(Config hocon, ITestOutputHelper output = null) : base(hocon, output)
+        {
+            _testOutputHelper = output;
+        }
 
         interface IActorModelMessage : INoSerializationVerificationNeeded { }
 
@@ -168,6 +173,13 @@ namespace Akka.Tests.Actor.Dispatch
             public static readonly DoubleStop Instance = new DoubleStop();
         }
 
+        private class GetStats : IActorModelMessage
+        {
+            private GetStats(){}
+
+            public static readonly GetStats Instance = new GetStats();
+        }
+
         sealed class ThrowException : IActorModelMessage
         {
             public ThrowException(Exception e)
@@ -184,7 +196,7 @@ namespace Akka.Tests.Actor.Dispatch
         class DispatcherActor : ReceiveActor
         {
             private Switch _busy = new Switch(false);
-
+            private readonly ILoggingAdapter _log = Context.GetLogger();
             private MessageDispatcherInterceptor _interceptor = Context.Dispatcher.AsInstanceOf<MessageDispatcherInterceptor>();
 
             private void Ack()
@@ -219,13 +231,14 @@ namespace Akka.Tests.Actor.Dispatch
                 Receive<CountDownNStop>(countDown => { Ack(); countDown.Latch.Signal(); Context.Stop(Self); _busy.SwitchOff(); });
                 Receive<Restart>(restart => { Ack(); _busy.SwitchOff(); throw new Exception("restart requested"); }, restart => true); // had to add predicate for compiler magic
                 Receive<Interrupt>(interrupt => { Ack(); Sender.Tell(new Status.Failure(new ActorInterruptedException(cause: new Exception(Ping)))); _busy.SwitchOff(); throw new Exception(Ping); }, interrupt => true);
-#if UNSAFE_THREADING
-                Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); Thread.CurrentThread.Interrupt(); });
-#else
                 Receive<InterruptNicely>(interrupt => { Ack(); Sender.Tell(interrupt.Expect); _busy.SwitchOff(); });
-#endif
                 Receive<ThrowException>(throwEx => { Ack(); _busy.SwitchOff(); throw throwEx.E; }, throwEx => true);
                 Receive<DoubleStop>(doubleStop => { Ack(); Context.Stop(Self); Context.Stop(Self); _busy.SwitchOff(); });
+                Receive<GetStats>(stats => {
+                    Ack();
+                    Sender.Tell(_interceptor.GetStats(Self));
+                    _busy.SwitchOff();
+                });
             }
         }
 
@@ -304,12 +317,15 @@ namespace Akka.Tests.Actor.Dispatch
 
             public MessageDispatcherInterceptorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
             {
+                if (config.IsNullOrEmpty())
+                    throw ConfigurationException.NullOrEmptyConfig<MessageDispatcherInterceptorConfigurator>();
+
                 _instance = new MessageDispatcherInterceptor(this,
-                    config.GetString("id"),
-                    config.GetInt("throughput"),
-                    config.GetTimeSpan("throughput-deadline-time").Ticks,
+                    config.GetString("id", null),
+                    config.GetInt("throughput", 0),
+                    config.GetTimeSpan("throughput-deadline-time", null).Ticks,
                     ConfigureExecutor(),
-                    Config.GetTimeSpan("shutdown-timeout"));
+                    Config.GetTimeSpan("shutdown-timeout", null));
             }
 
             public override MessageDispatcher Dispatcher()
@@ -475,7 +491,7 @@ namespace Akka.Tests.Actor.Dispatch
             AssertRefDefaultZero(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, unregisters: 1, dispatcher: dispatcher);
         }
 
-        [Fact(Skip = "Racy on Azure DevOps")]
+        [Fact]
         public void A_dispatcher_must_handle_queuing_from_multiple_threads()
         {
             var dispatcher = InterceptedDispatcher();
@@ -488,14 +504,26 @@ namespace Akka.Tests.Actor.Dispatch
                 {
                     foreach (var c in Enumerable.Range(1, 20))
                     {
-                        a.Tell(new WaitAck(1, counter));
+                        a.Tell(new CountDown(counter));
                     }
                 });
             }
 
-            AssertCountdown(counter, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should process 200 messages");
-            AssertRefDefaultZero(a, dispatcher, registers: 1, msgsReceived: 200, msgsProcessed: 200);
-            Sys.Stop(a);
+            try
+            {
+                AssertCountdown(counter, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds,
+                    "Should process 200 messages");
+                AssertRefDefaultZero(a, dispatcher, registers: 1, msgsReceived: 200, msgsProcessed: 200);
+            }
+            finally
+            {
+                var stats = a.Ask<InterceptorStats>(GetStats.Instance).Result;
+                _testOutputHelper.WriteLine("Observed stats: {0}", stats);
+
+                Sys.Stop(a);
+            }
+           
+            
         }
 
         [Fact]
@@ -644,7 +672,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         ";
 
-        public DispatcherModelSpec() : base(DispatcherHocon) { }
+        public DispatcherModelSpec(ITestOutputHelper output) : base(DispatcherHocon, output) { }
 
         protected override MessageDispatcherInterceptor InterceptedDispatcher()
         {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LoggerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,6 +17,8 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using Akka.Configuration;
+using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Tests.Event
 {
@@ -115,9 +117,12 @@ namespace Akka.Tests.Event
             system.EventStream.Subscribe(TestActor, typeof(Debug));
             await system.Terminate();
 
-            var shutdownInitiated = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
-            shutdownInitiated.Message.ShouldBe("System shutdown initiated");
-
+            await AwaitAssertAsync(() =>
+            {
+                var shutdownInitiated = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
+                shutdownInitiated.Message.ShouldBe("System shutdown initiated");
+            });
+            
             var loggerStarted = ExpectMsg<Debug>(TestKitSettings.DefaultTimeout);
             loggerStarted.Message.ShouldBe("Shutting down: StandardOutLogger started");
             loggerStarted.LogClass.ShouldBe(typeof(EventStream));

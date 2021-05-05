@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InactiveEntityPassivationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -16,6 +17,7 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {
@@ -94,15 +96,15 @@ namespace Akka.Cluster.Sharding.Tests
         private readonly ExtractShardId _extractShard = message =>
             message is int msg ? (msg % 10).ToString(CultureInfo.InvariantCulture) : null;
 
-        public AbstractInactiveEntityPassivationSpec(Config config)
-            : base(config.WithFallback(GetConfig()))
+        public AbstractInactiveEntityPassivationSpec(Config config, ITestOutputHelper helper)
+            : base(config.WithFallback(GetConfig()), helper)
         {
         }
 
         public static Config GetConfig()
         {
             return ConfigurationFactory.ParseString(@"
-                akka.loglevel = INFO
+                akka.loglevel = DEBUG
                 akka.actor.provider = cluster
                 akka.cluster.sharding.passivate-idle-entity-after = 3s
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
@@ -127,24 +129,30 @@ namespace Akka.Cluster.Sharding.Tests
                 Passivate.Instance);
         }
 
-        protected TimeSpan TimeUntilPassivate(IActorRef region, TestProbe probe)
+        protected async Task<TimeSpan> TimeUntilPassivate(IActorRef region, TestProbe probe)
         {
-            region.Tell(1);
-            region.Tell(2);
-            var responses = new[]
+            Entity.GotIt[] responses = null;
+            await AwaitAssertAsync(() =>
             {
-                probe.ExpectMsg<Entity.GotIt>(),
-                probe.ExpectMsg<Entity.GotIt>()
-            };
-            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+                region.Tell(1);
+                region.Tell(2);
+                
+                responses = new[]
+                {
+                    probe.ExpectMsg<Entity.GotIt>(),
+                    probe.ExpectMsg<Entity.GotIt>()
+                };
+                responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+            }, TimeSpan.FromSeconds(20));
+            
             var timeOneSawMessage = responses.Single(r => r.Id == "1").When;
 
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
             region.Tell(2);
-            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
-            Thread.Sleep(1000);
+            probe.ExpectMsg<Entity.GotIt>(TimeSpan.FromSeconds(10)).Id.ShouldBe("2");
+            await Task.Delay(1000);
             region.Tell(2);
-            probe.ExpectMsg<Entity.GotIt>().Id.ShouldBe("2");
+            probe.ExpectMsg<Entity.GotIt>(TimeSpan.FromSeconds(10)).Id.ShouldBe("2");
 
             var timeSinceOneSawAMessage = DateTime.Now.Ticks - timeOneSawMessage;
             return settings.PassivateIdleEntityAfter - TimeSpan.FromTicks(timeSinceOneSawAMessage) + smallTolerance;
@@ -153,46 +161,51 @@ namespace Akka.Cluster.Sharding.Tests
 
     public class InactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
     {
-        public InactiveEntityPassivationSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"))
+        public InactiveEntityPassivationSpec(ITestOutputHelper helper)
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = 3s"), helper)
         {
         }
 
         [Fact]
-        public void Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
+        public async Task Passivation_of_inactive_entities_must_passivate_entities_when_they_have_not_seen_messages_for_the_configured_duration()
         {
             var probe = CreateTestProbe();
             var region = Start(probe);
 
             // make sure "1" hasn't seen a message in 3 seconds and passivates
-            probe.ExpectNoMsg(TimeUntilPassivate(region, probe));
+            var time = await TimeUntilPassivate(region, probe);
+            probe.ExpectNoMsg(time);
 
-            // but it can be re activated
-            region.Tell(1);
-            region.Tell(2);
-
-            var responses = new[]
+            await AwaitAssertAsync(() =>
             {
-                probe.ExpectMsg<Entity.GotIt>(),
-                probe.ExpectMsg<Entity.GotIt>()
-            };
-            responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+                // but it can be re activated
+                region.Tell(1);
+                region.Tell(2);
+                
+                var responses = new[]
+                {
+                    probe.ExpectMsg<Entity.GotIt>(),
+                    probe.ExpectMsg<Entity.GotIt>()
+                };
+                responses.Select(r => r.Id).Should().BeEquivalentTo("1", "2");
+            }, TimeSpan.FromSeconds(20));
         }
     }
 
     public class DisabledInactiveEntityPassivationSpec : AbstractInactiveEntityPassivationSpec
     {
-        public DisabledInactiveEntityPassivationSpec()
-            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"))
+        public DisabledInactiveEntityPassivationSpec(ITestOutputHelper helper)
+            : base(ConfigurationFactory.ParseString(@"akka.cluster.sharding.passivate-idle-entity-after = off"), helper)
         {
         }
 
         [Fact]
-        public void Passivation_of_inactive_entities_must_not_passivate_when_passivation_is_disabled()
+        public async Task Passivation_of_inactive_entities_must_not_passivate_when_passivation_is_disabled()
         {
             var probe = CreateTestProbe();
             var region = Start(probe);
-            probe.ExpectNoMsg(TimeUntilPassivate(region, probe));
+            var time = await TimeUntilPassivate(region, probe);
+            probe.ExpectNoMsg(time);
         }
     }
 }

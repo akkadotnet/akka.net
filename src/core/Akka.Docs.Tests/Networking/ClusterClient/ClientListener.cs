@@ -1,9 +1,17 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ClientListener.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.Cluster.Tools.Client;
 using System.Collections.Immutable;
 
 namespace DocsExamples.Networking.ClusterClient
 {
+    #region ClusterClient
     public class ClientListener : UntypedActor
     {
         private readonly IActorRef _targetClient;
@@ -45,4 +53,5 @@ namespace DocsExamples.Networking.ClusterClient
             };
         }
     }
+    #endregion
 }

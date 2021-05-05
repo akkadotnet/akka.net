@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Serializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Util;
+using Akka.Configuration;
 
 namespace Akka.Serialization
 {
@@ -186,6 +187,10 @@ namespace Akka.Serialization
         public static int GetSerializerIdentifierFromConfig(Type type, ExtendedActorSystem system)
         {
             var config = system.Settings.Config.GetConfig(SerializationIdentifiers);
+            /*
+            if (config.IsNullOrEmpty())
+                throw new ConfigurationException($"Cannot retrieve serialization identifier informations: {SerializationIdentifiers} configuration node not found");
+            */
             var identifiers = config.AsEnumerable()
                 .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
 

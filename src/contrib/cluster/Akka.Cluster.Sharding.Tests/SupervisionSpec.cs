@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -133,9 +133,18 @@ namespace Akka.Cluster.Sharding.Tests
             region.Tell(new Msg(10, "passivate"));
             ExpectTerminated(response.Self);
 
-            // This would fail before as sharded actor would be stuck passivating
-            region.Tell(new Msg(10, "hello"));
-            ExpectMsg<Response>(TimeSpan.FromSeconds(20));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                // This would fail before as sharded actor would be stuck passivating
+                // Need to use AwaitAssert here - message can be sent the the BackOffSupervisor, which is now
+                // terminating but still alive, but its child (the ultimate recipient of the message) is dead
+                // and this message will go to DeadLetters.
+                AwaitAssert(() =>
+                {
+                    region.Tell(new Msg(10, "hello"));
+                    ExpectMsg<Response>();
+                });
+            });
         }
     }
 }

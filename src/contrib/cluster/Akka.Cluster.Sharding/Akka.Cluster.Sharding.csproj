@@ -4,7 +4,6 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.Cluster.Sharding</AssemblyTitle>
     <Description>Sharded actors with managed lifecycle for Akka.NET cluster</Description>
-    <VersionSuffix>beta</VersionSuffix>
     <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
     <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -12,20 +11,12 @@
 
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
+    <ProjectReference Include="..\..\..\core\Akka.Coordination\Akka.Coordination.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
+    <ProjectReference Include="..\Akka.DistributedData.LightningDB\Akka.DistributedData.LightningDB.csproj" />
     <ProjectReference Include="..\Akka.DistributedData\Akka.DistributedData.csproj" />
   </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkLibVersion)' ">
-    <DefineConstants>$(DefineConstants);SERIALIZATION</DefineConstants>
-  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>

@@ -9,7 +9,7 @@ Cluster sharding is useful in cases when you want to contact with cluster actors
 Cluster sharding can operate in 2 modes, configured via `akka.cluster.sharding.state-store-mode` HOCON configuration:
 
 1. `persistence` (**default**) depends on Akka.Persistence module. In order to use it, you'll need to specify an event journal accessible by all of the participating nodes. An information about the particular shard placement is stored in a persistent cluster singleton actor known as *coordinator*. In order to guarantee consistent state between different incarnations, coordinator stores its own state using Akka.Persistence event journals.
-2. `ddata` (**experimental**, available in versions above 1.3.2) depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventually consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured. At this moment this mode doesn't support `akka.cluster.sharding.remember-entities` option.
+2. `ddata` depends on Akka.DistributedData module. It uses Conflict-free Replicated Data Types (CRDT) to ensure eventually consistent shard placement and global availability via node-to-node replication and automatic conflict resolution. In this mode event journals don't have to be configured. 
 
 Cluster sharding may be active only on nodes in `Up` status - so the ones fully recognized and acknowledged by every other node in a cluster.
 
@@ -82,7 +82,7 @@ To reduce memory consumption, you may decide to stop entities after some period 
 
 ### Automatic Passivation
 
-The entities can be configured to be automatically passivated if they haven't received a message for a while using the `akka.cluster.sharding.passivate-idle-entity-after` setting, or by explicitly setting `ClusterShardingSettings.PassivateIdleEntityAfter` to a suitable time to keep the actor alive. Note that only messages sent through sharding are counted, so direct messages to the `ActorRef` of the actor or messages that it sends to itself are not counted as activity. Passivation can be disabled by setting `akka.cluster.sharding.passivate-idle-entity-after = off`. It is always disabled if @ref:[Remembering Entities](#remembering-entities) is enabled.
+The entities can be configured to be automatically passivated if they haven't received a message for a while using the `akka.cluster.sharding.passivate-idle-entity-after` setting, or by explicitly setting `ClusterShardingSettings.PassivateIdleEntityAfter` to a suitable time to keep the actor alive. Note that only messages sent through sharding are counted, so direct messages to the `ActorRef` of the actor or messages that it sends to itself are not counted as activity. Passivation can be disabled by setting `akka.cluster.sharding.passivate-idle-entity-after = off`. It is always disabled if [Remembering Entities](#remembering-entities) is enabled.
 
 ## Remembering entities
 
@@ -115,6 +115,43 @@ public sealed class MessageExtractor : HashCodeMessageExtractor
 
 Using `ShardRegion.StartEntity` implies, that you're able to infer a shard id given an entity id alone. For this reason, in example above we modified a cluster sharding routing logic to make use of `HashCodeMessageExtractor` - in this variant, shard id doesn't have to be provided explicitly, as it will be computed from the hash of entity id itself. Notice a `maxNumberOfShards`, which is the maximum available number of shards allowed for this type of an actor - this value must never change during a single lifetime of a cluster. 
 
+### Terminating remembered entities
+One complication that  `akka.cluster.sharding.remember-entities = true` introduces is that your sharded entity actors can no longer be terminated through the normal Akka.NET channels, i.e. `Context.Stop(Self)`, `PoisonPill.Instance`, and the like. This is because as part of the `remember-entities` contract - the sharding system is going to insist on keeping all remembered entities alive until explictily told to stop.
+
+To terminate a remembered entity, the sharded entity actor needs to send a [`Passivate` command](xref:Akka.Cluster.Sharding.Passivate) _to its parent actor_ in order to signal to the sharding system that we no longer need to remember this particular entity.
+
+```csharp
+protected override bool ReceiveCommand(object message)
+{
+    switch (message)
+    {
+        case Increment _:
+            Persist(new CounterChanged(1), UpdateState);
+            return true;
+        case Decrement _:
+            Persist(new CounterChanged(-1), UpdateState);
+            return true;
+        case Get _:
+            Sender.Tell(_count);
+            return true;
+        case ReceiveTimeout _:
+            // send Passivate to parent (shard actor) to stop remembering this entity.
+            // shard actor will send us back a `Stop.Instance` message
+            // as our "shutdown" signal - at which point we can terminate normally.
+            Context.Parent.Tell(new Passivate(Stop.Instance));
+            return true;
+        case Stop _:
+            Context.Stop(Self);
+            return true;
+    }
+    return false;
+}
+```
+
+It is common to simply use `Context.Parent.Tell(new Passivate(PoisonPill.Instance));` to passivate and shutdown remembered-entity actors.
+
+To recreate a remembered entity actor after it has been passivated all you have to do is message the `ShardRegion` actor with a message containing the entity's `EntityId` again just like how you instantiated the actor the first time.
+
 ## Retrieving sharding state
 
 You can inspect current sharding stats by using following messages:
@@ -126,7 +163,13 @@ You can inspect current sharding stats by using following messages:
 
 One of the most common scenarios, where cluster sharding is used, is to combine them with eventsourced persistent actors from [Akka.Persistence](xref:persistence-architecture) module. However as the entities are incarnated automatically based on provided props, specifying a dedicated, static unique `PersistenceId` for each entity may seem troublesome.
 
-This can be resolved by getting information about shard/entity ids directly from actor's path and constructing unique id from it. For each entity actor path will follow */user/{typeName}/{shardId}/{entityId}* pattern, where *{typeName}* was the parameter provided to `ClusterSharding.Start` method, while *{shardId}* and *{entityId}* where strings returned by message extractor logic. Given these values we can build consistent, unique `PersistenceId`s on the fly like on the following example:
+This can be resolved by getting information about shard/entity ids directly from actor's path and constructing unique id from it. For each entity actor path will follow */system/{typeName}/{shardId}/{entityId}* pattern, where *{typeName}* was the parameter provided to `ClusterSharding.Start` method, while *{shardId}* and *{entityId}* where strings returned by message extractor logic. 
+
+> N.B. Sharded entity actors are automatically created by the Akka.Cluster.Sharding guardian actor hierarchy, hence why they live under the `/system` portion of the actor hierarchy. This is done intentionally - in the event of an `ActorSystem` termination the `/user` side of the actor hierachy is always terminated first before the `/system` actors are. 
+>
+> Therefore, this design gives the sharding system a chance to hand over all of the sharded entity actors running on the terminating node over to the other remaining nodes in the cluster.
+
+Given these values we can build consistent, unique `PersistenceId`s on the fly using the `entityId` (the expectation is that `entityId` are globally unique) as in the following example:
 
 ```csharp
 public class Aggregate : PersistentActor
@@ -135,7 +178,7 @@ public class Aggregate : PersistentActor
 
     public Aggregate()
     {
-        PersistenceId = Context.Parent.Path.Name + "-" + Self.Path.Name;
+        PersistenceId = Self.Path.Name;
     }
 
     ...

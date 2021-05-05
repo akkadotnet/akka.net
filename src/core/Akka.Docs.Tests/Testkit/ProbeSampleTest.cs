@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="ProbeSampleTest.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
@@ -7,6 +14,7 @@ namespace DocsExamples.Testkit
 {
     public class ProbeSampleTest : TestKit
     {
+#region ProbeSample_0
         public class Forwarder : ReceiveActor
         {
             private IActorRef target;
@@ -34,7 +42,9 @@ namespace DocsExamples.Testkit
             probe.ExpectMsg(43);
             Assert.Equal(TestActor, probe.LastSender);
         }
+#endregion ProbeSample_0
 
+#region MultipleProbeSample_0
         [Fact]
         public void MultipleProbes()
         {
@@ -44,7 +54,9 @@ namespace DocsExamples.Testkit
             Assert.StartsWith("worker", worker.Ref.Path.Name);
             Assert.StartsWith("aggregator", aggregator.Ref.Path.Name);
         }
+#endregion MultipleProbeSample_0
 
+#region ReplyingToProbeMessages_0
         [Fact]
         public void ReplyingToProbeMessages()
         {
@@ -56,7 +68,9 @@ namespace DocsExamples.Testkit
             ExpectMsg("world");
             Assert.Equal(probe.Ref, LastSender);
         }
+#endregion ReplyingToProbeMessages_0
 
+#region ForwardingProbeMessages_0
         [Fact]
         public void ForwardingProbeMessages()
         {
@@ -67,7 +81,9 @@ namespace DocsExamples.Testkit
             ExpectMsg("hello");
             Assert.Equal(TestActor, LastSender);
         }
+#endregion ForwardingProbeMessages_0
 
+#region ProbeAutopilot_0
         [Fact]
         public void ProbeAutopilot()
         {
@@ -85,6 +101,7 @@ namespace DocsExamples.Testkit
             probe.Tell("world");
             ExpectNoMsg();
         }
+#endregion ProbeAutopilot_0
 
     }
 }

@@ -1,36 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\common.props" />
+  <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <UserSecretsId>93253ee8-0410-4483-9809-9bb2d32860fa</UserSecretsId>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <Content Include="CoreAPISpec.ApproveCluster.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveClusterTools.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveCore.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApprovePersistence.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApprovePersistenceQuery.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveRemote.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="CoreAPISpec.ApproveStreams.approved.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
+    <ProjectReference Include="..\..\contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj" />
+    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Query.Sql\Akka.Persistence.Query.Sql.csproj" />
+    <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
+    <ProjectReference Include="..\Akka.Coordination\Akka.Coordination.csproj" />
+    <ProjectReference Include="..\Akka.Discovery\Akka.Discovery.csproj" />
     <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
@@ -41,14 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
+      <PackageReference Include="DiffPlex" Version="1.7.0" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.assert" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="ApiApprover" Version="9.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="App_Packages\" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

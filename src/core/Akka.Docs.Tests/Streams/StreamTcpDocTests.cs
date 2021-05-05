@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="StreamTcpDocTests.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,6 +19,7 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.Util;
 using Tcp = Akka.Streams.Dsl.Tcp;
+using Akka.Configuration;
 
 namespace DocsExamples.Streams
 {
@@ -20,7 +28,7 @@ namespace DocsExamples.Streams
         private ActorMaterializer Materializer { get; }
 
         public StreamTcpDocTests(ITestOutputHelper output)
-            : base("", output)
+            : base("{}", "Actorname", output)
         {
             Materializer = Sys.Materializer();
         }

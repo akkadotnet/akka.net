@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DiscoverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
                 constuctor.Should().NotBeNull();
             };
 
-            testDelegate.ShouldNotThrow();
+            testDelegate.Should().NotThrow();
         }
 
         [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]
@@ -53,11 +53,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
             Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count);
         }
 
-        [Fact(DisplayName = "Only public props and fields are considered when looking for RoleNames")]
-        public void Public_props_and_fields_are_considered()
+        [Fact(DisplayName = "Only the MultiNodeConfig.Roles property is used to compute the number of Roles in MultiNodeFact")]
+        public void Only_MultiNodeConfig_role_count_used()
         {
             var discoveredSpecs = DiscoverSpecs();
-            Assert.Equal(discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DiverseSpec))].Select(c => c.Role), new[] {"RoleProp", "RoleField"});
+            Assert.Equal(10, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.NoReflectionSpec))].Select(c => c.Role).Count());
         }
 
         private static Dictionary<string, List<NodeTest>> DiscoverSpecs()

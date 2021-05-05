@@ -1,10 +1,18 @@
-﻿using Akka.Actor;
+﻿//-----------------------------------------------------------------------
+// <copyright file="PersistAsync.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using Akka.Actor;
 using Akka.Persistence;
 
 namespace DocsExamples.Persistence.PersistentActor
 {
     public static class PersistAsync
     {
+        #region PersistAsync
         public class MyPersistentActor : UntypedPersistentActor
         {
             public override string PersistenceId => "my-stable-persistence-id";
@@ -25,6 +33,7 @@ namespace DocsExamples.Persistence.PersistentActor
                 }
             }
         }
+        #endregion
 
         public static void MainApp()
         {

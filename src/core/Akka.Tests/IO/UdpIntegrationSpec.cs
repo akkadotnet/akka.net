@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,6 +16,7 @@ using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using FsCheck;
 
 namespace Akka.Tests.IO
@@ -26,6 +27,8 @@ namespace Akka.Tests.IO
 
         public UdpIntegrationSpec(ITestOutputHelper output)
             : base(@"
+                    akka.actor.serialize-creators = on
+                    akka.actor.serialize-messages = on
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100

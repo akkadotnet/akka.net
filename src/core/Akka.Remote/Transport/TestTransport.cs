@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestTransport.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ namespace Akka.Remote.Transport
             : this(
                 Address.Parse(GetConfigString(conf, "local-address")),
                 AssociationRegistry.Get(GetConfigString(conf, "registry-key")),
-                conf.GetByteSize("maximum-payload-bytes") ?? 32000,
+                conf.GetByteSize("maximum-payload-bytes", null) ?? 32000L,
                 GetConfigString(conf, "scheme-identifier")
                 )
         {
@@ -107,7 +107,7 @@ namespace Akka.Remote.Transport
 
         private static string GetConfigString(Config conf, string name)
         {
-            var value = conf.GetString(name);
+            var value = conf.GetString(name, null);
             if (value == null)
                 throw new ConfigurationException("Please specify a value for config setting \"" + name + "\"");
             return value;

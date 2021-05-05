@@ -1,9 +1,9 @@
-// //-----------------------------------------------------------------------
-// // <copyright file="TcpOperationsBenchmarks.cs" company="Akka.NET Project">
-// //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-// //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
-// // </copyright>
-// //-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="TcpOperationsBenchmarks.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Concurrent;
@@ -31,14 +31,11 @@ namespace Akka.Benchmarks
         private IActorRef _server;
         private IActorRef _clientCoordinator;
 
-        [Params(10000)]
-        // [Params(100, 1000, 10000)]
+        [Params(100, 1000, 10000)]
         public int MessageCount { get; set; }
-        [Params(10)]
-        // [Params(10, 100)]
+        [Params(10, 100)]
         public int MessageLength { get; set; }
-        [Params(4)]
-        // [Params(1, 3, 5, 7, 10, 20, 30, 40)]
+        [Params(1, 3, 5, 7, 10, 20, 30, 40)]
         public int ClientsCount { get; set; }
         
         [GlobalSetup]

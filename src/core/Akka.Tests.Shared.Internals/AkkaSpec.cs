@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
@@ -56,6 +57,12 @@ namespace Akka.TestKit
 
         public AkkaSpec(Config config = null, ITestOutputHelper output = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
+        {
+            BeforeAll();
+        }
+
+        public AkkaSpec(ActorSystemSetup setup, ITestOutputHelper output = null)
+            : base(setup, GetCallerName(), output)
         {
             BeforeAll();
         }

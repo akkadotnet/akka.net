@@ -1,13 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Sources.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -15,7 +14,6 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
-using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Internal;
 
@@ -170,14 +168,13 @@ namespace Akka.Streams.Implementation
 
             public override void PostStop()
             {
+                var exception = StreamDetachedException.Instance;
+                _completion.TrySetException(exception);
                 StopCallback(input =>
                 {
-                    var offer = input as Offer<TOut>;
-                    if (offer != null)
-                    {
-                        var promise = offer.CompletionSource;
-                        promise.NonBlockingTrySetException(new IllegalStateException("Stream is terminated. SourceQueue is detached."));
-                    }
+                    if (!(input is Offer<TOut> offer)) return;
+                    var promise = offer.CompletionSource;
+                    promise.NonBlockingTrySetException(exception);
                 });
             }
 
@@ -441,6 +438,7 @@ namespace Akka.Streams.Implementation
                         switch (directive)
                         {
                             case Directive.Stop:
+                                _open = false;
                                 _stage._close(_blockingStream);
                                 FailStage(ex);
                                 stop = true;
@@ -467,6 +465,7 @@ namespace Akka.Streams.Implementation
 
             private void RestartState()
             {
+                _open = false;
                 _stage._close(_blockingStream);
                 _blockingStream = _stage._create();
                 _open = true;

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingRememberEntitiesNewExtractorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -171,7 +171,7 @@ namespace Akka.Cluster.Sharding.Tests
             _config = config;
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";
@@ -395,7 +395,7 @@ namespace Akka.Cluster.Sharding.Tests
                         foreach (var entityId in shardState.EntityIds)
                         {
                             var calculatedShardId = extractShardId2(int.Parse(entityId));
-                            calculatedShardId.ShouldAllBeEquivalentTo(shardState.ShardId);
+                            calculatedShardId.Should().BeEquivalentTo(shardState.ShardId);
                         }
                     }
 

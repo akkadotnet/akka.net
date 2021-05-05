@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
@@ -42,7 +43,8 @@ namespace Akka.Persistence.TCK.Snapshot
                 }
             }";
 
-        protected static readonly Config Config = ConfigurationFactory.ParseString(_specConfigTemplate);
+        protected static readonly Config Config = 
+            ConfigurationFactory.ParseString(_specConfigTemplate);
 
         protected override bool SupportsSerialization => true;
 
@@ -51,6 +53,18 @@ namespace Akka.Persistence.TCK.Snapshot
         
         protected SnapshotStoreSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
             : base(FromConfig(config).WithFallback(Config), actorSystemName ?? "SnapshotStoreSpec", output)
+        {
+            _senderProbe = CreateTestProbe();
+        }
+
+        protected SnapshotStoreSpec(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(setup, actorSystemName ?? "SnapshotStoreSpec", output)
+        {
+            _senderProbe = CreateTestProbe();
+        }
+
+        protected SnapshotStoreSpec(ActorSystem system = null, ITestOutputHelper output = null)
+            : base(system, output)
         {
             _senderProbe = CreateTestProbe();
         }
@@ -257,6 +271,8 @@ namespace Akka.Persistence.TCK.Snapshot
         [Fact]
         public void ShouldSerializeSnapshots()
         {
+            if (!SupportsSerialization) return;
+
             var probe = CreateTestProbe();
             var metadata = new SnapshotMetadata(Pid, 100L);
             var snap = new TestPayload(probe.Ref);

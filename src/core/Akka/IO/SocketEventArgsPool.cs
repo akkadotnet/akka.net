@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SocketEventArgsPool.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,12 +28,10 @@ namespace Akka.IO
         private readonly EventHandler<SocketAsyncEventArgs> _onComplete;
         private readonly ConcurrentStack<SocketAsyncEventArgs> _pool = new ConcurrentStack<SocketAsyncEventArgs>();
 
-        private int active = 0;
-
         public PreallocatedSocketEventAgrsPool(int initSize, EventHandler<SocketAsyncEventArgs> onComplete)
         {
             _onComplete = onComplete;
-            for (int i = 0; i < initSize; i++, active++)
+            for (var i = 0; i < initSize; i++)
             {
                 var e = CreateSocketAsyncEventArgs();
                 _pool.Push(e);
@@ -42,12 +40,9 @@ namespace Akka.IO
 
         public SocketAsyncEventArgs Acquire(IActorRef actor)
         {
-            SocketAsyncEventArgs e;
-            if (!_pool.TryPop(out e))
-            {
+            if (!_pool.TryPop(out var e))
                 e = CreateSocketAsyncEventArgs();
-                active++;
-            }
+
             e.UserToken = actor;
             return e;
         }
@@ -72,14 +67,12 @@ namespace Akka.IO
                 else
                 {
                     e.Dispose();
-                    active--;
                 }
             }
             catch (InvalidOperationException)
             {
                 // it can be that for some reason socket is in use and haven't closed yet. Dispose anyway to avoid leaks.
                 e.Dispose();
-                active--;
             }
         }
 

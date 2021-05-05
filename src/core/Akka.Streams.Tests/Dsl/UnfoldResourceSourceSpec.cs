@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldResourceSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -211,7 +211,7 @@ namespace Akka.Streams.Tests.Dsl
                     var actorRef = refs.First(@ref => @ref.Path.ToString().Contains("unfoldResourceSource"));
                     try
                     {
-                        Utils.AssertDispatcher(actorRef, "akka.stream.default-blocking-io-dispatcher");
+                        Utils.AssertDispatcher(actorRef, ActorAttributes.IODispatcher.Name);
                     }
                     finally
                     {
@@ -264,6 +264,48 @@ namespace Akka.Streams.Tests.Dsl
                 c.ExpectError().Should().Be(testException);
 
             }, Materializer);
+        }
+
+        [Fact]
+        public void A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails()
+        {
+            var closedCounter = new AtomicCounter(0);
+            var testException = new TestException("failing read");
+            
+            var probe = Source.UnfoldResource<int, int>(
+                () => 23, // the best resource there is
+                _ => throw testException, 
+                _ => closedCounter.IncrementAndGet()
+                ).RunWith(this.SinkProbe<int>(), Materializer);
+
+            probe.Request(1);
+            probe.ExpectError().Should().Be(testException);
+            closedCounter.Current.Should().Be(1);
+        }
+
+        [Fact]
+        public void A_UnfoldResourceSource_must_not_close_the_resource_twice_when_read_fails_and_then_close_fails()
+        {
+            var closedCounter = new AtomicCounter(0);
+            var testException = new TestException("boom");
+            
+            var probe = Source.UnfoldResource<int, int>(
+                () => 23, // the best resource there is
+                _ => throw new TestException("failing read"),
+                _ =>
+                {
+                    closedCounter.IncrementAndGet();
+                    if (closedCounter.Current == 1) throw testException;
+                }
+            ).RunWith(this.SinkProbe<int>(), Materializer);
+
+            EventFilter.Exception<TestException>().Expect(1, () =>
+            {
+                probe.Request(1);
+                probe.ExpectError().Should().Be(testException);
+            });
+            
+            closedCounter.Current.Should().Be(1);
         }
 
         protected override void AfterAll()

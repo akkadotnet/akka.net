@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InetAddressDnsResolver.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,9 +31,9 @@ namespace Akka.IO
         public InetAddressDnsResolver(SimpleDnsCache cache, Config config)
         {
             _cache = cache;
-            _positiveTtl = (long) config.GetTimeSpan("positive-ttl").TotalMilliseconds;
-            _negativeTtl = (long) config.GetTimeSpan("negative-ttl").TotalMilliseconds;
-            _useIpv6 = config.GetBoolean( "use-ipv6" );
+            _positiveTtl = (long) config.GetTimeSpan("positive-ttl", null).TotalMilliseconds;
+            _negativeTtl = (long) config.GetTimeSpan("negative-ttl", null).TotalMilliseconds;
+            _useIpv6 = config.GetBoolean( "use-ipv6" , false);
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamTcpException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,6 +42,22 @@ namespace Akka.Streams
         {
         }
 #endif
+    }
+
+    /// <summary>
+    /// This exception signals that materialized value is already detached from stream. This usually happens
+    /// when stream is completed and an ActorSystem is shut down while materialized object is still available.
+    /// </summary>
+    public class StreamDetachedException : Exception
+    {
+        /// <summary>
+        /// Initializes a single instance of the <see cref="StreamDetachedException"/> class.
+        /// </summary>
+        public static readonly StreamDetachedException Instance = new StreamDetachedException();
+
+        private StreamDetachedException() : base("Stream is terminated. Materialized value is detached.")
+        {
+        }
     }
 
     /// <summary>

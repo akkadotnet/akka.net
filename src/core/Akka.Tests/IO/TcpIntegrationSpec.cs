@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpIntegrationSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -45,6 +45,8 @@ namespace Akka.Tests.IO
         
         public TcpIntegrationSpec(ITestOutputHelper output)
             : base($@"akka.loglevel = DEBUG
+                     akka.actor.serialize-creators = on
+                     akka.actor.serialize-messages = on
                      akka.io.tcp.trace-logging = true
                      akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
@@ -190,7 +192,7 @@ namespace Akka.Tests.IO
             var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
             var clientHandler = CreateTestProbe();
             Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
-            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromMinutes(10));
+            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromSeconds(3));
             var clientEp = clientHandler.Sender;
             clientEp.Tell(new Tcp.Register(clientHandler));
             serverHandler.ExpectMsg<Tcp.Connected>();
@@ -326,7 +328,7 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5));
                 received.Sum(r => r.Data.Count).ShouldBe(counter.Current);
             });
         }
@@ -379,16 +381,16 @@ namespace Akka.Tests.IO
                 });
                 
                 // All messages data should be received, and be in the same order as they were sent
-                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, RemainingOrDefault, TimeSpan.FromSeconds(10));
+                var received = actors.ServerHandler.ReceiveWhile(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5));
                 var content = string.Join("", received.Select(r => r.Data.ToString()));
                 content.ShouldBe(contentBuilder.ToString());
             });
         }
 
         [Fact]
-        public void Should_fail_writing_when_buffer_is_filled()
+        public async Task Should_fail_writing_when_buffer_is_filled()
         {
-            new TestSetup(this).Run(x =>
+            await new TestSetup(this).RunAsync(async x =>
             {
                 var actors = x.EstablishNewClientConnection();
 
@@ -396,22 +398,26 @@ namespace Akka.Tests.IO
                 var overflowData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize + 1]);
                 var goodData = ByteString.FromBytes(new byte[InternalConnectionActorMaxQueueSize]);
 
-                // try sending overflow
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
-                actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+                // If test runner is too loaded, let it try ~3 times with 5 pause interval
+                await AwaitAssertAsync(() =>
+                {
+                    // try sending overflow
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this is sent immidiately
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(overflowData)); // this will try to buffer
+                    actors.ClientHandler.ExpectMsg<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
 
-                // First overflow data will be received anyway
-                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
-                    .Sum(m => m.Data.Count)
-                    .Should().Be(InternalConnectionActorMaxQueueSize + 1);
+                    // First overflow data will be received anyway
+                    actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                        .Sum(m => m.Data.Count)
+                        .Should().Be(InternalConnectionActorMaxQueueSize + 1);
                 
-                // Check that almost-overflow size does not cause any problems
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
-                actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
-                actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
-                    .Sum(m => m.Data.Count)
-                    .Should().Be(InternalConnectionActorMaxQueueSize);
+                    // Check that almost-overflow size does not cause any problems
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.ResumeWriting.Instance); // Recover after send failure
+                    actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(goodData));
+                    actors.ServerHandler.ReceiveWhile(TimeSpan.FromSeconds(1), m => m as Tcp.Received)
+                        .Sum(m => m.Data.Count)
+                        .Should().Be(InternalConnectionActorMaxQueueSize);
+                }, TimeSpan.FromSeconds(30 * 3), TimeSpan.FromSeconds(5)); // 3 attempts by ~25 seconds + 5 sec pause
             });
         }
 
@@ -590,6 +596,12 @@ namespace Akka.Tests.IO
             {
                 if (_shouldBindServer) BindServer();
                 action(this);
+            }
+            
+            public Task RunAsync(Func<TestSetup, Task> asyncAction)
+            {
+                if (_shouldBindServer) BindServer();
+                return asyncAction(this);
             }
         }
 

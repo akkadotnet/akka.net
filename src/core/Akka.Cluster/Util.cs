@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Util.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -109,7 +109,11 @@ namespace Akka.Cluster
         public static TimeSpan? GetTimeSpanWithOffSwitch(this Config @this, string key)
         {
             TimeSpan? ret = null;
-            if (@this.GetString(key).ToLower() != "off") ret = @this.GetTimeSpan(key);
+            var useTimeSpanOffSwitch = @this.GetString(key, "");
+            if (useTimeSpanOffSwitch.ToLower() != "off" &&
+                useTimeSpanOffSwitch.ToLower() != "false" &&
+                useTimeSpanOffSwitch.ToLower() != "no")
+                ret = @this.GetTimeSpan(key, null);
             return ret;
         }
 

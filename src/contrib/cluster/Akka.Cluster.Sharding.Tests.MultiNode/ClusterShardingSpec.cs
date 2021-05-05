@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,8 +78,8 @@ namespace Akka.Cluster.Sharding.Tests
                             number-of-entities = 1
                         }}
                         least-shard-allocation-strategy {{
-                            rebalance-threshold = 1
-                            max-simultaneous-rebalance = 1
+                            rebalance-absolute-limit = 1
+                            rebalance-relative-limit = 1.0
                         }}
                         distributed-data.durable.lmdb {{
                           dir = ""target/ClusterShardingSpec/sharding-ddata""
@@ -376,7 +376,7 @@ namespace Akka.Cluster.Sharding.Tests
         public DDataClusterShardingWithEntityRecoverySpec() : this(new DDataClusterShardingWithEntityRecoverySpecConfig()) { }
         protected DDataClusterShardingWithEntityRecoverySpec(DDataClusterShardingWithEntityRecoverySpecConfig config) : base(config, typeof(DDataClusterShardingWithEntityRecoverySpec)) { }
     }
-    public abstract class ClusterShardingSpec : MultiNodeClusterSpec 
+    public abstract class ClusterShardingSpec : MultiNodeClusterSpec
     {
         // must use different unique name for some tests than the one used in API tests
         public static string TestCounterShardingTypeName => $"Test{Counter.ShardingTypeName}";
@@ -409,7 +409,7 @@ namespace Akka.Cluster.Sharding.Tests
             _autoMigrateRegion = new Lazy<IActorRef>(() => CreateRegion("AutoMigrateRememberRegionTest", true));
             _storageLocations = new List<FileInfo>
             {
-                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir"))
+                new FileInfo(Sys.Settings.Config.GetString("akka.cluster.sharding.distributed-data.durable.lmdb.dir", null))
             };
 
             IsDDataMode = config.Mode == "ddata";
@@ -474,7 +474,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 Sys.ActorOf(ClusterSingletonManager.Props(
                     singletonProps,
-                    PoisonPill.Instance,
+                    Terminate.Instance,
                     ClusterSingletonManagerSettings.Create(Sys)),
                     typeName + "Coordinator");
             }
@@ -482,7 +482,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         private Props CoordinatorProps(string typeName, bool rebalanceEntities, bool rememberEntities)
         {
-            var allocationStrategy = new LeastShardAllocationStrategy(2, 1);
+            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 2, relativeLimit: 1.0);
+
             var config = ConfigurationFactory.ParseString(string.Format(@"
                 handoff-timeout = 10s
                 shard-start-timeout = 10s

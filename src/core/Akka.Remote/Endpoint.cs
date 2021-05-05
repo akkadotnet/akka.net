@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -1139,7 +1139,7 @@ namespace Akka.Remote
             }
             _buffer.Clear();
 
-            if (_handle != null) _handle.Disassociate(_stopReason);
+            _handle?.Disassociate(_stopReason);
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
 
@@ -1219,6 +1219,12 @@ namespace Akka.Remote
                 BecomeWritingOrSendBufferedMessages();
             });
             Receive<EndpointManager.Send>(send => EnqueueInBuffer(send));
+
+            // Ignore outgoing acks during take over, since we might have
+            // replaced the handle with a connection to a new, restarted, system
+            // and the ack might be targeted to the old incarnation.
+            // Relates to https://github.com/akka/akka/pull/20093
+            Receive<OutboundAck>(_ => { });
         }
 
         /// <summary>
@@ -1227,56 +1233,50 @@ namespace Akka.Remote
         /// <param name="message">TBD</param>
         protected override void Unhandled(object message)
         {
-            if (message is Terminated)
+            switch (message)
             {
-                var t = message as Terminated;
-                if (_reader == null || t.ActorRef.Equals(_reader))
+                case Terminated t:
                 {
-                    PublishAndThrow(new EndpointDisassociatedException("Disassociated"), LogLevel.DebugLevel);
-                }
-            }
-            else if (message is StopReading)
-            {
-                var stop = message as StopReading;
-                if (_reader != null)
-                {
-                    _reader.Tell(stop, stop.ReplyTo);
-                }
-                else
-                {
-                    // initializing, buffer and take care of it later when buffer is sent
-                    EnqueueInBuffer(message);
-                }
-            }
-            else if (message is TakeOver)
-            {
-                var takeover = message as TakeOver;
+                    if (_reader == null || t.ActorRef.Equals(_reader))
+                    {
+                        PublishAndThrow(new EndpointDisassociatedException("Disassociated"), LogLevel.DebugLevel);
+                    }
 
-                // Shutdown old reader
-                _handle.Disassociate();
-                _handle = takeover.ProtocolHandle;
-                takeover.ReplyTo.Tell(new TookOver(Self, _handle));
-                Become(Handoff);
-            }
-            else if (message is FlushAndStop)
-            {
-                _stopReason = DisassociateInfo.Shutdown;
-                Context.Stop(Self);
-            }
-            else if (message is OutboundAck)
-            {
-                var ack = message as OutboundAck;
-                _lastAck = ack.Ack;
-                if (_ackDeadline.IsOverdue)
-                    TrySendPureAck();
-            }
-            else if (message is AckIdleCheckTimer || message is FlushAndStopTimeout || message is BackoffTimer)
-            {
-                //ignore
-            }
-            else
-            {
-                base.Unhandled(message);
+                    break;
+                }
+                case StopReading stop when _reader != null:
+                    _reader.Tell(stop, stop.ReplyTo);
+                    break;
+                case StopReading stop:
+                    // initializing, buffer and take care of it later when buffer is sent
+                    EnqueueInBuffer(stop);
+                    break;
+                case TakeOver takeover:
+                    // Shutdown old reader
+                    _handle.Disassociate("the association was replaced by a new one", _log);
+                    _handle = takeover.ProtocolHandle;
+                    takeover.ReplyTo.Tell(new TookOver(Self, _handle));
+                    Become(Handoff);
+                    break;
+                case FlushAndStop _:
+                    _stopReason = DisassociateInfo.Shutdown;
+                    Context.Stop(Self);
+                    break;
+                case OutboundAck ack:
+                {
+                    _lastAck = ack.Ack;
+                    if (_ackDeadline.IsOverdue)
+                        TrySendPureAck();
+                    break;
+                }
+                case AckIdleCheckTimer _:
+                case FlushAndStopTimeout _:
+                case BackoffTimer _:
+                    //ignore
+                    break;
+                default:
+                    base.Unhandled(message);
+                    break;
             }
         }
 
@@ -1480,7 +1480,7 @@ namespace Akka.Remote
             {
                 _log.Error(
                   ex,
-                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
                   send.Message.GetType());
                 return true;
             }
@@ -1892,7 +1892,7 @@ namespace Akka.Remote
 
         private void Reading()
         {
-            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
+           
             Receive<InboundPayload>(inbound =>
             {
                 var payload = inbound.Payload;
@@ -1935,12 +1935,13 @@ namespace Akka.Remote
                             }
                             catch (Exception e)
                             {
-                                throw e;
+                                throw;
                             }
                         }
                     }
                 }
             });
+            Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
                 SaveState();
@@ -1981,31 +1982,33 @@ namespace Akka.Remote
 
         private void SaveState()
         {
-            var key = new EndpointManager.Link(LocalAddress, RemoteAddress);
-            _receiveBuffers.TryGetValue(key, out var previousValue);
-            UpdateSavedState(key, previousValue);
-        }
-
-        private EndpointManager.ResendState Merge(EndpointManager.ResendState current,
-            EndpointManager.ResendState oldState)
-        {
-            if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
-            return current;
-        }
-
-        private void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
-        {
-            if (expectedState == null)
+            EndpointManager.ResendState Merge(EndpointManager.ResendState current,
+                EndpointManager.ResendState oldState)
             {
-                if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
-                {
-                    UpdateSavedState(key, _receiveBuffers[key]);
-                }
-            } else if (!_receiveBuffers.TryUpdate(key,
-                Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
-            {
-                UpdateSavedState(key, _receiveBuffers[key]);
+                if (current.Uid == oldState.Uid) return new EndpointManager.ResendState(_uid, oldState.Buffer.MergeFrom(current.Buffer));
+                return current;
             }
+
+            void UpdateSavedState(EndpointManager.Link key, EndpointManager.ResendState expectedState)
+            {
+                if (expectedState == null)
+                {
+                    if (!_receiveBuffers.TryAdd(key, new EndpointManager.ResendState(_uid, _ackedReceiveBuffer)))
+                    {
+                        _receiveBuffers.TryGetValue(key, out var prevValue);
+                        UpdateSavedState(key, prevValue);
+                    }
+                }
+                else if (!_receiveBuffers.TryUpdate(key,
+                    Merge(new EndpointManager.ResendState(_uid, _ackedReceiveBuffer), expectedState), expectedState))
+                {
+                    _receiveBuffers.TryGetValue(key, out var prevValue);
+                    UpdateSavedState(key, prevValue);
+                }
+            }
+
+            var k = new EndpointManager.Link(LocalAddress, RemoteAddress);
+            UpdateSavedState(k, !_receiveBuffers.TryGetValue(k, out var previousValue) ? null : previousValue);
         }
 
         private void HandleDisassociated(DisassociateInfo info)

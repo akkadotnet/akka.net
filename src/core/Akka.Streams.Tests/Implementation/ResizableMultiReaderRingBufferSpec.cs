@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ResizableMultiReaderRingBufferSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -244,7 +244,7 @@ namespace Akka.Streams.Tests.Implementation
 
         private class SimpleCursor : ICursor
         {
-            public int Cursor { get; set; }
+            public long Cursor { get; set; }
         }
 
         private class StressTestCursor : ICursor
@@ -291,7 +291,7 @@ namespace Akka.Streams.Tests.Implementation
                 }
             }
 
-            public int Cursor { get; set; }
+            public long Cursor { get; set; }
 
             public override string ToString() => $"cursorNr {_cursorNr}, ix {Cursor}, counter {_counter}";
         }
