@@ -21,18 +21,18 @@ namespace Akka.Persistence.Serialization
 {
     public sealed class PersistenceMessageSerializer : SerializerWithStringManifest
     {
-        public const string IPersistentRepresentationManifest = "PR";
-        public const string AtomicWriteManifest = "AW";
-        public const string AtLeastOnceDeliverySnapshotManifest = "ALODS";
-        public const string StateChangeEventManifest = "FSM.SCE";
-        public const string PersistentFSMSnapshotManifest = "FSM.PS";
+        private const string IPersistentRepresentationManifest = "PR";
+        private const string AtomicWriteManifest = "AW";
+        private const string AtLeastOnceDeliverySnapshotManifest = "ALODS";
+        private const string StateChangeEventManifest = "FSM.SCE";
+        private const string PersistentFSMSnapshotManifest = "FSM.PS";
 
         // Backward compatibility constants
-        public const string IPersistentRepresentationManifestNetCoreManifest = "Akka.Persistence.Persistent, Akka.Persistence";
-        public const string AtomicWriteNetCoreManifest = "Akka.Persistence.AtomicWrite, Akka.Persistence";
-        public const string AtLeastOnceDeliverySnapshotNetCoreManifest = "Akka.Persistence.AtLeastOnceDeliverySnapshot, Akka.Persistence";
-        public const string StateChangeEventNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent, Akka.Persistence";
-        public const string PersistentFSMSnapshotNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+PersistentFSMSnapshot";
+        private const string IPersistentRepresentationManifestNetCoreManifest = "Akka.Persistence.Persistent, Akka.Persistence";
+        private const string AtomicWriteNetCoreManifest = "Akka.Persistence.AtomicWrite, Akka.Persistence";
+        private const string AtLeastOnceDeliverySnapshotNetCoreManifest = "Akka.Persistence.AtLeastOnceDeliverySnapshot, Akka.Persistence";
+        private const string StateChangeEventNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent, Akka.Persistence";
+        private const string PersistentFSMSnapshotNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+PersistentFSMSnapshot";
 
 
         public PersistenceMessageSerializer(ExtendedActorSystem system) : base(system)
