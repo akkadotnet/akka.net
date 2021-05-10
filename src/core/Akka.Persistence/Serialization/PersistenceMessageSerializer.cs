@@ -194,7 +194,7 @@ namespace Akka.Persistence.Serialization
                     return GetStateChangeEvent(bytes);
 
                 case PersistentFSMSnapshotManifest:
-                case var m when m != null && m.StartsWith(PersistentFSMSnapshotNetCoreManifest):
+                case var m when m.StartsWith(PersistentFSMSnapshotNetCoreManifest):
                     return GetPersistentFSMSnapshot(bytes);
             }
 
