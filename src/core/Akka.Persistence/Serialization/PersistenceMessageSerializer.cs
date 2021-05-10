@@ -28,7 +28,7 @@ namespace Akka.Persistence.Serialization
         private const string PersistentFSMSnapshotManifest = "FSM.PS";
 
         // Backward compatibility constants
-        private const string IPersistentRepresentationManifestNetCoreManifest = "Akka.Persistence.Persistent, Akka.Persistence";
+        private const string IPersistentRepresentationNetCoreManifest = "Akka.Persistence.Persistent, Akka.Persistence";
         private const string AtomicWriteNetCoreManifest = "Akka.Persistence.AtomicWrite, Akka.Persistence";
         private const string AtLeastOnceDeliverySnapshotNetCoreManifest = "Akka.Persistence.AtLeastOnceDeliverySnapshot, Akka.Persistence";
         private const string StateChangeEventNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent, Akka.Persistence";
@@ -174,7 +174,7 @@ namespace Akka.Persistence.Serialization
             {
                 case null:
                 case IPersistentRepresentationManifest:
-                case IPersistentRepresentationManifestNetCoreManifest:
+                case IPersistentRepresentationNetCoreManifest:
                     return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
 
                 case AtomicWriteManifest:
@@ -199,13 +199,17 @@ namespace Akka.Persistence.Serialization
 
         public override string Manifest(object obj)
         {
+            // TODO: Change this to the correct const when all persistence plugins uses the proper manifest lookup
             switch (obj)
             {
                 case IPersistentRepresentation _:
+                    return IPersistentRepresentationNetCoreManifest;
                 case AtomicWrite _:
+                    return AtomicWriteNetCoreManifest;
                 case AtLeastOnceDeliverySnapshot _:
+                    return AtLeastOnceDeliverySnapshotNetCoreManifest;
                 case PersistentFSM.StateChangeEvent _:
-                    return obj.GetType().TypeQualifiedName();
+                    return StateChangeEventNetCoreManifest;
             }
 
             if (obj.GetType().GetTypeInfo().IsGenericType
