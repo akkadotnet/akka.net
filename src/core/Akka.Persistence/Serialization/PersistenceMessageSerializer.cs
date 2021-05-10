@@ -21,8 +21,6 @@ namespace Akka.Persistence.Serialization
 {
     public sealed class PersistenceMessageSerializer : SerializerWithStringManifest
     {
-        public const string NullManifest = "null";
-
         public const string IPersistentRepresentationManifest = "PR";
         public const string AtomicWriteManifest = "AW";
         public const string AtLeastOnceDeliverySnapshotManifest = "ALODS";
@@ -176,7 +174,6 @@ namespace Akka.Persistence.Serialization
             switch (manifest)
             {
                 case null:
-                case NullManifest:
                 case IPersistentRepresentationManifest:
                 case IPersistentRepresentationManifestNetCoreManifest:
                     return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
@@ -205,8 +202,6 @@ namespace Akka.Persistence.Serialization
         {
             switch (obj)
             {
-                case null:
-                    return NullManifest;
                 case IPersistentRepresentation _:
                     return IPersistentRepresentationManifest;
                 case AtomicWrite _:
