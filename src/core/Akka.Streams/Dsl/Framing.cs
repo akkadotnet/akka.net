@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Akka.IO;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
@@ -122,6 +123,13 @@ namespace Akka.Streams.Dsl
             public FramingException(string message) : base(message)
             {
             }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="FramingException"/> class.
+            /// </summary>
+            /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+            /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+            protected FramingException(SerializationInfo info, StreamingContext context) : base(info, context) { }
         }
 
         private static readonly Func<IEnumerator<byte>, int, int> BigEndianDecoder = (enumerator, length) =>
