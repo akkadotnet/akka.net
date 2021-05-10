@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
 using Xunit;
 
@@ -117,7 +118,7 @@ namespace Akka.Persistence.Tests.Serialization
             };
 
             deserializeAction.Should().Throw<SerializationException>()
-                .WithMessage($"Unimplemented deserialization of message with type [{typeof(string)}] in [{typeof(PersistenceMessageSerializer)}]");
+                .WithMessage($"Unimplemented deserialization of message with manifest [{typeof(string).TypeQualifiedName()}] in [{typeof(PersistenceMessageSerializer)}]");
         }
     }
 }

@@ -19,22 +19,45 @@ using Google.Protobuf;
 
 namespace Akka.Persistence.Serialization
 {
-    public sealed class PersistenceMessageSerializer : Serializer
+    public sealed class PersistenceMessageSerializer : SerializerWithStringManifest
     {
+        public const string NullManifest = "null";
+
+        public const string IPersistentRepresentationManifest = "PR";
+        public const string AtomicWriteManifest = "AW";
+        public const string AtLeastOnceDeliverySnapshotManifest = "ALODS";
+        public const string StateChangeEventManifest = "FSM.SCE";
+        public const string PersistentFSMSnapshotManifest = "FSM.PS";
+
+        // Backward compatibility constants
+        public const string IPersistentRepresentationManifestNetCoreManifest = "Akka.Persistence.Persistent, Akka.Persistence";
+        public const string AtomicWriteNetCoreManifest = "Akka.Persistence.AtomicWrite, Akka.Persistence";
+        public const string AtLeastOnceDeliverySnapshotNetCoreManifest = "Akka.Persistence.AtLeastOnceDeliverySnapshot, Akka.Persistence";
+        public const string StateChangeEventNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent, Akka.Persistence";
+        public const string PersistentFSMSnapshotNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+PersistentFSMSnapshot";
+
+
         public PersistenceMessageSerializer(ExtendedActorSystem system) : base(system)
         {
         }
 
-        public override bool IncludeManifest { get; } = true;
-
         public override byte[] ToBinary(object obj)
         {
-            if (obj is IPersistentRepresentation repr) return GetPersistentMessage(repr).ToByteArray();
-            if (obj is AtomicWrite aw) return GetAtomicWrite(aw).ToByteArray();
-            if (obj is AtLeastOnceDeliverySnapshot snap) return GetAtLeastOnceDeliverySnapshot(snap).ToByteArray();
-            if (obj is PersistentFSM.StateChangeEvent stateEvent) return GetStateChangeEvent(stateEvent).ToByteArray();
+            switch (obj)
+            {
+                case IPersistentRepresentation repr:
+                    return GetPersistentMessage(repr).ToByteArray();
+                case AtomicWrite aw:
+                    return GetAtomicWrite(aw).ToByteArray();
+                case AtLeastOnceDeliverySnapshot snap:
+                    return GetAtLeastOnceDeliverySnapshot(snap).ToByteArray();
+                case PersistentFSM.StateChangeEvent stateEvent:
+                    return GetStateChangeEvent(stateEvent).ToByteArray();
+            }
+
             if (obj.GetType().GetTypeInfo().IsGenericType 
-                && obj.GetType().GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) return GetPersistentFSMSnapshot(obj).ToByteArray();
+                && obj.GetType().GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) 
+                return GetPersistentFSMSnapshot(obj).ToByteArray();
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
@@ -148,18 +171,57 @@ namespace Akka.Persistence.Serialization
             return message;
         }
 
-        public override object FromBinary(byte[] bytes, Type type)
+        public override object FromBinary(byte[] bytes, string manifest)
         {
-            if(type == null) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
-            if (type == typeof(Persistent)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
-            if (type == typeof(IPersistentRepresentation)) return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
-            if (type == typeof(AtomicWrite)) return GetAtomicWrite(bytes);
-            if (type == typeof(AtLeastOnceDeliverySnapshot)) return GetAtLeastOnceDeliverySnapshot(bytes);
-            if (type == typeof(PersistentFSM.StateChangeEvent)) return GetStateChangeEvent(bytes);
-            if (type.GetTypeInfo().IsGenericType
-                && type.GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>)) return GetPersistentFSMSnapshot(type, bytes);
+            switch (manifest)
+            {
+                case null:
+                case NullManifest:
+                case IPersistentRepresentationManifest:
+                case IPersistentRepresentationManifestNetCoreManifest:
+                    return GetPersistentRepresentation(PersistentMessage.Parser.ParseFrom(bytes));
 
-            throw new SerializationException($"Unimplemented deserialization of message with type [{type}] in [{GetType()}]");
+                case AtomicWriteManifest:
+                case AtomicWriteNetCoreManifest:
+                    return GetAtomicWrite(bytes);
+
+                case AtLeastOnceDeliverySnapshotManifest:
+                case AtLeastOnceDeliverySnapshotNetCoreManifest:
+                    return GetAtLeastOnceDeliverySnapshot(bytes);
+
+                case StateChangeEventManifest:
+                case StateChangeEventNetCoreManifest:
+                    return GetStateChangeEvent(bytes);
+
+                case PersistentFSMSnapshotManifest:
+                case var m when m != null && m.StartsWith(PersistentFSMSnapshotNetCoreManifest):
+                    return GetPersistentFSMSnapshot(bytes);
+            }
+
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
+        }
+
+        public override string Manifest(object obj)
+        {
+            switch (obj)
+            {
+                case null:
+                    return NullManifest;
+                case IPersistentRepresentation _:
+                    return IPersistentRepresentationManifest;
+                case AtomicWrite _:
+                    return AtomicWriteManifest;
+                case AtLeastOnceDeliverySnapshot _:
+                    return AtLeastOnceDeliverySnapshotManifest;
+                case PersistentFSM.StateChangeEvent _:
+                    return StateChangeEventManifest;
+            }
+
+            if (obj.GetType().GetTypeInfo().IsGenericType
+                && obj.GetType().GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>))
+                return PersistentFSMSnapshotManifest;
+
+            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]. No manifest for said type is defined.");
         }
 
         private IPersistentRepresentation GetPersistentRepresentation(PersistentMessage message)
@@ -226,7 +288,7 @@ namespace Akka.Persistence.Serialization
             return new PersistentFSM.StateChangeEvent(message.StateIdentifier, timeout);
         }
 
-        private object GetPersistentFSMSnapshot(Type type, byte[] bytes)
+        private object GetPersistentFSMSnapshot(byte[] bytes)
         {
             var message = PersistentFSMSnapshot.Parser.ParseFrom(bytes);
 
@@ -236,10 +298,13 @@ namespace Akka.Persistence.Serialization
                 timeout = TimeSpan.FromMilliseconds(message.TimeoutMillis);
             }
 
-            // use reflection to create the generic type of PersistentFSM.PersistentFSMSnapshot
-            Type[] types = { typeof(string), type.GenericTypeArguments[0], typeof(TimeSpan?) };
-            object[] arguments = { message.StateIdentifier, GetPayload(message.Data), timeout };
+            var payload = GetPayload(message.Data);
 
+            // use reflection to create the generic type of PersistentFSM.PersistentFSMSnapshot
+            Type[] types = { typeof(string), payload.GetType(), typeof(TimeSpan?) };
+            object[] arguments = { message.StateIdentifier, payload, timeout };
+
+            var type = typeof(PersistentFSM.PersistentFSMSnapshot<>).MakeGenericType(payload.GetType());
             return type.GetConstructor(types).Invoke(arguments);
         }
     }
