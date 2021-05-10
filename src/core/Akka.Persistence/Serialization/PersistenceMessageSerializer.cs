@@ -34,7 +34,6 @@ namespace Akka.Persistence.Serialization
         private const string StateChangeEventNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+StateChangeEvent, Akka.Persistence";
         private const string PersistentFSMSnapshotNetCoreManifest = "Akka.Persistence.Fsm.PersistentFSM+PersistentFSMSnapshot";
 
-
         public PersistenceMessageSerializer(ExtendedActorSystem system) : base(system)
         {
         }
@@ -203,18 +202,15 @@ namespace Akka.Persistence.Serialization
             switch (obj)
             {
                 case IPersistentRepresentation _:
-                    return IPersistentRepresentationManifest;
                 case AtomicWrite _:
-                    return AtomicWriteManifest;
                 case AtLeastOnceDeliverySnapshot _:
-                    return AtLeastOnceDeliverySnapshotManifest;
                 case PersistentFSM.StateChangeEvent _:
-                    return StateChangeEventManifest;
+                    return obj.GetType().TypeQualifiedName();
             }
 
             if (obj.GetType().GetTypeInfo().IsGenericType
                 && obj.GetType().GetGenericTypeDefinition() == typeof(PersistentFSM.PersistentFSMSnapshot<>))
-                return PersistentFSMSnapshotManifest;
+                return obj.GetType().TypeQualifiedName();
 
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]. No manifest for said type is defined.");
         }
