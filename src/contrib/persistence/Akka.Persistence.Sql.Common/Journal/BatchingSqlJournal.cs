@@ -13,6 +13,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -257,14 +258,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                 throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
             var connectionString = config.GetString("connection-string", null);
-#if CONFIGURATION
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager
                     .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]?
                     .ConnectionString;
             }
-#endif
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ConfigurationException("No connection string for Sql Event Journal was specified");
@@ -1522,6 +1521,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             + "requests incoming faster than the underlying database is able to fulfill them. You may modify "
             + "`max-buffer-size`, `max-batch-size` and `max-concurrent-operations` HOCON settings in order to "
             + " change it.")
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JournalBufferOverflowException" /> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected JournalBufferOverflowException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

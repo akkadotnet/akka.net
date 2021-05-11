@@ -100,10 +100,6 @@ namespace Akka.TestKit
 
         private static string GetCallerName()
         {
-#if CORECLR
-            // TODO: CORECLR FIX IT
-            var name = "AkkaSpec";
-#else
             var systemNumber = Interlocked.Increment(ref _systemNumber);
             var stackTrace = new StackTrace(0);
             var name = stackTrace.GetFrames().
@@ -112,7 +108,7 @@ namespace Akka.TestKit
                 SkipWhile(m => m.DeclaringType.Name == "AkkaSpec").
                 Select(m => _nameReplaceRegex.Replace(m.DeclaringType.Name + "-" + systemNumber, "-")).
                 FirstOrDefault() ?? "test";
-#endif
+
             return name;
         }
 

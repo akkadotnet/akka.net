@@ -187,6 +187,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public static readonly Akka.Persistence.Sql.Common.Journal.JournalBufferOverflowException Instance;
         public JournalBufferOverflowException() { }
+        protected JournalBufferOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class JournalEntry
     {
