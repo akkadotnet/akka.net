@@ -56,11 +56,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static NotUsed None<TLeft, TRight>(TLeft left, TRight right) => NotUsed.Instance;
 
-#if !CORECLR
         private static readonly RuntimeMethodHandle KeepRightMethodhandle = typeof(Keep).GetMethod(nameof(Right)).MethodHandle;
-#else
-        private static readonly MethodInfo KeepRightMethodInfo = typeof(Keep).GetMethod(nameof(Right));
-#endif
 
         /// <summary>
         /// TBD
@@ -72,18 +68,10 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static bool IsRight<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
-#if !CORECLR
             return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().MethodHandle.Value == KeepRightMethodhandle.Value;
-#else
-            return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().Equals(KeepRightMethodInfo);
-#endif
         }
 
-#if !CORECLR
         private static readonly RuntimeMethodHandle KeepLeftMethodhandle = typeof(Keep).GetMethod(nameof(Left)).MethodHandle;
-#else
-        private static readonly MethodInfo KeepLeftMethodInfo = typeof(Keep).GetMethod(nameof(Left));
-#endif
 
         /// <summary>
         /// TBD
@@ -95,11 +83,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static bool IsLeft<T1, T2, T3>(Func<T1, T2, T3> fn)
         {
-#if !CORECLR
             return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().MethodHandle.Value == KeepLeftMethodhandle.Value;
-#else
-            return fn.GetMethodInfo().IsGenericMethod && fn.GetMethodInfo().GetGenericMethodDefinition().Equals(KeepLeftMethodInfo);
-#endif
         }
     }
 }

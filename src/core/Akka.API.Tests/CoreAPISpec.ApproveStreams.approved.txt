@@ -12,11 +12,13 @@ namespace Akka.Streams
     public sealed class AbruptStageTerminationException : System.Exception
     {
         public AbruptStageTerminationException(Akka.Streams.Stage.GraphStageLogic logic) { }
+        protected AbruptStageTerminationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class AbruptTerminationException : System.Exception
     {
         public readonly Akka.Actor.IActorRef Actor;
         public AbruptTerminationException(Akka.Actor.IActorRef actor) { }
+        protected AbruptTerminationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static ActorAttributes
     {
@@ -280,11 +282,13 @@ namespace Akka.Streams
     public class BindFailedException : Akka.Streams.StreamTcpException
     {
         public static readonly Akka.Streams.BindFailedException Instance;
+        protected BindFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class BufferOverflowException : System.Exception
     {
         public BufferOverflowException(string message) { }
         public BufferOverflowException(string message, System.Exception innerException) { }
+        protected BufferOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ClosedShape : Akka.Streams.Shape
     {
@@ -298,6 +302,7 @@ namespace Akka.Streams
     {
         public ConnectionException(string message) { }
         public ConnectionException(string message, System.Exception innerException) { }
+        protected ConnectionException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static Construct
     {
@@ -757,12 +762,14 @@ namespace Akka.Streams
     public sealed class InvalidPartnerActorException : Akka.Pattern.IllegalStateException
     {
         public InvalidPartnerActorException(Akka.Actor.IActorRef expectedRef, Akka.Actor.IActorRef gotRef, string message) { }
+        protected InvalidPartnerActorException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public Akka.Actor.IActorRef ExpectedRef { get; }
         public Akka.Actor.IActorRef GotRef { get; }
     }
     public sealed class InvalidSequenceNumberException : Akka.Pattern.IllegalStateException
     {
         public InvalidSequenceNumberException(long expectedSeqNr, long gotSeqNr, string message) { }
+        protected InvalidSequenceNumberException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public long ExpectedSeqNr { get; }
         public long GotSeqNr { get; }
     }
@@ -783,6 +790,7 @@ namespace Akka.Streams
     public class MaterializationException : System.Exception
     {
         public MaterializationException(string message, System.Exception innerException) { }
+        protected MaterializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class NoMaterializer : Akka.Streams.IMaterializer
     {
@@ -797,6 +805,7 @@ namespace Akka.Streams
     public class NoSuchElementException : System.Exception
     {
         public NoSuchElementException(string message) { }
+        protected NoSuchElementException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public abstract class OutPort
     {
@@ -848,8 +857,9 @@ namespace Akka.Streams
     public sealed class RemoteStreamRefActorTerminatedException : System.Exception
     {
         public RemoteStreamRefActorTerminatedException(string message) { }
+        protected RemoteStreamRefActorTerminatedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
-    public abstract class Shape
+    public abstract class Shape : System.ICloneable
     {
         protected Shape() { }
         public abstract System.Collections.Immutable.ImmutableArray<Akka.Streams.Inlet> Inlets { get; }
@@ -890,9 +900,14 @@ namespace Akka.Streams
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
+    public class StreamDetachedException : System.Exception
+    {
+        public static readonly Akka.Streams.StreamDetachedException Instance;
+    }
     public class StreamLimitReachedException : System.Exception
     {
         public StreamLimitReachedException(long max) { }
+        protected StreamLimitReachedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static StreamRefAttributes
     {
@@ -941,6 +956,7 @@ namespace Akka.Streams
     public sealed class StreamRefSubscriptionTimeoutException : Akka.Pattern.IllegalStateException
     {
         public StreamRefSubscriptionTimeoutException(string message) { }
+        protected StreamRefSubscriptionTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class StreamSubscriptionTimeoutSettings : System.IEquatable<Akka.Streams.StreamSubscriptionTimeoutSettings>
     {
@@ -963,6 +979,7 @@ namespace Akka.Streams
     {
         public StreamTcpException(string message) { }
         public StreamTcpException(string message, System.Exception innerException) { }
+        protected StreamTcpException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public enum SubstreamCancelStrategy
     {
@@ -972,6 +989,7 @@ namespace Akka.Streams
     public sealed class TargetRefNotInitializedYetException : Akka.Pattern.IllegalStateException
     {
         public TargetRefNotInitializedYetException() { }
+        protected TargetRefNotInitializedYetException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public enum ThrottleMode
     {
@@ -1017,6 +1035,7 @@ namespace Akka.Streams
     public class WatchedActorTerminatedException : Akka.Actor.AkkaException
     {
         public WatchedActorTerminatedException(string stageName, Akka.Actor.IActorRef actorRef) { }
+        protected WatchedActorTerminatedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
 }
 namespace Akka.Streams.Actors
@@ -1454,6 +1473,7 @@ namespace Akka.Streams.Dsl
         public class FramingException : System.Exception
         {
             public FramingException(string message) { }
+            protected FramingException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         }
     }
     public class static GraphDsl
@@ -1688,6 +1708,7 @@ namespace Akka.Streams.Dsl
     public class OutputTruncationException : System.Exception
     {
         public OutputTruncationException() { }
+        protected OutputTruncationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static PagedSource
     {
@@ -1718,6 +1739,7 @@ namespace Akka.Streams.Dsl
     public sealed class PartitionOutOfBoundsException : System.Exception
     {
         public PartitionOutOfBoundsException(string message) { }
+        protected PartitionOutOfBoundsException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class PartitionWith<TIn, TOut0, TOut1> : Akka.Streams.Stage.GraphStage<Akka.Streams.FanOutShape<TIn, TOut0, TOut1>>
     {
@@ -2205,6 +2227,7 @@ namespace Akka.Streams.Dsl
     public sealed class TcpIdleTimeoutException : System.TimeoutException
     {
         public TcpIdleTimeoutException(string message, System.TimeSpan duration) { }
+        protected TcpIdleTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public System.TimeSpan Duration { get; }
     }
     public class static TcpStreamExtensions
@@ -2219,6 +2242,7 @@ namespace Akka.Streams.Dsl
     public class UnexpectedOutputException : System.Exception
     {
         public UnexpectedOutputException(object element) { }
+        protected UnexpectedOutputException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class UnzipWith
     {
@@ -3160,6 +3184,7 @@ namespace Akka.Streams.Implementation
         public class MaterializationPanicException : System.Exception
         {
             public MaterializationPanicException(System.Exception innerException) { }
+            protected MaterializationPanicException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         }
     }
     [Akka.Annotations.InternalApiAttribute()]
@@ -3218,10 +3243,12 @@ namespace Akka.Streams.Implementation
     public class NormalShutdownException : Akka.Pattern.IllegalStateException
     {
         public NormalShutdownException(string message) { }
+        protected NormalShutdownException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class NothingToReadException : System.Exception
     {
         public static readonly Akka.Streams.Implementation.NothingToReadException Instance;
+        protected NothingToReadException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class OutputBunch<T>
     {
@@ -3382,6 +3409,7 @@ namespace Akka.Streams.Implementation
     public class SignalThrewException : Akka.Pattern.IllegalStateException, Akka.Streams.Implementation.ISpecViolation
     {
         public SignalThrewException(string message, System.Exception cause) { }
+        protected SignalThrewException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class SimpleOutputs
     {
@@ -3580,6 +3608,7 @@ namespace Akka.Streams.Implementation
     {
         public SubscriptionTimeoutException(string message) { }
         public SubscriptionTimeoutException(string message, System.Exception innerException) { }
+        protected SubscriptionTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class Throttle<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
@@ -4838,6 +4867,7 @@ namespace Akka.Streams.Stage
     public class StageActorRefNotInitializedException : System.Exception
     {
         public static readonly Akka.Streams.Stage.StageActorRefNotInitializedException Instance;
+        protected StageActorRefNotInitializedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public abstract class StageState<TIn, TOut>
     {
