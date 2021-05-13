@@ -1,6 +1,29 @@
-#### 1.4.20 April 28 2021 ####
+#### 1.4.21 May 12 2021 ####
 **Placeholder for nightlies**
 
+#### 1.4.20 May 12 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.20 is a minor release that includes some bug fixes and improvements to Akka.NET.
+
+* [Akka: Fixed some `internal-dispatcher` usages ](https://github.com/akkadotnet/akka.net/pull/4995)
+* [Akka: Remove restrictions required by netstandard 1.x but available in 2.0 ](https://github.com/akkadotnet/akka.net/pull/3790)
+* [Akka: Prevent loggers to throw `FormatException` and show a friendly message instead. ](https://github.com/akkadotnet/akka.net/pull/4998)
+* [Akka.Persistence.Sql.Common: Some persistent actors are stuck with `RecoveryTimedOutException` after circuit breaker opens](https://github.com/akkadotnet/akka.net/issues/4265)
+* [Akka.Persistence.Sql.Common: marking Akka.Persistence.Sql.Common as `beta` for v1.4.20](https://github.com/akkadotnet/akka.net/pull/5006)
+* [Akka.Remote: `Akka.Remote.Serialization.PrimitiveSerializers` needs cross platform compatibility](https://github.com/akkadotnet/akka.net/issues/4986)
+* [Akka.Streams: Fixed `QueueSource.PostStop` and added a missing test case](https://github.com/akkadotnet/akka.net/pull/4991)
+* [Akka.Cluster.Sharding: Reduce sharding warnings when there are no buffered messages](https://github.com/akkadotnet/akka.net/pull/5003)
+
+To see the [full set of fixes in Akka.NET v1.4.20, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/50).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 677 | 316 | Gregorius Soedharmo |
+| 3 | 3 | 3 | dependabot[bot] |
+| 3 | 101 | 44 | Ismael Hamed |
+| 2 | 5 | 0 | Aaron Stannard |
+| 1 | 625 | 675 | Matthew Heaton |
 
 #### 1.4.19 April 28 2021 ####
 **Maintenance Release for Akka.NET 1.4**
