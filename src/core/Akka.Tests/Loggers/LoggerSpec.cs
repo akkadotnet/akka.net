@@ -25,10 +25,8 @@ akka.stdout-loglevel = DEBUG");
         public LoggerSpec(ITestOutputHelper output) : base(Config, output)
         { }
 
-        //[Fact]
-        [Theory]
-        [Repeat(500)]
-        public void TestOutputLogger_WithBadFormattingMustNotThrow(int _)
+        [Fact]
+        public void TestOutputLogger_WithBadFormattingMustNotThrow()
         {
             var events = new List<LogEvent>();
 
