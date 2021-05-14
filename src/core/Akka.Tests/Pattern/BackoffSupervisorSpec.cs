@@ -107,7 +107,7 @@ namespace Akka.Tests.Pattern
 
             Watch(c1);
             c1.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>().ActorRef.Should().Be(c1);
+            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c1));
 
             AwaitAssert(() =>
             {
@@ -115,12 +115,16 @@ namespace Akka.Tests.Pattern
                 ExpectMsg<BackoffSupervisor.RestartCount>().Count.Should().Be(1);
             });
 
-            AwaitAssert(() =>
+            IActorRef c2 = null;
+            AwaitCondition(() =>
             {
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 // new instance
-                ExpectMsg<BackoffSupervisor.CurrentChild>().Ref.Should().NotBeSameAs(c1);
+                c2 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
+                return !c2.IsNobody();
             });
+            c2.Should().NotBeNull();
+            c2.Should().NotBeSameAs(c1);
         }
 
         [Fact]
@@ -374,7 +378,7 @@ namespace Akka.Tests.Pattern
                     supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                     c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
                     return !c.IsNobody();
-                }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
+                }, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(100));
                 c.Should().NotBeNull();
                 return c;
             }
@@ -388,7 +392,7 @@ namespace Akka.Tests.Pattern
             var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
             Watch(c1);
             c1.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>().ActorRef.Should().Be(c1);
+            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c1));
 
             AwaitCondition(() =>
             {
@@ -400,7 +404,7 @@ namespace Akka.Tests.Pattern
             c2.ShouldNotBe(c1);
             Watch(c2);
             c2.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>().ActorRef.Should().Be(c2);
+            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c2));
 
             AwaitCondition(() =>
             {
@@ -412,8 +416,8 @@ namespace Akka.Tests.Pattern
             c3.ShouldNotBe(c2);
             Watch(c3);
             c3.Tell(PoisonPill.Instance);
-            ExpectMsg<Terminated>().ActorRef.Should().Be(c3);
-            ExpectMsg<Terminated>().ActorRef.Should().Be(supervisor);
+            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c3));
+            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(supervisor));
         }
 
         [Fact]
@@ -431,7 +435,7 @@ namespace Akka.Tests.Pattern
                         supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                         c = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
                         return !c.IsNobody();
-                    }, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50));
+                    }, TimeSpan.FromSeconds(2), TimeSpan.FromMilliseconds(100));
                     c.Should().NotBeNull();
                     return c;
                 }
@@ -445,7 +449,7 @@ namespace Akka.Tests.Pattern
                 var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
                 Watch(c1);
                 c1.Tell("boom");
-                ExpectMsg<Terminated>().ActorRef.Should().Be(c1);
+                AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c1));
 
                 AwaitCondition(() =>
                 {
@@ -457,7 +461,7 @@ namespace Akka.Tests.Pattern
                 AwaitAssert(() => c2.ShouldNotBe(c1));
                 Watch(c2);
                 c2.Tell("boom");
-                ExpectMsg<Terminated>().ActorRef.Should().Be(c2);
+                AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c2));
 
                 AwaitCondition(() =>
                 {
@@ -469,8 +473,8 @@ namespace Akka.Tests.Pattern
                 AwaitAssert(() => c3.ShouldNotBe(c2));
                 Watch(c3);
                 c3.Tell("boom");
-                ExpectMsg<Terminated>().ActorRef.Should().Be(c3);
-                ExpectMsg<Terminated>().ActorRef.Should().Be(supervisor);
+                AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c3));
+                AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(supervisor));
             });
         }
 
