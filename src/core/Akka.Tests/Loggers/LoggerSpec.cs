@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
+using Akka.Tests.Shared.Internals;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
@@ -23,28 +25,45 @@ akka.stdout-loglevel = DEBUG");
         public LoggerSpec(ITestOutputHelper output) : base(Config, output)
         { }
 
-        [Fact]
-        public void TestOutputLogger_WithBadFormattingMustNotThrow()
+        //[Fact]
+        [Theory]
+        [Repeat(500)]
+        public void TestOutputLogger_WithBadFormattingMustNotThrow(int _)
         {
+            var events = new List<LogEvent>();
+
             // Need to wait until TestOutputLogger initializes
             Thread.Sleep(200);
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
 
             Sys.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
-            ExpectMsg<Error>().Cause.Should().BeOfType<FakeException>();
-            ExpectMsg<Error>().Cause.Should().BeOfType<AggregateException>();
+            events.Add(ExpectMsg<Error>());
+            events.Add(ExpectMsg<Error>());
 
+            events.All(e => e is Error).Should().BeTrue();
+            events.Select(e => e.Cause).Any(c => c is FakeException).Should().BeTrue();
+            events.Select(e => e.Cause).Any(c => c is AggregateException).Should().BeTrue();
+
+            events.Clear();
             Sys.Log.Warning(Case.t, Case.p);
-            ExpectMsg<Warning>();
-            ExpectMsg<Error>().Cause.Should().BeOfType<FormatException>();
+            events.Add(ExpectMsg<LogEvent>());
+            events.Add(ExpectMsg<LogEvent>());
+            events.Any(e => e is Warning).Should().BeTrue();
+            events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
 
+            events.Clear();
             Sys.Log.Info(Case.t, Case.p);
-            ExpectMsg<Info>();
-            ExpectMsg<Error>().Cause.Should().BeOfType<FormatException>();
+            events.Add(ExpectMsg<LogEvent>());
+            events.Add(ExpectMsg<LogEvent>());
+            events.Any(e => e is Info).Should().BeTrue();
+            events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
 
+            events.Clear();
             Sys.Log.Debug(Case.t, Case.p);
-            ExpectMsg<Debug>();
-            ExpectMsg<Error>().Cause.Should().BeOfType<FormatException>();
+            events.Add(ExpectMsg<LogEvent>());
+            events.Add(ExpectMsg<LogEvent>());
+            events.Any(e => e is Debug).Should().BeTrue();
+            events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
         }
 
         [Fact]
