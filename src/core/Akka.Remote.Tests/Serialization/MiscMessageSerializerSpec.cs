@@ -142,7 +142,7 @@ namespace Akka.Remote.Tests.Serialization
             AssertEqual(poisonPill);
         }
 
-        [Fact(Skip = "Not implemented yet")]
+        [Fact]
         public void Can_serialize_LocalScope()
         {
             var localScope = LocalScope.Instance;
