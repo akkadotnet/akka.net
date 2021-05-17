@@ -15,6 +15,7 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Tests.Shared.Internals;
 using FluentAssertions;
+using FluentAssertions.Execution;
 using FluentAssertions.Extensions;
 using Xunit;
 
@@ -393,6 +394,7 @@ namespace Akka.Tests.Pattern
             Watch(c1);
             c1.Tell(PoisonPill.Instance);
             AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c1));
+            Unwatch(c1);
 
             AwaitCondition(() =>
             {
@@ -405,6 +407,7 @@ namespace Akka.Tests.Pattern
             Watch(c2);
             c2.Tell(PoisonPill.Instance);
             AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c2));
+            Unwatch(c2);
 
             AwaitCondition(() =>
             {
@@ -416,8 +419,17 @@ namespace Akka.Tests.Pattern
             c3.ShouldNotBe(c2);
             Watch(c3);
             c3.Tell(PoisonPill.Instance);
-            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c3));
-            AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(supervisor));
+
+            var list = new List<IActorRef> { c3, supervisor };
+            var deadline = DateTime.Now + TimeSpan.FromSeconds(3);
+            while (list.Count > 0 && DateTime.Now < deadline)
+            {
+                var actor = ExpectMsg<Terminated>().ActorRef;
+                if (list.Contains(actor))
+                    list.Remove(actor);
+            }
+            if (list.Count > 0)
+                throw new AssertionFailedException($"Timed out while waiting for actors to terminate: [{string.Join(", ", list)}]");
         }
 
         [Fact]
@@ -450,6 +462,7 @@ namespace Akka.Tests.Pattern
                 Watch(c1);
                 c1.Tell("boom");
                 AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c1));
+                Unwatch(c1);
 
                 AwaitCondition(() =>
                 {
@@ -462,6 +475,7 @@ namespace Akka.Tests.Pattern
                 Watch(c2);
                 c2.Tell("boom");
                 AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c2));
+                Unwatch(c2);
 
                 AwaitCondition(() =>
                 {
@@ -473,8 +487,17 @@ namespace Akka.Tests.Pattern
                 AwaitAssert(() => c3.ShouldNotBe(c2));
                 Watch(c3);
                 c3.Tell("boom");
-                AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(c3));
-                AwaitAssert(() => ExpectMsg<Terminated>().ActorRef.Should().Be(supervisor));
+
+                var list = new List<IActorRef> { c3, supervisor };
+                var deadline = DateTime.Now + TimeSpan.FromSeconds(3);
+                while (list.Count > 0 && DateTime.Now < deadline)
+                {
+                    var actor = ExpectMsg<Terminated>().ActorRef;
+                    if (list.Contains(actor))
+                        list.Remove(actor);
+                }
+                if (list.Count > 0)
+                    throw new AssertionFailedException($"Timed out while waiting for actors to terminate: [{string.Join(", ", list)}]");
             });
         }
 
