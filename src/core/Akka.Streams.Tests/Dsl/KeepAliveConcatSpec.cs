@@ -13,11 +13,16 @@ using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {
     public class KeepAliveConcatSpec : Akka.TestKit.Xunit2.TestKit
     {
+        public KeepAliveConcatSpec(ITestOutputHelper output)
+            : base(output: output)
+        { }
+
         private readonly Source<IEnumerable<int>, NotUsed> _sampleSource = Source.From(Enumerable.Range(1, 10).Grouped(3));
 
         private IEnumerable<IEnumerable<int>> Expand(IEnumerable<int> lst)
@@ -52,7 +57,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            t.AwaitResult()
+            t.AwaitResult(TimeSpan.FromSeconds(6))
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
         }
