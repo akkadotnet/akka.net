@@ -1379,35 +1379,41 @@ namespace Akka.DistributedData
                 .Select(x => x.Key)
                 .ToImmutableHashSet();
 
-            if (!removedSet.IsEmpty)
-            {
-                foreach (var entry in _dataEntries)
-                {
-                    var key = entry.Key;
-                    var envelope = entry.Value.envelope;
+            if (removedSet.IsEmpty) return;
 
-                    foreach (var removed in removedSet)
+            foreach (var entry in _dataEntries)
+            {
+                var key = entry.Key;
+                var envelope = entry.Value.envelope;
+
+                foreach (var removed in removedSet)
+                {
+                    void Init()
                     {
-                        if (envelope.NeedPruningFrom(removed))
+                        var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
+                        _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
+                        SetData(key, newEnvelope);
+                    }
+
+                    if (envelope.NeedPruningFrom(removed))
+                    {
+                        switch (envelope.Data)
                         {
-                            if (envelope.Data is IRemovedNodePruning)
+                            case IRemovedNodePruning rem:
                             {
                                 if (envelope.Pruning.TryGetValue(removed, out var state))
                                 {
                                     if (state is PruningInitialized initialized && initialized.Owner != _selfUniqueAddress)
                                     {
-                                        var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
-                                        _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
-                                        SetData(key, newEnvelope);
+                                        Init();
                                     }
                                 }
                                 else
                                 {
-                                    var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
-                                    _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
-                                    SetData(key, newEnvelope);
+                                    Init();
                                 }
                             }
+                                break;
                         }
                     }
                 }
