@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
+using Akka.DistributedData.Serialization;
 
 namespace Akka.DistributedData.Durable
 {
@@ -96,6 +97,12 @@ namespace Akka.DistributedData.Durable
         }
     }
 
+    /// <summary>
+    /// Wrapper class for serialization of a data value.
+    ///
+    /// The <see cref="ReplicatorMessageSerializer"/> will serialize / deserialize
+    /// the wrapped <see cref="IReplicatedData"/> including its serializerId and manifest.
+    /// </summary>
     public sealed class DurableDataEnvelope : IReplicatorMessage, IEquatable<DurableDataEnvelope>
     {
         internal DataEnvelope DataEnvelope { get; }
@@ -125,7 +132,12 @@ namespace Akka.DistributedData.Durable
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return obj is DurableDataEnvelope && Equals((DurableDataEnvelope) obj);
+            return obj is DurableDataEnvelope envelope && Equals(envelope);
+        }
+
+        public override string ToString()
+        {
+            return $"DurableDataEnvelope({Data})";
         }
     }
 }
