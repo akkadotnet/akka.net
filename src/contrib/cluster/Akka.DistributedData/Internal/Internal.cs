@@ -370,7 +370,7 @@ namespace Akka.DistributedData.Internal
         /// <summary>
         /// TBD
         /// </summary>
-        public static DataEnvelope DeletedEnvelope => new DataEnvelope(DeletedData.Instance);
+        public static DataEnvelope DeletedEnvelope { get; } = new DataEnvelope(DeletedData.Instance);
 
         /// <summary>
         /// TBD
