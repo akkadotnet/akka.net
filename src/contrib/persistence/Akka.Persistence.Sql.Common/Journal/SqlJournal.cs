@@ -506,12 +506,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var connectionString = _settings.ConnectionString;
 
-#if CONFIGURATION
             if (string.IsNullOrEmpty(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
             }
-#endif
 
             return connectionString;
         }

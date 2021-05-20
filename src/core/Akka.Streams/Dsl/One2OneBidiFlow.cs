@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
+using Akka.Pattern;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -41,6 +43,13 @@ namespace Akka.Streams.Dsl
         {
 
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UnexpectedOutputException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected UnexpectedOutputException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     /// <summary>
@@ -48,7 +57,14 @@ namespace Akka.Streams.Dsl
     /// </summary>
     public class OutputTruncationException : Exception
     {
+        public OutputTruncationException() { }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UserCalledFailException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected OutputTruncationException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     }
 
     /// <summary>
