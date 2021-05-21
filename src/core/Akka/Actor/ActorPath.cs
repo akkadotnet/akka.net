@@ -341,7 +341,26 @@ namespace Akka.Actor
                 actorPath /= spanified.Slice(0, nextSlash).ToString();
                 spanified = spanified.Slice(nextSlash + 1, spanified.Length - nextSlash - 1);
             }
-            actorPath /= spanified.ToString(); // final path element
+
+            // have a final path element - and we need to make sure it's not a trailing slash
+            if (spanified.Length > 0)
+            {
+                // edge case - leading slash
+                if (spanified.IndexOf('/') == 0)
+                {
+                    spanified = spanified.Slice(1); // skip it
+                    // edge case edge case - leading slash as was also trailing
+                    if (spanified.Length > 0) 
+                    {
+                        actorPath /= spanified.ToString();
+                    }
+                }
+                else
+                {
+                    actorPath /= spanified.ToString();
+                }
+            }
+           
 
             if (uri.Fragment.StartsWith("#"))
             {
