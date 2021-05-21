@@ -327,11 +327,19 @@ namespace Akka.Actor
         {
             actorPath = null;
 
-
             Address address;
             Uri uri;
             if (!TryParseAddress(path, out address, out uri)) return false;
-            var pathElements = uri.AbsolutePath.Split('/');
+            var spanified = uri.AbsolutePath.AsSpan();
+            var pathElements = new List<string>();
+            var curLen = 0;
+            var nextSlash = 0;
+            while ((nextSlash = spanified.IndexOf('/')) > 0)
+            {
+                pathElements.Add(spanified.Slice(curLen, nextSlash).ToString());
+                curLen = nextSlash + 1;
+            }
+
             actorPath = new RootActorPath(address) / pathElements.Skip(1);
             if (uri.Fragment.StartsWith("#"))
             {
@@ -378,13 +386,14 @@ namespace Akka.Actor
                     //port may not be specified for these types of paths
                     return false;
                 }
+
                 //System name is in the "host" position. According to rfc3986 host is case
                 //insensitive, but should be produced as lowercase, so if we use uri.Host
                 //we'll get it in lower case.
                 //So we'll extract it ourselves using the original path.
                 //We skip the protocol and "://"
                 var systemNameLength = uri.Host.Length;
-                systemName = path.Substring(protocol.Length + 3, systemNameLength);
+                systemName = path.AsSpan().Slice(protocol.Length + 3, systemNameLength).ToString();
             }
             else
             {
