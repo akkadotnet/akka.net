@@ -262,6 +262,22 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void QueueSource_should_complete_watching_future_with_failure_if_materializer_shut_down()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var tempMap = ActorMaterializer.Create(Sys);
+                var s = this.CreateManualSubscriberProbe<int>();
+                var queue = Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .To(Sink.FromSubscriber(s))
+                    .Run(tempMap);
+                queue.WatchCompletionAsync().PipeTo(TestActor);
+                tempMap.Shutdown();
+                ExpectMsg<Status.Failure>();
+            }, _materializer);
+        }
+
+        [Fact]
         public void QueueSource_should_return_false_when_element_was_not_added_to_buffer()
         {
             this.AssertAllStagesStopped(() =>
@@ -322,11 +338,12 @@ namespace Akka.Streams.Tests.Dsl
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
-                queue.WatchCompletionAsync().ContinueWith(t => "done").PipeTo(TestActor);
+                queue.WatchCompletionAsync().ContinueWith(t => Done.Instance).PipeTo(TestActor);
                 sub.Cancel();
-                ExpectMsg("done");
+                ExpectMsg(Done.Instance);
 
-                queue.OfferAsync(1).ContinueWith(t => t.Exception.Should().BeOfType<IllegalStateException>());
+                var exception = Record.ExceptionAsync(async () => await queue.OfferAsync(1)).Result;
+                exception.Should().BeOfType<StreamDetachedException>();
             }, _materializer);
         }
 

@@ -151,21 +151,26 @@ namespace Akka.Actor
         public ActorInitializationException(string message) { }
         public ActorInitializationException(string message, System.Exception cause) { }
         public ActorInitializationException(Akka.Actor.IActorRef actor, string message, System.Exception cause = null) { }
+        protected ActorInitializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public Akka.Actor.IActorRef Actor { get; set; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public override string ToString() { }
     }
     public class ActorInterruptedException : Akka.Actor.AkkaException
     {
         public ActorInterruptedException(string message = null, System.Exception cause = null) { }
+        protected ActorInterruptedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ActorKilledException : Akka.Actor.AkkaException
     {
         public ActorKilledException() { }
         public ActorKilledException(string message) { }
+        protected ActorKilledException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ActorNotFoundException : Akka.Actor.AkkaException
     {
         public ActorNotFoundException() { }
+        protected ActorNotFoundException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public ActorNotFoundException(string message, System.Exception innerException = null) { }
     }
     public abstract class ActorPath : Akka.Util.ISurrogated, System.IComparable<Akka.Actor.ActorPath>, System.IEquatable<Akka.Actor.ActorPath>
@@ -384,7 +389,7 @@ namespace Akka.Actor
             where T :  class, Akka.Actor.IExtension
             where TI : Akka.Actor.IExtensionId { }
     }
-    public sealed class Address : Akka.Util.ISurrogated, System.IComparable, System.IComparable<Akka.Actor.Address>, System.IEquatable<Akka.Actor.Address>
+    public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IComparable, System.IComparable<Akka.Actor.Address>, System.IEquatable<Akka.Actor.Address>
     {
         public static readonly Akka.Actor.Address AllSystems;
         public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> Comparer;
@@ -424,6 +429,7 @@ namespace Akka.Actor
     {
         protected AkkaException() { }
         protected AkkaException(string message, System.Exception cause = null) { }
+        protected AkkaException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         protected System.Exception Cause { get; }
     }
     public class AllForOneStrategy : Akka.Actor.SupervisorStrategy, System.IEquatable<Akka.Actor.AllForOneStrategy>
@@ -458,6 +464,7 @@ namespace Akka.Actor
     public class AskTimeoutException : Akka.Actor.AkkaException
     {
         public AskTimeoutException(string message) { }
+        protected AskTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class BootstrapSetup : Akka.Actor.Setup.Setup
     {
@@ -577,7 +584,9 @@ namespace Akka.Actor
     public class DeathPactException : Akka.Actor.AkkaException
     {
         public DeathPactException(Akka.Actor.IActorRef deadActor) { }
+        protected DeathPactException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public Akka.Actor.IActorRef DeadActor { get; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static Decider
     {
@@ -1160,10 +1169,12 @@ namespace Akka.Actor
     public class IllegalActorNameException : Akka.Actor.AkkaException
     {
         public IllegalActorNameException(string message) { }
+        protected IllegalActorNameException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class IllegalActorStateException : Akka.Actor.AkkaException
     {
         public IllegalActorStateException(string message) { }
+        protected IllegalActorStateException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class Inbox : Akka.Actor.ICanWatch, Akka.Actor.IInboxable, System.IDisposable
     {
@@ -1204,11 +1215,13 @@ namespace Akka.Actor
     {
         public InvalidActorNameException(string message) { }
         public InvalidActorNameException(string message, System.Exception innerException) { }
+        protected InvalidActorNameException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class InvalidMessageException : Akka.Actor.AkkaException
     {
         public InvalidMessageException() { }
         public InvalidMessageException(string message) { }
+        protected InvalidMessageException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class Kill : Akka.Actor.IAutoReceivedMessage
     {
@@ -1293,6 +1306,7 @@ namespace Akka.Actor
         public LoggerInitializationException() { }
         public LoggerInitializationException(string message) { }
         public LoggerInitializationException(string message, System.Exception cause = null) { }
+        protected LoggerInitializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public abstract class MinimalActorRef : Akka.Actor.InternalActorRefBase, Akka.Actor.IActorRefScope
@@ -1374,11 +1388,17 @@ namespace Akka.Actor
     public class PostRestartException : Akka.Actor.ActorInitializationException
     {
         public PostRestartException(Akka.Actor.IActorRef actor, System.Exception cause, System.Exception originalCause) { }
+        protected PostRestartException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public System.Exception OriginalCause { get; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
-    public class PreRestartException : Akka.Actor.AkkaException
+    public class PreRestartException : Akka.Actor.ActorInitializationException
     {
         public PreRestartException(Akka.Actor.IActorRef actor, System.Exception restartException, System.Exception cause, object optionalMessage) { }
+        protected PreRestartException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public object OptionalMessage { get; }
+        public System.Exception RestartException { get; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class Props : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Props>
     {
@@ -1577,6 +1597,7 @@ namespace Akka.Actor
     public sealed class SchedulerException : Akka.Actor.AkkaException
     {
         public SchedulerException(string message) { }
+        protected SchedulerException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static SchedulerExtensions
     {
@@ -1692,6 +1713,7 @@ namespace Akka.Actor
     public class StashOverflowException : Akka.Actor.AkkaException
     {
         public StashOverflowException(string message, System.Exception cause = null) { }
+        protected StashOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public abstract class Status
     {
@@ -2206,6 +2228,7 @@ namespace Akka.Configuration
     {
         public ConfigurationException(string message) { }
         public ConfigurationException(string message, System.Exception exception) { }
+        protected ConfigurationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public static Akka.Configuration.ConfigurationException NullOrEmptyConfig<T>(string path = null) { }
     }
     public class ConfigurationFactory
@@ -2642,6 +2665,7 @@ namespace Akka.Dispatch
     public class RejectedExecutionException : Akka.Actor.AkkaException
     {
         public RejectedExecutionException(string message = null, System.Exception inner = null) { }
+        protected RejectedExecutionException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ThreadPoolConfig
     {
@@ -3192,6 +3216,7 @@ namespace Akka.IO.Buffers
     public class BufferPoolAllocationException : Akka.Actor.AkkaException
     {
         public BufferPoolAllocationException(string message) { }
+        protected BufferPoolAllocationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public interface IBufferPool
     {
@@ -3973,6 +3998,7 @@ namespace Akka.Pattern
     {
         public IllegalStateException(string message) { }
         public IllegalStateException(string message, System.Exception innerEx) { }
+        protected IllegalStateException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class OpenCircuitException : Akka.Actor.AkkaException
     {
@@ -3983,7 +4009,9 @@ namespace Akka.Pattern
         public OpenCircuitException(string message, System.Exception cause, System.TimeSpan remainingDuration) { }
         public OpenCircuitException(System.Exception cause) { }
         public OpenCircuitException(System.Exception cause, System.TimeSpan remainingDuration) { }
+        protected OpenCircuitException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public System.TimeSpan RemainingDuration { get; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class static RetrySupport
     {
@@ -3995,6 +4023,7 @@ namespace Akka.Pattern
     public class UserCalledFailException : Akka.Actor.AkkaException
     {
         public UserCalledFailException() { }
+        protected UserCalledFailException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
 }
 namespace Akka.Routing

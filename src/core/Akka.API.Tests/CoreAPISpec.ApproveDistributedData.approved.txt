@@ -42,6 +42,7 @@ namespace Akka.DistributedData
     public class DataDeletedException : System.Exception
     {
         public DataDeletedException(string message) { }
+        protected DataDeletedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class Delete : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.DistributedData.Delete>
     {
@@ -981,6 +982,7 @@ namespace Akka.DistributedData.Durable
     {
         public LoadFailedException(string message) { }
         public LoadFailedException(string message, System.Exception cause) { }
+        public LoadFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class Store
     {

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -713,6 +714,16 @@ namespace Akka.Cluster
     public class ClusterJoinFailedException : AkkaException
     {
         public ClusterJoinFailedException(string message) : base(message)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ClusterJoinFailedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected ClusterJoinFailedException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }

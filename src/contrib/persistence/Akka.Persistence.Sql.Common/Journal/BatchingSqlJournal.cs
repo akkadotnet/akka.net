@@ -13,6 +13,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -22,6 +23,7 @@ using Akka.Pattern;
 using Akka.Persistence.Journal;
 using Akka.Serialization;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -256,14 +258,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                 throw ConfigurationException.NullOrEmptyConfig<BatchingSqlJournalSetup>();
 
             var connectionString = config.GetString("connection-string", null);
-#if CONFIGURATION
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager
                     .ConnectionStrings[config.GetString("connection-string-name", "DefaultConnection")]?
                     .ConnectionString;
             }
-#endif
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ConfigurationException("No connection string for Sql Event Journal was specified");
@@ -360,11 +360,13 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             public Exception Cause { get; }
             public IJournalRequest[] Requests { get; }
+            public int ChunkId { get; }
 
-            public ChunkExecutionFailure(Exception cause, IJournalRequest[] requests)
+            public ChunkExecutionFailure(Exception cause, IJournalRequest[] requests, int chunkId)
             {
                 Cause = cause;
                 Requests = requests;
+                ChunkId = chunkId;
             }
         }
 
@@ -373,14 +375,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             public readonly int ChunkId;
             public readonly int OperationCount;
             public readonly TimeSpan TimeSpent;
-            public readonly Exception Cause;
 
-            public BatchComplete(int chunkId, int operationCount, TimeSpan timeSpent, Exception cause = null)
+            public BatchComplete(int chunkId, int operationCount, TimeSpan timeSpent)
             {
                 ChunkId = chunkId;
                 TimeSpent = timeSpent;
                 OperationCount = operationCount;
-                Cause = cause;
             }
         }
 
@@ -532,11 +532,19 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected readonly ILoggingAdapter Log;
 
+        private readonly Queue<(IJournalRequest request, long id)>[] _buffers;
+
         /// <summary>
-        /// Buffer for requests that are waiting to be served when next DB connection will be released.
-        /// This object access is NOT thread safe.
+        /// Buffer for write requests that are waiting to be served when next DB connection will be released.
         /// </summary>
-        protected readonly Queue<IJournalRequest> Buffer;
+        private Queue<(IJournalRequest request, long id)> WriteBuffer => _buffers[0];
+
+        /// <summary>
+        /// Buffer for read requests that are waiting to be served when next DB connection will be released.
+        /// </summary>
+        private Queue<(IJournalRequest request, long id)> ReadBuffer => _buffers[1];
+
+        private readonly AtomicCounterLong _bufferIdCounter;
 
         private readonly Dictionary<string, HashSet<IActorRef>> _persistenceIdSubscribers;
         private readonly Dictionary<string, HashSet<IActorRef>> _tagSubscribers;
@@ -560,7 +568,13 @@ namespace Akka.Persistence.Sql.Common.Journal
             _newEventSubscriber = new HashSet<IActorRef>();
 
             _remainingOperations = Setup.MaxConcurrentOperations;
-            Buffer = new Queue<IJournalRequest>(Setup.MaxBatchSize);
+            _buffers = new[]
+            {
+                new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize),
+                new Queue<(IJournalRequest, long)>(Setup.MaxBatchSize)
+            };
+            _bufferIdCounter = new AtomicCounterLong(0);
+
             _serialization = Context.System.Serialization;
             Log = Context.GetLogger();
             _circuitBreaker = CircuitBreaker.Create(
@@ -733,31 +747,65 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void FailChunkExecution(ChunkExecutionFailure message)
         {
+            _remainingOperations++;
             var cause = message.Cause;
-            Log.Error(cause, "Failed to execute chunk for {0} requests", message.Requests.Length);
-
-            foreach (var req in message.Requests)
+            Log.Error(cause, "An error occurred during event batch processing. ChunkId: [{0}], batched requests: [{1}]", message.ChunkId, message.Requests.Length);
+            
+            foreach (var request in message.Requests)
             {
-                switch (req)
+                switch (request)
                 {
-                    case WriteMessages write:
-                        var atomicWriteCount = write.Messages.OfType<AtomicWrite>().Count();
-                        write.PersistentActor.Tell(new WriteMessagesFailed(cause, atomicWriteCount));
+                    case WriteMessages req:
+                    {
+                        var atomicWriteCount = req.Messages.OfType<AtomicWrite>().Count();
+                        var actorInstanceId = req.ActorInstanceId;
+                        var aRef = req.PersistentActor;
+
+                        aRef.Tell(new WriteMessagesFailed(cause, atomicWriteCount));
+                        foreach (var envelope in req.Messages)
+                        {
+                            if (!(envelope is AtomicWrite write)) 
+                                continue;
+
+                            var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
+                            foreach (var unadapted in writes)
+                            {
+                                if (cause is DbException)
+                                {
+                                    // database-related exceptions should result in failure                                
+                                    aRef.Tell(new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
+                                }
+                                else
+                                {
+                                    aRef.Tell(new WriteMessageRejected(unadapted, cause, actorInstanceId), unadapted.Sender);
+                                }
+                            }
+                        }
                         break;
+                    }
+
+                    case DeleteMessagesTo delete:
+                        delete.PersistentActor.Tell(new DeleteMessagesFailure(cause, delete.ToSequenceNr), ActorRefs.NoSender);
+                        break;
+
                     case ReplayMessages replay:
                         replay.PersistentActor.Tell(new ReplayMessagesFailure(cause));
                         break;
-                    case DeleteMessagesTo delete:
-                        delete.PersistentActor.Tell(new DeleteMessagesFailure(cause, delete.ToSequenceNr));
-                        break;
+
                     case ReplayTaggedMessages replayTagged:
                         replayTagged.ReplyTo.Tell(new ReplayMessagesFailure(cause));
                         break;
+
                     case ReplayAllEvents replayAll:
                         replayAll.ReplyTo.Tell(new EventReplayFailure(cause));
                         break;
+
+                    default:
+                        throw new Exception($"Unknown persistence journal request type [{request.GetType()}]");
                 }
             }
+
+            TryProcess();
         }
 
         #region subscriptions
@@ -829,10 +877,20 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="message">TBD</param>
         protected void BatchRequest(IJournalRequest message)
         {
-            if (Buffer.Count > Setup.MaxBufferSize)
+            if (WriteBuffer.Count + ReadBuffer.Count > Setup.MaxBufferSize)
+            {
                 OnBufferOverflow(message);
+            }
             else
-                Buffer.Enqueue(message);
+            {
+                var id = _bufferIdCounter.GetAndIncrement();
+                // Enqueue writes and delete operation requests into the write queue,
+                // else if they are query operations, enqueue them into the read queue
+                if (message is WriteMessages || message is DeleteMessagesTo)
+                    WriteBuffer.Enqueue((message, id));
+                else
+                    ReadBuffer.Enqueue((message, id));
+            }
 
             TryProcess();
         }
@@ -870,25 +928,28 @@ namespace Akka.Persistence.Sql.Common.Journal
 
         private void TryProcess()
         {
-            if (_remainingOperations > 0 && Buffer.Count > 0)
+            if (_remainingOperations > 0 && (WriteBuffer.Count > 0 || ReadBuffer.Count > 0))
             {
                 _remainingOperations--;
 
                 var chunk = DequeueChunk(_remainingOperations);
                 var context = Context;
                 _circuitBreaker.WithCircuitBreaker(() => ExecuteChunk(chunk, context))
-                    .PipeTo(Self, failure: ex => new ChunkExecutionFailure(ex, chunk.Requests));
+                    .PipeTo(Self, failure: ex => new ChunkExecutionFailure(ex, chunk.Requests, chunk.ChunkId));
             }
         }
 
         private async Task<BatchComplete> ExecuteChunk(RequestChunk chunk, IActorContext context)
         {
-            Exception cause = null;
+            var writeResults = new Queue<WriteMessagesResult>();
+            var isWriteOperation = false;
             var stopwatch = new Stopwatch();
             using (var connection = CreateConnection(Setup.ConnectionString))
             {
                 await connection.OpenAsync();
 
+                // In the grand scheme of thing, using a transaction in an all read batch operation
+                // should not hurt performance by much, because it is done only once at the start.
                 using (var tx = connection.BeginTransaction(Setup.IsolationLevel))
                 using (var command = (TCommand)connection.CreateCommand())
                 {
@@ -897,20 +958,22 @@ namespace Akka.Persistence.Sql.Common.Journal
                     try
                     {
                         stopwatch.Start();
-                        for (int i = 0; i < chunk.Requests.Length; i++)
+                        // This looks dangerous at a glance, but we have separated read and write operations
+                        // in the DequeueChunk method. 
+                        foreach (var req in chunk.Requests)
                         {
-                            var req = chunk.Requests[i];
-
                             switch (req)
                             {
                                 case WriteMessages msg:
-                                    await HandleWriteMessages(msg, command);
+                                    isWriteOperation = true;
+                                    writeResults.Enqueue(await HandleWriteMessages(msg, command)); 
+                                    break;
+                                case DeleteMessagesTo msg:
+                                    isWriteOperation = true;
+                                    await HandleDeleteMessagesTo(msg, command);
                                     break;
                                 case ReplayMessages msg:
                                     await HandleReplayMessages(msg, command, context);
-                                    break;
-                                case DeleteMessagesTo msg:
-                                    await HandleDeleteMessagesTo(msg, command);
                                     break;
                                 case ReplayTaggedMessages msg:
                                     await HandleReplayTaggedMessages(msg, command);
@@ -926,21 +989,19 @@ namespace Akka.Persistence.Sql.Common.Journal
                                     break;
                             }
                         }
-
                         tx.Commit();
-
-                        if (CanPublish)
-                        {
-                            for (int i = 0; i < chunk.Requests.Length; i++)
-                            {
-                                context.System.EventStream.Publish(chunk.Requests[i]);
-                            }
-                        }
                     }
-                    catch (Exception e)
+                    catch (Exception e1)
                     {
-                        cause = e;
-                        tx.Rollback();
+                        try
+                        {
+                            tx.Rollback();
+                        }
+                        catch (Exception e2)
+                        {
+                            throw new AggregateException(e2, e1);
+                        }
+                        throw;
                     }
                     finally
                     {
@@ -949,7 +1010,33 @@ namespace Akka.Persistence.Sql.Common.Journal
                 }
             }
 
-            return new BatchComplete(chunk.ChunkId, chunk.Requests.Length, stopwatch.Elapsed, cause);
+            if (CanPublish)
+            {
+                foreach (var request in chunk.Requests)
+                {
+                    context.System.EventStream.Publish(request);
+                }
+            }
+
+            if (isWriteOperation)
+            {
+                foreach (var request in chunk.Requests)
+                {
+                    switch (request)
+                    {
+                        case WriteMessages _:
+                            writeResults.Dequeue().FinalizeSuccess(this);
+                            break;
+                        case DeleteMessagesTo req:
+                            req.PersistentActor.Tell(new DeleteMessagesSuccess(req.ToSequenceNr));
+                            break;
+                        default:
+                            throw new Exception($"Unknown database write operation {request.GetType()}");
+                    }
+                }
+            }
+
+            return new BatchComplete(chunk.ChunkId, chunk.Requests.Length, stopwatch.Elapsed);
         }
 
         protected virtual async Task HandleDeleteMessagesTo(DeleteMessagesTo req, TCommand command)
@@ -957,35 +1044,24 @@ namespace Akka.Persistence.Sql.Common.Journal
             var toSequenceNr = req.ToSequenceNr;
             var persistenceId = req.PersistenceId;
 
-            try
-            {
-                var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
+            var highestSequenceNr = await ReadHighestSequenceNr(persistenceId, command);
 
-                command.CommandText = DeleteBatchSql;
+            command.CommandText = DeleteBatchSql;
+            command.Parameters.Clear();
+            AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
+            AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
+
+            await command.ExecuteNonQueryAsync();
+
+            if (highestSequenceNr <= toSequenceNr)
+            {
+                command.CommandText = UpdateSequenceNrSql;
                 command.Parameters.Clear();
+
                 AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-                AddParameter(command, "@ToSequenceNr", DbType.Int64, toSequenceNr);
+                AddParameter(command, "@SequenceNr", DbType.Int64, highestSequenceNr);
 
                 await command.ExecuteNonQueryAsync();
-
-                if (highestSequenceNr <= toSequenceNr)
-                {
-                    command.CommandText = UpdateSequenceNrSql;
-                    command.Parameters.Clear();
-
-                    AddParameter(command, "@PersistenceId", DbType.String, persistenceId);
-                    AddParameter(command, "@SequenceNr", DbType.Int64, highestSequenceNr);
-
-                    await command.ExecuteNonQueryAsync();
-                }
-
-                var response = new DeleteMessagesSuccess(toSequenceNr);
-                req.PersistentActor.Tell(response);
-            }
-            catch (Exception cause)
-            {
-                var response = new DeleteMessagesFailure(cause, toSequenceNr);
-                req.PersistentActor.Tell(response, ActorRefs.NoSender); 
             }
         }
 
@@ -1168,116 +1244,47 @@ namespace Akka.Persistence.Sql.Common.Journal
             }
         }
 
-        private async Task HandleWriteMessages(WriteMessages req, TCommand command)
+        private async Task<WriteMessagesResult> HandleWriteMessages(WriteMessages req, TCommand command)
         {
-            IJournalResponse summary = null;
-            var responses = new List<(IJournalResponse, IActorRef)>();
             var tags = new HashSet<string>();
             var persistenceIds = new HashSet<string>();
-            var actorInstanceId = req.ActorInstanceId;
-            var atomicWriteCount = req.Messages.OfType<AtomicWrite>().Count();
 
-            try
+            command.CommandText = InsertEventSql;
+
+            var tagBuilder = new StringBuilder(16); // magic number                
+
+            foreach (var envelope in req.Messages.OfType<AtomicWrite>())
             {
-                command.CommandText = InsertEventSql;
-
-                var tagBuilder = new StringBuilder(16); // magic number                
-
-                foreach (var envelope in req.Messages)
+                var writes = (IImmutableList<IPersistentRepresentation>)envelope.Payload;
+                foreach (var unadapted in writes)
                 {
-                    if (envelope is AtomicWrite write)
+                    command.Parameters.Clear();
+                    tagBuilder.Clear();
+
+                    var persistent = AdaptToJournal(unadapted);
+                    if (persistent.Payload is Tagged tagged)
                     {
-                        var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
-                        foreach (var unadapted in writes)
+                        if (tagged.Tags.Count != 0)
                         {
-                            try
+                            tagBuilder.Append(';');
+                            foreach (var tag in tagged.Tags)
                             {
-                                command.Parameters.Clear();
-                                tagBuilder.Clear();
-
-                                var persistent = AdaptToJournal(unadapted);
-                                if (persistent.Payload is Tagged tagged)
-                                {
-                                    if (tagged.Tags.Count != 0)
-                                    {
-                                        tagBuilder.Append(';');
-                                        foreach (var tag in tagged.Tags)
-                                        {
-                                            tags.Add(tag);
-                                            tagBuilder.Append(tag).Append(';');
-                                        }
-                                    }
-                                    persistent = persistent.WithPayload(tagged.Payload);
-                                }
-
-                                WriteEvent(command, persistent.WithTimestamp(DateTime.UtcNow.Ticks), tagBuilder.ToString());
-
-                                await command.ExecuteNonQueryAsync();
-
-                                var response = (new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
-                                responses.Add(response);
-                                persistenceIds.Add(persistent.PersistenceId);
-                            }
-                            catch (DbException cause)
-                            {
-                                // database-related exceptions should result in failure                                
-                                summary = new WriteMessagesFailed(cause, atomicWriteCount);
-                                var response = (new WriteMessageFailure(unadapted, cause, actorInstanceId), unadapted.Sender);
-                                responses.Add(response);
-                            }
-                            catch (Exception cause)
-                            {
-                                //TODO: this scope wraps atomic write. Atomic writes have all-or-nothing commits.
-                                // so we should revert transaction here. But we need to check how this affect performance.
-
-                                var response = (new WriteMessageRejected(unadapted, cause, actorInstanceId), unadapted.Sender);
-                                responses.Add(response);
+                                tags.Add(tag);
+                                tagBuilder.Append(tag).Append(';');
                             }
                         }
+                        persistent = persistent.WithPayload(tagged.Payload);
                     }
-                    else
-                    {
-                        //TODO: other cases?
-                        var response = (new LoopMessageSuccess(envelope.Payload, actorInstanceId), envelope.Sender);
-                        responses.Add(response);
-                    }
-                }
 
-                if (HasTagSubscribers && tags.Count != 0)
-                {
-                    foreach (var tag in tags)
-                    {
-                        NotifyTagChanged(tag);
-                    }
-                }
+                    WriteEvent(command, persistent.WithTimestamp(DateTime.UtcNow.Ticks), tagBuilder.ToString());
 
-                if (HasPersistenceIdSubscribers)
-                {
-                    foreach (var persistenceId in persistenceIds)
-                    {
-                        NotifyPersistenceIdChanged(persistenceId);
-                    }
-                }
+                    await command.ExecuteNonQueryAsync();
 
-                if (HasNewEventsSubscribers)
-                {
-                    NotifyNewEventAppended();
+                    persistenceIds.Add(persistent.PersistenceId);
                 }
-
-                summary = summary ?? WriteMessagesSuccessful.Instance;
-            }
-            catch (Exception cause)
-            {
-                summary = new WriteMessagesFailed(cause, atomicWriteCount);
             }
 
-            var aref = req.PersistentActor;
-
-            aref.Tell(summary);
-            foreach (var r in responses)
-            {
-                aref.Tell(r.Item1, r.Item2);
-            }
+            return new WriteMessagesResult(req, tags, persistenceIds);
         }
 
         /// <summary>
@@ -1388,29 +1395,111 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="param">Parameter to customize</param>
         protected virtual void PreAddParameterToCommand(TCommand command, DbParameter param) { }
         
+        /// <summary>
+        /// Select the buffer that has the smallest id on its first item, retrieve a maximum Setup.MaxBatchSize
+        /// items from it, and return it as a chunk that needs to be batched
+        /// </summary>
         private RequestChunk DequeueChunk(int chunkId)
         {
-            var operationsCount = Math.Min(Buffer.Count, Setup.MaxBatchSize);
-            var array = new IJournalRequest[operationsCount];
-            for (int i = 0; i < operationsCount; i++)
-            {
-                var req = Buffer.Dequeue();
-                array[i] = req;
-            }
+            var currentBuffer = _buffers
+                .Where(q => q.Count > 0)
+                .OrderBy(q => q.Peek().id).First();
 
-            return new RequestChunk(chunkId, array);
+            var operations = new List<IJournalRequest>();
+            if (ReferenceEquals(currentBuffer, WriteBuffer))
+            {
+                // Stop dequeuing when we encounter another type of write operation request
+                // We don't batch delete and writes in the same batch, reason being a database
+                // can be deadlocked if write and delete happens in the same transaction
+                var writeType = currentBuffer.Peek().request.GetType();
+                while(currentBuffer.Count > 0 && currentBuffer.Peek().request.GetType() == writeType)
+                {
+                    operations.Add(currentBuffer.Dequeue().request);
+                    if (operations.Count == Setup.MaxBatchSize)
+                        break;
+                }
+            }
+            else
+            {
+                while(currentBuffer.Count > 0)
+                {
+                    operations.Add(currentBuffer.Dequeue().request);
+                    if (operations.Count == Setup.MaxBatchSize)
+                        break;
+                }
+            }
+            
+            return new RequestChunk(chunkId, operations.ToArray());
         }
 
         private void CompleteBatch(BatchComplete msg)
         {
             _remainingOperations++;
-            if (msg.Cause != null)
-            {
-                Log.Error(msg.Cause, "An error occurred during event batch processing (chunkId: {0})", msg.ChunkId);
-            }
-            else Log.Debug("Completed batch (chunkId: {0}) of {1} operations in {2} milliseconds", msg.ChunkId, msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
+            Log.Debug("Completed batch (chunkId: {0}) of {1} operations in {2} milliseconds", msg.ChunkId, msg.OperationCount, msg.TimeSpent.TotalMilliseconds);
 
             TryProcess();
+        }
+
+        private class WriteMessagesResult
+        {
+            private readonly WriteMessages _request;
+
+            private readonly ImmutableHashSet<string> _tags;
+            private readonly ImmutableHashSet<string> _persistenceIds;
+
+            public WriteMessagesResult(
+                WriteMessages request,
+                IEnumerable<string> tags, 
+                IEnumerable<string> persistenceIds)
+            {
+                _request = request;
+                _tags = tags.ToImmutableHashSet();
+                _persistenceIds = persistenceIds.ToImmutableHashSet();
+            }
+
+            public void FinalizeSuccess(BatchingSqlJournal<TConnection, TCommand> journal)
+            {
+                var actorInstanceId = _request.ActorInstanceId;
+                var aRef = _request.PersistentActor;
+                aRef.Tell(WriteMessagesSuccessful.Instance);
+
+                foreach (var envelope in _request.Messages)
+                {
+                    if (!(envelope is AtomicWrite write))
+                    {
+                        aRef.Tell(new LoopMessageSuccess(envelope.Payload, actorInstanceId), envelope.Sender);
+                        continue;
+                    }
+
+                    var writes = (IImmutableList<IPersistentRepresentation>)write.Payload;
+                    foreach (var unadapted in writes)
+                    {
+                        aRef.Tell(new WriteMessageSuccess(unadapted, actorInstanceId), unadapted.Sender);
+                    }
+                }
+
+                if (journal.HasTagSubscribers && _tags.Count != 0)
+                {
+                    foreach (var tag in _tags)
+                    {
+                        journal.NotifyTagChanged(tag);
+                    }
+                }
+
+                if (journal.HasPersistenceIdSubscribers)
+                {
+                    foreach (var persistenceId in _persistenceIds)
+                    {
+                        journal.NotifyPersistenceIdChanged(persistenceId);
+                    }
+                }
+
+                if (journal.HasNewEventsSubscribers)
+                {
+                    journal.NotifyNewEventAppended();
+                }
+
+            }
         }
     }
 
@@ -1432,6 +1521,16 @@ namespace Akka.Persistence.Sql.Common.Journal
             + "requests incoming faster than the underlying database is able to fulfill them. You may modify "
             + "`max-buffer-size`, `max-batch-size` and `max-concurrent-operations` HOCON settings in order to "
             + " change it.")
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JournalBufferOverflowException" /> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
+        protected JournalBufferOverflowException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }
