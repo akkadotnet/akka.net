@@ -321,7 +321,7 @@ namespace Akka.DistributedData
         {
             private readonly (UniqueAddress, long)[] _backing;
             private readonly int _maxIndex;
-            private int _currentIndex;
+            private int _currentIndex = -1;
 
             public Enumerator(ImmutableDictionary<UniqueAddress, long> versions)
             {
@@ -352,7 +352,8 @@ namespace Akka.DistributedData
                 _currentIndex = 0;
             }
 
-            public (UniqueAddress, long) Current => _backing[_currentIndex];
+            public (UniqueAddress, long) Current
+                    => _currentIndex == -1 ? (null, 0) : _backing[_currentIndex];
 
             object IEnumerator.Current => Current;
 
