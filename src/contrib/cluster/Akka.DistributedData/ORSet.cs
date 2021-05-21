@@ -518,35 +518,38 @@ namespace Akka.DistributedData
             public override ORSet<T> Underlying { get; }
             public override IReplicatedData Merge(IReplicatedData other)
             {
-                if (other is AddDeltaOperation)
+                switch (other)
                 {
-                    var u = ((AddDeltaOperation)other).Underlying;
-                    // Note that we only merge deltas originating from the same node
-                    return new AddDeltaOperation(new ORSet<T>(
-                        ConcatElementsMap(u.ElementsMap),
-                        Underlying.VersionVector.Merge(u.VersionVector)));
+                    case AddDeltaOperation operation:
+                    {
+                        var u = operation.Underlying;
+                        // Note that we only merge deltas originating from the same node
+                        return new AddDeltaOperation(new ORSet<T>(
+                            ConcatElementsMap(u.ElementsMap),
+                            Underlying.VersionVector.Merge(u.VersionVector)));
+                    }
+                    case AtomicDeltaOperation _:
+                        return new DeltaGroup(ImmutableArray.Create(this, other));
+                    case DeltaGroup dg:
+                    {
+                        var vector = dg.Operations;
+                        return new DeltaGroup(vector.Add(this));
+                    }
+                    default:
+                        throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
                 }
-                else if (other is AtomicDeltaOperation)
-                {
-                    return new DeltaGroup(ImmutableArray.Create(this, other));
-                }
-                else if (other is DeltaGroup)
-                {
-                    var vector = ((DeltaGroup)other).Operations;
-                    return new DeltaGroup(vector.Add(this));
-                }
-                else throw new ArgumentException($"Unknown delta operation of type {other.GetType()}", nameof(other));
             }
 
             private ImmutableDictionary<T, VersionVector> ConcatElementsMap(
                 ImmutableDictionary<T, VersionVector> thatMap)
             {
-                var u = Underlying.ElementsMap.ToBuilder();
-                foreach (var entry in thatMap)
-                {
-                    u[entry.Key] = entry.Value;
-                }
-                return u.ToImmutable();
+                //var u = Underlying.ElementsMap.ToBuilder();
+                //foreach (var entry in thatMap)
+                //{
+                //    u[entry.Key] = entry.Value;
+                //}
+                //return u.ToImmutable();
+                return Underlying.ElementsMap.SetItems(thatMap);
             }
         }
 
