@@ -52,13 +52,13 @@ namespace Akka.DistributedData
         /// <summary>
         /// Marker to signal that we have reached the end of a version vector.
         /// </summary>
-        private static readonly KeyValuePair<UniqueAddress, long> EndMarker = new KeyValuePair<UniqueAddress, long>(null, long.MinValue);
+        private static readonly (UniqueAddress, long) EndMarker = (null, long.MinValue);
 
         public abstract bool IsEmpty { get; }
 
         public abstract int Count { get; }
 
-        public abstract IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator { get; }
+        public abstract IEnumerator<(UniqueAddress, long)> VersionEnumerator { get; }
         public static readonly VersionVector Empty = new MultiVersionVector(ImmutableDictionary<UniqueAddress, long>.Empty);
 
         /// <summary>
@@ -163,11 +163,11 @@ namespace Akka.DistributedData
         private T NextOrElse<T>(IEnumerator<T> enumerator, T defaultValue) =>
             enumerator.MoveNext() ? enumerator.Current : defaultValue;
 
-        private Ordering Compare(IEnumerator<KeyValuePair<UniqueAddress, long>> i1,
-            IEnumerator<KeyValuePair<UniqueAddress, long>> i2, Ordering requestedOrder)
+        private Ordering Compare(IEnumerator<(UniqueAddress, long)> i1,
+            IEnumerator<(UniqueAddress, long)> i2, Ordering requestedOrder)
         {
-            var nt1 = NextOrElse(i1, EndMarker);
-            var nt2 = NextOrElse(i2, EndMarker);
+            var nt1 = NextOrElse<(UniqueAddress Key, long Value)>(i1, EndMarker);
+            var nt2 = NextOrElse<(UniqueAddress Key, long Value)>(i2, EndMarker);
             var currentOrder = Ordering.Same;
             while (true)
             {
@@ -214,13 +214,13 @@ namespace Akka.DistributedData
     [DebuggerDisplay("VersionVector({Node}->{Version})")]
     public sealed class SingleVersionVector : VersionVector
     {
-        private sealed class Enumerator : IEnumerator<KeyValuePair<UniqueAddress, long>>
+        private sealed class Enumerator : IEnumerator<(UniqueAddress, long)>
         {
             private bool _moved = false;
 
             public Enumerator(UniqueAddress node, long version)
             {
-                Current = new KeyValuePair<UniqueAddress, long>(node, version);
+                Current = (node, version);
             }
 
             /// <inheritdoc/>
@@ -241,7 +241,7 @@ namespace Akka.DistributedData
                 _moved = false;
             }
 
-            public KeyValuePair<UniqueAddress, long> Current { get; }
+            public (UniqueAddress, long) Current { get; }
 
             object IEnumerator.Current => Current;
         }
@@ -257,7 +257,7 @@ namespace Akka.DistributedData
 
         public override bool IsEmpty => false;
         public override int Count => 1;
-        public override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => new Enumerator(Node, Version);
+        public override IEnumerator<(UniqueAddress, long)> VersionEnumerator => new Enumerator(Node, Version);
         public override VersionVector Increment(UniqueAddress node)
         {
             var v = Counter.GetAndIncrement();
@@ -317,6 +317,48 @@ namespace Akka.DistributedData
     [Serializable]
     public sealed class MultiVersionVector : VersionVector
     {
+        internal class Enumerator : IEnumerator<(UniqueAddress, long)>
+        {
+            private readonly (UniqueAddress, long)[] _backing;
+            private readonly int _maxIndex;
+            private int _currentIndex;
+
+            public Enumerator(ImmutableDictionary<UniqueAddress, long> versions)
+            {
+                _backing = new (UniqueAddress, long)[versions.Count];
+                var index = 0;
+                foreach (var kvp in versions)
+                {
+                    _backing[index] = (kvp.Key, kvp.Value);
+                    index++;
+                }
+
+                _maxIndex = _backing.Length - 1;
+            }
+
+            public bool MoveNext()
+            {
+                _currentIndex++;
+                if (_currentIndex > _maxIndex)
+                {
+                    _currentIndex = _maxIndex;
+                    return false;
+                }
+                return true;
+            }
+
+            public void Reset()
+            {
+                _currentIndex = 0;
+            }
+
+            public (UniqueAddress, long) Current => _backing[_currentIndex];
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() { }
+        }
+
         internal readonly ImmutableDictionary<UniqueAddress, long> Versions;
 
         public MultiVersionVector(params KeyValuePair<UniqueAddress, long>[] nodeVersions)
@@ -336,7 +378,7 @@ namespace Akka.DistributedData
 
         public override bool IsEmpty => Versions.IsEmpty;
         public override int Count => Versions.Count;
-        public override IEnumerator<KeyValuePair<UniqueAddress, long>> VersionEnumerator => Versions.GetEnumerator();
+        public override IEnumerator<(UniqueAddress, long)> VersionEnumerator => new Enumerator(Versions);
         public override VersionVector Increment(UniqueAddress node) =>
             new MultiVersionVector(Versions.SetItem(node, Counter.GetAndIncrement()));
 

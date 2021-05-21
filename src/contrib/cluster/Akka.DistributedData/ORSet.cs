@@ -709,9 +709,9 @@ namespace Akka.DistributedData
             {
                 while (deleteDots.MoveNext())
                 {
-                    var curr = deleteDots.Current;
-                    deleteDotNodes.Add(curr.Key);
-                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(curr.Key) <= curr.Value));
+                    var (key, value) = deleteDots.Current;
+                    deleteDotNodes.Add(key);
+                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(key) <= value));
                 }
             }
 
@@ -720,7 +720,7 @@ namespace Akka.DistributedData
             {
                 if (thisDot != null)
                 {
-                    using (var e = thisDot.VersionEnumerator)
+                    using (IEnumerator<(UniqueAddress Key, long)> e = thisDot.VersionEnumerator)
                     {
                         var allContains = true;
                         while (e.MoveNext()) allContains &= deleteDotNodes.Contains(e.Current.Key);

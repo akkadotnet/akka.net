@@ -153,11 +153,11 @@ namespace Akka.DistributedData.Serialization
             {
                 while (enumerator.MoveNext())
                 {
-                    var current = enumerator.Current;
+                    var (key, value) = enumerator.Current;
                     b.Entries.Add(new Proto.Msg.VersionVector.Types.Entry()
                     {
-                        Node = UniqueAddressToProto(current.Key),
-                        Version = current.Value
+                        Node = UniqueAddressToProto(key),
+                        Version = value
                     });
                 }
             }
