@@ -276,8 +276,8 @@ namespace Akka.Actor
         /// <returns>A newly created <see cref="ChildActorPath"/></returns>
         public static ActorPath operator /(ActorPath path, string name)
         {
-            var nameAndUid = ActorCell.SplitNameAndUid(name);
-            return new ChildActorPath(path, nameAndUid.Name, nameAndUid.Uid);
+            var (s, uid) = ActorCell.GetNameAndUid(name);
+            return new ChildActorPath(path, s, uid);
         }
 
         /// <summary>
@@ -327,74 +327,173 @@ namespace Akka.Actor
         {
             actorPath = null;
 
+            if (!TryParseAddress(path, out var address, out var absoluteUri)) return false;
+            var spanified = absoluteUri;
 
-            Address address;
-            Uri uri;
-            if (!TryParseAddress(path, out address, out uri)) return false;
-            var pathElements = uri.AbsolutePath.Split('/');
-            actorPath = new RootActorPath(address) / pathElements.Skip(1);
-            if (uri.Fragment.StartsWith("#"))
+            // check for Uri fragment here
+            var fragment = ReadOnlySpan<char>.Empty;
+            var fragLoc = spanified.IndexOf('#');
+            if (fragLoc > -1)
             {
-                var uid = int.Parse(uri.Fragment.Substring(1));
+                fragment = spanified.Slice(fragLoc + 1);
+                spanified = spanified.Slice(0, fragLoc);
+            }
+            var nextSlash = 0;
+
+            actorPath = new RootActorPath(address);
+
+            do
+            {
+                nextSlash = spanified.IndexOf('/');
+                if (nextSlash > 0)
+                {
+                    actorPath /= spanified.Slice(0, nextSlash).ToString();
+                }
+                else if (nextSlash < 0 && spanified.Length > 0)
+                {
+                    actorPath /= spanified.ToString();
+                }
+
+                spanified = spanified.Slice(nextSlash + 1);
+            } while (nextSlash >= 0);
+
+            if (!fragment.IsEmpty)
+            {
+                var uid = SpanHacks.Parse(fragment);
                 actorPath = actorPath.WithUid(uid);
             }
             return true;
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to parse an <see cref="Address"/> from a stringified <see cref="ActorPath"/>.
         /// </summary>
-        /// <param name="path">TBD</param>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="path">The string representation of the <see cref="ActorPath"/>.</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
         public static bool TryParseAddress(string path, out Address address)
         {
-            Uri uri;
-            return TryParseAddress(path, out address, out uri);
+            return TryParseAddress(path, out address, out var _);
         }
 
-        private static bool TryParseAddress(string path, out Address address, out Uri uri)
+        /// <summary>
+        /// Attempts to parse an <see cref="Address"/> from a stringified <see cref="ActorPath"/>.
+        /// </summary>
+        /// <param name="path">The string representation of the <see cref="ActorPath"/>.</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <param name="absoluteUri">A <see cref="ReadOnlySpan{T}"/> containing the path following the address.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        private static bool TryParseAddress(string path, out Address address, out ReadOnlySpan<char> absoluteUri)
         {
-            //This code corresponds to AddressFromURIString.unapply
             address = null;
-            if (!Uri.TryCreate(path, UriKind.Absolute, out uri))
+
+            var spanified = path.AsSpan();
+            absoluteUri = spanified;
+
+            var firstColonPos = spanified.IndexOf(':');
+
+            if (firstColonPos == -1) // not an absolute Uri
                 return false;
-            var protocol = uri.Scheme; //Typically "akka"
-            if (!protocol.StartsWith("akka", StringComparison.OrdinalIgnoreCase))
-            {
-                // Protocol must start with 'akka.*
+
+            var fullScheme = SpanHacks.ToLowerInvariant(spanified.Slice(0, firstColonPos));
+            if (!fullScheme.StartsWith("akka"))
                 return false;
+
+            spanified = spanified.Slice(firstColonPos + 1);
+            if (spanified.Length < 2 || !(spanified[0] == '/' && spanified[1] == '/'))
+                return false;
+
+            spanified = spanified.Slice(2); // move past the double //
+            var firstAtPos = spanified.IndexOf('@');
+            var sysName = string.Empty;
+
+            if (firstAtPos == -1)
+            { // dealing with an absolute local Uri
+                var nextSlash = spanified.IndexOf('/');
+
+                if (nextSlash == -1)
+                {
+                    sysName = spanified.ToString();
+                    absoluteUri = "/".AsSpan(); // RELY ON THE JIT
+                }
+                else
+                {
+                    sysName = spanified.Slice(0, nextSlash).ToString();
+                    absoluteUri = spanified.Slice(nextSlash);
+                }
+
+                address = new Address(fullScheme, sysName);
+                return true;
             }
 
+            // dealing with a remote Uri
+            sysName = spanified.Slice(0, firstAtPos).ToString();
+            spanified = spanified.Slice(firstAtPos + 1);
 
-            string systemName;
-            string host = null;
-            int? port = null;
-            if (IsNullOrEmpty(uri.UserInfo))
+            /*
+             * Need to check for:
+             * - IPV4 / hostnames
+             * - IPV6 (must be surrounded by '[]') according to spec.
+             */
+            var host = string.Empty;
+
+            // check for IPV6 first
+            var openBracket = spanified.IndexOf('[');
+            var closeBracket = spanified.IndexOf(']');
+            if (openBracket > -1 && closeBracket > openBracket)
             {
-                //  protocol://SystemName/Path1/Path2
-                if (uri.Port > 0)
-                {
-                    //port may not be specified for these types of paths
+                // found an IPV6 address
+                host = spanified.Slice(openBracket, closeBracket - openBracket + 1).ToString();
+                spanified = spanified.Slice(closeBracket + 1); // advance past the address
+
+                // need to check for trailing colon
+                var secondColonPos = spanified.IndexOf(':');
+                if (secondColonPos == -1)
                     return false;
-                }
-                //System name is in the "host" position. According to rfc3986 host is case
-                //insensitive, but should be produced as lowercase, so if we use uri.Host
-                //we'll get it in lower case.
-                //So we'll extract it ourselves using the original path.
-                //We skip the protocol and "://"
-                var systemNameLength = uri.Host.Length;
-                systemName = path.Substring(protocol.Length + 3, systemNameLength);
+
+                spanified = spanified.Slice(secondColonPos + 1);
             }
             else
             {
-                //  protocol://SystemName@Host:port/Path1/Path2
-                systemName = uri.UserInfo;
-                host = uri.Host;
-                port = uri.Port;
+                var secondColonPos = spanified.IndexOf(':');
+                if (secondColonPos == -1)
+                    return false;
+
+                host = spanified.Slice(0, secondColonPos).ToString();
+
+                // move past the host
+                spanified = spanified.Slice(secondColonPos + 1);
             }
-            address = new Address(protocol, systemName, host, port);
-            return true;
+
+            var actorPathSlash = spanified.IndexOf('/');
+            ReadOnlySpan<char> strPort;
+            if (actorPathSlash == -1)
+            {
+                strPort = spanified;
+            }
+            else
+            {
+                strPort = spanified.Slice(0, actorPathSlash);
+            }
+
+            if (SpanHacks.TryParse(strPort, out var port))
+            {
+                address = new Address(fullScheme, sysName, host, port);
+
+                // need to compute the absolute path after the Address
+                if (actorPathSlash == -1)
+                {
+                    absoluteUri = "/".AsSpan();
+                }
+                else
+                {
+                    absoluteUri = spanified.Slice(actorPathSlash);
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
 
