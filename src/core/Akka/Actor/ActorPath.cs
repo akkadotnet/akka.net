@@ -327,23 +327,22 @@ namespace Akka.Actor
         {
             actorPath = null;
 
-            Address address;
-            Uri uri;
-            if (!TryParseAddress(path, out address, out uri)) return false;
+            if (!TryParseAddress(path, out var address, out var uri)) return false;
             var spanified = uri.AbsolutePath.AsSpan();
-            var pathElements = new List<string>();
             var nextSlash = 0;
             var firstSlash = spanified.IndexOf('/');
             if (firstSlash == 0)
                 spanified = spanified.Slice(1); // skip
+
+            actorPath = new RootActorPath(address);
+
             while ((nextSlash = spanified.IndexOf('/')) > 0)
             {
-                pathElements.Add(spanified.Slice(0, nextSlash).ToString());
+                actorPath /= spanified.Slice(0, nextSlash).ToString();
                 spanified = spanified.Slice(nextSlash + 1, spanified.Length - nextSlash - 1);
             }
-            pathElements.Add(spanified.ToString()); // final element
+            actorPath /= spanified.ToString(); // final path element
 
-            actorPath = new RootActorPath(address) / pathElements;
             if (uri.Fragment.StartsWith("#"))
             {
                 var uid = int.Parse(uri.Fragment.Substring(1));
