@@ -330,37 +330,24 @@ namespace Akka.Actor
             if (!TryParseAddress(path, out var address, out var uri)) return false;
             var spanified = uri.AbsolutePath.AsSpan();
             var nextSlash = 0;
-            var firstSlash = spanified.IndexOf('/');
-            if (firstSlash == 0)
-                spanified = spanified.Slice(1); // skip
 
             actorPath = new RootActorPath(address);
 
-            while ((nextSlash = spanified.IndexOf('/')) > 0)
+            do
             {
-                actorPath /= spanified.Slice(0, nextSlash).ToString();
-                spanified = spanified.Slice(nextSlash + 1, spanified.Length - nextSlash - 1);
-            }
-
-            // have a final path element - and we need to make sure it's not a trailing slash
-            if (spanified.Length > 0)
-            {
-                // edge case - leading slash
-                if (spanified.IndexOf('/') == 0)
+                nextSlash = spanified.IndexOf('/');
+                if (nextSlash > 0)
                 {
-                    spanified = spanified.Slice(1); // skip it
-                    // edge case edge case - leading slash as was also trailing
-                    if (spanified.Length > 0) 
-                    {
-                        actorPath /= spanified.ToString();
-                    }
+                    actorPath /= spanified.Slice(0, nextSlash).ToString();
                 }
-                else
+                else if (nextSlash < 0 && spanified.Length > 0)
                 {
                     actorPath /= spanified.ToString();
                 }
-            }
-           
+
+                spanified = spanified.Slice(nextSlash + 1);
+            } while (nextSlash >= 0);
+
 
             if (uri.Fragment.StartsWith("#"))
             {
