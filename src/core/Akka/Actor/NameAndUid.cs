@@ -8,9 +8,9 @@
 namespace Akka.Actor
 {
     /// <summary>
-    /// INTERNAL API
+    /// TBD
     /// </summary>
-    internal readonly struct NameAndUid
+    public class NameAndUid
     {
         private readonly string _name;
         private readonly int _uid;
