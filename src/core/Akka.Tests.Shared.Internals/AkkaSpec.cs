@@ -154,37 +154,6 @@ namespace Akka.TestKit
             }
             throw new ThrowsException(typeof(Exception));
         }
-        
-        protected async Task InterceptAsync(Func<Task> asyncActionThatThrows)
-        {
-            try
-            {
-                await asyncActionThatThrows();
-            }
-            catch(Exception)
-            {
-                return;
-            }
-            throw new ThrowsException(typeof(Exception));
-        }
-
-        [Obsolete("Use Intercept instead. This member will be removed.")]
-        protected void intercept<T>(Action actionThatThrows) where T : Exception
-        {
-            Assert.Throws<T>(() => actionThatThrows());
-        }
-
-        [Obsolete("Use ExpectMsgPf instead. This member will be removed.")]
-        protected T expectMsgPF<T>(string hint, Func<object, T> pf)
-        {
-            return ExpectMsgPf<T>(hint, pf);
-        }
-
-        [Obsolete("Use ExpectMsgPf instead. This member will be removed.")]
-        protected T expectMsgPF<T>(TimeSpan duration, string hint, Func<object, T> pf)
-        {
-            return ExpectMsgPf<T>(duration, hint, pf);
-        }
 
         protected void MuteDeadLetters(params Type[] messageClasses)
         {
