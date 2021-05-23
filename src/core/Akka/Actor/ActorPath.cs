@@ -276,8 +276,8 @@ namespace Akka.Actor
         /// <returns>A newly created <see cref="ChildActorPath"/></returns>
         public static ActorPath operator /(ActorPath path, string name)
         {
-            var nameAndUid = ActorCell.SplitNameAndUid(name);
-            return new ChildActorPath(path, nameAndUid.Name, nameAndUid.Uid);
+            var (s, uid) = ActorCell.GetNameAndUid(name);
+            return new ChildActorPath(path, s, uid);
         }
 
         /// <summary>

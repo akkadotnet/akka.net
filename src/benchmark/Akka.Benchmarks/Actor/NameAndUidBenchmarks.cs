@@ -24,5 +24,11 @@ namespace Akka.Benchmarks.Actor
         {
             return ActorCell.SplitNameAndUid(ActorPath);
         }
+
+        [Benchmark]
+        public (string name, int uid) ActorCell_GetNameAndUid()
+        {
+            return ActorCell.GetNameAndUid(ActorPath);
+        }
     }
 }

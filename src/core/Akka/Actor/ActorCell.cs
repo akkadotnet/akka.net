@@ -479,16 +479,30 @@ namespace Akka.Actor
             actor?.Unclear();
         }
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Not used. Will be removed in Akka.NET v1.5.")]
         public static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');
             return i < 0
                 ? new NameAndUid(name, UndefinedUid)
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <param name="name">The full name of the actor, including the UID if known</param>
+        /// <returns>A new (string name, int uid) instance.</returns>
+        internal static (string name, int uid) GetNameAndUid(string name)
+        {
+            var i = name.IndexOf('#');
+            return i < 0
+                ? (name, UndefinedUid)
+                : (name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
         }
 
         /// <summary>
