@@ -20,9 +20,9 @@ namespace Akka.Benchmarks.Actor
         public const string ActorPath = "foo#11241311";
 
         [Benchmark]
-        public NameAndUid ActorCell_SplitNameAndUid()
+        public void ActorCell_SplitNameAndUid()
         {
-            return ActorCell.SplitNameAndUid(ActorPath);
+            ActorCell.SplitNameAndUid(ActorPath);
         }
     }
 }

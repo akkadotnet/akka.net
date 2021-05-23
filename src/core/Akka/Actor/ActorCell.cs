@@ -483,7 +483,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public static NameAndUid SplitNameAndUid(string name)
+        internal static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');
             return i < 0
