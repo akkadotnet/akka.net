@@ -212,7 +212,7 @@ namespace Akka.TestKit
             throw new ThrowsException(typeof(T));
         }
 
-        [Obsolete("User AssertThrows instead.")]
+        [Obsolete("Use AssertThrows instead.")]
         protected void Intercept(Action actionThatThrows)
         {
             try
