@@ -113,7 +113,7 @@ namespace Akka.TestKit
         }
 
         public static Config AkkaSpecConfig { get { return _akkaSpecConfig; } }
-        
+
         protected T ExpectMsgPf<T>(TimeSpan? timeout, string hint, Func<object, T> function)
         {
             MessageEnvelope envelope;
@@ -136,12 +136,83 @@ namespace Akka.TestKit
             return pf.Invoke(t);
         }
 
-
+        /// <summary>
+        /// Intercept and return an exception that's expected to be thrown by the passed function value. The thrown
+        /// exception must be an instance of the type specified by the type parameter of this method. This method
+        /// invokes the passed function. If the function throws an exception that's an instance of the specified type,
+        /// this method returns that exception. Else, whether the passed function returns normally or completes abruptly
+        /// with a different exception, this method throws <see cref="ThrowsException"/>.
+        /// <para>
+        /// Also note that the difference between this method and <seealso cref="AssertThrows{T}"/> is that this method
+        /// returns the expected exception, so it lets you perform further assertions on that exception. By contrast,
+        /// the <seealso cref="AssertThrows{T}"/> indicates to the reader of the code that nothing further is expected
+        /// about the thrown exception other than its type. The recommended usage is to use <seealso cref="AssertThrows{T}"/>
+        /// by default, intercept only when you need to inspect the caught exception further.
+        /// </para>
+        /// </summary>
+        /// <param name="actionThatThrows">The action that should throw the expected exception</param>
+        /// <returns>The intercepted exception, if it is of the expected type</returns>
+        /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
         protected T Intercept<T>(Action actionThatThrows) where T : Exception
         {
-            return Assert.Throws<T>(() => actionThatThrows());
+            try
+            {
+                actionThatThrows();
+            }
+            catch (Exception ex)
+            {
+                var exception = ex is AggregateException aggregateException
+                    ? aggregateException.Flatten().InnerExceptions[0]
+                    : ex;
+
+                var exceptionType = typeof(T);
+                return exceptionType == exception.GetType()
+                    ? (T)exception
+                    : throw new ThrowsException(exceptionType, exception);
+            }
+
+            throw new ThrowsException(typeof(T));
         }
 
+        /// <summary>
+        /// Ensure that an expected exception is thrown by the passed function value. The thrown exception must be an
+        /// instance of the type specified by the type parameter of this method. This method invokes the passed
+        /// function. If the function throws an exception that's an instance of the specified type, this method returns
+        /// void. Else, whether the passed function returns normally or completes abruptly with a different
+        /// exception, this method throws <see cref="ThrowsException"/>.
+        /// <para>
+        /// Also note that the difference between this method and <seealso cref="Intercept{T}"/> is that this method
+        /// does not return the expected exception, so it does not let you perform further assertions on that exception.
+        /// It also indicates to the reader of the code that nothing further is expected about the thrown exception
+        /// other than its type. The recommended usage is to use <see cref="AssertThrows{T}"/> by default,
+        /// <seealso cref="Intercept{T}"/> only when you need to inspect the caught exception further.
+        /// </para>
+        /// </summary>
+        /// <param name="actionThatThrows">The action that should throw the expected exception</param>
+        /// <exception cref="ThrowsException">If the passed action does not complete abruptly with an exception that's an instance of the specified type.</exception>
+        protected void AssertThrows<T>(Action actionThatThrows) where T : Exception
+        {
+            try
+            {
+                actionThatThrows();
+            }
+            catch (Exception ex)
+            {
+                var exception = ex is AggregateException aggregateException
+                    ? aggregateException.Flatten().InnerExceptions[0]
+                    : ex;
+
+                var exceptionType = typeof(T);
+                if (exceptionType == exception.GetType())
+                    return;
+
+                throw new ThrowsException(exceptionType, exception);
+            }
+
+            throw new ThrowsException(typeof(T));
+        }
+
+        [Obsolete("User AssertThrows instead.")]
         protected void Intercept(Action actionThatThrows)
         {
             try
