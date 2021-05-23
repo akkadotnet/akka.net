@@ -351,7 +351,7 @@ namespace Akka.Actor
 
             if (uri.Fragment.StartsWith("#"))
             {
-                var uid = int.Parse(uri.Fragment.Substring(1));
+                var uid = SpanHacks.Parse(uri.Fragment.AsSpan(1));
                 actorPath = actorPath.WithUid(uid);
             }
             return true;
