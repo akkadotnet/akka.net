@@ -266,13 +266,11 @@ namespace Akka.Streams.Tests.Dsl
                 .Ask<Reply>(r, _timeout, 4)
                 .RunWith(Sink.Ignore<Reply>(), _materializer);
 
-            Intercept<AggregateException>(() =>
+            Intercept<WatchedActorTerminatedException>(() =>
             {
                 r.Tell(PoisonPill.Instance);
                 done.Wait(RemainingOrDefault);
-            })
-            .Flatten()
-            .InnerException.Should().BeOfType<WatchedActorTerminatedException>();
+            });
 
         }, _materializer);
 
