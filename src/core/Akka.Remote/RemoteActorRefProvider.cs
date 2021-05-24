@@ -490,7 +490,7 @@ namespace Akka.Remote
                 if (HasAddress(actorPath.Address))
                 {
                     // HACK: needed to make ActorSelections work
-                    if (actorPath.ToStringWithoutAddress().Equals("/"))
+                    if (actorPath is RootActorPath)
                         return RootGuardian;
                     return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
                 }
