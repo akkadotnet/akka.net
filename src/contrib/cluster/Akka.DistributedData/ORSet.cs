@@ -712,9 +712,9 @@ namespace Akka.DistributedData
             {
                 while (deleteDots.MoveNext())
                 {
-                    var curr = deleteDots.Current;
-                    deleteDotNodes.Add(curr.Key);
-                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(curr.Key) <= curr.Value));
+                    var current = deleteDots.Current;
+                    deleteDotNodes.Add(current.Key);
+                    deleteDotsAreGreater &= (thisDot != null && (thisDot.VersionAt(current.Key) <= current.Value));
                 }
             }
 

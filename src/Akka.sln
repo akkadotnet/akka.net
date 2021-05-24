@@ -244,7 +244,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Samples.Akka.AspNetCore", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerializationBenchmarks", "benchmark\SerializationBenchmarks\SerializationBenchmarks.csproj", "{2E4B9584-42CC-4D17-B719-9F462B16C94D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DDataStressTest", "examples\Cluster\DData\DDataStressTest\DDataStressTest.csproj", "{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DDataStressTest", "examples\Cluster\DData\DDataStressTest\DDataStressTest.csproj", "{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
