@@ -11,6 +11,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Akka.DependencyInjection
 {
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// <see cref="IDependencyResolver"/> implementation backed by <see cref="IServiceProvider"/>
+    /// </summary>
     public class ServiceProviderDependencyResolver : IDependencyResolver
     {
         public IServiceProvider ServiceProvider { get; }
@@ -37,12 +42,17 @@ namespace Akka.DependencyInjection
         
         public Props Props(Type type, params object[] args)
         {
-            return new ServiceProviderProps(ServiceProvider, type, args);
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, args));
         }
         
         public Props Props(Type type)
         {
-            return new ServiceProviderProps(ServiceProvider, type);
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, Array.Empty<object>()));
+        }
+
+        public Props Props<T>(params object[] args) where T : ActorBase
+        {
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(ServiceProvider, Array.Empty<object>()));
         }
     }
 

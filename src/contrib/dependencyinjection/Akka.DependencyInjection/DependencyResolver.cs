@@ -59,19 +59,47 @@ namespace Akka.DependencyInjection
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props<T>(params object[] args) where T : ActorBase
         {
-            return Props(typeof(T), args);
+            return Resolver.Props<T>(args);
         }
-        
+
+        /// <summary>
+        /// Used to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
+        /// and others are not.
+        /// </summary>
+        /// <remarks>
+        /// YOU ARE RESPONSIBLE FOR MANAGING THE LIFECYCLE OF YOUR OWN DEPENDENCIES. AKKA.NET WILL NOT ATTEMPT TO DO IT FOR YOU.
+        /// </remarks>
+        /// <typeparam name="T">The type of actor to instantiate.</typeparam>
+        /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props<T>() where T : ActorBase
         {
-            return Props(typeof(T));
+            return Resolver.Props<T>();
         }
-        
+
+        /// <summary>
+        /// Used to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
+        /// and others are not.
+        /// </summary>
+        /// <remarks>
+        /// YOU ARE RESPONSIBLE FOR MANAGING THE LIFECYCLE OF YOUR OWN DEPENDENCIES. AKKA.NET WILL NOT ATTEMPT TO DO IT FOR YOU.
+        /// </remarks>
+        /// <param name="type">The type of actor to instantiate.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props(Type type)
         {
             return Resolver.Props(type);
         }
-        
+
+        /// <summary>
+        /// Used to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
+        /// and others are not.
+        /// </summary>
+        /// <remarks>
+        /// YOU ARE RESPONSIBLE FOR MANAGING THE LIFECYCLE OF YOUR OWN DEPENDENCIES. AKKA.NET WILL NOT ATTEMPT TO DO IT FOR YOU.
+        /// </remarks>
+        /// <param name="type">The type of actor to instantiate.</param>
+        /// <param name="args">Optional. Any constructor arguments that will be passed into the actor's constructor directly without being resolved by DI first.</param>
+        /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props(Type type, params object[] args)
         {
             return Resolver.Props(type, args);
