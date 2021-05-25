@@ -182,7 +182,7 @@ namespace Akka.DependencyInjection.Tests
         public void ServiceProvider_Props_should_support_copying()
         {
             // <CreateNonDiActor>
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var arg1 = "foo";
             var arg2 = "bar";
             var props = spExtension.Props<NonDiArgsActor>(arg1, arg2).WithRouter(new RoundRobinPool(10).WithSupervisorStrategy(new OneForOneStrategy(

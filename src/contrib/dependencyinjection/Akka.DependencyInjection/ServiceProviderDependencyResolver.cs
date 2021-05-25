@@ -52,7 +52,7 @@ namespace Akka.DependencyInjection
 
         public Props Props<T>(params object[] args) where T : ActorBase
         {
-            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(ServiceProvider, Array.Empty<object>()));
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(ServiceProvider, args));
         }
     }
 
