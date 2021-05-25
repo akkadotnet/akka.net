@@ -40,7 +40,7 @@ namespace Akka.Actor
                 if (result != 0) return result;
                 result = string.CompareOrdinal(x.System, y.System);
                 if (result != 0) return result;
-                result = string.CompareOrdinal(x.Host ?? "", y.Host ?? "");
+                result = string.CompareOrdinal(x.Host ?? string.Empty, y.Host ?? string.Empty);
                 if (result != 0) return result;
                 result = (x.Port ?? 0).CompareTo(y.Port ?? 0);
                 return result;
