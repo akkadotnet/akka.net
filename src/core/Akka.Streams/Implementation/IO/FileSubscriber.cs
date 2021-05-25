@@ -111,7 +111,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
+                CloseAndComplete(new Try<IOResult>(ex));
                 Cancel();
             }
         }
