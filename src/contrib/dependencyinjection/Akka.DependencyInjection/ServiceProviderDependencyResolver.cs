@@ -42,12 +42,14 @@ namespace Akka.DependencyInjection
         
         public Props Props(Type type, params object[] args)
         {
-            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, args));
+            if(type.IsAssignableTo(typeof(ActorBase)))
+                return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, args));
+            throw new ArgumentException(nameof(type), $"[{type}] does not implement Akka.Actor.ActorBase.");
         }
         
         public Props Props(Type type)
         {
-            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, Array.Empty<object>()));
+            return Props(type, Array.Empty<object>());
         }
 
         public Props Props<T>(params object[] args) where T : ActorBase
