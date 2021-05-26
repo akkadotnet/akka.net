@@ -60,6 +60,18 @@ namespace Akka.DependencyInjection.Tests
             deps2.Dependencies.All(x => x.Disposed).Should().BeFalse();
         }
 
+        [Fact(DisplayName = "DI: should be able to start actors with untyped Props")]
+        public void ShouldStartActorWithUntypedProps()
+        {
+            var spExtension = DependencyResolver.For(Sys);
+            var props = spExtension.Props(typeof(ScopedActor));
+
+            // create a scoped actor using the props from Akka.DependencyInjection
+            var scoped1 = Sys.ActorOf(props, "scoped1");
+            scoped1.Tell(new FetchDependencies());
+            var deps1 = ExpectMsg<CurrentDependencies>();
+        }
+
         [Fact(DisplayName =
             "DI: actors who receive an IServiceScope through Props should dispose of their dependencies and recreate upon restart")]
         public void ActorsWithScopedDependenciesShouldDisposeAndRecreateUponRestart()
