@@ -330,6 +330,37 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public void SynchronousFileSink_should_complete_materialized_task_with_an_exception_when_upstream_fails()
+        {
+            TargetFile(f =>
+            {
+                var completion = Source.From(_testByteStrings)
+                    .Select(bytes =>
+                    {
+                        if (bytes.Contains(Convert.ToByte('b'))) throw new TestException("bees!");
+                        return bytes;
+                    })
+                    .RunWith(FileIO.ToFile(f), _materializer);
+
+                var ex = Intercept<AbruptIOTerminationException>(() => completion.Wait(TimeSpan.FromSeconds(3)));
+                ex.IoResult.Count.ShouldBe(1001);
+                CheckFileContent(f, string.Join("", _testLines.TakeWhile(s => !s.Contains('b'))));
+            }, _materializer);
+        }
+
+        [Fact]
+        public void SynchronousFileSink_should_complete_with_failure_when_file_cannot_be_open()
+        {
+            TargetFile(f =>
+            {
+                var completion = Source.Single(ByteString.FromString("42"))
+                    .RunWith(FileIO.ToFile(new FileInfo("I-hope-this-file-doesnt-exist.txt"), FileMode.Open), _materializer);
+
+                AssertThrows<FileNotFoundException>(completion.Wait);
+            }, _materializer);
+        }
+
+        [Fact]
         public void SynchronousFileSink_should_write_each_element_if_auto_flush_is_set()
         {
             Within(TimeSpan.FromSeconds(10), () =>

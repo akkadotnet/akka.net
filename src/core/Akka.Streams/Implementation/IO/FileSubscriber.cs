@@ -13,6 +13,7 @@ using Akka.Event;
 using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
+using Akka.Util;
 
 namespace Akka.Streams.Implementation.IO
 {
@@ -110,7 +111,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
+                CloseAndComplete(new Try<IOResult>(ex));
                 Cancel();
             }
         }
@@ -143,7 +144,7 @@ namespace Akka.Streams.Implementation.IO
 
                 case OnError error:
                     _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
-                    CloseAndComplete(IOResult.Failed(_bytesWritten, error.Cause));
+                    CloseAndComplete(new Try<IOResult>(new AbruptIOTerminationException(IOResult.Success(_bytesWritten), error.Cause)));
                     Context.Stop(Self);
                     return true;
 
@@ -185,7 +186,7 @@ namespace Akka.Streams.Implementation.IO
             base.PostStop();
         }
 
-        private void CloseAndComplete(IOResult result)
+        private void CloseAndComplete(Try<IOResult> result)
         {
             try
             {
@@ -193,11 +194,15 @@ namespace Akka.Streams.Implementation.IO
                 // file to be deleted, which would not work (on some systems) if the
                 // file is still open for writing
                 _chan?.Dispose();
-                _completionPromise.TrySetResult(result);
+
+                if (result.IsSuccess) 
+                    _completionPromise.SetResult(result.Success.Value);
+                else 
+                    _completionPromise.SetException(result.Failure.Value);
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                _completionPromise.TrySetException(ex);
             }
         }
     }
