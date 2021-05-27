@@ -2564,6 +2564,11 @@ namespace Akka.Streams.Extra
 }
 namespace Akka.Streams.IO
 {
+    public sealed class AbruptIOTerminationException : System.Exception
+    {
+        public AbruptIOTerminationException(Akka.Streams.IO.IOResult ioResult, System.Exception cause) { }
+        public Akka.Streams.IO.IOResult IoResult { get; }
+    }
     public struct IOResult
     {
         public readonly long Count;

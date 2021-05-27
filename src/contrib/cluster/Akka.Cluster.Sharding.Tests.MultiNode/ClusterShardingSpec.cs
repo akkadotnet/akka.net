@@ -83,7 +83,7 @@ namespace Akka.Cluster.Sharding.Tests
                         }}
                         distributed-data.durable.lmdb {{
                           dir = ""target/ClusterShardingSpec/sharding-ddata""
-                          map-size = 10000000
+                          map-size = 10 MiB
                         }}
                     }}
                     akka.testconductor.barrier-timeout = 70s
@@ -491,6 +491,10 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding"));
             var settings = ClusterShardingSettings.Create(config, Sys.Settings.Config.GetConfig("akka.cluster.singleton"))
                 .WithRememberEntities(rememberEntities);
+            var majorityMinCap = Sys.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap");
+            if (IsDDataMode)
+                return DDataShardCoordinator.Props(typeName, settings, allocationStrategy, ReplicatorRef,
+                    majorityMinCap, rememberEntities);
             return PersistentShardCoordinator.Props(typeName, settings, allocationStrategy);
         }
 
@@ -540,14 +544,11 @@ namespace Akka.Cluster.Sharding.Tests
 
             ClusterSharding_should_be_easy_API_for_starting();
 
-            if (!IsDDataMode)
-            {
-                PersistentClusterShards_should_recover_entities_upon_restart();
-                PersistentClusterShards_should_permanently_stop_entities_which_passivate();
-                PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
-                PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
-                PersistentClusterShards_should_ensure_rebalance_restarts_shards();
-            }
+            PersistentClusterShards_should_recover_entities_upon_restart();
+            PersistentClusterShards_should_permanently_stop_entities_which_passivate();
+            PersistentClusterShards_should_restart_entities_which_stop_without_passivation();
+            PersistentClusterShards_should_be_migrated_to_new_regions_upon_region_failure();
+            PersistentClusterShards_should_ensure_rebalance_restarts_shards();
         }
 
         public void ClusterSharding_should_setup_shared_journal()
