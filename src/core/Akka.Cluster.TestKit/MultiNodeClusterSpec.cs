@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
@@ -154,6 +155,29 @@ namespace Akka.Cluster.TestKit
             _assertions = new XunitAssertions();
             _roleNameComparer = new RoleNameComparer(this);
         }
+
+        protected MultiNodeClusterSpec(
+            RoleName myself,
+            ActorSystem system,
+            ImmutableList<RoleName> roles,
+            Func<RoleName, ImmutableList<string>> deployments)
+            : base(myself, system, roles, deployments)
+        {
+            _assertions = new XunitAssertions();
+            _roleNameComparer = new RoleNameComparer(this);
+        }
+
+        protected MultiNodeClusterSpec(
+            RoleName myself,
+            ActorSystemSetup setup,
+            ImmutableList<RoleName> roles,
+            Func<RoleName, ImmutableList<string>> deployments)
+            : base(myself, setup, roles, deployments)
+        {
+            _assertions = new XunitAssertions();
+            _roleNameComparer = new RoleNameComparer(this);
+        }
+
 
         protected override int InitialParticipantsValueFactory
         {
