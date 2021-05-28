@@ -12,14 +12,19 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
+    [SimpleJob(RunStrategy.Monitoring, targetCount: 25, warmupCount: 5)]
     public class ActorMemoryFootprintBenchmark
     {
         public ActorSystem Sys;
         public Props Props;
+
+        [Params(10_000)]
+        public int SpawnCount { get; set; }
 
         [GlobalSetup]
         public void Setup()
@@ -39,7 +44,8 @@ namespace Akka.Benchmarks.Actor
         [Benchmark]
         public void SpawnActor()
         {
-            Sys.ActorOf(Props);
+            for(var i = 0; i < SpawnCount; i++)
+                Sys.ActorOf(Props);
         }
 
         [GlobalCleanup]
