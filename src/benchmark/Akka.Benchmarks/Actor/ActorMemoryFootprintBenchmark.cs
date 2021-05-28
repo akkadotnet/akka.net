@@ -23,6 +23,9 @@ namespace Akka.Benchmarks.Actor
         public ActorSystem Sys;
         public Props Props;
 
+        [Params(1000)]
+        public int SpawnCount { get; set; }
+
         [GlobalSetup]
         public void Setup()
         {
@@ -41,7 +44,8 @@ namespace Akka.Benchmarks.Actor
         [Benchmark]
         public void SpawnActor()
         {
-            Sys.ActorOf(Props);
+            for(var i = 0; i < SpawnCount; i++)
+                Sys.ActorOf(Props);
         }
 
         [GlobalCleanup]
