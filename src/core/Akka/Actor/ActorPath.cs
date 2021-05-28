@@ -331,13 +331,6 @@ namespace Akka.Actor
             var spanified = absoluteUri;
 
             // check for Uri fragment here
-            var fragment = ReadOnlySpan<char>.Empty;
-            var fragLoc = spanified.IndexOf('#');
-            if (fragLoc > -1)
-            {
-                fragment = spanified.Slice(fragLoc + 1);
-                spanified = spanified.Slice(0, fragLoc);
-            }
             var nextSlash = 0;
 
             actorPath = new RootActorPath(address);
@@ -349,19 +342,26 @@ namespace Akka.Actor
                 {
                     actorPath /= spanified.Slice(0, nextSlash).ToString();
                 }
-                else if (nextSlash < 0 && spanified.Length > 0)
+                else if (nextSlash < 0 && spanified.Length > 0) // final segment
                 {
-                    actorPath /= spanified.ToString();
+                    var fragLoc = spanified.IndexOf('#');
+                    if (fragLoc > -1)
+                    {
+                        var fragment = spanified.Slice(fragLoc+1);
+                        var fragValue = SpanHacks.Parse(fragment);
+                        spanified = spanified.Slice(0, fragLoc);
+                        actorPath = new ChildActorPath(actorPath, spanified.ToString(), fragValue);
+                    }
+                    else
+                    {
+                        actorPath /= spanified.ToString();
+                    }
+                    
                 }
 
                 spanified = spanified.Slice(nextSlash + 1);
             } while (nextSlash >= 0);
 
-            if (!fragment.IsEmpty)
-            {
-                var uid = SpanHacks.Parse(fragment);
-                actorPath = actorPath.WithUid(uid);
-            }
             return true;
         }
 
@@ -507,8 +507,8 @@ namespace Akka.Actor
                 return "/";
 
             // Resolve length of final string
-            int totalLength = 0;
-            ActorPath p = this;
+            var totalLength = 0;
+            var p = this;
             while (!(p is RootActorPath))
             {
                 totalLength += p.Name.Length + 1;
@@ -523,11 +523,13 @@ namespace Akka.Actor
             {
                 offset -= p.Name.Length + 1;
                 buffer[offset] = '/';
+
                 p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+
                 p = p.Parent;
             }
 
-            return new string(buffer);
+            return buffer.ToString();
         }
 
         /// <summary>
