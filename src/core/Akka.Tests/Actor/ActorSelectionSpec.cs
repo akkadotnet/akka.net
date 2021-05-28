@@ -76,12 +76,10 @@ namespace Akka.Tests.Actor
         {
             var result = node.Ask(query).Result;
 
-            var actorRef = result as IActorRef;
-            if (actorRef != null)
+            if (result is IActorRef actorRef)
                 return actorRef;
 
-            var selection = result as ActorSelection;
-            return selection != null ? Identify(selection) : null;
+            return result is ActorSelection selection ? Identify(selection) : null;
         }
 
         [Fact]
