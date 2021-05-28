@@ -12,10 +12,12 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 
 namespace Akka.Benchmarks.Actor
 {
     [Config(typeof(MicroBenchmarkConfig))]
+    [SimpleJob(RunStrategy.Monitoring, targetCount: 25, warmupCount: 5)]
     public class ActorMemoryFootprintBenchmark
     {
         public ActorSystem Sys;
