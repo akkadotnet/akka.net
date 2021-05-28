@@ -445,7 +445,7 @@ namespace Akka.Actor
                 // found an IPV6 address
                 host = spanified.Slice(openBracket, closeBracket - openBracket + 1).ToString();
                 spanified = spanified.Slice(closeBracket + 1); // advance past the address
-
+                
                 // need to check for trailing colon
                 var secondColonPos = spanified.IndexOf(':');
                 if (secondColonPos == -1)
