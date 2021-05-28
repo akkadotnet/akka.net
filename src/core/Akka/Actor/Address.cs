@@ -59,7 +59,7 @@ namespace Akka.Actor
         /// </summary>
         public static readonly Address AllSystems = new Address("akka", "all-systems");
 
-        private readonly Lazy<string> _toString;
+        private string _toString;
         private readonly string _host;
         private readonly int? _port;
         private readonly string _system;
@@ -114,19 +114,10 @@ namespace Akka.Actor
         /// </summary>
         public bool HasGlobalScope => !string.IsNullOrEmpty(Host);
 
-        private Lazy<string> CreateLazyToString()
+        private string CreateLazyToString()
         {
-            return new Lazy<string>(() =>
-            {
-                var sb = new StringBuilder();
-                sb.AppendFormat("{0}://{1}", Protocol, System);
-                if (!string.IsNullOrWhiteSpace(Host))
-                    sb.AppendFormat("@{0}", Host);
-                if (Port.HasValue)
-                    sb.AppendFormat(":{0}", Port.Value);
-
-                return sb.ToString();
-            }, true);
+            return !string.IsNullOrWhiteSpace(Host) && Port.HasValue ?
+            $"{Protocol}://{System}@{Host}:{Port}" : $"{Protocol}://{System}";
         }
 
         /// <summary>
@@ -140,7 +131,15 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public override string ToString() => _toString.Value;
+        public override string ToString()
+        {
+            if (string.IsNullOrEmpty(_toString))
+            {
+                _toString = CreateLazyToString();
+            }
+
+            return _toString;
+        }
 
         /// <inheritdoc/>
         public bool Equals(Address other)
@@ -279,7 +278,7 @@ namespace Akka.Actor
             if (string.IsNullOrEmpty(uri.UserInfo))
             {
                 var systemName = uri.Host;
-                
+
                 return new Address(protocol, systemName);
             }
             else
