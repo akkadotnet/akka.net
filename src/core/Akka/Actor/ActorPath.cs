@@ -529,7 +529,7 @@ namespace Akka.Actor
                 p = p.Parent;
             }
 
-            return buffer.ToString();
+            return new string(buffer);
         }
 
         /// <summary>
