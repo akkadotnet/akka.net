@@ -82,6 +82,14 @@ namespace Akka.Actor
             Parent = parent;
             Dispatcher = dispatcher;
 
+            if (parent is RootGuardianActorRef || self is RootGuardianActorRef)
+            {
+                _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+            }
+            else
+            {
+                _childrenContainerDoNotCallMeDirectly = EmptyNonRootChildrenContainer.Instance;
+            }
         }
 
         /// <summary>

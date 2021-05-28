@@ -22,7 +22,7 @@ namespace Akka.Actor
 {
     public partial class ActorCell
     {
-        private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly = EmptyChildrenContainer.Instance;
+        private volatile IChildrenContainer _childrenContainerDoNotCallMeDirectly;
         private long _nextRandomNameDoNotCallMeDirectly = -1; // Interlocked.Increment automatically adds 1 to this value. Allows us to start from 0.
         private ImmutableDictionary<string, FunctionRef> _functionRefsDoNotCallMeDirectly = ImmutableDictionary<string, FunctionRef>.Empty;
 
@@ -135,8 +135,13 @@ namespace Akka.Actor
         private string GetRandomActorName(string prefix = "$")
         {
             var id = Interlocked.Increment(ref _nextRandomNameDoNotCallMeDirectly);
-            var sb = new StringBuilder(prefix);
-            return id.Base64Encode(sb).ToString();
+            var sb = ObjectPools.StringBuilders.Get();
+
+            sb.Append(prefix);
+            //var sb = new StringBuilder(prefix);
+            var returnValue = id.Base64Encode(sb).ToString();
+            ObjectPools.StringBuilders.Return(sb);
+            return returnValue;
         }
 
         /// <summary>
@@ -266,8 +271,7 @@ namespace Akka.Actor
         {
             get
             {
-                var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
+                return ChildrenContainer is TerminatingChildrenContainer terminating && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 

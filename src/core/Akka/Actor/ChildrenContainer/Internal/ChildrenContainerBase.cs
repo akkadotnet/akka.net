@@ -13,47 +13,47 @@ using System.Text;
 
 namespace Akka.Actor.Internal
 {
+    internal class LazyReadOnlyCollection<T> : IReadOnlyCollection<T>
+    {
+        private readonly IEnumerable<T> _enumerable;
+        private int _lazyCount;
+
+        public int Count
+        {
+            get
+            {
+                int count = _lazyCount;
+
+                if (count == -1)
+                    _lazyCount = count = _enumerable.Count();
+
+                return count;
+            }
+        }
+
+        public LazyReadOnlyCollection(IEnumerable<T> enumerable)
+        {
+            _enumerable = enumerable;
+            _lazyCount = -1;
+        }
+
+        /// <inheritdoc/>
+        public IEnumerator<T> GetEnumerator()
+        {
+            return _enumerable.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
     /// <summary>
     /// TBD
     /// </summary>
     public abstract class ChildrenContainerBase : IChildrenContainer
     {
-        private class LazyReadOnlyCollection<T> : IReadOnlyCollection<T>
-        {
-            private readonly IEnumerable<T> _enumerable;
-            private int _lazyCount;
-
-            public int Count
-            {
-                get
-                {
-                    int count = _lazyCount;
-
-                    if (count == -1)
-                        _lazyCount = count = _enumerable.Count();
-
-                    return count;
-                }
-            }
-
-            public LazyReadOnlyCollection(IEnumerable<T> enumerable)
-            {
-                _enumerable = enumerable;
-                _lazyCount = -1;
-            }
-
-            /// <inheritdoc/>
-            public IEnumerator<T> GetEnumerator()
-            {
-                return _enumerable.GetEnumerator();
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-        }
-
         private readonly IImmutableDictionary<string, IChildStats> _children;
 
         /// <summary>

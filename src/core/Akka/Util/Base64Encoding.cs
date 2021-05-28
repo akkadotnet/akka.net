@@ -24,7 +24,13 @@ namespace Akka.Util
         /// </summary>
         /// <param name="value">TBD</param>
         /// <returns>TBD</returns>
-        public static string Base64Encode(this long value) => Base64Encode(value, new StringBuilder()).ToString();
+        public static string Base64Encode(this long value)
+        {
+            var sb = ObjectPools.StringBuilders.Get();
+            var rValue = Base64Encode(value, sb).ToString();
+            ObjectPools.StringBuilders.Return(sb);
+            return rValue;
+        }
 
         /// <summary>
         /// TBD

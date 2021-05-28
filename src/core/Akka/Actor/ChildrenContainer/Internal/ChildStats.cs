@@ -11,24 +11,24 @@ using Akka.Util;
 namespace Akka.Actor.Internal
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public interface IChildStats
     {
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public class ChildNameReserved : IChildStats
     {
-        private static readonly ChildNameReserved _instance = new ChildNameReserved();
         private ChildNameReserved() {/* Intentionally left blank */}
 
         /// <summary>
-        /// TBD
+        /// Singleton instance.
         /// </summary>
-        public static ChildNameReserved Instance { get { return _instance; } }
+        public static ChildNameReserved Instance { get; } = new ChildNameReserved();
+
         /// <inheritdoc/>
         public override string ToString()
         {
