@@ -23,7 +23,7 @@ namespace Akka.Benchmarks.Actor
         public ActorSystem Sys;
         public Props Props;
 
-        [Params(100_000)]
+        [Params(10_000)]
         public int SpawnCount { get; set; }
 
         [GlobalSetup]
