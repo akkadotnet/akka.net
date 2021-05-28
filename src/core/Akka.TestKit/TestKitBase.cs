@@ -109,7 +109,7 @@ namespace Akka.TestKit
         {
         }
 
-        private TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
             if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
 
