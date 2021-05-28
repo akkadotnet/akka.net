@@ -4810,6 +4810,8 @@ namespace Akka.Util
     {
         public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         public static string Base64Encode(this long value) { }
+        public static string Base64Encode(this long value, string prefix) { }
+        [System.ObsoleteAttribute("Do not use. Pass in prefix as a string instead.")]
         public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
         public static string Base64Encode(this string s) { }
     }
