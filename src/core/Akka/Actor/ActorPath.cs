@@ -516,15 +516,23 @@ namespace Akka.Actor
             }
 
             // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            char[] buffer = new char[totalLength];
-            int offset = buffer.Length;
-            p = this;
+            // Concatenate segments (in reverse order) into buffer with '/' prefixes
+            Span<char> buffer = stackalloc char[totalLength];
+            var offset = buffer.Length;
+            var writtenByes = 0;
+            p = this; // need to reset local var after previous traversal
             while (!(p is RootActorPath))
             {
                 offset -= p.Name.Length + 1;
                 buffer[offset] = '/';
 
-                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+                var spanified = p.Name.AsSpan();
+                var writeOffset = offset;
+                for (var i = 0; i < spanified.Length; i++)
+                {
+                    buffer[++writeOffset] = spanified[i];
+                }
+                writtenByes += 1 + spanified.Length;
 
                 p = p.Parent;
             }
