@@ -30,13 +30,13 @@ namespace Akka.Util
             return Base64Encode(value, "");
         }
 
-        public static string Base64Encode(this long value, string prefix)
+        internal static string Base64Encode(this long value, string prefix)
         {
             // 11 is the number of characters it takes to represent long.MaxValue
             // so we will never need a larger size for encoding longs
             Span<char> sb = stackalloc char[11 + prefix?.Length ?? 0];
             var spanIndex = 0;
-            if (!string.IsNullOrEmpty(prefix) && prefix.Length > 0)
+            if (!string.IsNullOrWhiteSpace(prefix) && prefix.Length > 0)
             {
                 prefix.AsSpan().CopyTo(sb);
                 spanIndex = prefix.Length;
