@@ -1913,7 +1913,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldAsync<TState, TElem>(TState state, System.Func<TState, System.Threading.Tasks.Task<Akka.Util.Option<System.ValueTuple<TState, TElem>>>> unfoldAsync) { }
         public static Akka.Streams.Dsl.Source<TElem, Akka.NotUsed> UnfoldInfinite<TState, TElem>(TState state, System.Func<TState, System.ValueTuple<TState, TElem>> unfold) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResource<T, TSource>(System.Func<TSource> create, System.Func<TSource, Akka.Util.Option<T>> read, System.Action<TSource> close) { }
-        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResourceAsync<T, TSource>(System.Func<System.Threading.Tasks.Task<TSource>> create, System.Func<TSource, System.Threading.Tasks.Task<Akka.Util.Option<T>>> read, System.Func<TSource, System.Threading.Tasks.Task> close) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> UnfoldResourceAsync<T, TSource>(System.Func<System.Threading.Tasks.Task<TSource>> create, System.Func<TSource, System.Threading.Tasks.Task<Akka.Util.Option<T>>> read, System.Func<TSource, System.Threading.Tasks.Task<Akka.Done>> close) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Immutable.IImmutableList<T>, Akka.NotUsed> ZipN<T>(System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
         public static Akka.Streams.Dsl.Source<TOut2, Akka.NotUsed> ZipWithN<T, TOut2>(System.Func<System.Collections.Immutable.IImmutableList<T>, TOut2> zipper, System.Collections.Generic.IEnumerable<Akka.Streams.Dsl.Source<T, Akka.NotUsed>> sources) { }
     }
