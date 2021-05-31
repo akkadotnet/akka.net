@@ -110,7 +110,7 @@ namespace Akka.Actor
         public void Resume(System.Exception causedByFailure) { }
         public virtual void SendMessage(Akka.Actor.Envelope message) { }
         public virtual void SendMessage(Akka.Actor.IActorRef sender, object message) { }
-        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
+        public virtual void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         protected void SetActorFields(Akka.Actor.ActorBase actor) { }
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
