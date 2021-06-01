@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -81,6 +83,8 @@ namespace Akka.DistributedData.Serialization
             }
         }
 
+        private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
+
         public static byte[] Compress(IMessage msg)
         {
             using (var memStream = new MemoryStream(BufferSize))
@@ -101,18 +105,25 @@ namespace Akka.DistributedData.Serialization
                 using(var inputStr = new MemoryStream(input))
                 using (var gzipStream = new GZipStream(inputStr, CompressionMode.Decompress))
                 {
-                    var buf = new byte[BufferSize];
-                    while (gzipStream.CanRead)
+                    var buf = BufferPool.Rent(BufferSize);
+                    try
                     {
-                        var read = gzipStream.Read(buf, 0, BufferSize);
-                        if (read > 0)
+                        while (gzipStream.CanRead)
                         {
-                            memStream.Write(buf, 0, read);
+                            var read = gzipStream.Read(buf, 0, BufferSize);
+                            if (read > 0)
+                            {
+                                memStream.Write(buf, 0, read);
+                            }
+                            else
+                            {
+                                break;
+                            }
                         }
-                        else
-                        {
-                            break;
-                        }
+                    }
+                    finally
+                    {
+                        BufferPool.Return(buf);
                     }
                 }
 
@@ -173,8 +184,14 @@ namespace Akka.DistributedData.Serialization
             if (entries.Count == 1)
                 return new SingleVersionVector(UniqueAddressFromProto(versionVector.Entries[0].Node),
                     versionVector.Entries[0].Version);
-            var versions = entries.ToDictionary(x => UniqueAddressFromProto(x.Node), v => v.Version);
-            return new MultiVersionVector(versions);
+
+            var builder = ImmutableDictionary.CreateBuilder<UniqueAddress, long>();
+            foreach (var entry in entries)
+            {
+                builder.Add(UniqueAddressFromProto(entry.Node), entry.Version);
+            }
+            //var versions = entries.ToDictionary(x => UniqueAddressFromProto(x.Node), v => v.Version).ToImmutableDictionary();
+            return new MultiVersionVector(builder.ToImmutable());
         }
 
         public VersionVector VersionVectorFromBinary(byte[] bytes)
