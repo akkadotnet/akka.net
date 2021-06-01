@@ -25,14 +25,14 @@ namespace Akka.DistributedData.Tests
         {
             private readonly UniqueAddress selfUniqueAddress;
 
-            public TestSelector(UniqueAddress selfUniqueAddress, ImmutableArray<Address> allNodes)
+            public TestSelector(UniqueAddress selfUniqueAddress, ImmutableArray<UniqueAddress> allNodes)
             {
                 this.selfUniqueAddress = selfUniqueAddress;
                 AllNodes = allNodes;
             }
 
             public override int GossipInternalDivisor { get; } = 5;
-            protected override ImmutableArray<Address> AllNodes { get; }
+            protected override ImmutableArray<UniqueAddress> AllNodes { get; }
             protected override int MaxDeltaSize => 10;
 
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData, long, long)> deltas) =>
@@ -45,7 +45,7 @@ namespace Akka.DistributedData.Tests
         {
             public override int NodeSliceSize(int allNodesSize) => 1;
 
-            public TestSelector2(UniqueAddress selfUniqueAddress, ImmutableArray<Address> allNodes) : base(selfUniqueAddress, allNodes)
+            public TestSelector2(UniqueAddress selfUniqueAddress, ImmutableArray<UniqueAddress> allNodes) : base(selfUniqueAddress, allNodes)
             {
             }
         }
@@ -55,20 +55,20 @@ namespace Akka.DistributedData.Tests
         private static readonly GSet<string> DeltaC = GSet<string>.Empty.Add("c");
 
         private readonly UniqueAddress selfUniqueAddress;
-        private readonly ImmutableArray<Address> nodes;
+        private readonly ImmutableArray<UniqueAddress> nodes;
 
         public DeltaPropagationSelectorSpec()
         {
             this.selfUniqueAddress = new UniqueAddress(new Address("akka", "Sys", "localhost", 4999), 1);
             this.nodes = Enumerable.Range(2500, 100)
-                .Select(i => new Address("akka", "Sys", "localhost", i))
+                .Select(i => new UniqueAddress(new Address("akka", "Sys", "localhost", i), i))
                 .ToImmutableArray();
         }
 
         [Fact]
         public void DeltaPropagationSelector_must_collect_none_when_no_nodes()
         {
-            var selector = new TestSelector(selfUniqueAddress, ImmutableArray<Address>.Empty);
+            var selector = new TestSelector(selfUniqueAddress, ImmutableArray<UniqueAddress>.Empty);
             selector.Update("A", DeltaA);
             selector.CollectPropagations().Should().BeEmpty();
             selector.CleanupDeltaEntries();
@@ -87,7 +87,7 @@ namespace Akka.DistributedData.Tests
             var expected = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(DeltaA), 1L, 1L))
                 .Add("B", new Delta(new DataEnvelope(DeltaB), 1L, 1L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected), }));
             selector.CollectPropagations().Should().BeEmpty();
             selector.CleanupDeltaEntries();
             selector.HasDeltaEntries("A").Should().BeFalse();
@@ -105,13 +105,13 @@ namespace Akka.DistributedData.Tests
                 .Add("B", new Delta(new DataEnvelope(DeltaB), 1L, 1L)));
             selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[]
             {
-                new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected),
-                new KeyValuePair<Address, DeltaPropagation>(nodes[1], expected),
+                new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected),
+                new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[1], expected),
             }));
             selector.CleanupDeltaEntries();
             selector.HasDeltaEntries("A").Should().BeTrue();
             selector.HasDeltaEntries("B").Should().BeTrue();
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[2], expected), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[2], expected), }));
             selector.CollectPropagations().Should().BeEmpty();
             selector.CleanupDeltaEntries();
             selector.HasDeltaEntries("A").Should().BeFalse();
@@ -129,8 +129,8 @@ namespace Akka.DistributedData.Tests
                 .Add("B", new Delta(new DataEnvelope(DeltaB), 1L, 1L)));
             selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[]
             {
-                new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected),
-                new KeyValuePair<Address, DeltaPropagation>(nodes[1], expected),
+                new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected),
+                new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[1], expected),
             }));
             // new update before previous was propagated to all nodes
             selector.Update("C", DeltaC);
@@ -142,14 +142,14 @@ namespace Akka.DistributedData.Tests
                 .Add("C", new Delta(new DataEnvelope(DeltaC), 1L, 1L)));
             selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[]
             {
-                new KeyValuePair<Address, DeltaPropagation>(nodes[2], expected2),
-                new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected3),
+                new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[2], expected2),
+                new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected3),
             }));
             selector.CleanupDeltaEntries();
             selector.HasDeltaEntries("A").Should().BeFalse();
             selector.HasDeltaEntries("B").Should().BeFalse();
             selector.HasDeltaEntries("C").Should().BeTrue();
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[1], expected3), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[1], expected3), }));
             selector.CollectPropagations().Should().BeEmpty();
             selector.CleanupDeltaEntries();
             selector.HasDeltaEntries("C").Should().BeFalse();
@@ -169,12 +169,12 @@ namespace Akka.DistributedData.Tests
             selector.CurrentVersion("A").Should().Be(2L);
             var expected1 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta1.Merge(delta2)), 1L, 2L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected1), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected1), }));
             selector.Update("A", delta3);
             selector.CurrentVersion("A").Should().Be(3L);
             var expected2 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta3), 3L, 3L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected2), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected2), }));
             selector.CollectPropagations().Should().BeEmpty();
         }
 
@@ -190,25 +190,25 @@ namespace Akka.DistributedData.Tests
             selector.Update("A", delta1);
             var expected1 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta1), 1L, 1L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected1), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected1), }));
 
             selector.Update("A", delta2);
             var expected2 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta1.Merge(delta2)), 1L, 2L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[1], expected2), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[1], expected2), }));
 
             selector.Update("A", delta3);
             var expected3 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta1.Merge(delta2).Merge(delta3)), 1L, 3L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[2], expected3), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[2], expected3), }));
 
             var expected4 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta2.Merge(delta3)), 2L, 3L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[0], expected4), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[0], expected4), }));
 
             var expected5 = new DeltaPropagation(selfUniqueAddress, false, ImmutableDictionary<string, Delta>.Empty
                 .Add("A", new Delta(new DataEnvelope(delta3), 3L, 3L)));
-            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<Address, DeltaPropagation>(nodes[1], expected5), }));
+            selector.CollectPropagations().Should().Equal(ImmutableDictionary.CreateRange(new[] { new KeyValuePair<UniqueAddress, DeltaPropagation>(nodes[1], expected5), }));
 
             selector.CollectPropagations().Should().BeEmpty();
         }
@@ -247,7 +247,7 @@ namespace Akka.DistributedData.Tests
             {
                 { "A", new Delta(new DataEnvelope(DeltaPropagation.NoDeltaPlaceholder), 1L, 1000L) }
             }.ToImmutableDictionary());
-            selector.CollectPropagations().Should().Equal(new Dictionary<Address, DeltaPropagation>
+            selector.CollectPropagations().Should().Equal(new Dictionary<UniqueAddress, DeltaPropagation>
             {
                 { nodes[0], expected }
             });

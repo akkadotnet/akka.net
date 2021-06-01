@@ -16,8 +16,8 @@ namespace Akka.DistributedData
 {
     internal class WriteAggregator : ReadWriteAggregator
     {
-        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable) =>
-            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
+        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, UniqueAddress selfUniqueAddress, IImmutableSet<UniqueAddress> nodes, IImmutableSet<UniqueAddress> unreachable, IActorRef replyTo, bool durable) =>
+            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, selfUniqueAddress, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly DataEnvelope _envelope;
@@ -32,11 +32,11 @@ namespace Akka.DistributedData
         private bool _gotLocalStoreReply;
         private ImmutableHashSet<Address> _gotNackFrom;
 
-        public WriteAggregator(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, 
-            IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable)
+        public WriteAggregator(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, UniqueAddress selfUniqueAddress, 
+            IImmutableSet<UniqueAddress> nodes, IImmutableSet<UniqueAddress> unreachable, IActorRef replyTo, bool durable)
             : base(nodes, unreachable, consistency.Timeout)
         {
-            _selfUniqueAddress = Cluster.Cluster.Get(Context.System).SelfUniqueAddress;
+            _selfUniqueAddress = selfUniqueAddress;
             _key = key;
             _envelope = envelope;
             _consistency = consistency;
@@ -124,9 +124,10 @@ namespace Akka.DistributedData
                         // Deltas must be applied in order and we can't keep track of ordering of
                         // simultaneous updates so there is a chance that the delta could not be applied.
                         // Try again with the full state to the primary nodes that have not acked.
-                        foreach (var address in PrimaryNodes.Intersect(Remaining))
+                        foreach (var address in PrimaryNodes)
                         {
-                            Replica(address).Tell(_write);
+                            if(Remaining.Contains(address.Address))
+                                Replica(address).Tell(_write);
                         }
                     }
 

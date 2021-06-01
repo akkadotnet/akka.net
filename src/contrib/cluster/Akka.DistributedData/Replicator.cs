@@ -277,6 +277,7 @@ namespace Akka.DistributedData
         private readonly Cluster.Cluster _cluster;
         private readonly Address _selfAddress;
         private readonly UniqueAddress _selfUniqueAddress;
+        private readonly long _selfFromSystemUid;
 
         private readonly ICancelable _gossipTask;
         private readonly ICancelable _notifyTask;
@@ -289,19 +290,19 @@ namespace Akka.DistributedData
         /// <summary>
         /// Cluster nodes, doesn't contain selfAddress.
         /// </summary>
-        private ImmutableHashSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<UniqueAddress> _nodes = ImmutableHashSet<UniqueAddress>.Empty;
 
-        private ImmutableHashSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
+        private ImmutableHashSet<UniqueAddress> AllNodes => _nodes.Union(_weaklyUpNodes);
 
         /// <summary>
         /// Cluster weaklyUp nodes, doesn't contain joining and not selfAddress
         /// </summary>
-        private ImmutableHashSet<Address> _weaklyUpNodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<UniqueAddress> _weaklyUpNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
         /// <summary>
         /// cluster joining nodes, doesn't contain selfAddress
         /// </summary>
-        private ImmutableHashSet<Address> _joiningNodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<UniqueAddress> _joiningNodes = ImmutableHashSet<UniqueAddress>.Empty;
 
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
         private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
@@ -313,15 +314,15 @@ namespace Akka.DistributedData
         private ImmutableSortedSet<Member> _leader = ImmutableSortedSet<Member>.Empty.WithComparer(Member.LeaderStatusOrdering);
         private bool IsLeader => !_leader.IsEmpty && _leader.First().Address == _selfAddress;
 
-        private bool IsKnownNode(Address node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
-                                                  _joiningNodes.Contains(node) || _selfAddress == node;
+        private bool IsKnownNode(UniqueAddress node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
+                                                        _joiningNodes.Contains(node) || _selfUniqueAddress == node;
 
         /// <summary>
         /// For pruning timeouts are based on clock that is only increased when all nodes are reachable.
         /// </summary>
         private long _previousClockTime;
         private long _allReachableClockTime = 0;
-        private ImmutableHashSet<Address> _unreachable = ImmutableHashSet<Address>.Empty;
+        private ImmutableHashSet<UniqueAddress> _unreachable = ImmutableHashSet<UniqueAddress>.Empty;
 
         /// <summary>
         /// The actual data.
@@ -363,6 +364,7 @@ namespace Akka.DistributedData
             _cluster = Cluster.Cluster.Get(Context.System);
             _selfAddress = _cluster.SelfAddress;
             _selfUniqueAddress = _cluster.SelfUniqueAddress;
+            _selfFromSystemUid = _selfUniqueAddress.Uid;
             _log = Context.GetLogger();
             _maxDeltaSize = settings.MaxDeltaSize;
 
@@ -533,15 +535,15 @@ namespace Akka.DistributedData
                         switch (msg)
                         {
                             case Status s:
-                                ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks); return true;
+                                ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks, s.FromSystemUid); return true;
                             case Gossip g : 
-                                ReceiveGossip(g.UpdatedData, g.SendBack); return true;
+                                ReceiveGossip(g.UpdatedData, g.SendBack, g.FromSystemUid); return true;
                         }
                     }
                     return true;
 
                 case ISendingSystemUid msg:
-                    if (msg.FromNode != null && !IsKnownNode(msg.FromNode.Address))
+                    if (msg.FromNode != null && !IsKnownNode(msg.FromNode))
                     {
                         // When restarting a node with same host:port it is possible that a Replicator on another node
                         // is sending messages to the restarted node even if it hasn't joined the same cluster.
@@ -601,7 +603,7 @@ namespace Akka.DistributedData
                 else Sender.Tell(new GetSuccess(key, req, localValue.Data));
             }
             else
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, _nodes, _unreachable, localValue, Sender)
+                Context.ActorOf(ReadAggregator.Props(key, consistency, req, _selfUniqueAddress, _nodes, _unreachable, localValue, Sender)
                     .WithDispatcher(Context.Props.Dispatcher));
         }
 
@@ -627,42 +629,51 @@ namespace Akka.DistributedData
             {
                 DataEnvelope envelope;
                 IReplicatedData delta;
-                if (localValue == null)
+                switch (localValue)
                 {
-                    var d = modify(null);
-                    if (d is IDeltaReplicatedData withDelta)
-                    {
-                        envelope = new DataEnvelope(withDelta.ResetDelta());
-                        delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
-                    }
-                    else
-                    {
-                        envelope = new DataEnvelope(d);
+                    case null:
+                        switch (modify(null))
+                        {
+                            case IDeltaReplicatedData d:
+                                envelope = new DataEnvelope(d.ResetDelta());
+                                delta = d.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
+                                break;
+
+                            case var d:
+                                envelope = new DataEnvelope(d);
+                                delta = null;
+                                break;
+                        }
+                        break;
+
+                    case var value when value.Data is DeletedData:
+                        envelope = value;
                         delta = null;
-                    }
+                        break;
+                        
+                    case var value:
+                        switch (modify(value.Data))
+                        {
+                            case IDeltaReplicatedData d:
+                                envelope = value.Merge(d.ResetDelta());
+                                delta = d.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
+                                break;
+
+                            case var d:
+                                envelope = value.Merge(d);
+                                delta = null;
+                                break;
+                        }
+                        break;
                 }
-                else if (localValue.Data is DeletedData)
+
+                // case Success((envelope, delta)) ⇒
+                if (envelope.Data is DeletedData)
                 {
                     _log.Debug("Received update for deleted key {0}", key);
                     Sender.Tell(new DataDeleted(key, request));
                     return;
                 }
-                else
-                {
-                    var d = modify(localValue.Data);
-                    if (d is IDeltaReplicatedData withDelta)
-                    {
-                        envelope = localValue.Merge(withDelta.ResetDelta());
-                        delta = withDelta.Delta ?? DeltaPropagation.NoDeltaPlaceholder;
-                    }
-                    else
-                    {
-                        envelope = localValue.Merge(d);
-                        delta = null;
-                    }
-                }
-
-                // case Success((envelope, delta)) ⇒
 
                 _log.Debug("Received Update for key {0}", key);
 
@@ -711,7 +722,7 @@ namespace Akka.DistributedData
                     }
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, writeEnvelope, writeDelta, consistency, request, _nodes, _unreachable, Sender, durable)
+                        .Props(key, writeEnvelope, writeDelta, consistency, request, _selfUniqueAddress, _nodes, _unreachable, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -747,27 +758,30 @@ namespace Akka.DistributedData
 
         private void WriteAndStore(string key, DataEnvelope writeEnvelope, bool reply)
         {
-            var newEnvelope = Write(key, writeEnvelope);
-            if (newEnvelope != null)
+            switch (Write(key, writeEnvelope))
             {
-                if (IsDurable(key))
-                {
+                case null:
+                    if (reply) Sender.Tell(WriteNack.Instance);
+                    break;
+
+                case var newEnvelope when IsDurable(key):
                     var storeReply = reply
                         ? new StoreReply(WriteAck.Instance, WriteNack.Instance, Sender)
                         : null;
-
                     _durableStore.Tell(new Store(key, new DurableDataEnvelope(newEnvelope), storeReply));
-                }
-                else if (reply) Sender.Tell(WriteAck.Instance);
+                    break;
+
+                case var newEnvelope:
+                    if (reply) Sender.Tell(WriteAck.Instance);
+                    break;
             }
-            else if (reply) Sender.Tell(WriteNack.Instance);
         }
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
             switch(GetData(key))
             {
-                case DataEnvelope envelope when envelope.Equals(writeEnvelope):
+                case DataEnvelope envelope when ReferenceEquals(envelope, writeEnvelope):
                     return envelope;
                 case DataEnvelope envelope when envelope.Data is DeletedData:
                     // already deleted
@@ -789,7 +803,7 @@ namespace Akka.DistributedData
                     if (writeEnvelope.Data is IReplicatedDelta withDelta)
                         writeEnvelope = writeEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
 
-                return SetData(key, writeEnvelope.AddSeen(_selfAddress));
+                    return SetData(key, writeEnvelope.AddSeen(_selfAddress));
             }
         }
 
@@ -835,7 +849,7 @@ namespace Akka.DistributedData
                 else
                 {
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, DeletedEnvelope, null, consistency, request, _nodes, _unreachable, Sender, durable)
+                        .Props(key, DeletedEnvelope, null, consistency, request, _selfUniqueAddress, _nodes, _unreachable, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -882,8 +896,7 @@ namespace Akka.DistributedData
 
         private Digest GetDigest(string key)
         {
-            var contained = _dataEntries.TryGetValue(key, out var value);
-            if (contained)
+            if (_dataEntries.TryGetValue(key, out var value))
             {
                 if (value.digest == LazyDigest)
                 {
@@ -1058,13 +1071,14 @@ namespace Akka.DistributedData
             }
         }
 
-        private void GossipTo(Address address)
+        private void GossipTo(UniqueAddress address)
         {
             var to = Replica(address);
+            var toSystemUid = address.Uid;
             if (_dataEntries.Count <= _settings.MaxDeltaElements)
             {
                 var status = new Internal.Status(_dataEntries
-                    .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key)), chunk: 0, totalChunks: 1);
+                    .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key)), chunk: 0, totalChunks: 1, toSystemUid, _selfFromSystemUid);
                 to.Tell(status);
             }
             else
@@ -1084,13 +1098,13 @@ namespace Akka.DistributedData
                     var chunk = (int)(_statusCount % totChunks);
                     var entries = _dataEntries.Where(x => Math.Abs(MurmurHash.StringHash(x.Key) % totChunks) == chunk)
                         .ToImmutableDictionary(x => x.Key, y => GetDigest(y.Key));
-                    var status = new Internal.Status(entries, chunk, totChunks);
+                    var status = new Internal.Status(entries, chunk, totChunks, toSystemUid, _selfFromSystemUid);
                     to.Tell(status);
                 }
             }
         }
 
-        private Address SelectRandomNode(ImmutableHashSet<Address> addresses)
+        private UniqueAddress SelectRandomNode(ImmutableHashSet<UniqueAddress> addresses)
         {
             if (addresses.Count > 0)
             {
@@ -1101,22 +1115,18 @@ namespace Akka.DistributedData
             return null;
         }
 
-        private ActorSelection Replica(Address address) => Context.ActorSelection(Self.Path.ToStringWithAddress(address));
+        private ActorSelection Replica(UniqueAddress address) => Context.ActorSelection(Self.Path.ToStringWithAddress(address.Address));
 
-        private bool IsOtherDifferent(string key, Digest otherDigest)
-        {
-            var d = GetDigest(key);
-            return d != NotFoundDigest && d != otherDigest;
-        }
-
-        private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks)
+        private void ReceiveStatus(IImmutableDictionary<string, ByteString> otherDigests, int chunk, int totChunks, long? fromSystemUid)
         {
             if (_log.IsDebugEnabled)
                 _log.Debug("Received gossip status from [{0}], chunk {1}/{2} containing [{3}]", Sender.Path.Address, chunk + 1, totChunks, string.Join(", ", otherDigests.Keys));
 
-            // if no data was send we do nothing
-            if (otherDigests.Count == 0)
-                return;
+            bool IsOtherDifferent(string key, Digest otherDigest)
+            {
+                var d = GetDigest(key);
+                return (d != NotFoundDigest && d != otherDigest);
+            }
 
             var otherDifferentKeys = otherDigests
                 .Where(x => IsOtherDifferent(x.Key, x.Value))
@@ -1141,27 +1151,27 @@ namespace Akka.DistributedData
                 if (_log.IsDebugEnabled)
                     _log.Debug("Sending gossip to [{0}]: {1}", Sender.Path.Address, string.Join(", ", keys));
 
-                var g = new Gossip(keys.ToImmutableDictionary(x => x, _ => GetData(_)), !otherDifferentKeys.IsEmpty);
+                var g = new Gossip(keys.ToImmutableDictionary(x => x, GetData), !otherDifferentKeys.IsEmpty, fromSystemUid, _selfFromSystemUid);
                 Sender.Tell(g);
             }
 
             var myMissingKeys = otherKeys.Except(myKeys);
             if (!myMissingKeys.IsEmpty)
             {
-                if (Context.System.Log.IsDebugEnabled)
-                    Context.System.Log.Debug("Sending gossip status to {0}, requesting missing {1}", Sender.Path.Address, string.Join(", ", myMissingKeys));
+                if (_log.IsDebugEnabled)
+                    _log.Debug("Sending gossip status to {0}, requesting missing {1}", Sender.Path.Address, string.Join(", ", myMissingKeys));
 
-                var status = new Internal.Status(myMissingKeys.ToImmutableDictionary(x => x, _ => NotFoundDigest), chunk, totChunks);
+                var status = new Status(myMissingKeys.ToImmutableDictionary(x => x, _ => NotFoundDigest), chunk, totChunks, fromSystemUid, _selfFromSystemUid);
                 Sender.Tell(status);
             }
         }
 
-        private void ReceiveGossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack)
+        private void ReceiveGossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? fromSystemUid)
         {
             if (_log.IsDebugEnabled)
                 _log.Debug("Received gossip from [{0}], containing [{1}]", Sender.Path.Address, string.Join(", ", updatedData.Keys));
 
-            var replyData = ImmutableDictionary<string, DataEnvelope>.Empty.ToBuilder();
+            var replyData = ImmutableDictionary.CreateBuilder<string, DataEnvelope>();
             foreach (var d in updatedData)
             {
                 var key = d.Key;
@@ -1176,7 +1186,7 @@ namespace Akka.DistributedData
                 }
             }
 
-            if (sendBack && replyData.Count != 0) Sender.Tell(new Gossip(replyData.ToImmutable(), sendBack: false));
+            if (sendBack && replyData.Count != 0) Sender.Tell(new Gossip(replyData.ToImmutable(), sendBack: false, fromSystemUid, _selfFromSystemUid));
         }
 
         private void ReceiveSubscribe(IKey key, IActorRef subscriber)
@@ -1259,15 +1269,15 @@ namespace Akka.DistributedData
         private void ReceiveMemberJoining(Member m)
         {
             if (MatchingRole(m) && m.Address != _selfAddress)
-                _joiningNodes = _joiningNodes.Add(m.Address);
+                _joiningNodes = _joiningNodes.Add(m.UniqueAddress);
         }
 
         private void ReceiveMemberWeaklyUp(Member m)
         {
             if (MatchingRole(m) && m.Address != _selfAddress)
             {
-                _weaklyUpNodes = _weaklyUpNodes.Add(m.Address);
-                _joiningNodes = _joiningNodes.Remove(m.Address);
+                _weaklyUpNodes = _weaklyUpNodes.Add(m.UniqueAddress);
+                _joiningNodes = _joiningNodes.Remove(m.UniqueAddress);
             }
         }
 
@@ -1278,9 +1288,9 @@ namespace Akka.DistributedData
                 _leader = _leader.Add(m);
                 if (m.Address != _selfAddress)
                 {
-                    _nodes = _nodes.Add(m.Address);
-                    _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
-                    _joiningNodes = _joiningNodes.Remove(m.Address);
+                    _nodes = _nodes.Add(m.UniqueAddress);
+                    _weaklyUpNodes = _weaklyUpNodes.Remove(m.UniqueAddress);
+                    _joiningNodes = _joiningNodes.Remove(m.UniqueAddress);
                 }
             }
         }
@@ -1295,24 +1305,24 @@ namespace Akka.DistributedData
                 // filter, it's possible that the ordering is changed since it based on MemberStatus
                 _leader = _leader.Where(x => x.Address != m.Address).ToImmutableSortedSet(Member.LeaderStatusOrdering);
 
-                _nodes = _nodes.Remove(m.Address);
-                _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
-                _joiningNodes = _joiningNodes.Remove(m.Address);
+                _nodes = _nodes.Remove(m.UniqueAddress);
+                _weaklyUpNodes = _weaklyUpNodes.Remove(m.UniqueAddress);
+                _joiningNodes = _joiningNodes.Remove(m.UniqueAddress);
                 
                 _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
-                _unreachable = _unreachable.Remove(m.Address);
-                _deltaPropagationSelector.CleanupRemovedNode(m.Address);
+                _unreachable = _unreachable.Remove(m.UniqueAddress);
+                _deltaPropagationSelector.CleanupRemovedNode(m.UniqueAddress);
             }
         }
 
         private void ReceiveUnreachable(Member m)
         {
-            if (MatchingRole(m)) _unreachable = _unreachable.Add(m.Address);
+            if (MatchingRole(m)) _unreachable = _unreachable.Add(m.UniqueAddress);
         }
 
         private void ReceiveReachable(Member m)
         {
-            if (MatchingRole(m)) _unreachable = _unreachable.Remove(m.Address);
+            if (MatchingRole(m)) _unreachable = _unreachable.Remove(m.UniqueAddress);
         }
 
         private void ReceiveOtherMemberEvent(Member m)
@@ -1352,13 +1362,13 @@ namespace Akka.DistributedData
 
         private void CollectRemovedNodes()
         {
-            var knownNodes = AllNodes.Union(_removedNodes.Keys.Select(x => x.Address));
+            var knownNodes = AllNodes.Union(_removedNodes.Keys);
             var newRemovedNodes = new HashSet<UniqueAddress>();
             foreach (var pair in _dataEntries)
             {
                 if (pair.Value.envelope.Data is IRemovedNodePruning removedNodePruning)
                 {
-                    newRemovedNodes.UnionWith(removedNodePruning.ModifiedByNodes.Where(n => !(n == _selfUniqueAddress || knownNodes.Contains(n.Address))));
+                    newRemovedNodes.UnionWith(removedNodePruning.ModifiedByNodes.Where(n => !(n == _selfUniqueAddress || knownNodes.Contains(n))));
                 }
             }
 
@@ -1397,14 +1407,14 @@ namespace Akka.DistributedData
                                     if (state is PruningInitialized initialized && initialized.Owner != _selfUniqueAddress)
                                     {
                                         var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
-                                        _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
+                                        _log.Debug("Initiating pruning of {0} for data key {1} to {2}", removed, key, _selfUniqueAddress);
                                         SetData(key, newEnvelope);
                                     }
                                 }
                                 else
                                 {
                                     var newEnvelope = envelope.InitRemovedNodePruning(removed, _selfUniqueAddress);
-                                    _log.Debug("Initiating pruning of {0} with data {1}", removed, key);
+                                    _log.Debug("Initiating pruning of {0} for data key {1} to {2}", removed, key, _selfUniqueAddress);
                                     SetData(key, newEnvelope);
                                 }
                             }
@@ -1417,9 +1427,9 @@ namespace Akka.DistributedData
         private void PerformRemovedNodePruning()
         {
             // perform pruning when all seen Init
-            var prunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.PruningMarkerTimeToLive);
-            var durablePrunningPerformed = new PruningPerformed(DateTime.UtcNow + _settings.DurablePruningMarkerTimeToLive);
-
+            var now = DateTime.UtcNow;
+            var prunningPerformed = new PruningPerformed(now + _settings.PruningMarkerTimeToLive);
+            var durablePrunningPerformed = new PruningPerformed(now + _settings.DurablePruningMarkerTimeToLive);
             foreach (var entry in _dataEntries)
             {
                 var key = entry.Key;
@@ -1428,7 +1438,7 @@ namespace Akka.DistributedData
                 {
                     foreach (var entry2 in envelope.Pruning)
                     {
-                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (AllNodes.IsEmpty || AllNodes.IsSubsetOf(init.Seen)))
+                        if (entry2.Value is PruningInitialized init && init.Owner == _selfUniqueAddress && (AllNodes.IsEmpty || AllNodes.All(n => init.Seen.Contains(n.Address))))
                         {
                             var removed = entry2.Key;
                             var isDurable = IsDurable(key);
@@ -1455,7 +1465,7 @@ namespace Akka.DistributedData
                 if (envelope.Data is IRemovedNodePruning)
                 {
                     var toRemove = envelope.Pruning
-                        .Where(pair => (pair.Value as PruningPerformed)?.IsObsolete(currentTime) ?? false)
+                        .Where(pair => pair.Value is PruningPerformed p && p.IsObsolete(currentTime))
                         .Select(pair => pair.Key)
                         .ToArray();
 
@@ -1494,7 +1504,7 @@ namespace Akka.DistributedData
             protected override int MaxDeltaSize => _replicator._maxDeltaSize;
 
             // TODO optimize, by maintaining a sorted instance variable instead
-            protected override ImmutableArray<Address> AllNodes
+            protected override ImmutableArray<UniqueAddress> AllNodes
             {
                 get
                 {

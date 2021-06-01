@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Akka.TestKit;
@@ -30,18 +31,19 @@ namespace Akka.DistributedData.Tests
                 IKey<T> key,
                 T data, 
                 Delta delta,
+                UniqueAddress selfUniqueAddress,
                 IWriteConsistency consistency, 
                 IImmutableDictionary<Address, IActorRef> probes,
-                IImmutableSet<Address> nodes,
-                IImmutableSet<Address> unreachable,
+                IImmutableSet<UniqueAddress> nodes,
+                IImmutableSet<UniqueAddress> unreachable,
                 IActorRef replyTo,
                 bool durable) 
-                : base(key, new DataEnvelope(data), delta, consistency, null, nodes, unreachable, replyTo, durable)
+                : base(key, new DataEnvelope(data), delta, consistency, null, selfUniqueAddress, nodes, unreachable, replyTo, durable)
             {
                 _probes = probes;
             }
 
-            protected override ActorSelection Replica(Address address) => Context.ActorSelection(_probes[address].Path);
+            protected override ActorSelection Replica(UniqueAddress address) => Context.ActorSelection(_probes[address.Address].Path);
             protected override Address SenderAddress => _probes.First(kv => Equals(kv.Value, Sender)).Key;
         }
 
@@ -61,31 +63,35 @@ namespace Akka.DistributedData.Tests
             }
         }
 
-        private static Props TestWriteAggregatorProps(GSet<string> data,
+        private static Props TestWriteAggregatorProps(
+            GSet<string> data,
+            UniqueAddress selfUniqueAddress,
             IWriteConsistency consistency,
             IImmutableDictionary<Address, IActorRef> probes,
-            IImmutableSet<Address> nodes,
-            IImmutableSet<Address> unreachable,
+            IImmutableSet<UniqueAddress> nodes,
+            IImmutableSet<UniqueAddress> unreachable,
             IActorRef replyTo,
-            bool durable) => Actor.Props.Create(() => new TestWriteAggregator<GSet<string>>(KeyA, data, null, consistency, probes, nodes, unreachable, replyTo, durable));
+            bool durable) => Actor.Props.Create(() => new TestWriteAggregator<GSet<string>>(KeyA, data, null, selfUniqueAddress, consistency, probes, nodes, unreachable, replyTo, durable));
 
-        private static Props TestWriteAggregatorPropsWithDelta(ORSet<string> data,
+        private static Props TestWriteAggregatorPropsWithDelta(
+            ORSet<string> data,
+            UniqueAddress selfUniqueAddress,
             Delta delta,
             IWriteConsistency consistency,
             IImmutableDictionary<Address, IActorRef> probes,
-            IImmutableSet<Address> nodes,
-            IImmutableSet<Address> unreachable,
+            IImmutableSet<UniqueAddress> nodes,
+            IImmutableSet<UniqueAddress> unreachable,
             IActorRef replyTo,
-            bool durable) => Actor.Props.Create(() => new TestWriteAggregator<ORSet<string>>(KeyB, data, delta, consistency, probes, nodes, unreachable, replyTo, durable));
+            bool durable) => Actor.Props.Create(() => new TestWriteAggregator<ORSet<string>>(KeyB, data, delta, selfUniqueAddress, consistency, probes, nodes, unreachable, replyTo, durable));
 
         private static readonly GSetKey<string> KeyA = new GSetKey<string>("a");
         private static readonly ORSetKey<string> KeyB = new ORSetKey<string>("b");
 
-        private readonly Address _nodeA = new Address("akka.tcp", "Sys", "a", 2552);
-        private readonly Address _nodeB = new Address("akka.tcp", "Sys", "b", 2552);
-        private readonly Address _nodeC = new Address("akka.tcp", "Sys", "c", 2552);
-        private readonly Address _nodeD = new Address("akka.tcp", "Sys", "d", 2552);
-        private readonly IImmutableSet<Address> _nodes;
+        private readonly UniqueAddress _nodeA = new UniqueAddress(new Address("akka.tcp", "Sys", "a", 2552), 1001);
+        private readonly UniqueAddress _nodeB = new UniqueAddress(new Address("akka.tcp", "Sys", "b", 2552), 1002);
+        private readonly UniqueAddress _nodeC = new UniqueAddress(new Address("akka.tcp", "Sys", "c", 2552), 1003);
+        private readonly UniqueAddress _nodeD = new UniqueAddress(new Address("akka.tcp", "Sys", "d", 2552), 1004);
+        private readonly IImmutableSet<UniqueAddress> _nodes;
 
         private readonly GSet<string> _data = GSet.Create("A", "B");
         private readonly WriteTo _writeThree = new WriteTo(3, TimeSpan.FromSeconds(3));
@@ -95,6 +101,8 @@ namespace Akka.DistributedData.Tests
         private readonly ORSet<string> _fullState1;
         private readonly ORSet<string> _fullState2;
         private readonly Delta _delta;
+
+        private readonly UniqueAddress _selfUniqueAddress;
 
         public WriteAggregatorSpec(ITestOutputHelper output) : base(ConfigurationFactory.ParseString($@"
             akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
@@ -111,13 +119,14 @@ namespace Akka.DistributedData.Tests
             _fullState2 = _fullState1.ResetDelta().Add(cluster, "c");
             _delta = new Delta(new DataEnvelope(_fullState2.Delta), 2L, 2L);
             _writeAll = new WriteAll(Dilated(TimeSpan.FromSeconds(3)));
+            _selfUniqueAddress = cluster.SelfUniqueAddress;
         }
 
         [Fact]
         public void WriteAggregator_must_send_at_least_half_N_plus_1_replicas_when_WriteMajority()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, false));
 
             probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
@@ -132,7 +141,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_must_send_to_more_when_no_immediate_reply()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, false));
 
             probe.ExpectMsg<Write>();
             // no reply
@@ -152,7 +161,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_must_timeout_when_less_than_required_ACKs()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, false));
 
             probe.ExpectMsg<Write>();
             // no reply
@@ -193,7 +202,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_with_delta_must_send_delta_first()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _selfUniqueAddress, _delta, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, false));
 
             Watch(aggregator);
 
@@ -211,26 +220,26 @@ namespace Akka.DistributedData.Tests
         {
             var testProbes = Probes();
             var testProbeRefs = testProbes.ToImmutableDictionary(kv => kv.Key, kv => kv.Value.Item2);
-            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeAll, testProbeRefs, _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _selfUniqueAddress, _delta, _writeAll, testProbeRefs, _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, false));
 
             Watch(aggregator);
 
-            testProbes[_nodeA].Item1.ExpectMsg<DeltaPropagation>();
+            testProbes[_nodeA.Address].Item1.ExpectMsg<DeltaPropagation>();
             // no reply
-            testProbes[_nodeB].Item1.ExpectMsg<DeltaPropagation>();
-            testProbes[_nodeB].Item1.LastSender.Tell(WriteAck.Instance);
-            testProbes[_nodeC].Item1.ExpectMsg<DeltaPropagation>();
-            testProbes[_nodeC].Item1.LastSender.Tell(WriteAck.Instance);
-            testProbes[_nodeD].Item1.ExpectMsg<DeltaPropagation>();
-            testProbes[_nodeD].Item1.LastSender.Tell(DeltaNack.Instance);
+            testProbes[_nodeB.Address].Item1.ExpectMsg<DeltaPropagation>();
+            testProbes[_nodeB.Address].Item1.LastSender.Tell(WriteAck.Instance);
+            testProbes[_nodeC.Address].Item1.ExpectMsg<DeltaPropagation>();
+            testProbes[_nodeC.Address].Item1.LastSender.Tell(WriteAck.Instance);
+            testProbes[_nodeD.Address].Item1.ExpectMsg<DeltaPropagation>();
+            testProbes[_nodeD.Address].Item1.LastSender.Tell(DeltaNack.Instance);
 
             // second round
-            testProbes[_nodeA].Item1.ExpectMsg<Write>();
-            testProbes[_nodeA].Item1.LastSender.Tell(WriteAck.Instance);
-            testProbes[_nodeD].Item1.ExpectMsg<Write>();
-            testProbes[_nodeD].Item1.LastSender.Tell(WriteAck.Instance);
-            testProbes[_nodeB].Item1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            testProbes[_nodeC].Item1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            testProbes[_nodeA.Address].Item1.ExpectMsg<Write>();
+            testProbes[_nodeA.Address].Item1.LastSender.Tell(WriteAck.Instance);
+            testProbes[_nodeD.Address].Item1.ExpectMsg<Write>();
+            testProbes[_nodeD.Address].Item1.LastSender.Tell(WriteAck.Instance);
+            testProbes[_nodeB.Address].Item1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            testProbes[_nodeC.Address].Item1.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
 
             ExpectMsg(new UpdateSuccess(KeyB, null));
             ExpectTerminated(aggregator);
@@ -240,7 +249,7 @@ namespace Akka.DistributedData.Tests
         public void WriteAggregator_with_delta_must_timeout_when_less_than_required_ACKs()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _delta, _writeAll, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, false));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorPropsWithDelta(_fullState2, _selfUniqueAddress, _delta, _writeAll, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, false));
 
             Watch(aggregator);
 
@@ -272,7 +281,7 @@ namespace Akka.DistributedData.Tests
         public void Durable_WriteAggregator_must_not_reply_before_local_confirmation()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeThree, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeThree, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, true));
             Watch(aggregator);
             
             probe.ExpectMsg<Write>();
@@ -292,7 +301,7 @@ namespace Akka.DistributedData.Tests
         public void Durable_WriteAggregator_must_tolerate_WriteNack_if_enough_WriteAck()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeThree, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeThree, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, true));
             Watch(aggregator);
             
             aggregator.Tell(new UpdateSuccess(KeyA, null));
@@ -311,7 +320,7 @@ namespace Akka.DistributedData.Tests
         public void Durable_WriteAggregator_must_reply_with_StoreFailure_when_too_many_nacks()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, true));
             Watch(aggregator);
 
             probe.ExpectMsg<Write>();
@@ -332,7 +341,7 @@ namespace Akka.DistributedData.Tests
         public void Durable_WriteAggregator_must_timeout_when_less_than_required_ACKs()
         {
             var probe = CreateTestProbe();
-            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<Address>.Empty, TestActor, true));
+            var aggregator = Sys.ActorOf(TestWriteAggregatorProps(_data, _selfUniqueAddress, _writeMajority, Probes(probe.Ref), _nodes, ImmutableHashSet<UniqueAddress>.Empty, TestActor, true));
             Watch(aggregator);
 
             probe.ExpectMsg<Write>();
@@ -355,15 +364,15 @@ namespace Akka.DistributedData.Tests
         private IImmutableDictionary<Address, IActorRef> Probes(IActorRef probe) =>
             _nodes.Select(address => 
                 new KeyValuePair<Address, IActorRef>(
-                    address,
+                    address.Address,
                     Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe)))))
                 .ToImmutableDictionary();
 
         private IImmutableDictionary<Address, (TestProbe, IActorRef)> Probes() =>
             _nodes.Select(address =>
                 {
-                    var probe = CreateTestProbe("probe-" + address.Host);
-                    return new KeyValuePair<Address, (TestProbe, IActorRef)>(address,
+                    var probe = CreateTestProbe("probe-" + address.Address.Host);
+                    return new KeyValuePair<Address, (TestProbe, IActorRef)>(address.Address,
                         (probe, Sys.ActorOf(Props.Create(() => new WriteAckAdapter(probe.Ref)))));
                 })
                 .ToImmutableDictionary();

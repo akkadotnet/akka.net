@@ -9,44 +9,47 @@ using Akka.Actor;
 using Akka.DistributedData.Internal;
 using System;
 using System.Collections.Immutable;
+using Akka.Cluster;
 using Akka.Event;
 
 namespace Akka.DistributedData
 {
     internal class ReadAggregator : ReadWriteAggregator
     {
-        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo) =>
-            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, localValue, replyTo)).WithDeploy(Deploy.Local);
+        internal static Props Props(IKey key, IReadConsistency consistency, object req, UniqueAddress selfUniqueAddress, IImmutableSet<UniqueAddress> nodes, IImmutableSet<UniqueAddress> unreachable, DataEnvelope localValue, IActorRef replyTo) =>
+            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, selfUniqueAddress, nodes, unreachable, localValue, replyTo)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly IReadConsistency _consistency;
         private readonly object _req;
+        private readonly UniqueAddress _selfUniqueAddress;
         private readonly IActorRef _replyTo;
         private readonly Read _read;
         
         private DataEnvelope _result;
 
-        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, DataEnvelope localValue, IActorRef replyTo)
+        public ReadAggregator(IKey key, IReadConsistency consistency, object req, UniqueAddress selfUniqueAddress, IImmutableSet<UniqueAddress> nodes, IImmutableSet<UniqueAddress> unreachable, DataEnvelope localValue, IActorRef replyTo)
             : base(nodes, unreachable, consistency.Timeout)
         {
             _key = key;
             _consistency = consistency;
             _req = req;
+            _selfUniqueAddress = selfUniqueAddress;
             _replyTo = replyTo;
             _result = localValue;
-            _read = new Read(key.Id);
+            _read = new Read(key.Id, _selfUniqueAddress);
             DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
         protected override int DoneWhenRemainingSize { get; }
 
         private int GetDoneWhenRemainingSize()
         {
-            if (_consistency is ReadFrom) return Nodes.Count - (((ReadFrom) _consistency).N - 1);
+            if (_consistency is ReadFrom rf) return Nodes.Count - (rf.N - 1);
             else if (_consistency is ReadAll) return 0;
-            else if (_consistency is ReadMajority)
+            else if (_consistency is ReadMajority rm)
             {
                 var ncount = Nodes.Count + 1;
-                var w = CalculateMajorityWithMinCapacity(((ReadMajority) _consistency).MinCapacity, ncount);
+                var w = CalculateMajorityWithMinCapacity(rm.MinCapacity, ncount);
                 return ncount - w;
             }
             else if (_consistency is ReadLocal) throw new ArgumentException("ReadAggregator does not support ReadLocal");

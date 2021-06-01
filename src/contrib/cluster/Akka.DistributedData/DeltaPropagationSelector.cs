@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Cluster;
 using Akka.DistributedData.Internal;
 using Akka.Event;
 using Akka.Util.Internal;
@@ -20,13 +21,13 @@ namespace Akka.DistributedData
     {
         private ImmutableDictionary<string, long> _deltaCounter = ImmutableDictionary<string, long>.Empty;
         private ImmutableDictionary<string, ImmutableSortedDictionary<long, IReplicatedData>> _deltaEntries = ImmutableDictionary<string, ImmutableSortedDictionary<long, IReplicatedData>>.Empty;
-        private ImmutableDictionary<string, ImmutableDictionary<Address, long>> _deltaSentToNode = ImmutableDictionary<string, ImmutableDictionary<Address, long>>.Empty;
+        private ImmutableDictionary<string, ImmutableDictionary<UniqueAddress, long>> _deltaSentToNode = ImmutableDictionary<string, ImmutableDictionary<UniqueAddress, long>>.Empty;
         private long _deltaNodeRoundRobinCounter = 0L;
 
         public long PropagationCount { get; private set; }
 
         public abstract int GossipInternalDivisor { get; }
-        protected abstract ImmutableArray<Address> AllNodes { get; }
+        protected abstract ImmutableArray<UniqueAddress> AllNodes { get; }
         protected abstract int MaxDeltaSize { get; }
         protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas);
 
@@ -53,19 +54,19 @@ namespace Akka.DistributedData
         public virtual int NodeSliceSize(int allNodesSize) =>
             Math.Min(Math.Max((allNodesSize / GossipInternalDivisor) + 1, 2), Math.Min(allNodesSize, 10));
 
-        public ImmutableDictionary<Address, DeltaPropagation> CollectPropagations()
+        public ImmutableDictionary<UniqueAddress, DeltaPropagation> CollectPropagations()
         {
             PropagationCount++;
             var all = AllNodes;
             if (all.IsEmpty)
-                return ImmutableDictionary<Address, DeltaPropagation>.Empty;
+                return ImmutableDictionary<UniqueAddress, DeltaPropagation>.Empty;
             else
             {
                 // For each tick we pick a few nodes in round-robin fashion, 2 - 10 nodes for each tick.
                 // Normally the delta is propagated to all nodes within the gossip tick, so that
                 // full state gossip is not needed.
                 var sliceSize = NodeSliceSize(all.Length);
-                ImmutableArray<Address> slice;
+                ImmutableArray<UniqueAddress> slice;
                 if (all.Length <= sliceSize) slice = all;
                 else
                 {
@@ -78,7 +79,7 @@ namespace Akka.DistributedData
 
                 _deltaNodeRoundRobinCounter += sliceSize;
 
-                var result = ImmutableDictionary<Address, DeltaPropagation>.Empty.ToBuilder();
+                var result = ImmutableDictionary<UniqueAddress, DeltaPropagation>.Empty.ToBuilder();
                 var cache = new Dictionary<(string, long, long), IReplicatedData>();
                 foreach (var node in slice)
                 {
@@ -90,7 +91,7 @@ namespace Akka.DistributedData
                         var key = entry.Key;
                         var entries = entry.Value;
 
-                        var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<Address, long>.Empty);
+                        var deltaSentToNodeForKey = _deltaSentToNode.GetValueOrDefault(key, ImmutableDictionary<UniqueAddress, long>.Empty);
                         
                         var j = deltaSentToNodeForKey.GetValueOrDefault(node, 0L);
                         var deltaEntriesAfterJ = DeltaEntriesAfter(entries, j);
@@ -167,10 +168,10 @@ namespace Akka.DistributedData
             }
         }
 
-        public void CleanupRemovedNode(Address address)
+        public void CleanupRemovedNode(UniqueAddress address)
         {
             _deltaSentToNode = _deltaSentToNode
-                .Select(entry => new KeyValuePair<string, ImmutableDictionary<Address, long>>(entry.Key, entry.Value.Remove(address)))
+                .Select(entry => new KeyValuePair<string, ImmutableDictionary<UniqueAddress, long>>(entry.Key, entry.Value.Remove(address)))
                 .ToImmutableDictionary();
         }
 
@@ -178,7 +179,7 @@ namespace Akka.DistributedData
             ImmutableSortedDictionary<long, IReplicatedData> entries, long version) =>
             entries.Where(e => e.Key > version).ToImmutableSortedDictionary();
 
-        private long FindSmallestVersionPropagatedToAllNodes(string key, IEnumerable<Address> nodes)
+        private long FindSmallestVersionPropagatedToAllNodes(string key, IEnumerable<UniqueAddress> nodes)
         {
             if (_deltaSentToNode.TryGetValue(key, out var deltaSentToNodeForKey) && !deltaSentToNodeForKey.IsEmpty)
             {

@@ -13,6 +13,7 @@ using System.Text;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Event;
+using Akka.Util.Internal;
 using Google.Protobuf;
 
 namespace Akka.DistributedData.Internal
@@ -232,7 +233,7 @@ namespace Akka.DistributedData.Internal
         /// </summary>
         /// <param name="key">TBD</param>
         /// <param name="fromNode">TBD</param>
-        public Read(string key, UniqueAddress fromNode = null)
+        public Read(string key, UniqueAddress fromNode)
         {
             Key = key;
             FromNode = fromNode;
@@ -435,7 +436,10 @@ namespace Akka.DistributedData.Internal
         /// <param name="owner">TBD</param>
         /// <returns>TBD</returns>
         internal DataEnvelope InitRemovedNodePruning(UniqueAddress removed, UniqueAddress owner) =>
-            new DataEnvelope(Data, Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)));
+            new DataEnvelope(
+                Data, 
+                Pruning.SetItem(removed, new PruningInitialized(owner, ImmutableHashSet<Address>.Empty)), 
+                CleanedDeltaVersions(removed));
 
         /// <summary>
         /// TBD
@@ -470,12 +474,14 @@ namespace Akka.DistributedData.Internal
             if (other.Data is DeletedData) return DeletedEnvelope;
 
             var mergedPrunning = other.Pruning.ToBuilder();
-            foreach (var entry in this.Pruning)
+            foreach (var entry in Pruning)
             {
-                if (mergedPrunning.TryGetValue(entry.Key, out var state))
-                    mergedPrunning[entry.Key] = entry.Value.Merge(state);
+                var key = entry.Key;
+                var thisValue = entry.Value;
+                if (mergedPrunning.TryGetValue(key, out var thatValue))
+                    mergedPrunning[key] = thisValue.Merge(thatValue);
                 else
-                    mergedPrunning[entry.Key] = entry.Value;
+                    mergedPrunning[key] = thisValue;
             }
 
             var currentTime = DateTime.UtcNow;
@@ -483,10 +489,8 @@ namespace Akka.DistributedData.Internal
                 ? mergedPrunning.ToImmutable()
                 : mergedPrunning
                     .Where(entry =>
-                    {
-                        var performed = entry.Value as PruningPerformed;
-                        return !performed?.IsObsolete(currentTime) ?? true;
-                    })
+                        entry.Value is PruningPerformed p && !p.IsObsolete(currentTime)
+                    )
                     .ToImmutableDictionary();
 
             // cleanup and merge DeltaVersions
@@ -512,15 +516,28 @@ namespace Akka.DistributedData.Internal
         {
             if (otherData is DeletedData) return DeletedEnvelope;
 
-            var cleanedData = Cleaned(otherData, Pruning);
             IReplicatedData mergedData;
-            if (cleanedData is IReplicatedDelta d)
+            switch (Cleaned(otherData, Pruning))
             {
-                var delta = Data as IDeltaReplicatedData ?? throw new ArgumentException($"Expected {nameof(IDeltaReplicatedData)} but got '{Data}' instead.");
+                case IReplicatedDelta d:
+                    switch (Data)
+                    {
+                        case IDeltaReplicatedData drd:
+                            mergedData = drd.MergeDelta(d);
+                            break;
+                        case var e:
+                            throw new ArgumentException($"Expected {nameof(IDeltaReplicatedData)} but got '{e.GetType()}' instead.");
+                    }
+                    break;
 
-                mergedData = delta.MergeDelta(d);
+                case var c:
+                    mergedData = Data.Merge(c);
+                    break;
             }
-            else mergedData = Data.Merge(cleanedData);
+
+            if (Data.GetType() != mergedData.GetType())
+                throw new ArgumentException(
+                    $"Wrong type, existing type [{Data.GetType()}], fot [{mergedData.GetType()}]");
 
             return new DataEnvelope(mergedData, Pruning, DeltaVersions);
         }
@@ -692,7 +709,7 @@ namespace Akka.DistributedData.Internal
         /// <param name="totalChunks">TBD</param>
         /// <param name="toSystemUid">TBD</param>
         /// <param name="fromSystemUid">TBD</param>
-        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks, long? toSystemUid = null, long? fromSystemUid = null)
+        public Status(IImmutableDictionary<string, ByteString> digests, int chunk, int totalChunks, long? toSystemUid, long? fromSystemUid)
         {
             Digests = digests;
             Chunk = chunk;
@@ -774,7 +791,7 @@ namespace Akka.DistributedData.Internal
         /// <param name="sendBack">TBD</param>
         /// <param name="toSystemUid">TBD</param>
         /// <param name="fromSystemUid">TBD</param>
-        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? toSystemUid = null, long? fromSystemUid = null)
+        public Gossip(IImmutableDictionary<string, DataEnvelope> updatedData, bool sendBack, long? toSystemUid , long? fromSystemUid)
         {
             UpdatedData = updatedData;
             SendBack = sendBack;
@@ -795,7 +812,7 @@ namespace Akka.DistributedData.Internal
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Gossip && Equals((Gossip)obj);
+        public override bool Equals(object obj) => obj is Gossip gossip && Equals(gossip);
 
         /// <inheritdoc/>
         public override int GetHashCode()

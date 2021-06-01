@@ -9,6 +9,7 @@ using Akka.Actor;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using Akka.Cluster;
 using Akka.Event;
 using Akka.Util;
 
@@ -25,9 +26,9 @@ namespace Akka.DistributedData
         private const int MaxSecondaryNodes = 10;
 
         protected TimeSpan Timeout { get; }
-        protected IImmutableSet<Address> Nodes { get; }
-        protected IImmutableSet<Address> Unreachable { get; }
-        protected IImmutableSet<Address> Reachable { get; }
+        protected IImmutableSet<UniqueAddress> Nodes { get; }
+        protected IImmutableSet<UniqueAddress> Unreachable { get; }
+        protected IImmutableSet<UniqueAddress> Reachable { get; }
 
         private readonly ICancelable _sendToSecondarySchedule;
         private readonly ICancelable _timeoutSchedule;
@@ -38,35 +39,35 @@ namespace Akka.DistributedData
 
         protected abstract int DoneWhenRemainingSize { get; }
 
-        private readonly Lazy<(IImmutableSet<Address>, IImmutableSet<Address>)> _primaryAndSecondaryNodes;
+        private readonly Lazy<(IImmutableSet<UniqueAddress>, IImmutableSet<UniqueAddress>)> _primaryAndSecondaryNodes;
 
-        protected IImmutableSet<Address> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
-        protected IImmutableSet<Address> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
+        protected IImmutableSet<UniqueAddress> PrimaryNodes => _primaryAndSecondaryNodes.Value.Item1;
+        protected IImmutableSet<UniqueAddress> SecondaryNodes => _primaryAndSecondaryNodes.Value.Item2;
 
         protected IImmutableSet<Address> Remaining;
 
-        protected ReadWriteAggregator(IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, TimeSpan timeout)
+        protected ReadWriteAggregator(IImmutableSet<UniqueAddress> nodes, IImmutableSet<UniqueAddress> unreachable, TimeSpan timeout)
         {
             Timeout = timeout;
             Nodes = nodes;
             Unreachable = unreachable;
             Reachable = nodes.Except(unreachable);
-            Remaining = Nodes;
+            Remaining = Nodes.Select(n => n.Address).ToImmutableHashSet();
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
             _timeoutSchedule = Context.System.Scheduler.ScheduleTellOnceCancelable(Timeout, Self, ReceiveTimeout.Instance, Self);
-            _primaryAndSecondaryNodes = new Lazy<(IImmutableSet<Address>, IImmutableSet<Address>)>(() =>
+            _primaryAndSecondaryNodes = new Lazy<(IImmutableSet<UniqueAddress>, IImmutableSet<UniqueAddress>)>(() =>
             {
                 var primarySize = Nodes.Count - DoneWhenRemainingSize;
-                if(primarySize >= nodes.Count)
+                if(primarySize >= Nodes.Count)
                 {
-                    return (nodes, (IImmutableSet<Address>)ImmutableHashSet<Address>.Empty);
+                    return (Nodes, ImmutableHashSet<UniqueAddress>.Empty);
                 }
                 else
                 {
                     var n = Nodes.OrderBy(x => ThreadLocalRandom.Current.Next()).ToArray();
                     var p = n.Take(primarySize).ToImmutableHashSet();
                     var s = n.Skip(primarySize).Take(MaxSecondaryNodes).ToImmutableHashSet();
-                    return ((IImmutableSet<Address>)p, (IImmutableSet<Address>)s);
+                    return (p, s);
                 }
             });
         }
@@ -84,9 +85,9 @@ namespace Akka.DistributedData
             _timeoutSchedule.Cancel();
         }
 
-        protected virtual ActorSelection Replica(Address address)
+        protected virtual ActorSelection Replica(UniqueAddress address)
         {
-            return Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(address));
+            return Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(address.Address));
         }
     }
 }
