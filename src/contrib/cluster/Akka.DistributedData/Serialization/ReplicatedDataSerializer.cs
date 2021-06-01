@@ -273,6 +273,7 @@ namespace Akka.DistributedData.Serialization
                         intElements.Sort();
                         foreach (var val in intElements)
                         {
+                            b.IntElements.Add(val);
                             b.Dots.Add(SerializationSupport.VersionVectorToProto(ints.ElementsMap[val]));
                         }
                         return b;
@@ -285,6 +286,7 @@ namespace Akka.DistributedData.Serialization
                         longElements.Sort();
                         foreach (var val in longElements)
                         {
+                            b.LongElements.Add(val);
                             b.Dots.Add(SerializationSupport.VersionVectorToProto(longs.ElementsMap[val]));
                         }
                         return b;
@@ -297,6 +299,7 @@ namespace Akka.DistributedData.Serialization
                         stringElements.Sort();
                         foreach (var val in stringElements)
                         {
+                            b.StringElements.Add(val);
                             b.Dots.Add(SerializationSupport.VersionVectorToProto(strings.ElementsMap[val]));
                         }
                         return b;
