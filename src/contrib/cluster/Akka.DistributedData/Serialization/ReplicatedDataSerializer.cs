@@ -385,6 +385,8 @@ namespace Akka.DistributedData.Serialization
         private static readonly MethodInfo ORSetUnknownMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ORSetUnknownToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
+        private static readonly OtherMessageComparer OtherMessageComparer = new OtherMessageComparer();
+
         /// <summary>
         /// Called when we're serializing none of the standard object types with ORSet
         /// </summary>
@@ -403,7 +405,7 @@ namespace Akka.DistributedData.Serialization
                 otherElements.Add(otherElement);
                 otherElementsDict[otherElement] = SerializationSupport.VersionVectorToProto(kvp.Value);
             }
-            otherElements.Sort();
+            otherElements.Sort(OtherMessageComparer);
             
             foreach (var val in otherElements)
             {
