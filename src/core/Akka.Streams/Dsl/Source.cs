@@ -930,7 +930,7 @@ namespace Akka.Streams.Dsl
         /// <param name="close">function that closes resource</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> UnfoldResourceAsync<T, TSource>(Func<Task<TSource>> create,
-            Func<TSource, Task<Option<T>>> read, Func<TSource, Task> close)
+            Func<TSource, Task<Option<T>>> read, Func<TSource, Task<Done>> close)
         {
             return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
         }
