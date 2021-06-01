@@ -409,7 +409,7 @@ namespace Akka.DistributedData.Serialization
                 proto.Entries.Add(new Proto.Msg.Status.Types.Entry
                 {
                     Key = entry.Key,
-                    Digest = ByteString.CopyFrom(entry.Value.ToByteArray())
+                    Digest = entry.Value
                 });
             }
 
