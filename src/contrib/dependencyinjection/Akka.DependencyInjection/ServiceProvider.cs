@@ -20,7 +20,7 @@ namespace Akka.DependencyInjection
     /// <remarks>
     /// [OBSOLETE] Switch to the <see cref="DependencyResolver"/> instead.
     /// </remarks>
-    [Obsolete("Replaced by the Akka.DependencyInjection.DependencyResolver in Akka.NET v1.4.20. Please switch to that.")]
+    [Obsolete("Replaced by the Akka.DependencyInjection.DependencyResolver in Akka.NET v1.4.21. Please switch to that.")]
     public sealed class ServiceProvider : IExtension
     {
         public ServiceProvider(IServiceProvider provider)
