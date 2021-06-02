@@ -496,6 +496,7 @@ namespace Akka.Actor
             return false;
         }
 
+        private string _join = null;
 
         /// <summary>
         /// Joins this instance.
@@ -506,30 +507,36 @@ namespace Akka.Actor
             if (this is RootActorPath)
                 return "/";
 
-            // Resolve length of final string
-            var totalLength = 0;
-            var p = this;
-            while (!(p is RootActorPath))
+            if (string.IsNullOrEmpty(_join))
             {
-                totalLength += p.Name.Length + 1;
-                p = p.Parent;
+                // Resolve length of final string
+                var totalLength = 0;
+                var p = this;
+                while (!(p is RootActorPath))
+                {
+                    totalLength += p.Name.Length + 1;
+                    p = p.Parent;
+                }
+
+                // Concatenate segments (in reverse order) into buffer with '/' prefixes
+                char[] buffer = new char[totalLength];
+                int offset = buffer.Length;
+                p = this;
+                while (!(p is RootActorPath))
+                {
+                    offset -= p.Name.Length + 1;
+                    buffer[offset] = '/';
+
+                    p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+
+                    p = p.Parent;
+                }
+
+                _join = new string(buffer);
             }
 
-            // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            char[] buffer = new char[totalLength];
-            int offset = buffer.Length;
-            p = this;
-            while (!(p is RootActorPath))
-            {
-                offset -= p.Name.Length + 1;
-                buffer[offset] = '/';
+            return _join;
 
-                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
-
-                p = p.Parent;
-            }
-
-            return new string(buffer);
         }
 
         /// <summary>
