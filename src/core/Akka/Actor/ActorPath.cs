@@ -554,7 +554,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            return ToStringWithAddress();
+            return $"{Address}{Join()}";
         }
 
         /// <summary>
