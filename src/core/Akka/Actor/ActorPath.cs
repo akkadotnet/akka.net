@@ -501,25 +501,73 @@ namespace Akka.Actor
         /// Joins this instance.
         /// </summary>
         /// <returns> System.String. </returns>
-        private string Join()
+        private string Join(Address addrOption = null, int? uidOption = null)
         {
             if (this is RootActorPath)
                 return "/";
 
             // Resolve length of final string
-            var totalLength = 0;
+            var totalPathLength = 0;
             var p = this;
             while (!(p is RootActorPath))
             {
-                totalLength += p.Name.Length + 1;
+                totalPathLength += p.Name.Length + 1;
                 p = p.Parent;
             }
 
+            var remote = !string.IsNullOrWhiteSpace(addrOption?.Host) && addrOption.Port.HasValue;
+            var addrLength = addrOption == null ? 0 : (remote
+                ? addrOption.Protocol.Length + 3 + addrOption.System.Length + 1 + addrOption.Host.Length + 1 + 11 // 11 MAX characters for port number
+                : addrOption.Protocol.Length + 3 + addrOption.System.Length);
+            Span<char> writeSpan = stackalloc char[addrLength];
+            if (addrOption != null)
+            {
+               
+                var curPos = 0;
+
+                var protSpan = addrOption.Protocol.AsSpan();
+                curPos += SpanHacks.CopySpans(protSpan, writeSpan, curPos);
+
+                writeSpan[curPos++] = ':';
+                writeSpan[curPos++] = '/';
+                writeSpan[curPos++] = '/';
+
+                var sysSpan = addrOption.System.AsSpan();
+                curPos += SpanHacks.CopySpans(sysSpan, writeSpan, curPos);
+
+                if (remote)
+                {
+                    writeSpan[curPos++] = '@';
+                    var hostSpan = addrOption.Host.AsSpan();
+                    curPos += SpanHacks.CopySpans(hostSpan, writeSpan, curPos);
+                    writeSpan[curPos++] = ':';
+                    Span<char> portSpan = stackalloc char[11];
+                    var length = addrOption.Port.Value.AsCharSpan(portSpan);
+                    curPos += SpanHacks.CopySpans(portSpan.Slice(0, length), writeSpan, curPos);
+                }
+
+                addrLength = curPos;
+            }
+
+            // 11 characters is the max for a stringified integer
+           
+            Span<char> uidSpan = stackalloc char[12];
+            var intLength = 0;
+            var adjustedUidLength = 0;
+            if (uidOption.HasValue)
+            {
+                intLength = uidOption.Value.AsCharSpan(uidSpan);
+                adjustedUidLength = intLength + 1; // need 1 extra for '#'
+            }
+
             // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            Span<char> buffer = stackalloc char[totalLength];
-            var offset = buffer.Length;
-            var writtenByes = 0;
+            Span<char> buffer = stackalloc char[addrLength + totalPathLength + adjustedUidLength];
+
+            // copy address
+            writeSpan.Slice(0, addrLength).CopyTo(buffer);
+
+            // need to start after address but before uid
+            var offset = buffer.Length - adjustedUidLength;
             p = this; // need to reset local var after previous traversal
             while (!(p is RootActorPath))
             {
@@ -532,9 +580,15 @@ namespace Akka.Actor
                 {
                     buffer[++writeOffset] = spanified[i];
                 }
-                writtenByes += 1 + spanified.Length;
 
                 p = p.Parent;
+            }
+
+            if (uidOption.HasValue)
+            {
+                var uidOffset = buffer.Length - adjustedUidLength;
+                buffer[offset++] = '#';
+                SpanHacks.CopySpans(uidSpan.Slice(0, intLength), buffer, offset);
             }
 
             return buffer.ToString();
