@@ -501,14 +501,19 @@ namespace Akka.Actor
         /// Joins this instance.
         /// </summary>
         /// <returns> System.String. </returns>
-        private string Join(Address addrOption = null, int? uidOption = null)
+        private string Join(Address addrOption = null, long? uidOption = null)
         {
-            if (this is RootActorPath)
+            if (this is RootActorPath && addrOption == null)
                 return "/";
 
             // Resolve length of final string
             var totalPathLength = 0;
             var p = this;
+            if (p is RootActorPath)
+            {
+                totalPathLength = 1; // "/"
+            }
+            
             while (!(p is RootActorPath))
             {
                 totalPathLength += p.Name.Length + 1;
@@ -549,12 +554,12 @@ namespace Akka.Actor
                 addrLength = curPos;
             }
 
-            // 11 characters is the max for a stringified integer
+            // 20 characters is the max for a long integer
            
-            Span<char> uidSpan = stackalloc char[12];
+            Span<char> uidSpan = stackalloc char[20];
             var intLength = 0;
             var adjustedUidLength = 0;
-            if (uidOption.HasValue)
+            if (uidOption.HasValue && uidOption != ActorCell.UndefinedUid)
             {
                 intLength = uidOption.Value.AsCharSpan(uidSpan);
                 adjustedUidLength = intLength + 1; // need 1 extra for '#'
@@ -569,6 +574,11 @@ namespace Akka.Actor
             // need to start after address but before uid
             var offset = buffer.Length - adjustedUidLength;
             p = this; // need to reset local var after previous traversal
+            if (totalPathLength == 1) // RootActorPath
+            {
+                buffer[offset-1] = '/';
+            }
+
             while (!(p is RootActorPath))
             {
                 offset -= p.Name.Length + 1;
@@ -584,7 +594,7 @@ namespace Akka.Actor
                 p = p.Parent;
             }
 
-            if (uidOption.HasValue)
+            if (adjustedUidLength > 0)
             {
                 var uidOffset = buffer.Length - adjustedUidLength;
                 buffer[offset++] = '#';
@@ -608,7 +618,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"{Address}{Join()}";
+            return Join(Address);
         }
 
         /// <summary>
@@ -620,7 +630,8 @@ namespace Akka.Actor
             var uid = Uid;
             if (uid == ActorCell.UndefinedUid)
                 return ToStringWithAddress();
-            return ToStringWithAddress() + "#" + uid;
+            return Join(Address, Uid);
+            //ToStringWithAddress() + "#" + uid;
         }
 
         /// <summary>
@@ -690,7 +701,9 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToSerializationFormat()
         {
-            return AppendUidFragment(ToStringWithAddress());
+            if (Uid == ActorCell.UndefinedUid)
+                return ToStringWithAddress();
+            return Join(Address, Uid);
         }
 
         /// <summary>
@@ -705,9 +718,9 @@ namespace Akka.Actor
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            var withAddress = ToStringWithAddress(address);
-            var result = AppendUidFragment(withAddress);
-            return result;
+            //var withAddress = ToStringWithAddress(address);
+            //var result = AppendUidFragment(withAddress);
+            return Join(address, Uid);
         }
 
         private string AppendUidFragment(string withAddress)
@@ -733,9 +746,9 @@ namespace Akka.Actor
                 return ToString();
             }
             if (Address.Host != null && Address.Port.HasValue)
-                return $"{Address}{Join()}";
+                return Join(Address);
 
-            return $"{address}{Join()}";
+            return Join(address);
         }
 
         /// <summary>

@@ -66,6 +66,63 @@ namespace Akka.Util
             }
 
             return count;
+        }
+
+        /// <summary>
+        /// Parses an <see cref="long"/> into a mutable <see cref="Span{T}"/>
+        /// </summary>
+        /// <param name="i">The long integer to convert.</param>
+        /// <param name="span">A 20 character span.</param>
+        /// <returns>The number of characters actually written to the span.</returns>
+        /// <remarks>
+        /// <see cref="span"/> MUST BE 20 CHARACTERS in length, as that's the maximum length
+        /// of a long integer represented as a string.
+        /// </remarks>
+        public static int AsCharSpan(this long i, Span<char> span)
+        {
+            if (i == 0)
+            {
+                span[0] = '0';
+                return 1;
+            }
+            else if (i == long.MinValue)
+            {
+                // special case - can't be converted back into positive integer
+                var negSpan = "-9223372036854775808".AsSpan();
+                negSpan.CopyTo(span);
+                return 11;
+            }
+
+            var negative = false;
+            if (i < 0)
+            {
+                negative = true;
+                i = -i;
+            }
+
+            // max string length is 10 for integer plus 1 for negative sign
+            Span<char> startSpan = stackalloc char[20];
+            var count = 0;
+            while (i != 0)
+            {
+                var rem = i % 10;
+                startSpan[count++] = (char)((rem > 9) ? (rem - 10) + 'a' : rem + '0');
+                i = i / 10;
+            }
+
+            if (negative)
+            {
+                startSpan[count++] = '-';
+            }
+
+            // reverse the string
+            var b = 0;
+            for (var a = count - 1; a >= 0; a--)
+            {
+                span[b++] = startSpan[a];
+            }
+
+            return count;
 
         }
 
