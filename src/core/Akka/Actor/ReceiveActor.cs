@@ -111,7 +111,7 @@ namespace Akka.Actor
             return newHandler;
         }
 
-        private Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
+        private static Action<T> WrapAsyncHandler<T>(Func<T, Task> asyncHandler)
         {
             return m =>
             {
