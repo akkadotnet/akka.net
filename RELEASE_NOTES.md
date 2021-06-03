@@ -1,5 +1,41 @@
-#### 1.4.21 May 12 2021 ####
-**Placeholder for nightlies**
+#### 1.4.21-beta1 June 03 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.21 is a significant release that includes major performance improvements, bug fixes, and a major update to the [Akka.DependencyInjection NuGet package](https://getakka.net/articles/actors/dependency-injection.html).
+
+**Performance Fixes**
+Akka.NET v1.4.21 includes some major performance fixes and improvements:
+
+* [`Ask` is now ~10% faster](https://github.com/akkadotnet/akka.net/pull/5051)
+* [`MurmurHash` is 33% faster and allocates 0 memory](https://github.com/akkadotnet/akka.net/pull/5028) - used _heavily_ in DData, Cluster Sharding, and Consistent Hash Routers
+* `ActorPath.Parse` went from 1672 ns/op to 527 ns/op - a 68% improvement in throughput and a 50% reduction in memory. See [#5039](https://github.com/akkadotnet/akka.net/pull/5039) and [#5068](https://github.com/akkadotnet/akka.net/pull/5068).
+* [Akka.Remote: remove `ActorPath.ToString` call from `ResolveActorRefWithLocalAddress`](https://github.com/akkadotnet/akka.net/pull/5034)
+
+Our observed performance numbers for Akka.Remote show a significant increase in performance for v1.4.21 over v1.4.20:
+
+*Before*
+
+*After*
+
+```
+PS> dotnet run -c Release --framework netcoreapp3.1                
+OSVersion:                         Microsoft Windows NT 6.2.9200.0 
+ProcessorCount:                    16                              
+ClockSpeed:                        0 MHZ                           
+Actor Count:                       32                              
+Messages sent/received per client: 200000  (2e5)                   
+Is Server GC:                      True                            
+Thread count:                      111                             
+                                                                   
+Num clients, Total [msg], Msgs/sec, Total [ms]                     
+         1,  200000,    109770,    1822.14                         
+         5, 1000000,    192902,    5184.79                         
+        10, 2000000,    191663,   10435.53                         
+        15, 3000000,    191339,   15679.11                         
+        20, 4000000,    192725,   20755.78                         
+        25, 5000000,    189754,   26350.14                         
+        30, 6000000,    189772,   31617.20                         
+```
 
 #### 1.4.20 May 12 2021 ####
 **Maintenance Release for Akka.NET 1.4**
