@@ -3,17 +3,38 @@
 
 Akka.NET v1.4.21 is a significant release that includes major performance improvements, bug fixes, and a major update to the [Akka.DependencyInjection NuGet package](https://getakka.net/articles/actors/dependency-injection.html).
 
-**Performance Fixes**
+**Performance Improvements**
 Akka.NET v1.4.21 includes some major performance fixes and improvements:
 
 * [`Ask` is now ~10% faster](https://github.com/akkadotnet/akka.net/pull/5051)
 * [`MurmurHash` is 33% faster and allocates 0 memory](https://github.com/akkadotnet/akka.net/pull/5028) - used _heavily_ in DData, Cluster Sharding, and Consistent Hash Routers
 * `ActorPath.Parse` went from 1672 ns/op to 527 ns/op - a 68% improvement in throughput and a 50% reduction in memory. See [#5039](https://github.com/akkadotnet/akka.net/pull/5039) and [#5068](https://github.com/akkadotnet/akka.net/pull/5068).
 * [Akka.Remote: remove `ActorPath.ToString` call from `ResolveActorRefWithLocalAddress`](https://github.com/akkadotnet/akka.net/pull/5034)
+* **Important**: [Revert `ThreadPool.SetMinThreads(0,0)`](https://github.com/akkadotnet/akka.net/pull/5059) - based on the input from users on "[Akka.NET v1.4.19: ChannelExecutor performance data](https://github.com/akkadotnet/akka.net/discussions/4983)"
 
 Our observed performance numbers for Akka.Remote show a significant increase in performance for v1.4.21 over v1.4.20:
 
 *Before*
+
+```
+PS> dotnet run -c Release --framework netcoreapp3.1      
+OSVersion:                         Microsoft Windows NT 6.2.9200.0
+ProcessorCount:                    16
+ClockSpeed:                        0 MHZ
+Actor Count:                       32
+Messages sent/received per client: 200000  (2e5)
+Is Server GC:                      True
+Thread count:                      109
+
+Num clients, Total [msg], Msgs/sec, Total [ms]
+         1,  200000,    113379,    1764.56
+         5, 1000000,    186429,    5364.05
+        10, 2000000,    185340,   10791.11
+        15, 3000000,    183218,   16374.06
+        20, 4000000,    179824,   22244.63
+        25, 5000000,    182716,   27365.89
+        30, 6000000,    182039,   32960.61
+```
 
 *After*
 
@@ -36,6 +57,38 @@ Num clients, Total [msg], Msgs/sec, Total [ms]
         25, 5000000,    189754,   26350.14                         
         30, 6000000,    189772,   31617.20                         
 ```
+
+> N.B. these after numbers don't benefit from the performance benefits we observed in v1.4.20 when we invoked `ThreadPool.SetMinThreads(0,0)`, which makes them even more impressive.
+
+**Akka.DependencyInjection Updates**
+We had one major issue we implemented in v1.4.21 for Akka.DependencyInjection: [Abstraction of `ServiceProvider`, Improving Akka.DependencyInjection ](https://github.com/akkadotnet/akka.net/pull/4814)
+
+What this change did was:
+
+* Deprecate the `Akka.DependencyInjection.ServiceProvider` class in favor of the `Akka.DependencyInjection.DependencyResolver` class - to avoid namespace collision with Microsoft.Extensions.DependencyInjection.ServiceProvider;
+* Deprecates the `Akka.DependencyInjection.ServiceProviderSetup` class in favor of the `Akka.DependencyInjection.DependencyResolverSetup` class for consistency reasons;
+* `Akka.DependencyInjection.DependencyResolver` now takes an input of type [`IDependencyResolver`](https://getakka.net/api/Akka.DependencyInjection.IDependencyResolver.html), which allows users to abstract away the `IServiceProvider` and mock / replace it during unit testing; and
+* Added some non-generic `Props` methods for dynamically spawning actors via DI.
+
+All of these changes are backwards-compatible with v1.4.20 and earlier - and the deprecation warnings will appear in your code when you upgrade. If you run into any [issues upgrading to Akka.DependencyInjection v1.4.21 please reply on this thread](https://github.com/akkadotnet/akka.net/discussions/5070)!
+
+**Other Changes and Fixes**
+
+* [Akka.Streams: A couple of fixes affecting the `FileSubscriber`](https://github.com/akkadotnet/akka.net/pull/5035)
+* [Akka.DistributedData: memory leak when recovering events from LMDB data store](https://github.com/akkadotnet/akka.net/issues/5022)
+* [Akka.DistributedData: port `VectorClock` performance optimizations to `VersionVector` and similar types](https://github.com/akkadotnet/akka.net/issues/4956)
+
+To see the [full set of fixes in Akka.NET v1.4.21, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/51).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 12 | 999 | 160 | Aaron Stannard |     
+| 10 | 410 | 299 | Gregorius Soedharmo |
+| 4 | 853 | 520 | Ismael Hamed |        
+| 4 | 5 | 5 | dependabot[bot] |         
+| 1 | 6 | 2 | Brah McDude |             
+| 1 | 428 | 67 | Sam Ember |            
+| 1 | 1 | 1 | Martin |                  
 
 #### 1.4.20 May 12 2021 ####
 **Maintenance Release for Akka.NET 1.4**
