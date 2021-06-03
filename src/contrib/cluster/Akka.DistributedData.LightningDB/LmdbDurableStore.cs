@@ -53,9 +53,11 @@ namespace Akka.DistributedData.LightningDB
         private readonly Akka.Serialization.Serialization _serialization;
         private readonly SerializerWithStringManifest _serializer;
         private readonly string _manifest;
+        private readonly long _mapSize;
 
         private readonly TimeSpan _writeBehindInterval;
         private readonly string _dir;
+        private bool _dirExists;
 
         private readonly Dictionary<string, DurableDataEnvelope> _pending = new Dictionary<string, DurableDataEnvelope>();
         private readonly ILoggingAdapter _log;
@@ -80,11 +82,16 @@ namespace Akka.DistributedData.LightningDB
                     TimeSpan.Zero :
                     _config.GetTimeSpan("write-behind-interval");
 
+            _mapSize = _config.GetByteSize("map-size") ?? 100 * 1024 * 1024;
+
             var path = _config.GetString("dir");
             _dir = path.EndsWith(DatabaseName)
                 ? Path.GetFullPath($"{path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
                 : Path.GetFullPath(path);
 
+            _dirExists = Directory.Exists(_dir);
+
+            _log.Info($"Using durable data in LMDB directory [{_dir}]");
             Init();
         }
 
@@ -103,19 +110,17 @@ namespace Akka.DistributedData.LightningDB
 
         private LightningEnvironment GetLightningEnvironment()
         {
-            _log.Info($"Using durable data in LMDB directory [{_dir}]");
-
-            var mapSize = _config.GetByteSize("map-size");
             LightningEnvironment env;
 
-            if (!Directory.Exists(_dir))
+            if (!_dirExists)
             {
                 var t0 = Stopwatch.StartNew();
                 Directory.CreateDirectory(_dir);
+                _dirExists = true;
 
                 env = new LightningEnvironment(_dir)
                 {
-                    MapSize = mapSize ?? 100 * 1024 * 1024,
+                    MapSize = _mapSize,
                     MaxDatabases = 1
                 };
                 env.Open(EnvironmentOpenFlags.NoLock);
@@ -134,7 +139,7 @@ namespace Akka.DistributedData.LightningDB
             {
                 env = new LightningEnvironment(_dir)
                 {
-                    MapSize = mapSize ?? 100 * 1024 * 1024,
+                    MapSize = _mapSize,
                     MaxDatabases = 1
                 };
                 env.Open(EnvironmentOpenFlags.NoLock);
