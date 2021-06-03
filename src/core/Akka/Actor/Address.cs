@@ -78,7 +78,7 @@ namespace Akka.Actor
             _system = system;
             _host = host?.ToLowerInvariant();
             _port = port;
-            _toString = CreateLazyToString();
+            _toString = null;
         }
 
         /// <summary>
