@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster;
 using Akka.Configuration;
-using Akka.DistributedData;
 using Akka.Remote.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
@@ -33,8 +32,7 @@ namespace Akka.Remote.Tests.Serialization
 	                ""{typeof(DummySerializerWithStringManifest).AssemblyQualifiedName}"" = 13
                 }}
             }}")
-            .WithFallback(RemoteConfigFactory.Default())
-            .WithFallback(DistributedData.DistributedData.DefaultConfig());
+            .WithFallback(RemoteConfigFactory.Default());
 
         public BugFix5062Spec(ITestOutputHelper output) : base(output, DDataConfig)
         { }
@@ -42,24 +40,20 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public void Failed_serialization_should_give_proper_exception_message()
         {
-            var node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
-            var payload = new LWWRegister<SomeMessage>(node1, new SomeMessage());
-
             var message = new ActorSelectionMessage(
-                payload, 
+                new SomeMessage(), 
                 new SelectionPathElement[] { new SelectChildName("dummy") }, 
                 true);
 
+            var node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
             var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, node1.Address, message);
 
             var o = new object();
             var ex = o.Invoking(s => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
                 .Throw<SerializationException>()
                 .WithMessage("Failed to deserialize object with serialization id [6] (manifest []).")
-                .WithInnerExceptionExactly<SerializationException>()
-                .WithMessage("Failed to deserialize object with serialization id [11] (manifest [E]).")
-                .WithInnerExceptionExactly<TargetInvocationException>()
-                .WithMessage("Exception has been thrown by the target of an invocation.")
+                //.WithInnerExceptionExactly<SerializationException>()
+                //.WithMessage("Failed to deserialize object with serialization id [11] (manifest [E]).")
                 .WithInnerExceptionExactly<SerializationException>()
                 .WithMessage("Failed to deserialize object with serialization id [13] (manifest [SM]).");
         }
