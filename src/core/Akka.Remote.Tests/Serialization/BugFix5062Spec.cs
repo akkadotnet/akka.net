@@ -6,7 +6,6 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Cluster;
 using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Serialization;
@@ -45,8 +44,8 @@ namespace Akka.Remote.Tests.Serialization
                 new SelectionPathElement[] { new SelectChildName("dummy") }, 
                 true);
 
-            var node1 = new UniqueAddress(new Address("akka.tcp", "Sys", "localhost", 2551), 1);
-            var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, node1.Address, message);
+            var node1 = new Address("akka.tcp", "Sys", "localhost", 2551);
+            var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, node1, message);
 
             var o = new object();
             var ex = o.Invoking(s => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
