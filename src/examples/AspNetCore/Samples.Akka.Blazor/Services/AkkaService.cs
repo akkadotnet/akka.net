@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Samples.Akka.Blazor.Actors;
 
 namespace Samples.Akka.Blazor.Services
@@ -13,10 +14,51 @@ namespace Samples.Akka.Blazor.Services
         private readonly ActorSystem _actorSystem;
         private readonly IActorRef _countActor;
 
-        public AkkaService(ActorSystem actorSystem)
+        public static readonly Config Config = @"
+        akka.actor.default-dispatcher = {
+            executor = channel-executor
+            fork-join-executor { #channelexecutor will re-use these settings
+              parallelism-min = 2
+              parallelism-factor = 1
+              parallelism-max = 64
+            }
+        }
+
+        akka.actor.scheduler.implementation = ""Akka.Actor.TimerScheduler""
+
+        akka.actor.internal-dispatcher = {
+            executor = channel-executor
+            throughput = 5
+            fork-join-executor {
+              parallelism-min = 4
+              parallelism-factor = 1.0
+              parallelism-max = 64
+            }
+        }
+
+        akka.remote.default-remote-dispatcher {
+            type = Dispatcher
+            executor = channel-executor
+            fork-join-executor {
+              parallelism-min = 2
+              parallelism-factor = 0.5
+              parallelism-max = 16
+            }
+        }
+
+        akka.remote.backoff-remote-dispatcher {
+          executor = channel-executor
+          fork-join-executor {
+            parallelism-min = 2
+            parallelism-max = 2
+          }
+        }
+        ";
+
+        public AkkaService()
         {
-            _actorSystem = actorSystem;
-            _countActor = actorSystem.ActorOf(CounterActor.Props, "counter");
+            _actorSystem = ActorSystem.Create("Blazor", Config);
+            _countActor = _actorSystem.ActorOf(CounterActor.Props, "counter");
         }
 
         public async ValueTask DisposeAsync()

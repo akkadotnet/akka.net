@@ -14,8 +14,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using var cts = new CancellationTokenSource(3000);
-        currentCount = await counterService.GetCount(cts.Token);
+        //using var cts = new CancellationTokenSource(3000);
+        //currentCount = await counterService.GetCount(cts.Token);
 
         await base.OnInitializedAsync();
     }
