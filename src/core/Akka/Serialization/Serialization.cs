@@ -429,11 +429,6 @@ namespace Akka.Serialization
 
                 return serializer.FromBinary(bytes, type);
             }
-            catch (Exception e)
-            {
-                throw new SerializationException(
-                    $"Failed to deserialize object with serialization id [{serializerId}] (manifest [{manifest}]).", e);
-            }
             finally
             {
                 Serialization.CurrentTransportInformation = oldInfo;
