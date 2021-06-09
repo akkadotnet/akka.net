@@ -39,22 +39,20 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public void Failed_serialization_should_give_proper_exception_message()
         {
+            var childName = "dummy";
             var message = new ActorSelectionMessage(
                 new SomeMessage(), 
-                new SelectionPathElement[] { new SelectChildName("dummy") }, 
+                new SelectionPathElement[] { new SelectChildName(childName) }, 
                 true);
 
             var node1 = new Address("akka.tcp", "Sys", "localhost", 2551);
             var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, node1, message);
 
             var o = new object();
-            var ex = o.Invoking(s => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
+            o.Invoking(s => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
                 .Throw<SerializationException>()
-                .WithMessage("Failed to deserialize object with serialization id [6] (manifest []).")
-                //.WithInnerExceptionExactly<SerializationException>()
-                //.WithMessage("Failed to deserialize object with serialization id [11] (manifest [E]).")
-                .WithInnerExceptionExactly<SerializationException>()
-                .WithMessage("Failed to deserialize object with serialization id [13] (manifest [SM]).");
+                .WithMessage($"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} addressed to [{childName}]")
+                .WithInnerExceptionExactly<NotImplementedException>();
         }
 
         public class SomeMessage
