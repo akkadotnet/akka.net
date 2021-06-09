@@ -1,16 +1,38 @@
+@using Akka.Actor
+@using Akka.Actor.Dsl;
+@using Akka.Blazor.Tests.Internal
+@using Akka.Configuration
+@implements IDisposable;
 <h1>Counter</h1>
 
 <p>
     Current count: @currentCount
 </p>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-primary" @onclick="(e => IncrementCount())">Click me</button>
 
 @code {
     int currentCount = 0;
+    private ActorSystem _actorSystem;
+    private IActorRef _testActor;
 
-    void IncrementCount()
+    protected override void OnInitialized()
     {
-        currentCount++;
+        _actorSystem = ActorSystem.Create("Foo", Config.Empty);
+        _testActor = _actorSystem.ActorOf(CounterActor.Props, "counter");
+
+        base.OnInitialized();
     }
+
+    async Task IncrementCount()
+    {
+        currentCount = await _testActor.Ask<int>(CounterActor.Hit.Instance, TimeSpan.FromSeconds(3));
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _actorSystem?.Dispose();
+    }
+
 }
