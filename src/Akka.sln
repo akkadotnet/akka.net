@@ -250,6 +250,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Platforms", "Platforms", "{
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Akka.Blazor.Tests", "contrib\platforms\Akka.Blazor.Tests\Akka.Blazor.Tests.csproj", "{6F7ACAF6-AE2E-4B58-84EA-ADB06309CE69}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Samples.Akka.Blazor", "examples\AspNetCore\Samples.Akka.Blazor\Samples.Akka.Blazor.csproj", "{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1153,6 +1155,18 @@ Global
 		{6F7ACAF6-AE2E-4B58-84EA-ADB06309CE69}.Release|x64.Build.0 = Release|Any CPU
 		{6F7ACAF6-AE2E-4B58-84EA-ADB06309CE69}.Release|x86.ActiveCfg = Release|Any CPU
 		{6F7ACAF6-AE2E-4B58-84EA-ADB06309CE69}.Release|x86.Build.0 = Release|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Debug|x64.Build.0 = Debug|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Debug|x86.Build.0 = Debug|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Release|x64.ActiveCfg = Release|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Release|x64.Build.0 = Release|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Release|x86.ActiveCfg = Release|Any CPU
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1263,6 +1277,7 @@ Global
 		{44B3DDD6-6103-4E8F-8AC2-0F4BA3CF6B50} = {C50E1A9E-820C-4E75-AE39-6F96A99AC4A7}
 		{0E0F71BB-A13C-46C3-AE19-602A3DD5AF35} = {588C1513-FAB6-42C3-B6FC-3485F13620CF}
 		{6F7ACAF6-AE2E-4B58-84EA-ADB06309CE69} = {0E0F71BB-A13C-46C3-AE19-602A3DD5AF35}
+		{2797D6E2-C00E-4747-8CB4-5D04856E3ED9} = {162F5991-EA57-4221-9B70-F9B6FEC18036}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {03AD8E21-7507-4E68-A4E9-F4A7E7273164}
