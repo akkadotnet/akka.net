@@ -34,7 +34,7 @@ namespace Akka.Event
             InfoColor = ConsoleColor.White;
             WarningColor = ConsoleColor.Yellow;
             ErrorColor = ConsoleColor.Red;
-            UseColors = true;
+            UseColors = false;
         }
 
         /// <summary>
