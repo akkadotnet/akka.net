@@ -67,7 +67,7 @@ namespace Akka.Persistence.TestKit.Tests
 
     public class CounterActorTests : PersistenceTestKit
     {
-        [Fact]
+        [Fact(Skip = "Flaky: Timeout 00:00:03 while waiting for a message of type [X].")]
         public async Task CounterActor_internal_state_will_be_lost_if_underlying_persistence_store_is_not_available()
         {
             await WithJournalWrite(write => write.Fail(), async () => 
@@ -77,13 +77,13 @@ namespace Akka.Persistence.TestKit.Tests
                 
                 Watch(actor);
                 actor.Tell("inc", TestActor);
-                ExpectMsg<Terminated>(TimeSpan.FromSeconds(3));
+                ExpectMsg<Terminated>(TimeSpan.FromSeconds(3)); // FLAKY: Timeout happened here
 
                 // need to restart actor
                 actor = ActorOf(counterProps, "counter1");
                 actor.Tell("read", TestActor);
 
-                var value = ExpectMsg<int>(TimeSpan.FromSeconds(3));
+                var value = ExpectMsg<int>(TimeSpan.FromSeconds(3)); // FLAKY: Timeout happened here
                 value.ShouldBe(0);
             });
         }
