@@ -20,7 +20,7 @@ namespace Akka.DependencyInjection
     public interface IDependencyResolver
     {
         IResolverScope CreateScope();
-        object GetService<T>();
+        T GetService<T>();
         object GetService(Type type);
 
         /// <summary>
