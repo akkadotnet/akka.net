@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.TestKit.Internal;
 using Akka.TestKit.Xunit2.Internals;
 using Xunit.Abstractions;
 
@@ -40,7 +41,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="system">The actor system to use for testing. The default value is <see langword="null"/>.</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
-            : base(Assertions, system)
+            : base(Assertions, system, null, output != null ? new TestOutputAdapter(output) : null)
         {
             Output = output;
             InitializeLogger(Sys);
@@ -53,7 +54,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(ActorSystemSetup config, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(Assertions, config, actorSystemName)
+            : base(Assertions, config, actorSystemName, null, output != null ? new TestOutputAdapter(output) : null)
         {
             Output = output;
             InitializeLogger(Sys);
@@ -66,7 +67,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
-            : base(Assertions, config, actorSystemName)
+            : base(Assertions, config, actorSystemName, null, output != null ? new TestOutputAdapter(output) : null)
         {
             Output = output;
             InitializeLogger(Sys);
@@ -78,7 +79,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
         public TestKit(string config, ITestOutputHelper output = null)
-            : base(Assertions, ConfigurationFactory.ParseString(config))
+            : base(Assertions, ConfigurationFactory.ParseString(config), null, null, output != null ? new TestOutputAdapter(output) : null)
         {
             Output = output;
             InitializeLogger(Sys);
@@ -163,6 +164,26 @@ namespace Akka.TestKit.Xunit2
             }
             finally
             {
+            }
+        }
+
+        private class TestOutputAdapter : ITestOutputAdapter
+        {
+            private readonly ITestOutputHelper _output;
+
+            public TestOutputAdapter(ITestOutputHelper output)
+            {
+                _output = output;
+            }
+
+            public void WriteLine(string message)
+            {
+                _output.WriteLine(message);
+            }
+
+            public void WriteLine(string format, params object[] args)
+            {
+                _output.WriteLine(format, args);
             }
         }
     }

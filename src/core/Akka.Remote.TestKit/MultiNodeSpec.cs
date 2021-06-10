@@ -421,7 +421,7 @@ namespace Akka.Remote.TestKit
             ActorSystemSetup setup,
             ImmutableList<RoleName> roles,
             Func<RoleName, ImmutableList<string>> deployments)
-            : base(new XunitAssertions(), system, setup, null, null)
+            : base(new XunitAssertions(), system, setup, null, null, null)
         {
             _myself = myself;
             _log = Logging.GetLogger(Sys, this);

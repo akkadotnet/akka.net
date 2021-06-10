@@ -22,7 +22,7 @@ namespace Akka.TestKit.Internal
     /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingQueue<T>
     {
-        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>();
+        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>(new QueueWithAddFirst());
 
         /// <summary>
         /// The number of items that are currently in the queue.
@@ -35,7 +35,10 @@ namespace Akka.TestKit.Internal
         /// <param name="item">The item to add to the queue.</param>
         public void Enqueue(T item)
         {
-            _collection.TryAdd(new Positioned(item));
+            if (!_collection.TryAdd(new Positioned(item)))
+            {
+                throw new Exception($"Internal error: Failed to enqueue {item} into the test state message queue.");
+            }
         }
 
         /// <summary>
@@ -44,7 +47,10 @@ namespace Akka.TestKit.Internal
         /// <param name="item">The item to add to the queue.</param>
         public void AddFirst(T item)
         {
-            _collection.TryAdd(new Positioned(item, first:true));
+            if(!_collection.TryAdd(new Positioned(item, first:true)))
+            {
+                throw new Exception($"Internal error: Failed to insert {item} into the head of test state message queue.");
+            }
         }
 
         /// <summary>
@@ -129,38 +135,41 @@ namespace Akka.TestKit.Internal
 
         private class Positioned
         {
-            private readonly T _value;
-            private readonly bool _first;
-
             public Positioned(T value, bool first = false)
             {
-                _value = value;
-                _first = first;
+                Value = value;
+                First = first;
             }
 
-            public T Value { get { return _value; } }
-            public bool First { get { return _first; } }
+            public T Value { get; }
+            public bool First { get; }
         }
 
         private class QueueWithAddFirst : IProducerConsumerCollection<Positioned>
         {
             private readonly LinkedList<Positioned> _list = new LinkedList<Positioned>();
-            private readonly object _lock = new object();
 
-            public int Count { get { return _list.Count; } }
+            public int Count
+            {
+                get {
+                    lock (SyncRoot) {
+                        return _list.Count;
+                    }
+                }
+            }
 
             public bool TryAdd(Positioned item)
             {
                 if(item.First)
                 {
-                    lock(_lock)
+                    lock(SyncRoot)
                     {
                         _list.AddFirst(item);
                     }
                 }
                 else
                 {
-                    lock(_lock)
+                    lock(SyncRoot)
                     {
                         _list.AddLast(item);
                     }
@@ -170,34 +179,22 @@ namespace Akka.TestKit.Internal
 
             public bool TryTake(out Positioned item)
             {
-                var result = false;
-                if(_list.Count == 0)
+                item = null;
+                lock(SyncRoot)
                 {
-                    item = null;
+                    if (_list.Count <= 0) 
+                        return false;
+
+                    item = _list.First.Value;
+                    _list.RemoveFirst();
                 }
-                else
-                {
-                    lock(_lock)
-                    {
-                        if(_list.Count == 0)
-                        {
-                            item = null;
-                        }
-                        else
-                        {
-                            item = _list.First.Value;
-                            _list.RemoveFirst();
-                            result = true;
-                        }
-                    }
-                }
-                return result;
+                return true;
             }
 
 
             public void CopyTo(Positioned[] array, int index)
             {
-                lock(_lock)
+                lock(SyncRoot)
                 {
                     _list.CopyTo(array, index);
                 }
@@ -206,7 +203,7 @@ namespace Akka.TestKit.Internal
 
             public void CopyTo(Array array, int index)
             {
-                lock(_lock)
+                lock(SyncRoot)
                 {
                     ((ICollection)_list).CopyTo(array, index);
                 }
@@ -215,7 +212,7 @@ namespace Akka.TestKit.Internal
             public Positioned[] ToArray()
             {
                 Positioned[] array;
-                lock(_lock)
+                lock(SyncRoot)
                 {
                     array = _list.ToArray();
                 }
@@ -227,7 +224,7 @@ namespace Akka.TestKit.Internal
             {
                 //We must create a copy
                 List<Positioned> copy;
-                lock(_lock)
+                lock(SyncRoot)
                 {
                     copy = new List<Positioned>(_list);
                 }
@@ -240,9 +237,9 @@ namespace Akka.TestKit.Internal
             }
 
 
-            public object SyncRoot { get { throw new NotImplementedException(); } }
+            public object SyncRoot { get; } = new object();
 
-            public bool IsSynchronized { get { return false; } }
+            public bool IsSynchronized => true;
         }
     }
 }

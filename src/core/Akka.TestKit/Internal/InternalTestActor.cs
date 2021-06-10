@@ -18,6 +18,7 @@ namespace Akka.TestKit.Internal
     /// </summary>
     public class InternalTestActor : ActorBase
     {
+        private readonly ITestOutputAdapter _output;
         private readonly ITestActorQueue<MessageEnvelope> _queue;
         private TestKit.TestActor.Ignore _ignore;
         private AutoPilot _autoPilot;
@@ -27,9 +28,11 @@ namespace Akka.TestKit.Internal
         /// TBD
         /// </summary>
         /// <param name="queue">TBD</param>
-        public InternalTestActor(ITestActorQueue<MessageEnvelope> queue)
+        /// <param name="output">TBD</param>
+        public InternalTestActor(ITestActorQueue<MessageEnvelope> queue, ITestOutputAdapter output)
         {
             _queue = queue;
+            _output = output;
         }
 
         /// <summary>
@@ -41,52 +44,41 @@ namespace Akka.TestKit.Internal
         {
             try
             {
-                global::System.Diagnostics.Debug.WriteLine("TestActor received " + message);
+                _output?.WriteLine("TestActor received " + message);
             }
             catch (FormatException)
             {
                 if (message is LogEvent evt && evt.Message is LogMessage msg)
-                    global::System.Diagnostics.Debug.WriteLine(
+                    _output?.WriteLine(
                         $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Args)}]");
                 else
                     throw;
             }
 
-            var setIgnore = message as TestKit.TestActor.SetIgnore;
-            if(setIgnore != null)
+            switch (message)
             {
-                _ignore = setIgnore.Ignore;
-                return true;
-            }
-            var watch = message as TestKit.TestActor.Watch;
-            if(watch != null)
-            {
-                Context.Watch(watch.Actor);
-                return true;
-            }
-            var unwatch = message as TestKit.TestActor.Unwatch;
-            if(unwatch != null)
-            {
-                Context.Unwatch(unwatch.Actor);
-                return true;
-            }
-            var setAutoPilot = message as TestKit.TestActor.SetAutoPilot;
-            if(setAutoPilot != null)
-            {
-                _autoPilot = setAutoPilot.AutoPilot;
-                return true;
-            }
-            
-            var spawn = message as TestKit.TestActor.Spawn;
-            if (spawn != null)
-            {
-                var actor = spawn.Apply(Context);
-                if (spawn._supervisorStrategy.HasValue)
+                case TestActor.SetIgnore setIgnore:
+                    _ignore = setIgnore.Ignore;
+                    return true;
+                case TestActor.Watch watch:
+                    Context.Watch(watch.Actor);
+                    return true;
+                case TestActor.Unwatch unwatch:
+                    Context.Unwatch(unwatch.Actor);
+                    return true;
+                case TestActor.SetAutoPilot setAutoPilot:
+                    _autoPilot = setAutoPilot.AutoPilot;
+                    return true;
+                case TestActor.Spawn spawn:
                 {
-                    _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
+                    var actor = spawn.Apply(Context);
+                    if (spawn._supervisorStrategy.HasValue)
+                    {
+                        _supervisorStrategy.Update(actor, spawn._supervisorStrategy.Value);
+                    }
+                    _queue.Enqueue(new RealMessageEnvelope(actor, Self));
+                    return true;
                 }
-                _queue.Enqueue(new RealMessageEnvelope(actor, Self));
-                return true;
             }
 
             var actorRef = Sender;
@@ -114,5 +106,11 @@ namespace Akka.TestKit.Internal
                 Context.System.DeadLetters.Tell(new DeadLetter(message, messageSender, self), messageSender);
             }
         }
+    }
+
+    public interface ITestOutputAdapter
+    {
+        void WriteLine(string message);
+        void WriteLine(string format, params object[] args);
     }
 }

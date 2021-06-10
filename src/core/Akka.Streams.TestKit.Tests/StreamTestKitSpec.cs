@@ -19,7 +19,7 @@ namespace Akka.Streams.TestKit.Tests
     {
         private ActorMaterializer Materializer { get; }
 
-        public StreamTestKitSpec(ITestOutputHelper output = null) : base(output)
+        public StreamTestKitSpec(ITestOutputHelper output) : base(output)
         {
             Materializer = ActorMaterializer.Create(Sys);
         }

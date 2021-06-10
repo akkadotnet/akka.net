@@ -61,6 +61,8 @@ namespace Akka.TestKit
         private readonly ITestKitAssertions _assertions;
         private TestState _testState;
 
+        private readonly ITestOutputAdapter _output;
+
         /// <summary>
         /// Create a new instance of the <see cref="TestKitBase"/> class.
         /// If no <paramref name="system"/> is passed in, a new system 
@@ -72,8 +74,8 @@ namespace Akka.TestKit
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
         /// </exception>
-        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null)
-            : this(assertions, system, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(_defaultConfig)), null, testActorName)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system = null, string testActorName=null, ITestOutputAdapter output=null)
+            : this(assertions, system, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(_defaultConfig)), null, testActorName, output)
         {
         }
 
@@ -88,8 +90,8 @@ namespace Akka.TestKit
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
         /// </exception>
-        protected TestKitBase(ITestKitAssertions assertions, ActorSystemSetup setup, string actorSystemName = null, string testActorName = null)
-            : this(assertions, null, setup, actorSystemName, testActorName)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystemSetup setup, string actorSystemName = null, string testActorName = null, ITestOutputAdapter output=null)
+            : this(assertions, null, setup, actorSystemName, testActorName, output)
         {
         }
 
@@ -104,17 +106,18 @@ namespace Akka.TestKit
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the given <paramref name="assertions"/> is undefined.
         /// </exception>
-        protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null)
-            : this(assertions, null, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(config)), actorSystemName, testActorName)
+        protected TestKitBase(ITestKitAssertions assertions, Config config, string actorSystemName = null, string testActorName = null, ITestOutputAdapter output=null)
+            : this(assertions, null, ActorSystemSetup.Empty.WithSetup(BootstrapSetup.Create().WithConfig(config)), actorSystemName, testActorName, output)
         {
         }
 
-        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName, ITestOutputAdapter output)
         {
             if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
 
             _assertions = assertions;
-            
+            _output = output;
+
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
@@ -559,7 +562,7 @@ namespace Akka.TestKit
 
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
-            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue)))
+            var testActorProps = Props.Create(() => new InternalTestActor(new BlockingCollectionTestActorQueue<MessageEnvelope>(_testState.Queue), _output))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;

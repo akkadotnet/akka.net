@@ -28,7 +28,7 @@ namespace Akka.TestKit
 {
     public abstract class AkkaSpec : Xunit2.TestKit    //AkkaSpec is not part of TestKit
     {
-        private static Regex _nameReplaceRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
+        private static readonly Regex _nameReplaceRegex = new Regex("[^a-zA-Z0-9]", RegexOptions.Compiled);
         private static readonly Config _akkaSpecConfig = ConfigurationFactory.ParseString(@"
           akka {
             loglevel = WARNING
@@ -50,30 +50,30 @@ namespace Akka.TestKit
 
         private static int _systemNumber = 0;
 
-        public AkkaSpec(string config, ITestOutputHelper output = null)
+        protected AkkaSpec(string config, ITestOutputHelper output = null)
             : this(ConfigurationFactory.ParseString(config).WithFallback(_akkaSpecConfig), output)
         {
         }
 
-        public AkkaSpec(Config config = null, ITestOutputHelper output = null)
+        protected AkkaSpec(Config config = null, ITestOutputHelper output = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
         {
             BeforeAll();
         }
 
-        public AkkaSpec(ActorSystemSetup setup, ITestOutputHelper output = null)
+        protected AkkaSpec(ActorSystemSetup setup, ITestOutputHelper output = null)
             : base(setup, GetCallerName(), output)
         {
             BeforeAll();
         }
 
-        public AkkaSpec(ITestOutputHelper output, Config config = null)
+        protected AkkaSpec(ITestOutputHelper output, Config config = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
         {
             BeforeAll();
         }
 
-        public AkkaSpec(ActorSystem system, ITestOutputHelper output = null)
+        protected AkkaSpec(ActorSystem system, ITestOutputHelper output = null)
             : base(system, output)
         {
             BeforeAll();
@@ -132,7 +132,8 @@ namespace Akka.TestKit
         {
             var t = ExpectMsg<T>();
             //TODO: Check if this really is needed:
-            Assertions.AssertTrue(pf.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)), string.Format("expected {0} but got {1} instead", hint, t));
+            Assertions.AssertTrue(pf.GetMethodInfo().GetParameters().Any(x => x.ParameterType.IsInstanceOfType(t)),
+                $"expected {hint} but got {t} instead");
             return pf.Invoke(t);
         }
 
