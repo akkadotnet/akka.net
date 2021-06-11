@@ -73,13 +73,12 @@ namespace Akka.TestKit.Internal
         /// <returns><c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item)
         {
-            Positioned p;
-            if(_collection.TryTake(out p))
+            if(_collection.TryTake(out var p))
             {
                 item = p.Value;
                 return true;
             }
-            item = default(T);
+            item = default;
             return false;
         }
 
@@ -93,13 +92,12 @@ namespace Akka.TestKit.Internal
         /// <returns><c>true</c> if the remove completed within the specified timeout; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            Positioned p;
-            if(_collection.TryTake(out p,millisecondsTimeout,cancellationToken))
+            if(_collection.TryTake(out var p,millisecondsTimeout,cancellationToken))
             {
                 item = p.Value;
                 return true;
             }
-            item = default(T);
+            item = default;
             return false;
         }
 
@@ -123,13 +121,7 @@ namespace Akka.TestKit.Internal
         /// <returns>A <see cref="List{T}"/> containing copies of the elements of the collection</returns>
         public List<T> ToList()
         {
-            var positionArray = _collection.ToArray();
-            var items = new List<T>();
-            foreach (var positioned in positionArray)
-            {
-                items.Add(positioned.Value);
-            }
-            return items;
+            return new List<T>(_collection.Select(p => p.Value));
         }
 
 
@@ -211,24 +203,20 @@ namespace Akka.TestKit.Internal
 
             public Positioned[] ToArray()
             {
-                Positioned[] array;
                 lock(SyncRoot)
                 {
-                    array = _list.ToArray();
+                    return _list.ToArray();
                 }
-                return array;
             }
 
 
             public IEnumerator<Positioned> GetEnumerator()
             {
                 //We must create a copy
-                List<Positioned> copy;
                 lock(SyncRoot)
                 {
-                    copy = new List<Positioned>(_list);
+                    return new List<Positioned>(_list).GetEnumerator();
                 }
-                return copy.GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()

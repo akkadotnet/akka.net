@@ -2416,28 +2416,30 @@ namespace Akka.Streams.Implementation
         private object ResolveMaterialized(StreamLayout.IMaterializedValueNode node, IDictionary<IModule, object> values,
             int spaces)
         {
-            var indent = Enumerable.Repeat(" ", spaces).Aggregate("", (s, s1) => s + s1);
+            var indent = string.Empty;
             if (IsDebug)
+            {
+                indent = new string(' ', spaces);
                 Console.WriteLine($"{indent}{node}");
+            }
+
             object result;
-            if (node is StreamLayout.Atomic)
+            switch (node)
             {
-                var atomic = (StreamLayout.Atomic) node;
-                values.TryGetValue(atomic.Module, out result);
+                case StreamLayout.Atomic atomic:
+                    values.TryGetValue(atomic.Module, out result);
+                    break;
+                case StreamLayout.Combine combine:
+                    result = combine.Combinator(ResolveMaterialized(combine.Left, values, spaces + 2),
+                        ResolveMaterialized(combine.Right, values, spaces + 2));
+                    break;
+                case StreamLayout.Transform transform:
+                    result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
+                    break;
+                default:
+                    result = NotUsed.Instance;
+                    break;
             }
-            else if (node is StreamLayout.Combine)
-            {
-                var combine = (StreamLayout.Combine) node;
-                result = combine.Combinator(ResolveMaterialized(combine.Left, values, spaces + 2),
-                    ResolveMaterialized(combine.Right, values, spaces + 2));
-            }
-            else if (node is StreamLayout.Transform)
-            {
-                var transform = (StreamLayout.Transform) node;
-                result = transform.Transformator(ResolveMaterialized(transform.Node, values, spaces + 2));
-            }
-            else
-                result = NotUsed.Instance;
 
             if (IsDebug)
                 Console.WriteLine($"{indent}result = {result}");
