@@ -49,9 +49,9 @@ namespace Akka.TestKit
                 var left = end - Now;
                 var msg = ReceiveOne(left);
                 _assertions.AssertTrue(msg != null, "Timeout ({0}) during fishForMessage{1}", maxValue, string.IsNullOrEmpty(hint) ? "" : ", hint: " + hint);
-                if (msg is T && isMessage((T)msg))
+                if (msg is T received && isMessage(received))
                 {
-                    return (T)msg;
+                    return received;
                 }
             }
         }
@@ -70,10 +70,7 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(TimeSpan? max = null)
         {
-            MessageEnvelope envelope;
-            if (TryReceiveOne(out envelope, max, CancellationToken.None))
-                return envelope.Message;
-            return null;
+            return TryReceiveOne(out var envelope, max, CancellationToken.None) ? envelope.Message : null;
         }
 
         /// <summary>
@@ -84,12 +81,8 @@ namespace Akka.TestKit
         /// <returns>The message if one was received; <c>null</c> otherwise</returns>
         public object ReceiveOne(CancellationToken cancellationToken)
         {
-            MessageEnvelope envelope;
-            if (TryReceiveOne(out envelope, Timeout.InfiniteTimeSpan, cancellationToken))
-                return envelope.Message;
-            return null;
+            return TryReceiveOne(out var envelope, Timeout.InfiniteTimeSpan, cancellationToken) ? envelope.Message : null;
         }
-
 
         /// <summary>
         /// Receive one message from the internal queue of the TestActor within 
@@ -145,7 +138,7 @@ namespace Akka.TestKit
             else if (maxDuration.IsPositiveFinite())
             {
                 ConditionalLog(shouldLog, "Trying to receive message from TestActor queue within {0}", maxDuration);
-                didTake = _testState.Queue.TryTake(out envelope, (int)maxDuration.TotalMilliseconds, cancellationToken);
+                didTake = _testState.Queue.TryTake(out envelope, (int)Math.Ceiling(maxDuration.TotalMilliseconds), cancellationToken);
             }
             else if (maxDuration == Timeout.InfiniteTimeSpan)
             {

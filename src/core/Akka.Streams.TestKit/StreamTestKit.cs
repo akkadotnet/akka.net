@@ -90,14 +90,10 @@ namespace Akka.Streams.TestKit
 
             public void ExpectCancellation()
             {
-                PublisherProbe.FishForMessage(msg =>
-                {
-                    if (msg is TestPublisher.CancelSubscription &&
-                        Equals(((TestPublisher.CancelSubscription) msg).Subscription, this)) return true;
-                    if (msg is TestPublisher.RequestMore && Equals(((TestPublisher.RequestMore) msg).Subscription, this))
-                        return false;
-                    return false;
-                });
+                PublisherProbe.FishForMessage(msg => 
+                    msg is TestPublisher.CancelSubscription cancelSubscription &&
+                    ReferenceEquals(cancelSubscription.Subscription, this), 
+                    hint: "Expecting cancellation");
             }
 
             public void SendNext(T element) => Subscriber.OnNext(element);

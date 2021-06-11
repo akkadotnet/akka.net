@@ -173,8 +173,7 @@ namespace Akka.TestKit
             // Calling sync version here, since .Wait() causes deadlock
             AwaitCondition(() =>
             {
-                var repRef = testActor as IRepointableRef;
-                return repRef == null || repRef.IsStarted;
+                return !(testActor is IRepointableRef repRef) || repRef.IsStarted;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
             if (!(this is INoImplicitSender))
