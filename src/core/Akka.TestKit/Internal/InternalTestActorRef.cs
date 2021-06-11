@@ -104,6 +104,10 @@ namespace Akka.TestKit.Internal
                     var timeout = TestKitExtension.For(System).DefaultTimeout;
                     actor = this.Ask(InternalGetActor.Instance, timeout).Result;
                 }
+
+                if (actor == null)
+                    throw new Exception("Failed to retrieve underlying actor");
+
                 return actor;
             }
         }
@@ -172,27 +176,25 @@ namespace Akka.TestKit.Internal
 
             var dispatcher = system.Dispatchers.Lookup(props.Deploy.Dispatcher);
 
-            var supervisorLocal = supervisor as LocalActorRef;
-            if (supervisorLocal != null)
+            if (supervisor is LocalActorRef supervisorLocal)
             {
                 supervisorLocal.Cell.ReserveChild(name);
             }
             else
             {
-                var supervisorRep = supervisor as RepointableActorRef;
-                if (supervisorRep != null)
+                if (supervisor is RepointableActorRef supervisorRep)
                 {
                     var repUnderlying = supervisorRep.Underlying;
-                    if (repUnderlying is UnstartedCell)
-                        throw new IllegalStateException("Cannot attach a TestActor to an unstarted top-level actor, ensure that it is started by sending a message and observing the reply");
-                    var cellUnderlying = repUnderlying as ActorCell;
-                    if (cellUnderlying != null)
+                    switch (repUnderlying)
                     {
-                        cellUnderlying.ReserveChild(name);
-                    }
-                    else
-                    {
-                        system.Log.Error("Trying to attach child {0} to unknown type of supervisor cell {1}, this is not going to end well", name, repUnderlying.GetType());
+                        case UnstartedCell _:
+                            throw new IllegalStateException("Cannot attach a TestActor to an unstarted top-level actor, ensure that it is started by sending a message and observing the reply");
+                        case ActorCell cellUnderlying:
+                            cellUnderlying.ReserveChild(name);
+                            break;
+                        default:
+                            system.Log.Error("Trying to attach child {0} to unknown type of supervisor cell {1}, this is not going to end well", name, repUnderlying.GetType());
+                            break;
                     }
                 }
             }
