@@ -4,9 +4,8 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion);netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <NoWarn></NoWarn> 
   </PropertyGroup>
 
   <ItemGroup>
