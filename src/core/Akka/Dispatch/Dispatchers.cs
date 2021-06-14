@@ -507,13 +507,13 @@ namespace Akka.Dispatch
             var simpleName = id.Substring(id.LastIndexOf('.') + 1);
             return IdConfig(id)
                 .WithFallback(appConfig)
-                .WithFallback(ConfigurationFactory.ParseString(string.Format("name: {0}", simpleName)))
+                .WithFallback(ConfigurationFactory.ParseString($"name: {simpleName}"))
                 .WithFallback(DefaultDispatcherConfig);
         }
 
-        private Config IdConfig(string id)
+        private static Config IdConfig(string id)
         {
-            return ConfigurationFactory.ParseString(string.Format("id: {0}", id));
+            return ConfigurationFactory.ParseString($"id: {id}");
         }
 
 
