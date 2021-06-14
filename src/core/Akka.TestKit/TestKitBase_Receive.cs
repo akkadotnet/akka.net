@@ -229,46 +229,36 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue) where T : class
         {
-            var start = Now;
             var maxValue = RemainingOrDilated(max);
+            var start = Now;
             var stop = start + maxValue;
             ConditionalLog("Trying to receive {0}messages of type {1} while filter returns non-nulls during {2}", msgs == int.MaxValue ? "" : msgs + " ", typeof(T), maxValue);
-
+            var count = 0;
             var acc = new List<T>();
             var idleValue = idle.GetValueOrDefault(Timeout.InfiniteTimeSpan);
             MessageEnvelope msg = NullMessageEnvelope.Instance;
-            while (acc.Count < msgs)
+            while (count < msgs)
             {
-                if (!TryReceiveOne(out var envelope, (stop - Now).Min(idleValue)))
-                    break;
-
-                var shouldStop = false;
-                switch (envelope)
+                MessageEnvelope envelope;
+                if (!TryReceiveOne(out envelope, (stop - Now).Min(idleValue)))
                 {
-                    case NullMessageEnvelope _:
-                        shouldStop = true;
-                        break;
-
-                    case RealMessageEnvelope m when filter(m.Message) != null:
-                        msg = _testState.LastMessage;
-                        acc.Add(filter(m.Message));
-                        break;
-
-                    case RealMessageEnvelope _:
-                        _testState.Queue.AddFirst(envelope);  //Put the message back in the queue
-                        shouldStop = true;
-                        break;
-
-                    case var unexpected:
-                        throw new Exception($"Unexpected {unexpected}");
-                }
-
-                if (shouldStop)
+                    _testState.LastMessage = msg;
                     break;
+                }
+                var message = envelope.Message;
+                var result = filter(message);
+                if (result == null)
+                {
+                    _testState.Queue.AddFirst(envelope);  //Put the message back in the queue
+                    _testState.LastMessage = msg;
+                    break;
+                }
+                msg = envelope;
+                acc.Add(result);
+                count++;
             }
+            ConditionalLog("Received {0} messages with filter during {1}", count, Now - start);
 
-            ConditionalLog("Received {0} messages with filter during {1}", acc.Count, Now - start);
-            _testState.LastMessage = msg;
             _testState.LastWasNoMsg = true;
             return acc;
         }
@@ -300,50 +290,47 @@ namespace Akka.TestKit
             var stop = start + maxValue;
             ConditionalLog("Trying to receive {0}messages of type {1} while predicate returns true during {2}. Messages of other types will {3}", msgs == int.MaxValue ? "" : msgs + " ", typeof(T), maxValue, shouldIgnoreOtherMessageTypes ? "be ignored" : "cause this to stop");
 
+            var count = 0;
             var acc = new List<T>();
             var idleValue = idle.GetValueOrDefault(Timeout.InfiniteTimeSpan);
             MessageEnvelope msg = NullMessageEnvelope.Instance;
-            while (acc.Count < msgs)
+            while (count < msgs)
             {
-                if (!TryReceiveOne(out var envelope, (stop - Now).Min(idleValue)))
-                    break;
-
-                var shouldStop = false;
-                switch (envelope)
+                MessageEnvelope envelope;
+                if (!TryReceiveOne(out envelope, (stop - Now).Min(idleValue)))
                 {
-                    case NullMessageEnvelope _:
-                        shouldStop = true;
-                        break;
-
-                    case RealMessageEnvelope m when m.Message is T typedMessage:
-                        if (shouldIgnore(typedMessage))
-                        {
-                            msg = _testState.LastMessage;
-                            acc.Add(typedMessage);
-                            break;
-                        }
-                        shouldStop = true;
-                        break;
-
-                    case RealMessageEnvelope _:
-                        shouldStop = !shouldIgnoreOtherMessageTypes;
-                        break;
-
-                    case var unexpected:
-                        throw new Exception($"Unexpected {unexpected}");
+                    _testState.LastMessage = msg;
+                    break;
                 }
-
+                var message = envelope.Message;
+                var typedMessage = message as T;
+                var shouldStop = false;
+                if (typedMessage != null)
+                {
+                    if (shouldIgnore(typedMessage))
+                    {
+                        acc.Add(typedMessage);
+                        count++;
+                    }
+                    else
+                    {
+                        shouldStop = true;
+                    }
+                }
+                else
+                {
+                    shouldStop = !shouldIgnoreOtherMessageTypes;
+                }
                 if (shouldStop)
                 {
                     _testState.Queue.AddFirst(envelope);  //Put the message back in the queue
+                    _testState.LastMessage = msg;
                     break;
                 }
                 msg = envelope;
             }
+            ConditionalLog("Received {0} messages with filter during {1}", count, Now - start);
 
-            ConditionalLog("Received {0} messages with filter during {1}", acc.Count, Now - start);
-
-            _testState.LastMessage = msg;
             _testState.LastWasNoMsg = true;
             return acc;
         }

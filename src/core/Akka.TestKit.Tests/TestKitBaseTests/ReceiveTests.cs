@@ -9,7 +9,6 @@ using System;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Akka.Testkit.Tests.TestKitBaseTests
 {
@@ -29,7 +28,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         [Fact]
         public void ReceiveN_should_timeout_if_no_messages()
         {
-            AssertThrows<TrueException>(() => ReceiveN(3, TimeSpan.FromMilliseconds(10)));
+            Intercept(() => ReceiveN(3, TimeSpan.FromMilliseconds(10)));
         }
 
         [Fact]
@@ -37,7 +36,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         {
             TestActor.Tell("1");
             TestActor.Tell("2");
-            AssertThrows<TrueException>(() => ReceiveN(3, TimeSpan.FromMilliseconds(100)));
+            Intercept(() => ReceiveN(3, TimeSpan.FromMilliseconds(100)));
         }
 
 
@@ -54,7 +53,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         [Fact]
         public void FishForMessage_should_timeout_if_no_messages()
         {
-            AssertThrows<TrueException>(() => FishForMessage(_=>false, TimeSpan.FromMilliseconds(10)));
+            Intercept(() => FishForMessage(_=>false, TimeSpan.FromMilliseconds(10)));
         }
 
         [Fact]
@@ -62,7 +61,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         {
             TestActor.Tell("1");
             TestActor.Tell("2");
-            AssertThrows<TrueException>(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(100)));
+            Intercept(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(100)));
         }
 
         [Fact]
@@ -88,18 +87,8 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("1");
             TestActor.Tell("2");
             TestActor.Tell(4711);
-            TestActor.Tell("3");
-            TestActor.Tell("4");
-            TestActor.Tell("56");
-            TestActor.Tell("7");
-
-            ReceiveWhile(_ => _ is string ? _ : null)
-                .ShouldOnlyContainInOrder("1", "2");
+            ReceiveWhile<object>(_ => _ is string ? _ : null);
             ExpectMsg(4711);
-
-            ReceiveWhile(_ => _ is string s && s.Length == 1 ? s : null)
-                .ShouldOnlyContainInOrder("3", "4");
-            ExpectMsg("56");
         }
 
         [Fact]
@@ -152,10 +141,14 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("7");
             TestActor.Tell("8");
 
-            ReceiveWhile<object>(_ => _ is string).ShouldOnlyContainInOrder("1", "2");
+            var received = ReceiveWhile<object>(_ => _ is string);
+            received.ShouldOnlyContainInOrder("1", "2");
+
             ExpectMsg(4711);
 
-            ReceiveWhile<object>(_ => _ is string).ShouldOnlyContainInOrder("3", "4", "5");
+            received = ReceiveWhile<object>(_ => _ is string);
+            received.ShouldOnlyContainInOrder("3", "4", "5");
+
             ExpectMsg(6);
         }
 
