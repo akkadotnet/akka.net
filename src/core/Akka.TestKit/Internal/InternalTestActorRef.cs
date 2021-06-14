@@ -199,7 +199,7 @@ namespace Akka.TestKit.Internal
                 }
             }
 
-            MailboxType mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
+            var mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
             var testActorRef = new InternalTestActorRef((ActorSystemImpl)system, props, dispatcher, mailbox, (IInternalActorRef)supervisor, supervisor.Path / name);
 
             // we need to start ourselves since the creation of an actor has been split into initialization and starting
