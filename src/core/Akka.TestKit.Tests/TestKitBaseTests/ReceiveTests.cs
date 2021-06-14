@@ -134,8 +134,22 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("1");
             TestActor.Tell("2");
             TestActor.Tell(4711);
-            ReceiveWhile<object>(_ => _ is string);
+            TestActor.Tell("3");
+            TestActor.Tell("4");
+            TestActor.Tell("5");
+            TestActor.Tell(6);
+            TestActor.Tell("7");
+            TestActor.Tell("8");
+
+            var received = ReceiveWhile<object>(_ => _ is string);
+            received.ShouldOnlyContainInOrder("1", "2");
+
             ExpectMsg(4711);
+
+            received = ReceiveWhile<object>(_ => _ is string);
+            received.ShouldOnlyContainInOrder("3", "4", "5");
+
+            ExpectMsg(6);
         }
 
     }
