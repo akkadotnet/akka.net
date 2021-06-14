@@ -22,7 +22,7 @@ namespace Akka.TestKit.Internal
     /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingQueue<T>
     {
-        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>();
+        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>(new QueueWithAddFirst());
 
         /// <summary>
         /// The number of items that are currently in the queue.
