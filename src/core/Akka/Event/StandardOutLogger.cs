@@ -34,7 +34,7 @@ namespace Akka.Event
             InfoColor = ConsoleColor.White;
             WarningColor = ConsoleColor.Yellow;
             ErrorColor = ConsoleColor.Red;
-            UseColors = true;
+            UseColors = false;
         }
 
         /// <summary>
@@ -67,8 +67,7 @@ namespace Akka.Event
             if(message == null)
                 throw new ArgumentNullException(nameof(message), "The message to log must not be null.");
 
-            var logEvent = message as LogEvent;
-            if (logEvent != null)
+            if (message is LogEvent logEvent)
             {
                 PrintLogEvent(logEvent);
             }
