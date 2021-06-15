@@ -92,7 +92,7 @@ namespace Akka.TestKit.Internal
         /// <returns><c>true</c> if the remove completed within the specified timeout; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            if(_collection.TryTake(out var p,millisecondsTimeout,cancellationToken))
+            if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
             {
                 item = p.Value;
                 return true;
@@ -141,10 +141,11 @@ namespace Akka.TestKit.Internal
         {
             private readonly LinkedList<Positioned> _list = new LinkedList<Positioned>();
 
-            public int Count
-            {
-                get {
-                    lock (SyncRoot) {
+            public int Count { 
+                get
+                {
+                    lock (SyncRoot)
+                    {
                         return _list.Count;
                     }
                 }
@@ -152,37 +153,31 @@ namespace Akka.TestKit.Internal
 
             public bool TryAdd(Positioned item)
             {
-                if(item.First)
+                lock (SyncRoot)
                 {
-                    lock(SyncRoot)
-                    {
+                    if(item.First)
                         _list.AddFirst(item);
-                    }
-                }
-                else
-                {
-                    lock(SyncRoot)
-                    {
+                    else
                         _list.AddLast(item);
-                    }
+                    return true;
                 }
-                return true;
             }
 
             public bool TryTake(out Positioned item)
             {
-                item = null;
                 lock(SyncRoot)
                 {
-                    if (_list.Count <= 0) 
+                    if(_list.Count == 0)
+                    {
+                        item = null;
                         return false;
+                    }
 
                     item = _list.First.Value;
                     _list.RemoveFirst();
+                    return true;
                 }
-                return true;
             }
-
 
             public void CopyTo(Positioned[] array, int index)
             {
@@ -212,9 +207,9 @@ namespace Akka.TestKit.Internal
 
             public IEnumerator<Positioned> GetEnumerator()
             {
-                //We must create a copy
                 lock(SyncRoot)
                 {
+                    //We must create a copy
                     return new List<Positioned>(_list).GetEnumerator();
                 }
             }
@@ -223,7 +218,6 @@ namespace Akka.TestKit.Internal
             {
                 return GetEnumerator();
             }
-
 
             public object SyncRoot { get; } = new object();
 
