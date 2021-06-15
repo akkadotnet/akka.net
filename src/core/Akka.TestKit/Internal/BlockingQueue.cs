@@ -22,7 +22,7 @@ namespace Akka.TestKit.Internal
     /// <typeparam name="T">The type of item to store.</typeparam>
     public class BlockingQueue<T>
     {
-        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>();
+        private readonly BlockingCollection<Positioned> _collection = new BlockingCollection<Positioned>(new QueueWithAddFirst());
 
         /// <summary>
         /// The number of items that are currently in the queue.
@@ -35,7 +35,8 @@ namespace Akka.TestKit.Internal
         /// <param name="item">The item to add to the queue.</param>
         public void Enqueue(T item)
         {
-            _collection.TryAdd(new Positioned(item));
+            if (!_collection.TryAdd(new Positioned(item)))
+                throw new InvalidOperationException("Failed to enqueue item into the queue.");
         }
 
         /// <summary>
@@ -44,7 +45,8 @@ namespace Akka.TestKit.Internal
         /// <param name="item">The item to add to the queue.</param>
         public void AddFirst(T item)
         {
-            _collection.TryAdd(new Positioned(item, first:true));
+            if(!_collection.TryAdd(new Positioned(item, first:true)))
+                throw new InvalidOperationException("Failed to enqueue item into the head of the queue.");
         }
 
         /// <summary>
@@ -67,13 +69,12 @@ namespace Akka.TestKit.Internal
         /// <returns><c>true</c> if the item was removed; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item)
         {
-            Positioned p;
-            if(_collection.TryTake(out p))
+            if(_collection.TryTake(out var p))
             {
                 item = p.Value;
                 return true;
             }
-            item = default(T);
+            item = default;
             return false;
         }
 
@@ -87,13 +88,12 @@ namespace Akka.TestKit.Internal
         /// <returns><c>true</c> if the remove completed within the specified timeout; otherwise, <c>false</c>.</returns>
         public bool TryTake(out T item, int millisecondsTimeout, CancellationToken cancellationToken)
         {
-            Positioned p;
-            if(_collection.TryTake(out p,millisecondsTimeout,cancellationToken))
+            if(_collection.TryTake(out var p, millisecondsTimeout, cancellationToken))
             {
                 item = p.Value;
                 return true;
             }
-            item = default(T);
+            item = default;
             return false;
         }
 
@@ -118,12 +118,7 @@ namespace Akka.TestKit.Internal
         public List<T> ToList()
         {
             var positionArray = _collection.ToArray();
-            var items = new List<T>();
-            foreach (var positioned in positionArray)
-            {
-                items.Add(positioned.Value);
-            }
-            return items;
+            return positionArray.Select(positioned => positioned.Value).ToList();
         }
 
 
@@ -145,59 +140,48 @@ namespace Akka.TestKit.Internal
         private class QueueWithAddFirst : IProducerConsumerCollection<Positioned>
         {
             private readonly LinkedList<Positioned> _list = new LinkedList<Positioned>();
-            private readonly object _lock = new object();
 
-            public int Count { get { return _list.Count; } }
+            public int Count { 
+                get
+                {
+                    lock (SyncRoot)
+                    {
+                        return _list.Count;
+                    }
+                }
+            }
 
             public bool TryAdd(Positioned item)
             {
-                if(item.First)
+                lock (SyncRoot)
                 {
-                    lock(_lock)
-                    {
+                    if(item.First)
                         _list.AddFirst(item);
-                    }
-                }
-                else
-                {
-                    lock(_lock)
-                    {
+                    else
                         _list.AddLast(item);
-                    }
+                    return true;
                 }
-                return true;
             }
 
             public bool TryTake(out Positioned item)
             {
-                var result = false;
-                if(_list.Count == 0)
+                lock(SyncRoot)
                 {
-                    item = null;
-                }
-                else
-                {
-                    lock(_lock)
+                    if(_list.Count == 0)
                     {
-                        if(_list.Count == 0)
-                        {
-                            item = null;
-                        }
-                        else
-                        {
-                            item = _list.First.Value;
-                            _list.RemoveFirst();
-                            result = true;
-                        }
+                        item = null;
+                        return false;
                     }
-                }
-                return result;
-            }
 
+                    item = _list.First.Value;
+                    _list.RemoveFirst();
+                    return true;
+                }
+            }
 
             public void CopyTo(Positioned[] array, int index)
             {
-                lock(_lock)
+                lock(SyncRoot)
                 {
                     _list.CopyTo(array, index);
                 }
@@ -206,7 +190,7 @@ namespace Akka.TestKit.Internal
 
             public void CopyTo(Array array, int index)
             {
-                lock(_lock)
+                lock(SyncRoot)
                 {
                     ((ICollection)_list).CopyTo(array, index);
                 }
@@ -214,24 +198,20 @@ namespace Akka.TestKit.Internal
 
             public Positioned[] ToArray()
             {
-                Positioned[] array;
-                lock(_lock)
+                lock(SyncRoot)
                 {
-                    array = _list.ToArray();
+                    return _list.ToArray();
                 }
-                return array;
             }
 
 
             public IEnumerator<Positioned> GetEnumerator()
             {
-                //We must create a copy
-                List<Positioned> copy;
-                lock(_lock)
+                lock(SyncRoot)
                 {
-                    copy = new List<Positioned>(_list);
+                    //We must create a copy
+                    return new List<Positioned>(_list).GetEnumerator();
                 }
-                return copy.GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -239,10 +219,9 @@ namespace Akka.TestKit.Internal
                 return GetEnumerator();
             }
 
+            public object SyncRoot { get; } = new object();
 
-            public object SyncRoot { get { throw new NotImplementedException(); } }
-
-            public bool IsSynchronized { get { return false; } }
+            public bool IsSynchronized => true;
         }
     }
 }
