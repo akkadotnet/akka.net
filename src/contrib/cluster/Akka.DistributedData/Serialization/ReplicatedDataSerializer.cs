@@ -385,8 +385,6 @@ namespace Akka.DistributedData.Serialization
         private static readonly MethodInfo ORSetUnknownMaker =
             typeof(ReplicatedDataSerializer).GetMethod(nameof(ORSetUnknownToProto), BindingFlags.Instance | BindingFlags.NonPublic);
 
-        private static readonly OtherMessageComparer OtherMessageComparer = new OtherMessageComparer();
-
         /// <summary>
         /// Called when we're serializing none of the standard object types with ORSet
         /// </summary>
@@ -405,7 +403,7 @@ namespace Akka.DistributedData.Serialization
                 otherElements.Add(otherElement);
                 otherElementsDict[otherElement] = SerializationSupport.VersionVectorToProto(kvp.Value);
             }
-            otherElements.Sort(OtherMessageComparer);
+            otherElements.Sort(OtherMessageComparer.Instance);
             
             foreach (var val in otherElements)
             {
@@ -531,9 +529,14 @@ namespace Akka.DistributedData.Serialization
         private Proto.Msg.GSet GSetToProtoUnknown<T>(IGSet g)
         {
             var gset = (GSet<T>)g;
-            var p = new Proto.Msg.GSet();
-            p.TypeInfo = GetTypeDescriptor(typeof(T));
-            p.OtherElements.Add(gset.Select(x => _ser.OtherMessageToProto(x)));
+            var otherElements = new List<OtherMessage>(gset.Select(x => _ser.OtherMessageToProto(x)));
+            otherElements.Sort(OtherMessageComparer.Instance);
+
+            var p = new Proto.Msg.GSet
+            {
+                TypeInfo = GetTypeDescriptor(typeof(T))
+            };
+            p.OtherElements.Add(otherElements);
             return p;
         }
 
@@ -547,25 +550,33 @@ namespace Akka.DistributedData.Serialization
                 case GSet<int> ints:
                     {
                         var p = GSetToProto(ints);
-                        p.IntElements.Add(ints.Elements);
+                        var intElements = new List<int>(ints.Elements);
+                        intElements.Sort();
+                        p.IntElements.Add(intElements);
                         return p;
                     }
                 case GSet<long> longs:
                     {
                         var p = GSetToProto(longs);
-                        p.LongElements.Add(longs.Elements);
+                        var longElements = new List<long>(longs.Elements);
+                        longElements.Sort();
+                        p.LongElements.Add(longElements);
                         return p;
                     }
                 case GSet<string> strings:
                     {
                         var p = GSetToProto(strings);
-                        p.StringElements.Add(strings.Elements);
+                        var stringElements = new List<string>(strings.Elements);
+                        stringElements.Sort();
+                        p.StringElements.Add(stringElements);
                         return p;
                     }
                 case GSet<IActorRef> refs:
                     {
                         var p = GSetToProto(refs);
-                        p.ActorRefElements.Add(refs.Select(Akka.Serialization.Serialization.SerializedActorPath));
+                        var refElements = new List<IActorRef>(refs.Elements);
+                        refElements.Sort();
+                        p.ActorRefElements.Add(refElements.Select(Akka.Serialization.Serialization.SerializedActorPath));
                         return p;
                     }
                 default: // unknown type
