@@ -1104,10 +1104,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.Parameters.Clear();
             AddParameter(command, "@Ordering", DbType.Int64, message.Offset);
 
-            var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                result.Add(reader.GetString(0));
+                while (await reader.ReadAsync())
+                {
+                    result.Add(reader.GetString(0));
+                }
             }
 
             message.ReplyTo.Tell(new CurrentPersistenceIds(result, highestOrderingNumber));
