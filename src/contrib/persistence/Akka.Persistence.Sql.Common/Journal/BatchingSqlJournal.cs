@@ -800,6 +800,12 @@ namespace Akka.Persistence.Sql.Common.Journal
                         replayAll.ReplyTo.Tell(new EventReplayFailure(cause));
                         break;
 
+                    case SelectCurrentPersistenceIds select:
+                        // SqlJournal handled this failure case by using the default PipeTo failure
+                        // handler which sends a Status.Failure message back to the sender.
+                        select.ReplyTo.Tell(new Status.Failure(cause));
+                        break;
+
                     default:
                         throw new Exception($"Unknown persistence journal request type [{request.GetType()}]");
                 }
