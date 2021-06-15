@@ -13,6 +13,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
@@ -807,7 +808,8 @@ namespace Akka.Persistence.Sql.Common.Journal
                         break;
 
                     default:
-                        throw new Exception($"Unknown persistence journal request type [{request.GetType()}]");
+                        Log.Error(cause, $"Batching failure not reported to original sender. Unknown batched persistence journal request type [{request.GetType()}].");
+                        break;
                 }
             }
 
