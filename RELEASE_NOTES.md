@@ -80,15 +80,13 @@ All of these changes are backwards-compatible with v1.4.20 and earlier - and the
 
 To see the [full set of fixes in Akka.NET v1.4.21, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/51).
 
-| COMMITS | LOC+ | LOC- | AUTHOR |      
-| --- | --- | --- | --- |               
-| 12 | 999 | 160 | Aaron Stannard |     
-| 10 | 410 | 299 | Gregorius Soedharmo |
-| 4 | 853 | 520 | Ismael Hamed |        
-| 4 | 5 | 5 | dependabot[bot] |         
-| 1 | 6 | 2 | Brah McDude |             
-| 1 | 428 | 67 | Sam Ember |            
-| 1 | 1 | 1 | Martin |                  
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 34 | 24 | Aaron Stannard |
+| 4 | 196 | 77 | Gregorius Soedharmo |
+| 3 | 3 | 3 | dependabot[bot] |
+| 1 | 2 | 2 | Wessel Kranenborg |
+| 1 | 1 | 1 | Martijn Schoemaker |      
 
 #### 1.4.20 May 12 2021 ####
 **Maintenance Release for Akka.NET 1.4**
