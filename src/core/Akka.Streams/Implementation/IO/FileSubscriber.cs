@@ -35,20 +35,20 @@ namespace Akka.Streams.Implementation.IO
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         public static Props Props(
-            FileInfo f, 
-            TaskCompletionSource<IOResult> completionPromise, 
-            int bufferSize, 
-            long startPosition, 
+            FileInfo f,
+            TaskCompletionSource<IOResult> completionPromise,
+            int bufferSize,
+            long startPosition,
             FileMode fileMode,
             bool autoFlush = false,
             object flushCommand = null)
         {
-            if(bufferSize <= 0)
+            if (bufferSize <= 0)
                 throw new ArgumentException($"bufferSize must be > 0 (was {bufferSize})", nameof(bufferSize));
-            if(startPosition < 0)
+            if (startPosition < 0)
                 throw new ArgumentException($"startPosition must be >= 0 (was {startPosition})", nameof(startPosition));
 
-            return Actor.Props.Create(()=> new FileSubscriber(f, completionPromise, bufferSize, startPosition, fileMode, autoFlush, flushCommand))
+            return Actor.Props.Create(() => new FileSubscriber(f, completionPromise, bufferSize, startPosition, fileMode, autoFlush, flushCommand))
                 .WithDeploy(Deploy.Local);
         }
 
@@ -74,12 +74,12 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="autoFlush"></param>
         /// <param name="flushCommand"></param>
         public FileSubscriber(
-            FileInfo f, 
-            TaskCompletionSource<IOResult> completionPromise, 
-            int bufferSize, 
-            long startPosition, 
+            FileInfo f,
+            TaskCompletionSource<IOResult> completionPromise,
+            int bufferSize,
+            long startPosition,
             FileMode fileMode,
-            bool autoFlush, 
+            bool autoFlush,
             object flushCommand)
         {
             _f = f;
@@ -111,7 +111,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                CloseAndComplete(new Try<IOResult>(ex));
                 Cancel();
             }
         }
@@ -128,32 +128,23 @@ namespace Akka.Streams.Implementation.IO
                 case OnNext next:
                     try
                     {
-                        var byteString = (ByteString) next.Element;
+                        var byteString = (ByteString)next.Element;
                         var bytes = byteString.ToArray();
-                        try
-                        {
-                            _chan.Write(bytes, 0, bytes.Length);
-                            _bytesWritten += bytes.Length;
-                            if (_autoFlush)
-                                _chan.Flush(true);
-                        }
-                        catch (Exception ex)
-                        {
-                            _log.Error(ex, $"Tearing down FileSink({_f.FullName}) due to write error.");
-                            _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
-                            Context.Stop(Self);
-                        }
+                        _chan.Write(bytes, 0, bytes.Length);
+                        _bytesWritten += bytes.Length;
+                        if (_autoFlush)
+                            _chan.Flush(true);
                     }
                     catch (Exception ex)
                     {
-                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                        CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
                         Cancel();
                     }
                     return true;
 
                 case OnError error:
-                    _log.Error(error.Cause, $"Tearing down FileSink({_f.FullName}) due to upstream error");
-                    _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, error.Cause));
+                    _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
+                    CloseAndComplete(new Try<IOResult>(new AbruptIOTerminationException(IOResult.Success(_bytesWritten), error.Cause)));
                     Context.Stop(Self);
                     return true;
 
@@ -164,8 +155,8 @@ namespace Akka.Streams.Implementation.IO
                     }
                     catch (Exception ex)
                     {
-                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
-                    } 
+                        CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
+                    }
                     Context.Stop(Self);
                     return true;
 
@@ -176,8 +167,8 @@ namespace Akka.Streams.Implementation.IO
                     }
                     catch (Exception ex)
                     {
-                        _log.Error(ex, $"Tearing down FileSink({_f.FullName}). File flush failed.");
-                        _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                        _log.Error(ex, "Tearing down FileSink({0}). File flush failed.", _f.FullName);
+                        CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
                         Context.Stop(Self);
                     }
                     return true;
@@ -191,17 +182,28 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         protected override void PostStop()
         {
+            CloseAndComplete(IOResult.Success(_bytesWritten));
+            base.PostStop();
+        }
+
+        private void CloseAndComplete(Try<IOResult> result)
+        {
             try
             {
+                // close the channel/file before completing the promise, allowing the
+                // file to be deleted, which would not work (on some systems) if the
+                // file is still open for writing
                 _chan?.Dispose();
+
+                if (result.IsSuccess) 
+                    _completionPromise.SetResult(result.Success.Value);
+                else 
+                    _completionPromise.SetException(result.Failure.Value);
             }
             catch (Exception ex)
             {
-                _completionPromise.TrySetResult(IOResult.Failed(_bytesWritten, ex));
+                _completionPromise.TrySetException(ex);
             }
-
-            _completionPromise.TrySetResult(IOResult.Success(_bytesWritten));
-            base.PostStop();
         }
     }
 }

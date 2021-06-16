@@ -345,7 +345,7 @@ namespace Akka.Cluster.Sharding
         {
             var s = CurrentState.Updated(e);
             _replicator.Tell(Dsl.Update(_coordinatorStateKey,
-                new LWWRegister<PersistentShardCoordinator.State>(Cluster.SelfUniqueAddress, PersistentShardCoordinator.State.Empty),
+                new LWWRegister<PersistentShardCoordinator.State>(Cluster.SelfUniqueAddress, PersistentShardCoordinator.State.Empty.WithRememberEntities(Settings.RememberEntities)),
                 _writeConsistency,
                 e,
                 reg => reg.WithValue(Cluster.SelfUniqueAddress, s)));
