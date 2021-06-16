@@ -1,4 +1,4 @@
-#### 1.4.21-beta1 June 03 2021 ####
+#### 1.4.21 June 16 2021 ####
 **Maintenance Release for Akka.NET 1.4**
 
 Akka.NET v1.4.21 is a significant release that includes major performance improvements, bug fixes, and a major update to the [Akka.DependencyInjection NuGet package](https://getakka.net/articles/actors/dependency-injection.html).
