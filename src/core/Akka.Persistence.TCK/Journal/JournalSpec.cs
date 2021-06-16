@@ -9,10 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
@@ -324,7 +326,6 @@ namespace Akka.Persistence.TCK.Journal
             Assertions.AssertEqual(_receiverProbe.ExpectMsg<RecoverySuccess>().HighestSequenceNr, 6L);
         }
 
-#if !CORECLR
         /// <summary>
         /// JSON serializer should fail on this
         /// </summary>
@@ -343,6 +344,35 @@ namespace Akka.Persistence.TCK.Journal
         {
             if (!SupportsRejectingNonSerializableObjects) return;
 
+            // Test that JSON actually fail
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(NotSerializableEvent));
+            if (!(serializer is NewtonSoftJsonSerializer))
+            {
+                Output.WriteLine("[SKIP] This test only works with NewtonSoftJsonSerializer.");
+                return;
+            }
+
+            var serializerFailed = false;
+            try
+            {
+                var serialized = serializer.ToBinary(new NotSerializableEvent(true));
+                var deserialized = serializer.FromBinary<NotSerializableEvent>(serialized);
+                if (!(deserialized is NotSerializableEvent))
+                    throw new Exception();
+            }
+            catch (Exception)
+            {
+                serializerFailed = true;
+            }
+
+            if (!serializerFailed)
+            {
+                Output.WriteLine("[SKIP] This test assumes that the serializer will fail, but it doesn't.");
+                return;
+            }
+            // End test
+
+            // Start of actual test
             var msgs = Enumerable.Range(6, 3).Select(i =>
             {
                 var evt = i == 7 ? (object) new NotSerializableEvent(false) : "b-" + i;
@@ -371,6 +401,5 @@ namespace Akka.Persistence.TCK.Journal
                                                       m.Persistent.WriterGuid.Equals(writerGuid) &&
                                                       m.Persistent.Payload.Equals("b-8"));
         }
-#endif
     }
 }

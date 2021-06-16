@@ -34,3 +34,4 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Metrics")]
+[assembly: InternalsVisibleTo("Akka.Benchmarks")]

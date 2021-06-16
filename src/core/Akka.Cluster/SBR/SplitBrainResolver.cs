@@ -374,6 +374,7 @@ namespace Akka.Cluster.SBR
         {
             Log.Debug("SBR trying to acquire lease");
             //implicit val ec: ExecutionContext = internalDispatcher
+            
             Strategy.Lease?.Acquire().ContinueWith(r =>
                 {
                     if (r.IsFaulted)
@@ -385,7 +386,7 @@ namespace Akka.Cluster.SBR
 
         public Receive WaitingForLease(IDecision decision)
         {
-            bool Receive(object message)
+            bool ReceiveLease(object message)
             {
                 switch (message)
                 {
@@ -426,7 +427,7 @@ namespace Akka.Cluster.SBR
                         }
 
                         Stash.UnstashAll();
-                        Context.Become(Receive);
+                        Context.Become(ReceiveLease);
                         return true;
 
                     case ReleaseLeaseResult lr:
@@ -441,7 +442,7 @@ namespace Akka.Cluster.SBR
                 }
             }
 
-            return Receive;
+            return ReceiveLease;
         }
 
         private void OnReleaseLeaseResult(bool released)

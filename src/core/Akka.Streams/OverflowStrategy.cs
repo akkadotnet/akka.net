@@ -110,7 +110,6 @@ namespace Akka.Streams
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="BufferOverflowException"/> class.
         /// </summary>
@@ -119,6 +118,5 @@ namespace Akka.Streams
         protected BufferOverflowException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 }

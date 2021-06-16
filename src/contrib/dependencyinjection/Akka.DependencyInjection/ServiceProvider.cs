@@ -17,6 +17,10 @@ namespace Akka.DependencyInjection
     /// Provides users with immediate access to the <see cref="IServiceProvider"/> bound to
     /// this <see cref="ActorSystem"/>, if any.
     /// </summary>
+    /// <remarks>
+    /// [OBSOLETE] Switch to the <see cref="DependencyResolver"/> instead.
+    /// </remarks>
+    [Obsolete("Replaced by the Akka.DependencyInjection.DependencyResolver in Akka.NET v1.4.21. Please switch to that.")]
     public sealed class ServiceProvider : IExtension
     {
         public ServiceProvider(IServiceProvider provider)
@@ -66,6 +70,7 @@ namespace Akka.DependencyInjection
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [Obsolete("Use the DependencyResolverExtensions instead.")]
     public sealed class ServiceProviderExtension : ExtensionIdProvider<ServiceProvider>
     {
         public override ServiceProvider CreateExtension(ExtendedActorSystem system)
@@ -88,17 +93,16 @@ namespace Akka.DependencyInjection
     ///
     /// Used to create actors via the <see cref="ActivatorUtilities"/>.
     /// </summary>
-    /// <typeparam name="TActor">the actor type</typeparam>
-    internal sealed class ServiceProviderActorProducer<TActor> : IIndirectActorProducer where TActor:ActorBase
+    internal class ServiceProviderActorProducer : IIndirectActorProducer
     {
         private readonly IServiceProvider _provider;
         private readonly object[] _args;
 
-        public ServiceProviderActorProducer(IServiceProvider provider, object[] args)
+        public ServiceProviderActorProducer(IServiceProvider provider, Type actorType, object[] args)
         {
             _provider = provider;
             _args = args;
-            ActorType = typeof(TActor);
+            ActorType = actorType;
         }
 
         public ActorBase Produce()
@@ -111,6 +115,21 @@ namespace Akka.DependencyInjection
         public void Release(ActorBase actor)
         {
             // no-op
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Used to create actors via the <see cref="ActivatorUtilities"/>.
+    /// </summary>
+    /// <typeparam name="TActor">the actor type</typeparam>
+    internal class ServiceProviderActorProducer<TActor> : ServiceProviderActorProducer where TActor:ActorBase
+    {
+
+        public ServiceProviderActorProducer(IServiceProvider provider, object[] args)
+             : base(provider, typeof(TActor), args)
+        {
         }
     }
 }

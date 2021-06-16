@@ -167,7 +167,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
                     return true;
 
                 case ActionRequest ar:
-                    var r = requests.Where(i => i.Item2.Equals(ar.Request)).FirstOrDefault();
+                    var r = requests.FirstOrDefault(i => i.Item2.Equals(ar.Request));
                     if (r.Item1 != null)
                     {
                         _log.Info("Actioning request {0} to {1}", r.Item2, ar.Result);

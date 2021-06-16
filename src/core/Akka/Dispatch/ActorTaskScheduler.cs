@@ -116,7 +116,7 @@ namespace Akka.Dispatch
             RunTask(() =>
             {
                 action();
-                return Task.FromResult(0);
+                return Task.CompletedTask;
             });
         }
 
