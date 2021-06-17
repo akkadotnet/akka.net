@@ -119,7 +119,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static async Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            await SynchronizationContextManager.RemoveContext;
+            //await SynchronizationContextManager.RemoveContext;
 
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
@@ -159,15 +159,18 @@ namespace Akka.Actor
             provider.RegisterTempActor(future, path);
             var message = messageFactory(future);
             self.Tell(message, future);
+            var prevContext = SynchronizationContext.Current;
 
+  
             try
             {
+                SynchronizationContext.SetSynchronizationContext(null);
                 return await result.Task;
             }
             finally
             {
                 //callback to unregister from tempcontainer
-
+                SynchronizationContext.SetSynchronizationContext(prevContext);
                 provider.UnregisterTempActor(path);
 
                 ctr1?.Dispose();
