@@ -117,10 +117,8 @@ namespace Akka.Actor
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
         /// <returns>TBD</returns>
-        public static async Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            //await SynchronizationContextManager.RemoveContext;
-
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
@@ -132,7 +130,6 @@ namespace Akka.Actor
 
             CancellationTokenRegistration? ctr1 = null;
             CancellationTokenRegistration? ctr2 = null;
-
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
@@ -154,29 +151,21 @@ namespace Akka.Actor
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef<T>(result, () => { }, path);
-            //The future actor needs to be registered in the temp container
-            provider.RegisterTempActor(future, path);
-            var message = messageFactory(future);
-            self.Tell(message, future);
-            var prevContext = SynchronizationContext.Current;
-
-  
-            try
+            var future = new FutureActorRef<T>(result, t =>
             {
-                SynchronizationContext.SetSynchronizationContext(null);
-                return await result.Task;
-            }
-            finally
-            {
-                //callback to unregister from tempcontainer
-                SynchronizationContext.SetSynchronizationContext(prevContext);
                 provider.UnregisterTempActor(path);
 
                 ctr1?.Dispose();
                 ctr2?.Dispose();
                 timeoutCancellation?.Dispose();
-            }
+            }, path);
+
+            //The future actor needs to be registered in the temp container
+            provider.RegisterTempActor(future, path);
+            var message = messageFactory(future);
+            self.Tell(message, future);
+
+            return result.Task;
         }
 
         /// <summary>

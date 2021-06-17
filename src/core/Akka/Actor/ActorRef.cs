@@ -71,7 +71,6 @@ namespace Akka.Actor
     public class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
-        private readonly Action _unregister;
         private readonly ActorPath _path;
 
         /// <summary>
@@ -80,16 +79,16 @@ namespace Akka.Actor
         /// <param name="result">TBD</param>
         /// <param name="unregister">TBD</param>
         /// <param name="path">TBD</param>
-        public FutureActorRef(TaskCompletionSource<T> result, Action unregister, ActorPath path)
+        public FutureActorRef(TaskCompletionSource<T> result, Action<Task> unregister, ActorPath path)
         {
             if (ActorCell.Current != null)
             {
                 _actorAwaitingResultSender = ActorCell.Current.Sender;
             }
             _result = result;
-            _unregister = unregister;
             _path = path;
-            _result.Task.ContinueWith(_ => _unregister());
+
+            _result.Task.ContinueWith(unregister);
         }
 
         /// <summary>
