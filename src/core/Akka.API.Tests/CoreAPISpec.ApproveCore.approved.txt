@@ -866,7 +866,7 @@ namespace Akka.Actor
     }
     public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
-        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action unregister, Akka.Actor.ActorPath path) { }
+        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action<System.Threading.Tasks.Task> unregister, Akka.Actor.ActorPath path) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
