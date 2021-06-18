@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -43,6 +44,7 @@ namespace Akka.TestKit.Xunit2
             : base(Assertions, system)
         {
             Output = output;
+            RedirectConsoleOutput(output);
             InitializeLogger(Sys);
         }
 
@@ -56,6 +58,7 @@ namespace Akka.TestKit.Xunit2
             : base(Assertions, config, actorSystemName)
         {
             Output = output;
+            RedirectConsoleOutput(output);
             InitializeLogger(Sys);
         }
 
@@ -69,6 +72,7 @@ namespace Akka.TestKit.Xunit2
             : base(Assertions, config, actorSystemName)
         {
             Output = output;
+            RedirectConsoleOutput(output);
             InitializeLogger(Sys);
         }
 
@@ -81,7 +85,17 @@ namespace Akka.TestKit.Xunit2
             : base(Assertions, ConfigurationFactory.ParseString(config))
         {
             Output = output;
+            RedirectConsoleOutput(output);
             InitializeLogger(Sys);
+        }
+
+        private void RedirectConsoleOutput(ITestOutputHelper output = null)
+        {
+            if(output == null)
+                return;
+            var redirector = new OutputHelperWriter(output);
+            Console.SetOut(redirector);
+            Console.SetError(redirector);
         }
 
         /// <summary>
@@ -164,6 +178,30 @@ namespace Akka.TestKit.Xunit2
             finally
             {
             }
+        }
+    }
+
+    internal class OutputHelperWriter : StreamWriter
+    {
+        private readonly ITestOutputHelper _output;
+        public OutputHelperWriter(ITestOutputHelper output) : base(new MemoryStream())
+        {
+            _output = output;
+        }
+
+        public override void WriteLine()
+        {
+            _output.WriteLine("");
+        }
+
+        public override void WriteLine(string value)
+        {
+            _output.WriteLine(value);
+        }
+
+        public override void WriteLine(string format, params object[] arg)
+        {
+            _output.WriteLine(format, arg);
         }
     }
 }
