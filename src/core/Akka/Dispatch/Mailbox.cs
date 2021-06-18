@@ -538,7 +538,16 @@ namespace Akka.Dispatch
             }
             catch (FormatException)
             {
-                formattedMessage = $"Failed to format string. message: [{message}], args:[{string.Join(",", args)}]";
+                try
+                {
+                    formattedMessage =
+                        $"Failed to format string. message: [{message}], args:[{string.Join(",", args)}]";
+                }
+                catch (FormatException)
+                {
+                    formattedMessage =
+                        $"Failed to format string. message: [{message}], args:[Failed to list args due to FormatException]";
+                }
             }
             
             Console.WriteLine("[MAILBOX][{0}][Thread {1:0000}] {2}", DateTime.Now, Thread.CurrentThread.ManagedThreadId, formattedMessage);
