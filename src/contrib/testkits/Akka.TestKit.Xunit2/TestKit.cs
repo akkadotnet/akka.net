@@ -7,6 +7,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -89,10 +90,12 @@ namespace Akka.TestKit.Xunit2
             InitializeLogger(Sys);
         }
 
+        private TextWriter _originalConsoleOut = null;
         private void RedirectConsoleOutput(ITestOutputHelper output = null)
         {
             if(output == null)
                 return;
+            _originalConsoleOut = Console.Out;
             var redirector = new OutputHelperWriter(output);
             Console.SetOut(redirector);
             Console.SetError(redirector);
@@ -126,6 +129,12 @@ namespace Akka.TestKit.Xunit2
         protected virtual void AfterAll()
         {
             Shutdown();
+            if (_originalConsoleOut != null)
+            {
+                Console.SetOut(_originalConsoleOut);
+                Console.SetError(_originalConsoleOut);
+                _originalConsoleOut = null;
+            }
         }
 
         /// <summary>
@@ -181,10 +190,10 @@ namespace Akka.TestKit.Xunit2
         }
     }
 
-    internal class OutputHelperWriter : StreamWriter
+    internal class OutputHelperWriter : TextWriter
     {
         private readonly ITestOutputHelper _output;
-        public OutputHelperWriter(ITestOutputHelper output) : base(new MemoryStream())
+        public OutputHelperWriter(ITestOutputHelper output)
         {
             _output = output;
         }
@@ -203,5 +212,7 @@ namespace Akka.TestKit.Xunit2
         {
             _output.WriteLine(format, arg);
         }
+
+        public override Encoding Encoding { get; } = Encoding.UTF8;
     }
 }
