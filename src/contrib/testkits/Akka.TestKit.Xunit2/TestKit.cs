@@ -200,17 +200,26 @@ namespace Akka.TestKit.Xunit2
 
         public override void WriteLine()
         {
-            _output.WriteLine("");
+            try
+            {
+                _output.WriteLine("");
+            }catch{}
         }
 
         public override void WriteLine(string value)
         {
-            _output.WriteLine(value);
+            try
+            {
+                _output.WriteLine(value);
+            }catch{}
         }
 
         public override void WriteLine(string format, params object[] arg)
         {
-            _output.WriteLine(format, arg);
+            try
+            {
+                _output.WriteLine(format, arg);
+            }catch{}
         }
 
         public override Encoding Encoding { get; } = Encoding.UTF8;
