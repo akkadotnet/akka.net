@@ -531,7 +531,16 @@ namespace Akka.Dispatch
         //[Conditional("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args)
         {
-            var formattedMessage = args.Length == 0 ? message : string.Format(message, args);
+            string formattedMessage;
+            try
+            {
+                formattedMessage = args.Length == 0 ? message : string.Format(message, args);
+            }
+            catch (FormatException)
+            {
+                formattedMessage = $"Failed to format string. message: [{message}], args:[{string.Join(",", args)}]";
+            }
+            
             Console.WriteLine("[MAILBOX][{0}][Thread {1:0000}] {2}", DateTime.Now, Thread.CurrentThread.ManagedThreadId, formattedMessage);
         }
 
