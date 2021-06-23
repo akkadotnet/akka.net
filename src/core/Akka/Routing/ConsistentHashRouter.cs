@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConsistentHashRouter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -47,7 +47,7 @@ namespace Akka.Routing
     /// This class represents a <see cref="RouterEnvelope"/> that can be wrapped around a message in order to make
     /// it hashable for use with <see cref="ConsistentHashingGroup"/> or <see cref="ConsistentHashingPool"/> routers.
     /// </summary>
-    public sealed class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable
+    public sealed class ConsistentHashableEnvelope : RouterEnvelope, IConsistentHashable, IWrappedMessage
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHashableEnvelope"/> class.

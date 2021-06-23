@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Udp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.IO
     {
         #region internal connection messages
 
-        internal abstract class SocketCompleted { }
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded { }
 
         internal sealed class SocketSent : SocketCompleted
         {
@@ -104,7 +104,7 @@ namespace Akka.IO
         }
 
         /// <summary>The common interface for <see cref="Command"/> and <see cref="Event"/>.</summary>
-        public abstract class Message { }
+        public abstract class Message : INoSerializationVerificationNeeded { }
 
         /// <summary>The common type of all commands supported by the UDP implementation.</summary>
         public abstract class Command : Message

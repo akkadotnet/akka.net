@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IOResult.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,5 +70,28 @@ namespace Akka.Streams.IO
         /// <returns>Failed IOResult</returns>
         public static IOResult Failed(long count, Exception reason)
             => new IOResult(count, Result.Failure<NotUsed>(reason));
+    }
+
+    /// <summary>
+    /// This exception signals that a stream has been completed by an onError signal while there was still IO operations in progress.
+    /// </summary>
+    public sealed class AbruptIOTerminationException : Exception
+    {
+        /// <summary>
+        /// The number of bytes read/written up until the error
+        /// </summary>
+        public IOResult IoResult { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbruptIOTerminationException"/> class with the result of the IO operation
+        /// until the error and a reference to the inner exception that is the cause of this exception.
+        /// </summary>
+        /// <param name="ioResult">The result of the IO operation until the error</param>
+        /// <param name="cause">The exception that is the cause of the current exception</param>
+        public AbruptIOTerminationException(IOResult ioResult, Exception cause)
+            : base("Stream terminated without completing IO operation.", cause)
+        {
+            IoResult = ioResult;
+        }
     }
 }

@@ -1,10 +1,11 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Concurrent;
 using Akka.Actor;
 using Akka.Event;
@@ -38,7 +39,19 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            global::System.Diagnostics.Debug.WriteLine("TestActor received " + message);
+            try
+            {
+                global::System.Diagnostics.Debug.WriteLine("TestActor received " + message);
+            }
+            catch (FormatException)
+            {
+                if (message is LogEvent evt && evt.Message is LogMessage msg)
+                    global::System.Diagnostics.Debug.WriteLine(
+                        $"TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(",", msg.Args)}]");
+                else
+                    throw;
+            }
+
             var setIgnore = message as TestKit.TestActor.SetIgnore;
             if(setIgnore != null)
             {

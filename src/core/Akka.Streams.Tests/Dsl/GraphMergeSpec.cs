@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMergeSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -82,7 +82,7 @@ namespace Akka.Streams.Tests.Dsl
                 collected.Where(i => i <= 4).ShouldOnlyContainInOrder(1, 2, 3, 4);
                 collected.Where(i => i >= 5).ShouldOnlyContainInOrder(5, 6, 7, 8, 9, 10);
 
-                collected.ShouldBeEquivalentTo(Enumerable.Range(1, 10).ToArray());
+                collected.Should().BeEquivalentTo(Enumerable.Range(1, 10).ToArray());
                 probe.ExpectComplete();
             }, Materializer);
         }
@@ -105,7 +105,7 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            task.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 3));
+            task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 3));
         }
 
         [Fact]
@@ -144,7 +144,7 @@ namespace Akka.Streams.Tests.Dsl
                 collected.Add(probe.ExpectNext());
             }
 
-            collected.ShouldAllBeEquivalentTo(Enumerable.Range(1, 5));
+            collected.Should().BeEquivalentTo(Enumerable.Range(1, 5));
             probe.ExpectComplete();
         }
 

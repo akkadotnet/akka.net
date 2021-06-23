@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -40,14 +40,14 @@ namespace Akka.Cluster.Sharding
     /// reduce memory consumption. This is done by the application specific implementation of
     /// the entity actors for example by defining receive timeout (<see cref="IActorContext.SetReceiveTimeout"/>).
     /// If a message is already enqueued to the entity when it stops itself the enqueued message
-    /// in the mailbox will be dropped. To support graceful passivation without loosing such
+    /// in the mailbox will be dropped. To support graceful passivation without losing such
     /// messages the entity actor can send this <see cref="Passivate"/> message to its parent <see cref="ShardRegion"/>.
     /// The specified wrapped <see cref="StopMessage"/> will be sent back to the entity, which is
     /// then supposed to stop itself. Incoming messages will be buffered by the `ShardRegion`
     /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
     /// are thereafter delivered to a new incarnation of the entity.
     ///
-    /// <see cref="PoisonPill"/> is a perfectly fine <see cref="StopMessage"/>.
+    /// <see cref="PoisonPill.Instance"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
     [Serializable]
     public sealed class Passivate : IShardRegionCommand

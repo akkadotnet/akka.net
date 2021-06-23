@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSharding.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -277,7 +277,8 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
-            return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf");
+            return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf")
+                .WithFallback(DistributedData.DistributedData.DefaultConfig());
         }
 
         /// <summary>

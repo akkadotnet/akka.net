@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.DefaultMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -401,7 +401,7 @@ namespace Akka.Actor
             }
         }
 
-        private void HandleSupervise(IActorRef child, bool async)
+        private static void HandleSupervise(IActorRef child, bool async)
         {
             if (async && child is RepointableActorRef @ref)
             {
@@ -506,11 +506,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Handles a <see cref="ISystemMessage"/>
         /// </summary>
         /// <remarks>➡➡➡ NEVER SEND THE SAME SYSTEM MESSAGE OBJECT TO TWO ACTORS ⬅⬅⬅</remarks>
-        /// <param name="systemMessage">TBD</param>
-        public void SendSystemMessage(ISystemMessage systemMessage)
+        /// <param name="systemMessage">The system message to process.</param>
+        public virtual void SendSystemMessage(ISystemMessage systemMessage)
         {
             try
             {
@@ -522,7 +522,7 @@ namespace Akka.Actor
             }
         }
 
-        private void Kill()
+        private static void Kill()
         {
             throw new ActorKilledException("Kill");
         }

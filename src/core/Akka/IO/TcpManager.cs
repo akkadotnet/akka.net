@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -76,14 +76,14 @@ namespace Akka.IO
             if (c != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c));
+                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local));
                 return true;
             }
             var b = message as Bind;
             if (b != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b));
+                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local));
                 return true;
             }
             var dl = message as DeadLetter;

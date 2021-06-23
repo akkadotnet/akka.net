@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestLease.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -160,7 +167,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
                     return true;
 
                 case ActionRequest ar:
-                    var r = requests.Where(i => i.Item2.Equals(ar.Request)).FirstOrDefault();
+                    var r = requests.FirstOrDefault(i => i.Item2.Equals(ar.Request));
                     if (r.Item1 != null)
                     {
                         _log.Info("Actioning request {0} to {1}", r.Item2, ar.Result);

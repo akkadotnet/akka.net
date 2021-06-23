@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Deploy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -237,7 +237,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="other">The <see cref="Akka.Actor.Deploy" /> used for fallback configuration.</param>
         /// <returns>A new <see cref="Akka.Actor.Deploy" /> using <paramref name="other" /> for fallback configuration.</returns>
-        public Deploy WithFallback(Deploy other)
+        public virtual Deploy WithFallback(Deploy other)
         {
             return new Deploy
                 (
@@ -259,7 +259,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="scope">The <see cref="Akka.Actor.Scope" /> used to configure the new <see cref="Akka.Actor.Deploy" />.</param>
         /// <returns>A new <see cref="Akka.Actor.Deploy" /> with the provided <paramref name="scope" />.</returns>
-        public Deploy WithScope(Scope scope)
+        public virtual Deploy WithScope(Scope scope)
         {
             return new Deploy
                 (
@@ -281,7 +281,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="mailbox">The mailbox used to configure the new <see cref="Akka.Actor.Deploy" />.</param>
         /// <returns>A new <see cref="Akka.Actor.Deploy" /> with the provided <paramref name="mailbox" />.</returns>
-        public Deploy WithMailbox(string mailbox)
+        public virtual Deploy WithMailbox(string mailbox)
         {
             return new Deploy
                 (
@@ -303,7 +303,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="dispatcher">The dispatcher used to configure the new <see cref="Akka.Actor.Deploy" />.</param>
         /// <returns>A new <see cref="Akka.Actor.Deploy" /> with the provided <paramref name="dispatcher" />.</returns>
-        public Deploy WithDispatcher(string dispatcher)
+        public virtual Deploy WithDispatcher(string dispatcher)
         {
             return new Deploy
                 (
@@ -325,7 +325,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="routerConfig">The <see cref="Akka.Routing.RouterConfig" /> used to configure the new <see cref="Akka.Actor.Deploy" />.</param>
         /// <returns>A new <see cref="Akka.Actor.Deploy" /> with the provided <paramref name="routerConfig" />.</returns>
-        public Deploy WithRouterConfig(RouterConfig routerConfig)
+        public virtual Deploy WithRouterConfig(RouterConfig routerConfig)
         {
             return new Deploy
                 (

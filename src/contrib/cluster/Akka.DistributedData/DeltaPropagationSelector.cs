@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeltaPropagationSelector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.DistributedData.Internal;
 using Akka.Event;
+using Akka.Util.Internal;
 
 namespace Akka.DistributedData
 {
@@ -68,13 +69,11 @@ namespace Akka.DistributedData
                 if (all.Length <= sliceSize) slice = all;
                 else
                 {
-                    var start = (int)(_deltaNodeRoundRobinCounter % all.Length);
-                    var buffer = new Address[sliceSize];
-                    for (var i = 0; i < sliceSize; i++)
-                    {
-                        buffer[i] = all[(start + i) % all.Length];
-                    }
-                    slice = ImmutableArray.CreateRange(buffer);
+                    var i = (int)(_deltaNodeRoundRobinCounter % all.Length);
+                    slice = all.Slice(i, sliceSize).ToImmutableArray();
+                
+                    if (slice.Length != sliceSize)
+                        slice = slice.AddRange(all.Take(sliceSize - slice.Length));
                 }
 
                 _deltaNodeRoundRobinCounter += sliceSize;
@@ -105,19 +104,17 @@ namespace Akka.DistributedData
                             var cacheKey = (key, fromSeqNr, toSeqNr);
                             if (!cache.TryGetValue(cacheKey, out var deltaGroup))
                             {
-                                using (var e = deltaEntriesAfterJ.Values.GetEnumerator())
+                                deltaGroup = deltaEntriesAfterJ.Values.Aggregate((d1, d2) =>
                                 {
-                                    e.MoveNext();
-                                    deltaGroup = e.Current;
-                                    while (e.MoveNext())
-                                    {
-                                        deltaGroup = deltaGroup.Merge(e.Current);
-                                        if (deltaGroup is IReplicatedDeltaSize s && s.DeltaSize > MaxDeltaSize)
-                                        {
-                                            deltaGroup = DeltaPropagation.NoDeltaPlaceholder;
-                                        }
-                                    }
-                                }
+                                    var merged = ReferenceEquals(d2, DeltaPropagation.NoDeltaPlaceholder) 
+                                        ? DeltaPropagation.NoDeltaPlaceholder 
+                                        : d1.Merge(d2);
+
+                                    if (merged is IReplicatedDeltaSize s && s.DeltaSize >= MaxDeltaSize)
+                                        return DeltaPropagation.NoDeltaPlaceholder; // discard too large deltas
+
+                                    return merged;
+                                });
 
                                 cache[cacheKey] = deltaGroup;
                             }

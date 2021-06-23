@@ -68,33 +68,28 @@ system.ActorOf(DemoActor.Props(42), "demo");
 
 Another good practice is to declare local messages (messages that are sent in process) within the Actor, which makes it easier to know what messages are generally being sent over the wire vs in process.:
 ```csharp
-public class DemoActor : UntypedActor
+public class DemoActor : ReceiveActor
 {
-    protected override void OnReceive(object message)
+    public DemoActor()
     {
-        switch (message)
+        Receive<DemoActor.DemoActorLocalMessage1>(x =>
         {
-            case DemoActorLocalMessages.DemoActorLocalMessage1 msg1:
-                // Handle message here...
-                break;
-            case DemoActorLocalMessages.DemoActorLocalMessage2 msg2:
-                // Handle message here...
-                break;
-            default:
-                break;
-                }
-            }
+            // Handle message here...
+        });
 
-    class DemoActorLocalMessages
+        Receive<DemoActor.DemoActorLocalMessage2>(x =>
         {
-            public class DemoActorLocalMessage1
-            {
-            }
+            // Handle message here...
+        });
+    }
 
-            public class DemoActorLocalMessage2
-            {
-            }
-        }
+    public class DemoActorLocalMessage1
+    {
+    }
+
+    public class DemoActorLocalMessage2
+    {
+    }
 }
 ```
 
@@ -410,10 +405,10 @@ For more information on Tasks, check out the [MSDN documentation](https://msdn.m
 > When using task callbacks inside actors, you need to carefully avoid closing over the containing actor’s reference, i.e. do not call methods or access mutable state on the enclosing actor from within the callback. This would break the actor encapsulation and may introduce synchronization bugs and race conditions because the callback will be scheduled concurrently to the enclosing actor. Unfortunately there is not yet a way to detect these illegal accesses at compile time.
 
 ### Forward message
-You can forward a message from one actor to another. This means that the original sender address/reference is maintained even though the message is going through a 'mediator'. This can be useful when writing actors that work as routers, load-balancers, replicators etc. You need to pass along your context variable as well.
+You can forward a message from one actor to another. This means that the original sender address/reference is maintained even though the message is going through a 'mediator'. This can be useful when writing actors that work as routers, load-balancers, replicators etc.
 
 ```csharp
-target.Forward(result, Context);
+target.Forward(result);
 ```
 
 ## Receive messages
@@ -500,32 +495,6 @@ Receive<string>(s => Console.WriteLine("Received string: " + s);  //This will ca
 ```csharp
 ReceiveAny(o => Console.WriteLine("Received object: " + o);
 Receive<object>(0 => Console.WriteLine("Received object: " + o);
-```
-
-### Non generic overloads
-Receive has non generic overloads:
-```csharp
-Receive(typeof(string), obj => Console.WriteLine(obj.ToString()) );
-```
-Predicates can go before or after the handler:
-
-```csharp
-Receive(typeof(string), obj => ((string) obj).Length > 5, obj => Console.WriteLine(obj.ToString()) );
-Receive(typeof(string), obj => Console.WriteLine(obj.ToString()), obj => ((string) obj).Length > 5 );
-```
-And the non generic Func
-
-```csharp
-Receive(typeof(string), obj =>
-  {
-    var s = (string)obj;
-    if (s.Length > 5)
-    {
-      Console.WriteLine("1: " + s);
-      return true;
-    }
-    return false;
-  });
 ```
 
 ## Reply to messages
@@ -703,7 +672,7 @@ public class HotSwapActor : ReceiveActor
         });
     }
 
-    private void Angry(object message)
+    private void Angry()
     {
         Receive<string>(s => s.Equals("foo"), msg =>
         {
@@ -716,7 +685,7 @@ public class HotSwapActor : ReceiveActor
         });
     }
 
-    private void Happy(object message)
+    private void Happy()
     {
         Receive<string>(s => s.Equals("foo"), msg =>
         {
@@ -834,8 +803,10 @@ Use `Kill` like this:
 victim.Tell(Akka.Actor.Kill.Instance, ActorRefs.NoSender);
 ```
 
-## Actors and exceptions
-It can happen that while a message is being processed by an actor, that some kind of exception is thrown, e.g. a database exception.
+## Actors and Exceptions
+An exception can be thrown while a message is being processed by an actor, e.g. a database exception or some other type of runtime exception.
+
+When this occurs and the exception is not handled via a `try` / `catch` block, the actor's parent will be notified that its child failed with a specific exception type and will use its [supervision strategy](xref:supervision#what-supervision-means) to restart that child.
 
 ### What happens to the Message
 If an exception is thrown while a message is being processed (i.e. taken out of its mailbox and handed over to the current behavior), then this message will be lost. It is important to understand that it is not put back on the mailbox. So if you want to retry processing of a message, you need to deal with it yourself by catching the exception and retry your flow. Make sure that you put a bound on the number of retries since you don't want a system to livelock (so consuming a lot of cpu cycles without making progress).

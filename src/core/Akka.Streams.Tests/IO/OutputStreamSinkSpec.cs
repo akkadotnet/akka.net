@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using System.IO;
 using Akka.Actor;
 using Akka.IO;
 using Akka.Streams.Dsl;
+using Akka.Streams.IO;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
 using Xunit;
@@ -152,6 +153,40 @@ namespace Akka.Streams.Tests.IO
             public override long Length { get; }
             public override long Position { get; set; }
         }
+
+        private sealed class OutputStream : Stream
+        {
+            public override void Flush()
+            {
+                throw new NotImplementedException();
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+            }
+
+            public override bool CanRead { get; }
+            public override bool CanSeek { get; }
+            public override bool CanWrite => true;
+            public override long Length { get; }
+            public override long Position { get; set; }
+        }
+
         #endregion
 
         private readonly ActorMaterializer _materializer;
@@ -196,6 +231,18 @@ namespace Akka.Streams.Tests.IO
                     .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
 
                 p.ExpectMsg("closed");
+            }, _materializer);
+        }
+
+        [Fact]
+        public void OutputStreamSink_must_complete_materialized_value_with_the_error()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var completion = Source.Failed<ByteString>(new Exception("Boom!"))
+                    .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer);
+
+                AssertThrows<AbruptIOTerminationException>(completion.Wait);
             }, _materializer);
         }
 

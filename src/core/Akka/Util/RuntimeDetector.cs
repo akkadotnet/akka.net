@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RuntimeDetector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -37,12 +37,7 @@ namespace Akka.Util
         /// <returns><c>true</c> if the current runtime is Windows</returns>
         private static bool _IsWindows()
         {
-#if CORECLR
-            return System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-#else
-            return System.Environment.OSVersion.Platform != PlatformID.MacOSX &&
-                   System.Environment.OSVersion.Platform != PlatformID.Unix;
-#endif
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
     }
 }

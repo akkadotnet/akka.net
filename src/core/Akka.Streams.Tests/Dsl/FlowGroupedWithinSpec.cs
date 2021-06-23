@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupedWithinSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,13 +61,13 @@ namespace Akka.Streams.Tests.Dsl
                     pSub.SendNext(input.Next());
 
                 var demand3 = (int)pSub.ExpectRequest();
-                c.ExpectNext().ShouldAllBeEquivalentTo(Enumerable.Range(1, demand1 + demand2));
+                c.ExpectNext().Should().BeEquivalentTo(Enumerable.Range(1, demand1 + demand2));
                 for (var i = 1; i <= demand3; i++)
                     pSub.SendNext(input.Next());
 
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
                 c.ExpectNext()
-                    .ShouldAllBeEquivalentTo(Enumerable.Range(demand1 + demand2 + 1, demand3));
+                    .Should().BeEquivalentTo(Enumerable.Range(demand1 + demand2 + 1, demand3));
                 c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
                 pSub.ExpectRequest();
 
@@ -95,7 +95,7 @@ namespace Akka.Streams.Tests.Dsl
             var cSub = c.ExpectSubscription();
             cSub.Request(100);
 
-            c.ExpectNext().ShouldAllBeEquivalentTo(new[] { 1, 2, 3 });
+            c.ExpectNext().Should().BeEquivalentTo(new[] { 1, 2, 3 });
             c.ExpectComplete();
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(200));
         }
@@ -120,14 +120,14 @@ namespace Akka.Streams.Tests.Dsl
             var demand1 = (int)pSub.ExpectRequest();
             for (var i = 1; i <= demand1; i++)
                 pSub.SendNext(input.Next());
-            c.ExpectNext().ShouldAllBeEquivalentTo(Enumerable.Range(1, demand1));
+            c.ExpectNext().Should().BeEquivalentTo(Enumerable.Range(1, demand1));
 
             var demand2 = (int)pSub.ExpectRequest();
             for (var i = 1; i <= demand2; i++)
                 pSub.SendNext(input.Next());
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(300));
             cSub.Request(1);
-            c.ExpectNext().ShouldAllBeEquivalentTo(Enumerable.Range(demand1 + 1, demand2));
+            c.ExpectNext().Should().BeEquivalentTo(Enumerable.Range(demand1 + 1, demand2));
 
             pSub.SendComplete();
             c.ExpectComplete();
@@ -154,7 +154,7 @@ namespace Akka.Streams.Tests.Dsl
 
             pSub.SendNext(1);
             pSub.SendNext(2);
-            c.ExpectNext().ShouldAllBeEquivalentTo(new [] {1,2});
+            c.ExpectNext().Should().BeEquivalentTo(new [] {1,2});
             // nothing more requested
             c.ExpectNoMsg(TimeSpan.FromMilliseconds(1100));
             cSub.Request(3);
@@ -202,7 +202,7 @@ namespace Akka.Streams.Tests.Dsl
             Enumerable.Range(1,4).ForEach(_=>upstream.SendNext(input.Next()));
             downstream.Within(TimeSpan.FromMilliseconds(1000), () =>
             {
-                downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] {1, 2, 3});
+                downstream.ExpectNext().Should().BeEquivalentTo(new[] {1, 2, 3});
                 return NotUsed.Instance;
             });
 
@@ -210,7 +210,7 @@ namespace Akka.Streams.Tests.Dsl
 
             downstream.Within(TimeSpan.FromMilliseconds(1000), () =>
             {
-                downstream.ExpectNext().ShouldAllBeEquivalentTo(new[] {4});
+                downstream.ExpectNext().Should().BeEquivalentTo(new[] {4});
                 return NotUsed.Instance;
             });
 
@@ -267,7 +267,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Throttle(1, TimeSpan.FromMilliseconds(110), 0, ThrottleMode.Shaping)
                 .RunWith(Sink.Seq<IEnumerable<int>>(), Materializer);
             t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-            t.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
+            t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
         }
     }
 }

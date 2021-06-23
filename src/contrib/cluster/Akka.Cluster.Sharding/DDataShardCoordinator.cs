@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DDataShardCoordinator.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -345,7 +345,7 @@ namespace Akka.Cluster.Sharding
         {
             var s = CurrentState.Updated(e);
             _replicator.Tell(Dsl.Update(_coordinatorStateKey,
-                new LWWRegister<PersistentShardCoordinator.State>(Cluster.SelfUniqueAddress, PersistentShardCoordinator.State.Empty),
+                new LWWRegister<PersistentShardCoordinator.State>(Cluster.SelfUniqueAddress, PersistentShardCoordinator.State.Empty.WithRememberEntities(Settings.RememberEntities)),
                 _writeConsistency,
                 e,
                 reg => reg.WithValue(Cluster.SelfUniqueAddress, s)));

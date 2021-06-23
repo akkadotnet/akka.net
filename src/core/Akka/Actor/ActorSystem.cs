@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// Core boostrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
+    /// Core bootstrap settings for the <see cref="ActorSystem"/>, which can be created using one of the static factory methods
     /// on this class.
     /// </summary>
     public sealed class BootstrapSetup : Setup.Setup

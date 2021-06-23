@@ -17,6 +17,8 @@
   <ItemGroup>
       <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
+    <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
+      <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
@@ -36,10 +38,6 @@
       <DependentUpon>PartialHandlerArgumentsCapture.tt</DependentUpon>
     </Compile>
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <DefineConstants>$(DefineConstants);CORECLR;CONFIGURATION;</DefineConstants>
-  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

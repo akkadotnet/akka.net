@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractDispatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -114,6 +114,26 @@ namespace Akka.Dispatch
         /// The system prerequisites needed for this dispatcher to do its job
         /// </summary>
         public IDispatcherPrerequisites Prerequisites { get; private set; }
+    }
+
+    internal sealed class ChannelExecutorConfigurator : ExecutorServiceConfigurator
+    {
+        public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
+        {
+            var fje = config.GetConfig("fork-join-executor");
+            MaxParallelism = ThreadPoolConfig.ScaledPoolSize(
+                        fje.GetInt("parallelism-min"), 
+                        fje.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
+                        fje.GetInt("parallelism-max"));
+        }
+
+        public int MaxParallelism {get;}
+
+        public override ExecutorService Produce(string id)
+        {
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[id]", typeof(FixedConcurrencyTaskScheduler), $"Launched Dispatcher [{id}] with MaxParallelism=[{MaxParallelism}]"));
+            return new TaskSchedulerExecutor(id, new FixedConcurrencyTaskScheduler(MaxParallelism));
+        }
     }
 
     /// <summary>
@@ -306,6 +326,8 @@ namespace Akka.Dispatch
                     return new CurrentSynchronizationContextExecutorServiceFactory(Config, Prerequisites);
                 case "task-executor":
                     return new DefaultTaskSchedulerExecutorConfigurator(Config, Prerequisites);
+                case "channel-executor":
+                    return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)

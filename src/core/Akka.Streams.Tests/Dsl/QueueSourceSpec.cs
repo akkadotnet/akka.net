@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ namespace Akka.Streams.Tests.Dsl
             var task = source.OfferAsync(42);
             var ex = source.OfferAsync(43);
             ex.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3)))
-                .ShouldThrow<IllegalStateException>()
+                .Should().Throw<IllegalStateException>()
                 .And.Message.Should()
                 .Contain("have to wait");
 
@@ -262,6 +262,22 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void QueueSource_should_complete_watching_future_with_failure_if_materializer_shut_down()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var tempMap = ActorMaterializer.Create(Sys);
+                var s = this.CreateManualSubscriberProbe<int>();
+                var queue = Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .To(Sink.FromSubscriber(s))
+                    .Run(tempMap);
+                queue.WatchCompletionAsync().PipeTo(TestActor);
+                tempMap.Shutdown();
+                ExpectMsg<Status.Failure>();
+            }, _materializer);
+        }
+
+        [Fact]
         public void QueueSource_should_return_false_when_element_was_not_added_to_buffer()
         {
             this.AssertAllStagesStopped(() =>
@@ -322,11 +338,12 @@ namespace Akka.Streams.Tests.Dsl
                         .Run(_materializer);
                 var sub = s.ExpectSubscription();
 
-                queue.WatchCompletionAsync().ContinueWith(t => "done").PipeTo(TestActor);
+                queue.WatchCompletionAsync().ContinueWith(t => Done.Instance).PipeTo(TestActor);
                 sub.Cancel();
-                ExpectMsg("done");
+                ExpectMsg(Done.Instance);
 
-                queue.OfferAsync(1).ContinueWith(t => t.Exception.Should().BeOfType<IllegalStateException>());
+                var exception = Record.ExceptionAsync(async () => await queue.OfferAsync(1)).Result;
+                exception.Should().BeOfType<StreamDetachedException>();
             }, _materializer);
         }
 
@@ -456,7 +473,7 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
 
@@ -473,7 +490,7 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(1);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
 
@@ -491,7 +508,7 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(2);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
 
         }
@@ -508,7 +525,7 @@ namespace Akka.Streams.Tests.Dsl
 
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
 
@@ -525,7 +542,7 @@ namespace Akka.Streams.Tests.Dsl
             source.OfferAsync(1);
             source.Fail(Ex);
             var task = source.WatchCompletionAsync();
-            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).ShouldThrow<Exception>().And.Should().Be(Ex);
+            task.Invoking(_ => _.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Exception>().And.Should().Be(Ex);
             probe.EnsureSubscription().ExpectError().Should().Be(Ex);
         }
     }

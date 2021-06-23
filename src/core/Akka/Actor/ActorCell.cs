@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorCell.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Akka.Serialization;
 using Akka.Util;
 using Assert = System.Diagnostics.Debug;
@@ -314,7 +315,7 @@ namespace Akka.Actor
             BecomeStacked(m => { receive(m); return true; });
         }
 
-        private long NewUid()
+        private static long NewUid()
         {
             // Note that this uid is also used as hashCode in ActorRef, so be careful
             // to not break hashing if you change the way uid is generated
@@ -353,8 +354,7 @@ namespace Akka.Actor
             var pipeline = _systemImpl.ActorPipelineResolver.ResolvePipeline(actor.GetType());
             pipeline.AfterActorIncarnated(actor, this);
 
-            var initializableActor = actor as IInitializableActor;
-            if (initializableActor != null)
+            if (actor is IInitializableActor initializableActor)
             {
                 initializableActor.Init();
             }
@@ -479,16 +479,30 @@ namespace Akka.Actor
             actor?.Unclear();
         }
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
+        [Obsolete("Not used. Will be removed in Akka.NET v1.5.")]
         public static NameAndUid SplitNameAndUid(string name)
         {
             var i = name.IndexOf('#');
             return i < 0
                 ? new NameAndUid(name, UndefinedUid)
                 : new NameAndUid(name.Substring(0, i), Int32.Parse(name.Substring(i + 1)));
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        /// <param name="name">The full name of the actor, including the UID if known</param>
+        /// <returns>A new (string name, int uid) instance.</returns>
+        internal static (string name, int uid) GetNameAndUid(string name)
+        {
+            var i = name.IndexOf('#');
+            return i < 0
+                ? (name, UndefinedUid)
+                : (name.Substring(0, i), SpanHacks.Parse(name.AsSpan(i + 1)));
         }
 
         /// <summary>
@@ -519,7 +533,16 @@ namespace Akka.Actor
             if (unwrapped is INoSerializationVerificationNeeded)
                 return envelope;
 
-            var deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+            object deserializedMsg;
+            try
+            {
+                deserializedMsg = SerializeAndDeserializePayload(unwrapped);
+            }
+            catch (Exception e)
+            {
+                throw new SerializationException($"Failed to serialize and deserialize payload object [{unwrapped.GetType()}]. Envelope: [{envelope}], Actor type: [{Actor.GetType()}]", e);
+            }
+
             if (deadLetter != null)
                 return new Envelope(new DeadLetter(deserializedMsg, deadLetter.Sender, deadLetter.Recipient), envelope.Sender);
             return new Envelope(deserializedMsg, envelope.Sender);

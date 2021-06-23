@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorDeleteFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ namespace Akka.Persistence.Tests
         {
             var pref = Sys.ActorOf(Props.Create(() => new DoesNotHandleDeleteFailureActor(Name)));
             Sys.EventStream.Subscribe(TestActor, typeof (Warning));
-            pref.Tell(new DeleteTo(100));
+            pref.Tell(new DeleteTo(long.MaxValue));
             var message = ExpectMsg<Warning>().Message.ToString();
             message.Contains("Failed to DeleteMessages").ShouldBeTrue();
             message.Contains("Boom! Unable to delete events!").ShouldBeTrue();
@@ -126,8 +126,8 @@ namespace Akka.Persistence.Tests
         {
             var pref = Sys.ActorOf(Props.Create(() => new HandlesDeleteFailureActor(Name, TestActor)));
             Sys.EventStream.Subscribe(TestActor, typeof (Warning));
-            pref.Tell(new DeleteTo(100));
-            ExpectMsg<DeleteMessagesFailure>(m => m.ToSequenceNr == 100);
+            pref.Tell(new DeleteTo(long.MaxValue));
+            ExpectMsg<DeleteMessagesFailure>();
             ExpectNoMsg(TimeSpan.FromMilliseconds(100));
         }
     }

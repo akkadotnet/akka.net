@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="IOSinks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,6 +26,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly FileInfo _f;
         private readonly long _startPosition;
         private readonly FileMode _fileMode;
+        private readonly bool _autoFlush;
 
         /// <summary>
         /// TBD
@@ -35,12 +36,14 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="fileMode">TBD</param>
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
-        public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ByteString> shape) : base(shape)
+        /// <param name="autoFlush"></param>
+        public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ByteString> shape, bool autoFlush) : base(shape)
         {
             _f = f;
             _startPosition = startPosition;
             _fileMode = fileMode;
             Attributes = attributes;
+            _autoFlush = autoFlush;
 
             Label = $"FileSink({f}, {fileMode})";
         }
@@ -61,7 +64,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="attributes">TBD</param>
         /// <returns>TBD</returns>
         public override IModule WithAttributes(Attributes attributes)
-            => new FileSink(_f, _startPosition, _fileMode, attributes, AmendShape(attributes));
+            => new FileSink(_f, _startPosition, _fileMode, attributes, AmendShape(attributes), _autoFlush);
 
 
         /// <summary>
@@ -70,7 +73,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
         protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
-            => new FileSink(_f, _startPosition, _fileMode, Attributes, shape);
+            => new FileSink(_f, _startPosition, _fileMode, Attributes, shape, _autoFlush);
 
         /// <summary>
         /// TBD
@@ -84,7 +87,7 @@ namespace Akka.Streams.Implementation.IO
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
 
             var ioResultPromise = new TaskCompletionSource<IOResult>();
-            var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _startPosition, _fileMode);
+            var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _startPosition, _fileMode, _autoFlush);
             var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.AttributeList.First()) as ActorAttributes.Dispatcher;
 
             var actorRef = mat.ActorOf(

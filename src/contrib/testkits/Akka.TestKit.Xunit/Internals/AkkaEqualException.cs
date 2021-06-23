@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaEqualException.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,6 @@ namespace Akka.TestKit.Xunit.Internals
             _args = args;
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
@@ -43,7 +42,7 @@ namespace Akka.TestKit.Xunit.Internals
             : base(info, context)
         {
         }
-#endif
+
         /// <summary>
         /// The message that describes the error.
         /// </summary>

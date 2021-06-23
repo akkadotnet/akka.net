@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -930,7 +930,7 @@ namespace Akka.Streams.Dsl
         /// <param name="close">function that closes resource</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> UnfoldResourceAsync<T, TSource>(Func<Task<TSource>> create,
-            Func<TSource, Task<Option<T>>> read, Func<TSource, Task> close)
+            Func<TSource, Task<Option<T>>> read, Func<TSource, Task<Done>> close)
         {
             return FromGraph(new UnfoldResourceSourceAsync<T, TSource>(create, read, close));
         }

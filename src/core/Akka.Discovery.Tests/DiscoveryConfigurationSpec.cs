@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="Lease.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="DiscoveryConfigurationSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -108,7 +108,7 @@ namespace Akka.Discovery.Tests
 
             Action discoveryInstance = () => _ = Discovery.Get(sys).Default;
             discoveryInstance
-                .ShouldThrow<TargetInvocationException>()
+                .Should().Throw<TargetInvocationException>()
                 .WithInnerException<DiscoveryException>();
         }
 

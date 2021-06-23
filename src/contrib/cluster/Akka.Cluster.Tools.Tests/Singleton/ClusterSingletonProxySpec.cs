@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonProxySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,11 +12,12 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.TestKit;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
-    public class ClusterSingletonProxySpec 
+    public class ClusterSingletonProxySpec : TestKit.Xunit2.TestKit
     {
         [Fact]
         public void ClusterSingletonProxy_must_correctly_identify_the_singleton()
@@ -42,11 +43,35 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
 
+        [Fact]
+        public async Task ClusterSingletonProxy_with_zero_buffering_should_work()
+        {
+            var seed = new ActorSys();
+            seed.Cluster.Join(seed.Cluster.SelfAddress);
+
+            var testSystem = new ActorSys(joinTo: seed.Cluster.SelfAddress, bufferSize: 0);
+            
+            // have to wait for cluster singleton to be ready, otherwise message will be rejected
+            await AwaitConditionAsync(
+                () => Cluster.Get(testSystem.Sys).State.Members.Count(m => m.Status == MemberStatus.Up) == 2,
+                TimeSpan.FromSeconds(30));
+
+            try
+            {
+                testSystem.TestProxy("Hello");
+            }
+            finally
+            {
+                // force everything to cleanup
+                Task.WhenAll(testSystem.Sys.Terminate()).Wait(TimeSpan.FromSeconds(30));
+            }
+        }
+
         private class ActorSys : TestKit.Xunit2.TestKit
         {
             public Cluster Cluster { get; }
 
-            public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null)
+            public ActorSys(string name = "ClusterSingletonProxySystem", Address joinTo = null, int bufferSize = 1000)
                 : base(ActorSystem.Create(name, ConfigurationFactory.ParseString(_cfg).WithFallback(TestKit.Configs.TestConfigs.DefaultConfig)))
             {
                 Cluster = Cluster.Get(Sys);
@@ -63,8 +88,11 @@ namespace Akka.Cluster.Tools.Tests.Singleton
                 });
 
                 Proxy =
-                    Sys.ActorOf(ClusterSingletonProxy.Props("user/singletonmanager",
-                        ClusterSingletonProxySettings.Create(Sys)), $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
+                    Sys.ActorOf(
+                        ClusterSingletonProxy.Props(
+                            "user/singletonmanager",
+                            ClusterSingletonProxySettings.Create(Sys).WithBufferSize(bufferSize)), 
+                        $"singletonProxy-{Cluster.SelfAddress.Port ?? 0}");
             }
 
             public IActorRef Proxy { get; private set; }

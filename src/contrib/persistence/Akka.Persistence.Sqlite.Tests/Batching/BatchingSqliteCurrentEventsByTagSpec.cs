@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchingSqliteCurrentEventsByTagSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,11 +42,6 @@ namespace Akka.Persistence.Sqlite.Tests.Batching
         public BatchingSqliteCurrentEventsByTagSpec(ITestOutputHelper output) : base(Config(Counter.GetAndIncrement()), nameof(BatchingSqliteCurrentEventsByTagSpec), output)
         {
             ReadJournal = Sys.ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-        }
-
-        [Fact(Skip = "Test work good, but raises an exception")]
-        public override void ReadJournal_query_CurrentEventsByTag_should_complete_when_no_events()
-        {
         }
     }
 }

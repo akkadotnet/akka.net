@@ -42,6 +42,7 @@ namespace Akka.DistributedData
     public class DataDeletedException : System.Exception
     {
         public DataDeletedException(string message) { }
+        protected DataDeletedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class Delete : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.DistributedData.Delete>
     {
@@ -981,6 +982,7 @@ namespace Akka.DistributedData.Durable
     {
         public LoadFailedException(string message) { }
         public LoadFailedException(string message, System.Exception cause) { }
+        public LoadFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class Store
     {
@@ -1012,10 +1014,10 @@ namespace Akka.DistributedData.Internal
     }
     public sealed class Delta : System.IEquatable<Akka.DistributedData.Internal.Delta>
     {
-        public readonly Akka.DistributedData.Internal.DataEnvelope DataEnvelope;
-        public readonly long FromSeqNr;
-        public readonly long ToSeqNr;
         public Delta(Akka.DistributedData.Internal.DataEnvelope dataEnvelope, long fromSeqNr, long toSeqNr) { }
+        public Akka.DistributedData.Internal.DataEnvelope DataEnvelope { get; }
+        public long FromSeqNr { get; }
+        public long ToSeqNr { get; }
         public bool Equals(Akka.DistributedData.Internal.Delta other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -1029,11 +1031,11 @@ namespace Akka.DistributedData.Internal
     }
     public sealed class DeltaPropagation : Akka.DistributedData.IReplicatorMessage, System.IEquatable<Akka.DistributedData.Internal.DeltaPropagation>
     {
-        public readonly System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> Deltas;
-        public readonly Akka.Cluster.UniqueAddress FromNode;
         public static readonly Akka.DistributedData.IReplicatedDelta NoDeltaPlaceholder;
-        public readonly bool ShouldReply;
         public DeltaPropagation(Akka.Cluster.UniqueAddress fromNode, bool shouldReply, System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> deltas) { }
+        public System.Collections.Immutable.ImmutableDictionary<string, Akka.DistributedData.Internal.Delta> Deltas { get; }
+        public Akka.Cluster.UniqueAddress FromNode { get; }
+        public bool ShouldReply { get; }
         public bool Equals(Akka.DistributedData.Internal.DeltaPropagation other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }

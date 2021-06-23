@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReactiveStreamsCompliance.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,14 +30,12 @@ namespace Akka.Streams.Implementation
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public SignalThrewException(string message, Exception cause) : base(message, cause) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="SignalThrewException"/> class.
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected SignalThrewException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-#endif
     }
 
     /// <summary>

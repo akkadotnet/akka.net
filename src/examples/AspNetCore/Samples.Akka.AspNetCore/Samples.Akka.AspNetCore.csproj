@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <Import Project="..\..\..\common.props" />
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreTestVersion)</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="app.conf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="app.conf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\contrib\dependencyinjection\Akka.DependencyInjection\Akka.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj" />
+  </ItemGroup>
+
+</Project>

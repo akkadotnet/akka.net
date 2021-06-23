@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Spec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,6 +28,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
             TestDisplayName = testDisplayName;
             NodeIndex = nodeIndex;
             NodeRole = nodeRole;
+            Timestamp = DateTime.UtcNow;
         }
 
         public int NodeIndex { get; private set; }
@@ -35,9 +36,11 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
 
         public string TestDisplayName { get; private set; }
 
+        public DateTime Timestamp { get; }
+
         public override string ToString()
         {
-            return string.Format("[Node{0}:{1}][PASS] {2}", NodeIndex, NodeRole, TestDisplayName);
+            return $"[Node{NodeIndex}:{NodeRole}][{Timestamp}][PASS] {TestDisplayName}";
         }
     }
 
@@ -65,20 +68,20 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine(string.Format("[Node{0}:{1}][FAIL] {2}", NodeIndex, NodeRole, TestDisplayName));
+            sb.AppendLine($"[Node{NodeIndex}:{NodeRole}][{Timestamp}][FAIL] {TestDisplayName}");
             foreach (var exception in FailureExceptionTypes)
             {
-                sb.AppendFormat("[Node{0}:{1}][FAIL-EXCEPTION] Type: {2}", NodeIndex, NodeRole, exception);
+                sb.Append($"[Node{NodeIndex}:{NodeRole}][{Timestamp}][FAIL-EXCEPTION] Type: {exception}");
                 sb.AppendLine();
             }
             foreach (var exception in FailureMessages)
             {
-                sb.AppendFormat("--> [Node{0}:{1}][FAIL-EXCEPTION] Message: {2}", NodeIndex, NodeRole, exception);
+                sb.Append($"--> [Node{NodeIndex}:{NodeRole}][{Timestamp}][FAIL-EXCEPTION] Message: {exception}");
                 sb.AppendLine();
             }
             foreach (var exception in FailureStackTraces)
             {
-                sb.AppendFormat("--> [Node{0}:{1}][FAIL-EXCEPTION] StackTrace: {2}", NodeIndex, NodeRole, exception);
+                sb.Append($"--> [Node{NodeIndex}:{NodeRole}][{Timestamp}][FAIL-EXCEPTION] StackTrace: {exception}");
                 sb.AppendLine();
             }
             return sb.ToString();

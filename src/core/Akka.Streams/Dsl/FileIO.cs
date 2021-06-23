@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileIO.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -52,9 +52,10 @@ namespace Akka.Streams.Dsl
         /// <param name="f">the file to write to</param>
         /// <param name="fileMode">the write file mode, defaults to <see cref="FileMode.OpenOrCreate"/></param>
         /// <param name="startPosition">the start position to write to, defaults to 0</param>
+        /// <param name="autoFlush">when set, auto flush the file buffer to disk for every incoming element</param>
         /// <returns>TBD</returns>
-        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0) =>
+        public static Sink<ByteString, Task<IOResult>> ToFile(FileInfo f, FileMode? fileMode = null, long startPosition = 0, bool autoFlush = false) =>
             new Sink<ByteString, Task<IOResult>>(new FileSink(f, startPosition, fileMode ?? FileMode.Create, DefaultAttributes.FileSink,
-                new SinkShape<ByteString>(new Inlet<ByteString>("FileSink"))));
+                new SinkShape<ByteString>(new Inlet<ByteString>("FileSink")), autoFlush));
     }
 }

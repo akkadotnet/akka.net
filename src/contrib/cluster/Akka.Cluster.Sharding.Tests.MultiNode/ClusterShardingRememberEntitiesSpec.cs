@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingRememberEntitiesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Remote.TestKit;
+using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 
@@ -21,13 +22,15 @@ namespace Akka.Cluster.Sharding.Tests
     public abstract class ClusterShardingRememberEntitiesSpecConfig : MultiNodeConfig
     {
         public string Mode { get; }
+        public bool RememberEntities { get; }
         public RoleName First { get; }
         public RoleName Second { get; }
         public RoleName Third { get; }
 
-        protected ClusterShardingRememberEntitiesSpecConfig(string mode)
+        protected ClusterShardingRememberEntitiesSpecConfig(string mode, bool rememberEntities)
         {
             Mode = mode;
+            RememberEntities = rememberEntities;
             First = Role("first");
             Second = Role("second");
             Third = Role("third");
@@ -78,24 +81,43 @@ namespace Akka.Cluster.Sharding.Tests
     }
     public class PersistentClusterShardingRememberEntitiesSpecConfig : ClusterShardingRememberEntitiesSpecConfig
     {
-        public PersistentClusterShardingRememberEntitiesSpecConfig() : base("persistence") { }
+        public PersistentClusterShardingRememberEntitiesSpecConfig(bool rememberEntities) : base("persistence", rememberEntities) { }
     }
     public class DDataClusterShardingRememberEntitiesSpecConfig : ClusterShardingRememberEntitiesSpecConfig
     {
-        public DDataClusterShardingRememberEntitiesSpecConfig() : base("ddata") { }
+        public DDataClusterShardingRememberEntitiesSpecConfig(bool rememberEntities) : base("ddata", rememberEntities) { }
     }
 
-    public class PersistentClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
+    public abstract class PersistentClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
     {
-        public PersistentClusterShardingRememberEntitiesSpec() : this(new PersistentClusterShardingRememberEntitiesSpecConfig()) { }
-        protected PersistentClusterShardingRememberEntitiesSpec(PersistentClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
+        protected PersistentClusterShardingRememberEntitiesSpec(bool rememberEntities) : this(new PersistentClusterShardingRememberEntitiesSpecConfig(rememberEntities)) { }
+        private PersistentClusterShardingRememberEntitiesSpec(PersistentClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
     }
 
-    // DData has no support for remember-entities at this point
-    public class DDataClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
+    public abstract class DDataClusterShardingRememberEntitiesSpec : ClusterShardingRememberEntitiesSpec
     {
-        public DDataClusterShardingRememberEntitiesSpec() : this(new DDataClusterShardingRememberEntitiesSpecConfig()) { }
-        protected DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(PersistentClusterShardingRememberEntitiesSpec)) { }
+        protected DDataClusterShardingRememberEntitiesSpec(bool rememberEntities) : this(new DDataClusterShardingRememberEntitiesSpecConfig(rememberEntities)) { }
+        private DDataClusterShardingRememberEntitiesSpec(DDataClusterShardingRememberEntitiesSpecConfig config) : base(config, typeof(DDataClusterShardingRememberEntitiesSpec)) { }
+    }
+
+    public class PersistentClusterShardingRememberEntitiesDefaultSpec : PersistentClusterShardingRememberEntitiesSpec
+    {
+        public PersistentClusterShardingRememberEntitiesDefaultSpec() : base(false) { }
+    }
+
+    public class PersistentClusterShardingRememberEntitiesEnabledSpec : PersistentClusterShardingRememberEntitiesSpec
+    {
+        public PersistentClusterShardingRememberEntitiesEnabledSpec() : base(true) { }
+    }
+
+    public class DDataClusterShardingRememberEntitiesDefaultSpec : DDataClusterShardingRememberEntitiesSpec
+    {
+        public DDataClusterShardingRememberEntitiesDefaultSpec() : base(false) { }
+    }
+
+    public class DDataClusterShardingRememberEntitiesEnabledSpec : DDataClusterShardingRememberEntitiesSpec
+    {
+        public DDataClusterShardingRememberEntitiesEnabledSpec() : base(true) { }
     }
 
     public abstract class ClusterShardingRememberEntitiesSpec : MultiNodeClusterSpec
@@ -141,7 +163,7 @@ namespace Akka.Cluster.Sharding.Tests
             return null;
         };
 
-        private Lazy<IActorRef> _region;
+        private readonly Lazy<IActorRef> _region;
 
         private readonly ClusterShardingRememberEntitiesSpecConfig _config;
         private readonly List<FileInfo> _storageLocations;
@@ -191,13 +213,23 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void StartSharding(ActorSystem sys, IActorRef probe)
         {
-            var allocationStrategy = ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1);
             ClusterSharding.Get(sys).Start(
                 typeName: "Entity",
                 entityProps: Props.Create(() => new TestEntity(probe)),
-                settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
+                settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(_config.RememberEntities),
                 extractEntityId: extractEntityId,
                 extractShardId: extractShardId);
+        }
+
+        private Started ExpectEntityRestarted(ActorSystem sys, int evt, TestProbe probe, TestProbe entityProbe, TimeSpan? remaining = null)
+        {
+            if (!_config.RememberEntities)
+            {
+                probe.Send(ClusterSharding.Get(sys).ShardRegion("Entity"), evt);
+                probe.ExpectMsg(1);
+            }
+
+            return entityProbe.ExpectMsg<Started>(remaining ?? TimeSpan.FromSeconds(30));
         }
 
         [MultiNodeFact]
@@ -205,9 +237,7 @@ namespace Akka.Cluster.Sharding.Tests
         {
             if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_setup_shared_journal();
             Cluster_sharding_with_remember_entities_should_start_remembered_entities_when_coordinator_fail_over();
-
-            // https://github.com/akkadotnet/akka.net/issues/4262 - need to resolve this and then we can remove if statement
-            if (!IsDDataMode) Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
+            Cluster_sharding_with_remember_entities_should_start_remembered_entities_in_new_cluster();
         }
 
         public void Cluster_sharding_with_remember_entities_should_setup_shared_journal()
@@ -245,19 +275,23 @@ namespace Akka.Cluster.Sharding.Tests
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
+                var probe = CreateTestProbe();
+                var entityProbe = CreateTestProbe();
+
                 Join(_config.Second, _config.Second);
                 RunOn(() =>
                 {
-                    StartSharding(Sys, TestActor);
-                    _region.Value.Tell(1);
-                    ExpectMsg<Started>();
+                    StartSharding(Sys, entityProbe.Ref);
+                    probe.Send(_region.Value, 1);
+                    probe.ExpectMsg(1);
+                    entityProbe.ExpectMsg<Started>();
                 }, _config.Second);
                 EnterBarrier("second-started");
 
                 Join(_config.Third, _config.Second);
                 RunOn(() =>
                 {
-                    StartSharding(Sys, TestActor);
+                    StartSharding(Sys, entityProbe.Ref);
                 }, _config.Third);
 
                 RunOn(() =>
@@ -289,7 +323,7 @@ namespace Akka.Cluster.Sharding.Tests
 
                 RunOn(() =>
                 {
-                    ExpectMsg<Started>(Remaining);
+                    ExpectEntityRestarted(Sys, 1, probe, entityProbe, Remaining);
                 }, _config.Third);
 
                 EnterBarrier("after-2");
@@ -313,6 +347,7 @@ namespace Akka.Cluster.Sharding.Tests
                     // no nodes left of the original cluster, start a new cluster
 
                     var sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+                    var entityProbe2 = CreateTestProbe(sys2);
                     var probe2 = CreateTestProbe(sys2);
 
                     if (!IsDDataMode)
@@ -327,8 +362,8 @@ namespace Akka.Cluster.Sharding.Tests
                     }
 
                     Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
-                    StartSharding(sys2, probe2.Ref);
-                    probe2.ExpectMsg<Started>(TimeSpan.FromSeconds(20));
+                    StartSharding(sys2, entityProbe2.Ref);
+                    ExpectEntityRestarted(sys2, 1, probe2, entityProbe2);
 
                     Shutdown(sys2);
                 }, _config.Third);

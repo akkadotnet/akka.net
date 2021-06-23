@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSelectionSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,6 +66,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to NEW actors", 
             NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
+        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void New_ActorSelection_on_new_actor_throughput(BenchmarkContext context)
         {
             var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time
@@ -77,6 +78,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the message delivery throughput of REUSABLE ActorSelections to PRE-EXISTING actors",
             NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
+        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void Reused_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
         {
             var actorSelection = System.ActorSelection(_receiverActorPath);
@@ -91,6 +93,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the message delivery throughput of NEW ActorSelections to PRE-EXISTING actors. This is really a stress test.",
             NumberOfIterations = 13, RunMode = RunMode.Iterations, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
+        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void New_ActorSelection_on_pre_existing_actor_throughput(BenchmarkContext context)
         {
             for (var i = 0; i < NumberOfMessages;)
@@ -104,6 +107,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Tests the throughput of resolving an ActorSelection on a pre-existing actor via ResolveOne",
             NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
+        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void ActorSelection_ResolveOne_throughput(BenchmarkContext context)
         {
             var actorRef= System.ActorSelection(_receiverActorPath).ResolveOne(TimeSpan.FromSeconds(2)).Result; // send that actor a message via selection
@@ -113,6 +117,7 @@ namespace Akka.Tests.Performance.Actor
         [PerfBenchmark(Description = "Continuously creates actors and attempts to resolve them immediately. Used to surface race conditions.",
             NumberOfIterations = 13, RunMode = RunMode.Throughput, RunTimeMilliseconds = 1000, TestMode = TestMode.Measurement)]
         [CounterMeasurement(ActorSelectionCounterName)]
+        [MemoryMeasurement(MemoryMetric.TotalBytesAllocated)]
         public void ActorSelection_ResolveOne_stress_test(BenchmarkContext context)
         {
             var actorRef = System.ActorOf(_oneMessageBenchmarkProps); // create a new actor every time

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterHeartBeatSenderStateSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -97,14 +97,14 @@ namespace Akka.Cluster.Tests
         public void ClusterHeartbeatSenderState_must_return_empty_active_set_when_no_nodes()
         {
             _emptyState
-                .ActiveReceivers.IsEmpty.Should().BeTrue();
+                .ActiveReceivers.Count.Should().Be(0);
         }
 
         [Fact]
         public void ClusterHeartbeatSenderState_must_init_with_empty()
         {
             _emptyState.Init(ImmutableHashSet<UniqueAddress>.Empty, ImmutableHashSet<UniqueAddress>.Empty)
-                .ActiveReceivers.IsEmpty.Should().BeTrue();
+                .ActiveReceivers.Count.Should().Be(0);
         }
 
         [Fact]

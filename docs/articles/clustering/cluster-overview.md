@@ -208,7 +208,7 @@ Nodes send each other <a href="https://en.wikipedia.org/wiki/Heartbeat_(computin
 
 When marked as unreachable, the node can restart and join the cluster again, however the association will only be formed if that node is identified as the same node that became unreachable. If you use dynamic addressing (port 0), starting a node again might result in a different port being assigned upon restart. The result of that is that the cluster remains in an inconsistent state, waiting to the unreachable node to either become reachable or get downed.
 
-A node might also exit the cluster gracefully, preventing it from being marked as unreachable in the first place. Akka.net uses IDowningProvider to take the nodes through all the stages of existing the cluster. Starting in Akka.NET 1.2 [CoordinatedShutdown](https://github.com/akkadotnet/akka.net/releases/tag/v1.2) was introduced allowing the user to easily invoke that mechanism.
+A node might also exit the cluster gracefully, preventing it from being marked as unreachable in the first place. Akka.net uses IDowningProvider to take the nodes through all the stages of exiting the cluster. Starting in Akka.NET 1.2 [CoordinatedShutdown](https://github.com/akkadotnet/akka.net/releases/tag/v1.2) was introduced allowing the user to easily invoke that mechanism.
 
 ## Location Transparency
 [Location transparency](xref:location-transparency) is the underlying principle powering all of Akka.Remote and Akka.Cluster. The key point is that in a cluster, it's entirely possible that the actors you interface with to do work can be living on any node in the cluster... and you don't have to worry about which one.

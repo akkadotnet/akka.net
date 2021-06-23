@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Member.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -370,7 +370,7 @@ namespace Akka.Cluster
                 else
                 {
                     var m = g.First();
-                    if (!Gossip.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
+                    if (!MembershipState.RemoveUnreachableWithMemberStatus.Contains(m.Status)) acc.Add(m);
                 }
             }
             return acc.ToImmutableHashSet();
@@ -502,7 +502,7 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="object.Equals(object)"/>
-        public override bool Equals(object obj) => obj is UniqueAddress && Equals((UniqueAddress)obj);
+        public override bool Equals(object obj) => obj is UniqueAddress address && Equals(address);
 
         /// <inheritdoc cref="object.GetHashCode"/>
         public override int GetHashCode()

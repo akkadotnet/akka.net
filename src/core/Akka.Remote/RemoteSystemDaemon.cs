@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteSystemDaemon.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -308,10 +308,10 @@ namespace Akka.Remote
             var n = 0;
             while (true)
             {
-                var nameAndUid = ActorCell.SplitNameAndUid(path);
-                if (TryGetChild(nameAndUid.Name, out var child))
+                var (s, uid) = ActorCell.GetNameAndUid(path);
+                if (TryGetChild(s, out var child))
                 {
-                    if (nameAndUid.Uid != ActorCell.UndefinedUid && nameAndUid.Uid != child.Path.Uid)
+                    if (uid != ActorCell.UndefinedUid && uid != child.Path.Uid)
                         return Nobody.Instance;
                     return n == 0 ? child : child.GetChild(name.TakeRight(n));
                 }

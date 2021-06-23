@@ -1,5 +1,333 @@
-#### 1.4.15 December 30 2020 ####
+#### 1.4.22 June 16 2021 ####
 **Placeholder for nightlies**
+
+#### 1.4.21 June 16 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.21 is a significant release that includes major performance improvements, bug fixes, and a major update to the [Akka.DependencyInjection NuGet package](https://getakka.net/articles/actors/dependency-injection.html).
+
+**Performance Improvements**
+Akka.NET v1.4.21 includes some major performance fixes and improvements:
+
+* [`Ask` is now ~10% faster](https://github.com/akkadotnet/akka.net/pull/5051)
+* [`MurmurHash` is 33% faster and allocates 0 memory](https://github.com/akkadotnet/akka.net/pull/5028) - used _heavily_ in DData, Cluster Sharding, and Consistent Hash Routers
+* `ActorPath.Parse` went from 1672 ns/op to 527 ns/op - a 68% improvement in throughput and a 50% reduction in memory. See [#5039](https://github.com/akkadotnet/akka.net/pull/5039) and [#5068](https://github.com/akkadotnet/akka.net/pull/5068).
+* [Akka.Remote: remove `ActorPath.ToString` call from `ResolveActorRefWithLocalAddress`](https://github.com/akkadotnet/akka.net/pull/5034)
+* **Important**: [Revert `ThreadPool.SetMinThreads(0,0)`](https://github.com/akkadotnet/akka.net/pull/5059) - based on the input from users on "[Akka.NET v1.4.19: ChannelExecutor performance data](https://github.com/akkadotnet/akka.net/discussions/4983)"
+
+Our observed performance numbers for Akka.Remote show a significant increase in performance for v1.4.21 over v1.4.20:
+
+*Before*
+
+```
+PS> dotnet run -c Release --framework netcoreapp3.1      
+OSVersion:                         Microsoft Windows NT 6.2.9200.0
+ProcessorCount:                    16
+ClockSpeed:                        0 MHZ
+Actor Count:                       32
+Messages sent/received per client: 200000  (2e5)
+Is Server GC:                      True
+Thread count:                      109
+
+Num clients, Total [msg], Msgs/sec, Total [ms]
+         1,  200000,    113379,    1764.56
+         5, 1000000,    186429,    5364.05
+        10, 2000000,    185340,   10791.11
+        15, 3000000,    183218,   16374.06
+        20, 4000000,    179824,   22244.63
+        25, 5000000,    182716,   27365.89
+        30, 6000000,    182039,   32960.61
+```
+
+*After*
+
+```
+PS> dotnet run -c Release --framework netcoreapp3.1                
+OSVersion:                         Microsoft Windows NT 6.2.9200.0 
+ProcessorCount:                    16                              
+ClockSpeed:                        0 MHZ                           
+Actor Count:                       32                              
+Messages sent/received per client: 200000  (2e5)                   
+Is Server GC:                      True                            
+Thread count:                      111                             
+                                                                   
+Num clients, Total [msg], Msgs/sec, Total [ms]                     
+         1,  200000,    109770,    1822.14                         
+         5, 1000000,    192902,    5184.79                         
+        10, 2000000,    191663,   10435.53                         
+        15, 3000000,    191339,   15679.11                         
+        20, 4000000,    192725,   20755.78                         
+        25, 5000000,    189754,   26350.14                         
+        30, 6000000,    189772,   31617.20                         
+```
+
+> N.B. these after numbers don't benefit from the performance benefits we observed in v1.4.20 when we invoked `ThreadPool.SetMinThreads(0,0)`, which makes them even more impressive.
+
+**Akka.DependencyInjection Updates**
+We had one major issue we implemented in v1.4.21 for Akka.DependencyInjection: [Abstraction of `ServiceProvider`, Improving Akka.DependencyInjection ](https://github.com/akkadotnet/akka.net/pull/4814)
+
+What this change did was:
+
+* Deprecate the `Akka.DependencyInjection.ServiceProvider` class in favor of the `Akka.DependencyInjection.DependencyResolver` class - to avoid namespace collision with Microsoft.Extensions.DependencyInjection.ServiceProvider;
+* Deprecates the `Akka.DependencyInjection.ServiceProviderSetup` class in favor of the `Akka.DependencyInjection.DependencyResolverSetup` class for consistency reasons;
+* `Akka.DependencyInjection.DependencyResolver` now takes an input of type [`IDependencyResolver`](https://getakka.net/api/Akka.DependencyInjection.IDependencyResolver.html), which allows users to abstract away the `IServiceProvider` and mock / replace it during unit testing; and
+* Added some non-generic `Props` methods for dynamically spawning actors via DI.
+
+All of these changes are backwards-compatible with v1.4.20 and earlier - and the deprecation warnings will appear in your code when you upgrade. If you run into any [issues upgrading to Akka.DependencyInjection v1.4.21 please reply on this thread](https://github.com/akkadotnet/akka.net/discussions/5070)!
+
+**Other Changes and Fixes**
+
+* [Akka.Streams: A couple of fixes affecting the `FileSubscriber`](https://github.com/akkadotnet/akka.net/pull/5035)
+* [Akka.DistributedData: memory leak when recovering events from LMDB data store](https://github.com/akkadotnet/akka.net/issues/5022)
+* [Akka.DistributedData: port `VectorClock` performance optimizations to `VersionVector` and similar types](https://github.com/akkadotnet/akka.net/issues/4956)
+
+To see the [full set of fixes in Akka.NET v1.4.21, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/51).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 34 | 24 | Aaron Stannard |
+| 4 | 196 | 77 | Gregorius Soedharmo |
+| 3 | 3 | 3 | dependabot[bot] |
+| 1 | 2 | 2 | Wessel Kranenborg |
+| 1 | 1 | 1 | Martijn Schoemaker |      
+
+#### 1.4.20 May 12 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.20 is a minor release that includes some bug fixes and improvements to Akka.NET.
+
+* [Akka: Fixed some `internal-dispatcher` usages ](https://github.com/akkadotnet/akka.net/pull/4995)
+* [Akka: Remove restrictions required by netstandard 1.x but available in 2.0 ](https://github.com/akkadotnet/akka.net/pull/3790)
+* [Akka: Prevent loggers to throw `FormatException` and show a friendly message instead. ](https://github.com/akkadotnet/akka.net/pull/4998)
+* [Akka.Persistence.Sql.Common: Some persistent actors are stuck with `RecoveryTimedOutException` after circuit breaker opens](https://github.com/akkadotnet/akka.net/issues/4265)
+* [Akka.Persistence.Sql.Common: marking Akka.Persistence.Sql.Common as `beta` for v1.4.20](https://github.com/akkadotnet/akka.net/pull/5006)
+* [Akka.Remote: `Akka.Remote.Serialization.PrimitiveSerializers` needs cross platform compatibility](https://github.com/akkadotnet/akka.net/issues/4986)
+* [Akka.Streams: Fixed `QueueSource.PostStop` and added a missing test case](https://github.com/akkadotnet/akka.net/pull/4991)
+* [Akka.Cluster.Sharding: Reduce sharding warnings when there are no buffered messages](https://github.com/akkadotnet/akka.net/pull/5003)
+
+To see the [full set of fixes in Akka.NET v1.4.20, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/50).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 677 | 316 | Gregorius Soedharmo |
+| 3 | 3 | 3 | dependabot[bot] |
+| 3 | 101 | 44 | Ismael Hamed |
+| 2 | 5 | 0 | Aaron Stannard |
+| 1 | 625 | 675 | Matthew Heaton |
+
+#### 1.4.19 April 28 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.19 is a _substantial_ release that includes a number of critical Akka.Cluster fixes, baseline Akka.NET performance improvements, and entirely new dispatcher that has shown to improve performance when used across all of the major actor groups that run both inside the `/user` hierarchy and the `/system` actor hierarchy as well.
+
+**Akka.Cluster Improvements**
+One of the most demanding issues of the v1.4.19 release was "[Akka.Cluster: quarantining / reachability changes appear to be extremely sensitive](https://github.com/akkadotnet/akka.net/issues/4849)" - and this is because debugging this issue touched so many different parts of Akka.Cluster.
+
+We ultimately solved the problem - it is now quite feasible to rapidly scale an Akka.NET cluster from ~10 nodes to 50+ nodes without having a huge number of quarantines, accidentally downed nodes, and so on. 
+
+Here's the full set of fixes that went into resolving this issue:
+
+* [Added `PhiAccrualFailureDetector` warning logging for slow heartbeats](https://github.com/akkadotnet/akka.net/pull/4897)
+* [measure Akka.Cluster heartbeat timings, hardened Akka.Cluster serialization](https://github.com/akkadotnet/akka.net/pull/4934)
+* [`ClusterStressSpec` and Cluster Failure Detector Cleanup](https://github.com/akkadotnet/akka.net/pull/4940)
+* [Akka.Cluster: improve `HeartbeatNodeRing` performance](https://github.com/akkadotnet/akka.net/pull/4943)
+* [Akka.Cluster: Turned `HeatbeatNodeRing` into `struct`](https://github.com/akkadotnet/akka.net/pull/4944)
+* [Akka.Cluster: Configure duration for applying `MemberStatus.WeaklyUp`  to joining nodes](https://github.com/akkadotnet/akka.net/pull/4946)
+* [Akka.Cluster: Performance optimize `VectorClock`](https://github.com/akkadotnet/akka.net/pull/4952)
+* [Akka.Cluster: Refactored `Gossip` into `MembershipState`](https://github.com/akkadotnet/akka.net/pull/4968)
+* [Akka.Remote: Clean up bad outbound ACKs in Akka.Remote](https://github.com/akkadotnet/akka.net/pull/4963)
+
+Akka.Cluster is now much more robust, faster, and capable of scaling up and down much more efficiently than in previous releases.
+
+**`ChannelExecutor` and Akka Performance Improvements**
+In addition to improving Akka.Cluster, we also made substantial improvements to constructs found inside Akka.NET core itself:
+
+* [Perf optimize `ActorSelection`](https://github.com/akkadotnet/akka.net/pull/4962) - 20% throughput improvement, 25% memory consumption improvement
+* [fixed N-1 error inside `Mailbox`](https://github.com/akkadotnet/akka.net/pull/4964)
+* [Introduce `ChannelExecutor`](https://github.com/akkadotnet/akka.net/pull/4882)
+
+In Akka.NET v1.4.19 we introduce an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
+
+In order to get the most use out of the `ChannelExecutor`, the default actor dispatcher, the internal dispatcher, and the Akka.Remote dispatchers all need to run on it - and you can see the latest configuration settings and guidance for that here in our documentation: https://getakka.net/articles/actors/dispatchers.html#channelexecutor
+
+But a copy of today's configuration is included below - you can enable this feature inside your Akka.NET applications via the following HOCON:
+
+```
+akka.actor.default-dispatcher = {
+    executor = channel-executor
+    fork-join-executor { #channelexecutor will re-use these settings
+      parallelism-min = 2
+      parallelism-factor = 1
+      parallelism-max = 64
+    }
+}
+
+akka.actor.internal-dispatcher = {
+    executor = channel-executor
+    throughput = 5
+    fork-join-executor {
+      parallelism-min = 4
+      parallelism-factor = 1.0
+      parallelism-max = 64
+    }
+}
+
+akka.remote.default-remote-dispatcher {
+    type = Dispatcher
+    executor = channel-executor
+    fork-join-executor {
+      parallelism-min = 2
+      parallelism-factor = 0.5
+      parallelism-max = 16
+    }
+}
+
+akka.remote.backoff-remote-dispatcher {
+  executor = channel-executor
+  fork-join-executor {
+    parallelism-min = 2
+    parallelism-max = 2
+  }
+}
+```
+
+**We are looking for feedback on how well the `ChannelExecutor` works in real world applications here: https://github.com/akkadotnet/akka.net/discussions/4983**
+
+**Hyperion v0.10 and Improvements**
+We also released [Hyperion v0.10.0](https://github.com/akkadotnet/Hyperion/releases/tag/0.10.0) and [v0.10.1](https://github.com/akkadotnet/Hyperion/releases/tag/0.10.1) as part of the Akka.NET v1.4.19 sprint, and this includes some useful changes for Akka.NET users who are trying to build cross-platform (.NET Framework + .NET Core / .NET 5) applications and need to handle all of the idiosyncrasies those platforms introduced by changing the default namespaces on primitive types such as `string` and `int`.
+
+We have also introduced a [new `Setup` type](https://getakka.net/articles/concepts/configuration.html#programmatic-configuration-with-setup) designed to make it easy to resolve some of these "cross platform" serialization concerns programmatically when configuring Hyperion for use inside Akka.NET:
+
+```csharp
+#if NETFRAMEWORK
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("System.Private.CoreLib,%core%")
+            ? str.Replace("System.Private.CoreLib,%core%", "mscorlib,%core%") : str
+    }
+#elif NETCOREAPP
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("mscorlib,%core%")
+            ? str.Replace("mscorlib,%core%", "System.Private.CoreLib,%core%") : str
+    }
+#endif
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+See the full documentation for this feature here: https://getakka.net/articles/networking/serialization.html#cross-platform-serialization-compatibility-in-hyperion
+
+To see the [full set of fixes in Akka.NET v1.4.19, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/49).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |             
+| --- | --- | --- | --- |                      
+| 38 | 6092 | 4422 | Aaron Stannard |          
+| 13 | 2231 | 596 | Gregorius Soedharmo |      
+| 10 | 15 | 14 | dependabot-preview[bot] |     
+| 3 | 512 | 306 | zbynek001 |                  
+| 3 | 417 | 1 | Ismael Hamed |                 
+| 1 | 5 | 5 | Erik Følstad |                   
+| 1 | 5 | 19 | Arjen Smits |                   
+| 1 | 27 | 1 | Anton V. Ilyin |                
+| 1 | 21 | 33 | Igor |                         
+| 1 | 1 | 1 | Cagatay YILDIZOGLU |             
+
+#### 1.4.18 March 23 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a minor release of Akka.NET that redesigns how the `Props` class and Akka.DependencyInjection uses it. _These changes are non-breaking_, but please let us know if you run into any trouble at all.
+
+* [Akka: `Props` methods for propagating and setting `IActorProducer` are pretty weird](https://github.com/akkadotnet/akka.net/issues/3599)
+* [Akka: made `Deploy` methods virtual](https://github.com/akkadotnet/akka.net/pull/4868)
+* [Akka.DependencyInjection: `ServiceProviderProps` is broken - needs to be rewritten](https://github.com/akkadotnet/akka.net/issues/4853)
+* [Akka.Streams: FileIO sinks don't flush until completed](https://github.com/akkadotnet/akka.net/issues/4851)
+
+To see the [full set of fixes in Akka.NET v1.4.18, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/48).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |      
+| --- | --- | --- | --- |               
+| 3 | 431 | 451 | Aaron Stannard |      
+| 3 | 229 | 4980 | Gregorius Soedharmo |
+| 2 | 2 | 2 | dependabot-preview[bot] | 
+
+#### 1.4.17 March 09 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a more significant release of Akka.NET that solves a number of bugs, introduces new features, and more.
+
+**Introduction of Akka.Cluster.SBR - Lightbend's Split Brain Resolvers**
+In Akka.NET v1.4.17 we introduce a new set of Akka.Cluster split brain resolvers for Akka.NET, which are based on the recently open sourced Lightbend implementations of the same. We've [documented how to work with each of the new SBR types here](https://getakka.net/articles/clustering/split-brain-resolver.html), but here's the complete list:
+
+* `static-quorum` 
+* `keep-majority`
+* `keep-oldest`
+* `down-all`
+* `lease-majority`
+* `keep-referee` - only available with the legacy split brain resolver (still ships with Akka.NET.)
+
+Other bug fixes:
+
+* [Akka: Parse expressions where possible to avoid penalties for `.Compile()`](https://github.com/akkadotnet/akka.net/pull/4712)
+* [Akka: Ask can't find temporary actor inside async context](https://github.com/akkadotnet/akka.net/issues/4384)
+* [Akka: Add Serialization.WithTransport overload that takes TState](https://github.com/akkadotnet/akka.net/pull/4764)
+* [Akka.DependencyInjection: Allow different versions of MS Abstractions nuget package](https://github.com/akkadotnet/akka.net/pull/4739)
+* [Akka.DependencyInjection: `ServiceProviderProps` did not copy over `Deploy` and `SupervisorStrategy` properties properly](https://github.com/akkadotnet/akka.net/pull/4745)
+* [Akka.Cluster.Tools: on singleton-proxy setting buffer-size to 0 via Hocon fail on exception](https://github.com/akkadotnet/akka.net/issues/4763)
+* [Akka.Streams: InputStreamPublisher cannot be cancelled and StreamRef will be blocked](https://github.com/akkadotnet/akka.net/issues/4744)
+* [Akka.DistributedData: ORDictionary.DeltaGroup.Merge InvalidCastException](https://github.com/akkadotnet/akka.net/issues/4806)
+* [Akka.TestKit: `Expect(0)` with `EventFilter` does not work](https://github.com/akkadotnet/akka.net/issues/4770)
+
+To see the [full set of fixes in Akka.NET v1.4.17, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/47).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |         
+| --- | --- | --- | --- |                  
+| 20 | 282 | 237 | IgorFedchenko |         
+| 14 | 76 | 25 | Aaron Stannard |          
+| 13 | 17 | 17 | dependabot-preview[bot] | 
+| 8 | 1031 | 749 | Igor Fedchenko |        
+| 6 | 225 | 53 | Gregorius Soedharmo |     
+| 3 | 3 | 3 | Brah McDude |                
+| 2 | 328 | 21 | Drew |                    
+| 1 | 4053 | 59 | zbynek001 |              
+| 1 | 2 | 1 | Vagif Abilov |               
+
+#### 1.4.16 January 22 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+This is a tiny release of Akka.NET, aimed at solving a transient dependency issue with Akka.DependencyInjection:
+
+* [Akka.DependencyInjection: Allow different versions of MS Abstractions nuget package for Akka.DependencyInjection](https://github.com/akkadotnet/akka.net/pull/4739) - rolls back to Microsoft.Extensions.DependencyInjection.Abstractions 3.1 instead of 5.0
+
+#### 1.4.15 January 19 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.15 introduces a new module, Akka.DependencyInjection, which will replace Akka.DI.Core and all of the libraries which depend on it. This seemed like the easiest way to preserve backwards compatibility - simple deprecate the old package and replace it with a new one.
+
+So what does Akka.DependencyInjection do differently than Akka.DI.Core?
+
+1. **Allows users to pass in an [`IServiceProvider`](https://docs.microsoft.com/en-us/dotnet/api/system.iserviceprovider) into the `ActorSystem` before the latter is created, via [a new kind of programmatic configuration `Setup` that was introduced in Akka.NET v1.4](https://getakka.net/articles/concepts/configuration.html#programmatic-configuration-with-setup)**. This ensures that the `IServiceProvider` is immutable within an `ActorSystem`, a problem that we have currently with Akka.DI.Core.
+2. **Makes it easy to access the `IServiceProvider` via the `Akka.DependencyInjection.ServiceProvider.For(ActorSystem)` method**, which is what we can use to get access to the service provider in order to consume required services inside our actors.
+3. **Makes it possible to dependency inject some parameters will dynamically specifying some others**, something that users have been asking for since 2015.
+
+To see a full example of how to use Akka.DependencyInjection in concert with Microsoft.Extensions.DependencyInjection, please see https://getakka.net/articles/actors/dependency-injection.html
+
+Other changes:
+
+* [Akka: Add `WithConfigFallback` quality of life helper method to `BootstrapSetup`](https://github.com/akkadotnet/akka.net/pull/4714)
+* [Akka.MultiNodeTestRunner: Provide .NET 5.0 support for MultiNode TestKit](https://github.com/akkadotnet/akka.net/issues/4602)
+
+To see the [full set of fixes in Akka.NET v1.4.15, please see the milestone on Github](https://github.com/akkadotnet/akka.net/milestone/46).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 5351 | 4004 | Aaron Stannard |
+| 3 | 5 | 5 | dependabot-preview[bot] |
+| 2 | 369 | 170 | Ebere Abanonu |
+| 1 | 7 | 0 | Gregorius Soedharmo |
 
 #### 1.4.14 December 30 2020 ####
 **Maintenance Release for Akka.NET 1.4**

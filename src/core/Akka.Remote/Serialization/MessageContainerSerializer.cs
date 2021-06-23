@@ -1,13 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MessageContainerSerializer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Actor;
+using Akka.Remote.Serialization.Proto.Msg;
 using Akka.Serialization;
 using Akka.Util;
 using Google.Protobuf;
@@ -71,7 +73,6 @@ namespace Akka.Remote.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             var selectionEnvelope = Proto.Msg.SelectionEnvelope.Parser.ParseFrom(bytes);
-            var message = _payloadSupport.PayloadFrom(selectionEnvelope.Payload);
 
             var elements = new SelectionPathElement[selectionEnvelope.Pattern.Count];
             for (var i = 0; i < selectionEnvelope.Pattern.Count; i++)
@@ -83,6 +84,17 @@ namespace Akka.Remote.Serialization
                     elements[i] = new SelectChildPattern(p.Matcher);
                 if (p.Type == Proto.Msg.Selection.Types.PatternType.Parent)
                     elements[i] = new SelectParent();
+            }
+
+            object message;
+            try
+            {
+                message = _payloadSupport.PayloadFrom(selectionEnvelope.Payload);
+            }
+            catch (Exception ex)
+            {
+                throw new SerializationException(
+                    $"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} addressed to [{string.Join(",", elements.Select(e => e.ToString()))}]", ex);
             }
 
             return new ActorSelectionMessage(message, elements);

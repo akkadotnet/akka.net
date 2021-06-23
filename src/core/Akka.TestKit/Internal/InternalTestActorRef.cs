@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalTestActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -172,21 +172,18 @@ namespace Akka.TestKit.Internal
 
             var dispatcher = system.Dispatchers.Lookup(props.Deploy.Dispatcher);
 
-            var supervisorLocal = supervisor as LocalActorRef;
-            if (supervisorLocal != null)
+            if (supervisor is LocalActorRef supervisorLocal)
             {
                 supervisorLocal.Cell.ReserveChild(name);
             }
             else
             {
-                var supervisorRep = supervisor as RepointableActorRef;
-                if (supervisorRep != null)
+                if (supervisor is RepointableActorRef supervisorRep)
                 {
                     var repUnderlying = supervisorRep.Underlying;
                     if (repUnderlying is UnstartedCell)
                         throw new IllegalStateException("Cannot attach a TestActor to an unstarted top-level actor, ensure that it is started by sending a message and observing the reply");
-                    var cellUnderlying = repUnderlying as ActorCell;
-                    if (cellUnderlying != null)
+                    if (repUnderlying is ActorCell cellUnderlying)
                     {
                         cellUnderlying.ReserveChild(name);
                     }
@@ -197,7 +194,7 @@ namespace Akka.TestKit.Internal
                 }
             }
 
-            MailboxType mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
+            var mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
             var testActorRef = new InternalTestActorRef((ActorSystemImpl)system, props, dispatcher, mailbox, (IInternalActorRef)supervisor, supervisor.Path / name);
 
             // we need to start ourselves since the creation of an actor has been split into initialization and starting

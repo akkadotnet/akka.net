@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -525,7 +525,6 @@ namespace Akka.Cluster.Tools.Singleton
         /// <param name="message">The message that describes the error.</param>
         public ClusterSingletonManagerIsStuckException(string message) : base(message) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterSingletonManagerIsStuckException"/> class.
         /// </summary>
@@ -534,7 +533,6 @@ namespace Akka.Cluster.Tools.Singleton
         public ClusterSingletonManagerIsStuckException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,6 +18,7 @@ using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
 using Akka.Util;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests
 {
@@ -198,7 +199,7 @@ namespace Akka.Cluster.Tests
             probe.ExpectMsg<ClusterEvent.MemberLeft>();
             // MemberExited might not be published before MemberRemoved
             var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
-            removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
+            removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
 
             AwaitCondition(() => leaveTask.IsCompleted);
 
@@ -456,7 +457,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
-                removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
+                removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
             }
             finally
             {
@@ -490,7 +491,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
-                removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
+                removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
             }
             finally
             {
@@ -520,7 +521,7 @@ namespace Akka.Cluster.Tests
                 probe.ExpectMsg<ClusterEvent.MemberLeft>();
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)probe.FishForMessage(m => m is ClusterEvent.MemberRemoved);
-                removed.PreviousStatus.ShouldBeEquivalentTo(MemberStatus.Exiting);
+                removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
                 AwaitCondition(() => sys2.WhenTerminated.IsCompleted, TimeSpan.FromSeconds(10));
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys2).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterLeavingReason>();

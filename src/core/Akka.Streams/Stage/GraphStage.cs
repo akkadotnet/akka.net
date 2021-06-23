@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphStage.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -2191,14 +2191,12 @@ namespace Akka.Streams.Stage
         public static readonly StageActorRefNotInitializedException Instance = new StageActorRefNotInitializedException();
         private StageActorRefNotInitializedException() : base("You must first call GetStageActorRef(StageActorRef.Receive), to initialize the actor's behavior") { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="StageActorRefNotInitializedException"/> class.
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo" /> that holds the serialized object data about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information about the source or destination.</param>
         protected StageActorRefNotInitializedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
-#endif
     }
 
     /// <summary>

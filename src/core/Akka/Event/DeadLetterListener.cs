@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeadLetterListener.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -41,6 +41,8 @@ namespace Akka.Event
         protected override void PreStart()
         {
             _eventStream.Subscribe(Self, typeof(DeadLetter));
+            _eventStream.Subscribe(Self, typeof(Dropped));
+            _eventStream.Subscribe(Self, typeof(UnhandledMessage));
         }
 
         /// <summary>
@@ -85,10 +87,13 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
-                    IncrementCount();
-                    LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, "");
+                    if (!IsWrappedSuppressed(d))
+                    {
+                        IncrementCount();
+                        LogDeadLetter(d, "");
+                    }
                     return true;
                 }
                 return false;
@@ -99,17 +104,20 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
-                    IncrementCount();
-                    if (_count == _maxCount)
+                    if (!IsWrappedSuppressed(d))
                     {
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, ", no more dead letters will be logged");
-                        Context.Stop(Self);
-                    }
-                    else
-                    {
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, "");
+                        IncrementCount();
+                        if (_count == _maxCount)
+                        {
+                            LogDeadLetter(d, ", no more dead letters will be logged");
+                            Context.Stop(Self);
+                        }
+                        else
+                        {
+                            LogDeadLetter(d, "");
+                        }
                     }
                     return true;
                 }
@@ -121,18 +129,21 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
-                    IncrementCount();
-                    if (_count == _maxCount)
+                    if (!IsWrappedSuppressed(d))
                     {
-                        var doneMsg = $", no more dead letters will be logged in next [{suspendDuration}]";
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, doneMsg);
-                        Context.Become(ReceiveWhenSuspended(suspendDuration, Deadline.Now + suspendDuration));
-                    }
-                    else
-                    {
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, "");
+                        IncrementCount();
+                        if (_count == _maxCount)
+                        {
+                            var doneMsg = $", no more dead letters will be logged in next [{suspendDuration}]";
+                            LogDeadLetter(d, doneMsg);
+                            Context.Become(ReceiveWhenSuspended(suspendDuration, Deadline.Now + suspendDuration));
+                        }
+                        else
+                        {
+                            LogDeadLetter(d, "");
+                        }
                     }
                     return true;
                 }
@@ -144,15 +155,18 @@ namespace Akka.Event
         {
             return message =>
             {
-                if (message is DeadLetter deadLetter)
+                if (message is AllDeadLetters d)
                 {
-                    IncrementCount();
-                    if (suspendDeadline.IsOverdue)
+                    if (!IsWrappedSuppressed(d))
                     {
-                        var doneMsg = $", of which {(_count - _maxCount - 1).ToString()} were not logged. The counter will be reset now";
-                        LogDeadLetter(deadLetter.Message, deadLetter.Sender, deadLetter.Recipient, doneMsg);
-                        _count = 0;
-                        Context.Become(ReceiveWithSuspendLogging(suspendDuration));
+                        IncrementCount();
+                        if (suspendDeadline.IsOverdue)
+                        {
+                            var doneMsg = $", of which {(_count - _maxCount - 1)} were not logged. The counter will be reset now";
+                            LogDeadLetter(d, doneMsg);
+                            _count = 0;
+                            Context.Become(ReceiveWithSuspendLogging(suspendDuration));
+                        }
                     }
                     return true;
                 }
@@ -160,16 +174,48 @@ namespace Akka.Event
             };
         }
 
-        private void LogDeadLetter(object message, IActorRef snd, IActorRef recipient, string doneMsg)
+        private void LogDeadLetter(AllDeadLetters d, string doneMsg)
         {
-            var origin = ReferenceEquals(snd, Context.System.DeadLetters) ? "without sender" : $"from {snd.Path}";
+            var origin = IsReal(d.Sender) ? $" from {d.Sender}" : "";
+            var unwrapped = WrappedMessage.Unwrap(d.Message);
+            var messageStr = unwrapped?.GetType().Name ?? "null";
+            var wrappedIn = (d.Message is IWrappedMessage) ? $" wrapped in [${d.Message.GetType().Name}]" : "";
+
+            string logMessage;
+            switch (d)
+            {
+                case Dropped dropped:
+                    var destination = IsReal(d.Recipient) ? $" to {d.Recipient}" : "";
+                    logMessage = $"Message [{messageStr}]{wrappedIn}{origin}{destination} was dropped. {dropped.Reason}. " +
+                    $"[{_count}] dead letters encountered{doneMsg}. ";
+                    break;
+                case UnhandledMessage unhandled:
+                    destination = IsReal(d.Recipient) ? $" to {d.Recipient}" : "";
+                    logMessage = $"Message [{messageStr}]{wrappedIn}{origin}{destination} was unhandled. " +
+                    $"[{_count}] dead letters encountered{doneMsg}. ";
+                    break;
+                default:
+                    logMessage = $"Message [{messageStr}]{wrappedIn}{origin} to {d.Recipient} was not delivered. " +
+                    $"[{_count}] dead letters encountered{doneMsg}. " +
+                    $"If this is not an expected behavior then {d.Recipient} may have terminated unexpectedly. ";
+                    break;
+            }
             _eventStream.Publish(new Info(
-                recipient.Path.ToString(),
-                recipient.GetType(),
-                $"Message [{message.GetType().Name}] {origin} to {recipient.Path} was not delivered. [{_count.ToString()}] dead letters encountered{doneMsg}. " +
-                $"If this is not an expected behavior then {recipient.Path} may have terminated unexpectedly. " +
+                d.Recipient.Path.ToString(),
+                d.Recipient.GetType(),
+                logMessage +
                 "This logging can be turned off or adjusted with configuration settings 'akka.log-dead-letters' " +
                 "and 'akka.log-dead-letters-during-shutdown'."));
+        }
+
+        private bool IsReal(IActorRef snd)
+        {
+            return !ReferenceEquals(snd, ActorRefs.NoSender) && !ReferenceEquals(snd, Context.System.DeadLetters) && !(snd is DeadLetterActorRef);
+        }
+
+        private bool IsWrappedSuppressed(AllDeadLetters d)
+        {
+            return d is IWrappedMessage w && w.Message is IDeadLetterSuppression;
         }
 
         /// <summary>
@@ -209,9 +255,9 @@ namespace Akka.Event
             public TimeSpan TimeLeft { get { return When - DateTime.UtcNow; } }
 
             #region Overrides
-            
+
             /// <inheritdoc/>
-            public override bool Equals(object obj) => 
+            public override bool Equals(object obj) =>
                 obj is Deadline deadline && Equals(deadline);
 
             /// <inheritdoc/>

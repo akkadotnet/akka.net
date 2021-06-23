@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveTimeoutSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,25 +30,22 @@ namespace DocsExamples.Actors
         public class CheckTimeout : INotInfluenceReceiveTimeout { }
         public class ReceiveTimeoutActor : ReceiveActor
         {
-            private bool _timedOut = false;
+            private readonly TimeSpan _inactivityTimeout;
 
-            public ReceiveTimeoutActor()
+            public ReceiveTimeoutActor(TimeSpan inactivityTimeout, IActorRef receiver)
             {
+                _inactivityTimeout = inactivityTimeout;
+                
                 // if we don't 
                 Receive<ReceiveTimeout>(_ =>
                 {
-                    _timedOut = true;
-                });
-
-                Receive<CheckTimeout>(_ =>
-                {
-                    Sender.Tell(_timedOut);
+                    receiver.Tell("timeout");
                 });
             }
 
             protected override void PreStart()
             {
-                Context.SetReceiveTimeout(TimeSpan.FromMilliseconds(100));
+                Context.SetReceiveTimeout(_inactivityTimeout);
             }
         }
         // </ReceiveTimeoutActor>
@@ -56,14 +53,15 @@ namespace DocsExamples.Actors
         [Fact]
         public async Task ShouldReceiveTimeoutActors()
         {
-            var receiveTimeout = Sys.ActorOf(Props.Create(() => new ReceiveTimeoutActor()), "receive-timeout");
-            var timedout1 = await receiveTimeout.Ask<bool>(new CheckTimeout(), TimeSpan.FromMilliseconds(500));
-            timedout1.Should().BeFalse();
-
-            await Task.Delay(200); // wait 200 ms
-
-            var timedout2 = await receiveTimeout.Ask<bool>(new CheckTimeout(), TimeSpan.FromMilliseconds(500));
-            timedout2.Should().BeTrue();
+            var receiveTimeout = Sys.ActorOf(
+                Props.Create(() => new ReceiveTimeoutActor(TimeSpan.FromMilliseconds(100), TestActor)), 
+                "receive-timeout");
+            
+            // should not receive timeout initially
+            ExpectNoMsg(TimeSpan.FromMilliseconds(50));
+            
+            // then should receive timeout due to inactivity
+            ExpectMsg("timeout", TimeSpan.FromSeconds(30));
         }
     }
 }

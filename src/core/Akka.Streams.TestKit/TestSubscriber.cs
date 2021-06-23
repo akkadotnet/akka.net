@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestSubscriber.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.Streams.TestKit
             public override string ToString() => $"TestSubscriber.OnSubscribe({Subscription})";
         }
 
-        public struct OnNext<T> : ISubscriberEvent
+        public struct OnNext<T> : ISubscriberEvent, IEquatable<OnNext<T>>
         {
             public readonly T Element;
 
@@ -44,6 +44,21 @@ namespace Akka.Streams.TestKit
             }
 
             public override string ToString() => $"TestSubscriber.OnNext({Element})";
+
+            public bool Equals(OnNext<T> other)
+            {
+                return EqualityComparer<T>.Default.Equals(Element, other.Element);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is OnNext<T> other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return EqualityComparer<T>.Default.GetHashCode(Element);
+            }
         }
 
         public sealed class OnComplete: ISubscriberEvent

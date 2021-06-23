@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RepointableActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -292,12 +292,10 @@ namespace Akka.Actor
                 case "":
                     return ActorRefs.Nobody;
                 default:
-                    var nameAndUid = ActorCell.SplitNameAndUid(next);
-                    if (Lookup.TryGetChildStatsByName(nameAndUid.Name, out var stats))
+                    var (s, uid) = ActorCell.GetNameAndUid(next);
+                    if (Lookup.TryGetChildStatsByName(s, out var stats))
                     {
-                        var crs = stats as ChildRestartStats;
-                        var uid = nameAndUid.Uid;
-                        if (crs != null && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
+                        if (stats is ChildRestartStats crs && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
                         {
                             if (name.Skip(1).Any())
                                 return crs.Child.GetChild(name.Skip(1));
@@ -305,7 +303,7 @@ namespace Akka.Actor
                                 return crs.Child;
                         }
                     }
-                    else if (Lookup is ActorCell cell && cell.TryGetFunctionRef(nameAndUid.Name, nameAndUid.Uid, out var functionRef))
+                    else if (Lookup is ActorCell cell && cell.TryGetFunctionRef(s, uid, out var functionRef))
                     {
                         return functionRef;
                     }

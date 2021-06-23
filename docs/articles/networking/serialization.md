@@ -179,6 +179,19 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
+### Programatically change NewtonSoft JSON serializer settings
+You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
+
+Note that, while we try to keep everything to be compatible, there are no guarantee that your specific serializer settings use case is compatible with the rest of
+Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
+
+There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
+in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+object respectively.
+
 ### Serializer with String Manifest
 The `Serializer` illustrated above supports a class-based manifest (type hint). 
 For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
@@ -290,3 +303,80 @@ akka {
   }
 }
 ```
+
+## Cross platform serialization compatibility in Hyperion
+There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
+Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.
+
+There are two ways to set this up, one through the HOCON configuration file, and the other by using the `HyperionSerializerSetup` class.
+
+> [!NOTE]
+> Only the first successful name transformation is applied, the rest are ignored. 
+> If you are matching several similar names, make sure that you order them from the most specific match to the least specific one.
+
+### HOCON
+HOCON example:
+```
+akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides = {
+  netfx = [
+    {
+      fingerprint = "System.Private.CoreLib,%core%",
+      rename-from = "System.Private.CoreLib,%core%",
+      rename-to = "mscorlib,%core%"
+   }]
+  netcore = [
+    {
+      fingerprint = "mscorlib,%core%",
+      rename-from = "mscorlib,%core%",
+      rename-to = "System.Private.CoreLib,%core%"
+    }]
+  net = [
+    {
+      fingerprint = "mscorlib,%core%",
+      rename-from = "mscorlib,%core%",
+      rename-to = "System.Private.CoreLib,%core%"
+    }]
+}
+```
+
+In the example above, we're addressing the classic case where the core library name was changed between `mscorlib` in .NET Framework to `System.Private.CoreLib` in .NET Core.
+This transform is already included inside Hyperion as the default cross platform support, and used here as an illustration only. 
+
+The HOCON configuration section is composed of three object arrays named `netfx`, `netcore`, and `net`, each corresponds, respectively, to .NET Framework, .NET Core, and the new .NET 5.0 and beyond.
+The Hyperion serializer will automatically detects the platform it is running on currently and uses the correct array to use inside its deserializer. For example, if Hyperion detects 
+that it is running under .NET framework, then it will use the `netfx` array to do its deserialization transformation.
+
+The way it works that when the serializer detects that the type name contains the `fingerprint` string, it will replace the string declared in the `rename-from`
+property into the string declared in the `rename-to`.
+
+In code, we can write this behaviour as:
+```csharp
+if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
+```
+
+### HyperionSerializerSetup
+
+This behaviour can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+
+```csharp
+#if NETFRAMEWORK
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("System.Private.CoreLib,%core%")
+            ? str.Replace("System.Private.CoreLib,%core%", "mscorlib,%core%") : str
+    }
+#elif NETCOREAPP
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("mscorlib,%core%")
+            ? str.Replace("mscorlib,%core%", "System.Private.CoreLib,%core%") : str
+    }
+#endif
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+In the example above, we're using compiler directives to make sure that the correct name transform are used during compilation. 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ConfigurationFactory.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2018 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2018 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,12 +61,8 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the configuration file.</returns>
         public static Config Load()
         {
-#if CONFIGURATION
             var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
             return section.AkkaConfig;
-#else
-            return ConfigurationFactory.Empty;
-#endif
         }
 
         /// <summary>

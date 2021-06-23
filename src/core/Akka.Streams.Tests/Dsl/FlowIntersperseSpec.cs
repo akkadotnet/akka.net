@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowIntersperseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -101,6 +101,32 @@ namespace Akka.Streams.Tests.Dsl
 
             probe.ExpectSubscription();
             probe.ToStrict(TimeSpan.FromSeconds(1)).Aggregate((s, s1) => s + s1).Should().Be("[1]");
+        }
+        
+        [Fact]
+        public void A_Intersperse_must_not_surround_empty_stream_with_null_start_and_stop()
+        {
+            var probe =
+                Source.From(new int[0])
+                    .Select(x => x.ToString())
+                    .Intersperse(",")
+                    .RunWith(this.SinkProbe<string>(), Materializer);
+
+            probe.ExpectSubscription();
+            probe.ToStrict(TimeSpan.FromSeconds(1)).Count().Should().Be(0);
+        }
+        
+        [Fact]
+        public void A_Intersperse_must_not_surround_single_element_stream_with_null_start_and_stop()
+        {
+            var probe =
+                Source.From(new int[]{1})
+                    .Select(x => x.ToString())
+                    .Intersperse(",")
+                    .RunWith(this.SinkProbe<string>(), Materializer);
+
+            probe.ExpectSubscription();
+            probe.ToStrict(TimeSpan.FromSeconds(1)).Aggregate((s, s1) => s + s1).Should().Be("1");
         }
 
         [Fact]

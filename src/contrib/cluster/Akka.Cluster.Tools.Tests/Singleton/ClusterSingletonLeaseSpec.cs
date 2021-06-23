@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterSingletonLeaseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         private ClusterSingletonManagerSettings NextSettings() => ClusterSingletonManagerSettings.Create(Sys).WithSingletonName(NextName());
 
-        private string LeaseNameFor(ClusterSingletonManagerSettings settings) => $"AkkaSpec-singleton-akka://AkkaSpec/user/{settings.SingletonName}";
+        private string LeaseNameFor(ClusterSingletonManagerSettings settings) => $"{Sys.Name}-singleton-akka://{Sys.Name}/user/{settings.SingletonName}";
 
         [Fact]
         public void ClusterSingleton_with_lease_should_not_start_until_lease_is_available()

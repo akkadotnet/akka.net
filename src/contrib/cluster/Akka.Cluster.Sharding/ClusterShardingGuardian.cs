@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingGuardian.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -251,7 +251,9 @@ namespace Akka.Cluster.Sharding
 
         private ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
         {
-            var configuredSettings = ReplicatorSettings.Create(Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data"));
+            var config = Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data")
+                .WithFallback(Context.System.Settings.Config.GetConfig("akka.cluster.distributed-data"));
+            var configuredSettings = ReplicatorSettings.Create(config);
             var settingsWithRoles = configuredSettings.WithRole(shardingSettings.Role);
             if (shardingSettings.RememberEntities)
                 return settingsWithRoles;

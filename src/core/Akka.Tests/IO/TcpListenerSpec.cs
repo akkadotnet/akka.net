@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TcpListenerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,12 +19,14 @@ namespace Akka.Tests.IO
     public class TcpListenerSpec : AkkaSpec
     {
         public TcpListenerSpec()
-            : base(@"akka.io.tcp.register-timeout = 500ms
+            : base(@"
+                     akka.actor.serialize-creators = on
+                     akka.actor.serialize-messages = on
+                     akka.io.tcp.register-timeout = 500ms
                      akka.io.tcp.max-received-message-size = 1024
                      akka.io.tcp.direct-buffer-size = 512
                      akka.actor.serialize-creators = on
-                     akka.io.tcp.batch-accept-limit = 2
-                    ")
+                     akka.io.tcp.batch-accept-limit = 2")
         { }
 
         [Fact]

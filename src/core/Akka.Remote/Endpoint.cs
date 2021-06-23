@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Endpoint.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -191,7 +191,6 @@ namespace Akka.Remote
         /// <param name="cause">The exception that is the cause of the current exception.</param>
         public EndpointException(string message, Exception cause = null) : base(message, cause) { }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="EndpointException"/> class.
         /// </summary>
@@ -201,7 +200,6 @@ namespace Akka.Remote
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -325,6 +323,16 @@ namespace Akka.Remote
             : base(message)
         {
         }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EndpointDisassociatedException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected EndpointDisassociatedException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -347,6 +355,16 @@ namespace Akka.Remote
         /// <param name="message">The message that describes the error.</param>
         /// <param name="innerException">The exception that is the cause of the current exception.</param>
         public EndpointAssociationException(string message, Exception innerException) : base(message, innerException) { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="EndpointAssociationException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected EndpointAssociationException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
     }
 
     /// <summary>
@@ -360,6 +378,16 @@ namespace Akka.Remote
         /// <param name="message">The message that describes the error.</param>
         public OversizedPayloadException(string message)
             : base(message)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="OversizedPayloadException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected OversizedPayloadException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
         {
         }
     }
@@ -1139,7 +1167,7 @@ namespace Akka.Remote
             }
             _buffer.Clear();
 
-            if (_handle != null) _handle.Disassociate(_stopReason);
+            _handle?.Disassociate(_stopReason);
             EventPublisher.NotifyListeners(new DisassociatedEvent(LocalAddress, RemoteAddress, Inbound));
         }
 
@@ -1219,6 +1247,12 @@ namespace Akka.Remote
                 BecomeWritingOrSendBufferedMessages();
             });
             Receive<EndpointManager.Send>(send => EnqueueInBuffer(send));
+
+            // Ignore outgoing acks during take over, since we might have
+            // replaced the handle with a connection to a new, restarted, system
+            // and the ack might be targeted to the old incarnation.
+            // Relates to https://github.com/akka/akka/pull/20093
+            Receive<OutboundAck>(_ => { });
         }
 
         /// <summary>
@@ -1227,56 +1261,50 @@ namespace Akka.Remote
         /// <param name="message">TBD</param>
         protected override void Unhandled(object message)
         {
-            if (message is Terminated)
+            switch (message)
             {
-                var t = message as Terminated;
-                if (_reader == null || t.ActorRef.Equals(_reader))
+                case Terminated t:
                 {
-                    PublishAndThrow(new EndpointDisassociatedException("Disassociated"), LogLevel.DebugLevel);
-                }
-            }
-            else if (message is StopReading)
-            {
-                var stop = message as StopReading;
-                if (_reader != null)
-                {
-                    _reader.Tell(stop, stop.ReplyTo);
-                }
-                else
-                {
-                    // initializing, buffer and take care of it later when buffer is sent
-                    EnqueueInBuffer(message);
-                }
-            }
-            else if (message is TakeOver)
-            {
-                var takeover = message as TakeOver;
+                    if (_reader == null || t.ActorRef.Equals(_reader))
+                    {
+                        PublishAndThrow(new EndpointDisassociatedException("Disassociated"), LogLevel.DebugLevel);
+                    }
 
-                // Shutdown old reader
-                _handle.Disassociate();
-                _handle = takeover.ProtocolHandle;
-                takeover.ReplyTo.Tell(new TookOver(Self, _handle));
-                Become(Handoff);
-            }
-            else if (message is FlushAndStop)
-            {
-                _stopReason = DisassociateInfo.Shutdown;
-                Context.Stop(Self);
-            }
-            else if (message is OutboundAck)
-            {
-                var ack = message as OutboundAck;
-                _lastAck = ack.Ack;
-                if (_ackDeadline.IsOverdue)
-                    TrySendPureAck();
-            }
-            else if (message is AckIdleCheckTimer || message is FlushAndStopTimeout || message is BackoffTimer)
-            {
-                //ignore
-            }
-            else
-            {
-                base.Unhandled(message);
+                    break;
+                }
+                case StopReading stop when _reader != null:
+                    _reader.Tell(stop, stop.ReplyTo);
+                    break;
+                case StopReading stop:
+                    // initializing, buffer and take care of it later when buffer is sent
+                    EnqueueInBuffer(stop);
+                    break;
+                case TakeOver takeover:
+                    // Shutdown old reader
+                    _handle.Disassociate("the association was replaced by a new one", _log);
+                    _handle = takeover.ProtocolHandle;
+                    takeover.ReplyTo.Tell(new TookOver(Self, _handle));
+                    Become(Handoff);
+                    break;
+                case FlushAndStop _:
+                    _stopReason = DisassociateInfo.Shutdown;
+                    Context.Stop(Self);
+                    break;
+                case OutboundAck ack:
+                {
+                    _lastAck = ack.Ack;
+                    if (_ackDeadline.IsOverdue)
+                        TrySendPureAck();
+                    break;
+                }
+                case AckIdleCheckTimer _:
+                case FlushAndStopTimeout _:
+                case BackoffTimer _:
+                    //ignore
+                    break;
+                default:
+                    base.Unhandled(message);
+                    break;
             }
         }
 
@@ -1480,7 +1508,7 @@ namespace Akka.Remote
             {
                 _log.Error(
                   ex,
-                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
                   send.Message.GetType());
                 return true;
             }

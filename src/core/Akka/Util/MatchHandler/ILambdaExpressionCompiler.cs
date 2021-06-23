@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ILambdaExpressionCompiler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,15 +22,6 @@ namespace Akka.Tools.MatchHandler
         /// <param name="expression">The expression to compile</param>
         /// <returns>A delegate containing the compiled version of the lambda.</returns>
         Delegate Compile(LambdaExpression expression);
-
-#if !CORECLR
-        /// <summary>
-        /// Compiles the lambda into a method definition.
-        /// </summary>
-        /// <param name="expression">The expression to compile</param>
-        /// <param name="method">A <see cref="MethodBuilder"/> which will be used to hold the lambda's IL.</param>
-        void CompileToMethod(LambdaExpression expression, MethodBuilder method);
-#endif
     }
 }
 

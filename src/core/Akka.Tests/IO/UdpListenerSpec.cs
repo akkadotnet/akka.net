@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UdpListenerSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,17 +13,21 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 using UdpListener = Akka.IO.UdpListener;
 
 namespace Akka.Tests.IO
 {
     public class UdpListenerSpec : AkkaSpec
     {
-        public UdpListenerSpec()
-            : base(@"akka.io.udp.max-channels = unlimited
+        public UdpListenerSpec(ITestOutputHelper output)
+            : base(@"
+                    akka.actor.serialize-creators = on
+                    akka.actor.serialize-messages = on
+                    akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100
-                    akka.io.udp.direct-buffer-size = 1024")
+                    akka.io.udp.direct-buffer-size = 1024", output)
         { }
 
         [Fact]

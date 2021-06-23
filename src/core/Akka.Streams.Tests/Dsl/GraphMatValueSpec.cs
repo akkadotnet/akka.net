@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphMatValueSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -228,7 +228,7 @@ namespace Akka.Streams.Tests.Dsl
             var source = Source.FromGraph(GraphDsl.Create(b => new SourceShape<NotUsed>(b.MaterializedValue)));
             var task = source.RunWith(Sink.Seq<NotUsed>(), materializer);
             task.Wait(TimeSpan.FromSeconds(3));
-            task.Result.ShouldAllBeEquivalentTo(NotUsed.Instance);
+            task.Result.Should().BeEquivalentTo(NotUsed.Instance);
         }
 
         [Theory]

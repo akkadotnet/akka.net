@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LruBoundedCache.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2020 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2020 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -25,7 +25,7 @@ namespace Akka.Remote.Serialization
         /// <returns>A 32-bit pseudo-random hash value.</returns>
         public static int OfString(string s)
         {
-            var chars = s.ToCharArray();
+            var chars = s.AsSpan();
             var s0 = 391408L; // seed value 1, DON'T CHANGE
             var s1 = 601258L; // seed value 2, DON'T CHANGE
             unchecked

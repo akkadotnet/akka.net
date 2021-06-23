@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="Bugfix4353Specs.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
@@ -29,7 +36,7 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void Bugfix4353Spec_Cluster_of_3_must_reach_cnovergence()
+        public void Bugfix4353Spec_Cluster_of_3_must_reach_convergence()
         {
             AwaitClusterUp(First, Second, Third);
             EnterBarrier("after-1");

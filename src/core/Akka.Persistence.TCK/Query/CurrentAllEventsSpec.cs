@@ -1,4 +1,11 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="CurrentAllEventsSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
@@ -13,7 +20,10 @@ namespace Akka.Persistence.TCK.Query
 {
     public class CurrentAllEventsSpec : Akka.TestKit.Xunit2.TestKit
     {
-        private static readonly Config InternalConfig = "akka.persistence.query.journal.sql.max-buffer-size = 3";
+        // Expect should be passing by default, need to make them less sencitive to timing
+        private static readonly Config DefaultTimeoutConfig = "akka.test.single-expect-default = 30s";
+        
+        private static readonly Config InternalConfig = DefaultTimeoutConfig.WithFallback("akka.persistence.query.journal.sql.max-buffer-size = 3");
 
         protected ActorMaterializer Materializer { get; }
 
