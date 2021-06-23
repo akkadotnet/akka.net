@@ -19,6 +19,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         private const int Timeout = 1000;
         private const int ExpectedTimeout = Timeout * TimeFactor;
         private const int Margin = 1000; // margin for GC
+        private const int DiffDelta = 100; 
 
         public DilatedTests()
             : base("akka.test.timefactor=" + TimeFactor)
@@ -69,7 +70,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
 
         private static void AssertDilated(double diff, string message = null)
         {
-            Assert.True(diff >= ExpectedTimeout, message);
+            Assert.True(diff >= ExpectedTimeout - DiffDelta, message);
             Assert.True(diff < ExpectedTimeout + Margin, message); // margin for GC
         }
     }
