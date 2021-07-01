@@ -315,7 +315,7 @@ namespace Akka.Actor
             BecomeStacked(m => { receive(m); return true; });
         }
 
-        private long NewUid()
+        private static long NewUid()
         {
             // Note that this uid is also used as hashCode in ActorRef, so be careful
             // to not break hashing if you change the way uid is generated
