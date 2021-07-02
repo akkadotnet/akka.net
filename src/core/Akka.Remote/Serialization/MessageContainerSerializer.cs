@@ -94,7 +94,7 @@ namespace Akka.Remote.Serialization
             catch (Exception ex)
             {
                 throw new SerializationException(
-                    $"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} addressed to [{string.Join(",", elements.Select(e => e.ToString()))}]", ex);
+                    $"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} addressed to [{string.Join(",", elements.Select(e => e.ToString()))}]. {ex.Message}", ex);
             }
 
             return new ActorSelectionMessage(message, elements);
