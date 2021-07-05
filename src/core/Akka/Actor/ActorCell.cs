@@ -160,9 +160,9 @@ namespace Akka.Actor
         internal static Props TerminatedProps { get; } = new TerminatedProps();
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API - used for scheduling continuations inside actor
         /// </summary>
-        public ActorTaskScheduler TaskScheduler
+        public virtual ActorTaskScheduler TaskScheduler
         {
             get
             {

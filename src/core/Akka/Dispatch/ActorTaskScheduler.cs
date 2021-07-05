@@ -16,7 +16,7 @@ using Akka.Util.Internal;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public class ActorTaskScheduler : TaskScheduler
     {
@@ -35,27 +35,19 @@ namespace Akka.Dispatch
             _actorCell = actorCell;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override int MaximumConcurrencyLevel
         {
             get { return 1; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             return null;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="task">TBD</param>
+        /// <inheritdoc/>
         protected override void QueueTask(Task task)
         {
             if ((task.CreationOptions & TaskCreationOptions.LongRunning) == TaskCreationOptions.LongRunning)
@@ -94,12 +86,7 @@ namespace Akka.Dispatch
             TryExecuteTask(task);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="task">TBD</param>
-        /// <param name="taskWasPreviouslyQueued">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
             // Prevent inline execution, it will execute inline anyway in QueueTask if we
@@ -121,7 +108,7 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to schedule a message inside the <see cref="ActorCell.Current"/>
         /// </summary>
         /// <param name="asyncAction">TBD</param>
         /// <exception cref="InvalidOperationException">
