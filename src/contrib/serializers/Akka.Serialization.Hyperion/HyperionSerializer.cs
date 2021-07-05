@@ -129,17 +129,9 @@ namespace Akka.Serialization
                     return res;
                 }
             }
-            catch (TypeLoadException e)
+            catch (Exception ex)
             {
-                throw new SerializationException(e.Message, e);
-            }
-            catch(NotSupportedException e)
-            {
-                throw new SerializationException(e.Message, e);
-            }
-            catch (ArgumentException e)
-            {
-                throw new SerializationException(e.Message, e);
+                throw new SerializationException($"Failed to deserialize instance of type {type}. {ex.Message}", ex);
             }
         }
 

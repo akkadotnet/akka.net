@@ -207,7 +207,7 @@ namespace Akka.TestKit.Tests.Xunit2.TestEventListenerTests
         [Fact]
         public void Make_sure_async_works()
         {
-            _testingEventFilter.ForLogLevel(LogLevel).Expect(1, TimeSpan.FromMilliseconds(100), () =>
+            _testingEventFilter.ForLogLevel(LogLevel).Expect(1, TimeSpan.FromSeconds(2), () =>
             {
                 Task.Delay(TimeSpan.FromMilliseconds(10)).ContinueWith(t => { LogMessage("whatever"); });
             });

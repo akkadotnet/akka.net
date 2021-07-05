@@ -229,12 +229,16 @@ namespace Akka.Cluster.Sharding
         public ShardState(string shardId, System.Collections.Immutable.IImmutableSet<string> entityIds) { }
     }
     [Akka.Annotations.ApiMayChangeAttribute()]
+    [Akka.Annotations.DoNotInheritAttribute()]
     public class ShardedDaemonProcess : Akka.Actor.IExtension
     {
         public ShardedDaemonProcess(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.Cluster.Sharding.ShardedDaemonProcess Get(Akka.Actor.ActorSystem system) { }
         public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, object stopMessage) { }
+        [System.ObsoleteAttribute("Use the overloaded one which accepts a stopMessage instead.")]
         public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings, object stopMessage) { }
     }
     public class ShardedDaemonProcessExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ShardedDaemonProcess>
     {
