@@ -4,7 +4,7 @@ title: Akka.NET Nightly Builds
 ---
 
 # Nightly & Developer Builds
-If you're interested in working on the Akka.NET project or just want to try out the very latest Akka.NET edge releases, you can subscribe to the project's package feed.
+If you're interested in working on the Akka.NET project or just want to try out the very latest Akka.NET edge releases, you can subscribe to the project's nightly package feed.
 
 ## Nightly Package Feed URL
 Below is the URL for the Akka.NET nightly package feeds.
