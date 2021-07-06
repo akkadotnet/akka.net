@@ -74,7 +74,7 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef Sender { get; }
         public Akka.Actor.ActorSystem System { get; }
         public Akka.Actor.Internal.ActorSystemImpl SystemImpl { get; }
-        public Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
+        public virtual Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
         public virtual Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null) { }
         public Akka.Actor.ActorSelection ActorSelection(string path) { }
         public Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath path) { }
@@ -2482,6 +2482,8 @@ namespace Akka.Dispatch
         public object CurrentMessage { get; }
         public override int MaximumConcurrencyLevel { get; }
         protected override System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> GetScheduledTasks() { }
+        protected virtual void OnAfterTaskCompleted() { }
+        protected virtual void OnBeforeTaskStarted() { }
         protected override void QueueTask(System.Threading.Tasks.Task task) { }
         public static void RunTask(System.Action action) { }
         public static void RunTask(System.Func<System.Threading.Tasks.Task> asyncAction) { }
