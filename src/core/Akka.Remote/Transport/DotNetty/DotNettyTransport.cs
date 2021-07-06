@@ -170,7 +170,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
             catch (Exception ex)
             {
-                throw new RemoteTransportException($"Failed to bind to [{listenAddress}]")
+                throw new RemoteTransportException($"Failed to bind to [{listenAddress}]");
             }
         }
 
