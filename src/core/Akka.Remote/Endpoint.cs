@@ -1500,7 +1500,7 @@ namespace Akka.Remote
             {
                 _log.Error(
                   ex,
-                  "Serializer not defined for message type [{0}]. Transient association error (association remains live)",
+                  "Serialization failed for message [{0}]. Transient association error (association remains live)",
                   send.Message.GetType());
                 return true;
             }
@@ -1981,8 +1981,8 @@ namespace Akka.Remote
         private void LogTransientSerializationError(Message msg, Exception error)
         {
             var sm = msg.SerializedMessage;
-            _log.Warning(
-              "Serializer not defined for message with serializer id [{0}] and manifest [{1}]. " +
+            _log.Warning(error,
+              "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
                 "Transient association error (association remains live). {2}",
               sm.SerializerId,
               sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
