@@ -17,7 +17,9 @@ using Akka.Actor.Internal;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Used to resolve 
     /// </summary>
     class ActorCellKeepingSynchronizationContext : SynchronizationContext
     {
@@ -32,11 +34,7 @@ namespace Akka.TestKit
             _cell = cell;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="d">TBD</param>
-        /// <param name="state">TBD</param>
+        /// <inheritdoc/>
         public override void Post(SendOrPostCallback d, object state)
         {
             ThreadPool.QueueUserWorkItem(_ =>
@@ -58,27 +56,22 @@ namespace Akka.TestKit
             }, state);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="d">TBD</param>
-        /// <param name="state">TBD</param>
+        /// <inheritdoc/>
         public override void Send(SendOrPostCallback d, object state)
         {
-            var tcs = new TaskCompletionSource<int>();
-            Post(_ =>
+            var oldCell = InternalCurrentActorCellKeeper.Current;
+            var oldContext = Current;
+            SetSynchronizationContext(this);
+            InternalCurrentActorCellKeeper.Current = _cell;
+            try
             {
-                try
-                {
-                    d(state);
-                    tcs.SetResult(0);
-                }
-                catch (Exception e)
-                {
-                    tcs.TrySetException(e);
-                }
-            }, state);
-            tcs.Task.Wait();
+                d(state);
+            }
+            finally
+            {
+                InternalCurrentActorCellKeeper.Current = oldCell;
+                SetSynchronizationContext(oldContext);
+            }
         }
     }
 }

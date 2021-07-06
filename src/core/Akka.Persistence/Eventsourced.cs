@@ -581,7 +581,7 @@ namespace Akka.Persistence
                 return t;
             };
 
-            Dispatch.ActorTaskScheduler.RunTask(wrap);
+            ActorCell.Current.TaskScheduler.RunTask(wrap);
         }
 
         private void ChangeState(EventsourcedState state)

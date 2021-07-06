@@ -31,18 +31,18 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
-        protected void RunTask(Action action)
+        protected static void RunTask(Action action)
         {
-            ActorTaskScheduler.RunTask(action);
+            ((ActorCell)Context).TaskScheduler.RunTask(action);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
-        protected void RunTask(Func<Task> action)
+        protected static void RunTask(Func<Task> action)
         {
-            ActorTaskScheduler.RunTask(action);
+            ((ActorCell)Context).TaskScheduler.RunTask(action);
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Akka.Actor
         /// Changes the actor's behavior and replaces the current receive handler with the specified handler.
         /// </summary>
         /// <param name="receive">The new message handler.</param>
-        protected void Become(UntypedReceive receive)
+        protected static void Become(UntypedReceive receive)
         {
             Context.Become(receive);
         }

@@ -87,7 +87,7 @@ namespace Akka.Actor
         protected void Become(Action configure)
         {
             var newHandler = CreateNewHandler(configure);
-            base.Become(m => ExecutePartialMessageHandler(m, newHandler));
+            Become(m => ExecutePartialMessageHandler(m, newHandler));
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Akka.Actor
             return m =>
             {
                 Task Wrap() => asyncHandler(m);
-                ActorTaskScheduler.RunTask(Wrap);
+                (ActorCell.Current.TaskScheduler).RunTask(Wrap);
             };
         }
 

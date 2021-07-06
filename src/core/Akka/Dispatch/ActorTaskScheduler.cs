@@ -16,7 +16,7 @@ using Akka.Util.Internal;
 namespace Akka.Dispatch
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public class ActorTaskScheduler : TaskScheduler
     {
@@ -35,27 +35,19 @@ namespace Akka.Dispatch
             _actorCell = actorCell;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override int MaximumConcurrencyLevel
         {
             get { return 1; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             return null;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="task">TBD</param>
+        /// <inheritdoc/>
         protected override void QueueTask(Task task)
         {
             if ((task.CreationOptions & TaskCreationOptions.LongRunning) == TaskCreationOptions.LongRunning)
@@ -94,12 +86,7 @@ namespace Akka.Dispatch
             TryExecuteTask(task);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="task">TBD</param>
-        /// <param name="taskWasPreviouslyQueued">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
             // Prevent inline execution, it will execute inline anyway in QueueTask if we
@@ -111,7 +98,7 @@ namespace Akka.Dispatch
         /// TBD
         /// </summary>
         /// <param name="action">TBD</param>
-        public static void RunTask(Action action)
+        public virtual void RunTask(Action action)
         {
             RunTask(() =>
             {
@@ -121,46 +108,45 @@ namespace Akka.Dispatch
         }
 
         /// <summary>
-        /// TBD
+        /// Attempts to schedule a message inside the <see cref="ActorCell.Current"/>
         /// </summary>
         /// <param name="asyncAction">TBD</param>
         /// <exception cref="InvalidOperationException">
         /// This exception is thrown if this method is called outside an actor context.
         /// </exception>
-        public static void RunTask(Func<Task> asyncAction)
+        public virtual void RunTask(Func<Task> asyncAction)
         {
-            var context = ActorCell.Current;
-
-            if (context == null)
-                throw new InvalidOperationException("RunTask must be called from an actor context.");
-
-            var dispatcher = context.Dispatcher;
+            var dispatcher = _actorCell.Dispatcher;
 
             //suspend the mailbox
-            dispatcher.Suspend(context);
-
-            ActorTaskScheduler actorScheduler = context.TaskScheduler;
-            actorScheduler.CurrentMessage = context.CurrentMessage;
+            dispatcher.Suspend(_actorCell);
+            
+            CurrentMessage = _actorCell.CurrentMessage;
+            var actorScheduler = this;
 
             Task<Task>.Factory.StartNew(asyncAction, CancellationToken.None, TaskCreationOptions.None, actorScheduler)
                               .Unwrap()
-                              .ContinueWith(parent =>
-                              {
-                                  Exception exception = GetTaskException(parent);
+                              .ContinueWith(parent => { HandleTaskResult(parent, dispatcher, actorScheduler); }, actorScheduler);
+        }
 
-                                  if (exception == null)
-                                  {
-                                      dispatcher.Resume(context);
+        protected virtual void HandleTaskResult(Task parent, MessageDispatcher dispatcher, ActorTaskScheduler actorScheduler)
+        {
+            var exception = GetTaskException(parent);
 
-                                      context.CheckReceiveTimeout();
-                                  }
-                                  else
-                                  {
-                                      context.Self.AsInstanceOf<IInternalActorRef>().SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
-                                  }
-                                  //clear the current message field of the scheduler
-                                  actorScheduler.CurrentMessage = null;
-                              }, actorScheduler);
+            if (exception == null)
+            {
+                dispatcher.Resume(_actorCell);
+
+                _actorCell.CheckReceiveTimeout();
+            }
+            else
+            {
+                _actorCell.Self.AsInstanceOf<IInternalActorRef>()
+                    .SendSystemMessage(new ActorTaskSchedulerMessage(exception, actorScheduler.CurrentMessage));
+            }
+
+            //clear the current message field of the scheduler
+            actorScheduler.CurrentMessage = null;
         }
 
         private static Exception GetTaskException(Task task)
