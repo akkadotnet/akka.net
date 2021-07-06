@@ -21,7 +21,6 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingMessageSerializerSpec : AkkaSpec
     {
-        private SerializerWithStringManifest serializer;
         private IActorRef region1;
         private IActorRef region2;
         private IActorRef region3;
@@ -37,7 +36,6 @@ namespace Akka.Cluster.Sharding.Tests
 
         public ClusterShardingMessageSerializerSpec() : base(SpecConfig)
         {
-            serializer = new ClusterShardingMessageSerializer((ExtendedActorSystem)Sys);
             region1 = Sys.ActorOf(Props.Empty, "region1");
             region2 = Sys.ActorOf(Props.Empty, "region2");
             region3 = Sys.ActorOf(Props.Empty, "region3");
@@ -47,6 +45,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void CheckSerialization(object obj)
         {
+            var serializer = (SerializerWithStringManifest) Sys.Serialization.FindSerializerFor(obj);
+            serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
             var blob = serializer.ToBinary(obj);
             var reference = serializer.FromBinary(blob, serializer.Manifest(obj));
             reference.Should().Be(obj);
