@@ -159,12 +159,19 @@ namespace Akka.Remote.Transport.DotNetty
             if (InternalTransport != TransportMode.Tcp)
                 throw new NotImplementedException("Haven't implemented UDP transport at this time");
 
-            if (listenAddress is DnsEndPoint dns)
+            try
             {
-                listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
-            }
+                if (listenAddress is DnsEndPoint dns)
+                {
+                    listenAddress = await DnsToIPEndpoint(dns).ConfigureAwait(false);
+                }
 
-            return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
+                return await ServerFactory().BindAsync(listenAddress).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                throw new RemoteTransportException($"Failed to bind to [{listenAddress}]")
+            }
         }
 
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
