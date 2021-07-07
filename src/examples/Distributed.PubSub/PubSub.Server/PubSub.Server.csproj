@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Akka.Cluster.Tools" Version="1.4.21" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\FSharp.PubSub.Messages\FSharp.PubSub.Messages.fsproj" />
+      <ProjectReference Include="..\PubSub.Messages\PubSub.Messages.csproj" />
+    </ItemGroup>
+
+</Project>
