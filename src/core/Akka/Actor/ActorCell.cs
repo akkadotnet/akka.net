@@ -162,7 +162,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorTaskScheduler TaskScheduler
+        public virtual ActorTaskScheduler TaskScheduler
         {
             get
             {
