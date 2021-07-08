@@ -8,12 +8,9 @@
 using System;
 using System.Linq;
 using System.Net.Http;
-using System.Threading.Tasks;
-using Akka;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.TestKit.Xunit2;
-using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,19 +36,21 @@ namespace DocsExamples.Streams
             #region restart-with-backoff-source
             var httpClient = new HttpClient();
 
-            var restartSource = RestartSource.WithBackoff(() =>
-                {
-                    // Create a source from a task
-                    return Source.FromTask(
-                        httpClient.GetAsync("http://example.com/eventstream") // Make a single request
-                    )
-                    .Select(c => c.Content.ReadAsStringAsync())
-                    .Select(c => c.Result);
-                }, 
+            var settings = RestartSettings.Create(
                 minBackoff: TimeSpan.FromSeconds(3), 
                 maxBackoff: TimeSpan.FromSeconds(30),
                 randomFactor: 0.2 // adds 20% "noise" to vary the intervals slightly
-            );
+            ).WithMaxRestarts(20, TimeSpan.FromMinutes(5)); // limits the amount of restarts to 20 within 5 minutes
+
+            var restartSource = RestartSource.WithBackoff(() =>
+            {
+                // Create a source from a task
+                return Source.FromTask(
+                    httpClient.GetAsync("http://example.com/eventstream") // Make a single request
+                )
+                .Select(c => c.Content.ReadAsStringAsync())
+                .Select(c => c.Result);
+            }, settings);
             #endregion
 
             #region with-kill-switch
