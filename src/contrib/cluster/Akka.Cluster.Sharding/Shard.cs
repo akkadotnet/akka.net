@@ -295,7 +295,7 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class GetShardStats : IShardQuery
+        public sealed class GetShardStats : IShardQuery, IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -311,7 +311,7 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class ShardStats
+        public sealed class ShardStats : IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
