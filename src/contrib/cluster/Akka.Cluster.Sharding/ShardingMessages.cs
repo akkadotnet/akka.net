@@ -281,7 +281,7 @@ namespace Akka.Cluster.Sharding
     /// and what entities are running on each of those shards.
     /// </summary>
     [Serializable]
-    public sealed class GetShardRegionState : IShardRegionQuery
+    public sealed class GetShardRegionState : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -297,7 +297,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetShardRegionState"/> If gathering the shard information times out the set of shards will be empty.
     /// </summary>
     [Serializable]
-    public sealed class CurrentShardRegionState
+    public sealed class CurrentShardRegionState : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD

@@ -66,6 +66,10 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string GetCurrentRegionsManifest = "DG";
         private const string CurrentRegionsManifest = "DH";
 
+        private const string GetShardRegionStateManifest = "FC";
+        private const string ShardStateManifest = "FD";
+        private const string CurrentShardRegionStateManifest = "FE";
+        
         private const string GetClusterShardingStatsManifest = "GS"; // This is "DE" in JVM
         private const string ClusterShardingStatsManifest = "CS"; // This is "DF" in JVM
 
@@ -115,9 +119,12 @@ namespace Akka.Cluster.Sharding.Serialization
                 
                 {GetCurrentRegionsManifest, bytes => GetCurrentRegions.Instance},
                 {CurrentRegionsManifest, bytes => CurrentRegionsFromBinary(bytes) },
-
                 {StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
-                {StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) }
+                {StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) },
+                {CurrentShardRegionStateManifest, bytes => CurrentShardRegionStateFromBinary(bytes) },
+                {GetShardRegionStateManifest, bytes => GetShardRegionState.Instance},
+                {ShardStateManifest, bytes => ShardStateFromBinary(bytes)},
+
             };
         }
 
@@ -165,6 +172,9 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ClusterShardingStats o: return ClusterShardingStatsToProto(o).ToByteArray();
                 case GetCurrentRegions o: return Empty;
                 case CurrentRegions o: return CurrentRegionsToProto(o).ToByteArray();
+                case GetShardRegionState _: return Empty;
+                case ShardState o: return ShardStateToProto(o).ToByteArray();
+                case CurrentShardRegionState o: return CurrentShardRegionStateToProto(o).ToByteArray();
             }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
@@ -233,6 +243,9 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ClusterShardingStats _: return ClusterShardingStatsManifest;
                 case GetCurrentRegions _: return GetCurrentRegionsManifest;
                 case CurrentRegions _: return CurrentRegionsManifest;
+                case GetShardRegionState _: return GetShardRegionStateManifest;
+                case ShardState _: return ShardStateManifest;
+                case CurrentShardRegionState _: return CurrentShardRegionStateManifest;
             }
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
         }
@@ -505,6 +518,59 @@ namespace Akka.Cluster.Sharding.Serialization
             }
 
             return new CurrentRegions(set.ToImmutableHashSet());
+        }
+        
+        // ShardState
+        private static Proto.Msg.ShardState ShardStateToProto(ShardState state)
+        {
+            var p = new Proto.Msg.ShardState();
+            p.ShardId = state.ShardId;
+            foreach (var id in state.EntityIds)
+            {
+                p.EntityIds.Add(id);
+            }
+
+            return p;
+        }
+
+        private static ShardState ShardStateFrom(Proto.Msg.ShardState state)
+        {
+            var set = new HashSet<string>();
+            foreach (var id in state.EntityIds)
+            {
+                set.Add(id);
+            }
+
+            return new ShardState(state.ShardId, set.ToImmutableHashSet());
+        }
+
+        private static ShardState ShardStateFromBinary(byte[] b)
+        {
+            return ShardStateFrom(Proto.Msg.ShardState.Parser.ParseFrom(b));
+        }
+
+        // CurrentShardRegionState
+        private static Proto.Msg.CurrentShardRegionState CurrentShardRegionStateToProto(CurrentShardRegionState state)
+        {
+            var p = new Proto.Msg.CurrentShardRegionState();
+            foreach (var shard in state.Shards)
+            {
+                p.Shards.Add(ShardStateToProto(shard));
+            }
+
+            return p;
+        }
+
+        private static CurrentShardRegionState CurrentShardRegionStateFromBinary(byte[] b)
+        {
+            var p = Proto.Msg.CurrentShardRegionState.Parser.ParseFrom(b);
+            var set = new HashSet<ShardState>();
+            foreach (var shard in p.Shards)
+            {
+                set.Add(ShardStateFrom(shard));
+            }
+
+            return new CurrentShardRegionState(set.ToImmutableHashSet());
         }
         
         private static AddressData AddressToProto(Address address)
