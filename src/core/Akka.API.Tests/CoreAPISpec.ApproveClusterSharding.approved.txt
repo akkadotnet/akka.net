@@ -77,12 +77,12 @@ namespace Akka.Cluster.Sharding
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class CurrentRegions
+    public sealed class CurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable
     {
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> Regions;
         public CurrentRegions(System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> regions) { }
     }
-    public sealed class CurrentShardRegionState
+    public sealed class CurrentShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable
     {
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> Shards;
         public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards) { }
@@ -101,11 +101,11 @@ namespace Akka.Cluster.Sharding
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IShardRegionQuery
+    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetCurrentRegions Instance;
     }
-    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IShardRegionQuery
+    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetShardRegionState Instance;
     }
