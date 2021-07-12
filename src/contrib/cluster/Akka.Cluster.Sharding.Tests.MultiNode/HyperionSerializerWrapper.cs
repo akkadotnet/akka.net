@@ -39,28 +39,32 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
         {
             if (obj is IClusterShardingSerializable)
                 throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {obj.GetType().FullName}");
-            var typeName = obj.GetType().AssemblyQualifiedName;
-            if(typeName.StartsWith("Akka.Cluster.Sharding") && !typeName.Contains("Tests"))
-                throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {typeName}");
+            
+            // IShardRegionCommand isn't serialized using cluster sharding serializer
+            if (!(obj is IShardRegionCommand))
+            {
+                var typeName = obj.GetType().AssemblyQualifiedName;
+                if(typeName.StartsWith("Akka.Cluster.Sharding") && !typeName.Contains("Tests"))
+                    throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {typeName}");
+            }
 
             return _serializer.ToBinary(obj);
         }
 
         public override object FromBinary(byte[] bytes, Type type)
         {
-            if (type != null)
-            {
-                var name = type.AssemblyQualifiedName;
-                if(name.StartsWith("Akka.Cluster.Sharding") && !name.Contains("Tests"))
-                    throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {name}");
-            }
-            
             var obj = _serializer.FromBinary(bytes, type);
+            
             if (obj is IClusterShardingSerializable)
                 throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {obj.GetType().FullName}");
-            var typeName = obj.GetType().AssemblyQualifiedName;
-            if(typeName.StartsWith("Akka.Cluster.Sharding") && !typeName.Contains("Tests"))
-                throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {typeName}");
+            
+            // IShardRegionCommand isn't serialized using cluster sharding serializer
+            if (!(obj is IShardRegionCommand))
+            {
+                var typeName = obj.GetType().AssemblyQualifiedName;
+                if(typeName.StartsWith("Akka.Cluster.Sharding") && !typeName.Contains("Tests"))
+                    throw new Exception($"THIS ISN'T SUPPOSED TO BE SERIALIZED. Type: {typeName}");
+            }
             return obj;
         }
     }

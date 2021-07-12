@@ -63,9 +63,11 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string ShardStatsManifest = "DB";
         private const string GetShardRegionStatsManifest = "DC";
         private const string ShardRegionStatsManifest = "DD";
+        private const string GetCurrentRegionsManifest = "DG";
+        private const string CurrentRegionsManifest = "DH";
 
-        private const string GetClusterShardingStatsManifest = "GS";
-        private const string ClusterShardingStatsManifest = "CS";
+        private const string GetClusterShardingStatsManifest = "GS"; // This is "DE" in JVM
+        private const string ClusterShardingStatsManifest = "CS"; // This is "DF" in JVM
 
         #endregion
 
@@ -110,6 +112,9 @@ namespace Akka.Cluster.Sharding.Serialization
                 { ShardRegionStatsManifest, bytes => ShardRegionStatsFromBinary(bytes) },
                 { GetClusterShardingStatsManifest, bytes => GetClusterShardingStatsFromBinary(bytes) },
                 { ClusterShardingStatsManifest, bytes => ClusterShardingStatsFromBinary(bytes) },
+                
+                {GetCurrentRegionsManifest, bytes => GetCurrentRegions.Instance},
+                {CurrentRegionsManifest, bytes => CurrentRegionsFromBinary(bytes) },
 
                 {StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
                 {StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) }
@@ -158,6 +163,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardRegionStats o: return ShardRegionStatsToProto(o).ToByteArray();
                 case GetClusterShardingStats o: return GetClusterShardingStatsToProto(o).ToByteArray();
                 case ClusterShardingStats o: return ClusterShardingStatsToProto(o).ToByteArray();
+                case GetCurrentRegions o: return Empty;
+                case CurrentRegions o: return CurrentRegionsToProto(o).ToByteArray();
             }
             throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
         }
@@ -224,6 +231,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardRegionStats _: return ShardRegionStatsManifest;
                 case GetClusterShardingStats _: return GetClusterShardingStatsManifest;
                 case ClusterShardingStats _: return ClusterShardingStatsManifest;
+                case GetCurrentRegions _: return GetCurrentRegionsManifest;
+                case CurrentRegions _: return CurrentRegionsManifest;
             }
             throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
         }
@@ -472,6 +481,30 @@ namespace Akka.Cluster.Sharding.Serialization
                 dict[AddressFrom(s.NodeAddress)] = new ShardRegionStats(s.Stats.Stats.ToImmutableDictionary());
             }
             return new ClusterShardingStats(dict.ToImmutableDictionary());
+        }
+
+        // CurrentRegions
+        private static Proto.Msg.CurrentRegions CurrentRegionsToProto(CurrentRegions regions)
+        {
+            var p = new Proto.Msg.CurrentRegions();
+            foreach (var address in regions.Regions)
+            {
+                p.Regions.Add(AddressToProto(address));
+            }
+
+            return p;
+        }
+
+        private static CurrentRegions CurrentRegionsFromBinary(byte[] b)
+        {
+            var p = Proto.Msg.CurrentRegions.Parser.ParseFrom(b);
+            var set = new HashSet<Address>();
+            foreach (var addressData in p.Regions)
+            {
+                set.Add(AddressFrom(addressData));
+            }
+
+            return new CurrentRegions(set.ToImmutableHashSet());
         }
         
         private static AddressData AddressToProto(Address address)

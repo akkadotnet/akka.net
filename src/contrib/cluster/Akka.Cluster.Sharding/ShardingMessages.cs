@@ -141,7 +141,7 @@ namespace Akka.Cluster.Sharding
     /// Intended for testing purpose to see when cluster sharding is "ready".
     /// </summary>
     [Serializable]
-    public sealed class GetCurrentRegions : IShardRegionQuery
+    public sealed class GetCurrentRegions : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -157,7 +157,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetCurrentRegions"/>.
     /// </summary>
     [Serializable]
-    public sealed class CurrentRegions
+    public sealed class CurrentRegions : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
