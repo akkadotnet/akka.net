@@ -859,6 +859,20 @@ namespace Akka.Streams
         public RemoteStreamRefActorTerminatedException(string message) { }
         protected RemoteStreamRefActorTerminatedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
+    public class RestartSettings
+    {
+        public System.TimeSpan MaxBackoff { get; }
+        public int MaxRestarts { get; }
+        public System.TimeSpan MaxRestartsWithin { get; }
+        public System.TimeSpan MinBackoff { get; }
+        public double RandomFactor { get; }
+        public static Akka.Streams.RestartSettings Create(System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        public override string ToString() { }
+        public Akka.Streams.RestartSettings WithMaxBackoff(System.TimeSpan value) { }
+        public Akka.Streams.RestartSettings WithMaxRestarts(int count, System.TimeSpan within) { }
+        public Akka.Streams.RestartSettings WithMinBackoff(System.TimeSpan value) { }
+        public Akka.Streams.RestartSettings WithRandomFactor(double value) { }
+    }
     public abstract class Shape : System.ICloneable
     {
         protected Shape() { }
@@ -1763,22 +1777,37 @@ namespace Akka.Streams.Dsl
     }
     public class static RestartFlow
     {
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> OnFailuresWithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, Akka.Streams.RestartSettings settings) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, Akka.NotUsed> WithBackoff<TIn, TOut, TMat>(System.Func<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>> flowFactory, Akka.Streams.RestartSettings settings) { }
     }
     public class static RestartSink
     {
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Sink<T, TMat>> sinkFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Sink<T, TMat>> sinkFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Sink<T, TMat>> sinkFactory, Akka.Streams.RestartSettings settings) { }
     }
     public class static RestartSource
     {
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> OnFailuresWithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> OnFailuresWithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> OnFailuresWithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, Akka.Streams.RestartSettings settings) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor) { }
+        [System.ObsoleteAttribute("Use the overloaded method which accepts Akka.Stream.RestartSettings instead.")]
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, int maxRestarts) { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> WithBackoff<T, TMat>(System.Func<Akka.Streams.Dsl.Source<T, TMat>> sourceFactory, Akka.Streams.RestartSettings settings) { }
     }
     public class static Retry
     {

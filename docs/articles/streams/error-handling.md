@@ -96,6 +96,16 @@ when a WebSocket connection fails due to the HTTP server it's running on going d
 By using an exponential backoff, we avoid going into a tight reconnect look, which both gives the HTTP server some time
 to recover, and it avoids using needless resources on the client side.
 
+The various restart shapes mentioned all expect an `Akka.Stream.RestartSettings` which configures the restart behavior.
+
+Configurable parameters are:
+
+* `minBackoff` is the initial duration until the underlying stream is restarted
+* `maxBackoff` caps the exponential backoff
+* `randomFactor` allows addition of a random delay following backoff calculation
+* `maxRestarts` caps the total number of restarts
+* `maxRestartsWithin` sets a timeframe during which restarts are counted towards the same total for `maxRestarts`
+
 The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource` 
 which will supervise the given `Source`. The `Source` in this case is a 
 `HttpResponseMessage`, produced by `HttpCLient`. If the stream fails or completes at any point, the request will
