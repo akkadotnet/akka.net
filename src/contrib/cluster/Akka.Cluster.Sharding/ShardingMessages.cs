@@ -355,7 +355,7 @@ namespace Akka.Cluster.Sharding
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ShardState
+    public sealed class ShardState : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
