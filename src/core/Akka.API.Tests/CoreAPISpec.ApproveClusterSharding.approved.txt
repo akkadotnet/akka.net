@@ -222,7 +222,7 @@ namespace Akka.Cluster.Sharding
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class ShardState
+    public sealed class ShardState : Akka.Cluster.Sharding.IClusterShardingSerializable
     {
         public readonly System.Collections.Immutable.IImmutableSet<string> EntityIds;
         public readonly string ShardId;
