@@ -168,47 +168,8 @@ namespace Akka.DistributedData.Tests
             ExpectTerminated(replicator, TimeSpan.FromSeconds(10));
 
             // The replicator should not have been recreated, so expect ActorNotFound
-            await AssertThrowsAsync<ActorNotFoundException>(async () => 
-                await _sys1.ActorSelection(replicatorActorPath).ResolveOne(TimeSpan.FromSeconds(5)));
-        }
-
-        private async Task AssertThrowsAsync<T>(Func<Task> task) where T : Exception
-        {
-            Exception exception = null;
-            try
-            {
-                await task();
-            }
-            catch (Exception e)
-            {
-                exception = e;
-            }
-            
-            if(exception == null)
-                throw new Exception($"Test failed. Code did not throw.");
-
-            if (!FindException<T>(exception))
-                throw new Exception($"Test failed. Exception is not of type {nameof(ActorNotFoundException)}");
-        }
-        
-        private bool FindException<T>(Exception ex) where T : Exception
-        {
-            if (ex is T)
-                return true;
-            
-            if (ex is AggregateException aEx)
-            {
-                foreach (var innerException in aEx.InnerExceptions)
-                {
-                    if (FindException<T>(innerException))
-                        return true;
-                }
-            }
-
-            if (ex.InnerException != null)
-                return FindException<T>(ex.InnerException);
-
-            return false;
+            await Assert.ThrowsAsync<ActorNotFoundException>(() =>
+                _sys1.ActorSelection(replicatorActorPath).ResolveOne(TimeSpan.FromSeconds(5)));
         }
     }
     
