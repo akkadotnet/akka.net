@@ -77,7 +77,8 @@ namespace Akka.DistributedData
                 durableStoreProps: durableStoreProps,
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromHours(6)),
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromDays(10)),
-                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50));
+                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50),
+                restartReplicatorOnFailure: config.GetBoolean("recreate-on-failure", false));
         }
 
         /// <summary>
@@ -149,7 +150,10 @@ namespace Akka.DistributedData
         public Props DurableStoreProps { get; }
 
         public int MaxDeltaSize { get; }
+        
+        public bool RestartReplicatorOnFailure { get; }
 
+        [Obsolete]
         public ReplicatorSettings(string role,
                                   TimeSpan gossipInterval,
                                   TimeSpan notifySubscribersInterval,
@@ -177,6 +181,35 @@ namespace Akka.DistributedData
             MaxDeltaSize = maxDeltaSize;
         }
 
+        public ReplicatorSettings(string role,
+            TimeSpan gossipInterval,
+            TimeSpan notifySubscribersInterval,
+            int maxDeltaElements,
+            string dispatcher,
+            TimeSpan pruningInterval,
+            TimeSpan maxPruningDissemination, 
+            IImmutableSet<string> durableKeys, 
+            Props durableStoreProps, 
+            TimeSpan pruningMarkerTimeToLive, 
+            TimeSpan durablePruningMarkerTimeToLive,
+            int maxDeltaSize,
+            bool restartReplicatorOnFailure)
+        {
+            Role = role;
+            GossipInterval = gossipInterval;
+            NotifySubscribersInterval = notifySubscribersInterval;
+            MaxDeltaElements = maxDeltaElements;
+            Dispatcher = dispatcher;
+            PruningInterval = pruningInterval;
+            MaxPruningDissemination = maxPruningDissemination;
+            DurableKeys = durableKeys;
+            DurableStoreProps = durableStoreProps;
+            PruningMarkerTimeToLive = pruningMarkerTimeToLive;
+            DurablePruningMarkerTimeToLive = durablePruningMarkerTimeToLive;
+            MaxDeltaSize = maxDeltaSize;
+            RestartReplicatorOnFailure = restartReplicatorOnFailure;
+        }
+
         private ReplicatorSettings Copy(string role = null,
             TimeSpan? gossipInterval = null,
             TimeSpan? notifySubscribersInterval = null,
@@ -188,7 +221,8 @@ namespace Akka.DistributedData
             Props durableStoreProps = null,
             TimeSpan? pruningMarkerTimeToLive = null,
             TimeSpan? durablePruningMarkerTimeToLive = null,
-            int? maxDeltaSize = null)
+            int? maxDeltaSize = null,
+            bool? restartReplicatorOnFailure = null)
         {
             return new ReplicatorSettings(
                 role: role ?? this.Role,
@@ -202,7 +236,8 @@ namespace Akka.DistributedData
                 durableStoreProps: durableStoreProps ?? this.DurableStoreProps,
                 pruningMarkerTimeToLive: pruningMarkerTimeToLive ?? this.PruningMarkerTimeToLive,
                 durablePruningMarkerTimeToLive: durablePruningMarkerTimeToLive ?? this.DurablePruningMarkerTimeToLive,
-                maxDeltaSize: maxDeltaSize ?? this.MaxDeltaSize);
+                maxDeltaSize: maxDeltaSize ?? this.MaxDeltaSize,
+                restartReplicatorOnFailure: restartReplicatorOnFailure ?? this.RestartReplicatorOnFailure);
         }
 
         public ReplicatorSettings WithRole(string role) => Copy(role: role);
@@ -217,5 +252,7 @@ namespace Akka.DistributedData
         public ReplicatorSettings WithPruningMarkerTimeToLive(TimeSpan pruningMarkerTtl, TimeSpan durablePruningMarkerTtl) =>
             Copy(pruningMarkerTimeToLive: pruningMarkerTtl, durablePruningMarkerTimeToLive: durablePruningMarkerTtl);
         public ReplicatorSettings WithMaxDeltaSize(int maxDeltaSize) => Copy(maxDeltaSize: maxDeltaSize);
+        public ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) =>
+            Copy(restartReplicatorOnFailure: restart);
     }
 }
