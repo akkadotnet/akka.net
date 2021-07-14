@@ -129,9 +129,20 @@ namespace Akka.DistributedData.Tests
             Watch(replicator);
             Watch(durableStore);
             durableStore.Tell(new InitFail());
+
+            var terminated = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
+            if (!terminated.ActorRef.Path.Equals(durableStore.Path) && !terminated.ActorRef.Path.Equals(replicator.Path))
+            {
+                throw new Exception(
+                    $"Expecting termination of either durable storage or replicator, found {terminated.ActorRef.Path} instead.");
+            }   
             
-            ExpectTerminated(durableStore,TimeSpan.FromSeconds(10));
-            ExpectTerminated(replicator,TimeSpan.FromSeconds(10));
+            terminated = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
+            if (!terminated.ActorRef.Path.Equals(durableStore.Path) && !terminated.ActorRef.Path.Equals(replicator.Path))
+            {
+                throw new Exception(
+                    $"Expecting termination of either durable storage or replicator, found {terminated.ActorRef.Path} instead.");
+            }
             
             //The supervisor should have restarted the replicator actor by now
             await AwaitAssertAsync(async () =>
