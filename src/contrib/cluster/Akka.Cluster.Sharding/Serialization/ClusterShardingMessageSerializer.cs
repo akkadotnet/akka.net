@@ -131,8 +131,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 { StartEntityManifest, bytes => StartEntityFromBinary(bytes) },
                 { StartEntityAckManifest, bytes => StartEntityAckFromBinary(bytes) },
 
-                //{ GetCurrentShardStateManifest, bytes => GetCurrentShardState },
-                //{ CurrentShardStateManifest, bytes => CurrentShardStateFromBinary(bytes) },
+                { GetCurrentShardStateManifest, bytes => Shard.GetCurrentShardState.Instance },
+                { CurrentShardStateManifest, bytes => CurrentShardStateFromBinary(bytes) },
                 { GetShardRegionStateManifest, bytes => GetShardRegionState.Instance },
                 { ShardStateManifest, bytes => ShardStateFromBinary(bytes) },
                 { CurrentShardRegionStateManifest, bytes => CurrentShardRegionStateFromBinary(bytes) },
@@ -190,8 +190,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case GetCurrentRegions o: return Empty;
                 case CurrentRegions o: return CurrentRegionsToProto(o).ToByteArray();
 
-                //case GetCurrentShardState o: return Empty;
-                //case CurrentShardState o: return CurrentShardStateToProto(o).ToByteArray();
+                case Shard.GetCurrentShardState o: return Empty;
+                case Shard.CurrentShardState o: return CurrentShardStateToProto(o).ToByteArray();
                 case GetShardRegionState o: return Empty;
                 case ShardState o: return ShardStateToProto(o).ToByteArray();
                 case CurrentShardRegionState o: return CurrentShardRegionStateToProto(o).ToByteArray();
@@ -271,8 +271,8 @@ namespace Akka.Cluster.Sharding.Serialization
                 case GetCurrentRegions _: return GetCurrentRegionsManifest;
                 case CurrentRegions _: return CurrentRegionsManifest;
 
-                //case GetCurrentShardState _: return GetCurrentShardStateManifest;
-                //case CurrentShardState _: return CurrentShardStateManifest;
+                case Shard.GetCurrentShardState _: return GetCurrentShardStateManifest;
+                case Shard.CurrentShardState _: return CurrentShardStateManifest;
                 case GetShardRegionState _: return GetShardRegionStateManifest;
                 case ShardState _: return ShardStateManifest;
                 case CurrentShardRegionState _: return CurrentShardRegionStateManifest;
@@ -576,6 +576,21 @@ namespace Akka.Cluster.Sharding.Serialization
         {
             var p = Proto.Msg.CurrentRegions.Parser.ParseFrom(b);
             return new CurrentRegions(p.Regions.Select(AddressFrom).ToImmutableHashSet());
+        }
+
+        //CurrentShardState
+        private static Proto.Msg.CurrentShardState CurrentShardStateToProto(Shard.CurrentShardState state)
+        {
+            var p = new Proto.Msg.CurrentShardState();
+            p.ShardId = state.ShardId;
+            p.EntityIds.AddRange(state.EntityIds);
+            return p;
+        }
+
+        private static Shard.CurrentShardState CurrentShardStateFromBinary(byte[] b)
+        {
+            var p = Proto.Msg.CurrentShardState.Parser.ParseFrom(b);
+            return new Shard.CurrentShardState(p.ShardId, p.EntityIds.ToImmutableHashSet());
         }
 
         //ShardState

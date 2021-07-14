@@ -43,7 +43,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void CheckSerialization(object obj)
         {
-            var serializer = (SerializerWithStringManifest) Sys.Serialization.FindSerializerFor(obj);
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(obj);
             serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
             var blob = serializer.ToBinary(obj);
             var reference = serializer.FromBinary(blob, serializer.Manifest(obj));
@@ -74,6 +74,9 @@ namespace Akka.Cluster.Sharding.Tests
                 unallocatedShards: ImmutableHashSet.Create("d"));
 
             CheckSerialization(state);
+
+            CheckSerialization(EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance);
+            CheckSerialization(new EventSourcedRememberEntitiesCoordinatorStore.State(ImmutableHashSet.Create("11", "12"), true));
         }
 
         [Fact]
@@ -189,7 +192,23 @@ namespace Akka.Cluster.Sharding.Tests
                 .Add(new Address("akka.tcp", "sys", "b", 2552), new ShardRegionStats(ImmutableDictionary<string, int>.Empty.Add("a", 23), ImmutableHashSet.Create("b")))
                 ));
         }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_serialize_ShardQuery()
+        {
+            CheckSerialization(Shard.GetCurrentShardState.Instance);
+            CheckSerialization(new Shard.CurrentShardState("12", ImmutableHashSet.Create("a", "b")));
+        }
+
+        [Fact]
+        public void ClusterShardingMessageSerializer_must_serialize_ShardRegionQuery()
+        {
+            CheckSerialization(GetShardRegionState.Instance);
+            CheckSerialization(new ShardState("12", ImmutableHashSet.Create("a", "b")));
+            CheckSerialization(new CurrentShardRegionState(
+                ImmutableHashSet.Create(new ShardState("12", ImmutableHashSet.Create("a", "b")), new ShardState("13", ImmutableHashSet.Create("c", "d"))),
+                ImmutableHashSet.Create("14", "15")
+                ));
+        }
     }
 }
-
-

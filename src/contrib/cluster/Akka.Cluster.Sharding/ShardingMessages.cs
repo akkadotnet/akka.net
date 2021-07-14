@@ -525,7 +525,7 @@ namespace Akka.Cluster.Sharding
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ShardState : IClusterShardingSerializable
+    public sealed class ShardState : IClusterShardingSerializable, IEquatable<ShardState>
     {
         /// <summary>
         /// TBD
@@ -546,6 +546,44 @@ namespace Akka.Cluster.Sharding
             ShardId = shardId;
             EntityIds = entityIds;
         }
+
+        #region Equals
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as ShardState);
+        }
+
+        public bool Equals(ShardState other)
+        {
+            if (ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, this)) return true;
+
+            return ShardId == other.ShardId
+                && EntityIds.SetEquals(other.EntityIds);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = 0;
+                hashCode = (hashCode * 397) ^ ShardId.GetHashCode();
+                foreach (var e in EntityIds)
+                    hashCode = (hashCode * 397) ^ e.GetHashCode();
+                return hashCode;
+            }
+        }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return $"ShardState[shardId={ShardId}, entityIds={string.Join(", ", EntityIds)}]";
+        }
+
+        #endregion
     }
 
 

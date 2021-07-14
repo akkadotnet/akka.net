@@ -129,7 +129,7 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class GetCurrentShardState : IShardQuery
+        public sealed class GetCurrentShardState : IShardQuery, IClusterShardingSerializable
         {
             /// <summary>
             /// TBD
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Sharding
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class CurrentShardState : IEquatable<CurrentShardState>
+        public sealed class CurrentShardState : IClusterShardingSerializable, IEquatable<CurrentShardState>
         {
             /// <summary>
             /// TBD
