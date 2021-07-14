@@ -247,16 +247,21 @@ namespace Akka.Cluster.Sharding.Internal
                         events.Add(new EntitiesStopped(update.Stopped));
 
                     var left = events.Count;
+                    var saveSnap = false;
                     void PersistEventsAndHandleComplete(IEnumerable<IStateChange> evts)
                     {
                         PersistAll(evts, _ =>
                         {
                             left -= 1;
+                            saveSnap |= IsSnapshotNeeded;
                             if (left == 0)
                             {
                                 Sender.Tell(new RememberEntitiesShardStore.UpdateDone(update.Started, update.Stopped));
                                 state = new State(state.Entities.Union(update.Started).Except(update.Stopped));
-                                SaveSnapshotWhenNeeded();
+                                if (saveSnap)
+                                {
+                                    SaveSnapshot();
+                                }
                             }
                         });
                     }
@@ -288,7 +293,10 @@ namespace Akka.Cluster.Sharding.Internal
 
                 case DeleteMessagesSuccess e:
                     var deleteTo = e.ToSequenceNr - 1;
-                    var deleteFrom = Math.Max(0, deleteTo - (Settings.TuningParameters.KeepNrOfBatches * Settings.TuningParameters.SnapshotAfter));
+                    // keeping one additional batch of messages in case snapshotAfter has been delayed to the end of a processed batch
+                    var keepNrOfBatchesWithSafetyBatch = Settings.TuningParameters.KeepNrOfBatches == 0 ? 0 : Settings.TuningParameters.KeepNrOfBatches + 1;
+                    var deleteFrom = Math.Max(0, deleteTo - (keepNrOfBatchesWithSafetyBatch * Settings.TuningParameters.SnapshotAfter));
+
                     Log.Debug(
                         "Messages to [{0}] deleted successfully. Deleting snapshots from [{1}] to [{2}]",
                         e.ToSequenceNr,
@@ -320,11 +328,18 @@ namespace Akka.Cluster.Sharding.Internal
 
         private void SaveSnapshotWhenNeeded()
         {
-            if (LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
+            if (IsSnapshotNeeded)
             {
-                Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
-                SaveSnapshot(state);
+                SaveSnapshot();
             }
         }
+
+        private void SaveSnapshot()
+        {
+            Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
+            SaveSnapshot(state);
+        }
+
+        private bool IsSnapshotNeeded => LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0;
     }
 }

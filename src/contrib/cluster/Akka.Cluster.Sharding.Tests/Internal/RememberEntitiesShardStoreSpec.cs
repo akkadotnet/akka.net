@@ -39,6 +39,7 @@ namespace Akka.Cluster.Sharding.Tests.Internal
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.state-store-mode = ddata
+                akka.cluster.sharding.snapshot-after = 2
                 akka.cluster.sharding.remember-entities = on
                 # no leaks between test runs thank you
                 akka.cluster.sharding.distributed-data.durable.keys = []
