@@ -156,9 +156,14 @@ namespace Akka.DistributedData.Tests
 
             await InitCluster();
             var replicator = DistributedData.Get(_sys1).Replicator;
-            var durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3))
-                .ContinueWith(
-                    m => m.Result).Result;
+            
+            IActorRef durableStore = null; 
+            await AwaitAssertAsync(() =>
+            {
+                durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3))
+                    .ContinueWith(
+                        m => m.Result).Result;
+            }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
 
             Watch(replicator);
             Watch(durableStore);
