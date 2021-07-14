@@ -77,7 +77,8 @@ namespace Akka.DistributedData
                 durableStoreProps: durableStoreProps,
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromHours(6)),
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromDays(10)),
-                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50));
+                maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50),
+                recreateOnFailure: config.GetBoolean("recreate-on-failure", false));
         }
 
         /// <summary>
@@ -150,6 +151,8 @@ namespace Akka.DistributedData
 
         public int MaxDeltaSize { get; }
 
+        public bool RecreateOnFailure { get; set; }
+        
         public ReplicatorSettings(string role,
                                   TimeSpan gossipInterval,
                                   TimeSpan notifySubscribersInterval,
@@ -161,7 +164,8 @@ namespace Akka.DistributedData
                                   Props durableStoreProps, 
                                   TimeSpan pruningMarkerTimeToLive, 
                                   TimeSpan durablePruningMarkerTimeToLive,
-                                  int maxDeltaSize)
+                                  int maxDeltaSize, 
+                                  bool recreateOnFailure)
         {
             Role = role;
             GossipInterval = gossipInterval;
@@ -175,7 +179,10 @@ namespace Akka.DistributedData
             PruningMarkerTimeToLive = pruningMarkerTimeToLive;
             DurablePruningMarkerTimeToLive = durablePruningMarkerTimeToLive;
             MaxDeltaSize = maxDeltaSize;
+            RecreateOnFailure = recreateOnFailure;
         }
+
+        
 
         private ReplicatorSettings Copy(string role = null,
             TimeSpan? gossipInterval = null,
@@ -188,7 +195,8 @@ namespace Akka.DistributedData
             Props durableStoreProps = null,
             TimeSpan? pruningMarkerTimeToLive = null,
             TimeSpan? durablePruningMarkerTimeToLive = null,
-            int? maxDeltaSize = null)
+            int? maxDeltaSize = null,
+            bool? recreateOnFailure = null)
         {
             return new ReplicatorSettings(
                 role: role ?? this.Role,
@@ -202,7 +210,8 @@ namespace Akka.DistributedData
                 durableStoreProps: durableStoreProps ?? this.DurableStoreProps,
                 pruningMarkerTimeToLive: pruningMarkerTimeToLive ?? this.PruningMarkerTimeToLive,
                 durablePruningMarkerTimeToLive: durablePruningMarkerTimeToLive ?? this.DurablePruningMarkerTimeToLive,
-                maxDeltaSize: maxDeltaSize ?? this.MaxDeltaSize);
+                maxDeltaSize: maxDeltaSize ?? this.MaxDeltaSize,
+                recreateOnFailure: recreateOnFailure ?? this.RecreateOnFailure);
         }
 
         public ReplicatorSettings WithRole(string role) => Copy(role: role);
