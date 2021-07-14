@@ -10,6 +10,7 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Configuration;
+using static Akka.Cluster.MembershipState;
 
 namespace Akka.Cluster
 {
@@ -140,7 +141,7 @@ namespace Akka.Cluster
     internal abstract class AutoDownBase : UntypedActor
     {
         private readonly ImmutableHashSet<MemberStatus> _skipMemberStatus =
-            Gossip.ConvergenceSkipUnreachableWithMemberStatus;
+           ConvergenceSkipUnreachableWithMemberStatus;
 
         private ImmutableDictionary<UniqueAddress, ICancelable> _scheduledUnreachable =
             ImmutableDictionary.Create<UniqueAddress, ICancelable>();

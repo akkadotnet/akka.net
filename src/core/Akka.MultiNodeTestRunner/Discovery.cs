@@ -20,11 +20,7 @@ using Xunit.Sdk;
 
 namespace Akka.MultiNodeTestRunner
 {
-#if CORECLR
-    public class Discovery : IMessageSink, IDisposable
-#else
     public class Discovery : MarshalByRefObject, IMessageSink, IDisposable
-#endif
     {
         public Dictionary<string, List<NodeTest>> Tests { get; set; }
         public List<ErrorMessage> Errors { get; } = new List<ErrorMessage>();
@@ -108,14 +104,8 @@ namespace Akka.MultiNodeTestRunner
             var ctorWithConfig = FindConfigConstructor(specType);
             var configType = ctorWithConfig.GetParameters().First().ParameterType;
             var args = ConfigConstructorParamValues(configType);
-            var configInstance = Activator.CreateInstance(configType, args);
-            var roleType = typeof(RoleName);
-            var configProps = configType.GetProperties(BindingFlags.Instance | BindingFlags.Public);
-            var roleProps = configProps.Where(p => p.PropertyType == roleType && p.Name != "Myself").Select(p => (RoleName)p.GetValue(configInstance));
-            var configFields = configType.GetFields(BindingFlags.Instance | BindingFlags.Public);
-            var roleFields = configFields.Where(f => f.FieldType == roleType && f.Name != "Myself").Select(f => (RoleName)f.GetValue(configInstance));
-            var roles = roleProps.Concat(roleFields).Distinct();
-            return roles;
+            var configInstance = (MultiNodeConfig)Activator.CreateInstance(configType, args);
+            return configInstance.Roles;
         }
 
         internal static ConstructorInfo FindConfigConstructor(Type configUser)
@@ -124,20 +114,11 @@ namespace Akka.MultiNodeTestRunner
             var current = configUser;
             while (current != null)
             {
-
-#if CORECLR
-                var ctorWithConfig = current
-                    .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
-                    .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
-            
-                current = current.GetTypeInfo().BaseType;
-#else
                 var ctorWithConfig = current
                     .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.IsSubclassOf(baseConfigType)));
 
                 current = current.BaseType;
-#endif
                 if (ctorWithConfig != null) return ctorWithConfig;
             }
 
@@ -149,15 +130,9 @@ namespace Akka.MultiNodeTestRunner
             var ctors = configType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             var empty = ctors.FirstOrDefault(c => !c.GetParameters().Any());
 
-#if CORECLR
-            return empty != null
-                ? new object[0]
-                : ctors.First().GetParameters().Select(p => p.ParameterType.GetTypeInfo().IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-#else
             return empty != null
                 ? new object[0]
                 : ctors.First().GetParameters().Select(p => p.ParameterType.IsValueType ? Activator.CreateInstance(p.ParameterType) : null).ToArray();
-#endif
         }
 
         /// <inheritdoc/>

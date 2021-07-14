@@ -71,9 +71,9 @@ namespace Akka.IO
             {
                 var self = Self;
                 var saea = new SocketAsyncEventArgs();
-                saea.Completed += (s, e) => self.Tell(e);
+                saea.Completed += (s, e) => self.Tell(new SocketEvent(e));
                 if (!_socket.AcceptAsync(saea))
-                    Self.Tell(saea);
+                    Self.Tell(new SocketEvent(saea));
                 yield return saea;
             }
         }
@@ -85,34 +85,34 @@ namespace Akka.IO
 
         protected override bool Receive(object message)
         {
-            if (message is SocketAsyncEventArgs)
+            switch (message)
             {
-                var saea = message as SocketAsyncEventArgs;
-                if (saea.SocketError == SocketError.Success)
-                    Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode).WithDeploy(Deploy.Local));
-                saea.AcceptSocket = null;
+                case SocketEvent evt:
+                    var saea = evt.Args;
+                    if (saea.SocketError == SocketError.Success)
+                        Context.ActorOf(Props.Create<TcpIncomingConnection>(_tcp, saea.AcceptSocket, _bind.Handler, _bind.Options, _bind.PullMode).WithDeploy(Deploy.Local));
+                    saea.AcceptSocket = null;
 
-                if (!_socket.AcceptAsync(saea))
-                    Self.Tell(saea);
-                return true;
+                    if (!_socket.AcceptAsync(saea))
+                        Self.Tell(new SocketEvent(saea));
+                    return true;
+
+                case Tcp.ResumeAccepting resumeAccepting:
+                    _acceptLimit = resumeAccepting.BatchSize;
+                    _saeas = Accept(_acceptLimit).ToArray();
+                    return true;
+
+                case Tcp.Unbind _:
+                    _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
+                    _socket.Dispose();
+                    Sender.Tell(Tcp.Unbound.Instance);
+                    _log.Debug("Unbound endpoint {0}, stopping listener", _bind.LocalAddress);
+                    Context.Stop(Self);
+                    return true;
+
+                default:
+                    return false;
             }
-            var resumeAccepting = message as Tcp.ResumeAccepting;
-            if (resumeAccepting != null)
-            {
-                _acceptLimit = resumeAccepting.BatchSize;
-                _saeas = Accept(_acceptLimit).ToArray();
-                return true;
-            }
-            if (message is Tcp.Unbind)
-            {
-                _log.Debug("Unbinding endpoint {0}", _bind.LocalAddress);
-                 _socket.Dispose();
-                Sender.Tell(Tcp.Unbound.Instance);
-                _log.Debug("Unbound endpoint {0}, stopping listener", _bind.LocalAddress);
-                Context.Stop(Self);
-                return true;
-            }
-            return false;
         }
 
         /// <summary>
@@ -128,6 +128,16 @@ namespace Akka.IO
             catch (Exception e)
             {
                 _log.Debug("Error closing ServerSocketChannel: {0}", e);
+            }
+        }
+
+        private readonly struct SocketEvent : INoSerializationVerificationNeeded
+        {
+            public readonly SocketAsyncEventArgs Args;
+
+            public SocketEvent(SocketAsyncEventArgs args)
+            {
+                Args = args;
             }
         }
     }

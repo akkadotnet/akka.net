@@ -32,72 +32,79 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "ChVDbHVzdGVyTWVzc2FnZXMucHJvdG8SJEFra2EuQ2x1c3Rlci5TZXJpYWxp",
-            "emF0aW9uLlByb3RvLk1zZxoWQ29udGFpbmVyRm9ybWF0cy5wcm90byKAAQoE",
-            "Sm9pbhJBCgRub2RlGAEgASgLMjMuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MSDQoFcm9sZXMYAiADKAkSFwoK",
-            "YXBwVmVyc2lvbhgDIAEoCUgAiAEBQg0KC19hcHBWZXJzaW9uIooBCgdXZWxj",
-            "b21lEkEKBGZyb20YASABKAsyMy5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlv",
-            "bi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxI8CgZnb3NzaXAYAiABKAsyLC5B",
-            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuR29zc2lwIq4B",
-            "Cg5Hb3NzaXBFbnZlbG9wZRJBCgRmcm9tGAEgASgLMjMuQWtrYS5DbHVzdGVy",
-            "LlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MSPwoCdG8Y",
-            "AiABKAsyMy5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cu",
-            "VW5pcXVlQWRkcmVzcxIYChBzZXJpYWxpemVkR29zc2lwGAMgASgMIqgBCgxH",
-            "b3NzaXBTdGF0dXMSQQoEZnJvbRgBIAEoCzIzLkFra2EuQ2x1c3Rlci5TZXJp",
-            "YWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEhEKCWFsbEhhc2hl",
-            "cxgCIAMoCRJCCgd2ZXJzaW9uGAMgASgLMjEuQWtrYS5DbHVzdGVyLlNlcmlh",
-            "bGl6YXRpb24uUHJvdG8uTXNnLlZlY3RvckNsb2NrItsCCgZHb3NzaXASSQoM",
-            "YWxsQWRkcmVzc2VzGAEgAygLMjMuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRp",
-            "b24uUHJvdG8uTXNnLlVuaXF1ZUFkZHJlc3MSEAoIYWxsUm9sZXMYAiADKAkS",
-            "EQoJYWxsSGFzaGVzGAMgAygJEj0KB21lbWJlcnMYBCADKAsyLC5Ba2thLkNs",
-            "dXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuTWVtYmVyEkYKCG92ZXJ2",
-            "aWV3GAUgASgLMjQuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLkdvc3NpcE92ZXJ2aWV3EkIKB3ZlcnNpb24YBiABKAsyMS5Ba2thLkNs",
-            "dXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVmVjdG9yQ2xvY2sSFgoO",
-            "YWxsQXBwVmVyc2lvbnMYCCADKAkieAoOR29zc2lwT3ZlcnZpZXcSDAoEc2Vl",
-            "bhgBIAMoBRJYChRvYnNlcnZlclJlYWNoYWJpbGl0eRgCIAMoCzI6LkFra2Eu",
-            "Q2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5PYnNlcnZlclJlYWNo",
-            "YWJpbGl0eSKVAQoUT2JzZXJ2ZXJSZWFjaGFiaWxpdHkSFAoMYWRkcmVzc0lu",
-            "ZGV4GAEgASgFEg8KB3ZlcnNpb24YBCABKAMSVgoTc3ViamVjdFJlYWNoYWJp",
-            "bGl0eRgCIAMoCzI5LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3Rv",
-            "Lk1zZy5TdWJqZWN0UmVhY2hhYmlsaXR5IuABChNTdWJqZWN0UmVhY2hhYmls",
-            "aXR5EhQKDGFkZHJlc3NJbmRleBgBIAEoBRJcCgZzdGF0dXMYAyABKA4yTC5B",
-            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuU3ViamVjdFJl",
-            "YWNoYWJpbGl0eS5SZWFjaGFiaWxpdHlTdGF0dXMSDwoHdmVyc2lvbhgEIAEo",
-            "AyJEChJSZWFjaGFiaWxpdHlTdGF0dXMSDQoJUmVhY2hhYmxlEAASDwoLVW5y",
-            "ZWFjaGFibGUQARIOCgpUZXJtaW5hdGVkEAIiqwIKBk1lbWJlchIUCgxhZGRy",
-            "ZXNzSW5kZXgYASABKAUSEAoIdXBOdW1iZXIYAiABKAUSSQoGc3RhdHVzGAMg",
-            "ASgOMjkuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk1l",
-            "bWJlci5NZW1iZXJTdGF0dXMSGAoMcm9sZXNJbmRleGVzGAQgAygFQgIQARIc",
-            "Cg9hcHBWZXJzaW9uSW5kZXgYBSABKAVIAIgBASJiCgxNZW1iZXJTdGF0dXMS",
-            "CwoHSm9pbmluZxAAEgYKAlVwEAESCwoHTGVhdmluZxACEgsKB0V4aXRpbmcQ",
-            "AxIICgREb3duEAQSCwoHUmVtb3ZlZBAFEgwKCFdlYWtseVVwEAZCEgoQX2Fw",
-            "cFZlcnNpb25JbmRleCKeAQoLVmVjdG9yQ2xvY2sSEQoJdGltZXN0YW1wGAEg",
-            "ASgDEksKCHZlcnNpb25zGAIgAygLMjkuQWtrYS5DbHVzdGVyLlNlcmlhbGl6",
-            "YXRpb24uUHJvdG8uTXNnLlZlY3RvckNsb2NrLlZlcnNpb24aLwoHVmVyc2lv",
-            "bhIRCgloYXNoSW5kZXgYASABKAUSEQoJdGltZXN0YW1wGAIgASgDIl8KDVVu",
-            "aXF1ZUFkZHJlc3MSQQoHYWRkcmVzcxgBIAEoCzIwLkFra2EuUmVtb3RlLlNl",
-            "cmlhbGl6YXRpb24uUHJvdG8uTXNnLkFkZHJlc3NEYXRhEgsKA3VpZBgCIAEo",
-            "DSKgAQoRQ2x1c3RlclJvdXRlclBvb2wSOAoEcG9vbBgBIAEoCzIqLkFra2Eu",
-            "Q2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5Qb29sElEKCHNldHRp",
-            "bmdzGAIgASgLMj8uQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8u",
-            "TXNnLkNsdXN0ZXJSb3V0ZXJQb29sU2V0dGluZ3MiPAoEUG9vbBIUCgxzZXJp",
-            "YWxpemVySWQYASABKA0SEAoIbWFuaWZlc3QYAiABKAkSDAoEZGF0YRgDIAEo",
-            "DCJ8ChlDbHVzdGVyUm91dGVyUG9vbFNldHRpbmdzEhYKDnRvdGFsSW5zdGFu",
-            "Y2VzGAEgASgNEhsKE21heEluc3RhbmNlc1Blck5vZGUYAiABKA0SGQoRYWxs",
-            "b3dMb2NhbFJvdXRlZXMYAyABKAgSDwoHdXNlUm9sZRgEIAEoCWIGcHJvdG8z"));
+            "emF0aW9uLlByb3RvLk1zZxoWQ29udGFpbmVyRm9ybWF0cy5wcm90byJsCgRK",
+            "b2luEkEKBG5vZGUYASABKAsyMy5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlv",
+            "bi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxINCgVyb2xlcxgCIAMoCRISCgph",
+            "cHBWZXJzaW9uGAMgASgJIooBCgdXZWxjb21lEkEKBGZyb20YASABKAsyMy5B",
+            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRk",
+            "cmVzcxI8CgZnb3NzaXAYAiABKAsyLC5Ba2thLkNsdXN0ZXIuU2VyaWFsaXph",
+            "dGlvbi5Qcm90by5Nc2cuR29zc2lwInUKCUhlYXJ0YmVhdBI+CgRmcm9tGAEg",
+            "ASgLMjAuQWtrYS5SZW1vdGUuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuQWRk",
+            "cmVzc0RhdGESEgoKc2VxdWVuY2VOchgCIAEoAxIUCgxjcmVhdGlvblRpbWUY",
+            "AyABKBIigAEKEUhlYXJ0QmVhdFJlc3BvbnNlEkEKBGZyb20YASABKAsyMy5B",
+            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRk",
+            "cmVzcxISCgpzZXF1ZW5jZU5yGAIgASgDEhQKDGNyZWF0aW9uVGltZRgDIAEo",
+            "AyKuAQoOR29zc2lwRW52ZWxvcGUSQQoEZnJvbRgBIAEoCzIzLkFra2EuQ2x1",
+            "c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEj8K",
+            "AnRvGAIgASgLMjMuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8u",
+            "TXNnLlVuaXF1ZUFkZHJlc3MSGAoQc2VyaWFsaXplZEdvc3NpcBgDIAEoDCKo",
+            "AQoMR29zc2lwU3RhdHVzEkEKBGZyb20YASABKAsyMy5Ba2thLkNsdXN0ZXIu",
+            "U2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuVW5pcXVlQWRkcmVzcxIRCglhbGxI",
+            "YXNoZXMYAiADKAkSQgoHdmVyc2lvbhgDIAEoCzIxLkFra2EuQ2x1c3Rlci5T",
+            "ZXJpYWxpemF0aW9uLlByb3RvLk1zZy5WZWN0b3JDbG9jayLbAgoGR29zc2lw",
+            "EkkKDGFsbEFkZHJlc3NlcxgBIAMoCzIzLkFra2EuQ2x1c3Rlci5TZXJpYWxp",
+            "emF0aW9uLlByb3RvLk1zZy5VbmlxdWVBZGRyZXNzEhAKCGFsbFJvbGVzGAIg",
+            "AygJEhEKCWFsbEhhc2hlcxgDIAMoCRI9CgdtZW1iZXJzGAQgAygLMiwuQWtr",
+            "YS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLk1lbWJlchJGCghv",
+            "dmVydmlldxgFIAEoCzI0LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlBy",
+            "b3RvLk1zZy5Hb3NzaXBPdmVydmlldxJCCgd2ZXJzaW9uGAYgASgLMjEuQWtr",
+            "YS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZlY3RvckNsb2Nr",
+            "EhYKDmFsbEFwcFZlcnNpb25zGAggAygJIngKDkdvc3NpcE92ZXJ2aWV3EgwK",
+            "BHNlZW4YASADKAUSWAoUb2JzZXJ2ZXJSZWFjaGFiaWxpdHkYAiADKAsyOi5B",
+            "a2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Qcm90by5Nc2cuT2JzZXJ2ZXJS",
+            "ZWFjaGFiaWxpdHkilQEKFE9ic2VydmVyUmVhY2hhYmlsaXR5EhQKDGFkZHJl",
+            "c3NJbmRleBgBIAEoBRIPCgd2ZXJzaW9uGAQgASgDElYKE3N1YmplY3RSZWFj",
+            "aGFiaWxpdHkYAiADKAsyOS5Ba2thLkNsdXN0ZXIuU2VyaWFsaXphdGlvbi5Q",
+            "cm90by5Nc2cuU3ViamVjdFJlYWNoYWJpbGl0eSLgAQoTU3ViamVjdFJlYWNo",
+            "YWJpbGl0eRIUCgxhZGRyZXNzSW5kZXgYASABKAUSXAoGc3RhdHVzGAMgASgO",
+            "MkwuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlN1Ympl",
+            "Y3RSZWFjaGFiaWxpdHkuUmVhY2hhYmlsaXR5U3RhdHVzEg8KB3ZlcnNpb24Y",
+            "BCABKAMiRAoSUmVhY2hhYmlsaXR5U3RhdHVzEg0KCVJlYWNoYWJsZRAAEg8K",
+            "C1VucmVhY2hhYmxlEAESDgoKVGVybWluYXRlZBACIpICCgZNZW1iZXISFAoM",
+            "YWRkcmVzc0luZGV4GAEgASgFEhAKCHVwTnVtYmVyGAIgASgFEkkKBnN0YXR1",
+            "cxgDIAEoDjI5LkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9uLlByb3RvLk1z",
+            "Zy5NZW1iZXIuTWVtYmVyU3RhdHVzEhgKDHJvbGVzSW5kZXhlcxgEIAMoBUIC",
+            "EAESFwoPYXBwVmVyc2lvbkluZGV4GAUgASgFImIKDE1lbWJlclN0YXR1cxIL",
+            "CgdKb2luaW5nEAASBgoCVXAQARILCgdMZWF2aW5nEAISCwoHRXhpdGluZxAD",
+            "EggKBERvd24QBBILCgdSZW1vdmVkEAUSDAoIV2Vha2x5VXAQBiKeAQoLVmVj",
+            "dG9yQ2xvY2sSEQoJdGltZXN0YW1wGAEgASgDEksKCHZlcnNpb25zGAIgAygL",
+            "MjkuQWtrYS5DbHVzdGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlZlY3Rv",
+            "ckNsb2NrLlZlcnNpb24aLwoHVmVyc2lvbhIRCgloYXNoSW5kZXgYASABKAUS",
+            "EQoJdGltZXN0YW1wGAIgASgDIl8KDVVuaXF1ZUFkZHJlc3MSQQoHYWRkcmVz",
+            "cxgBIAEoCzIwLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNn",
+            "LkFkZHJlc3NEYXRhEgsKA3VpZBgCIAEoDSKgAQoRQ2x1c3RlclJvdXRlclBv",
+            "b2wSOAoEcG9vbBgBIAEoCzIqLkFra2EuQ2x1c3Rlci5TZXJpYWxpemF0aW9u",
+            "LlByb3RvLk1zZy5Qb29sElEKCHNldHRpbmdzGAIgASgLMj8uQWtrYS5DbHVz",
+            "dGVyLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkNsdXN0ZXJSb3V0ZXJQb29s",
+            "U2V0dGluZ3MiPAoEUG9vbBIUCgxzZXJpYWxpemVySWQYASABKA0SEAoIbWFu",
+            "aWZlc3QYAiABKAkSDAoEZGF0YRgDIAEoDCJ8ChlDbHVzdGVyUm91dGVyUG9v",
+            "bFNldHRpbmdzEhYKDnRvdGFsSW5zdGFuY2VzGAEgASgNEhsKE21heEluc3Rh",
+            "bmNlc1Blck5vZGUYAiABKA0SGQoRYWxsb3dMb2NhbFJvdXRlZXMYAyABKAgS",
+            "DwoHdXNlUm9sZRgEIAEoCWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Join), global::Akka.Cluster.Serialization.Proto.Msg.Join.Parser, new[]{ "Node", "Roles", "AppVersion" }, new[]{ "AppVersion" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Join), global::Akka.Cluster.Serialization.Proto.Msg.Join.Parser, new[]{ "Node", "Roles", "AppVersion" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Welcome), global::Akka.Cluster.Serialization.Proto.Msg.Welcome.Parser, new[]{ "From", "Gossip" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Heartbeat), global::Akka.Cluster.Serialization.Proto.Msg.Heartbeat.Parser, new[]{ "From", "SequenceNr", "CreationTime" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.HeartBeatResponse), global::Akka.Cluster.Serialization.Proto.Msg.HeartBeatResponse.Parser, new[]{ "From", "SequenceNr", "CreationTime" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipEnvelope), global::Akka.Cluster.Serialization.Proto.Msg.GossipEnvelope.Parser, new[]{ "From", "To", "SerializedGossip" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipStatus), global::Akka.Cluster.Serialization.Proto.Msg.GossipStatus.Parser, new[]{ "From", "AllHashes", "Version" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Gossip), global::Akka.Cluster.Serialization.Proto.Msg.Gossip.Parser, new[]{ "AllAddresses", "AllRoles", "AllHashes", "Members", "Overview", "Version", "AllAppVersions" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview), global::Akka.Cluster.Serialization.Proto.Msg.GossipOverview.Parser, new[]{ "Seen", "ObserverReachability" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability), global::Akka.Cluster.Serialization.Proto.Msg.ObserverReachability.Parser, new[]{ "AddressIndex", "Version", "SubjectReachability" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability), global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Parser, new[]{ "AddressIndex", "Status", "Version" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.SubjectReachability.Types.ReachabilityStatus) }, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member), global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser, new[]{ "AddressIndex", "UpNumber", "Status", "RolesIndexes", "AppVersionIndex" }, new[]{ "AppVersionIndex" }, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus) }, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member), global::Akka.Cluster.Serialization.Proto.Msg.Member.Parser, new[]{ "AddressIndex", "UpNumber", "Status", "RolesIndexes", "AppVersionIndex" }, null, new[]{ typeof(global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus) }, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Parser, new[]{ "Timestamp", "Versions" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version), global::Akka.Cluster.Serialization.Proto.Msg.VectorClock.Types.Version.Parser, new[]{ "HashIndex", "Timestamp" }, null, null, null, null)}),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress), global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress.Parser, new[]{ "Address", "Uid" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Serialization.Proto.Msg.ClusterRouterPool), global::Akka.Cluster.Serialization.Proto.Msg.ClusterRouterPool.Parser, new[]{ "Pool", "Settings" }, null, null, null, null),
@@ -175,23 +182,13 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     /// <summary>Field number for the "appVersion" field.</summary>
     public const int AppVersionFieldNumber = 3;
-    private string appVersion_;
+    private string appVersion_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string AppVersion {
-      get { return appVersion_ ?? ""; }
+      get { return appVersion_; }
       set {
         appVersion_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
       }
-    }
-    /// <summary>Gets whether the "appVersion" field is set</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool HasAppVersion {
-      get { return appVersion_ != null; }
-    }
-    /// <summary>Clears the value of the "appVersion" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void ClearAppVersion() {
-      appVersion_ = null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -218,7 +215,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       int hash = 1;
       if (node_ != null) hash ^= Node.GetHashCode();
       hash ^= roles_.GetHashCode();
-      if (HasAppVersion) hash ^= AppVersion.GetHashCode();
+      if (AppVersion.Length != 0) hash ^= AppVersion.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -240,7 +237,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         output.WriteMessage(Node);
       }
       roles_.WriteTo(output, _repeated_roles_codec);
-      if (HasAppVersion) {
+      if (AppVersion.Length != 0) {
         output.WriteRawTag(26);
         output.WriteString(AppVersion);
       }
@@ -258,7 +255,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         output.WriteMessage(Node);
       }
       roles_.WriteTo(ref output, _repeated_roles_codec);
-      if (HasAppVersion) {
+      if (AppVersion.Length != 0) {
         output.WriteRawTag(26);
         output.WriteString(AppVersion);
       }
@@ -275,7 +272,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Node);
       }
       size += roles_.CalculateSize(_repeated_roles_codec);
-      if (HasAppVersion) {
+      if (AppVersion.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(AppVersion);
       }
       if (_unknownFields != null) {
@@ -296,7 +293,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         Node.MergeFrom(other.Node);
       }
       roles_.Add(other.roles_);
-      if (other.HasAppVersion) {
+      if (other.AppVersion.Length != 0) {
         AppVersion = other.AppVersion;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
@@ -594,6 +591,526 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   }
 
   /// <summary>
+  ///*
+  /// Prior to version 1.4.19
+  /// Heartbeat
+  /// Sends an Address
+  /// Version 1.4.19 can deserialize this message but does not send it
+  /// </summary>
+  internal sealed partial class Heartbeat : pb::IMessage<Heartbeat>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<Heartbeat> _parser = new pb::MessageParser<Heartbeat>(() => new Heartbeat());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<Heartbeat> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Heartbeat() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Heartbeat(Heartbeat other) : this() {
+      from_ = other.from_ != null ? other.from_.Clone() : null;
+      sequenceNr_ = other.sequenceNr_;
+      creationTime_ = other.creationTime_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Heartbeat Clone() {
+      return new Heartbeat(this);
+    }
+
+    /// <summary>Field number for the "from" field.</summary>
+    public const int FromFieldNumber = 1;
+    private global::Akka.Remote.Serialization.Proto.Msg.AddressData from_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Remote.Serialization.Proto.Msg.AddressData From {
+      get { return from_; }
+      set {
+        from_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "sequenceNr" field.</summary>
+    public const int SequenceNrFieldNumber = 2;
+    private long sequenceNr_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long SequenceNr {
+      get { return sequenceNr_; }
+      set {
+        sequenceNr_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "creationTime" field.</summary>
+    public const int CreationTimeFieldNumber = 3;
+    private long creationTime_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long CreationTime {
+      get { return creationTime_; }
+      set {
+        creationTime_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as Heartbeat);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(Heartbeat other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(From, other.From)) return false;
+      if (SequenceNr != other.SequenceNr) return false;
+      if (CreationTime != other.CreationTime) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (from_ != null) hash ^= From.GetHashCode();
+      if (SequenceNr != 0L) hash ^= SequenceNr.GetHashCode();
+      if (CreationTime != 0L) hash ^= CreationTime.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (from_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(From);
+      }
+      if (SequenceNr != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(SequenceNr);
+      }
+      if (CreationTime != 0L) {
+        output.WriteRawTag(24);
+        output.WriteSInt64(CreationTime);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (from_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(From);
+      }
+      if (SequenceNr != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(SequenceNr);
+      }
+      if (CreationTime != 0L) {
+        output.WriteRawTag(24);
+        output.WriteSInt64(CreationTime);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (from_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(From);
+      }
+      if (SequenceNr != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(SequenceNr);
+      }
+      if (CreationTime != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt64Size(CreationTime);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(Heartbeat other) {
+      if (other == null) {
+        return;
+      }
+      if (other.from_ != null) {
+        if (from_ == null) {
+          From = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
+        }
+        From.MergeFrom(other.From);
+      }
+      if (other.SequenceNr != 0L) {
+        SequenceNr = other.SequenceNr;
+      }
+      if (other.CreationTime != 0L) {
+        CreationTime = other.CreationTime;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (from_ == null) {
+              From = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
+            }
+            input.ReadMessage(From);
+            break;
+          }
+          case 16: {
+            SequenceNr = input.ReadInt64();
+            break;
+          }
+          case 24: {
+            CreationTime = input.ReadSInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (from_ == null) {
+              From = new global::Akka.Remote.Serialization.Proto.Msg.AddressData();
+            }
+            input.ReadMessage(From);
+            break;
+          }
+          case 16: {
+            SequenceNr = input.ReadInt64();
+            break;
+          }
+          case 24: {
+            CreationTime = input.ReadSInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  ///*
+  /// Prior to version 1.4.19
+  /// HeartbeatRsp
+  /// Sends an UniqueAddress
+  /// Version 1.4.19 can deserialize this message but does not send it
+  /// </summary>
+  internal sealed partial class HeartBeatResponse : pb::IMessage<HeartBeatResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<HeartBeatResponse> _parser = new pb::MessageParser<HeartBeatResponse>(() => new HeartBeatResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<HeartBeatResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public HeartBeatResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public HeartBeatResponse(HeartBeatResponse other) : this() {
+      from_ = other.from_ != null ? other.from_.Clone() : null;
+      sequenceNr_ = other.sequenceNr_;
+      creationTime_ = other.creationTime_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public HeartBeatResponse Clone() {
+      return new HeartBeatResponse(this);
+    }
+
+    /// <summary>Field number for the "from" field.</summary>
+    public const int FromFieldNumber = 1;
+    private global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress from_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress From {
+      get { return from_; }
+      set {
+        from_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "sequenceNr" field.</summary>
+    public const int SequenceNrFieldNumber = 2;
+    private long sequenceNr_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long SequenceNr {
+      get { return sequenceNr_; }
+      set {
+        sequenceNr_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "creationTime" field.</summary>
+    public const int CreationTimeFieldNumber = 3;
+    private long creationTime_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public long CreationTime {
+      get { return creationTime_; }
+      set {
+        creationTime_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as HeartBeatResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(HeartBeatResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(From, other.From)) return false;
+      if (SequenceNr != other.SequenceNr) return false;
+      if (CreationTime != other.CreationTime) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (from_ != null) hash ^= From.GetHashCode();
+      if (SequenceNr != 0L) hash ^= SequenceNr.GetHashCode();
+      if (CreationTime != 0L) hash ^= CreationTime.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (from_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(From);
+      }
+      if (SequenceNr != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(SequenceNr);
+      }
+      if (CreationTime != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(CreationTime);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (from_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(From);
+      }
+      if (SequenceNr != 0L) {
+        output.WriteRawTag(16);
+        output.WriteInt64(SequenceNr);
+      }
+      if (CreationTime != 0L) {
+        output.WriteRawTag(24);
+        output.WriteInt64(CreationTime);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (from_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(From);
+      }
+      if (SequenceNr != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(SequenceNr);
+      }
+      if (CreationTime != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(CreationTime);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(HeartBeatResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.from_ != null) {
+        if (from_ == null) {
+          From = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
+        }
+        From.MergeFrom(other.From);
+      }
+      if (other.SequenceNr != 0L) {
+        SequenceNr = other.SequenceNr;
+      }
+      if (other.CreationTime != 0L) {
+        CreationTime = other.CreationTime;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (from_ == null) {
+              From = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
+            }
+            input.ReadMessage(From);
+            break;
+          }
+          case 16: {
+            SequenceNr = input.ReadInt64();
+            break;
+          }
+          case 24: {
+            CreationTime = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (from_ == null) {
+              From = new global::Akka.Cluster.Serialization.Proto.Msg.UniqueAddress();
+            }
+            input.ReadMessage(From);
+            break;
+          }
+          case 16: {
+            SequenceNr = input.ReadInt64();
+            break;
+          }
+          case 24: {
+            CreationTime = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
   /// Gossip Envelope
   /// </summary>
   internal sealed partial class GossipEnvelope : pb::IMessage<GossipEnvelope>
@@ -608,7 +1125,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -873,7 +1390,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1127,7 +1644,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[4]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1481,7 +1998,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[5]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1675,7 +2192,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[6]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[8]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1908,7 +2425,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[9]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2163,13 +2680,12 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
   {
     private static readonly pb::MessageParser<Member> _parser = new pb::MessageParser<Member>(() => new Member());
     private pb::UnknownFieldSet _unknownFields;
-    private int _hasBits0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<Member> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[8]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[10]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2186,7 +2702,6 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public Member(Member other) : this() {
-      _hasBits0 = other._hasBits0;
       addressIndex_ = other.addressIndex_;
       upNumber_ = other.upNumber_;
       status_ = other.status_;
@@ -2248,21 +2763,10 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
     private int appVersionIndex_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int AppVersionIndex {
-      get { if ((_hasBits0 & 1) != 0) { return appVersionIndex_; } else { return 0; } }
+      get { return appVersionIndex_; }
       set {
-        _hasBits0 |= 1;
         appVersionIndex_ = value;
       }
-    }
-    /// <summary>Gets whether the "appVersionIndex" field is set</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool HasAppVersionIndex {
-      get { return (_hasBits0 & 1) != 0; }
-    }
-    /// <summary>Clears the value of the "appVersionIndex" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void ClearAppVersionIndex() {
-      _hasBits0 &= ~1;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2293,7 +2797,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
       if (UpNumber != 0) hash ^= UpNumber.GetHashCode();
       if (Status != global::Akka.Cluster.Serialization.Proto.Msg.Member.Types.MemberStatus.Joining) hash ^= Status.GetHashCode();
       hash ^= rolesIndexes_.GetHashCode();
-      if (HasAppVersionIndex) hash ^= AppVersionIndex.GetHashCode();
+      if (AppVersionIndex != 0) hash ^= AppVersionIndex.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2323,7 +2827,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         output.WriteEnum((int) Status);
       }
       rolesIndexes_.WriteTo(output, _repeated_rolesIndexes_codec);
-      if (HasAppVersionIndex) {
+      if (AppVersionIndex != 0) {
         output.WriteRawTag(40);
         output.WriteInt32(AppVersionIndex);
       }
@@ -2349,7 +2853,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         output.WriteEnum((int) Status);
       }
       rolesIndexes_.WriteTo(ref output, _repeated_rolesIndexes_codec);
-      if (HasAppVersionIndex) {
+      if (AppVersionIndex != 0) {
         output.WriteRawTag(40);
         output.WriteInt32(AppVersionIndex);
       }
@@ -2372,7 +2876,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Status);
       }
       size += rolesIndexes_.CalculateSize(_repeated_rolesIndexes_codec);
-      if (HasAppVersionIndex) {
+      if (AppVersionIndex != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(AppVersionIndex);
       }
       if (_unknownFields != null) {
@@ -2396,7 +2900,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
         Status = other.Status;
       }
       rolesIndexes_.Add(other.rolesIndexes_);
-      if (other.HasAppVersionIndex) {
+      if (other.AppVersionIndex != 0) {
         AppVersionIndex = other.AppVersionIndex;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
@@ -2508,7 +3012,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[9]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[11]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -2926,7 +3430,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[10]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3143,7 +3647,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[11]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[13]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3369,7 +3873,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[12]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[14]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3613,7 +4117,7 @@ namespace Akka.Cluster.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[13]; }
+      get { return global::Akka.Cluster.Serialization.Proto.Msg.ClusterMessagesReflection.Descriptor.MessageTypes[15]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]

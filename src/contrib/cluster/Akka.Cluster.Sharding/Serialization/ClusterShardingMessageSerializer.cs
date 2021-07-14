@@ -64,9 +64,8 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string ShardStatsManifest = "DB";
         private const string GetShardRegionStatsManifest = "DC";
         private const string ShardRegionStatsManifest = "DD";
-
-        private const string GetClusterShardingStatsManifest = "GS"; //"DE" in akka
-        private const string ClusterShardingStatsManifest = "CS"; //"DF" in akka
+        private const string GetClusterShardingStatsManifest = "GS"; // This is "DE" in JVM
+        private const string ClusterShardingStatsManifest = "CS"; // This is "DF" in JVM
         private const string GetCurrentRegionsManifest = "DG";
         private const string CurrentRegionsManifest = "DH";
 
@@ -137,8 +136,6 @@ namespace Akka.Cluster.Sharding.Serialization
                 { GetShardRegionStateManifest, bytes => GetShardRegionState.Instance },
                 { ShardStateManifest, bytes => ShardStateFromBinary(bytes) },
                 { CurrentShardRegionStateManifest, bytes => CurrentShardRegionStateFromBinary(bytes) },
-
-
                 { EventSourcedRememberShardsMigrationMarkerManifest, bytes => EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker.Instance},
                 { EventSourcedRememberShardsState, bytes => RememberShardsStateFromBinary(bytes) }
             };
@@ -568,51 +565,51 @@ namespace Akka.Cluster.Sharding.Serialization
         }
 
         //CurrentRegions
-        private Proto.Msg.CurrentRegions CurrentRegionsToProto(CurrentRegions evt)
+        private static Proto.Msg.CurrentRegions CurrentRegionsToProto(CurrentRegions regions)
         {
             var p = new Proto.Msg.CurrentRegions();
-            p.Regions.AddRange(evt.Regions.Select(AddressToProto));
+            p.Regions.AddRange(regions.Regions.Select(AddressToProto));
             return p;
         }
 
-        private CurrentRegions CurrentRegionsFromBinary(byte[] bytes)
+        private static CurrentRegions CurrentRegionsFromBinary(byte[] b)
         {
-            var p = Proto.Msg.CurrentRegions.Parser.ParseFrom(bytes);
+            var p = Proto.Msg.CurrentRegions.Parser.ParseFrom(b);
             return new CurrentRegions(p.Regions.Select(AddressFrom).ToImmutableHashSet());
         }
 
         //ShardState
-        private Proto.Msg.ShardState ShardStateToProto(ShardState evt)
+        private static Proto.Msg.ShardState ShardStateToProto(ShardState state)
         {
             var p = new Proto.Msg.ShardState();
-            p.ShardId = evt.ShardId;
-            p.EntityIds.AddRange(evt.EntityIds);
+            p.ShardId = state.ShardId;
+            p.EntityIds.AddRange(state.EntityIds);
             return p;
         }
 
-        private ShardState ShardStateFromProto(Proto.Msg.ShardState parsed)
+        private static ShardState ShardStateFromProto(Proto.Msg.ShardState state)
         {
-            return new ShardState(parsed.ShardId, parsed.EntityIds.ToImmutableHashSet());
+            return new ShardState(state.ShardId, state.EntityIds.ToImmutableHashSet());
         }
 
-        private ShardState ShardStateFromBinary(byte[] bytes)
+        private static ShardState ShardStateFromBinary(byte[] b)
         {
-            var p = Proto.Msg.ShardState.Parser.ParseFrom(bytes);
+            var p = Proto.Msg.ShardState.Parser.ParseFrom(b);
             return new ShardState(p.ShardId, p.EntityIds.ToImmutableHashSet());
         }
 
         //CurrentShardRegionState
-        private Proto.Msg.CurrentShardRegionState CurrentShardRegionStateToProto(CurrentShardRegionState evt)
+        private static Proto.Msg.CurrentShardRegionState CurrentShardRegionStateToProto(CurrentShardRegionState state)
         {
             var p = new Proto.Msg.CurrentShardRegionState();
-            p.Shards.AddRange(evt.Shards.Select(ShardStateToProto));
-            p.Failed.AddRange(evt.Failed);
+            p.Shards.AddRange(state.Shards.Select(ShardStateToProto));
+            p.Failed.AddRange(state.Failed);
             return p;
         }
 
-        private CurrentShardRegionState CurrentShardRegionStateFromBinary(byte[] bytes)
+        private static CurrentShardRegionState CurrentShardRegionStateFromBinary(byte[] b)
         {
-            var p = Proto.Msg.CurrentShardRegionState.Parser.ParseFrom(bytes);
+            var p = Proto.Msg.CurrentShardRegionState.Parser.ParseFrom(b);
             return new CurrentShardRegionState(p.Shards.Select(ShardStateFromProto).ToImmutableHashSet(), p.Failed.ToImmutableHashSet());
         }
 

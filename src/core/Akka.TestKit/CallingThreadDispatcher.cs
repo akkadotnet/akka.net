@@ -12,7 +12,7 @@ using Akka.Dispatch;
 namespace Akka.TestKit
 {
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public class CallingThreadDispatcherConfigurator : MessageDispatcherConfigurator
     {
@@ -36,7 +36,9 @@ namespace Akka.TestKit
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
+    ///
+    /// Used to run an actor on the foreground thread.
     /// </summary>
     public class CallingThreadDispatcher : MessageDispatcher
     {

@@ -1189,7 +1189,7 @@ namespace Akka.Cluster.Sharding
                     ReceiveTerminated(t.ActorRef);
                     return true;
                 case EntityTerminated t:
-                    EentityTerminated(t.Ref);
+                    ReceiveEntityTerminated(t.Ref);
                     return true;
                 case ICoordinatorMessage msg:
                     ReceiveCoordinatorMessage(msg);
@@ -1292,7 +1292,7 @@ namespace Akka.Cluster.Sharding
                         ReceiveTerminated(t.ActorRef);
                         return true;
                     case EntityTerminated t:
-                        EentityTerminated(t.Ref);
+                        ReceiveEntityTerminated(t.Ref);
                         return true;
                     case ICoordinatorMessage _:
                         Stash.Stash();
@@ -1574,7 +1574,7 @@ namespace Akka.Cluster.Sharding
                 Context.Stop(Self);
         }
 
-        private void EentityTerminated(IActorRef @ref)
+        private void ReceiveEntityTerminated(IActorRef @ref)
         {
             var entityId = entities.EntityId(@ref);
             if (entityId != null)

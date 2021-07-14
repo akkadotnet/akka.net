@@ -53,7 +53,7 @@ namespace Akka.IO
 
         #region internal connection messages
         
-        internal abstract class SocketCompleted { }
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded { }
 
         internal sealed class SocketSent : SocketCompleted
         {

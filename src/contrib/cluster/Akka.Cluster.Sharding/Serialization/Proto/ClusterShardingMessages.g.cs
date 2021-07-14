@@ -68,8 +68,8 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             "CRIRCgllbnRpdHlJZHMYAiADKAkidAoXQ3VycmVudFNoYXJkUmVnaW9uU3Rh",
             "dGUSSQoGc2hhcmRzGAEgAygLMjkuQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNl",
             "cmlhbGl6YXRpb24uUHJvdG8uTXNnLlNoYXJkU3RhdGUSDgoGZmFpbGVkGAIg",
-            "AygJIkcKFFJlbWVtYmVyZWRTaGFyZFN0YXRlEg8KB3NoYXJkSWQYASADKAkS",
-            "EwoGbWFya2VyGAIgASgISACIAQFCCQoHX21hcmtlcmIGcHJvdG8z"));
+            "AygJIjcKFFJlbWVtYmVyZWRTaGFyZFN0YXRlEg8KB3NoYXJkSWQYASADKAkS",
+            "DgoGbWFya2VyGAIgASgIYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -94,7 +94,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentShardState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentShardState.Parser, new[]{ "ShardId", "EntityIds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState.Parser, new[]{ "ShardId", "EntityIds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentShardRegionState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentShardRegionState.Parser, new[]{ "Shards", "Failed" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RememberedShardState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RememberedShardState.Parser, new[]{ "ShardId", "Marker" }, new[]{ "Marker" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RememberedShardState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.RememberedShardState.Parser, new[]{ "ShardId", "Marker" }, null, null, null, null)
           }));
     }
     #endregion
@@ -4235,7 +4235,6 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
   {
     private static readonly pb::MessageParser<RememberedShardState> _parser = new pb::MessageParser<RememberedShardState>(() => new RememberedShardState());
     private pb::UnknownFieldSet _unknownFields;
-    private int _hasBits0;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pb::MessageParser<RememberedShardState> Parser { get { return _parser; } }
 
@@ -4258,7 +4257,6 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public RememberedShardState(RememberedShardState other) : this() {
-      _hasBits0 = other._hasBits0;
       shardId_ = other.shardId_.Clone();
       marker_ = other.marker_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -4284,21 +4282,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     private bool marker_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public bool Marker {
-      get { if ((_hasBits0 & 1) != 0) { return marker_; } else { return false; } }
+      get { return marker_; }
       set {
-        _hasBits0 |= 1;
         marker_ = value;
       }
-    }
-    /// <summary>Gets whether the "marker" field is set</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool HasMarker {
-      get { return (_hasBits0 & 1) != 0; }
-    }
-    /// <summary>Clears the value of the "marker" field</summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void ClearMarker() {
-      _hasBits0 &= ~1;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -4323,7 +4310,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     public override int GetHashCode() {
       int hash = 1;
       hash ^= shardId_.GetHashCode();
-      if (HasMarker) hash ^= Marker.GetHashCode();
+      if (Marker != false) hash ^= Marker.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -4341,7 +4328,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
       output.WriteRawMessage(this);
     #else
       shardId_.WriteTo(output, _repeated_shardId_codec);
-      if (HasMarker) {
+      if (Marker != false) {
         output.WriteRawTag(16);
         output.WriteBool(Marker);
       }
@@ -4355,7 +4342,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
       shardId_.WriteTo(ref output, _repeated_shardId_codec);
-      if (HasMarker) {
+      if (Marker != false) {
         output.WriteRawTag(16);
         output.WriteBool(Marker);
       }
@@ -4369,7 +4356,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
     public int CalculateSize() {
       int size = 0;
       size += shardId_.CalculateSize(_repeated_shardId_codec);
-      if (HasMarker) {
+      if (Marker != false) {
         size += 1 + 1;
       }
       if (_unknownFields != null) {
@@ -4384,7 +4371,7 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
         return;
       }
       shardId_.Add(other.shardId_);
-      if (other.HasMarker) {
+      if (other.Marker != false) {
         Marker = other.Marker;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);

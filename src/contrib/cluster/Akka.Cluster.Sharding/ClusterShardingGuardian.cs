@@ -285,7 +285,9 @@ namespace Akka.Cluster.Sharding
 
         private ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
         {
-            var configuredSettings = ReplicatorSettings.Create(Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data"));
+            var config = Context.System.Settings.Config.GetConfig("akka.cluster.sharding.distributed-data")
+                .WithFallback(Context.System.Settings.Config.GetConfig("akka.cluster.distributed-data"));
+            var configuredSettings = ReplicatorSettings.Create(config);
             var settingsWithRoles = configuredSettings.WithRole(shardingSettings.Role);
             if (shardingSettings.RememberEntities)
                 return settingsWithRoles;

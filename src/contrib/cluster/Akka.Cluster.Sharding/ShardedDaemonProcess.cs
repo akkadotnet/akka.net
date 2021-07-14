@@ -104,7 +104,7 @@ namespace Akka.Cluster.Sharding
     /// </para>
     /// <para>Not for user extension.</para>
     /// </summary>
-    [ApiMayChange]
+    [DoNotInherit, ApiMayChange]
     public class ShardedDaemonProcess : IExtension
     {
         private readonly ExtendedActorSystem _system;
@@ -120,10 +120,18 @@ namespace Akka.Cluster.Sharding
         /// <param name="name">TBD</param>
         /// <param name="numberOfInstances">TBD</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory)
-        {
-            Init(name, numberOfInstances, propsFactory, ShardedDaemonProcessSettings.Create(_system));
-        }
+        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory) => 
+            Init(name, numberOfInstances, propsFactory, ShardedDaemonProcessSettings.Create(_system), null);
+
+        /// <summary>
+        /// Start a specific number of actors that is then kept alive in the cluster.
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="numberOfInstances">TBD</param>
+        /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
+        /// <param name="stopMessage">Sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
+        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, object stopMessage) => 
+            Init(name, numberOfInstances, propsFactory, ShardedDaemonProcessSettings.Create(_system), stopMessage);
 
         /// <summary>
         /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
@@ -132,7 +140,19 @@ namespace Akka.Cluster.Sharding
         /// <param name="numberOfInstances">TBD</param>
         /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
         /// <param name="settings">TBD</param>
-        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings)
+        [Obsolete("Use the overloaded one which accepts a stopMessage instead.")]
+        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings) =>
+            Init(name, numberOfInstances, propsFactory, settings, null);
+
+        /// <summary>
+        /// Start a specific number of actors, each with a unique numeric id in the set, that is then kept alive in the cluster.
+        /// </summary>
+        /// <param name="name">TBD</param>
+        /// <param name="numberOfInstances">TBD</param>
+        /// <param name="propsFactory">Given a unique id of `0` until `numberOfInstance` create an entity actor.</param>
+        /// <param name="settings">TBD</param>
+        /// <param name="stopMessage">If defined sent to the actors when they need to stop because of a rebalance across the nodes of the cluster or cluster shutdown.</param>
+        public void Init(string name, int numberOfInstances, Func<int, Props> propsFactory, ShardedDaemonProcessSettings settings, object stopMessage)
         {
             // One shard per actor identified by the numeric id encoded in the entity id
             var numberOfShards = numberOfInstances;
@@ -159,14 +179,17 @@ namespace Akka.Cluster.Sharding
 
             if (string.IsNullOrEmpty(shardingSettings.Role) || Cluster.Get(_system).SelfRoles.Contains(shardingSettings.Role))
             {
-                var shardRegion = ClusterSharding.Get(_system).Start(
+                var sharding = ClusterSharding.Get(_system);
+                var shardingRef = sharding.Start(
                     typeName: $"sharded-daemon-process-{name}",
                     entityPropsFactory: entityId => propsFactory(int.Parse(entityId)),
                     settings: shardingSettings,
-                    messageExtractor: new MessageExtractor(numberOfShards));
+                    messageExtractor: new MessageExtractor(numberOfShards),
+                    allocationStrategy: sharding.DefaultShardAllocationStrategy(shardingSettings), 
+                    stopMessage ?? PoisonPill.Instance);
 
                 _system.ActorOf(
-                    KeepAlivePinger.Props(settings, name, entityIds, shardRegion),
+                    KeepAlivePinger.Props(settings, name, entityIds, shardingRef),
                     $"ShardedDaemonProcessKeepAlive-{name}");
             }
         }

@@ -40,47 +40,47 @@ namespace Akka.NodeTestRunner
 
         public bool OnMessage(IMessageSinkMessage message)
         {
-            var resultMessage = message as ITestResultMessage;
-            if (resultMessage != null)
+            if (message is ITestResultMessage resultMessage)
             {
                 _logger.Tell(resultMessage.Output);
                 Console.WriteLine(resultMessage.Output);
             }
-            var testPassed = message as ITestPassed;
-            if (testPassed != null)
+
+            switch (message)
             {
-                //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
-                var specPass = new SpecPass(_nodeIndex + 1, _nodeRole, testPassed.TestCase.DisplayName);
-                _logger.Tell(specPass.ToString());
-                Console.WriteLine(specPass.ToString()); //so the message also shows up in the individual per-node build log
-                Passed = true;
-                return true;
-            }
-            var testFailed = message as ITestFailed;
-            if (testFailed != null)
-            {
-                //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
-                var specFail = new SpecFail(_nodeIndex + 1, _nodeRole, testFailed.TestCase.DisplayName);
-                foreach (var failedMessage in testFailed.Messages) specFail.FailureMessages.Add(failedMessage);
-                foreach (var stackTrace in testFailed.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
-                foreach(var exceptionType in testFailed.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
-                _logger.Tell(specFail.ToString());
-                Console.WriteLine(specFail.ToString());
-                return true;
-            }
-            var errorMessage = message as ErrorMessage;
-            if (errorMessage != null)
-            {
-                var specFail = new SpecFail(_nodeIndex + 1, _nodeRole, "ERRORED");
-                foreach (var failedMessage in errorMessage.Messages) specFail.FailureMessages.Add(failedMessage);
-                foreach (var stackTrace in errorMessage.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
-                foreach (var exceptionType in errorMessage.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
-                _logger.Tell(specFail.ToString());
-                Console.WriteLine(specFail.ToString());
-            }
-            if (message is ITestAssemblyFinished)
-            {
-                Finished.Set();
+                case ITestPassed testPassed:
+                {
+                    //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
+                    var specPass = new SpecPass(_nodeIndex + 1, _nodeRole, testPassed.TestCase.DisplayName);
+                    _logger.Tell(specPass.ToString());
+                    Console.WriteLine(specPass.ToString()); //so the message also shows up in the individual per-node build log
+                    Passed = true;
+                    return true;
+                }
+                case ITestFailed testFailed:
+                {
+                    //the MultiNodeTestRunner uses 1-based indexing, which is why we have to add 1 to the index.
+                    var specFail = new SpecFail(_nodeIndex + 1, _nodeRole, testFailed.TestCase.DisplayName);
+                    foreach (var failedMessage in testFailed.Messages) specFail.FailureMessages.Add(failedMessage);
+                    foreach (var stackTrace in testFailed.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
+                    foreach(var exceptionType in testFailed.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
+                    _logger.Tell(specFail.ToString());
+                    Console.WriteLine(specFail.ToString());
+                    return true;
+                }
+                case ErrorMessage errorMessage:
+                {
+                    var specFail = new SpecFail(_nodeIndex + 1, _nodeRole, "ERRORED");
+                    foreach (var failedMessage in errorMessage.Messages) specFail.FailureMessages.Add(failedMessage);
+                    foreach (var stackTrace in errorMessage.StackTraces) specFail.FailureStackTraces.Add(stackTrace);
+                    foreach (var exceptionType in errorMessage.ExceptionTypes) specFail.FailureExceptionTypes.Add(exceptionType);
+                    _logger.Tell(specFail.ToString());
+                    Console.WriteLine(specFail.ToString());
+                    break;
+                }
+                case ITestAssemblyFinished _:
+                    Finished.Set();
+                    break;
             }
 
             return true;

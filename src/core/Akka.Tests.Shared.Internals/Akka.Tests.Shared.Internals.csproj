@@ -14,11 +14,8 @@
 
   <ItemGroup>
     <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
+    <PackageReference Include="Fsharp.Core" Version="5.0.1" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
-  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

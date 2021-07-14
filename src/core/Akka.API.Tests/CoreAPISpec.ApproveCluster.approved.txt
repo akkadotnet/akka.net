@@ -1,4 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
@@ -175,6 +176,7 @@ namespace Akka.Cluster
     public class ClusterJoinFailedException : Akka.Actor.AkkaException
     {
         public ClusterJoinFailedException(string message) { }
+        protected ClusterJoinFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ClusterScope : Akka.Actor.Scope
     {
@@ -219,6 +221,7 @@ namespace Akka.Cluster
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
+        public System.TimeSpan WeaklyUpAfter { get; }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
@@ -437,11 +440,12 @@ namespace Akka.Cluster.SBR
 }
 namespace Akka.Cluster.Serialization
 {
-    public class ClusterMessageSerializer : Akka.Serialization.Serializer
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
 }

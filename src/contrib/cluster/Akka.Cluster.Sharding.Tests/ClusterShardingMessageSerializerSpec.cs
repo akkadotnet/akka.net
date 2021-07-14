@@ -23,7 +23,6 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingMessageSerializerSpec : AkkaSpec
     {
-        private SerializerWithStringManifest serializer;
         private IActorRef region1;
         private IActorRef region2;
         private IActorRef region3;
@@ -35,7 +34,6 @@ namespace Akka.Cluster.Sharding.Tests
 
         public ClusterShardingMessageSerializerSpec() : base(SpecConfig)
         {
-            serializer = new ClusterShardingMessageSerializer((ExtendedActorSystem)Sys);
             region1 = Sys.ActorOf(Props.Empty, "region1");
             region2 = Sys.ActorOf(Props.Empty, "region2");
             region3 = Sys.ActorOf(Props.Empty, "region3");
@@ -45,6 +43,8 @@ namespace Akka.Cluster.Sharding.Tests
 
         private void CheckSerialization(object obj)
         {
+            var serializer = (SerializerWithStringManifest) Sys.Serialization.FindSerializerFor(obj);
+            serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
             var blob = serializer.ToBinary(obj);
             var reference = serializer.FromBinary(blob, serializer.Manifest(obj));
             reference.Should().Be(obj);
@@ -124,6 +124,9 @@ namespace Akka.Cluster.Sharding.Tests
             var message1 = new Serialization.Proto.Msg.EntityStarted();
             message1.EntityId = "e1";
             var blob = message1.ToByteArray();
+
+            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerForType(typeof(EventSourcedRememberEntitiesShardStore.EntitiesStarted));
+            serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
 
             var reference = serializer.FromBinary(blob, "CB");
             reference.Should().Be(new EventSourcedRememberEntitiesShardStore.EntitiesStarted(ImmutableHashSet.Create("e1")));

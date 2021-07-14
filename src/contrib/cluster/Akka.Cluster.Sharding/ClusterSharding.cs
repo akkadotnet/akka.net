@@ -279,7 +279,8 @@ namespace Akka.Cluster.Sharding
         /// <returns>TBD</returns>
         public static Config DefaultConfig()
         {
-            return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf");
+            return ConfigurationFactory.FromResource<ClusterSharding>("Akka.Cluster.Sharding.reference.conf")
+                .WithFallback(DistributedData.DistributedData.DefaultConfig());
         }
 
         /// <summary>

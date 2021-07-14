@@ -112,5 +112,5 @@ message CurrentShardRegionState {
 
 message RememberedShardState {
     repeated string shardId = 1;
-    optional bool marker = 2;
+    bool marker = 2;
 }

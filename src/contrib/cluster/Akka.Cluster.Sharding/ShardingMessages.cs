@@ -32,7 +32,7 @@ namespace Akka.Cluster.Sharding
     /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
     /// are thereafter delivered to a new incarnation of the entity.
     ///
-    /// <see cref="PoisonPill"/> is a perfectly fine <see cref="StopMessage"/>.
+    /// <see cref="PoisonPill.Instance"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
     [Serializable]
     public sealed class Passivate : IShardRegionCommand
@@ -525,7 +525,7 @@ namespace Akka.Cluster.Sharding
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ShardState
+    public sealed class ShardState : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD

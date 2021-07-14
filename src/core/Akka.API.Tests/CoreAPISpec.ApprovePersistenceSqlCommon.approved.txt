@@ -74,7 +74,6 @@ namespace Akka.Persistence.Sql.Common.Journal
         where TConnection : System.Data.Common.DbConnection
         where TCommand : System.Data.Common.DbCommand
     {
-        protected readonly System.Collections.Generic.Queue<Akka.Persistence.IJournalRequest> Buffer;
         protected readonly bool CanPublish;
         protected const int IsDeletedIndex = 3;
         protected readonly Akka.Event.ILoggingAdapter Log;
@@ -188,6 +187,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public static readonly Akka.Persistence.Sql.Common.Journal.JournalBufferOverflowException Instance;
         public JournalBufferOverflowException() { }
+        protected JournalBufferOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class JournalEntry
     {
