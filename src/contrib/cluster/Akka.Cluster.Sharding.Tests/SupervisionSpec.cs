@@ -136,9 +136,13 @@ namespace Akka.Cluster.Sharding.Tests
             var response = ExpectMsg<Response>(TimeSpan.FromSeconds(5));
             Watch(response.Self);
 
-            region.Tell(new Msg(10, "passivate"));
-            ExpectTerminated(response.Self);
-            Thread.Sleep(200);
+            // We need the shard to have observed the passivation for this test but
+            // we don't know that this means the passivation reached the shard yet unless we observe it
+            EventFilter.Debug("passy: Passivation started for [10]").ExpectOne(() =>
+            {
+                region.Tell(new Msg(10, "passivate"));
+                ExpectTerminated(response.Self);
+            });
 
             // This would fail before as sharded actor would be stuck passivating
             region.Tell(new Msg(10, "hello"));
