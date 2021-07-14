@@ -64,7 +64,8 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.test.single-expect-default = 5 s
                 akka.cluster.sharding.state-store-mode = ""ddata""
                 akka.cluster.sharding.verbose-debug-logging = on
-                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                akka.cluster.sharding.distributed-data.durable.keys = []")
                 .WithFallback(ClusterSingletonManager.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
 
