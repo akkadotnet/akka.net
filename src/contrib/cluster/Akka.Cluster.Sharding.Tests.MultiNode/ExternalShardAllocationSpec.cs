@@ -32,7 +32,8 @@ namespace Akka.Cluster.Sharding.Tests
                 waiting-for-state-timeout = 2000ms
                 rebalance-interval = 1s
             }
-
+            akka.cluster.sharding.distributed-data.durable.keys = []
+            akka.testconductor.barrier-timeout = 60s
             ")
         {
             First = Role("first");
