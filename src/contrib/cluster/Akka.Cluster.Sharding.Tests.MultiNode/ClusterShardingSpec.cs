@@ -549,11 +549,11 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding_should_be_easy_to_use_with_extensions();
             ClusterSharding_should_be_easy_API_for_starting();
 
-            ClusterSharding_should_recover_entities_upon_restart();
-            ClusterSharding_should_permanently_stop_entities_which_passivate();
-            ClusterSharding_should_restart_entities_which_stop_without_passivation();
-            ClusterSharding_should_be_migrated_to_new_regions_upon_region_failure();
-            ClusterSharding_should_ensure_rebalance_restarts_shards();
+            PersistentClusterSharding_should_recover_entities_upon_restart();
+            PersistentClusterSharding_should_permanently_stop_entities_which_passivate();
+            PersistentClusterSharding_should_restart_entities_which_stop_without_passivation();
+            PersistentClusterSharding_should_be_migrated_to_new_regions_upon_region_failure();
+            PersistentClusterSharding_should_ensure_rebalance_restarts_shards();
         }
 
         private void ClusterSharding_should_setup_shared_journal()
@@ -981,7 +981,7 @@ namespace Akka.Cluster.Sharding.Tests
 
         #region Persistent cluster shards specs
 
-        private void ClusterSharding_should_recover_entities_upon_restart()
+        private void PersistentClusterSharding_should_recover_entities_upon_restart()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -1074,7 +1074,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        private void ClusterSharding_should_permanently_stop_entities_which_passivate()
+        private void PersistentClusterSharding_should_permanently_stop_entities_which_passivate()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -1157,7 +1157,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        private void ClusterSharding_should_restart_entities_which_stop_without_passivation()
+        private void PersistentClusterSharding_should_restart_entities_which_stop_without_passivation()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {
@@ -1188,7 +1188,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        private void ClusterSharding_should_be_migrated_to_new_regions_upon_region_failure()
+        private void PersistentClusterSharding_should_be_migrated_to_new_regions_upon_region_failure()
         {
             Within(TimeSpan.FromSeconds(15), () =>
             {
@@ -1234,7 +1234,7 @@ namespace Akka.Cluster.Sharding.Tests
             });
         }
 
-        private void ClusterSharding_should_ensure_rebalance_restarts_shards()
+        private void PersistentClusterSharding_should_ensure_rebalance_restarts_shards()
         {
             Within(TimeSpan.FromSeconds(50), () =>
             {

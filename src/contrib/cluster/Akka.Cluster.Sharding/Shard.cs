@@ -1178,8 +1178,6 @@ namespace Akka.Cluster.Sharding
 
         // ===== shard up and running =====
 
-
-
         // when not remembering entities, we stay in this state all the time
         private bool Idle(object message)
         {
