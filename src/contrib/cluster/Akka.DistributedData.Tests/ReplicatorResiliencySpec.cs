@@ -117,7 +117,6 @@ namespace Akka.DistributedData.Tests
 
         public async Task DurableStoreActorCrash()
         {
-
             const string replicatorActorPath = "/user/replicatorSuper/replicator";
             const string durableStoreActorPath = "/user/replicatorSuper/replicator/durableStore";
             
@@ -147,11 +146,33 @@ namespace Akka.DistributedData.Tests
                     Assert.Equal(replicatorActorPath,r.Result.Subject.Path.ToStringWithoutAddress());
                 });
             },TimeSpan.FromSeconds(10));
+        }
+        
+        [Fact]
+        public async Task DistributedData_Replicator_Defaults_to_NoSupervisor()
+        {
+            const string replicatorActorPath = "/user/ddataReplicator";
+            const string durableStoreActorPath = "/user/ddataReplicator/durableStore";
+
+            await InitCluster();
+            var replicator = DistributedData.Get(_sys1).Replicator;
+            var durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3))
+                .ContinueWith(
+                    m => m.Result).Result;
+
+            Watch(replicator);
+            Watch(durableStore);
+            durableStore.Tell(new InitFail());
+
+            ExpectTerminated(durableStore, TimeSpan.FromSeconds(10));
+            ExpectTerminated(replicator, TimeSpan.FromSeconds(10));
+
+            // The replicator should not have been recreated, so expect ActorNotFound
+            await Assert.ThrowsAsync<ActorNotFoundException>( () => 
+                _sys1.ActorSelection(replicatorActorPath).ResolveOne(TimeSpan.FromSeconds(5)));
 
         }
     }
-
-
 
     public class FakeDurableStore : ReceiveActor
     {
