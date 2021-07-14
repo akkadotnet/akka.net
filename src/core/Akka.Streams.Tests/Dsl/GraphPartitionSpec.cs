@@ -245,6 +245,29 @@ namespace Akka.Streams.Tests.Dsl
                         "partitioner must return an index in the range [0,1]. returned: [-1] for input [Int32].");
             }, Materializer);
         }
+
+        [Fact]
+        public void A_Partition_divertTo_must_send_matching_elements_to_the_sink()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var odd = this.CreateSubscriberProbe<int>();
+                var even = this.CreateSubscriberProbe<int>();
+
+                Source.From(Enumerable.Range(1, 2))
+                    .DivertTo(Sink.FromSubscriber(odd), i => i % 2 != 0)
+                    .To(Sink.FromSubscriber(even))
+                    .Run(Materializer);
+
+                even.Request(1);
+                even.ExpectNoMsg(TimeSpan.FromSeconds(1));
+                odd.Request(1);
+                odd.ExpectNext(1);
+                even.ExpectNext(2);
+                odd.ExpectComplete();
+                even.ExpectComplete();
+            }, Materializer);
+        }
     }
 }
 
