@@ -55,7 +55,8 @@ namespace Akka.DistributedData.Tests
             
             var settings = ReplicatorSettings.Create(Sys)
                 .WithGossipInterval(TimeSpan.FromSeconds(1.0))
-                .WithMaxDeltaElements(10);
+                .WithMaxDeltaElements(10)
+                .WithRestartReplicatorOnFailure(true);
 
             var props = BackoffSupervisor.Props(
                     Backoff.OnStop(
