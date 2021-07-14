@@ -117,8 +117,8 @@ namespace Akka.DistributedData.Tests
         public async Task DurableStoreActorCrash()
         {
 
-            const string replicatorActorPath = "akka://AkkaSpec/user/replicatorSuper/replicator";
-            const string durableStoreActorPath = "akka://AkkaSpec/user/replicatorSuper/replicator/durableStore";
+            const string replicatorActorPath = "/user/replicatorSuper/replicator";
+            const string durableStoreActorPath = "/user/replicatorSuper/replicator/durableStore";
             
             var durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3)).ContinueWith(
                 m => m.Result).Result;
@@ -143,7 +143,7 @@ namespace Akka.DistributedData.Tests
                 // We should be able to identify the recreated actor to prove the actor exists
                 await newReplicator.Ask<ActorIdentity>(new Identify(Guid.NewGuid().ToString())).ContinueWith(r =>
                 {
-                    Assert.Equal(replicatorActorPath,r.Result.Subject.Path.ToString());
+                    Assert.Equal(replicatorActorPath,r.Result.Subject.Path.ToStringWithoutAddress());
                 });
             },TimeSpan.FromSeconds(10));
 
