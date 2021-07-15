@@ -417,24 +417,14 @@ namespace Akka.Cluster.SBR
             throw new InvalidOperationException();
         }
 
-        public IDecision ReverseDecision(IDecision decision)
+        public IDecision ReverseDecision(IAcquireLeaseDecision decision)
         {
             switch (decision)
             {
-                case DownUnreachable _:
-                    return DownReachable.Instance;
                 case AcquireLeaseAndDownUnreachable _:
                     return DownReachable.Instance;
-                case DownReachable _:
-                    return DownUnreachable.Instance;
-                case DownAll _:
-                    return DownAll.Instance;
-                case DownIndirectlyConnected _:
-                    return ReverseDownIndirectlyConnected.Instance;
                 case AcquireLeaseAndDownIndirectlyConnected _:
                     return ReverseDownIndirectlyConnected.Instance;
-                case ReverseDownIndirectlyConnected _:
-                    return DownIndirectlyConnected.Instance;
             }
 
             throw new InvalidOperationException();

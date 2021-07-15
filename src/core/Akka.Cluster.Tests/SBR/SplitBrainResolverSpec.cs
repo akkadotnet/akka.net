@@ -1191,7 +1191,7 @@ namespace Akka.Cluster.Tests.SBR
             var decision1 = strategy1.Decide();
             decision1.Should().Be(new AcquireLeaseAndDownUnreachable(TimeSpan.Zero));
             strategy1.NodesToDown(decision1).Should().BeEquivalentTo(setup.Side2Nodes);
-            var reverseDecision1 = strategy1.ReverseDecision(decision1);
+            var reverseDecision1 = strategy1.ReverseDecision((IAcquireLeaseDecision)decision1);
             reverseDecision1.Should().BeOfType<DownReachable>();
             strategy1.NodesToDown(reverseDecision1).Should().BeEquivalentTo(setup.Side1Nodes);
 
@@ -1199,7 +1199,7 @@ namespace Akka.Cluster.Tests.SBR
             var decision2 = strategy2.Decide();
             decision2.Should().Be(new AcquireLeaseAndDownUnreachable(setup.AcquireLeaseDelayForMinority));
             strategy2.NodesToDown(decision2).Should().BeEquivalentTo(setup.Side1Nodes);
-            var reverseDecision2 = strategy2.ReverseDecision(decision2);
+            var reverseDecision2 = strategy2.ReverseDecision((IAcquireLeaseDecision)decision2);
             reverseDecision2.Should().BeOfType<DownReachable>();
             strategy2.NodesToDown(reverseDecision2).Should().BeEquivalentTo(setup.Side2Nodes);
         }
@@ -1236,7 +1236,7 @@ namespace Akka.Cluster.Tests.SBR
             var decision1 = strategy1.Decide();
             decision1.Should().Be(new AcquireLeaseAndDownIndirectlyConnected(TimeSpan.Zero));
             strategy1.NodesToDown(decision1).Should().BeEquivalentTo(new[] { MemberA.UniqueAddress, MemberB.UniqueAddress });
-            var reverseDecision1 = strategy1.ReverseDecision(decision1);
+            var reverseDecision1 = strategy1.ReverseDecision((IAcquireLeaseDecision)decision1);
             reverseDecision1.Should().BeOfType<ReverseDownIndirectlyConnected>();
             strategy1.NodesToDown(reverseDecision1).Should().BeEquivalentTo(setup.Side1Nodes);
         }
@@ -1258,7 +1258,7 @@ namespace Akka.Cluster.Tests.SBR
             var decision1 = strategy1.Decide();
             decision1.Should().Be(new AcquireLeaseAndDownIndirectlyConnected(TimeSpan.Zero));
             strategy1.NodesToDown(decision1).Should().BeEquivalentTo(new[] { MemberB, MemberC, MemberD, MemberE }.Select(m => m.UniqueAddress));
-            var reverseDecision1 = strategy1.ReverseDecision(decision1);
+            var reverseDecision1 = strategy1.ReverseDecision((IAcquireLeaseDecision)decision1);
             reverseDecision1.Should().BeOfType<ReverseDownIndirectlyConnected>();
             strategy1.NodesToDown(reverseDecision1).Should().BeEquivalentTo(setup.Side1Nodes);
 
@@ -1271,7 +1271,7 @@ namespace Akka.Cluster.Tests.SBR
             var decision2 = strategy2.Decide();
             decision2.Should().Be(new AcquireLeaseAndDownUnreachable(setup.AcquireLeaseDelayForMinority));
             strategy2.NodesToDown(decision2).Should().BeEquivalentTo(setup.Side1Nodes);
-            var reverseDecision2 = strategy2.ReverseDecision(decision2);
+            var reverseDecision2 = strategy2.ReverseDecision((IAcquireLeaseDecision)decision2);
             reverseDecision2.Should().BeOfType<DownReachable>();
             strategy2.NodesToDown(reverseDecision2).Should().BeEquivalentTo(setup.Side2Nodes);
 
@@ -1284,7 +1284,7 @@ namespace Akka.Cluster.Tests.SBR
             var decision3 = strategy3.Decide();
             decision3.Should().Be(new AcquireLeaseAndDownIndirectlyConnected(TimeSpan.Zero));
             strategy3.NodesToDown(decision3).Should().BeEquivalentTo(setup.Side1Nodes);
-            var reverseDecision3 = strategy3.ReverseDecision(decision3);
+            var reverseDecision3 = strategy3.ReverseDecision((IAcquireLeaseDecision)decision3);
             reverseDecision3.Should().BeOfType<ReverseDownIndirectlyConnected>();
             strategy3.NodesToDown(reverseDecision3).Should().BeEquivalentTo(new[] { MemberB, MemberC, MemberD, MemberE }.Select(m => m.UniqueAddress));
         }

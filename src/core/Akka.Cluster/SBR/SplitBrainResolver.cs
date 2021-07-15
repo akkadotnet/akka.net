@@ -383,7 +383,7 @@ namespace Akka.Cluster.SBR
                 .PipeTo(Self);
         }
 
-        public Receive WaitingForLease(IDecision decision)
+        public Receive WaitingForLease(IAcquireLeaseDecision decision)
         {
             bool ReceiveLease(object message)
             {
