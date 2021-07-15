@@ -35,7 +35,7 @@ namespace Akka.DistributedData.Tests
         private readonly IActorRef _replicator1;
         private readonly IActorRef _replicator2;
         private readonly IActorRef _replicator3;
-        
+
         static ReplicatorResiliencySpec()
         {
             SpecConfig = ConfigurationFactory.ParseString(@"
@@ -52,7 +52,7 @@ namespace Akka.DistributedData.Tests
             _sys1 = Sys;
             _sys3 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             _sys2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
-            
+
             var settings = ReplicatorSettings.Create(Sys)
                 .WithGossipInterval(TimeSpan.FromSeconds(1.0))
                 .WithMaxDeltaElements(10)
@@ -68,14 +68,14 @@ namespace Akka.DistributedData.Tests
                             maxNrOfRetries: -1)
                         .WithFinalStopMessage(m => m is Terminate))
                 .WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
-            
+
             _replicator1 = _sys1.ActorOf(props, "replicatorSuper");
             _replicator2 = _sys2.ActorOf(props, "replicatorSuper");
             _replicator3 = _sys3.ActorOf(props, "replicatorSuper");
-            
+
 
         }
-        
+
         private async Task InitCluster()
         {
             Cluster.Cluster.Get(_sys1).Join(Cluster.Cluster.Get(_sys1).SelfAddress); // coordinator will initially run on sys1
@@ -107,7 +107,7 @@ namespace Akka.DistributedData.Tests
                 });
             });
         }
-        
+
         [Fact]
         public async Task Handle_Durable_Store_Exception()
         {
@@ -119,10 +119,10 @@ namespace Akka.DistributedData.Tests
         {
             const string replicatorActorPath = "/user/replicatorSuper/replicator";
             const string durableStoreActorPath = "/user/replicatorSuper/replicator/durableStore";
-            
+
             var durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3)).ContinueWith(
                 m => m.Result).Result;
-            
+
             var replicator = _sys1.ActorSelection(replicatorActorPath).ResolveOne(TimeSpan.FromSeconds(3)).ContinueWith(
                 m => m.Result).Result;
 
@@ -135,22 +135,22 @@ namespace Akka.DistributedData.Tests
             {
                 throw new Exception(
                     $"Expecting termination of either durable storage or replicator, found {terminated.ActorRef.Path} instead.");
-            }   
-            
+            }
+
             terminated = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
             if (!terminated.ActorRef.Path.Equals(durableStore.Path) && !terminated.ActorRef.Path.Equals(replicator.Path))
             {
                 throw new Exception(
                     $"Expecting termination of either durable storage or replicator, found {terminated.ActorRef.Path} instead.");
             }
-            
+
             //The supervisor should have restarted the replicator actor by now
             await AwaitAssertAsync(async () =>
             {
                 // Is the replicator actor recreated
                 var newReplicator = await _sys1.ActorSelection(replicatorActorPath).ResolveOne(TimeSpan.FromSeconds(5)).ContinueWith(
                     m => m.Result);
-                
+
                 // We should be able to identify the recreated actor to prove the actor exists
                 await newReplicator.Ask<ActorIdentity>(new Identify(Guid.NewGuid().ToString())).ContinueWith(r =>
                 {
@@ -158,7 +158,7 @@ namespace Akka.DistributedData.Tests
                 });
             },TimeSpan.FromSeconds(10));
         }
-        
+
         [Fact]
         public async Task DistributedData_Replicator_Defaults_to_NoSupervisor()
         {
@@ -167,8 +167,8 @@ namespace Akka.DistributedData.Tests
 
             await InitCluster();
             var replicator = DistributedData.Get(_sys1).Replicator;
-            
-            IActorRef durableStore = null; 
+
+            IActorRef durableStore = null;
             await AwaitAssertAsync(() =>
             {
                 durableStore = _sys1.ActorSelection(durableStoreActorPath).ResolveOne(TimeSpan.FromSeconds(3))
@@ -180,15 +180,16 @@ namespace Akka.DistributedData.Tests
             Watch(durableStore);
             durableStore.Tell(new InitFail());
 
-            ExpectTerminated(durableStore, TimeSpan.FromSeconds(10));
-            ExpectTerminated(replicator, TimeSpan.FromSeconds(10));
+            var terminated1 = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
+            var terminated2 = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
+            ImmutableHashSet.Create(terminated1.ActorRef, terminated2.ActorRef).Should().BeEquivalentTo(durableStore, replicator);
 
             // The replicator should not have been recreated, so expect ActorNotFound
             await Assert.ThrowsAsync<ActorNotFoundException>(() =>
                 _sys1.ActorSelection(replicatorActorPath).ResolveOne(TimeSpan.FromSeconds(5)));
         }
     }
-    
+
     public class FakeDurableStore : ReceiveActor
     {
         public FakeDurableStore(Config config)
@@ -198,7 +199,7 @@ namespace Akka.DistributedData.Tests
             Receive<LoadAll>( load=> { Sender.Tell(LoadAllCompleted.Instance); });
             Receive<InitFail>( init => { throw new LoadFailedException("failed to load durable distributed-data"); });
         }
-        
+
     }
 
     public class InitFail
