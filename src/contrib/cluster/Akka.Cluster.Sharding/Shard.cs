@@ -1900,12 +1900,12 @@ namespace Akka.Cluster.Sharding
                 Log.Debug("{0}: Sending message buffer for entity [{1}] ([{2}] messages)", _typeName, entityId, messages.Count);
                 // Now there is no deliveryBuffer we can try to redeliver
                 // and as the child exists, the message will be directly forwarded
-                foreach (var msg in messages)
+                foreach (var (Message, Ref) in messages)
                 {
-                    if (msg.Message is ShardRegion.StartEntity se)
-                        StartEntity(se.EntityId, msg.Ref);
+                    if (Message is ShardRegion.StartEntity se)
+                        StartEntity(se.EntityId, Ref);
                     else
-                        DeliverMessage(msg.Message, msg.Ref);
+                        DeliverMessage(Message, Ref);
                 }
                 TouchLastMessageTimestamp(entityId);
             }

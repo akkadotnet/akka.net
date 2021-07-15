@@ -94,8 +94,8 @@ namespace Akka.Cluster.Sharding.Internal
             }
             else
             {
-                var suitable = MostSuitableRegion(regionEntries);
-                return suitable.Region;
+                var (Region, _) = MostSuitableRegion(regionEntries);
+                return Region;
             }
         }
 

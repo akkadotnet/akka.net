@@ -181,25 +181,25 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardRegion.StartEntity o: return StartEntityToProto(o).ToByteArray();
                 case ShardRegion.StartEntityAck o: return StartEntityAckToProto(o).ToByteArray();
 
-                case Shard.GetShardStats o: return Empty;
+                case Shard.GetShardStats _: return Empty;
                 case Shard.ShardStats o: return ShardStatsToProto(o).ToByteArray();
-                case GetShardRegionStats o: return Empty;
+                case GetShardRegionStats _: return Empty;
                 case ShardRegionStats o: return ShardRegionStatsToProto(o).ToByteArray();
                 case GetClusterShardingStats o: return GetClusterShardingStatsToProto(o).ToByteArray();
                 case ClusterShardingStats o: return ClusterShardingStatsToProto(o).ToByteArray();
-                case GetCurrentRegions o: return Empty;
+                case GetCurrentRegions _: return Empty;
                 case CurrentRegions o: return CurrentRegionsToProto(o).ToByteArray();
 
-                case Shard.GetCurrentShardState o: return Empty;
+                case Shard.GetCurrentShardState _: return Empty;
                 case Shard.CurrentShardState o: return CurrentShardStateToProto(o).ToByteArray();
-                case GetShardRegionState o: return Empty;
+                case GetShardRegionState _: return Empty;
                 case ShardState o: return ShardStateToProto(o).ToByteArray();
                 case CurrentShardRegionState o: return CurrentShardRegionStateToProto(o).ToByteArray();
 
                 case EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _: return Empty;
                 case EventSourcedRememberEntitiesCoordinatorStore.State o: return RememberShardsStateToProto(o).ToByteArray();
             }
-            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{this.GetType()}]");
+            throw new ArgumentException($"Can't serialize object of type [{obj.GetType()}] in [{GetType()}]");
         }
 
         /// <summary>
@@ -216,13 +216,13 @@ namespace Akka.Cluster.Sharding.Serialization
             if (_fromBinaryMap.TryGetValue(manifest, out var factory))
                 return factory(bytes);
 
-            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{this.GetType()}]");
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{GetType()}]");
         }
 
         /// <summary>
-        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(System.Byte[],System.String)" /> method.
+        /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[], string)" /> method.
         /// <note>
-        /// This method returns <see cref="String.Empty" /> if a manifest is not needed.
+        /// This method returns <see cref="string.Empty" /> if a manifest is not needed.
         /// </note>
         /// </summary>
         /// <param name="o">The object for which the manifest is needed.</param>
@@ -280,7 +280,7 @@ namespace Akka.Cluster.Sharding.Serialization
                 case EventSourcedRememberEntitiesCoordinatorStore.MigrationMarker _: return EventSourcedRememberShardsMigrationMarkerManifest;
                 case EventSourcedRememberEntitiesCoordinatorStore.State _: return EventSourcedRememberShardsState;
             }
-            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{this.GetType()}]");
+            throw new ArgumentException($"Can't serialize object of type [{o.GetType()}] in [{GetType()}]");
         }
 
         //

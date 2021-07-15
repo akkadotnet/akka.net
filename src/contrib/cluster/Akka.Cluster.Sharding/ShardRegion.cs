@@ -408,7 +408,7 @@ namespace Akka.Cluster.Sharding
 
         private IImmutableDictionary<IActorRef, IImmutableSet<ShardId>> _regions = ImmutableDictionary<IActorRef, IImmutableSet<ShardId>>.Empty;
         private IImmutableDictionary<ShardId, IActorRef> _regionByShard = ImmutableDictionary<ShardId, IActorRef>.Empty;
-        private MessageBufferMap<ShardId> _shardBuffers = new MessageBufferMap<ShardId>();
+        private readonly MessageBufferMap<ShardId> _shardBuffers = new MessageBufferMap<ShardId>();
         private IImmutableDictionary<ShardId, IActorRef> _shards = ImmutableDictionary<ShardId, IActorRef>.Empty;
         private IImmutableDictionary<IActorRef, ShardId> _shardsByRef = ImmutableDictionary<IActorRef, ShardId>.Empty;
         private IImmutableSet<ShardId> _startingShards = ImmutableHashSet<ShardId>.Empty;
@@ -1164,17 +1164,17 @@ namespace Akka.Cluster.Sharding
                 var buffer = _shardBuffers.GetOrEmpty(shardId);
                 _log.Debug("{0}: Deliver [{1}] buffered messages for shard [{2}]", _typeName, buffer.Count, shardId);
 
-                foreach (var m in buffer)
+                foreach (var (Message, Ref) in buffer)
                 {
-                    if (m.Message is RestartShard && !receiver.Equals(Self))
+                    if (Message is RestartShard && !receiver.Equals(Self))
                     {
                         _log.Debug("{0}: Dropping buffered message {1}, these are only processed by a local ShardRegion.",
                             _typeName,
-                            m.Message);
+                            Message);
                     }
                     else
                     {
-                        receiver.Tell(m.Message, m.Ref);
+                        receiver.Tell(Message, Ref);
                     }
                 }
 

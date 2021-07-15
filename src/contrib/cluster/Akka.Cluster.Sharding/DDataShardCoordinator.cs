@@ -82,11 +82,11 @@ namespace Akka.Cluster.Sharding
         private readonly IWriteConsistency _stateWriteConsistency;
         private readonly CoordinatorState _initEmptyState;
         private bool _terminating = false;
-        private UniqueAddress _selfUniqueAddress;
+        private readonly UniqueAddress _selfUniqueAddress;
         private readonly LWWRegisterKey<ShardCoordinator.CoordinatorState> _coordinatorStateKey;
         private ImmutableHashSet<(IActorRef, GetShardHome)> _getShardHomeRequests = ImmutableHashSet<(IActorRef, GetShardHome)>.Empty;
         private readonly IActorRef _rememberEntitiesStore;
-        private bool _rememberEntities;
+        private readonly bool _rememberEntities;
 
         public ITimerScheduler Timers { get; set; }
         public IStash Stash { get; set; }
