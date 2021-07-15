@@ -1176,7 +1176,7 @@ namespace Akka.Cluster.Tests.SBR
 
             public override DowningStrategy CreateStrategy()
             {
-                return new LeaseMajority(Role, TestLease, AcquireLeaseDelayForMinority);
+                return new LeaseMajority(Role, TestLease, AcquireLeaseDelayForMinority, releaseAfter: TimeSpan.FromSeconds(10));
             }
         }
 
@@ -1502,7 +1502,7 @@ namespace Akka.Cluster.Tests.SBR
                 : base(
                       owner,
                       stableAfter,
-                      new LeaseMajority(role, testLease, acquireLeaseDelayForMinority: TimeSpan.FromMilliseconds(20)),
+                      new LeaseMajority(role, testLease, acquireLeaseDelayForMinority: TimeSpan.FromMilliseconds(20), releaseAfter: TimeSpan.FromSeconds(10)),
                       selfUniqueAddress,
                       downAllWhenUnstable,
                       tickInterval)

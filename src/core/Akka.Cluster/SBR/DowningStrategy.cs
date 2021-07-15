@@ -684,14 +684,16 @@ namespace Akka.Cluster.SBR
     /// </summary>
     internal class LeaseMajority : DowningStrategy
     {
-        public LeaseMajority(string role, Lease lease, TimeSpan acquireLeaseDelayForMinority)
+        public LeaseMajority(string role, Lease lease, TimeSpan acquireLeaseDelayForMinority, TimeSpan releaseAfter)
         {
             Role = role;
             Lease = lease;
             AcquireLeaseDelayForMinority = acquireLeaseDelayForMinority;
+            ReleaseAfter = releaseAfter;
         }
 
         public TimeSpan AcquireLeaseDelayForMinority { get; }
+        public TimeSpan ReleaseAfter { get; }
 
         private TimeSpan AcquireLeaseDelay
         {

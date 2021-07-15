@@ -74,8 +74,6 @@ namespace Akka.Cluster.SBR
     /// </summary>
     internal abstract class SplitBrainResolverBase : ActorBase, IWithUnboundedStash, IWithTimers
     {
-        private readonly TimeSpan releaseLeaseAfter;
-
         // would be better as constructor parameter, but don't want to break Cinnamon instrumentation
         private readonly SplitBrainResolverSettings settings;
         private ILoggingAdapter _log;
@@ -95,13 +93,14 @@ namespace Akka.Cluster.SBR
             Strategy = strategy;
 
             settings = new SplitBrainResolverSettings(Context.System.Settings.Config);
-            releaseLeaseAfter = stableAfter + stableAfter;
 
             // ReSharper disable once VirtualMemberCallInConstructor
             Timers.StartPeriodicTimer(Tick.Instance, Tick.Instance, TickInterval);
 
             ResetStableDeadline();
         }
+
+        private TimeSpan ReleaseLeaseAfter => (Strategy is LeaseMajority lm) ? lm.ReleaseAfter : throw new InvalidOperationException($"Unexpected use of releaseLeaseAfter for strategy [{Strategy?.GetType().Name}]");
 
         public TimeSpan StableAfter { get; }
 
@@ -374,7 +373,7 @@ namespace Akka.Cluster.SBR
         {
             Log.Debug("SBR trying to acquire lease");
             //implicit val ec: ExecutionContext = internalDispatcher
-            
+
             Strategy.Lease?.Acquire().ContinueWith(r =>
                 {
                     if (r.IsFaulted)
@@ -408,7 +407,7 @@ namespace Akka.Cluster.SBR
                                 default:
                                     if (downedNodes.IsEmpty)
                                         releaseLeaseCondition =
-                                            new ReleaseLeaseCondition.WhenTimeElapsed(Deadline.Now + releaseLeaseAfter);
+                                            new ReleaseLeaseCondition.WhenTimeElapsed(Deadline.Now + ReleaseLeaseAfter);
                                     else
                                         releaseLeaseCondition =
                                             new ReleaseLeaseCondition.WhenMembersRemoved(downedNodes);
@@ -642,7 +641,7 @@ namespace Akka.Cluster.SBR
 
                             if (remainingDownedNodes.IsEmpty)
                                 releaseLeaseCondition =
-                                    new ReleaseLeaseCondition.WhenTimeElapsed(Deadline.Now + releaseLeaseAfter);
+                                    new ReleaseLeaseCondition.WhenTimeElapsed(Deadline.Now + ReleaseLeaseAfter);
                             else
                                 releaseLeaseCondition =
                                     new ReleaseLeaseCondition.WhenMembersRemoved(remainingDownedNodes);
