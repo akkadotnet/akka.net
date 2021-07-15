@@ -25,7 +25,7 @@ namespace Akka.Util
         /// <returns>an empty message buffer</returns>
         public static MessageBuffer Empty() => new MessageBuffer();
 
-        private readonly LinkedList<(object Message, IActorRef Ref)> buffer = new LinkedList<(object Message, IActorRef Ref)>();
+        private readonly LinkedList<(object Message, IActorRef Ref)> _buffer = new LinkedList<(object Message, IActorRef Ref)>();
 
         private MessageBuffer()
         {
@@ -34,7 +34,7 @@ namespace Akka.Util
         /// <summary>
         /// Check if the message buffer is empty.
         /// </summary>
-        public bool IsEmpty => buffer.First == null;
+        public bool IsEmpty => _buffer.First == null;
 
         /// <summary>
         /// Check if the message buffer is not empty.
@@ -44,7 +44,7 @@ namespace Akka.Util
         /// <summary>
         /// How many elements are in the message buffer.
         /// </summary>
-        public int Count => buffer.Count;
+        public int Count => _buffer.Count;
 
         /// <summary>
         /// Add one element to the end of the message buffer.
@@ -54,7 +54,7 @@ namespace Akka.Util
         /// <returns>this message buffer</returns>
         public MessageBuffer Append(object message, IActorRef @ref)
         {
-            buffer.AddLast((message, @ref));
+            _buffer.AddLast((message, @ref));
             return this;
         }
 
@@ -64,14 +64,14 @@ namespace Akka.Util
         public void DropHead()
         {
             if (NonEmpty)
-                buffer.RemoveFirst();
+                _buffer.RemoveFirst();
         }
 
         /// <summary>
         /// Return the first element or an element containing null if the buffer is empty
         /// </summary>
         /// <returns></returns>
-        public (object, IActorRef) Head => buffer.First?.Value ?? default;
+        public (object, IActorRef) Head => _buffer.First?.Value ?? default;
 
         /// <summary>
         /// Returns an enumerator that iterates through the buffer
@@ -79,12 +79,12 @@ namespace Akka.Util
         /// <returns></returns>
         public IEnumerator<(object Message, IActorRef Ref)> GetEnumerator()
         {
-            return buffer.GetEnumerator();
+            return _buffer.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return buffer.GetEnumerator();
+            return _buffer.GetEnumerator();
         }
     }
 
@@ -94,12 +94,12 @@ namespace Akka.Util
     /// <typeparam name="TId">Id type</typeparam>
     internal sealed class MessageBufferMap<TId> : IEnumerable<KeyValuePair<TId, MessageBuffer>>, IReadOnlyCollection<KeyValuePair<TId, MessageBuffer>>
     {
-        private readonly Dictionary<TId, MessageBuffer> bufferMap = new Dictionary<TId, MessageBuffer>();
+        private readonly Dictionary<TId, MessageBuffer> _bufferMap = new Dictionary<TId, MessageBuffer>();
 
         /// <summary>
         /// Check if the buffer map is empty.
         /// </summary>
-        public bool IsEmpty => bufferMap.Count == 0;
+        public bool IsEmpty => _bufferMap.Count == 0;
 
         /// <summary>
         /// Check if the buffer map is not empty.
@@ -109,19 +109,19 @@ namespace Akka.Util
         /// <summary>
         /// the number of ids in the buffer map
         /// </summary>
-        public int Count => bufferMap.Count;
+        public int Count => _bufferMap.Count;
 
         /// <summary>
         /// The number of elements in the buffers in the buffer map
         /// </summary>
-        public int TotalCount => bufferMap.Values.Sum(i => i.Count);
+        public int TotalCount => _bufferMap.Values.Sum(i => i.Count);
 
         private MessageBuffer GetOrAddBuffer(TId id)
         {
-            if (!bufferMap.TryGetValue(id, out var buffer))
+            if (!_bufferMap.TryGetValue(id, out var buffer))
             {
                 buffer = MessageBuffer.Empty();
-                bufferMap[id] = buffer;
+                _bufferMap[id] = buffer;
             }
             return buffer;
         }
@@ -153,7 +153,7 @@ namespace Akka.Util
         /// <param name="id">the id to remove the buffer for</param>
         public void Remove(TId id)
         {
-            bufferMap.Remove(id);
+            _bufferMap.Remove(id);
         }
 
         /// <summary>
@@ -165,7 +165,7 @@ namespace Akka.Util
         /// <returns>how many buffered messages were dropped</returns>
         public int Drop(TId id, string reason, IActorRef deadLetters)
         {
-            if (bufferMap.TryGetValue(id, out var buffer))
+            if (_bufferMap.TryGetValue(id, out var buffer))
             {
                 if (buffer.NonEmpty)
                 {
@@ -182,7 +182,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="id">the id to check for</param>
         /// <returns>true if the buffer contains the given id</returns>
-        public bool Contains(TId id) => bufferMap.ContainsKey(id);
+        public bool Contains(TId id) => _bufferMap.ContainsKey(id);
 
         /// <summary>
         /// Get the message buffer for an id, or an empty buffer if the id doesn't exist in the map.
@@ -191,7 +191,7 @@ namespace Akka.Util
         /// <returns>the message buffer for the given id or an empty buffer if the id doesn't exist</returns>
         public MessageBuffer GetOrEmpty(TId id)
         {
-            if (bufferMap.TryGetValue(id, out var buffer))
+            if (_bufferMap.TryGetValue(id, out var buffer))
                 return buffer;
             return MessageBuffer.Empty();
         }
@@ -202,12 +202,12 @@ namespace Akka.Util
         /// <returns></returns>
         public IEnumerator<KeyValuePair<TId, MessageBuffer>> GetEnumerator()
         {
-            return bufferMap.GetEnumerator();
+            return _bufferMap.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return bufferMap.GetEnumerator();
+            return _bufferMap.GetEnumerator();
         }
     }
 }
