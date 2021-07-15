@@ -177,8 +177,8 @@ namespace Akka.Cluster.Sharding.Internal
             return Actor.Props.Create(() => new EventSourcedRememberEntitiesShardStore(typeName, shardId, settings));
         }
 
-        private readonly int maxUpdatesPerWrite;
-        private State state = new State();
+        private readonly int _maxUpdatesPerWrite;
+        private State _state = new State();
 
         /// <summary>
         /// Persistent actor keeping the state for Akka Persistence backed remember entities (enabled through `state-store-mode=persistence`).
@@ -196,7 +196,7 @@ namespace Akka.Cluster.Sharding.Internal
             TypeName = typeName;
             ShardId = shardId;
             Settings = settings;
-            maxUpdatesPerWrite = Context.System.Settings.Config
+            _maxUpdatesPerWrite = Context.System.Settings.Config
                 .GetInt("akka.cluster.sharding.event-sourced-remember-entities-store.max-updates-per-write");
 
             Log.Debug("Starting up EventSourcedRememberEntitiesStore");
@@ -220,16 +220,16 @@ namespace Akka.Cluster.Sharding.Internal
             switch (message)
             {
                 case EntitiesStarted started:
-                    state = new State(state.Entities.Union(started.Entities));
+                    _state = new State(_state.Entities.Union(started.Entities));
                     return true;
                 case EntitiesStopped stopped:
-                    state = new State(state.Entities.Except(stopped.Entities));
+                    _state = new State(_state.Entities.Except(stopped.Entities));
                     return true;
                 case SnapshotOffer offer when (offer.Snapshot is State snapshot):
-                    state = snapshot;
+                    _state = snapshot;
                     return true;
                 case RecoveryCompleted _:
-                    Log.Debug("Recovery completed for shard [{0}] with [{1}] entities", ShardId, state.Entities.Count);
+                    Log.Debug("Recovery completed for shard [{0}] with [{1}] entities", ShardId, _state.Entities.Count);
                     return true;
             }
             return false;
@@ -257,7 +257,7 @@ namespace Akka.Cluster.Sharding.Internal
                             if (left == 0)
                             {
                                 Sender.Tell(new RememberEntitiesShardStore.UpdateDone(update.Started, update.Stopped));
-                                state = new State(state.Entities.Union(update.Started).Except(update.Stopped));
+                                _state = new State(_state.Entities.Union(update.Started).Except(update.Stopped));
                                 if (saveSnap)
                                 {
                                     SaveSnapshot();
@@ -265,7 +265,7 @@ namespace Akka.Cluster.Sharding.Internal
                             }
                         });
                     }
-                    if (left <= maxUpdatesPerWrite)
+                    if (left <= _maxUpdatesPerWrite)
                     {
                         // optimized when batches are small
                         PersistEventsAndHandleComplete(events);
@@ -273,13 +273,13 @@ namespace Akka.Cluster.Sharding.Internal
                     else
                     {
                         // split up in several writes so we don't hit journal limit
-                        foreach (var g in events.Grouped(maxUpdatesPerWrite))
+                        foreach (var g in events.Grouped(_maxUpdatesPerWrite))
                             PersistEventsAndHandleComplete(g);
                     }
                     return true;
 
                 case RememberEntitiesShardStore.GetEntities _:
-                    Sender.Tell(new RememberEntitiesShardStore.RememberedEntities(state.Entities));
+                    Sender.Tell(new RememberEntitiesShardStore.RememberedEntities(_state.Entities));
                     return true;
 
                 case SaveSnapshotSuccess e:
@@ -337,7 +337,7 @@ namespace Akka.Cluster.Sharding.Internal
         private void SaveSnapshot()
         {
             Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
-            SaveSnapshot(state);
+            SaveSnapshot(_state);
         }
 
         private bool IsSnapshotNeeded => LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0;

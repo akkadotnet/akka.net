@@ -39,12 +39,12 @@ namespace Akka.Cluster.Sharding
                 .WithDeploy(Deploy.Local);
         }
 
-        private readonly ShardCoordinator baseImpl;
+        private readonly ShardCoordinator _baseImpl;
 
-        private bool VerboseDebug => baseImpl.VerboseDebug;
-        private string TypeName => baseImpl.TypeName;
-        private ClusterShardingSettings Settings => baseImpl.Settings;
-        private CoordinatorState State { get => baseImpl.State; set => baseImpl.State = value; }
+        private bool VerboseDebug => _baseImpl.VerboseDebug;
+        private string TypeName => _baseImpl.TypeName;
+        private ClusterShardingSettings Settings => _baseImpl.Settings;
+        private CoordinatorState State { get => _baseImpl.State; set => _baseImpl.State = value; }
 
         public PersistentShardCoordinator(
             string typeName,
@@ -55,7 +55,7 @@ namespace Akka.Cluster.Sharding
             var log = Context.GetLogger();
             var verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
 
-            baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
+            _baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
                 Context, log, verboseDebug, Update, UnstashOneGetShardHomeRequest);
 
             //should have been this: $"/sharding/{typeName}Coordinator";
@@ -132,7 +132,7 @@ namespace Akka.Cluster.Sharding
 
                 case RecoveryCompleted _:
                     State = State.WithRememberEntities(Settings.RememberEntities);
-                    baseImpl.WatchStateActors();
+                    _baseImpl.WatchStateActors();
                     return true;
             }
             return false;
@@ -159,9 +159,9 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case StateInitialized _:
-                    baseImpl.ReceiveStateInitialized();
+                    _baseImpl.ReceiveStateInitialized();
                     Log.Debug("{0}: Coordinator initialization completed", TypeName);
-                    Context.Become(msg => baseImpl.Active(msg) || ReceiveSnapshotResult(msg));
+                    Context.Become(msg => _baseImpl.Active(msg) || ReceiveSnapshotResult(msg));
                     return true;
 
                 case Register r:
@@ -170,7 +170,7 @@ namespace Akka.Cluster.Sharding
                     return true;
             }
 
-            if (baseImpl.ReceiveTerminated(message)) return true;
+            if (_baseImpl.ReceiveTerminated(message)) return true;
             else return ReceiveSnapshotResult(message);
         }
 
@@ -235,14 +235,14 @@ namespace Akka.Cluster.Sharding
 
         protected override void PreStart()
         {
-            baseImpl.PreStart();
+            _baseImpl.PreStart();
         }
 
 
         protected override void PostStop()
         {
             base.PostStop();
-            baseImpl.PostStop();
+            _baseImpl.PostStop();
         }
     }
 }

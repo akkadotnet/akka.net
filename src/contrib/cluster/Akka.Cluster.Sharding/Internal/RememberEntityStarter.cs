@@ -49,13 +49,13 @@ namespace Akka.Cluster.Sharding.Internal
             }
         }
 
-        private readonly IActorRef region;
-        private readonly IActorRef shard;
-        private readonly string shardId;
+        private readonly IActorRef _region;
+        private readonly IActorRef _shard;
+        private readonly string _shardId;
 
-        private IImmutableSet<EntityId> idsLeftToStart = ImmutableHashSet<EntityId>.Empty;
-        private IImmutableSet<EntityId> waitingForAck = ImmutableHashSet<EntityId>.Empty;
-        private IImmutableSet<EntityId> entitiesMoved = ImmutableHashSet<EntityId>.Empty;
+        private IImmutableSet<EntityId> _idsLeftToStart = ImmutableHashSet<EntityId>.Empty;
+        private IImmutableSet<EntityId> _waitingForAck = ImmutableHashSet<EntityId>.Empty;
+        private IImmutableSet<EntityId> _entitiesMoved = ImmutableHashSet<EntityId>.Empty;
 
         public RememberEntityStarter(
             IActorRef region,
@@ -66,9 +66,9 @@ namespace Akka.Cluster.Sharding.Internal
         {
             if (ids == null || ids.Count == 0)
                 throw new ArgumentOutOfRangeException(nameof(ids));
-            this.region = region;
-            this.shard = shard;
-            this.shardId = shardId;
+            _region = region;
+            _shard = shard;
+            _shardId = shardId;
 
             Log.Debug(
               "Shard starting [{0}] remembered entities using strategy [{1}]",
@@ -78,11 +78,11 @@ namespace Akka.Cluster.Sharding.Internal
             switch (settings.TuningParameters.EntityRecoveryStrategy)
             {
                 case "all":
-                    idsLeftToStart = ImmutableHashSet<EntityId>.Empty;
+                    _idsLeftToStart = ImmutableHashSet<EntityId>.Empty;
                     OnStartBatch(ids);
                     break;
                 case "constant":
-                    idsLeftToStart = ids;
+                    _idsLeftToStart = ids;
                     Timers.StartPeriodicTimer(
                         "constant",
                         new StartBatch(settings.TuningParameters.EntityRecoveryConstantRateStrategyNumberOfEntities),
@@ -116,16 +116,16 @@ namespace Akka.Cluster.Sharding.Internal
 
         private void OnAck(EntityId entityId, ShardId ackFromShardId)
         {
-            idsLeftToStart = idsLeftToStart.Remove(entityId);
-            waitingForAck = waitingForAck.Remove(entityId);
-            if (shardId != ackFromShardId)
-                entitiesMoved = entitiesMoved.Add(entityId);
-            if (waitingForAck.Count == 0 && idsLeftToStart.Count == 0)
+            _idsLeftToStart = _idsLeftToStart.Remove(entityId);
+            _waitingForAck = _waitingForAck.Remove(entityId);
+            if (_shardId != ackFromShardId)
+                _entitiesMoved = _entitiesMoved.Add(entityId);
+            if (_waitingForAck.Count == 0 && _idsLeftToStart.Count == 0)
             {
-                if (entitiesMoved.Count != 0)
+                if (_entitiesMoved.Count != 0)
                 {
-                    Log.Info("Found [{0}] entities moved to new shard(s)", entitiesMoved.Count);
-                    shard.Tell(new Shard.EntitiesMovedToOtherShard(entitiesMoved));
+                    Log.Info("Found [{0}] entities moved to new shard(s)", _entitiesMoved.Count);
+                    _shard.Tell(new Shard.EntitiesMovedToOtherShard(_entitiesMoved));
                 }
                 Context.Stop(Self);
             }
@@ -134,10 +134,10 @@ namespace Akka.Cluster.Sharding.Internal
         private void OnStartBatch(int batchSize)
         {
             Log.Debug("Starting batch of [{0}] remembered entities", batchSize);
-            var ids = idsLeftToStart.ToList();
+            var ids = _idsLeftToStart.ToList();
             var batch = ids.Take(batchSize).ToImmutableHashSet();
             var newIdsLeftToStart = ids.Skip(batchSize).ToImmutableHashSet();
-            idsLeftToStart = newIdsLeftToStart;
+            _idsLeftToStart = newIdsLeftToStart;
             OnStartBatch(batch);
         }
 
@@ -145,21 +145,21 @@ namespace Akka.Cluster.Sharding.Internal
         {
             // these go through the region rather the directly to the shard
             // so that shard id extractor changes make them start on the right shard
-            waitingForAck = waitingForAck.Union(entityIds);
+            _waitingForAck = _waitingForAck.Union(entityIds);
             foreach (var entityId in entityIds)
-                region.Tell(new ShardRegion.StartEntity(entityId));
+                _region.Tell(new ShardRegion.StartEntity(entityId));
         }
 
         private void OnRetryUnacked()
         {
-            if (waitingForAck.Count != 0)
+            if (_waitingForAck.Count != 0)
             {
-                Log.Debug("Found [{0}] remembered entities waiting for StartEntityAck, retrying", waitingForAck.Count);
-                foreach (var id in waitingForAck)
+                Log.Debug("Found [{0}] remembered entities waiting for StartEntityAck, retrying", _waitingForAck.Count);
+                foreach (var id in _waitingForAck)
                 {
                     // for now we just retry all (as that was the existing behavior spread out over starter and shard)
                     // but in the future it could perhaps make sense to batch also the retries to avoid thundering herd
-                    region.Tell(new ShardRegion.StartEntity(id));
+                    _region.Tell(new ShardRegion.StartEntity(id));
                 }
             }
         }

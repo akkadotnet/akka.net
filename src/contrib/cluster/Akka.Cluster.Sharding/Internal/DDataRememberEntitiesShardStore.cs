@@ -129,15 +129,15 @@ namespace Akka.Cluster.Sharding.Internal
             #endregion
         }
 
-        private readonly ILoggingAdapter log = Context.GetLogger();
-        private readonly IActorRef replicator;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly IActorRef _replicator;
 
-        private readonly Cluster node;
-        private readonly UniqueAddress selfUniqueAddress;
-        private readonly IReadConsistency readMajority;
-        private readonly IWriteConsistency writeMajority;
-        private readonly int maxUpdateAttempts = 3;
-        private readonly ImmutableArray<ORSetKey<EntityId>> keys;
+        private readonly Cluster _node;
+        private readonly UniqueAddress _selfUniqueAddress;
+        private readonly IReadConsistency _readMajority;
+        private readonly IWriteConsistency _writeMajority;
+        private readonly int _maxUpdateAttempts = 3;
+        private readonly ImmutableArray<ORSetKey<EntityId>> _keys;
 
         public IStash Stash { get; set; }
 
@@ -148,20 +148,20 @@ namespace Akka.Cluster.Sharding.Internal
             IActorRef replicator,
             int majorityMinCap)
         {
-            this.replicator = replicator;
+            _replicator = replicator;
 
             //  implicit val ec: ExecutionContext = context.dispatcher
-            node = Cluster.Get(Context.System);
-            selfUniqueAddress = node.SelfUniqueAddress;
+            _node = Cluster.Get(Context.System);
+            _selfUniqueAddress = _node.SelfUniqueAddress;
 
-            readMajority = new ReadMajority(settings.TuningParameters.WaitingForStateTimeout, majorityMinCap);
+            _readMajority = new ReadMajority(settings.TuningParameters.WaitingForStateTimeout, majorityMinCap);
             // Note that the timeout is actually updatingStateTimeout / 4 so that we fit 3 retries and a response in the timeout before the shard sees it as a failure
-            writeMajority = new WriteMajority(new TimeSpan(settings.TuningParameters.UpdatingStateTimeout.Ticks / 4), majorityMinCap);
-            keys = StateKeys(typeName, shardId);
+            _writeMajority = new WriteMajority(new TimeSpan(settings.TuningParameters.UpdatingStateTimeout.Ticks / 4), majorityMinCap);
+            _keys = StateKeys(typeName, shardId);
 
-            if (log.IsDebugEnabled)
+            if (_log.IsDebugEnabled)
             {
-                log.Debug("Starting up DDataRememberEntitiesStore, read timeout: [{0}], write timeout: [{1}], majority min cap: [{2}]",
+                _log.Debug("Starting up DDataRememberEntitiesStore, read timeout: [{0}], write timeout: [{1}], majority min cap: [{2}]",
                   settings.TuningParameters.WaitingForStateTimeout,
                   settings.TuningParameters.UpdatingStateTimeout,
                   majorityMinCap);
@@ -174,7 +174,7 @@ namespace Akka.Cluster.Sharding.Internal
         private ORSetKey<EntityId> Key(EntityId entityId)
         {
             var i = Math.Abs(MurmurHash.StringHash(entityId) % numberOfKeys);
-            return keys[i];
+            return _keys[i];
         }
 
         protected override bool Receive(object message)
@@ -188,7 +188,7 @@ namespace Akka.Cluster.Sharding.Internal
             {
                 case RememberEntitiesShardStore.GetEntities _:
                     // not supported, but we may get several if the shard timed out and retried
-                    log.Debug("Another get entities request after responding to one, not expected/supported, ignoring");
+                    _log.Debug("Another get entities request after responding to one, not expected/supported, ignoring");
                     return true;
                 case RememberEntitiesShardStore.Update update:
                     OnUpdate(update);
@@ -207,7 +207,7 @@ namespace Akka.Cluster.Sharding.Internal
                 {
                     if (shardWaiting != null)
                     {
-                        log.Debug("Shard waiting for remembered entities, sending remembered and going idle");
+                        _log.Debug("Shard waiting for remembered entities, sending remembered and going idle");
                         shardWaiting.Tell(new RememberEntitiesShardStore.RememberedEntities(newIds));
                         Context.Become(Idle);
                         Stash.UnstashAll();
@@ -215,7 +215,7 @@ namespace Akka.Cluster.Sharding.Internal
                     else
                     {
                         // we haven't seen request yet
-                        log.Debug("Got remembered entities, waiting for shard to request them");
+                        _log.Debug("Got remembered entities, waiting for shard to request them");
                         Context.Become(WaitingForAllEntityIds(newGotKeys, newIds, null));
                     }
                 }
@@ -230,7 +230,7 @@ namespace Akka.Cluster.Sharding.Internal
                 switch (message)
                 {
                     case GetSuccess g when g.Request is int i:
-                        var key = keys[i];
+                        var key = _keys[i];
                         var ids2 = g.Get(key).Elements;
                         ReceiveOne(i, ids2);
                         return true;
@@ -238,24 +238,24 @@ namespace Akka.Cluster.Sharding.Internal
                         ReceiveOne(i, ImmutableHashSet<EntityId>.Empty);
                         return true;
                     case GetFailure m:
-                        log.Error("Unable to get an initial state within 'waiting-for-state-timeout': [{0}] using [{1}] (key [{2}])",
-                            readMajority.Timeout,
-                            readMajority,
+                        _log.Error("Unable to get an initial state within 'waiting-for-state-timeout': [{0}] using [{1}] (key [{2}])",
+                            _readMajority.Timeout,
+                            _readMajority,
                             m.Key);
                         Context.Stop(Self);
                         return true;
                     case DataDeleted m:
-                        log.Error("Unable to get an initial state because it was deleted");
+                        _log.Error("Unable to get an initial state because it was deleted");
                         Context.Stop(Self);
                         return true;
                     case RememberEntitiesShardStore.Update update:
-                        log.Warning("Got an update before load of initial entities completed, dropping update: [{0}]", update);
+                        _log.Warning("Got an update before load of initial entities completed, dropping update: [{0}]", update);
                         return true;
                     case RememberEntitiesShardStore.GetEntities _:
                         if (gotKeys.Count == numberOfKeys)
                         {
                             // we already got all and was waiting for a request
-                            log.Debug("Got request from shard, sending remembered entities");
+                            _log.Debug("Got request from shard, sending remembered entities");
                             Sender.Tell(new RememberEntitiesShardStore.RememberedEntities(ids));
                             Context.Become(Idle);
                             Stash.UnstashAll();
@@ -263,7 +263,7 @@ namespace Akka.Cluster.Sharding.Internal
                         else
                         {
                             // we haven't seen all ids yet
-                            log.Debug("Got request from shard, waiting for all remembered entities to arrive");
+                            _log.Debug("Got request from shard, waiting for all remembered entities to arrive");
                             Context.Become(WaitingForAllEntityIds(gotKeys, ids, Sender));
                         }
                         return true;
@@ -285,27 +285,27 @@ namespace Akka.Cluster.Sharding.Internal
             var ddataUpdates = allEvts.GroupBy(evt => Key(evt.Id)).Select(i =>
             {
                 var evts = i.ToImmutableHashSet();
-                return new KeyValuePair<IImmutableSet<IEvt>, (Update Update, int MaxUpdateAttempts)>(evts, (Update: Dsl.Update(i.Key, ORSet<EntityId>.Empty, writeMajority, evts, existing =>
+                return new KeyValuePair<IImmutableSet<IEvt>, (Update Update, int MaxUpdateAttempts)>(evts, (Update: Dsl.Update(i.Key, ORSet<EntityId>.Empty, _writeMajority, evts, existing =>
                 {
                     foreach (var evt in evts)
                     {
                         switch (evt)
                         {
                             case Started s:
-                                existing = existing.Add(selfUniqueAddress, s.Id);
+                                existing = existing.Add(_selfUniqueAddress, s.Id);
                                 break;
                             case Stopped s:
-                                existing = existing.Remove(selfUniqueAddress, s.Id);
+                                existing = existing.Remove(_selfUniqueAddress, s.Id);
                                 break;
                         }
                     }
                     return existing;
-                }), MaxUpdateAttempts: maxUpdateAttempts));
+                }), MaxUpdateAttempts: _maxUpdateAttempts));
             }).ToImmutableDictionary();
 
             foreach (var u in ddataUpdates)
             {
-                replicator.Tell(u.Value.Update);
+                _replicator.Tell(u.Value.Update);
             }
 
             Context.Become(WaitingForUpdates(Sender, update, ddataUpdates));
@@ -324,7 +324,7 @@ namespace Akka.Cluster.Sharding.Internal
                     switch (message)
                     {
                         case UpdateSuccess m when m.Request is IImmutableSet<IEvt> evts:
-                            log.Debug("The DDataShard state was successfully updated for [{0}]", string.Join(", ", evts));
+                            _log.Debug("The DDataShard state was successfully updated for [{0}]", string.Join(", ", evts));
                             var remainingAfterThis = updatesLeft.Remove(evts);
                             if (remainingAfterThis.IsEmpty)
                             {
@@ -340,36 +340,36 @@ namespace Akka.Cluster.Sharding.Internal
                             var (updateForEvts, retriesLeft) = updatesLeft.GetValueOrDefault(evts);
                             if (retriesLeft > 0)
                             {
-                                log.Debug("Retrying update because of write timeout, tries left [{0}]", retriesLeft);
-                                replicator.Tell(updateForEvts);
+                                _log.Debug("Retrying update because of write timeout, tries left [{0}]", retriesLeft);
+                                _replicator.Tell(updateForEvts);
                                 Context.Become(Next(updatesLeft.SetItem(evts, (updateForEvts, retriesLeft - 1))));
                             }
                             else
                             {
-                                log.Error("Unable to update state, within 'updating-state-timeout'= [{0}], gave up after [{1}] retries",
-                                    writeMajority.Timeout,
-                                    maxUpdateAttempts);
+                                _log.Error("Unable to update state, within 'updating-state-timeout'= [{0}], gave up after [{1}] retries",
+                                    _writeMajority.Timeout,
+                                    _maxUpdateAttempts);
                                 // will trigger shard restart
                                 Context.Stop(Self);
                             }
                             return true;
                         case StoreFailure m:
-                            log.Error("Unable to update state, due to store failure");
+                            _log.Error("Unable to update state, due to store failure");
                             // will trigger shard restart
                             Context.Stop(Self);
                             return true;
                         case ModifyFailure m:
-                            log.Error(m.Cause, "Unable to update state, due to modify failure: {0}", m.ErrorMessage);
+                            _log.Error(m.Cause, "Unable to update state, due to modify failure: {0}", m.ErrorMessage);
                             // will trigger shard restart
                             Context.Stop(Self);
                             return true;
                         case DataDeleted m:
-                            log.Error("Unable to update state, due to delete");
+                            _log.Error("Unable to update state, due to delete");
                             // will trigger shard restart
                             Context.Stop(Self);
                             return true;
                         case RememberEntitiesShardStore.Update m:
-                            log.Warning("Got a new update before write of previous completed, dropping update: [{0}]", m);
+                            _log.Warning("Got a new update before write of previous completed, dropping update: [{0}]", m);
                             return true;
                     }
 
@@ -386,8 +386,8 @@ namespace Akka.Cluster.Sharding.Internal
         {
             foreach (var i in Enumerable.Range(0, numberOfKeys))
             {
-                var key = keys[i];
-                replicator.Tell(Dsl.Get(key, readMajority, i));
+                var key = _keys[i];
+                _replicator.Tell(Dsl.Get(key, _readMajority, i));
             }
         }
     }

@@ -106,36 +106,36 @@ namespace Akka.Cluster.Sharding.Internal
         /// </summary>
         public override string PersistenceId { get; }
 
-        private HashSet<ShardId> shards = new HashSet<EntityId>();
-        private bool writtenMarker = false;
+        private HashSet<ShardId> _shards = new HashSet<EntityId>();
+        private bool _writtenMarker = false;
 
         protected override bool ReceiveRecover(object message)
         {
             switch (message)
             {
                 case ShardId shardId:
-                    shards.Add(shardId);
+                    _shards.Add(shardId);
                     return true;
                 case SnapshotOffer offer when (offer.Snapshot is ShardCoordinator.CoordinatorState state):
-                    shards.UnionWith(state.Shards.Keys.Union(state.UnallocatedShards));
+                    _shards.UnionWith(state.Shards.Keys.Union(state.UnallocatedShards));
                     return true;
                 case SnapshotOffer offer when (offer.Snapshot is State state):
-                    shards.Union(state.Shards);
-                    writtenMarker = state.WrittenMigrationMarker;
+                    _shards.Union(state.Shards);
+                    _writtenMarker = state.WrittenMigrationMarker;
                     return true;
                 case RecoveryCompleted _:
-                    Log.Debug("Recovery complete. Current shards [{0}]. Written Marker {1}", string.Join(", ", shards), writtenMarker);
-                    if (!writtenMarker)
+                    Log.Debug("Recovery complete. Current shards [{0}]. Written Marker {1}", string.Join(", ", _shards), _writtenMarker);
+                    if (!_writtenMarker)
                     {
                         Persist(MigrationMarker.Instance, _ =>
                         {
                             Log.Debug("Written migration marker");
-                            writtenMarker = true;
+                            _writtenMarker = true;
                         });
                     }
                     return true;
                 case MigrationMarker _:
-                    writtenMarker = true;
+                    _writtenMarker = true;
                     return true;
             }
             Log.Error(
@@ -149,13 +149,13 @@ namespace Akka.Cluster.Sharding.Internal
             switch (message)
             {
                 case RememberEntitiesCoordinatorStore.GetShards _:
-                    Sender.Tell(new RememberEntitiesCoordinatorStore.RememberedShards(shards.ToImmutableHashSet()));
+                    Sender.Tell(new RememberEntitiesCoordinatorStore.RememberedShards(_shards.ToImmutableHashSet()));
                     return true;
 
                 case RememberEntitiesCoordinatorStore.AddShard add:
                     PersistAsync(add.ShardId, shardId =>
                     {
-                        shards.Add(shardId);
+                        _shards.Add(shardId);
                         Sender.Tell(new RememberEntitiesCoordinatorStore.UpdateDone(shardId));
                         SaveSnapshotWhenNeeded();
                     });
@@ -205,7 +205,7 @@ namespace Akka.Cluster.Sharding.Internal
             if (LastSequenceNr % Settings.TuningParameters.SnapshotAfter == 0 && LastSequenceNr != 0)
             {
                 Log.Debug("Saving snapshot, sequence number [{0}]", SnapshotSequenceNr);
-                SaveSnapshot(new State(shards.ToImmutableHashSet(), writtenMarker));
+                SaveSnapshot(new State(_shards.ToImmutableHashSet(), _writtenMarker));
             }
         }
     }

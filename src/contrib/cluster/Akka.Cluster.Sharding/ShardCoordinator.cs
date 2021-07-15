@@ -1553,25 +1553,25 @@ namespace Akka.Cluster.Sharding
             }
         }
 
-        private readonly IActorContext context;
-        private readonly Action<IDomainEvent, Action<IDomainEvent>> update;
-        private readonly Action unstashOneGetShardHomeRequest;
+        private readonly IActorContext _context;
+        private readonly Action<IDomainEvent, Action<IDomainEvent>> _update;
+        private readonly Action _unstashOneGetShardHomeRequest;
 
-        private readonly IActorRef ignoreRef;
-        private readonly Cluster cluster;
-        private readonly TimeSpan removalMargin;
-        private readonly int minMembers;
-        private bool allRegionsRegistered = false;
+        private readonly IActorRef _ignoreRef;
+        private readonly Cluster _cluster;
+        private readonly TimeSpan _removalMargin;
+        private readonly int _minMembers;
+        private bool _allRegionsRegistered = false;
 
         // rebalanceInProgress for the ShardId keys, pending GetShardHome requests by the ActorRef values
-        private ImmutableDictionary<string, ImmutableHashSet<IActorRef>> rebalanceInProgress = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
-        private ImmutableHashSet<IActorRef> rebalanceWorkers = ImmutableHashSet<IActorRef>.Empty;
-        private ImmutableDictionary<string, ICancelable> unAckedHostShards = ImmutableDictionary<string, ICancelable>.Empty;
+        private ImmutableDictionary<string, ImmutableHashSet<IActorRef>> _rebalanceInProgress = ImmutableDictionary<string, ImmutableHashSet<IActorRef>>.Empty;
+        private ImmutableHashSet<IActorRef> _rebalanceWorkers = ImmutableHashSet<IActorRef>.Empty;
+        private ImmutableDictionary<string, ICancelable> _unAckedHostShards = ImmutableDictionary<string, ICancelable>.Empty;
         // regions that have requested handoff, for graceful shutdown
-        private ImmutableHashSet<IActorRef> gracefulShutdownInProgress = ImmutableHashSet<IActorRef>.Empty;
-        private ImmutableHashSet<IActorRef> aliveRegions = ImmutableHashSet<IActorRef>.Empty;
-        private ImmutableHashSet<IActorRef> regionTerminationInProgress = ImmutableHashSet<IActorRef>.Empty;
-        private readonly ICancelable rebalanceTask;
+        private ImmutableHashSet<IActorRef> _gracefulShutdownInProgress = ImmutableHashSet<IActorRef>.Empty;
+        private ImmutableHashSet<IActorRef> _aliveRegions = ImmutableHashSet<IActorRef>.Empty;
+        private ImmutableHashSet<IActorRef> _regionTerminationInProgress = ImmutableHashSet<IActorRef>.Empty;
+        private readonly ICancelable _rebalanceTask;
 
         internal string TypeName { get; }
         internal ClusterShardingSettings Settings { get; }
@@ -1597,27 +1597,27 @@ namespace Akka.Cluster.Sharding
             TypeName = typeName;
             Settings = settings;
             AllocationStrategy = allocationStrategy;
-            this.context = context;
+            _context = context;
             Log = log;
             VerboseDebug = verboseDebug;
-            this.update = update;
-            this.unstashOneGetShardHomeRequest = unstashOneGetShardHomeRequest;
+            _update = update;
+            _unstashOneGetShardHomeRequest = unstashOneGetShardHomeRequest;
 
-            ignoreRef = context.System.IgnoreRef;
+            _ignoreRef = context.System.IgnoreRef;
 
-            cluster = Cluster.Get(context.System);
-            removalMargin = cluster.DowningProvider.DownRemovalMargin;
+            _cluster = Cluster.Get(context.System);
+            _removalMargin = _cluster.DowningProvider.DownRemovalMargin;
 
             if (string.IsNullOrEmpty(settings.Role))
-                minMembers = cluster.Settings.MinNrOfMembers;
+                _minMembers = _cluster.Settings.MinNrOfMembers;
             else
-                minMembers = cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
+                _minMembers = _cluster.Settings.MinNrOfMembersOfRole.GetValueOrDefault(settings.Role, 1);
 
             State = CoordinatorState.Empty.WithRememberEntities(settings.RememberEntities);
 
-            rebalanceTask = context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, context.Self, RebalanceTick.Instance, ActorRefs.NoSender);
+            _rebalanceTask = context.System.Scheduler.ScheduleTellRepeatedlyCancelable(Settings.TuningParameters.RebalanceInterval, Settings.TuningParameters.RebalanceInterval, context.Self, RebalanceTick.Instance, ActorRefs.NoSender);
 
-            cluster.Subscribe(context.Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
+            _cluster.Subscribe(context.Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, new[] { typeof(ClusterEvent.ClusterShuttingDown) });
         }
 
 
@@ -1629,21 +1629,21 @@ namespace Akka.Cluster.Sharding
                     strategy.Start();
                     break;
                 case IActorSystemDependentAllocationStrategy strategy:
-                    strategy.Start(context.System);
+                    strategy.Start(_context.System);
                     break;
             }
         }
 
         internal void PostStop()
         {
-            rebalanceTask.Cancel();
-            cluster.Unsubscribe(context.Self);
+            _rebalanceTask.Cancel();
+            _cluster.Unsubscribe(_context.Self);
         }
 
         internal bool IsMember(IActorRef region)
         {
             var regionAddress = region.Path.Address;
-            return regionAddress.Equals(context.Self.Path.Address) || cluster.State.IsMemberUp(regionAddress);
+            return regionAddress.Equals(_context.Self.Path.Address) || _cluster.State.IsMemberUp(regionAddress);
         }
 
         internal bool Active(object message)
@@ -1654,20 +1654,20 @@ namespace Akka.Cluster.Sharding
                     if (IsMember(m.ShardRegion))
                     {
                         Log.Debug("{0}: ShardRegion registered: [{1}]", TypeName, m.ShardRegion);
-                        aliveRegions = aliveRegions.Add(m.ShardRegion);
+                        _aliveRegions = _aliveRegions.Add(m.ShardRegion);
                         if (State.Regions.ContainsKey(m.ShardRegion))
                         {
-                            m.ShardRegion.Tell(new RegisterAck(context.Self));
+                            m.ShardRegion.Tell(new RegisterAck(_context.Self));
                             AllocateShardHomesForRememberEntities();
                         }
                         else
                         {
-                            gracefulShutdownInProgress = gracefulShutdownInProgress.Remove(m.ShardRegion);
+                            _gracefulShutdownInProgress = _gracefulShutdownInProgress.Remove(m.ShardRegion);
                             Update(new ShardRegionRegistered(m.ShardRegion), evt =>
                             {
                                 State = State.Updated(evt);
-                                context.Watch(m.ShardRegion);
-                                m.ShardRegion.Tell(new RegisterAck(context.Self));
+                                _context.Watch(m.ShardRegion);
+                                m.ShardRegion.Tell(new RegisterAck(_context.Self));
                                 AllocateShardHomesForRememberEntities();
                             });
                         }
@@ -1684,14 +1684,14 @@ namespace Akka.Cluster.Sharding
                     {
                         Log.Debug("{0}: ShardRegion proxy registered: [{1}]", TypeName, m.ShardRegionProxy);
                         if (State.RegionProxies.Contains(m.ShardRegionProxy))
-                            m.ShardRegionProxy.Tell(new RegisterAck(context.Self));
+                            m.ShardRegionProxy.Tell(new RegisterAck(_context.Self));
                         else
                         {
                             Update(new ShardRegionProxyRegistered(m.ShardRegionProxy), evt =>
                             {
                                 State = State.Updated(evt);
-                                context.Watch(m.ShardRegionProxy);
-                                m.ShardRegionProxy.Tell(new RegisterAck(context.Self));
+                                _context.Watch(m.ShardRegionProxy);
+                                m.ShardRegionProxy.Tell(new RegisterAck(_context.Self));
                             });
                         }
                     }
@@ -1700,10 +1700,10 @@ namespace Akka.Cluster.Sharding
                     if (!HandleGetShardHome(m.Shard))
                     {
                         // location not know, yet
-                        var activeRegions = State.Regions.RemoveRange(gracefulShutdownInProgress).RemoveRange(regionTerminationInProgress);
+                        var activeRegions = State.Regions.RemoveRange(_gracefulShutdownInProgress).RemoveRange(_regionTerminationInProgress);
                         if (activeRegions.Count > 0)
                         {
-                            var getShardHomeSender = context.Sender;
+                            var getShardHomeSender = _context.Sender;
                             var regionTask = AllocationStrategy.AllocateShard(getShardHomeSender, m.Shard, activeRegions);
 
                             // if task completed immediately, just continue
@@ -1711,7 +1711,7 @@ namespace Akka.Cluster.Sharding
                                 ContinueGetShardHome(m.Shard, regionTask.Result, getShardHomeSender);
                             else
                             {
-                                regionTask.PipeTo(context.Self,
+                                regionTask.PipeTo(_context.Self,
                                     success: region => new AllocateShardResult(m.Shard, region, getShardHomeSender),
                                     failure: e =>
                                     {
@@ -1732,10 +1732,10 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case ShardStarted m:
-                    if (unAckedHostShards.TryGetValue(m.Shard, out var cancel))
+                    if (_unAckedHostShards.TryGetValue(m.Shard, out var cancel))
                     {
                         cancel.Cancel();
-                        unAckedHostShards = unAckedHostShards.Remove(m.Shard);
+                        _unAckedHostShards = _unAckedHostShards.Remove(m.Shard);
                     }
                     return true;
 
@@ -1752,14 +1752,14 @@ namespace Akka.Cluster.Sharding
 
                 case RebalanceTick _:
                     // optimisation: don't rebalance with un-acked shards, will cause unnecessary rebalance
-                    if (State.Regions.Count > 0 && unAckedHostShards.IsEmpty)
+                    if (State.Regions.Count > 0 && _unAckedHostShards.IsEmpty)
                     {
-                        var shardsTask = AllocationStrategy.Rebalance(State.Regions, rebalanceInProgress.Keys.ToImmutableHashSet());
+                        var shardsTask = AllocationStrategy.Rebalance(State.Regions, _rebalanceInProgress.Keys.ToImmutableHashSet());
                         if (shardsTask.IsCompleted && !shardsTask.IsFaulted)
                             ContinueRebalance(shardsTask.Result);
                         else
                         {
-                            shardsTask.PipeTo(context.Self,
+                            shardsTask.PipeTo(_context.Self,
                                 success: shards => new RebalanceResult(shards),
                                 failure: e => new RebalanceResult(ImmutableHashSet<ShardId>.Empty));
                         }
@@ -1771,7 +1771,7 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case RebalanceDone m:
-                    rebalanceWorkers = rebalanceWorkers.Remove(context.Sender);
+                    _rebalanceWorkers = _rebalanceWorkers.Remove(_context.Sender);
 
                     if (m.Ok)
                     {
@@ -1786,7 +1786,7 @@ namespace Akka.Cluster.Sharding
                                 State = State.Updated(evt);
                                 ClearRebalanceInProgress(m.Shard);
                                 AllocateShardHomesForRememberEntities();
-                                context.Self.Tell(new GetShardHome(m.Shard), ignoreRef);
+                                _context.Self.Tell(new GetShardHome(m.Shard), _ignoreRef);
                             });
                         }
                         else
@@ -1805,7 +1805,7 @@ namespace Akka.Cluster.Sharding
                         // if so, consider the region as still alive and let it retry to gracefully shutdown later
                         if (State.Shards.TryGetValue(m.Shard, out var region))
                         {
-                            gracefulShutdownInProgress = gracefulShutdownInProgress.Remove(region);
+                            _gracefulShutdownInProgress = _gracefulShutdownInProgress.Remove(region);
                         }
 
                         ClearRebalanceInProgress(m.Shard);
@@ -1813,7 +1813,7 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case GracefulShutdownRequest m:
-                    if (!gracefulShutdownInProgress.Contains(m.ShardRegion))
+                    if (!_gracefulShutdownInProgress.Contains(m.ShardRegion))
                     {
                         if (State.Regions.TryGetValue(m.ShardRegion, out var shards))
                         {
@@ -1828,7 +1828,7 @@ namespace Akka.Cluster.Sharding
                                 else
                                     Log.Debug("{0}: Graceful shutdown of region [{1}] with [{2}] shards", TypeName, m.ShardRegion, shards.Count);
                             }
-                            gracefulShutdownInProgress = gracefulShutdownInProgress.Add(m.ShardRegion);
+                            _gracefulShutdownInProgress = _gracefulShutdownInProgress.Add(m.ShardRegion);
                             ShutdownShards(m.ShardRegion, shards.ToImmutableHashSet());
                         }
                         else
@@ -1840,7 +1840,7 @@ namespace Akka.Cluster.Sharding
 
                 case GetClusterShardingStats m:
 
-                    var tasks = aliveRegions.Select(regionActor => (Region: regionActor, Task: regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, m.Timeout))).ToImmutableList();
+                    var tasks = _aliveRegions.Select(regionActor => (Region: regionActor, Task: regionActor.Ask<ShardRegionStats>(GetShardRegionStats.Instance, m.Timeout))).ToImmutableList();
                     Task.WhenAll(tasks.Select(i => i.Task)).ContinueWith(ps =>
                     {
                         if (ps.IsFaulted || ps.IsCanceled)
@@ -1849,43 +1849,43 @@ namespace Akka.Cluster.Sharding
                         var regions = tasks.Where(i => !i.Task.IsCanceled && !i.Task.IsFaulted).ToImmutableDictionary(i =>
                         {
                             Address regionAddress = i.Region.Path.Address;
-                            Address address = (regionAddress.HasLocalScope && regionAddress.System == cluster.SelfAddress.System) ? cluster.SelfAddress : regionAddress;
+                            Address address = (regionAddress.HasLocalScope && regionAddress.System == _cluster.SelfAddress.System) ? _cluster.SelfAddress : regionAddress;
                             return address;
                         }, j => j.Task.Result);
 
                         return new ClusterShardingStats(regions);
-                    }).PipeTo(context.Sender);
+                    }).PipeTo(_context.Sender);
                     return true;
 
                 case ClusterEvent.ClusterShuttingDown _:
                     Log.Debug("{0}: Shutting down ShardCoordinator", TypeName);
                     // can't stop because supervisor will start it again,
                     // it will soon be stopped when singleton is stopped
-                    context.Become(ShuttingDown);
+                    _context.Become(ShuttingDown);
                     return true;
 
                 case GetCurrentRegions _:
                     var reply = new CurrentRegions(State.Regions.Keys.Select(r =>
-                        string.IsNullOrEmpty(r.Path.Address.Host) ? cluster.SelfAddress : r.Path.Address).ToImmutableHashSet());
-                    context.Sender.Tell(reply);
+                        string.IsNullOrEmpty(r.Path.Address.Host) ? _cluster.SelfAddress : r.Path.Address).ToImmutableHashSet());
+                    _context.Sender.Tell(reply);
                     return true;
 
                 case Terminate _:
-                    if (rebalanceInProgress.Count == 0)
+                    if (_rebalanceInProgress.Count == 0)
                         Log.Debug("{0}: Received termination message.", TypeName);
                     else if (Log.IsDebugEnabled)
                     {
                         if (VerboseDebug)
                             Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards [{2}].",
                                 TypeName,
-                                rebalanceInProgress.Count,
-                                string.Join(", ", rebalanceInProgress.Keys));
+                                _rebalanceInProgress.Count,
+                                string.Join(", ", _rebalanceInProgress.Keys));
                         else
                             Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards.",
                                 TypeName,
-                                rebalanceInProgress.Count);
+                                _rebalanceInProgress.Count);
                     }
-                    context.Stop(context.Self);
+                    _context.Stop(_context.Self);
                     return true;
             }
 
@@ -1894,14 +1894,14 @@ namespace Akka.Cluster.Sharding
 
         private void ClearRebalanceInProgress(string shard)
         {
-            if (rebalanceInProgress.TryGetValue(shard, out var pendingGetShardHome))
+            if (_rebalanceInProgress.TryGetValue(shard, out var pendingGetShardHome))
             {
                 var msg = new GetShardHome(shard);
                 foreach (var getShardHomeSender in pendingGetShardHome)
                 {
-                    context.Self.Tell(msg, getShardHomeSender);
+                    _context.Self.Tell(msg, getShardHomeSender);
                 }
-                rebalanceInProgress = rebalanceInProgress.Remove(shard);
+                _rebalanceInProgress = _rebalanceInProgress.Remove(shard);
             }
         }
 
@@ -1913,7 +1913,7 @@ namespace Akka.Cluster.Sharding
                 TypeName,
                 shard,
                 from);
-            rebalanceInProgress = rebalanceInProgress.SetItem(shard, rebalanceInProgress.GetValueOrDefault(shard, ImmutableHashSet<IActorRef>.Empty).Add(from));
+            _rebalanceInProgress = _rebalanceInProgress.SetItem(shard, _rebalanceInProgress.GetValueOrDefault(shard, ImmutableHashSet<IActorRef>.Empty).Add(from));
         }
 
         /// <summary>
@@ -1924,10 +1924,10 @@ namespace Akka.Cluster.Sharding
         ///     the shard location was known or the request was deferred or ignored</returns>
         internal bool HandleGetShardHome(ShardId shard)
         {
-            if (rebalanceInProgress.ContainsKey(shard))
+            if (_rebalanceInProgress.ContainsKey(shard))
             {
-                DeferGetShardHomeRequest(shard, context.Sender);
-                unstashOneGetShardHomeRequest(); // continue unstashing
+                DeferGetShardHomeRequest(shard, _context.Sender);
+                _unstashOneGetShardHomeRequest(); // continue unstashing
                 return true;
             }
             else if (!HasAllRegionsRegistered())
@@ -1935,22 +1935,22 @@ namespace Akka.Cluster.Sharding
                 Log.Debug("{0}: GetShardHome [{1}] request from [{2}] ignored, because not all regions have registered yet.",
                     TypeName,
                     shard,
-                    context.Sender);
+                    _context.Sender);
                 return true;
             }
             else
             {
                 if (State.Shards.TryGetValue(shard, out var shardRegionRef))
                 {
-                    if (regionTerminationInProgress.Contains(shardRegionRef))
+                    if (_regionTerminationInProgress.Contains(shardRegionRef))
                         Log.Debug("{0}: GetShardHome [{1}] request ignored, due to region [{2}] termination in progress.",
                             TypeName,
                             shard,
                             shardRegionRef);
                     else
-                        context.Sender.Tell(new ShardHome(shard, shardRegionRef));
+                        _context.Sender.Tell(new ShardHome(shard, shardRegionRef));
 
-                    unstashOneGetShardHomeRequest(); // continue unstashing
+                    _unstashOneGetShardHomeRequest(); // continue unstashing
                     return true;
                 }
                 else
@@ -1967,10 +1967,10 @@ namespace Akka.Cluster.Sharding
                 case Terminated t:
                     if (State.Regions.ContainsKey(t.ActorRef))
                     {
-                        if (removalMargin != TimeSpan.Zero && t.AddressTerminated && aliveRegions.Contains(t.ActorRef))
+                        if (_removalMargin != TimeSpan.Zero && t.AddressTerminated && _aliveRegions.Contains(t.ActorRef))
                         {
-                            context.System.Scheduler.ScheduleTellOnce(removalMargin, context.Self, new DelayedShardRegionTerminated(t.ActorRef), ActorRefs.NoSender);
-                            regionTerminationInProgress = regionTerminationInProgress.Add(t.ActorRef);
+                            _context.System.Scheduler.ScheduleTellOnce(_removalMargin, _context.Self, new DelayedShardRegionTerminated(t.ActorRef), ActorRefs.NoSender);
+                            _regionTerminationInProgress = _regionTerminationInProgress.Add(t.ActorRef);
                         }
                         else
                             RegionTerminated(t.ActorRef);
@@ -1990,7 +1990,7 @@ namespace Akka.Cluster.Sharding
 
         private void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : IDomainEvent
         {
-            update(e, evn => handler((TEvent)evn));
+            _update(e, evn => handler((TEvent)evn));
         }
 
         internal void WatchStateActors()
@@ -2000,13 +2000,13 @@ namespace Akka.Cluster.Sharding
             // Consider regions that don't belong to the current cluster to be terminated.
             // This is an optimization that makes it operationally faster and reduces the
             // amount of lost messages during startup.
-            var nodes = cluster.State.Members.Select(i => i.Address).ToImmutableHashSet();
+            var nodes = _cluster.State.Members.Select(i => i.Address).ToImmutableHashSet();
             foreach (var i in State.Regions)
             {
                 //case (ref, _) =>
                 var a = i.Key.Path.Address;
                 if (a.HasLocalScope || nodes.Contains(a))
-                    context.Watch(i.Key);
+                    _context.Watch(i.Key);
                 else
                     RegionTerminated(i.Key); // not part of cluster
             }
@@ -2014,7 +2014,7 @@ namespace Akka.Cluster.Sharding
             {
                 var a = @ref.Path.Address;
                 if (a.HasLocalScope || nodes.Contains(a))
-                    context.Watch(@ref);
+                    _context.Watch(@ref);
                 else
                     RegionProxyTerminated(@ref); // not part of cluster
             }
@@ -2023,7 +2023,7 @@ namespace Akka.Cluster.Sharding
             // be processed before starting to reply to GetShardHome.
             // This is an optimization that makes it operational faster and reduces the
             // amount of lost messages during startup.
-            context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), context.Self, StateInitialized.Instance, ActorRefs.NoSender);
+            _context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(500), _context.Self, StateInitialized.Instance, ActorRefs.NoSender);
         }
 
         internal void ReceiveStateInitialized()
@@ -2036,34 +2036,34 @@ namespace Akka.Cluster.Sharding
         private bool HasAllRegionsRegistered()
         {
             // the check is only for startup, i.e. once all have registered we don't check more
-            if (allRegionsRegistered)
+            if (_allRegionsRegistered)
                 return true;
             else
             {
-                allRegionsRegistered = aliveRegions.Count >= minMembers;
-                return allRegionsRegistered;
+                _allRegionsRegistered = _aliveRegions.Count >= _minMembers;
+                return _allRegionsRegistered;
             }
         }
 
         private void RegionTerminated(IActorRef @ref)
         {
-            foreach (var rw in rebalanceWorkers)
+            foreach (var rw in _rebalanceWorkers)
                 rw.Tell(new RebalanceWorker.ShardRegionTerminated(@ref));
             if (State.Regions.TryGetValue(@ref, out var shards))
             {
                 Log.Debug("{0}: ShardRegion terminated: [{1}]", TypeName, @ref);
-                regionTerminationInProgress = regionTerminationInProgress.Add(@ref);
+                _regionTerminationInProgress = _regionTerminationInProgress.Add(@ref);
                 foreach (var s in shards)
                 {
-                    context.Self.Tell(new GetShardHome(s), ignoreRef);
+                    _context.Self.Tell(new GetShardHome(s), _ignoreRef);
                 }
 
                 Update(new ShardRegionTerminated(@ref), evt =>
                 {
                     State = State.Updated(evt);
-                    gracefulShutdownInProgress = gracefulShutdownInProgress.Remove(@ref);
-                    regionTerminationInProgress = regionTerminationInProgress.Remove(@ref);
-                    aliveRegions = aliveRegions.Remove(@ref);
+                    _gracefulShutdownInProgress = _gracefulShutdownInProgress.Remove(@ref);
+                    _regionTerminationInProgress = _regionTerminationInProgress.Remove(@ref);
+                    _aliveRegions = _aliveRegions.Remove(@ref);
                     AllocateShardHomesForRememberEntities();
                 });
             }
@@ -2071,7 +2071,7 @@ namespace Akka.Cluster.Sharding
 
         private void RegionProxyTerminated(IActorRef @ref)
         {
-            foreach (var rw in rebalanceWorkers)
+            foreach (var rw in _rebalanceWorkers)
                 rw.Tell(new RebalanceWorker.ShardRegionTerminated(@ref));
             if (State.RegionProxies.Contains(@ref))
             {
@@ -2092,8 +2092,8 @@ namespace Akka.Cluster.Sharding
         private void SendHostShardMsg(ShardId shard, IActorRef region)
         {
             region.Tell(new HostShard(shard));
-            var cancel = context.System.Scheduler.ScheduleTellOnceCancelable(Settings.TuningParameters.ShardStartTimeout, context.Self, new ResendShardHost(shard, region), ActorRefs.NoSender);
-            unAckedHostShards = unAckedHostShards.SetItem(shard, cancel);
+            var cancel = _context.System.Scheduler.ScheduleTellOnceCancelable(Settings.TuningParameters.ShardStartTimeout, _context.Self, new ResendShardHost(shard, region), ActorRefs.NoSender);
+            _unAckedHostShards = _unAckedHostShards.SetItem(shard, cancel);
         }
 
         internal void AllocateShardHomesForRememberEntities()
@@ -2102,14 +2102,14 @@ namespace Akka.Cluster.Sharding
             {
                 foreach (var shard in State.UnallocatedShards)
                 {
-                    context.Self.Tell(new GetShardHome(shard), ignoreRef);
+                    _context.Self.Tell(new GetShardHome(shard), _ignoreRef);
                 }
             }
         }
 
         private void ContinueGetShardHome(ShardId shard, IActorRef region, IActorRef getShardHomeSender)
         {
-            if (rebalanceInProgress.ContainsKey(shard))
+            if (_rebalanceInProgress.ContainsKey(shard))
             {
                 DeferGetShardHomeRequest(shard, getShardHomeSender);
             }
@@ -2121,7 +2121,7 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    if (State.Regions.ContainsKey(region) && !gracefulShutdownInProgress.Contains(region) && !regionTerminationInProgress.Contains(region))
+                    if (State.Regions.ContainsKey(region) && !_gracefulShutdownInProgress.Contains(region) && !_regionTerminationInProgress.Contains(region))
                     {
                         Update(new ShardHomeAllocated(shard, region), evt =>
                         {
@@ -2167,10 +2167,10 @@ namespace Akka.Cluster.Sharding
             TimeSpan handOffTimeout,
             bool isRebalance)
         {
-            if (!rebalanceInProgress.ContainsKey(shard))
+            if (!_rebalanceInProgress.ContainsKey(shard))
             {
-                rebalanceInProgress = rebalanceInProgress.SetItem(shard, ImmutableHashSet<IActorRef>.Empty);
-                rebalanceWorkers = rebalanceWorkers.Add(context.ActorOf(
+                _rebalanceInProgress = _rebalanceInProgress.SetItem(shard, ImmutableHashSet<IActorRef>.Empty);
+                _rebalanceWorkers = _rebalanceWorkers.Add(_context.ActorOf(
                     RebalanceWorker.Props(
                         TypeName,
                         shard,
@@ -2178,23 +2178,23 @@ namespace Akka.Cluster.Sharding
                         handOffTimeout,
                         State.Regions.Keys.Union(State.RegionProxies),
                         isRebalance: isRebalance)
-                    .WithDispatcher(context.Props.Dispatcher)));
+                    .WithDispatcher(_context.Props.Dispatcher)));
             }
         }
 
         private void ContinueRebalance(IImmutableSet<ShardId> shards)
         {
-            if (Log.IsInfoEnabled && (shards.Count > 0 || rebalanceInProgress.Count > 0))
+            if (Log.IsInfoEnabled && (shards.Count > 0 || _rebalanceInProgress.Count > 0))
             {
                 Log.Info("{0}: Starting rebalance for shards [{1}]. Current shards rebalancing: [{2}]",
                     TypeName,
                     string.Join(", ", shards),
-                    string.Join(", ", rebalanceInProgress.Keys));
+                    string.Join(", ", _rebalanceInProgress.Keys));
             }
             foreach (var shard in shards)
             {
                 // optimisation: check if not already in progress before fetching region
-                if (!rebalanceInProgress.ContainsKey(shard))
+                if (!_rebalanceInProgress.ContainsKey(shard))
                 {
                     if (State.Shards.TryGetValue(shard, out var region))
                     {

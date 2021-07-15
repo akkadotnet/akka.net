@@ -23,19 +23,19 @@ namespace Akka.Cluster.Sharding.External
             return system.WithExtension<ExternalShardAllocation, ExternalShardAllocationExtensionProvider>();
         }
 
-        private readonly ExtendedActorSystem system;
-        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> clients = new ConcurrentDictionary<ShardId, IExternalShardAllocationClient>();
+        private readonly ExtendedActorSystem _system;
+        private readonly ConcurrentDictionary<string, IExternalShardAllocationClient> _clients = new ConcurrentDictionary<ShardId, IExternalShardAllocationClient>();
 
         public ExternalShardAllocation(ExtendedActorSystem system)
         {
-            this.system = system;
+            _system = system;
         }
 
         public IExternalShardAllocationClient ClientFor(string typeName) => Client(typeName);
 
         private IExternalShardAllocationClient Client(string typeName)
         {
-            return clients.GetOrAdd(typeName, key => new Internal.ExternalShardAllocationClientImpl(system, key));
+            return _clients.GetOrAdd(typeName, key => new Internal.ExternalShardAllocationClientImpl(_system, key));
         }
     }
 

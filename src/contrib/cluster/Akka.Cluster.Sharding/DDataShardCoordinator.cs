@@ -74,27 +74,27 @@ namespace Akka.Cluster.Sharding
 
         private const string RememberEntitiesTimeoutKey = "RememberEntityTimeout";
 
-        private readonly IActorRef replicator;
-        private readonly ShardCoordinator baseImpl;
-        private bool VerboseDebug => baseImpl.VerboseDebug;
+        private readonly IActorRef _replicator;
+        private readonly ShardCoordinator _baseImpl;
+        private bool VerboseDebug => _baseImpl.VerboseDebug;
 
-        private readonly IReadConsistency stateReadConsistency;
-        private readonly IWriteConsistency stateWriteConsistency;
-        private readonly CoordinatorState initEmptyState;
-        private bool terminating = false;
-        private UniqueAddress selfUniqueAddress;
-        private readonly LWWRegisterKey<ShardCoordinator.CoordinatorState> coordinatorStateKey;
-        private ImmutableHashSet<(IActorRef, GetShardHome)> getShardHomeRequests = ImmutableHashSet<(IActorRef, GetShardHome)>.Empty;
-        private readonly IActorRef rememberEntitiesStore;
-        private bool rememberEntities;
+        private readonly IReadConsistency _stateReadConsistency;
+        private readonly IWriteConsistency _stateWriteConsistency;
+        private readonly CoordinatorState _initEmptyState;
+        private bool _terminating = false;
+        private UniqueAddress _selfUniqueAddress;
+        private readonly LWWRegisterKey<ShardCoordinator.CoordinatorState> _coordinatorStateKey;
+        private ImmutableHashSet<(IActorRef, GetShardHome)> _getShardHomeRequests = ImmutableHashSet<(IActorRef, GetShardHome)>.Empty;
+        private readonly IActorRef _rememberEntitiesStore;
+        private bool _rememberEntities;
 
         public ITimerScheduler Timers { get; set; }
         public IStash Stash { get; set; }
 
-        private string TypeName => baseImpl.TypeName;
-        private ClusterShardingSettings Settings => baseImpl.Settings;
-        private CoordinatorState State { get => baseImpl.State; set => baseImpl.State = value; }
-        private ILoggingAdapter Log => baseImpl.Log;
+        private string TypeName => _baseImpl.TypeName;
+        private ClusterShardingSettings Settings => _baseImpl.Settings;
+        private CoordinatorState State { get => _baseImpl.State; set => _baseImpl.State = value; }
+        private ILoggingAdapter Log => _baseImpl.Log;
 
         public DDataShardCoordinator(
             string typeName,
@@ -104,39 +104,39 @@ namespace Akka.Cluster.Sharding
             int majorityMinCap,
             IRememberEntitiesProvider rememberEntitiesStoreProvider)
         {
-            this.replicator = replicator;
+            _replicator = replicator;
             var log = Context.GetLogger();
             var verboseDebug = Context.System.Settings.Config.GetBoolean("akka.cluster.sharding.verbose-debug-logging");
 
-            baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
+            _baseImpl = new ShardCoordinator(typeName, settings, allocationStrategy,
                 Context, log, verboseDebug, Update, UnstashOneGetShardHomeRequest);
 
             if (settings.TuningParameters.CoordinatorStateReadMajorityPlus == int.MaxValue)
-                stateReadConsistency = new ReadAll(settings.TuningParameters.WaitingForStateTimeout);
+                _stateReadConsistency = new ReadAll(settings.TuningParameters.WaitingForStateTimeout);
             else
-                stateReadConsistency = new ReadMajority/*Plus*/(settings.TuningParameters.WaitingForStateTimeout/*, additional*/, majorityMinCap);
+                _stateReadConsistency = new ReadMajority/*Plus*/(settings.TuningParameters.WaitingForStateTimeout/*, additional*/, majorityMinCap);
 
             if (settings.TuningParameters.CoordinatorStateWriteMajorityPlus == int.MaxValue)
-                stateWriteConsistency = new WriteAll(settings.TuningParameters.UpdatingStateTimeout);
+                _stateWriteConsistency = new WriteAll(settings.TuningParameters.UpdatingStateTimeout);
             else
-                stateWriteConsistency = new WriteMajority/*Plus*/(settings.TuningParameters.UpdatingStateTimeout/*, additional*/, majorityMinCap);
+                _stateWriteConsistency = new WriteMajority/*Plus*/(settings.TuningParameters.UpdatingStateTimeout/*, additional*/, majorityMinCap);
 
             Cluster node = Cluster.Get(Context.System);
-            selfUniqueAddress = node.SelfUniqueAddress;
+            _selfUniqueAddress = node.SelfUniqueAddress;
 
-            coordinatorStateKey = new LWWRegisterKey<CoordinatorState>(typeName + "CoordinatorState");
+            _coordinatorStateKey = new LWWRegisterKey<CoordinatorState>(typeName + "CoordinatorState");
 
-            initEmptyState = CoordinatorState.Empty.WithRememberEntities(settings.RememberEntities);
+            _initEmptyState = CoordinatorState.Empty.WithRememberEntities(settings.RememberEntities);
 
 
             if (rememberEntitiesStoreProvider != null)
             {
                 log.Debug("{0}: Starting remember entities store from provider {1}", typeName, rememberEntitiesStoreProvider);
-                rememberEntitiesStore = Context.WatchWith(
+                _rememberEntitiesStore = Context.WatchWith(
                     Context.ActorOf(rememberEntitiesStoreProvider.CoordinatorStoreProps(), "RememberEntitiesStore"),
                     RememberEntitiesStoreStopped.Instance);
             }
-            rememberEntities = rememberEntitiesStore != null;
+            _rememberEntities = _rememberEntitiesStore != null;
             node.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents, typeof(ClusterEvent.ClusterShuttingDown));
 
             // get state from ddata replicator, repeat until GetSuccess
@@ -165,8 +165,8 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
-                    case GetSuccess g when g.Key.Equals(coordinatorStateKey):
-                        var existingState = g.Get(coordinatorStateKey).Value.WithRememberEntities(Settings.RememberEntities);
+                    case GetSuccess g when g.Key.Equals(_coordinatorStateKey):
+                        var existingState = g.Get(_coordinatorStateKey).Value.WithRememberEntities(Settings.RememberEntities);
                         if (VerboseDebug)
                             Log.Debug("{0}: Received initial coordinator state [{1}]", TypeName, existingState);
                         else
@@ -177,16 +177,16 @@ namespace Akka.Cluster.Sharding
                         OnInitialState(existingState, rememberedShards);
                         return true;
 
-                    case GetFailure m when m.Key.Equals(coordinatorStateKey):
+                    case GetFailure m when m.Key.Equals(_coordinatorStateKey):
                         Log.Error(
                             "{0}: The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {1} millis (retrying). Has ClusterSharding been started on all nodes?",
                             TypeName,
-                            stateReadConsistency.Timeout.TotalMilliseconds);
+                            _stateReadConsistency.Timeout.TotalMilliseconds);
                         // repeat until GetSuccess
                         GetCoordinatorState();
                         return true;
 
-                    case NotFound m when m.Key.Equals(coordinatorStateKey):
+                    case NotFound m when m.Key.Equals(_coordinatorStateKey):
                         Log.Debug("{0}: Initial coordinator is empty.", TypeName);
                         // this.state is empty initially
                         OnInitialState(State, rememberedShards);
@@ -246,7 +246,7 @@ namespace Akka.Cluster.Sharding
             {
                 Context.Become(WaitingForStateInitialized);
                 // note that watchStateActors may call update
-                baseImpl.WatchStateActors();
+                _baseImpl.WatchStateActors();
             }
         }
 
@@ -263,7 +263,7 @@ namespace Akka.Cluster.Sharding
                 case StateInitialized _:
                     UnstashOneGetShardHomeRequest();
                     Stash.UnstashAll();
-                    baseImpl.ReceiveStateInitialized();
+                    _baseImpl.ReceiveStateInitialized();
                     Activate();
                     return true;
 
@@ -323,7 +323,7 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
-                    case UpdateSuccess m when m.Key.Equals(coordinatorStateKey) && m.Request.Equals(evt):
+                    case UpdateSuccess m when m.Key.Equals(_coordinatorStateKey) && m.Request.Equals(evt):
                         if (!waitingForRememberShard)
                         {
                             Log.Debug("{0}: The coordinator state was successfully updated with {1}", TypeName, evt);
@@ -346,15 +346,15 @@ namespace Akka.Cluster.Sharding
                         }
                         return true;
 
-                    case UpdateTimeout m when m.Key.Equals(coordinatorStateKey) && m.Request.Equals(evt):
+                    case UpdateTimeout m when m.Key.Equals(_coordinatorStateKey) && m.Request.Equals(evt):
                         Log.Error(
                             "{0}: The ShardCoordinator was unable to update a distributed state within 'updating-state-timeout': {1} millis ({2}). " +
                             "Perhaps the ShardRegion has not started on all active nodes yet? event={3}",
                             TypeName,
-                            stateWriteConsistency.Timeout.TotalMilliseconds,
-                            terminating ? "terminating" : "retrying",
+                            _stateWriteConsistency.Timeout.TotalMilliseconds,
+                            _terminating ? "terminating" : "retrying",
                             evt);
-                        if (terminating)
+                        if (_terminating)
                         {
                             Context.Stop(Self);
                         }
@@ -373,9 +373,9 @@ namespace Akka.Cluster.Sharding
                             m.Key,
                             m.ErrorMessage,
                             evt,
-                            terminating ? "Coordinator will be terminated due to Terminate message received"
+                            _terminating ? "Coordinator will be terminated due to Terminate message received"
                             : "Coordinator will be restarted");
-                        if (terminating)
+                        if (_terminating)
                         {
                             Context.Stop(Self);
                         }
@@ -386,13 +386,13 @@ namespace Akka.Cluster.Sharding
                         return true;
 
                     case GetShardHome g:
-                        if (!baseImpl.HandleGetShardHome(g.Shard))
+                        if (!_baseImpl.HandleGetShardHome(g.Shard))
                             StashGetShardHomeRequest(Sender, g); // must wait for update that is in progress
                         return true;
 
                     case Terminate _:
                         Log.Debug("{0}: The ShardCoordinator received termination message while waiting for update", TypeName);
-                        terminating = true;
+                        _terminating = true;
                         Stash.Stash();
                         return true;
 
@@ -493,24 +493,24 @@ namespace Akka.Cluster.Sharding
               TypeName,
               request.Shard,
               sender);
-            getShardHomeRequests = getShardHomeRequests.Add((sender, request));
+            _getShardHomeRequests = _getShardHomeRequests.Add((sender, request));
         }
 
         private void UnstashOneGetShardHomeRequest()
         {
-            if (getShardHomeRequests.Count > 0)
+            if (_getShardHomeRequests.Count > 0)
             {
                 // unstash one, will continue unstash of next after receive GetShardHome or update completed
-                var requestTuple = getShardHomeRequests.First();
+                var requestTuple = _getShardHomeRequests.First();
                 var (originalSender, request) = requestTuple;
                 Self.Tell(request, sender: originalSender);
-                getShardHomeRequests = getShardHomeRequests.Remove(requestTuple);
+                _getShardHomeRequests = _getShardHomeRequests.Remove(requestTuple);
             }
         }
 
         private void Activate()
         {
-            Context.Become(msg => baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
+            Context.Become(msg => _baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
             Log.Info("{0}: ShardCoordinator was moved to the active state with [{1}] shards", TypeName, State.Shards.Count);
             if (VerboseDebug)
                 Log.Debug("{0}: Full ShardCoordinator initial state {1}", TypeName, State);
@@ -531,7 +531,7 @@ namespace Akka.Cluster.Sharding
                     {
                         var newUnallocatedShards = State.UnallocatedShards.Union(m.Entities.Except(State.Shards.Keys));
                         State = State.Copy(unallocatedShards: newUnallocatedShards);
-                        baseImpl.AllocateShardHomesForRememberEntities();
+                        _baseImpl.AllocateShardHomesForRememberEntities();
                     }
                     Timers.Cancel(RememberEntitiesTimeoutKey);
                     break;
@@ -550,7 +550,7 @@ namespace Akka.Cluster.Sharding
             Receive waitingReceive;
             switch (evt)
             {
-                case ShardHomeAllocated s when rememberEntities && !State.Shards.ContainsKey(s.Shard):
+                case ShardHomeAllocated s when _rememberEntities && !State.Shards.ContainsKey(s.Shard):
                     RememberShardAllocated(s.Shard);
                     waitingReceive = WaitingForUpdate(
                         evt,
@@ -574,7 +574,7 @@ namespace Akka.Cluster.Sharding
 
         private void GetCoordinatorState()
         {
-            replicator.Tell(Dsl.Get(coordinatorStateKey, stateReadConsistency));
+            _replicator.Tell(Dsl.Get(_coordinatorStateKey, _stateReadConsistency));
         }
 
         private void GetAllRememberedShards()
@@ -583,8 +583,8 @@ namespace Akka.Cluster.Sharding
                 RememberEntitiesTimeoutKey,
                 RememberEntitiesLoadTimeout.Instance,
                 Settings.TuningParameters.WaitingForStateTimeout);
-            if (rememberEntitiesStore != null)
-                rememberEntitiesStore.Tell(RememberEntitiesCoordinatorStore.GetShards.Instance);
+            if (_rememberEntitiesStore != null)
+                _rememberEntitiesStore.Tell(RememberEntitiesCoordinatorStore.GetShards.Instance);
         }
 
         private void SendCoordinatorStateUpdate(IDomainEvent evt)
@@ -592,19 +592,19 @@ namespace Akka.Cluster.Sharding
             var s = State.Updated(evt);
             if (VerboseDebug)
                 Log.Debug("{0}: Storing new coordinator state [{1}]", TypeName, State);
-            replicator.Tell(Dsl.Update(
-                coordinatorStateKey,
-                new LWWRegister<CoordinatorState>(selfUniqueAddress, initEmptyState),
-                stateWriteConsistency,
+            _replicator.Tell(Dsl.Update(
+                _coordinatorStateKey,
+                new LWWRegister<CoordinatorState>(_selfUniqueAddress, _initEmptyState),
+                _stateWriteConsistency,
                 evt,
-                reg => reg.WithValue(selfUniqueAddress, s)));
+                reg => reg.WithValue(_selfUniqueAddress, s)));
         }
 
         private void RememberShardAllocated(string newShard)
         {
             Log.Debug("{0}: Remembering shard allocation [{1}]", TypeName, newShard);
-            if (rememberEntitiesStore != null)
-                rememberEntitiesStore.Tell(new RememberEntitiesCoordinatorStore.AddShard(newShard));
+            if (_rememberEntitiesStore != null)
+                _rememberEntitiesStore.Tell(new RememberEntitiesCoordinatorStore.AddShard(newShard));
             Timers.StartSingleTimer(
                 RememberEntitiesTimeoutKey,
                 new RememberEntitiesTimeout(newShard),
@@ -613,7 +613,7 @@ namespace Akka.Cluster.Sharding
 
         private bool ReceiveTerminated(object message)
         {
-            if (!baseImpl.ReceiveTerminated(message))
+            if (!_baseImpl.ReceiveTerminated(message))
             {
                 if (message is RememberEntitiesStoreStopped)
                 {
@@ -630,8 +630,8 @@ namespace Akka.Cluster.Sharding
               TypeName,
               shardId,
               Settings.TuningParameters.UpdatingStateTimeout,
-              terminating ? "terminating" : "retrying");
-            if (terminating)
+              _terminating ? "terminating" : "retrying");
+            if (_terminating)
                 Context.Stop(Self);
             else
             {
@@ -649,13 +649,13 @@ namespace Akka.Cluster.Sharding
 
         protected override void PreStart()
         {
-            baseImpl.PreStart();
+            _baseImpl.PreStart();
         }
 
         protected override void PostStop()
         {
             base.PostStop();
-            baseImpl.PostStop();
+            _baseImpl.PostStop();
         }
     }
 }

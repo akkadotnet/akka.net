@@ -22,53 +22,53 @@ namespace Akka.Cluster.Sharding.External.Internal
     /// </summary>
     internal sealed class ExternalShardAllocationClientImpl : IExternalShardAllocationClient
     {
-        private readonly ActorSystem system;
-        private readonly string typeName;
-        private readonly ILoggingAdapter log;
-        private readonly IActorRef replicator;
-        private readonly UniqueAddress self;
-        private readonly TimeSpan timeout;
-        private readonly TimeSpan askTimeout;
-        private readonly LWWDictionaryKey<ShardId, string> Key;
+        private readonly ActorSystem _system;
+        private readonly string _typeName;
+        private readonly ILoggingAdapter _log;
+        private readonly IActorRef _replicator;
+        private readonly UniqueAddress _self;
+        private readonly TimeSpan _timeout;
+        private readonly TimeSpan _askTimeout;
+        private readonly LWWDictionaryKey<ShardId, string> _key;
 
         public ExternalShardAllocationClientImpl(ActorSystem system, string typeName)
         {
-            this.system = system;
-            this.typeName = typeName;
-            log = Logging.GetLogger(system, GetType());
-            replicator = DistributedData.DistributedData.Get(system).Replicator;
-            self = Cluster.Get(system).SelfUniqueAddress;
+            _system = system;
+            _typeName = typeName;
+            _log = Logging.GetLogger(system, GetType());
+            _replicator = DistributedData.DistributedData.Get(system).Replicator;
+            _self = Cluster.Get(system).SelfUniqueAddress;
 
-            timeout =
+            _timeout =
                 system.Settings.Config
                   .GetTimeSpan("akka.cluster.sharding.external-shard-allocation-strategy.client-timeout");
-            askTimeout = timeout + timeout;
+            _askTimeout = _timeout + _timeout;
 
-            Key = ExternalShardAllocationStrategy.DdataKey(typeName);
+            _key = ExternalShardAllocationStrategy.DdataKey(typeName);
         }
 
         public async Task<Done> UpdateShardLocation(string shard, Address location)
         {
-            log.Debug("updateShardLocation {0} {1} key {2}", shard, location, Key);
-            switch (await replicator.Ask(Dsl.Update(Key, LWWDictionary<ShardId, string>.Empty, WriteLocal.Instance, null, existing =>
+            _log.Debug("updateShardLocation {0} {1} key {2}", shard, location, _key);
+            switch (await _replicator.Ask(Dsl.Update(_key, LWWDictionary<ShardId, string>.Empty, WriteLocal.Instance, null, existing =>
             {
-                return existing.SetItem(self, shard, location.ToString());
-            }), askTimeout))
+                return existing.SetItem(_self, shard, location.ToString());
+            }), _askTimeout))
             {
                 case UpdateSuccess _:
                     return Done.Instance;
                 case UpdateTimeout _:
                 default:
-                    throw new ClientTimeoutException($"Unable to update shard location after ${timeout}");
+                    throw new ClientTimeoutException($"Unable to update shard location after ${_timeout}");
             }
         }
 
         public async Task<ShardLocations> ShardLocations()
         {
-            switch (await replicator.Ask(Dsl.Get(Key, new ReadMajority(timeout)), askTimeout))
+            switch (await _replicator.Ask(Dsl.Get(_key, new ReadMajority(_timeout)), _askTimeout))
             {
-                case GetSuccess success when success.Key.Equals(Key):
-                    return new ShardLocations(success.Get(Key).Entries.ToImmutableDictionary(i => i.Key, i =>
+                case GetSuccess success when success.Key.Equals(_key):
+                    return new ShardLocations(success.Get(_key).Entries.ToImmutableDictionary(i => i.Key, i =>
                     {
                         ActorPath.TryParseAddress(i.Value, out var address);
                         return new ExternalShardAllocationStrategy.ShardLocation(address);
@@ -77,26 +77,26 @@ namespace Akka.Cluster.Sharding.External.Internal
                     return new ShardLocations(ImmutableDictionary<ShardId, ExternalShardAllocationStrategy.ShardLocation>.Empty);
                 case GetFailure _:
                 default:
-                    throw new ClientTimeoutException($"Unable to get shard locations after ${timeout}");
+                    throw new ClientTimeoutException($"Unable to get shard locations after ${_timeout}");
             }
         }
 
         public async Task<Done> UpdateShardLocations(IImmutableDictionary<string, Address> locations)
         {
-            log.Debug("updateShardLocations {0} for {1}", string.Join(", ", locations.Select(i => $"{i.Key}: {i.Value}")), Key);
-            switch (await replicator.Ask(Dsl.Update(Key, LWWDictionary<ShardId, string>.Empty, WriteLocal.Instance, null, existing =>
+            _log.Debug("updateShardLocations {0} for {1}", string.Join(", ", locations.Select(i => $"{i.Key}: {i.Value}")), _key);
+            switch (await _replicator.Ask(Dsl.Update(_key, LWWDictionary<ShardId, string>.Empty, WriteLocal.Instance, null, existing =>
             {
                 var acc = existing;
                 foreach (var l in locations)
-                    acc = acc.SetItem(self, l.Key, l.Value.ToString());
+                    acc = acc.SetItem(_self, l.Key, l.Value.ToString());
                 return acc;
-            }), askTimeout))
+            }), _askTimeout))
             {
                 case UpdateSuccess _:
                     return Done.Instance;
                 case UpdateTimeout _:
                 default:
-                    throw new ClientTimeoutException($"Unable to update shard location after ${timeout}");
+                    throw new ClientTimeoutException($"Unable to update shard location after ${_timeout}");
             }
         }
     }

@@ -49,7 +49,7 @@ namespace Akka.Cluster.Sharding
         /// <summary>
         /// TBD
         /// </summary>
-        public object StopMessage { get; private set; }
+        public object StopMessage { get; }
     }
 
     /// <summary>
