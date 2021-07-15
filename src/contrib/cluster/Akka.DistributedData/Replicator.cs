@@ -29,20 +29,20 @@ namespace Akka.DistributedData
     /// <para>
     /// A replicated in-memory data store supporting low latency and high availability
     /// requirements.
-    /// 
+    ///
     /// The <see cref="Replicator"/> actor takes care of direct replication and gossip based
     /// dissemination of Conflict Free Replicated Data Types (CRDTs) to replicas in the
     /// the cluster.
     /// The data types must be convergent CRDTs and implement <see cref="IReplicatedData{T}"/>, i.e.
     /// they provide a monotonic merge function and the state changes always converge.
-    /// 
+    ///
     /// You can use your own custom <see cref="IReplicatedData{T}"/> or <see cref="IDeltaReplicatedData{T,TDelta}"/> types,
     /// and several types are provided by this package, such as:
     /// </para>
     /// <list type="bullet">
     ///     <item>
     ///         <term>Counters</term>
-    ///         <description><see cref="GCounter"/>, <see cref="PNCounter"/></description> 
+    ///         <description><see cref="GCounter"/>, <see cref="PNCounter"/></description>
     ///     </item>
     ///     <item>
     ///         <term>Registers</term>
@@ -53,7 +53,7 @@ namespace Akka.DistributedData
     ///         <description><see cref="GSet{T}"/>, <see cref="ORSet{T}"/></description>
     ///     </item>
     ///     <item>
-    ///         <term>Maps</term> 
+    ///         <term>Maps</term>
     ///         <description><see cref="ORDictionary{TKey,TValue}"/>, <see cref="ORMultiValueDictionary{TKey,TValue}"/>, <see cref="LWWDictionary{TKey,TValue}"/>, <see cref="PNCounterDictionary{TKey}"/></description>
     ///     </item>
     /// </list>
@@ -93,20 +93,20 @@ namespace Akka.DistributedData
     /// </para>
     /// <para>
     /// == Update ==
-    /// 
+    ///
     /// To modify and replicate a <see cref="IReplicatedData{T}"/> value you send a <see cref="Update"/> message
     /// to the local <see cref="Replicator"/>.
     /// The current data value for the `key` of the <see cref="Update"/> is passed as parameter to the `modify`
     /// function of the <see cref="Update"/>. The function is supposed to return the new value of the data, which
     /// will then be replicated according to the given consistency level.
-    /// 
+    ///
     /// The `modify` function is called by the `Replicator` actor and must therefore be a pure
     /// function that only uses the data parameter and stable fields from enclosing scope. It must
     /// for example not access `sender()` reference of an enclosing actor.
-    /// 
+    ///
     /// <see cref="Update"/> is intended to only be sent from an actor running in same local `ActorSystem` as
     /// the <see cref="Replicator"/>, because the `modify` function is typically not serializable.
-    /// 
+    ///
     /// You supply a write consistency level which has the following meaning:
     /// <list type="bullet">
     ///     <item>
@@ -124,29 +124,29 @@ namespace Akka.DistributedData
     ///     <item>
     ///         <term><see cref="WriteMajority"/></term>
     ///         <description>
-    ///             The value will immediately be written to a majority of replicas, i.e. at least `N/2 + 1` replicas, 
+    ///             The value will immediately be written to a majority of replicas, i.e. at least `N/2 + 1` replicas,
     ///             where N is the number of nodes in the cluster (or cluster role group).
-    ///         </description>     
+    ///         </description>
     ///     </item>
     ///     <item>
-    ///         <term><see cref="WriteAll"/></term> 
+    ///         <term><see cref="WriteAll"/></term>
     ///         <description>
     ///             The value will immediately be written to all nodes in the cluster (or all nodes in the cluster role group).
     ///         </description>
     ///     </item>
     /// </list>
-    /// 
+    ///
     /// As reply of the <see cref="Update"/> a <see cref="UpdateSuccess"/> is sent to the sender of the
     /// <see cref="Update"/> if the value was successfully replicated according to the supplied consistency
     /// level within the supplied timeout. Otherwise a <see cref="IUpdateFailure"/> subclass is
     /// sent back. Note that a <see cref="UpdateTimeout"/> reply does not mean that the update completely failed
     /// or was rolled back. It may still have been replicated to some nodes, and will eventually
     /// be replicated to all nodes with the gossip protocol.
-    /// 
+    ///
     /// You will always see your own writes. For example if you send two <see cref="Update"/> messages
     /// changing the value of the same `key`, the `modify` function of the second message will
     /// see the change that was performed by the first <see cref="Update"/> message.
-    /// 
+    ///
     /// In the <see cref="Update"/> message you can pass an optional request context, which the <see cref="Replicator"/>
     /// does not care about, but is included in the reply messages. This is a convenient
     /// way to pass contextual information (e.g. original sender) without having to use <see cref="Ask"/>
@@ -154,16 +154,16 @@ namespace Akka.DistributedData
     /// </para>
     /// <para>
     /// == Get ==
-    /// 
+    ///
     /// To retrieve the current value of a data you send <see cref="Get"/> message to the
     /// <see cref="Replicator"/>. You supply a consistency level which has the following meaning:
     /// <list type="bullet">
     ///     <item>
-    ///         <term><see cref="ReadLocal"/></term> 
+    ///         <term><see cref="ReadLocal"/></term>
     ///         <description>The value will only be read from the local replica.</description>
     ///     </item>
     ///     <item>
-    ///         <term><see cref="ReadFrom"/></term> 
+    ///         <term><see cref="ReadFrom"/></term>
     ///         <description>The value will be read and merged from <see cref="ReadFrom.N"/> replicas, including the local replica.</description>
     ///     </item>
     ///     <item>
@@ -177,38 +177,38 @@ namespace Akka.DistributedData
     ///         <description>The value will be read and merged from all nodes in the cluster (or all nodes in the cluster role group).</description>
     ///     </item>
     /// </list>
-    /// 
+    ///
     /// As reply of the <see cref="Get"/> a <see cref="GetSuccess"/> is sent to the sender of the
     /// <see cref="Get"/> if the value was successfully retrieved according to the supplied consistency
     /// level within the supplied timeout. Otherwise a <see cref="GetFailure"/> is sent.
     /// If the key does not exist the reply will be <see cref="NotFound"/>.
-    /// 
+    ///
     /// You will always read your own writes. For example if you send a <see cref="Update"/> message
     /// followed by a <see cref="Get"/> of the same `key` the <see cref="Get"/> will retrieve the change that was
     /// performed by the preceding <see cref="Update"/> message. However, the order of the reply messages are
     /// not defined, i.e. in the previous example you may receive the <see cref="GetSuccess"/> before
     /// the <see cref="UpdateSuccess"/>.
-    /// 
+    ///
     /// In the <see cref="Get"/> message you can pass an optional request context in the same way as for the
     /// <see cref="Update"/> message, described above. For example the original sender can be passed and replied
     /// to after receiving and transforming <see cref="GetSuccess"/>.
     /// </para>
     /// <para>
     /// == Subscribe ==
-    /// 
+    ///
     /// You may also register interest in change notifications by sending <see cref="Subscribe"/>
     /// message to the <see cref="Replicator"/>. It will send <see cref="Changed"/> messages to the registered
     /// subscriber when the data for the subscribed key is updated. Subscribers will be notified
     /// periodically with the configured `notify-subscribers-interval`, and it is also possible to
     /// send an explicit <see cref="FlushChanges"/> message to the <see cref="Replicator"/> to notify the subscribers
     /// immediately.
-    /// 
+    ///
     /// The subscriber is automatically removed if the subscriber is terminated. A subscriber can
     /// also be deregistered with the <see cref="Unsubscribe"/> message.
     /// </para>
     /// <para>
     /// == Delete ==
-    /// 
+    ///
     /// A data entry can be deleted by sending a <see cref="Delete"/> message to the local
     /// local <see cref="Replicator"/>. As reply of the <see cref="Delete"/> a <see cref="DeleteSuccess"/> is sent to
     /// the sender of the <see cref="Delete"/> if the value was successfully deleted according to the supplied
@@ -216,19 +216,19 @@ namespace Akka.DistributedData
     /// is sent. Note that <see cref="ReplicationDeleteFailure"/> does not mean that the delete completely failed or
     /// was rolled back. It may still have been replicated to some nodes, and may eventually be replicated
     /// to all nodes.
-    /// 
+    ///
     /// A deleted key cannot be reused again, but it is still recommended to delete unused
     /// data entries because that reduces the replication overhead when new nodes join the cluster.
     /// Subsequent <see cref="Delete"/>, <see cref="Update"/> and <see cref="Get"/> requests will be replied with <see cref="DataDeleted"/>.
     /// Subscribers will receive <see cref="Deleted"/>.
-    /// 
+    ///
     /// In the <see cref="Delete"/> message you can pass an optional request context in the same way as for the
     /// <see cref="Update"/> message, described above. For example the original sender can be passed and replied
     /// to after receiving and transforming <see cref="DeleteSuccess"/>.
     /// </para>
     /// <para>
     /// == CRDT Garbage ==
-    /// 
+    ///
     /// One thing that can be problematic with CRDTs is that some data types accumulate history (garbage).
     /// For example a <see cref="GCounter"/> keeps track of one counter per node. If a <see cref="GCounter"/> has been updated
     /// from one node it will associate the identifier of that node forever. That can become a problem
@@ -289,19 +289,23 @@ namespace Akka.DistributedData
         /// <summary>
         /// Cluster nodes, doesn't contain selfAddress.
         /// </summary>
-        private ImmutableHashSet<Address> _nodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableSortedSet<Address> _nodes = ImmutableSortedSet<Address>.Empty;
 
-        private ImmutableHashSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
+        // cluster members sorted by age, oldest first,, doesn't contain selfAddress, doesn't contain joining and weaklyUp
+        // only used when prefer-oldest is enabled
+        private ImmutableSortedSet<Member> _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(Member.AgeOrdering);
+
+        private ImmutableSortedSet<Address> AllNodes => _nodes.Union(_weaklyUpNodes);
 
         /// <summary>
         /// Cluster weaklyUp nodes, doesn't contain joining and not selfAddress
         /// </summary>
-        private ImmutableHashSet<Address> _weaklyUpNodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableSortedSet<Address> _weaklyUpNodes = ImmutableSortedSet<Address>.Empty;
 
         /// <summary>
         /// cluster joining nodes, doesn't contain selfAddress
         /// </summary>
-        private ImmutableHashSet<Address> _joiningNodes = ImmutableHashSet<Address>.Empty;
+        private ImmutableSortedSet<Address> _joiningNodes = ImmutableSortedSet<Address>.Empty;
 
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
         private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
@@ -419,6 +423,14 @@ namespace Akka.DistributedData
             else Become(NormalReceive);
         }
 
+        private IImmutableList<Address> NodesForReadWrite()
+        {
+            if (_settings.PreferOldest)
+                return _membersByAge.Select(i => i.Address).ToImmutableList();
+            else
+                return _nodes.ToImmutableList();
+        }
+
         protected override void PreStart()
         {
             if (_hasDurableKeys) _durableStore.Tell(LoadAll.Instance);
@@ -534,7 +546,7 @@ namespace Akka.DistributedData
                         {
                             case Status s:
                                 ReceiveStatus(s.Digests, s.Chunk, s.TotalChunks); return true;
-                            case Gossip g : 
+                            case Gossip g:
                                 ReceiveGossip(g.UpdatedData, g.SendBack); return true;
                         }
                     }
@@ -552,37 +564,37 @@ namespace Akka.DistributedData
                     {
                         switch (msg)
                         {
-                            case Read r : ReceiveRead(r.Key); return true;
-                            case Write w : ReceiveWrite(w.Key, w.Envelope); return true;
-                            case DeltaPropagation d : ReceiveDeltaPropagation(msg.FromNode, d.ShouldReply, d.Deltas); return true;
+                            case Read r: ReceiveRead(r.Key); return true;
+                            case Write w: ReceiveWrite(w.Key, w.Envelope); return true;
+                            case DeltaPropagation d: ReceiveDeltaPropagation(msg.FromNode, d.ShouldReply, d.Deltas); return true;
                         }
                     }
                     return true;
 
-                case Get g : ReceiveGet(g.Key, g.Consistency, g.Request); return true;
-                case Update msg : ReceiveUpdate(msg.Key, msg.Modify, msg.Consistency, msg.Request); return true;
-                case ReadRepair rr : ReceiveReadRepair(rr.Key, rr.Envelope); return true;
-                case FlushChanges _ : ReceiveFlushChanges(); return true;
-                case DeltaPropagationTick _ : ReceiveDeltaPropagationTick(); return true;
-                case GossipTick _ : ReceiveGossipTick(); return true;
-                case ClockTick c : ReceiveClockTick(); return true;
-                case Subscribe s : ReceiveSubscribe(s.Key, s.Subscriber); return true;
-                case Unsubscribe u : ReceiveUnsubscribe(u.Key, u.Subscriber); return true;
-                case Terminated t : ReceiveTerminated(t.ActorRef); return true;
+                case Get g: ReceiveGet(g.Key, g.Consistency, g.Request); return true;
+                case Update msg: ReceiveUpdate(msg.Key, msg.Modify, msg.Consistency, msg.Request); return true;
+                case ReadRepair rr: ReceiveReadRepair(rr.Key, rr.Envelope); return true;
+                case FlushChanges _: ReceiveFlushChanges(); return true;
+                case DeltaPropagationTick _: ReceiveDeltaPropagationTick(); return true;
+                case GossipTick _: ReceiveGossipTick(); return true;
+                case ClockTick c: ReceiveClockTick(); return true;
+                case Subscribe s: ReceiveSubscribe(s.Key, s.Subscriber); return true;
+                case Unsubscribe u: ReceiveUnsubscribe(u.Key, u.Subscriber); return true;
+                case Terminated t: ReceiveTerminated(t.ActorRef); return true;
 
-                case ClusterEvent.MemberJoined m : ReceiveMemberJoining(m.Member); return true;
-                case ClusterEvent.MemberWeaklyUp m : ReceiveMemberWeaklyUp(m.Member); return true;
-                case ClusterEvent.MemberUp m : ReceiveMemberUp(m.Member); return true;
-                case ClusterEvent.MemberRemoved m : ReceiveMemberRemoved(m.Member); return true;
+                case ClusterEvent.MemberJoined m: ReceiveMemberJoining(m.Member); return true;
+                case ClusterEvent.MemberWeaklyUp m: ReceiveMemberWeaklyUp(m.Member); return true;
+                case ClusterEvent.MemberUp m: ReceiveMemberUp(m.Member); return true;
+                case ClusterEvent.MemberRemoved m: ReceiveMemberRemoved(m.Member); return true;
 
-                case ClusterEvent.IMemberEvent m : ReceiveOtherMemberEvent(m.Member); return true;
-                case ClusterEvent.UnreachableMember u : ReceiveUnreachable(u.Member); return true;
-                case ClusterEvent.ReachableMember r : ReceiveReachable(r.Member); return true;
+                case ClusterEvent.IMemberEvent m: ReceiveOtherMemberEvent(m.Member); return true;
+                case ClusterEvent.UnreachableMember u: ReceiveUnreachable(u.Member); return true;
+                case ClusterEvent.ReachableMember r: ReceiveReachable(r.Member); return true;
 
-                case GetKeyIds _ : ReceiveGetKeyIds(); return true;
-                case Delete d : ReceiveDelete(d.Key, d.Consistency, d.Request); return true;
-                case RemovedNodePruningTick r : ReceiveRemovedNodePruningTick(); return true;
-                case GetReplicaCount _ : ReceiveGetReplicaCount(); return true;
+                case GetKeyIds _: ReceiveGetKeyIds(); return true;
+                case Delete d: ReceiveDelete(d.Key, d.Consistency, d.Request); return true;
+                case RemovedNodePruningTick r: ReceiveRemovedNodePruningTick(); return true;
+                case GetReplicaCount _: ReceiveGetReplicaCount(); return true;
             }
 
             return false;
@@ -601,7 +613,7 @@ namespace Akka.DistributedData
                 else Sender.Tell(new GetSuccess(key, req, localValue.Data));
             }
             else
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, _nodes, _unreachable, localValue, Sender)
+                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(), _unreachable, !_settings.PreferOldest, localValue, Sender)
                     .WithDispatcher(Context.Props.Dispatcher));
         }
 
@@ -618,6 +630,7 @@ namespace Akka.DistributedData
         }
 
         private bool MatchingRole(Member m) => string.IsNullOrEmpty(_settings.Role) || m.HasRole(_settings.Role);
+        //roles.subsetOf(m.roles)
 
         private void ReceiveUpdate(IKey key, Func<IReplicatedData, IReplicatedData> modify, IWriteConsistency consistency, object request)
         {
@@ -710,8 +723,13 @@ namespace Akka.DistributedData
                         writeDelta = null;
                     }
 
+                    // When RequiresCausalDeliveryOfDeltas use deterministic order to so that sequence numbers
+                    // of subsequent updates are in sync on the destination nodes.
+                    // The order is also kept when prefer-oldest is enabled.
+                    var shuffle = !(_settings.PreferOldest || (writeDelta?.RequiresCausalDeliveryOfDeltas) == true);
+
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, writeEnvelope, writeDelta, consistency, request, _nodes, _unreachable, Sender, durable)
+                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(), _unreachable, shuffle, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -765,7 +783,7 @@ namespace Akka.DistributedData
 
         private DataEnvelope Write(string key, DataEnvelope writeEnvelope)
         {
-            switch(GetData(key))
+            switch (GetData(key))
             {
                 case DataEnvelope envelope when envelope.Equals(writeEnvelope):
                     return envelope;
@@ -789,7 +807,7 @@ namespace Akka.DistributedData
                     if (writeEnvelope.Data is IReplicatedDelta withDelta)
                         writeEnvelope = writeEnvelope.WithData(withDelta.Zero.MergeDelta(withDelta));
 
-                return SetData(key, writeEnvelope.AddSeen(_selfAddress));
+                    return SetData(key, writeEnvelope.AddSeen(_selfAddress));
             }
         }
 
@@ -835,7 +853,7 @@ namespace Akka.DistributedData
                 else
                 {
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, DeletedEnvelope, null, consistency, request, _nodes, _unreachable, Sender, durable)
+                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(), _unreachable, !_settings.PreferOldest, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -1090,14 +1108,12 @@ namespace Akka.DistributedData
             }
         }
 
-        private Address SelectRandomNode(ImmutableHashSet<Address> addresses)
+        private Address SelectRandomNode(IReadOnlyList<Address> addresses)
         {
             if (addresses.Count > 0)
             {
-                var random = ThreadLocalRandom.Current.Next(addresses.Count - 1);
-                return addresses.Skip(random).First();
+                return addresses[ThreadLocalRandom.Current.Next(addresses.Count)];
             }
-
             return null;
         }
 
@@ -1281,6 +1297,8 @@ namespace Akka.DistributedData
                     _nodes = _nodes.Add(m.Address);
                     _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
                     _joiningNodes = _joiningNodes.Remove(m.Address);
+                    if (_settings.PreferOldest)
+                        _membersByAge = _membersByAge.Add(m);
                 }
             }
         }
@@ -1298,9 +1316,11 @@ namespace Akka.DistributedData
                 _nodes = _nodes.Remove(m.Address);
                 _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
                 _joiningNodes = _joiningNodes.Remove(m.Address);
-                
+
                 _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
                 _unreachable = _unreachable.Remove(m.Address);
+                if (_settings.PreferOldest)
+                    _membersByAge = _membersByAge.Remove(m);
                 _deltaPropagationSelector.CleanupRemovedNode(m.Address);
             }
         }
@@ -1498,11 +1518,11 @@ namespace Akka.DistributedData
             {
                 get
                 {
-                    var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).OrderBy(x => x).ToImmutableArray();
+                    var allNodes = _replicator.AllNodes.Except(_replicator._unreachable).ToImmutableArray();
                     return allNodes;
                 }
             }
-                
+
 
             protected override DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas)
             {
