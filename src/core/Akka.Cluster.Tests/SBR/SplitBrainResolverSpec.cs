@@ -20,11 +20,11 @@ using Akka.Cluster.SBR;
 using System.Collections.Immutable;
 using FluentAssertions;
 using Akka.Configuration;
-using Akka.Cluster.Tools.Tests;
 using Akka.Remote;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Akka.Util;
+using Akka.Coordination.Tests;
 
 namespace Akka.Cluster.Tests.SBR
 {
@@ -150,86 +150,28 @@ namespace Akka.Cluster.Tests.SBR
             : base(Config, output)
         {
             testLeaseSettings = new LeaseSettings("akka-sbr", "test", new TimeoutSettings(TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(2), TimeSpan.FromSeconds(3)), ConfigurationFactory.Empty);
-
-            #region TestAddresses
-
-            var addressA = new Address("akka.tcp", "sys", "a", 2552);
-            MemberA =
-                new Member(
-                    new UniqueAddress(addressA, 0),
-                    5,
-                    MemberStatus.Up,
-                    new[] { "role3" },
-                    AppVersion.Zero);
-            MemberB =
-                new Member(
-                      new UniqueAddress(new Address(addressA.Protocol, addressA.System, "b", addressA.Port), 0),
-                      4,
-                      MemberStatus.Up,
-                      new[] { "role1", "role3" },
-                      AppVersion.Zero);
-            MemberC =
-                new Member(
-                      new UniqueAddress(new Address(addressA.Protocol, addressA.System, "c", addressA.Port), 0),
-                      3,
-                      MemberStatus.Up,
-                      new[] { "role2" },
-                      AppVersion.Zero);
-            MemberD =
-                new Member(
-                      new UniqueAddress(new Address(addressA.Protocol, addressA.System, "d", addressA.Port), 0),
-                      2,
-                      MemberStatus.Up,
-                      new[] { "role1", "role2", "role3" },
-                      AppVersion.Zero);
-            MemberE =
-                new Member(
-                      new UniqueAddress(new Address(addressA.Protocol, addressA.System, "e", addressA.Port), 0),
-                      1,
-                      MemberStatus.Up,
-                      new string[] { },
-                      AppVersion.Zero);
-            MemberF =
-                new Member(
-                      new UniqueAddress(new Address(addressA.Protocol, addressA.System, "f", addressA.Port), 0),
-                      5,
-                      MemberStatus.Up,
-                      new string[] { },
-                      AppVersion.Zero);
-            MemberG =
-                new Member(
-                      new UniqueAddress(new Address(addressA.Protocol, addressA.System, "g", addressA.Port), 0),
-                      6,
-                      MemberStatus.Up,
-                      new string[] { },
-                      AppVersion.Zero);
-
-            MemberAWeaklyUp = new Member(MemberA.UniqueAddress, int.MaxValue, MemberStatus.WeaklyUp, MemberA.Roles, AppVersion.Zero);
-            MemberBWeaklyUp = new Member(MemberB.UniqueAddress, int.MaxValue, MemberStatus.WeaklyUp, MemberB.Roles, AppVersion.Zero);
-
-            #endregion TestAddresses
         }
 
         #region TestAddresses
 
-        public Member MemberA { get; }
-        public Member MemberB { get; }
-        public Member MemberC { get; }
-        public Member MemberD { get; }
-        public Member MemberE { get; }
-        public Member MemberF { get; }
-        public Member MemberG { get; }
+        public Member MemberA => TestAddresses.MemberA;
+        public Member MemberB => TestAddresses.MemberB;
+        public Member MemberC => TestAddresses.MemberC;
+        public Member MemberD => TestAddresses.MemberD;
+        public Member MemberE => TestAddresses.MemberE;
+        public Member MemberF => TestAddresses.MemberF;
+        public Member MemberG => TestAddresses.MemberG;
 
-        public Member MemberAWeaklyUp { get; }
-        public Member MemberBWeaklyUp { get; }
+        public Member MemberAWeaklyUp => TestAddresses.MemberAWeaklyUp;
+        public Member MemberBWeaklyUp => TestAddresses.MemberBWeaklyUp;
 
-        public Member Joining(Member m) => Member.Create(m.UniqueAddress, m.Roles, AppVersion.Zero);
+        public Member Joining(Member m) => TestAddresses.Joining(m);
 
-        public Member Leaving(Member m) => m.Copy(MemberStatus.Leaving);
+        public Member Leaving(Member m) => TestAddresses.Leaving(m);
 
-        public Member Exiting(Member m) => Leaving(m).Copy(MemberStatus.Exiting);
+        public Member Exiting(Member m) => TestAddresses.Exiting(m);
 
-        public Member Downed(Member m) => m.Copy(MemberStatus.Down);
+        public Member Downed(Member m) => TestAddresses.Downed(m);
 
         #endregion TestAddresses
 
