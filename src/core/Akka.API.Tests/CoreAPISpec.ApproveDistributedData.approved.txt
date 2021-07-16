@@ -762,7 +762,9 @@ namespace Akka.DistributedData
     }
     public sealed class ReplicatorSettings
     {
+        [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize) { }
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure) { }
         public string Dispatcher { get; }
         public System.Collections.Immutable.IImmutableSet<string> DurableKeys { get; }
         public System.TimeSpan DurablePruningMarkerTimeToLive { get; }
@@ -775,6 +777,7 @@ namespace Akka.DistributedData
         public System.TimeSpan NotifySubscribersInterval { get; }
         public System.TimeSpan PruningInterval { get; }
         public System.TimeSpan PruningMarkerTimeToLive { get; }
+        public bool RestartReplicatorOnFailure { get; }
         public string Role { get; }
         public static Akka.DistributedData.ReplicatorSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.DistributedData.ReplicatorSettings Create(Akka.Configuration.Config config) { }
@@ -787,6 +790,7 @@ namespace Akka.DistributedData
         public Akka.DistributedData.ReplicatorSettings WithNotifySubscribersInterval(System.TimeSpan notifySubscribersInterval) { }
         public Akka.DistributedData.ReplicatorSettings WithPruning(System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination) { }
         public Akka.DistributedData.ReplicatorSettings WithPruningMarkerTimeToLive(System.TimeSpan pruningMarkerTtl, System.TimeSpan durablePruningMarkerTtl) { }
+        public Akka.DistributedData.ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) { }
         public Akka.DistributedData.ReplicatorSettings WithRole(string role) { }
     }
     [System.Diagnostics.DebuggerDisplayAttribute("VersionVector({Node}->{Version})")]
