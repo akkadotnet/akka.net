@@ -426,7 +426,7 @@ namespace Akka.Cluster.SBR
                         }
 
                         Stash.UnstashAll();
-                        Context.Become(ReceiveLease);
+                        Context.Become(Receive);
                         return true;
 
                     case ReleaseLeaseResult lr:
