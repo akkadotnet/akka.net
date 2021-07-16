@@ -67,7 +67,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 }
 
                 test-lease {
-                    lease-class = ""Akka.Cluster.Tools.Tests.TestLease, Akka.Cluster.Tools.Tests""
+                    lease-class = ""Akka.Coordination.Tests.TestLease, Akka.Coordination.Tests""
                     heartbeat-interval = 1s
                     heartbeat-timeout = 120s
                     lease-operation-timeout = 3s
