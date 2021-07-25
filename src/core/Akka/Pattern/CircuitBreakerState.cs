@@ -43,27 +43,21 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// N/A
+        /// Fail-fast on any invocation
         /// </summary>
         /// <typeparam name="T">N/A</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
-        /// <returns>N/A</returns>
-        public override Task<T> Invoke<T>(Func<Task<T>> body)
-        {
-            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
-        }
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task<T> Invoke<T>(Func<Task<T>> body) => 
+            Task.FromException<T>(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
         /// <summary>
-        /// N/A
+        /// Fail-fast on any invocation
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">This exception is thrown automatically since the circuit is open.</exception>
-        /// <returns>N/A</returns>
-        public override Task Invoke(Func<Task> body)
-        {
-            throw new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration());
-        }
+        /// <returns><see cref="Task"/> containing result of protected call</returns>
+        public override Task Invoke(Func<Task> body) => 
+            Task.FromException(new OpenCircuitException(_breaker.LastCaughtException, RemainingDuration()));
 
         /// <summary>
         /// No-op for open, calls are never executed so cannot succeed or fail
@@ -132,7 +126,6 @@ namespace Akka.Pattern
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task<T> Invoke<T>(Func<Task<T>> body)
         {
@@ -148,7 +141,6 @@ namespace Akka.Pattern
         /// If the call succeeds, the breaker closes.
         /// </summary>
         /// <param name="body">Implementation of the call that needs protected</param>
-        /// <exception cref="OpenCircuitException">TBD</exception>
         /// <returns><see cref="Task"/> containing result of protected call</returns>
         public override async Task Invoke(Func<Task> body)
         {
