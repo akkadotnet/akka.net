@@ -9,6 +9,7 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using Hyperion;
 
 namespace Akka.Serialization.Hyperion.Tests
 {
@@ -37,7 +38,12 @@ akka.actor {
                 .WithPreserveObjectReference(true)
                 .WithKnownTypeProvider<NoKnownTypes>();
             var settings =
-                new HyperionSerializerSettings(false, false, typeof(DummyTypesProvider), new Func<string, string>[] { s => $"{s}.." });
+                new HyperionSerializerSettings(
+                    false, 
+                    false, 
+                    typeof(DummyTypesProvider), 
+                    new Func<string, string>[] { s => $"{s}.." },
+                    new Surrogate[0]);
             var appliedSettings = setup.ApplySettings(settings);
 
             appliedSettings.PreserveObjectReferences.Should().BeTrue(); // overriden
@@ -45,6 +51,7 @@ akka.actor {
             appliedSettings.KnownTypesProvider.Should().Be(typeof(NoKnownTypes)); // overriden
             appliedSettings.PackageNameOverrides.Count().Should().Be(1); // from settings
             appliedSettings.PackageNameOverrides.First()("a").Should().Be("a..");
+            appliedSettings.Surrogates.ToList().Count.Should().Be(0); // from settings
         }
 
         [Fact]
@@ -63,6 +70,43 @@ akka.actor {
 
             var adapter = appliedSettings.PackageNameOverrides.First();
             adapter("My.Hyperion.Override").Should().Be("My.Hyperion");
+        }
+        
+        public class Foo
+        {
+            public Foo(string bar)
+            {
+                Bar = bar;
+            }
+
+            public string Bar { get; }
+        }
+        
+        public class FooSurrogate
+        {
+            public FooSurrogate(string bar)
+            {
+                Bar = bar;
+            }
+
+            public string Bar { get; }
+        }
+        
+        [Fact]
+        public void Setup_surrogate_should_work()
+        {
+            var setup = HyperionSerializerSetup.Empty
+                .WithSurrogates(new [] { Surrogate.Create<Foo, FooSurrogate>(
+                    foo => new FooSurrogate(foo.Bar + "."), 
+                    surrogate => new Foo(surrogate.Bar))
+                });
+            var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, settings);
+
+            var expected = new Foo("bar");
+            var serialized = serializer.ToBinary(expected);
+            var deserialized = serializer.FromBinary<Foo>(serialized);
+            deserialized.Bar.Should().Be("bar.");
         }
     }
 }

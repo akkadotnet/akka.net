@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using FluentAssertions;
+using Hyperion;
 using Xunit;
 
 namespace Akka.Serialization.Hyperion.Tests
@@ -160,6 +162,33 @@ namespace Akka.Serialization.Hyperion.Tests
 #endif
             }
         }
+        
+        [Fact]
+        public void Hyperion_serializer_should_allow_to_setup_surrogates()
+        {
+            var config = ConfigurationFactory.ParseString(@"
+                akka.actor {
+                    serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                    serialization-bindings {
+                        ""System.Object"" = hyperion
+                    }
+                    serialization-settings.hyperion {
+                        surrogates = [
+                            ""Akka.Serialization.Hyperion.Tests.FooHyperionSurrogate, Akka.Serialization.Hyperion.Tests""
+                        ]
+                    }
+                }
+            ");
+            using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
+            {
+                var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var expected = new Foo("bar");
+                var serialized = serializer.ToBinary(expected);
+                var deserialized = serializer.FromBinary<Foo>(serialized);
+                deserialized.Bar.Should().Be("bar.");
+            }
+        }
+
     }
 
     class DummyTypesProvider : IKnownTypesProvider
@@ -177,4 +206,36 @@ namespace Akka.Serialization.Hyperion.Tests
     {
         public IEnumerable<Type> GetKnownTypes() => Enumerable.Empty<Type>();
     }
+    
+    public class Foo
+    {
+        public Foo(string bar)
+        {
+            Bar = bar;
+        }
+
+        public string Bar { get; }
+    }
+        
+    public class FooSurrogate
+    {
+        public FooSurrogate(string bar)
+        {
+            Bar = bar;
+        }
+
+        public string Bar { get; }
+    }
+        
+    public class FooHyperionSurrogate : Surrogate
+    {
+        public FooHyperionSurrogate()
+        {
+            From = typeof(Foo);
+            To = typeof(FooSurrogate);
+            ToSurrogate = obj => new FooSurrogate(((Foo)obj).Bar + ".");
+            FromSurrogate = obj => new Foo(((FooSurrogate)obj).Bar);
+        }
+    }
+
 }
