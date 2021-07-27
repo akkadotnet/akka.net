@@ -630,7 +630,6 @@ namespace Akka.DistributedData
         }
 
         private bool MatchingRole(Member m) => string.IsNullOrEmpty(_settings.Role) || m.HasRole(_settings.Role);
-        //roles.subsetOf(m.roles)
 
         private void ReceiveUpdate(IKey key, Func<IReplicatedData, IReplicatedData> modify, IWriteConsistency consistency, object request)
         {
