@@ -174,7 +174,7 @@ namespace Akka.Remote.Tests
             //so the token is cancelled before the delay completed.. 
             var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
             Assert.Equal("pong", msg);
-            Assert.IsType<FutureActorRef>(actorRef);
+            Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
 
         [Fact(Skip = "Racy")]
