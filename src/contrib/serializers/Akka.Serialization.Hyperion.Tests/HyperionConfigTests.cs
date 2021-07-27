@@ -182,10 +182,14 @@ namespace Akka.Serialization.Hyperion.Tests
             using (var system = ActorSystem.Create(nameof(HyperionConfigTests), config))
             {
                 var serializer = (HyperionSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                FooHyperionSurrogate.Surrogated.Clear();
+                
                 var expected = new Foo("bar");
                 var serialized = serializer.ToBinary(expected);
                 var deserialized = serializer.FromBinary<Foo>(serialized);
                 deserialized.Bar.Should().Be("bar.");
+                FooHyperionSurrogate.Surrogated.Count.Should().Be(1);
+                FooHyperionSurrogate.Surrogated[0].Should().BeEquivalentTo(expected);
             }
         }
 
@@ -229,11 +233,18 @@ namespace Akka.Serialization.Hyperion.Tests
         
     public class FooHyperionSurrogate : Surrogate
     {
+        public static readonly List<Foo> Surrogated = new List<Foo>();
+        
         public FooHyperionSurrogate()
         {
             From = typeof(Foo);
             To = typeof(FooSurrogate);
-            ToSurrogate = obj => new FooSurrogate(((Foo)obj).Bar + ".");
+            ToSurrogate = obj =>
+            {
+                var foo = (Foo)obj;
+                Surrogated.Add(foo);
+                return new FooSurrogate(foo.Bar + ".");
+            };
             FromSurrogate = obj => new Foo(((FooSurrogate)obj).Bar);
         }
     }

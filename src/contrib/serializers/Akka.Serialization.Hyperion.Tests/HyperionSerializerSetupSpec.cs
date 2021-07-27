@@ -95,9 +95,14 @@ akka.actor {
         [Fact]
         public void Setup_surrogate_should_work()
         {
+            var surrogated = new List<Foo>();
             var setup = HyperionSerializerSetup.Empty
                 .WithSurrogates(new [] { Surrogate.Create<Foo, FooSurrogate>(
-                    foo => new FooSurrogate(foo.Bar + "."), 
+                    foo =>
+                    {
+                        surrogated.Add(foo);
+                        return new FooSurrogate(foo.Bar + ".");
+                    }, 
                     surrogate => new Foo(surrogate.Bar))
                 });
             var settings = setup.ApplySettings(HyperionSerializerSettings.Default);
@@ -107,6 +112,8 @@ akka.actor {
             var serialized = serializer.ToBinary(expected);
             var deserialized = serializer.FromBinary<Foo>(serialized);
             deserialized.Bar.Should().Be("bar.");
+            surrogated.Count.Should().Be(1);
+            surrogated[0].Should().BeEquivalentTo(expected);
         }
     }
 }
