@@ -1569,6 +1569,7 @@ namespace Akka.Cluster.Sharding
         private ImmutableDictionary<string, ICancelable> _unAckedHostShards = ImmutableDictionary<string, ICancelable>.Empty;
         // regions that have requested handoff, for graceful shutdown
         private ImmutableHashSet<IActorRef> _gracefulShutdownInProgress = ImmutableHashSet<IActorRef>.Empty;
+        private bool _waitingForLocalRegionToTerminate = false;
         private ImmutableHashSet<IActorRef> _aliveRegions = ImmutableHashSet<IActorRef>.Empty;
         private ImmutableHashSet<IActorRef> _regionTerminationInProgress = ImmutableHashSet<IActorRef>.Empty;
         private readonly ICancelable _rebalanceTask;
@@ -1820,8 +1821,9 @@ namespace Akka.Cluster.Sharding
                             if (Log.IsDebugEnabled)
                             {
                                 if (VerboseDebug)
-                                    Log.Debug("{0}: Graceful shutdown of region [{1}] with [{2}] shards [{3}]",
+                                    Log.Debug("{0}: Graceful shutdown of{1} region [{2}] with [{3}] shards [{4}] started",
                                         TypeName,
+                                        m.ShardRegion.Path.Address.HasLocalScope ? " local" : "",
                                         m.ShardRegion,
                                         shards.Count,
                                         string.Join(", ", shards));
@@ -1871,25 +1873,44 @@ namespace Akka.Cluster.Sharding
                     return true;
 
                 case Terminate _:
-                    if (_rebalanceInProgress.Count == 0)
-                        Log.Debug("{0}: Received termination message.", TypeName);
-                    else if (Log.IsDebugEnabled)
-                    {
-                        if (VerboseDebug)
-                            Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards [{2}].",
-                                TypeName,
-                                _rebalanceInProgress.Count,
-                                string.Join(", ", _rebalanceInProgress.Keys));
-                        else
-                            Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards.",
-                                TypeName,
-                                _rebalanceInProgress.Count);
-                    }
-                    _context.Stop(_context.Self);
+                    HandleTerminate();
                     return true;
             }
 
             return ReceiveTerminated(message);
+        }
+
+        private void HandleTerminate()
+        {
+            if (_aliveRegions.Any(i => i.Path.Address.HasLocalScope) || _gracefulShutdownInProgress.Any(i => i.Path.Address.HasLocalScope))
+            {
+                foreach (var region in _aliveRegions.Where(i => i.Path.Address.HasLocalScope))
+                {
+                    // region will get this from taking part in coordinated shutdown, but for good measure
+                    region.Tell(GracefulShutdown.Instance);
+                }
+
+                Log.Debug("{0}: Deferring coordinator termination until local region has terminated", TypeName);
+                _waitingForLocalRegionToTerminate = true;
+            }
+            else
+            {
+                if (_rebalanceInProgress.Count == 0)
+                    Log.Debug("{0}: Received termination message.", TypeName);
+                else if (Log.IsDebugEnabled)
+                {
+                    if (VerboseDebug)
+                        Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards [{2}].",
+                            TypeName,
+                            _rebalanceInProgress.Count,
+                            string.Join(", ", _rebalanceInProgress.Keys));
+                    else
+                        Log.Debug("{0}: Received termination message. Rebalance in progress of [{1}] shards.",
+                            TypeName,
+                            _rebalanceInProgress.Count);
+                }
+                _context.Stop(_context.Self);
+            }
         }
 
         private void ClearRebalanceInProgress(string shard)
@@ -2051,7 +2072,13 @@ namespace Akka.Cluster.Sharding
                 rw.Tell(new RebalanceWorker.ShardRegionTerminated(@ref));
             if (State.Regions.TryGetValue(@ref, out var shards))
             {
-                Log.Debug("{0}: ShardRegion terminated: [{1}]", TypeName, @ref);
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("{0}: ShardRegion terminated{1}: [{2}]",
+                        TypeName,
+                        _gracefulShutdownInProgress.Contains(@ref) ? " (gracefully)" : "",
+                        @ref);
+                }
                 _regionTerminationInProgress = _regionTerminationInProgress.Add(@ref);
                 foreach (var s in shards)
                 {
@@ -2065,6 +2092,14 @@ namespace Akka.Cluster.Sharding
                     _regionTerminationInProgress = _regionTerminationInProgress.Remove(@ref);
                     _aliveRegions = _aliveRegions.Remove(@ref);
                     AllocateShardHomesForRememberEntities();
+
+                    if (@ref.Path.Address.HasLocalScope && _waitingForLocalRegionToTerminate)
+                    {
+                        // handoff optimization: singleton told coordinator to stop but we deferred stop until the local region
+                        // had completed the handoff
+                        Log.Debug("{0}: Local region stopped, terminating coordinator", TypeName);
+                        HandleTerminate();
+                    }
                 });
             }
         }
