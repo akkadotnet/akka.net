@@ -209,7 +209,7 @@ namespace Akka.Cluster.Sharding.Tests
                     region.Tell(GetCurrentRegions.Instance);
                     ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(2);
                 });
-            }, config.First);
+            }, config.Fourth);
 
             EnterBarrier($"{Roles.Count}-up");
         }

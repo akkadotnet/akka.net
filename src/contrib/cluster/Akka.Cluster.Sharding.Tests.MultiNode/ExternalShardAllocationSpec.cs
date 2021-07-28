@@ -34,7 +34,6 @@ namespace Akka.Cluster.Sharding.Tests
             }
             akka.cluster.sharding.distributed-data.durable.keys = []
             akka.testconductor.barrier-timeout = 60s
-            akka.cluster.sharding.verbose-debug-logging = on
             ")
         {
             First = Role("first");
