@@ -19,14 +19,12 @@ namespace Akka.Serialization.Hyperion
         public static readonly HyperionSerializerSetup Empty =
             new HyperionSerializerSetup(Option<bool>.None, Option<bool>.None, null, null, null);
 
-        [Obsolete]
         public static HyperionSerializerSetup Create(
             bool preserveObjectReferences, 
             bool versionTolerance, 
             Type knownTypesProvider)
             => new HyperionSerializerSetup(preserveObjectReferences, versionTolerance, knownTypesProvider, null, null);
 
-        [Obsolete]
         public static HyperionSerializerSetup Create(
             bool preserveObjectReferences, 
             bool versionTolerance, 
