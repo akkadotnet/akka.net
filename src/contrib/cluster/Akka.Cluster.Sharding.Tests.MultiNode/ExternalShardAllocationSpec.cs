@@ -34,6 +34,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
             akka.cluster.sharding.distributed-data.durable.keys = []
             akka.testconductor.barrier-timeout = 60s
+            akka.cluster.sharding.verbose-debug-logging = on
             ")
         {
             First = Role("first");
@@ -229,6 +230,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
+                    Sys.Log.Info("Requesting {0} home", InitiallyOnForth);
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(InitiallyOnForth));
                     ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.First)));
                 }, TimeSpan.FromSeconds(10));
