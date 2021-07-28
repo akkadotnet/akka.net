@@ -535,6 +535,10 @@ namespace Akka.Cluster.Sharding
         protected override void PostStop()
         {
             base.PostStop();
+
+            _log.Debug("{0}: Region stopped", _typeName);
+            _coordinator?.Tell(new ShardCoordinator.RegionStopped(Context.Self));
+
             _cluster.Unsubscribe(Self);
             _gracefulShutdownProgress.TrySetResult(Done.Instance);
         }

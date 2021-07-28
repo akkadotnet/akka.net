@@ -596,6 +596,56 @@ namespace Akka.Cluster.Sharding
             #endregion
         }
 
+
+        /// <summary>
+        /// Notification when the entire shard region has stopped
+        /// </summary>
+        [Serializable]
+        internal sealed class RegionStopped : ICoordinatorCommand, IEquatable<RegionStopped>
+        {
+            /// <summary>
+            /// TBD
+            /// </summary>
+            public IActorRef ShardRegion { get; }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shardRegion">TBD</param>
+            public RegionStopped(IActorRef shardRegion)
+            {
+                ShardRegion = shardRegion;
+            }
+
+            #region Equals
+
+            /// <inheritdoc/>
+            public override bool Equals(object obj)
+            {
+                return Equals(obj as RegionStopped);
+            }
+
+            public bool Equals(RegionStopped other)
+            {
+                if (other is null) return false;
+                if (ReferenceEquals(other, this)) return true;
+
+                return ShardRegion.Equals(other.ShardRegion);
+            }
+
+            /// <inheritdoc/>
+            public override int GetHashCode()
+            {
+                return ShardRegion.GetHashCode();
+            }
+
+            /// <inheritdoc/>
+            public override string ToString() => $"RegionStopped({ShardRegion})";
+
+            #endregion
+        }
+
+
         /// <summary>
         /// <see cref="Sharding.ShardRegion"/> requests full handoff to be able to shutdown gracefully.
         /// </summary>
@@ -1524,7 +1574,7 @@ namespace Akka.Cluster.Sharding
                 }
                 else
                 {
-                    Log.Debug("{0}: Remaining shard regions: {1}", _typeName, _remaining.Count);
+                    Log.Debug("{0}: Remaining shard regions for shard [{1}]: {2}", _typeName, _shard, _remaining.Count);
                 }
             }
 
@@ -2000,6 +2050,11 @@ namespace Akka.Cluster.Sharding
                     {
                         RegionProxyTerminated(t.ActorRef);
                     }
+                    return true;
+
+                case RegionStopped s:
+                    Log.Debug("{0}: ShardRegion stopped: [{1}]", TypeName, s.ShardRegion);
+                    RegionTerminated(s.ShardRegion);
                     return true;
 
                 case DelayedShardRegionTerminated t:

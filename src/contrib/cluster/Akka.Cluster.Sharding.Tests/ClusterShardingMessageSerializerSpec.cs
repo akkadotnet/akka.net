@@ -105,6 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
             CheckSerialization(new ShardCoordinator.HandOff("a"));
             CheckSerialization(new ShardCoordinator.ShardStopped("a"));
             CheckSerialization(new ShardCoordinator.GracefulShutdownRequest(region1));
+            CheckSerialization(new ShardCoordinator.RegionStopped(region1));
         }
 
         [Fact]

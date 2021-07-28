@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.TestKit;
 using FluentAssertions;
@@ -29,6 +30,10 @@ namespace Akka.Cluster.Sharding.Tests
             # don't leak ddata state across runs
             akka.cluster.sharding.distributed-data.durable.keys = []
             akka.persistence.journal.leveldb-shared.store.native = off
+
+            # We set this high to allow pausing coordinated shutdown make sure the handoff completes 'immediately' and not
+            # relies on the member removal, which could make things take longer then necessary
+            akka.coordinated-shutdown.phases.cluster-sharding-shutdown-region.timeout = 60s
             ")
         {
             First = Role("first");
@@ -109,7 +114,7 @@ namespace Akka.Cluster.Sharding.Tests
         public void ClusterShardingGracefulShutdownSpecs()
         {
             Cluster_sharding_must_start_some_shards_in_both_regions();
-            Cluster_sharding_must_gracefully_shutdown_a_region();
+            Cluster_sharding_must_gracefully_shutdown_the_region_on_the_newest_node();
             Cluster_sharding_must_gracefully_shutdown_empty_region();
         }
 
@@ -119,7 +124,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 StartPersistenceIfNeeded(startOn: config.First, config.First, config.Second);
 
-                Join(config.First, config.First, TypeName);
+                Join(config.First, config.First, TypeName); // oldest
                 Join(config.Second, config.First, TypeName);
 
                 AwaitAssert(() =>
@@ -135,16 +140,27 @@ namespace Akka.Cluster.Sharding.Tests
                     regionAddresses.Count.Should().Be(2);
                 });
                 EnterBarrier("after-2");
+
+                _region.Value.Tell(GetCurrentRegions.Instance);
+                ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(2);
             });
         }
 
-        private void Cluster_sharding_must_gracefully_shutdown_a_region()
+        private void Cluster_sharding_must_gracefully_shutdown_the_region_on_the_newest_node()
         {
             Within(TimeSpan.FromSeconds(30), () =>
             {
                 RunOn(() =>
                 {
-                    _region.Value.Tell(GracefulShutdown.Instance);
+                    // Make sure the 'cluster-sharding-shutdown-region' phase takes at least 40 seconds,
+                    // to validate region shutdown completion is propagated immediately and not postponed
+                    // until when the cluster member leaves
+                    CoordinatedShutdown.Get(Sys).AddTask("cluster-sharding-shutdown-region", "postpone-actual-stop", async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(40));
+                        return Done.Instance;
+                    });
+                    CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
                 }, config.Second);
 
                 RunOn(() =>
@@ -161,6 +177,19 @@ namespace Akka.Cluster.Sharding.Tests
                     });
                 }, config.First);
                 EnterBarrier("handoff-completed");
+
+                // Check that the coordinator is correctly notified the region has stopped:
+                RunOn(() =>
+                {
+                    // the coordinator side should observe that the region has stopped
+                    AwaitAssert(() =>
+                    {
+                        _region.Value.Tell(GetCurrentRegions.Instance);
+                        ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(1);
+                    });
+                    // without having to wait for the member to be entirely removed (as that would cause unnecessary latency)
+                }, config.First);
+
 
                 RunOn(() =>
                 {

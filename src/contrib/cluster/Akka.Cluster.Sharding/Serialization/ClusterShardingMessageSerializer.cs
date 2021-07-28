@@ -50,6 +50,7 @@ namespace Akka.Cluster.Sharding.Serialization
         private const string HandOffManifest = "BJ";
         private const string ShardStoppedManifest = "BK";
         private const string GracefulShutdownReqManifest = "BL";
+        private const string RegionStoppedManifest = "BM";
 
         private const string EntityStateManifest = "CA";
         private const string EntityStartedManifest = "CB";
@@ -116,6 +117,7 @@ namespace Akka.Cluster.Sharding.Serialization
                 { HandOffManifest, bytes => new ShardCoordinator.HandOff(ShardIdMessageFromBinary(bytes)) },
                 { ShardStoppedManifest, bytes => new ShardCoordinator.ShardStopped(ShardIdMessageFromBinary(bytes)) },
                 { GracefulShutdownReqManifest, bytes => new ShardCoordinator.GracefulShutdownRequest(ActorRefMessageFromBinary(bytes)) },
+                { RegionStoppedManifest, bytes => new ShardCoordinator.RegionStopped(ActorRefMessageFromBinary(bytes)) },
 
                 { GetShardStatsManifest, bytes => Shard.GetShardStats.Instance },
                 { ShardStatsManifest, bytes => ShardStatsFromBinary(bytes) },
@@ -173,6 +175,7 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardCoordinator.HandOff o: return ShardIdMessageToProto(o.Shard).ToByteArray();
                 case ShardCoordinator.ShardStopped o: return ShardIdMessageToProto(o.Shard).ToByteArray();
                 case ShardCoordinator.GracefulShutdownRequest o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
+                case ShardCoordinator.RegionStopped o: return ActorRefMessageToProto(o.ShardRegion).ToByteArray();
 
                 case EventSourcedRememberEntitiesShardStore.State o: return EntityStateToProto(o).ToByteArray();
                 case EventSourcedRememberEntitiesShardStore.EntitiesStarted o: return EntitiesStartedToProto(o).ToByteArray();
@@ -258,6 +261,7 @@ namespace Akka.Cluster.Sharding.Serialization
                 case ShardCoordinator.HandOff _: return HandOffManifest;
                 case ShardCoordinator.ShardStopped _: return ShardStoppedManifest;
                 case ShardCoordinator.GracefulShutdownRequest _: return GracefulShutdownReqManifest;
+                case ShardCoordinator.RegionStopped _: return RegionStoppedManifest;
 
                 case ShardRegion.StartEntity _: return StartEntityManifest;
                 case ShardRegion.StartEntityAck _: return StartEntityAckManifest;
