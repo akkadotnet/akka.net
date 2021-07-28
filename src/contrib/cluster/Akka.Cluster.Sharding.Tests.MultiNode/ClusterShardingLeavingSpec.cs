@@ -194,6 +194,16 @@ namespace Akka.Cluster.Sharding.Tests
                     Cluster.State.Members.Should().OnlyContain(m => m.Status == MemberStatus.Up);
                 });
 
+                RunOn(() =>
+                {
+                    // wait for all regions registered
+                    AwaitAssert(() =>
+                    {
+                        _region.Value.Tell(GetCurrentRegions.Instance);
+                        ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(5);
+                    });
+                }, config.First);
+
                 EnterBarrier("after-2");
             });
         }

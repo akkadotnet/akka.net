@@ -193,6 +193,24 @@ namespace Akka.Cluster.Sharding.Tests
                 extractShardId: E2.ExtractShardId);
 
             AwaitClusterUp(config.First, config.Second, config.Third, config.Fourth, config.Fifth);
+
+            RunOn(() =>
+            {
+                // wait for all regions registered
+                AwaitAssert(() =>
+                {
+                    var region = ClusterSharding.Get(Sys).ShardRegion(E1.TypeKey);
+                    region.Tell(GetCurrentRegions.Instance);
+                    ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(3);
+                });
+                AwaitAssert(() =>
+                {
+                    var region = ClusterSharding.Get(Sys).ShardRegion(E2.TypeKey);
+                    region.Tell(GetCurrentRegions.Instance);
+                    ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(2);
+                });
+            }, config.First);
+
             EnterBarrier($"{Roles.Count}-up");
         }
 
