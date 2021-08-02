@@ -281,6 +281,7 @@ namespace Akka.Cluster.Sharding.Tests
                     .ToImmutableDictionary(kv => kv.Key, kv => kv.Value);
 
                 shardLocations.Tell(new Locations(locations));
+                Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
             }, _config.First);
             EnterBarrier("after-3");
         }
