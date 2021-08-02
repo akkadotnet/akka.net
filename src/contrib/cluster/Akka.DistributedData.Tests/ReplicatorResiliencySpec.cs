@@ -180,8 +180,9 @@ namespace Akka.DistributedData.Tests
             Watch(durableStore);
             durableStore.Tell(new InitFail());
 
-            ExpectTerminated(durableStore, TimeSpan.FromSeconds(10));
-            ExpectTerminated(replicator, TimeSpan.FromSeconds(10));
+            // termination orders aren't guaranteed, so can't use ExpectTerminated here
+            var terminated = ReceiveN(2, TimeSpan.FromSeconds(10)).Cast<Terminated>();
+            terminated.Select(x => x.ActorRef).Should().BeEquivalentTo(replicator, durableStore);
 
             // The replicator should not have been recreated, so expect ActorNotFound
             await Assert.ThrowsAsync<ActorNotFoundException>(() =>
