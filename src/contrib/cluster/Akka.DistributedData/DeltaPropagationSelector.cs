@@ -110,7 +110,7 @@ namespace Akka.DistributedData
                                         ? DeltaPropagation.NoDeltaPlaceholder 
                                         : d1.Merge(d2);
 
-                                    if (merged is IReplicatedDeltaSize s && s.DeltaSize >= MaxDeltaSize)
+                                    if (merged is IReplicatedDeltaSize s && s.DeltaSize > MaxDeltaSize)
                                         return DeltaPropagation.NoDeltaPlaceholder; // discard too large deltas
 
                                     return merged;
