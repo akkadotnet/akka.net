@@ -707,8 +707,8 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.Chunk.Equals(Chunk) 
-                && other.TotalChunks.Equals(TotalChunks) 
+            return other.Chunk.Equals(Chunk)
+                && other.TotalChunks.Equals(TotalChunks)
                 && Digests.SequenceEqual(other.Digests)
                 && ToSystemUid.Equals(other.ToSystemUid)
                 && FromSystemUid.Equals(other.FromSystemUid);
@@ -788,7 +788,7 @@ namespace Akka.DistributedData.Internal
             if (ReferenceEquals(other, null)) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            return other.SendBack.Equals(SendBack) 
+            return other.SendBack.Equals(SendBack)
                 && UpdatedData.SequenceEqual(other.UpdatedData)
                 && ToSystemUid.Equals(other.ToSystemUid)
                 && FromSystemUid.Equals(other.FromSystemUid);
@@ -833,6 +833,8 @@ namespace Akka.DistributedData.Internal
             FromSeqNr = fromSeqNr;
             ToSeqNr = toSeqNr;
         }
+
+        public bool RequiresCausalDeliveryOfDeltas => DataEnvelope.Data is IRequireCausualDeliveryOfDeltas;
 
         public bool Equals(Delta other)
         {
@@ -882,7 +884,7 @@ namespace Akka.DistributedData.Internal
         /// treated as a delta that increase the version counter in <see cref="DeltaPropagationSelector"/>`.
         /// Otherwise a later delta might be applied before the full state gossip is received
         /// and thereby violating <see cref="IRequireCausualDeliveryOfDeltas"/>.
-        /// 
+        ///
         /// This is used as a placeholder for such `null` delta. It's filtered out
         /// in <see cref="DeltaPropagationSelector.CreateDeltaPropagation(ImmutableDictionary{string, Tuple{IReplicatedData, long, long}})"/>, i.e. never sent to the other replicas.
         /// </summary>
