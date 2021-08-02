@@ -180,6 +180,7 @@ namespace Akka.DistributedData.Tests
             Watch(durableStore);
             durableStore.Tell(new InitFail());
 
+            // termination orders aren't guaranteed, so can't use ExpectTerminated here
             var terminated1 = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
             var terminated2 = ExpectMsg<Terminated>(TimeSpan.FromSeconds(10));
             ImmutableHashSet.Create(terminated1.ActorRef, terminated2.ActorRef).Should().BeEquivalentTo(durableStore, replicator);
