@@ -303,6 +303,8 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectTerminated(region, TimeSpan.FromSeconds(15));
             }, _config.First);
             EnterBarrier("stopped");
+            
+            // more stress by not having the barrier here
 
             RunOn(() =>
             {
@@ -318,7 +320,11 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = kv.Value;
                             region.Tell(new Ping(id), probe.Ref);
                             if (r.Path.Address.Equals(firstAddress))
-                                probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)).Should().NotBe(r);
+                            {
+                                var newRef = probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1));
+                                newRef.Should().NotBe(r);
+                                Sys.Log.Debug("Moved [{0}] from [{1}] to [{2}]", id, r, newRef);
+                            }
                             else
                                 probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
                         }
