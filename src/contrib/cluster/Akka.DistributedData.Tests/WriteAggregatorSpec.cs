@@ -249,13 +249,13 @@ namespace Akka.DistributedData.Tests
             probe.ExpectMsg<DeltaPropagation>();
             probe.LastSender.Tell(WriteAck.Instance);
             probe.ExpectMsg<DeltaPropagation>();
-            // nack
-            probe.LastSender.Tell(DeltaNack.Instance);
             probe.ExpectMsg<DeltaPropagation>();
-            // no reply
+            
+            // nack - will force a write to be sent right away
+            probe.LastSender.Tell(DeltaNack.Instance);
+            probe.ExpectMsg<Write>();
 
             // only 1 ack so we expect 3 full state Write
-            probe.ExpectMsg<Write>();
             probe.LastSender.Tell(WriteAck.Instance);
             probe.ExpectMsg<Write>();
             probe.ExpectMsg<Write>();
