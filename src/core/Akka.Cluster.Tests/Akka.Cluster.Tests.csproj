@@ -19,7 +19,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="FsCheck.Xunit" Version="$(FsCheckVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-    <PackageReference Include="Fsharp.Core" Version="5.0.1" />
+    <PackageReference Include="Fsharp.Core" Version="5.0.2" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
