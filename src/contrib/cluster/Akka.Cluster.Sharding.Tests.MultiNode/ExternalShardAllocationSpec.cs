@@ -212,7 +212,11 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     Sys.Log.Info("Requesting {0} home", InitiallyOnForth);
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(InitiallyOnForth));
-                    ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.Forth)));
+
+                    //ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.Forth)));
+                    var home = ExpectMsg<GiveMeYourHome.Home>();
+                    Sys.Log.Info("{0} home actual [{1}], expected [{2}]", InitiallyOnForth, home.Address, GetAddress(config.Forth));
+                    home.Address.Should().Be(GetAddress(config.Forth));
                 }, TimeSpan.FromSeconds(10));
             }, config.First, config.Second, config.Third);
             EnterBarrier("shard-allocated-to-forth");
@@ -232,7 +236,10 @@ namespace Akka.Cluster.Sharding.Tests
                 {
                     Sys.Log.Info("Requesting {0} home", InitiallyOnForth);
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(InitiallyOnForth));
-                    ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.First)));
+                    //ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.First)));
+                    var home = ExpectMsg<GiveMeYourHome.Home>();
+                    Sys.Log.Info("{0} home actual [{1}], expected [{2}]", InitiallyOnForth, home.Address, GetAddress(config.First));
+                    home.Address.Should().Be(GetAddress(config.First));
                 }, TimeSpan.FromSeconds(10));
             }, config.First, config.Second, config.Third, config.Forth);
             EnterBarrier("finished");
