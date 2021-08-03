@@ -405,7 +405,7 @@ namespace Akka.Remote
                     var rpath = (new RootActorPath(addr) / "remote" / localAddress.Protocol / localAddress.HostPort() /
                                  path.Elements.ToArray()).
                         WithUid(path.Uid);
-                    var remoteRef = new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
+                    var remoteRef = CreateRemoteRef(props, supervisor, localAddress, rpath, deployment);
                     return remoteRef;
                 }
                 catch (Exception ex)
@@ -418,7 +418,6 @@ namespace Akka.Remote
             {
                 return LocalActorOf(system, props, supervisor, path, false, deployment, false, async);
             }
-
         }
 
         /// <summary>
@@ -510,6 +509,20 @@ namespace Akka.Remote
         protected virtual IInternalActorRef CreateRemoteRef(ActorPath actorPath, Address localAddress)
         {
             return new RemoteActorRef(Transport, localAddress, actorPath, ActorRefs.Nobody, Props.None, Deploy.None);
+        }
+        
+        /// <summary>
+        /// Used to create <see cref="RemoteActoRef"/> instances upon remote deployment to another <see cref="ActorSystem"/>.
+        /// </summary>
+        /// <param name="props">Props of the remotely deployed actor.</param>
+        /// <param name="supervisor">A reference to the local parent actor responsible for supervising the remotely deployed one.</param>
+        /// <param name="localAddress">The local address of this actor.</param>
+        /// <param name="rpath">The remote actor path.</param>
+        /// <param name="deployment">The deployment included in this Props.</param>
+        /// <returns>An <see cref="IInternalActorRef"/> instance.</returns>
+        protected virtual RemoteActorRef CreateRemoteRef(Props props, IInternalActorRef supervisor, Address localAddress, ActorPath rpath, Deploy deployment)
+        {
+            return new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
         }
 
         /// <summary>

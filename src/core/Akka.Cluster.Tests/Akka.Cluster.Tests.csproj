@@ -8,8 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools.Tests\Akka.Cluster.Tools.Tests.csproj" />
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
+    <ProjectReference Include="..\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 

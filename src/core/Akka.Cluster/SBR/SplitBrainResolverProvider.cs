@@ -73,7 +73,7 @@ namespace Akka.Cluster.SBR
                         var leaseName = lms.SafeLeaseName(system.Name);
                         var lease = LeaseProvider.Get(system).GetLease(leaseName, lms.LeaseImplementation, leaseOwnerName);
 
-                        strategy = new LeaseMajority(lms.Role, lease, lms.AcquireLeaseDelayForMinority);
+                        strategy = new LeaseMajority(lms.Role, lease, lms.AcquireLeaseDelayForMinority, lms.ReleaseAfter);
                         break;
                     default:
                         throw new InvalidOperationException();
