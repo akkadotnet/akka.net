@@ -114,12 +114,12 @@ namespace Akka.Cluster.Sharding
             if (settings.TuningParameters.CoordinatorStateReadMajorityPlus == int.MaxValue)
                 _stateReadConsistency = new ReadAll(settings.TuningParameters.WaitingForStateTimeout);
             else
-                _stateReadConsistency = new ReadMajority/*Plus*/(settings.TuningParameters.WaitingForStateTimeout/*, additional*/, majorityMinCap);
+                _stateReadConsistency = new ReadMajorityPlus(settings.TuningParameters.WaitingForStateTimeout, settings.TuningParameters.CoordinatorStateReadMajorityPlus, majorityMinCap);
 
             if (settings.TuningParameters.CoordinatorStateWriteMajorityPlus == int.MaxValue)
                 _stateWriteConsistency = new WriteAll(settings.TuningParameters.UpdatingStateTimeout);
             else
-                _stateWriteConsistency = new WriteMajority/*Plus*/(settings.TuningParameters.UpdatingStateTimeout/*, additional*/, majorityMinCap);
+                _stateWriteConsistency = new WriteMajorityPlus(settings.TuningParameters.UpdatingStateTimeout, settings.TuningParameters.CoordinatorStateWriteMajorityPlus, majorityMinCap);
 
             Cluster node = Cluster.Get(Context.System);
             _selfUniqueAddress = node.SelfUniqueAddress;
