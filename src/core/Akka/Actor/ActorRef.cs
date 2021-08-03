@@ -68,10 +68,9 @@ namespace Akka.Actor
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
-    public class FutureActorRef : MinimalActorRef
+    public class FutureActorRef<T> : MinimalActorRef
     {
-        private readonly TaskCompletionSource<object> _result;
-        private readonly Action _unregister;
+        private readonly TaskCompletionSource<T> _result;
         private readonly ActorPath _path;
 
         /// <summary>
@@ -80,16 +79,16 @@ namespace Akka.Actor
         /// <param name="result">TBD</param>
         /// <param name="unregister">TBD</param>
         /// <param name="path">TBD</param>
-        public FutureActorRef(TaskCompletionSource<object> result, Action unregister, ActorPath path)
+        public FutureActorRef(TaskCompletionSource<T> result, Action<Task> unregister, ActorPath path)
         {
             if (ActorCell.Current != null)
             {
                 _actorAwaitingResultSender = ActorCell.Current.Sender;
             }
             _result = result;
-            _unregister = unregister;
             _path = path;
-            _result.Task.ContinueWith(_ => _unregister());
+
+            _result.Task.ContinueWith(unregister);
         }
 
         /// <summary>
@@ -131,7 +130,15 @@ namespace Akka.Actor
             {
                 if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
                 {
-                    _result.TrySetResult(message);
+                    if (message is T t)
+                    {
+                        _result.TrySetResult(t);
+                    }
+                    else
+                    {
+                        _result.TrySetException(new ArgumentException(
+                            $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
+                    }
                 }
             }
         }

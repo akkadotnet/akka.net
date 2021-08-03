@@ -76,14 +76,14 @@ namespace Akka.IO
             if (c != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c));
+                Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local));
                 return true;
             }
             var b = message as Bind;
             if (b != null)
             {
                 var commander = Sender;
-                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b));
+                Context.ActorOf(Props.Create<TcpListener>(_tcp, commander, b).WithDeploy(Deploy.Local));
                 return true;
             }
             var dl = message as DeadLetter;

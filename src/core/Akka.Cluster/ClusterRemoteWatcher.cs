@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Dispatch;
 using Akka.Remote;
 
 namespace Akka.Cluster
@@ -31,19 +32,21 @@ namespace Akka.Cluster
         /// <param name="heartbeatInterval">TBD</param>
         /// <param name="unreachableReaperInterval">TBD</param>
         /// <param name="heartbeatExpectedResponseAfter">TBD</param>
-        public static Props Props(
+        public new static Props Props(
             IFailureDetectorRegistry<Address> failureDetector,
             TimeSpan heartbeatInterval,
             TimeSpan unreachableReaperInterval,
             TimeSpan heartbeatExpectedResponseAfter)
         {
             return new Props(typeof(ClusterRemoteWatcher), new object[]
-            {
-                failureDetector, 
-                heartbeatInterval, 
-                unreachableReaperInterval, 
-                heartbeatExpectedResponseAfter
-            }).WithDeploy(Deploy.Local);
+                {
+                    failureDetector, 
+                    heartbeatInterval, 
+                    unreachableReaperInterval, 
+                    heartbeatExpectedResponseAfter
+                })
+                .WithDispatcher(Dispatchers.InternalDispatcherId)
+                .WithDeploy(Deploy.Local);
         }
 
         private readonly Cluster _cluster;

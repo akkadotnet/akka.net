@@ -23,7 +23,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if the <paramref name="actorRef"/> is valid; otherwise <c>false</c>.</returns>
         public static bool IsNobody(this IActorRef actorRef)
         {
-            return actorRef == null || actorRef is Nobody || actorRef is DeadLetterActorRef;
+            return actorRef == null || actorRef is Nobody || actorRef is DeadLetterActorRef || (actorRef.Path.Uid == 0 && actorRef.Path.Name == "deadLetters");
         }
 
         /// <summary>

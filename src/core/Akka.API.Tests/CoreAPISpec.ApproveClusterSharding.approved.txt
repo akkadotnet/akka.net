@@ -77,12 +77,12 @@ namespace Akka.Cluster.Sharding
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class CurrentRegions
+    public sealed class CurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable
     {
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> Regions;
         public CurrentRegions(System.Collections.Immutable.IImmutableSet<Akka.Actor.Address> regions) { }
     }
-    public sealed class CurrentShardRegionState
+    public sealed class CurrentShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable
     {
         public readonly System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> Shards;
         public CurrentShardRegionState(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Sharding.ShardState> shards) { }
@@ -101,11 +101,11 @@ namespace Akka.Cluster.Sharding
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IShardRegionQuery
+    public sealed class GetCurrentRegions : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetCurrentRegions Instance;
     }
-    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IShardRegionQuery
+    public sealed class GetShardRegionState : Akka.Cluster.Sharding.IClusterShardingSerializable, Akka.Cluster.Sharding.IShardRegionQuery
     {
         public static readonly Akka.Cluster.Sharding.GetShardRegionState Instance;
     }
@@ -222,19 +222,23 @@ namespace Akka.Cluster.Sharding
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class ShardState
+    public sealed class ShardState : Akka.Cluster.Sharding.IClusterShardingSerializable
     {
         public readonly System.Collections.Immutable.IImmutableSet<string> EntityIds;
         public readonly string ShardId;
         public ShardState(string shardId, System.Collections.Immutable.IImmutableSet<string> entityIds) { }
     }
     [Akka.Annotations.ApiMayChangeAttribute()]
+    [Akka.Annotations.DoNotInheritAttribute()]
     public class ShardedDaemonProcess : Akka.Actor.IExtension
     {
         public ShardedDaemonProcess(Akka.Actor.ExtendedActorSystem system) { }
         public static Akka.Cluster.Sharding.ShardedDaemonProcess Get(Akka.Actor.ActorSystem system) { }
         public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, object stopMessage) { }
+        [System.ObsoleteAttribute("Use the overloaded one which accepts a stopMessage instead.")]
         public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings) { }
+        public void Init(string name, int numberOfInstances, System.Func<int, Akka.Actor.Props> propsFactory, Akka.Cluster.Sharding.ShardedDaemonProcessSettings settings, object stopMessage) { }
     }
     public class ShardedDaemonProcessExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Cluster.Sharding.ShardedDaemonProcess>
     {
@@ -253,7 +257,7 @@ namespace Akka.Cluster.Sharding
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithRole(string role) { }
         public Akka.Cluster.Sharding.ShardedDaemonProcessSettings WithShardingSettings(Akka.Cluster.Sharding.ClusterShardingSettings shardingSettings) { }
     }
-    public sealed class ShardingEnvelope
+    public sealed class ShardingEnvelope : Akka.Actor.IWrappedMessage
     {
         public ShardingEnvelope(string entityId, object message) { }
         public string EntityId { get; }

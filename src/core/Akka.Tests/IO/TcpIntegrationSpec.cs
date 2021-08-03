@@ -21,9 +21,7 @@ using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
-#if CORECLR
 using System.Runtime.InteropServices;
-#endif
 
 namespace Akka.Tests.IO
 {
@@ -45,6 +43,8 @@ namespace Akka.Tests.IO
         
         public TcpIntegrationSpec(ITestOutputHelper output)
             : base($@"akka.loglevel = DEBUG
+                     akka.actor.serialize-creators = on
+                     akka.actor.serialize-messages = on
                      akka.io.tcp.trace-logging = true
                      akka.io.tcp.write-commands-queue-max-size = {InternalConnectionActorMaxQueueSize}", output: output)
         { }
@@ -172,14 +172,10 @@ namespace Akka.Tests.IO
         public void The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
         {
             // Aaronontheweb, 9/2/2017 - POSIX-based OSES are still having trouble with IPV6 DNS resolution
-#if CORECLR
-            if(!System.Runtime.InteropServices.RuntimeInformation
+            if(!RuntimeInformation
                 .IsOSPlatform(OSPlatform.Windows) && family == AddressFamily.InterNetworkV6)
-            return;
-#else
-            if (RuntimeDetector.IsMono && family == AddressFamily.InterNetworkV6) // same as above
                 return;
-#endif
+
             var serverHandler = CreateTestProbe();
             var bindCommander = CreateTestProbe();
             bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 
@@ -190,7 +186,7 @@ namespace Akka.Tests.IO
             var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
             var clientHandler = CreateTestProbe();
             Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
-            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromMinutes(10));
+            clientHandler.ExpectMsg<Tcp.Connected>(TimeSpan.FromSeconds(3));
             var clientEp = clientHandler.Sender;
             clientEp.Tell(new Tcp.Register(clientHandler));
             serverHandler.ExpectMsg<Tcp.Connected>();

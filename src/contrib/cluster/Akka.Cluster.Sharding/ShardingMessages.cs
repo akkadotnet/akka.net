@@ -40,14 +40,14 @@ namespace Akka.Cluster.Sharding
     /// reduce memory consumption. This is done by the application specific implementation of
     /// the entity actors for example by defining receive timeout (<see cref="IActorContext.SetReceiveTimeout"/>).
     /// If a message is already enqueued to the entity when it stops itself the enqueued message
-    /// in the mailbox will be dropped. To support graceful passivation without loosing such
+    /// in the mailbox will be dropped. To support graceful passivation without losing such
     /// messages the entity actor can send this <see cref="Passivate"/> message to its parent <see cref="ShardRegion"/>.
     /// The specified wrapped <see cref="StopMessage"/> will be sent back to the entity, which is
     /// then supposed to stop itself. Incoming messages will be buffered by the `ShardRegion`
     /// between reception of <see cref="Passivate"/> and termination of the entity. Such buffered messages
     /// are thereafter delivered to a new incarnation of the entity.
     ///
-    /// <see cref="PoisonPill"/> is a perfectly fine <see cref="StopMessage"/>.
+    /// <see cref="PoisonPill.Instance"/> is a perfectly fine <see cref="StopMessage"/>.
     /// </summary>
     [Serializable]
     public sealed class Passivate : IShardRegionCommand
@@ -141,7 +141,7 @@ namespace Akka.Cluster.Sharding
     /// Intended for testing purpose to see when cluster sharding is "ready".
     /// </summary>
     [Serializable]
-    public sealed class GetCurrentRegions : IShardRegionQuery
+    public sealed class GetCurrentRegions : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -157,7 +157,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetCurrentRegions"/>.
     /// </summary>
     [Serializable]
-    public sealed class CurrentRegions
+    public sealed class CurrentRegions : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -281,7 +281,7 @@ namespace Akka.Cluster.Sharding
     /// and what entities are running on each of those shards.
     /// </summary>
     [Serializable]
-    public sealed class GetShardRegionState : IShardRegionQuery
+    public sealed class GetShardRegionState : IShardRegionQuery, IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -297,7 +297,7 @@ namespace Akka.Cluster.Sharding
     /// Reply to <see cref="GetShardRegionState"/> If gathering the shard information times out the set of shards will be empty.
     /// </summary>
     [Serializable]
-    public sealed class CurrentShardRegionState
+    public sealed class CurrentShardRegionState : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD
@@ -355,7 +355,7 @@ namespace Akka.Cluster.Sharding
     /// TBD
     /// </summary>
     [Serializable]
-    public sealed class ShardState
+    public sealed class ShardState : IClusterShardingSerializable
     {
         /// <summary>
         /// TBD

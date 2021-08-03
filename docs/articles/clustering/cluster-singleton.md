@@ -34,9 +34,6 @@ This pattern may seem to be very tempting to use at first, but it has several dr
 
 Especially the last point is something you should be aware of — in general when using the Cluster Singleton pattern you should take care of downing nodes yourself and not rely on the timing based auto-down feature.
 
-> [!WARNING]
-> Be very careful when using Cluster Singleton together with Automatic Downing, since it allows the cluster to split up into two separate clusters, which in turn will result in `multiple Singletons` being started, one in each separate cluster!
-
 ## An Example
 Assume that we need one single entry point to an external system. An actor that receives messages from a JMS queue with the strict requirement that only one JMS consumer must exist to be make sure that the messages are processed in order. That is perhaps not how one would like to design things, but a typical real-world scenario when integrating with external systems.
 

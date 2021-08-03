@@ -80,3 +80,16 @@ message ShardRegionWithAddress{
     Akka.Remote.Serialization.Proto.Msg.AddressData nodeAddress = 1;
     ShardRegionStats stats = 2;
 }
+
+message CurrentRegions {
+  repeated Akka.Remote.Serialization.Proto.Msg.AddressData regions = 1;
+}
+
+message ShardState {
+  string shardId = 1;
+  repeated string entityIds = 2;
+}
+
+message CurrentShardRegionState {
+  repeated ShardState shards = 1;
+}

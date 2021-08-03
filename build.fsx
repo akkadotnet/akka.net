@@ -348,6 +348,7 @@ Target "MultiNodeTests" (fun _ ->
 
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
+        setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
 
         let projects =
@@ -388,6 +389,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 )
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
+        setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
 
         let projects =
@@ -626,7 +628,6 @@ Target "Protobuf" <| fun _ ->
                 |> append (sprintf "-I=%s" (__SOURCE_DIRECTORY__ @@ "/src/protobuf/common") )
                 |> append (sprintf "--csharp_out=internal_access:%s" (__SOURCE_DIRECTORY__ @@ destinationPath))
                 |> append "--csharp_opt=file_extension=.g.cs"
-                |> append "--experimental_allow_proto3_optional"
                 |> append (__SOURCE_DIRECTORY__ @@ "/src/protobuf" @@ protoName)
                 |> toText
 

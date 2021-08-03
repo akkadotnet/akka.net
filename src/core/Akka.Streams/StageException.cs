@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.Serialization;
 
 namespace Akka.Streams
 {
@@ -21,6 +22,16 @@ namespace Akka.Streams
         public NoSuchElementException(string message) : base(message)
         {
 
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NoSuchElementException"/> class.
+        /// </summary>
+        /// <param name="info">The <see cref="SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="StreamingContext"/> that contains contextual information about the source or destination.</param>
+        protected NoSuchElementException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
         }
     }
 }

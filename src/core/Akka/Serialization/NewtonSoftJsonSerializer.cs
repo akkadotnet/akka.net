@@ -143,6 +143,28 @@ namespace Akka.Serialization
         public NewtonSoftJsonSerializer(ExtendedActorSystem system, NewtonSoftJsonSerializerSettings settings)
             : base(system)
         {
+            Settings = new JsonSerializerSettings
+            {
+                PreserveReferencesHandling = settings.PreserveObjectReferences
+                    ? PreserveReferencesHandling.Objects
+                    : PreserveReferencesHandling.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                DefaultValueHandling = DefaultValueHandling.Ignore,
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
+                TypeNameHandling = settings.EncodeTypeNames
+                    ? TypeNameHandling.All
+                    : TypeNameHandling.None,
+            };
+
+            if (system != null)
+            {
+                var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
+                    .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
+
+                settingsSetup.ApplySettings(Settings);
+            }
+
             var converters = settings.Converters
                 .Select(type => CreateConverter(type, system))
                 .ToList();
@@ -150,22 +172,13 @@ namespace Akka.Serialization
             converters.Add(new SurrogateConverter(this));
             converters.Add(new DiscriminatedUnionConverter());
 
-            Settings = new JsonSerializerSettings
+            foreach (var converter in converters)
             {
-                PreserveReferencesHandling = settings.PreserveObjectReferences 
-                    ? PreserveReferencesHandling.Objects 
-                    : PreserveReferencesHandling.None,
-                Converters = converters,
-                NullValueHandling = NullValueHandling.Ignore,
-                DefaultValueHandling = DefaultValueHandling.Ignore,
-                MissingMemberHandling = MissingMemberHandling.Ignore,
-                ObjectCreationHandling = ObjectCreationHandling.Replace, //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
-                ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
-                TypeNameHandling = settings.EncodeTypeNames
-                    ? TypeNameHandling.All 
-                    : TypeNameHandling.None,
-                ContractResolver = new AkkaContractResolver()
-            };
+                Settings.Converters.Add(converter);
+            }
+
+            Settings.ObjectCreationHandling = ObjectCreationHandling.Replace; //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
+            Settings.ContractResolver = new AkkaContractResolver();
 
             _serializer = JsonSerializer.Create(Settings);
         }

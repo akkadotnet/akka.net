@@ -423,11 +423,7 @@ namespace Akka.Remote.Tests.Transport
 
             Watch(stateActor);
 
-            // inner exception will be a TimeoutException
-            Intercept<AggregateException>(() =>
-            {
-                statusPromise.Task.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-            });
+            Intercept<TimeoutException>(() => statusPromise.Task.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue());
             ExpectTerminated(stateActor);
         }
 

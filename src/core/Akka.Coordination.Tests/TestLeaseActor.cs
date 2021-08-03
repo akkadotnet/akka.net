@@ -15,15 +15,15 @@ using Akka.Coordination;
 using Akka.Event;
 using Akka.Util;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode
+namespace Akka.Coordination.Tests
 {
-    internal class TestLeaseActor : ActorBase
+    public class TestLeaseActor : ActorBase
     {
-        internal interface ILeaseRequest
+        public interface ILeaseRequest
         {
         }
 
-        internal sealed class Acquire : ILeaseRequest, IEquatable<Acquire>
+        public sealed class Acquire : ILeaseRequest, IEquatable<Acquire>
         {
             public string Owner { get; }
 
@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
             public override string ToString() => $"Acquire({Owner})";
         }
 
-        internal sealed class Release : ILeaseRequest, IEquatable<Release>
+        public sealed class Release : ILeaseRequest, IEquatable<Release>
         {
             public string Owner { get; }
 
@@ -71,7 +71,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
             public override string ToString() => $"Release({Owner})";
         }
 
-        internal sealed class Create : ILeaseRequest, IEquatable<Create>
+        public sealed class Create : ILeaseRequest, IEquatable<Create>
         {
             public string LeaseName { get; }
             public string OwnerName { get; }
@@ -105,7 +105,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
             public override string ToString() => $"Create({LeaseName}, {OwnerName})";
         }
 
-        internal sealed class GetRequests
+        public sealed class GetRequests
         {
             public static readonly GetRequests Instance = new GetRequests();
             private GetRequests()
@@ -113,7 +113,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
             }
         }
 
-        internal sealed class LeaseRequests
+        public sealed class LeaseRequests
         {
             public List<ILeaseRequest> Requests { get; }
 
@@ -126,7 +126,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
         }
 
 
-        internal sealed class ActionRequest // boolean of Failure
+        public sealed class ActionRequest // boolean of Failure
         {
             public ILeaseRequest Request { get; }
             public bool Result { get; }
@@ -143,7 +143,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
         public static Props Props => Props.Create(() => new TestLeaseActor());
 
         private ILoggingAdapter _log = Context.GetLogger();
-        private readonly List<(IActorRef, ILeaseRequest)> requests = new List<(IActorRef, ILeaseRequest)>();
+        private readonly List<(IActorRef, ILeaseRequest)> _requests = new List<(IActorRef, ILeaseRequest)>();
 
         public TestLeaseActor()
         {
@@ -159,23 +159,23 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
 
                 case ILeaseRequest request:
                     _log.Info("Lease request {0} from {1}", request, Sender);
-                    requests.Insert(0, (Sender, request));
+                    _requests.Insert(0, (Sender, request));
                     return true;
 
                 case GetRequests _:
-                    Sender.Tell(new LeaseRequests(requests.Select(i => i.Item2).ToList()));
+                    Sender.Tell(new LeaseRequests(_requests.Select(i => i.Item2).ToList()));
                     return true;
 
                 case ActionRequest ar:
-                    var r = requests.Where(i => i.Item2.Equals(ar.Request)).FirstOrDefault();
+                    var r = _requests.FirstOrDefault(i => i.Item2.Equals(ar.Request));
                     if (r.Item1 != null)
                     {
                         _log.Info("Actioning request {0} to {1}", r.Item2, ar.Result);
                         r.Item1.Tell(ar.Result);
-                        requests.RemoveAll(i => i.Item2.Equals(ar.Request));
+                        _requests.RemoveAll(i => i.Item2.Equals(ar.Request));
                     }
                     else
-                        throw new InvalidOperationException($"unknown request to action: {ar.Request}. Requests: { string.Join(", ", requests.Select(i => $"([{i.Item1}],[{i.Item2}])"))}");
+                        throw new InvalidOperationException($"unknown request to action: {ar.Request}. Requests: { string.Join(", ", _requests.Select(i => $"([{i.Item1}],[{i.Item2}])"))}");
                     return true;
             }
             return false;
@@ -208,7 +208,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
             _system = system;
         }
 
-        internal IActorRef GetLeaseActor()
+        public IActorRef GetLeaseActor()
         {
             var lease = leaseActor.Value;
             if (lease == null)
@@ -216,13 +216,13 @@ namespace Akka.Cluster.Tools.Tests.MultiNode
             return lease;
         }
 
-        internal void SetActorLease(IActorRef client)
+        public void SetActorLease(IActorRef client)
         {
             leaseActor.GetAndSet(client);
         }
     }
 
-    internal class TestLeaseActorClient : Lease
+    public class TestLeaseActorClient : Lease
     {
         private ILoggingAdapter _log;
 

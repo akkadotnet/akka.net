@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Reflection;
 using Akka.Actor;
 using Akka.Configuration;
@@ -115,11 +116,23 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests
             //format the string as it would appear when reported by multinode test runner
             var nodeMessageFragment = "[NODE1:super_role_1]      Only part of a message!";
             var runnerMessageStr = foundMessage.ToString();
+            try
+            {
+                throw new ApplicationException("test");
+            }
+            catch (Exception ex)
+            {
+                specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                specFail.FailureMessages.Add(ex.Message);
+                specFail.FailureStackTraces.Add(ex.StackTrace);
+            }
             
+            var specFailMsg = specFail.ToString();
+
             MessageSink.DetermineMessageType(runnerMessageStr).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.RunnerLogMessage);
             MessageSink.DetermineMessageType(specPass.ToString()).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodePassMessage);
-            MessageSink.DetermineMessageType(specFail.ToString()).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeFailMessage);
-            MessageSink.DetermineMessageType("[Node2][FAIL-EXCEPTION] Type: Xunit.Sdk.TrueException").ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeFailureException);
+            MessageSink.DetermineMessageType(specFailMsg).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeFailMessage);
+            MessageSink.DetermineMessageType($"[Node2][{DateTime.UtcNow}][FAIL-EXCEPTION] Type: Xunit.Sdk.TrueException").ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeFailureException);
             MessageSink.DetermineMessageType(nodeMessageFragment).ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.NodeLogFragment);
             MessageSink.DetermineMessageType("foo!").ShouldBe(MessageSink.MultiNodeTestRunnerMessageType.Unknown);
         }

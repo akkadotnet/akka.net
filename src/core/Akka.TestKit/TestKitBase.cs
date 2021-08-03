@@ -109,7 +109,7 @@ namespace Akka.TestKit
         {
         }
 
-        private TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
+        protected TestKitBase(ITestKitAssertions assertions, ActorSystem system, ActorSystemSetup config, string actorSystemName, string testActorName)
         {
             if(assertions == null) throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
 
@@ -170,8 +170,7 @@ namespace Akka.TestKit
             // Calling sync version here, since .Wait() causes deadlock
             AwaitCondition(() =>
             {
-                var repRef = testActor as IRepointableRef;
-                return repRef == null || repRef.IsStarted;
+                return !(testActor is IRepointableRef repRef) || repRef.IsStarted;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(10));
 
             if (!(this is INoImplicitSender))
