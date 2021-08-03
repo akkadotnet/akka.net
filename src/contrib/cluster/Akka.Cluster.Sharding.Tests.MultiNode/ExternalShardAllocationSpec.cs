@@ -210,6 +210,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 AwaitAssert(() =>
                 {
+                    Sys.Log.Info("Requesting {0} home", InitiallyOnForth);
                     _shardRegion.Value.Tell(new GiveMeYourHome.Get(InitiallyOnForth));
                     ExpectMsg<GiveMeYourHome.Home>(m => m.Address.Equals(GetAddress(config.Forth)));
                 }, TimeSpan.FromSeconds(10));
