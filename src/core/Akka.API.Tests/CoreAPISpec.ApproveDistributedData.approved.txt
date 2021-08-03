@@ -740,6 +740,17 @@ namespace Akka.DistributedData
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class ReadMajorityPlus : Akka.DistributedData.IReadConsistency, System.IEquatable<Akka.DistributedData.ReadMajorityPlus>
+    {
+        public ReadMajorityPlus(System.TimeSpan timeout, int additional, int minCapacity = 0) { }
+        public int Additional { get; }
+        public int MinCapacity { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.ReadMajorityPlus other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public sealed class ReplicaCount : System.IEquatable<Akka.DistributedData.ReplicaCount>
     {
         public ReplicaCount(int n) { }
@@ -764,7 +775,9 @@ namespace Akka.DistributedData
     {
         [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize) { }
+        [System.ObsoleteAttribute()]
         public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure) { }
+        public ReplicatorSettings(string role, System.TimeSpan gossipInterval, System.TimeSpan notifySubscribersInterval, int maxDeltaElements, string dispatcher, System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination, System.Collections.Immutable.IImmutableSet<string> durableKeys, Akka.Actor.Props durableStoreProps, System.TimeSpan pruningMarkerTimeToLive, System.TimeSpan durablePruningMarkerTimeToLive, int maxDeltaSize, bool restartReplicatorOnFailure, bool preferOldest) { }
         public string Dispatcher { get; }
         public System.Collections.Immutable.IImmutableSet<string> DurableKeys { get; }
         public System.TimeSpan DurablePruningMarkerTimeToLive { get; }
@@ -775,6 +788,7 @@ namespace Akka.DistributedData
         public int MaxDeltaSize { get; }
         public System.TimeSpan MaxPruningDissemination { get; }
         public System.TimeSpan NotifySubscribersInterval { get; }
+        public bool PreferOldest { get; }
         public System.TimeSpan PruningInterval { get; }
         public System.TimeSpan PruningMarkerTimeToLive { get; }
         public bool RestartReplicatorOnFailure { get; }
@@ -788,6 +802,7 @@ namespace Akka.DistributedData
         public Akka.DistributedData.ReplicatorSettings WithMaxDeltaElements(int maxDeltaElements) { }
         public Akka.DistributedData.ReplicatorSettings WithMaxDeltaSize(int maxDeltaSize) { }
         public Akka.DistributedData.ReplicatorSettings WithNotifySubscribersInterval(System.TimeSpan notifySubscribersInterval) { }
+        public Akka.DistributedData.ReplicatorSettings WithPreferOldest(bool preferOldest) { }
         public Akka.DistributedData.ReplicatorSettings WithPruning(System.TimeSpan pruningInterval, System.TimeSpan maxPruningDissemination) { }
         public Akka.DistributedData.ReplicatorSettings WithPruningMarkerTimeToLive(System.TimeSpan pruningMarkerTtl, System.TimeSpan durablePruningMarkerTtl) { }
         public Akka.DistributedData.ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) { }
@@ -943,6 +958,17 @@ namespace Akka.DistributedData
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class WriteMajorityPlus : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteMajorityPlus>
+    {
+        public WriteMajorityPlus(System.TimeSpan timeout, int additional, int minCapacity = 0) { }
+        public int Additional { get; }
+        public int MinCapacity { get; }
+        public System.TimeSpan Timeout { get; }
+        public override bool Equals(object obj) { }
+        public bool Equals(Akka.DistributedData.WriteMajorityPlus other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
     public sealed class WriteTo : Akka.DistributedData.IWriteConsistency, System.IEquatable<Akka.DistributedData.WriteTo>
     {
         public WriteTo(int count, System.TimeSpan timeout) { }
@@ -1021,6 +1047,7 @@ namespace Akka.DistributedData.Internal
         public Delta(Akka.DistributedData.Internal.DataEnvelope dataEnvelope, long fromSeqNr, long toSeqNr) { }
         public Akka.DistributedData.Internal.DataEnvelope DataEnvelope { get; }
         public long FromSeqNr { get; }
+        public bool RequiresCausalDeliveryOfDeltas { get; }
         public long ToSeqNr { get; }
         public bool Equals(Akka.DistributedData.Internal.Delta other) { }
         public override bool Equals(object obj) { }

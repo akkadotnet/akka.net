@@ -1460,7 +1460,7 @@ namespace Akka.Cluster
             else
             {
                 // TODO: add config checking
-                _cluster.LogInfo("Sending InitJoinNack message from node [{0}] to [{1}]", SelfUniqueAddress.Address,
+                _cluster.LogInfo("Sending InitJoinAck message from node [{0}] to [{1}]", SelfUniqueAddress.Address,
                     Sender);
                 Sender.Tell(new InternalClusterAction.InitJoinAck(_cluster.SelfAddress));
             }

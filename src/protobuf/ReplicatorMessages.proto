@@ -17,6 +17,7 @@ message Get {
    int32 consistencyMinCap = 5;
    bool hasConsistencyAdditional = 6;
    int32 consistencyAdditional = 7;
+   bool hasConsistencyMinCap = 8;
 }
 
 message GetSuccess {
@@ -77,8 +78,8 @@ message DataEnvelope {
      bool performed = 3;
     repeated Address seen = 4;
      sint64 obsoleteTime = 5;
-  } 
-  
+  }
+
    OtherMessage data = 1;
   repeated PruningEntry pruning = 2;
    VersionVector deltaVersions = 3;
@@ -89,7 +90,7 @@ message Status {
      string key = 1;
      bytes digest = 2;
   }
-  
+
    uint32 chunk = 1;
    uint32 totChunks = 2;
   repeated Entry entries = 3;
@@ -104,7 +105,7 @@ message Gossip {
      string key = 1;
      DataEnvelope envelope = 2;
   }
-  
+
    bool sendBack = 1;
   repeated Entry entries = 2;
    sfixed64 toSystemUid = 3;
@@ -120,7 +121,7 @@ message DeltaPropagation {
      int64 fromSeqNr = 3;
      int64 toSeqNr = 4; // if not set then same as fromSequenceNr
   }
-  
+
    UniqueAddress fromNode = 1;
   repeated Entry entries = 2;
    bool reply = 3; // no reply if not set
