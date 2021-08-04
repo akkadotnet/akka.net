@@ -1778,7 +1778,7 @@ namespace Akka.Cluster.Sharding
                         {
                             case Active a:
                                 if (_verboseDebug)
-                                    Log.Debug("{0}: Delivering message of type [{1}] to [{2}] from [{3}]", _typeName, payload.GetType().Name, entityId, snd);
+                                    Log.Debug("{0}: Delivering message of type [{1}] to [{2}]", _typeName, payload.GetType().Name, entityId);
                                 TouchLastMessageTimestamp(entityId);
                                 a.Ref.Tell(payload, snd);
                                 break;
@@ -1867,9 +1867,6 @@ namespace Akka.Cluster.Sharding
 
         private void AppendToMessageBuffer(EntityId id, object msg, IActorRef snd)
         {
-            if (_verboseDebug)
-                Log.Debug("{0}: Buffering message [{1}] to [{2}] from [{3}]", _typeName, msg, _shardId, snd);
-
             if (_messageBuffers.TotalCount >= _settings.TuningParameters.BufferSize)
             {
                 if (Log.IsDebugEnabled)

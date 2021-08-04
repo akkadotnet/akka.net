@@ -756,8 +756,6 @@ namespace Akka.Cluster.Sharding
                 {
                     if (region.Equals(Self))
                     {
-                        if (_verboseDebug)
-                            _log.Debug("{0}: Deliver request [{1}] to shard [{2}] from [{3}]", _typeName, message, shardId, sender);
                         var sref = GetShard(shardId);
                         if (Equals(sref, ActorRefs.Nobody))
                             BufferMessage(shardId, message, sender);
@@ -803,9 +801,6 @@ namespace Akka.Cluster.Sharding
 
         private void BufferMessage(ShardId shardId, Msg message, IActorRef sender)
         {
-            if (_verboseDebug)
-                _log.Debug("{0}: Buffering message [{1}] to shard [{2}] from [{3}]", _typeName, message, shardId, sender);
-
             var totalBufferSize = _shardBuffers.TotalCount;
             if (totalBufferSize >= _settings.TuningParameters.BufferSize)
             {
