@@ -68,6 +68,7 @@ namespace Akka.Cluster.Sharding.Tests
                     akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
                     akka.loglevel = {loglevel}
                     akka.remote.log-remote-lifecycle-events = off
+                    akka.test.single-expect-default = 5 s
 
                     akka.actor {{
                         serializers {{

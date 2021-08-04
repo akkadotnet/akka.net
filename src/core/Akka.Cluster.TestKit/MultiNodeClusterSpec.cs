@@ -68,7 +68,7 @@ namespace Akka.Cluster.TestKit
                 akka.coordinated-shutdown.terminate-actor-system = off
                 #akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
                 akka.test {
-                    single-expect-default = 5 s
+                    single-expect-default = 15 s
                 }
             ");
         }
