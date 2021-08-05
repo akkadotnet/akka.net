@@ -436,7 +436,7 @@ namespace Akka.Cluster.Sharding.Tests
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef(result, () => { }, path);
+            var future = new FutureActorRef<object>(result, t => { }, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
 

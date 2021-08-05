@@ -499,8 +499,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(
-            this IFlow<TIn, TMat> flow, 
-            Func<TIn, bool> isDefined, 
+            this IFlow<TIn, TMat> flow,
+            Func<TIn, bool> isDefined,
             Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(isDefined, collector));
@@ -1824,7 +1824,7 @@ namespace Akka.Streams.Dsl.Internal
         public static IFlow<T, TMat> Throttle<T, TMat>(this IFlow<T, TMat> flow, int cost, TimeSpan per,
             int maximumBurst, Func<T, int> calculateCost, ThrottleMode mode)
         {
-            if(cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
+            if (cost <= 0) throw new ArgumentException("cost must be > 0", nameof(cost));
             if (per == TimeSpan.Zero) throw new ArgumentException("Throttle per timeout must not be zero", nameof(per));
             if (mode == ThrottleMode.Enforcing && maximumBurst < 0)
                 throw new ArgumentException("Throttle maximumBurst must be > 0 in Enforcing mode", nameof(maximumBurst));
@@ -1993,7 +1993,7 @@ namespace Akka.Streams.Dsl.Internal
             return flow.StatefulSelectMany<T1, (T1, long), TMat>(() =>
             {
                 var index = 0L;
-                return element => new[] {(element, index++)};
+                return element => new[] { (element, index++) };
             });
         }
 
@@ -2433,6 +2433,57 @@ namespace Akka.Streams.Dsl.Internal
                 var broadcast = b.Add(new Broadcast<TOut>(2));
                 b.From(broadcast.Out(1)).To(r);
                 return new FlowShape<TOut, TOut>(broadcast.In, broadcast.Out(0));
+            });
+        }
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
+        /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
+        /// 
+        /// <para>@see <seealso cref="DivertTo{TOut,TMat}"/></para>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="when">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<TOut, TMat3> DivertToMaterialized<TOut, TMat, TMat2, TMat3>(
+            this IFlow<TOut, TMat> flow,
+            IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TOut, bool> when,
+            Func<TMat, TMat2, TMat3> materializerFunction) => flow.ViaMaterialized(DivertToGraph(that, when), materializerFunction);
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
+        /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
+        /// 
+        /// <para>Emits when an element is available from the input and the chosen output has demand</para>
+        /// <para>Backpressures when the currently chosen output back-pressures</para>
+        /// <para>Completes when upstream completes and no output is pending</para>
+        /// <para>Cancels when when all downstreams cancel</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="when">TBD</param>
+        public static IFlow<TOut, TMat> DivertTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) =>
+            flow.Via(DivertToGraph(that, when));
+
+        private static IGraph<FlowShape<TOut, TOut>, TMat> DivertToGraph<TOut, TMat>(IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when)
+        {
+            return GraphDsl.Create(that, (b, r) =>
+            {
+                var partition = b.Add(new Partition<TOut>(2, @out => when(@out) ? 1 : 0));
+                b.From(partition.Out(1)).To(r);
+                return new FlowShape<TOut, TOut>(partition.In, partition.Out(0));
             });
         }
 

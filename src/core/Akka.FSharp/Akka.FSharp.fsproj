@@ -22,7 +22,7 @@
   <ItemGroup>
     <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0" />
     <PackageReference Include="FsPickler" Version="5.3.2" />
-    <PackageReference Include="FSharp.Core" Version="5.0.1" />
+    <PackageReference Include="FSharp.Core" Version="5.0.2" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

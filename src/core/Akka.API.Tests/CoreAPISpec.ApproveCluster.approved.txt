@@ -400,11 +400,15 @@ namespace Akka.Cluster.SBR
     }
     public sealed class LeaseMajoritySettings
     {
+        [System.ObsoleteAttribute()]
         public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role) { }
+        [System.ObsoleteAttribute()]
         public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role, string leaseName) { }
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, System.TimeSpan releaseAfter, string role, string leaseName) { }
         public System.TimeSpan AcquireLeaseDelayForMinority { get; }
         public string LeaseImplementation { get; }
         public string LeaseName { get; }
+        public System.TimeSpan ReleaseAfter { get; }
         public string Role { get; }
         public string SafeLeaseName(string systemName) { }
     }

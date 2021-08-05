@@ -1460,7 +1460,7 @@ namespace Akka.Cluster
             else
             {
                 // TODO: add config checking
-                _cluster.LogInfo("Sending InitJoinNack message from node [{0}] to [{1}]", SelfUniqueAddress.Address,
+                _cluster.LogInfo("Sending InitJoinAck message from node [{0}] to [{1}]", SelfUniqueAddress.Address,
                     Sender);
                 Sender.Tell(new InternalClusterAction.InitJoinAck(_cluster.SelfAddress));
             }
@@ -1964,7 +1964,7 @@ namespace Akka.Cluster
                 {
                     _cluster.FailureDetector.Remove(node.Address);
                 }
-                    
+
             }
 
             _log.Debug("Cluster Node [{0}] - Receiving gossip from [{1}]", _cluster.SelfAddress, from);
@@ -2085,7 +2085,7 @@ namespace Akka.Cluster
                 {
                     // If it's time to try to gossip to some nodes with a different view
                     // gossip to a random alive member with preference to a member with older gossip version
-                    preferredGossipTarget = ImmutableList.CreateRange(localGossip.Members.Where(m => !localGossip.SeenByNode(m.UniqueAddress) 
+                    preferredGossipTarget = ImmutableList.CreateRange(localGossip.Members.Where(m => !localGossip.SeenByNode(m.UniqueAddress)
                         && _membershipState.ValidNodeForGossip(m.UniqueAddress)).Select(m => m.UniqueAddress));
                 }
                 else
@@ -2639,7 +2639,7 @@ namespace Akka.Cluster
         public void PublishMembershipState()
         {
             if (_cluster.Settings.VerboseGossipReceivedLogging)
-                _log.Debug("Cluster Node [{0}] - New gossip published [{0}]", SelfUniqueAddress, _membershipState.LatestGossip);
+                _log.Debug("Cluster Node [{0}] - New gossip published [{1}]", SelfUniqueAddress, _membershipState.LatestGossip);
 
             _publisher.Tell(new InternalClusterAction.PublishChanges(_membershipState));
             if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero)

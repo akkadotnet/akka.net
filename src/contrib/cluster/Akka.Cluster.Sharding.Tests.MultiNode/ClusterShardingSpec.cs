@@ -53,7 +53,7 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(ConfigurationFactory.ParseString($@"
                     akka.actor {{
                         serializers {{
-                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                            hyperion = ""Akka.Cluster.Sharding.Tests.MultiNode.HyperionSerializerWrapper, Akka.Cluster.Sharding.Tests.MultiNode""
                         }}
                         serialization-bindings {{
                             ""System.Object"" = hyperion
