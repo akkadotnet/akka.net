@@ -512,7 +512,7 @@ namespace Akka.Remote
         }
         
         /// <summary>
-        /// Used to create <see cref="RemoteActoRef"/> instances upon remote deployment to another <see cref="ActorSystem"/>.
+        /// Used to create <see cref="RemoteActorRef"/> instances upon remote deployment to another <see cref="ActorSystem"/>.
         /// </summary>
         /// <param name="props">Props of the remotely deployed actor.</param>
         /// <param name="supervisor">A reference to the local parent actor responsible for supervising the remotely deployed one.</param>
@@ -552,7 +552,7 @@ namespace Akka.Remote
         /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
         public IActorRef InternalResolveActorRef(string path)
         {
-            if (path == String.Empty)
+            if (path == string.Empty)
                 return ActorRefs.NoSender;
 
             if (ActorPath.TryParse(path, out var actorPath))
@@ -586,10 +586,10 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Used to translate an incoming address into an external one
         /// </summary>
-        /// <param name="address">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="address">The incoming address</param>
+        /// <returns>The remote Address, if applicable. If not applicable <c>null</c> may be returned.</returns>
         public Address GetExternalAddressFor(Address address)
         {
             if (HasAddress(address)) { return _local.RootPath.Address; }
@@ -641,7 +641,7 @@ namespace Akka.Remote
         /// All of the private internals used by <see cref="RemoteActorRefProvider"/>, namely its transport
         /// registry, remote serializers, and the <see cref="RemoteDaemon"/> instance.
         /// </summary>
-        class Internals : INoSerializationVerificationNeeded
+        private class Internals : INoSerializationVerificationNeeded
         {
             /// <summary>
             /// TBD
@@ -679,7 +679,7 @@ namespace Akka.Remote
         /// <summary>
         /// Describes the FSM states of the <see cref="RemotingTerminator"/>
         /// </summary>
-        enum TerminatorState
+        private enum TerminatorState
         {
             /// <summary>
             /// TBD
@@ -773,14 +773,7 @@ namespace Akka.Remote
             public sealed class TransportShutdown
             {
                 private TransportShutdown() { }
-                private static readonly TransportShutdown _instance = new TransportShutdown();
-                public static TransportShutdown Instance
-                {
-                    get
-                    {
-                        return _instance;
-                    }
-                }
+                public static TransportShutdown Instance { get; } = new TransportShutdown();
 
                 public override string ToString()
                 {
@@ -800,18 +793,16 @@ namespace Akka.Remote
 
             protected override void TellInternal(object message, IActorRef sender)
             {
-                var send = message as EndpointManager.Send;
                 var deadLetter = message as DeadLetter;
-                if (send != null)
+                if (message is EndpointManager.Send send)
                 {
                     if (send.Seq == null)
                     {
                         base.TellInternal(send.Message, send.SenderOption ?? ActorRefs.NoSender);
                     }
                 }
-                else if (deadLetter?.Message is EndpointManager.Send)
+                else if (deadLetter?.Message is EndpointManager.Send deadSend)
                 {
-                    var deadSend = (EndpointManager.Send)deadLetter.Message;
                     if (deadSend.Seq == null)
                     {
                         base.TellInternal(deadSend.Message, deadSend.SenderOption ?? ActorRefs.NoSender);
