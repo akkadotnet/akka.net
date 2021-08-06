@@ -119,6 +119,59 @@ public sealed class MessageExtractor : HashCodeMessageExtractor
 
 Using `ShardRegion.StartEntity` implies, that you're able to infer a shard id given an entity id alone. For this reason, in example above we modified a cluster sharding routing logic to make use of `HashCodeMessageExtractor` - in this variant, shard id doesn't have to be provided explicitly, as it will be computed from the hash of entity id itself. Notice a `maxNumberOfShards`, which is the maximum available number of shards allowed for this type of an actor - this value must never change during a single lifetime of a cluster. 
 
+### Remember Entities Store
+
+There are two options for the remember entities store:
+
+1. Distributed data
+2. Persistence
+
+#### Remember Entities Persistence Mode
+You can enable persistence mode (enabled by default) with:
+
+```
+akka.cluster.sharding.state-store-mode = persistence
+```
+
+This mode uses [persistence](../persistence/event-sourcing.md) to store the active shards and active entities for each shard.
+By default, cluster sharding will use the journal and snapshot store plugin defined in `akka.persistence.journal.plugin` and 
+`akka.persistence.snapshot-store.plugin` respectively; to change this behaviour, you can use these configuration:
+
+```
+akka.cluster.sharding.journal-plugin-id = <plugin>
+akka.cluster.sharding.snapshot-plugin-id = <plugin>
+```
+
+#### Remember Entities Distributed Data Mode
+
+You can enable DData mode by setting these configuration:
+
+```
+akka.cluster.sharding.state-store-mode = ddata
+```
+
+To support restarting entities after a full cluster restart (non-rolling) the remember entities store 
+is persisted to disk by distributed data. This can be disabled if not needed:
+
+```
+akka.cluster.sharding.distributed-data.durable.keys = []
+```
+
+Possible reasons for disabling remember entity storage are:
+
+- No requirement for remembering entities after a full cluster shutdown
+- Running in an environment without access to disk between restarts e.g. Kubernetes without persistent volumes
+
+For supporting remembered entities in an environment without disk storage but with access to a database, use persistence mode instead.
+
+> [!NOTE]
+> Currently, Lightning.NET library, the storage solution used to store DData in disk, is having problem
+> deploying native library files in [Linux operating system operating in x64 and ARM platforms]
+> (https://github.com/CoreyKaylor/Lightning.NET/issues/141).
+> 
+> You will need to install LightningDB in your Linux distribution manually if you wanted to use the durable DData feature.
+
+
 ### Terminating Remembered Entities
 One complication that  `akka.cluster.sharding.remember-entities = true` introduces is that your sharded entity actors can no longer be terminated through the normal Akka.NET channels, i.e. `Context.Stop(Self)`, `PoisonPill.Instance`, and the like. This is because as part of the `remember-entities` contract - the sharding system is going to insist on keeping all remembered entities alive until explictily told to stop.
 
