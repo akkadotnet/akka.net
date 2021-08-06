@@ -520,7 +520,7 @@ namespace Akka.Remote
         /// <param name="rpath">The remote actor path.</param>
         /// <param name="deployment">The deployment included in this Props.</param>
         /// <returns>An <see cref="IInternalActorRef"/> instance.</returns>
-        protected virtual RemoteActorRef CreateRemoteRef(Props props, IInternalActorRef supervisor, Address localAddress, ActorPath rpath, Deploy deployment)
+        protected virtual IInternalActorRef CreateRemoteRef(Props props, IInternalActorRef supervisor, Address localAddress, ActorPath rpath, Deploy deployment)
         {
             return new RemoteActorRef(Transport, localAddress, rpath, supervisor, props, deployment);
         }
