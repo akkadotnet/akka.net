@@ -62,6 +62,8 @@ namespace Akka.Cluster.Sharding.Tests
             Assert.Equal(string.Empty, singletonConfig.GetString("role"));
             Assert.Equal(TimeSpan.FromSeconds(1), singletonConfig.GetTimeSpan("hand-over-retry-interval"));
             Assert.Equal(15, singletonConfig.GetInt("min-number-of-hand-over-retries"));
+            
+            Assert.Empty(config.GetStringList("distributed-data.durable.keys"));
         }
     }
 }
