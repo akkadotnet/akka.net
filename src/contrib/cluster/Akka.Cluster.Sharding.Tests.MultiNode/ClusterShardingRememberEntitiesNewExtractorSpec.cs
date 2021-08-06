@@ -58,6 +58,7 @@ namespace Akka.Cluster.Sharding.Tests
                         timeout = 5s
                     }}
                     akka.cluster.sharding.state-store-mode = ""{mode}""
+                    akka.cluster.sharding.distributed-data.durable.keys = [""shard-*""]
                     akka.cluster.sharding.distributed-data.durable.lmdb {{
                       dir = ""target/ClusterShardingMinMembersSpec/sharding-ddata""
                       map-size = 10000000
