@@ -4,6 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <Platforms>x64</Platforms> <!-- target x64 only due to LightningDb support -->
   </PropertyGroup>
  
   <ItemGroup>
