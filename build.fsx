@@ -494,7 +494,7 @@ Target "PublishMntr" (fun _ ->
     if not skipBuild.Value then
         let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
 
-        // Windows .NET 4.5.2
+        // Windows .NET Framework
         executableProjects |> Seq.iter (fun project ->
             DotNetCli.Restore
                 (fun p ->
@@ -503,7 +503,7 @@ Target "PublishMntr" (fun _ ->
                         AdditionalArgs = [sprintf "/p:VersionSuffix=%s" versionSuffix] })
         )
 
-        // Windows .NET 4.5.2
+        // Windows .NET Framework
         executableProjects |> Seq.iter (fun project ->
             DotNetCli.Publish
                 (fun p ->
@@ -511,6 +511,7 @@ Target "PublishMntr" (fun _ ->
                         Project = project
                         Configuration = configuration
                         Framework = testNetFrameworkVersion
+                        Runtime = "win-x64"
                         VersionSuffix = versionSuffix }))
 
         // Windows .NET 5
@@ -521,6 +522,7 @@ Target "PublishMntr" (fun _ ->
                         Project = project
                         Configuration = configuration
                         Framework = testNetVersion
+                        Runtime = "win-x64"
                         VersionSuffix = versionSuffix }))
 
         // Windows .NET Core
@@ -531,6 +533,7 @@ Target "PublishMntr" (fun _ ->
                         Project = project
                         Configuration = configuration
                         Framework = testNetCoreVersion
+                        Runtime = "win-x64"
                         VersionSuffix = versionSuffix }))
 )
 
