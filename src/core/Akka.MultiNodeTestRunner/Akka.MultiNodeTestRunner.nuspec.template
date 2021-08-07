@@ -15,8 +15,8 @@
     <tags>akka actors actor model Akka concurrency</tags>
   </metadata>
   <files>
-    <file src="bin\Release\net471\win-x64\publish\*.*" target="lib\net471\" />
-    <file src="bin\Release\netcoreapp3.1\win-x64\publish\*.*" target="lib\netcoreapp3.1\" />
-    <file src="bin\Release\net5.0\win-x64\publish\*.*" target="lib\net5.0\" />
+    <file src="bin\Release\net471\publish\*.*" target="lib\net471\" />
+    <file src="bin\Release\netcoreapp3.1\publish\*.*" target="lib\netcoreapp3.1\" />
+    <file src="bin\Release\net5.0\publish\*.*" target="lib\net5.0\" />
   </files>
 </package>
