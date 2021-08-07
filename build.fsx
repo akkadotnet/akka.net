@@ -349,7 +349,7 @@ Target "MultiNodeTests" (fun _ ->
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion @@ "win10-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion)
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -390,7 +390,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "win10-x64" @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion)
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -500,7 +500,7 @@ Target "PublishMntr" (fun _ ->
                 (fun p ->
                     { p with
                         Project = project
-                        AdditionalArgs = ["-r win10-x64"; sprintf "/p:VersionSuffix=%s" versionSuffix] })
+                        AdditionalArgs = [sprintf "/p:VersionSuffix=%s" versionSuffix] })
         )
 
         // Windows .NET 4.5.2
@@ -510,7 +510,6 @@ Target "PublishMntr" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        Runtime = "win10-x64"
                         Framework = testNetFrameworkVersion
                         VersionSuffix = versionSuffix }))
 
@@ -521,7 +520,6 @@ Target "PublishMntr" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        Runtime = "win10-x64"
                         Framework = testNetVersion
                         VersionSuffix = versionSuffix }))
 
@@ -532,7 +530,6 @@ Target "PublishMntr" (fun _ ->
                     { p with
                         Project = project
                         Configuration = configuration
-                        Runtime = "win10-x64"
                         Framework = testNetCoreVersion
                         VersionSuffix = versionSuffix }))
 )

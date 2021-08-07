@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>Akka.MultiNodeTestRunner</id>
-    <version>@version@</version>
+    <version>1.4.23</version>
     <title>Akka.MultiNodeTestRunner</title>
     <authors>Akka.NET Team</authors>
     <owners>Akka.NET Team</owners>

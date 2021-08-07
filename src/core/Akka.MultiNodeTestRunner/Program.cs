@@ -347,7 +347,8 @@ namespace Akka.MultiNodeTestRunner
                                         FileName = "Akka.NodeTestRunner.exe",
                                         UseShellExecute = false,
                                         RedirectStandardOutput = true,
-                                        Arguments = sbArguments.ToString()
+                                        Arguments = sbArguments.ToString(),
+                                        WorkingDirectory = Path.GetDirectoryName(assemblyPath)
                                     }
                                 };
 #endif
