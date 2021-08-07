@@ -3,10 +3,11 @@
     <Copyright>Copyright © 2013-2021 Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
     <VersionPrefix>1.4.23</VersionPrefix>
-    <PackageIconUrl>https://getakka.net/images/akkalogo.png</PackageIconUrl>
+    <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://github.com/akkadotnet/akka.net</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</PackageLicenseUrl>
     <NoWarn>$(NoWarn);CS1591;xUnit1013</NoWarn>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <PropertyGroup>
     <XunitVersion>2.4.1</XunitVersion>
@@ -29,11 +30,18 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
+    <RepoRoot>$([System.IO.Path]::GetDirectoryName($([MSBuild]::GetPathOfFileAbove('.gitignore', '$(MSBuildThisFileDirectory)'))))</RepoRoot>
+  </PropertyGroup>
+  <PropertyGroup>
     <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(RepoRoot)\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />
+    <None Include="$(RepoRoot)\README.md" Pack="true" Visible="false" PackagePath="\" />
   </ItemGroup>
   <PropertyGroup>
     <!--<PublishRepositoryUrl>true</PublishRepositoryUrl>-->
