@@ -1,10 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\..\common.props" />
+    <Import Project="..\..\..\common.props" />
+
+    <!-- Needed to resolve https://github.com/akkadotnet/akka.net/pull/5180 and https://github.com/akkadotnet/akka.net/issues/5174 -->
+    <Import Project="../lib-hack/LightningDB.targets" />
   
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests.MultiNode</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
-    <Platforms>x64</Platforms> <!-- target x64 only due to LightningDb support -->
   </PropertyGroup>
  
   <ItemGroup>
@@ -19,10 +21,6 @@
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
