@@ -22,4 +22,9 @@
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="../lib-hack/LightningDB.targets" Pack="false" PackagePath="build" />
+  </ItemGroup>
+
+
 </Project>
