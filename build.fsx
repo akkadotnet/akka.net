@@ -349,7 +349,7 @@ Target "MultiNodeTests" (fun _ ->
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion)
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion  @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -390,7 +390,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion)
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "publish")
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -732,7 +732,7 @@ Target "RunTestsNetCoreFull" DoNothing
 
 // build dependencies
 "Clean" ==> "AssemblyInfo" ==> "Build"
-"Build" ==> "PublishMntr" ==> "BuildRelease"
+"Build" ==> "BuildRelease"
 "ComputeIncrementalChanges" ==> "Build" // compute incremental changes
 
 // tests dependencies
@@ -741,9 +741,9 @@ Target "RunTestsNetCoreFull" DoNothing
 "Build" ==> "RunTestsNet"
 "Build" ==> "NBench"
 
-"BuildRelease" ==> "MultiNodeTestsNetCore"
-"BuildRelease" ==> "MultiNodeTestsNet"
-"BuildRelease" ==> "MultiNodeTests"
+"BuildRelease" ==> "PublishMntr" ==> "MultiNodeTestsNetCore"
+"BuildRelease" ==> "PublishMntr" ==> "MultiNodeTestsNet"
+"BuildRelease" ==> "PublishMntr" ==> "MultiNodeTests"
 
 // nuget dependencies
 "BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
