@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Pattern;
+using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 
 namespace Akka.Streams.Dsl
@@ -168,7 +169,7 @@ namespace Akka.Streams.Dsl
         public Func<Flow<TIn, TOut, TMat>> FlowFactory { get; }
         public RestartSettings Settings { get; }
         public bool OnlyOnFailures { get; }
-
+        
         public RestartWithBackoffFlow(
             Func<Flow<TIn, TOut, TMat>> flowFactory,
             RestartSettings settings,
@@ -186,17 +187,21 @@ namespace Akka.Streams.Dsl
 
         public override FlowShape<TIn, TOut> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, "Flow");
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes, "Flow");
 
         private sealed class Logic : RestartWithBackoffLogic<FlowShape<TIn, TOut>, TIn, TOut>
         {
             private readonly RestartWithBackoffFlow<TIn, TOut, TMat> _stage;
+            private readonly Attributes _inheritedAttributes;
             private Tuple<SubSourceOutlet<TIn>, SubSinkInlet<TOut>> _activeOutIn;
-
-            public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, string name)
+            private TimeSpan _delay;
+            
+            public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, Attributes inheritedAttributes, string name)
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
             {
+                _delay = _inheritedAttributes.GetAttribute<Delay>(new Delay(TimeSpan.FromMilliseconds(50))).Duration;
                 _stage = stage;
+                _inheritedAttributes = inheritedAttributes;
                 Backoff();
             }
 
@@ -205,15 +210,19 @@ namespace Akka.Streams.Dsl
                 var sourceOut = CreateSubOutlet(_stage.In);
                 var sinkIn = CreateSubInlet(_stage.Out);
                 
-                Source.FromGraph(sourceOut.Source)
+                var graph = Source.FromGraph(sourceOut.Source)
+                    //temp fix becaues the proper fix would be to have a concept of cause of cancellation. See https://github.com/akka/akka/pull/23909
+                    .Via(DelayCancellation<TIn>(_delay))
                     .Via(_stage.FlowFactory())
-                    .RunWith(sinkIn.Sink, SubFusingMaterializer);
+                    .To(sinkIn.Sink);
+                SubFusingMaterializer.Materialize(graph, _inheritedAttributes);
+               
                 if (IsAvailable(_stage.Out))
                     sinkIn.Pull();
 
                 _activeOutIn = Tuple.Create(sourceOut, sinkIn);
             }
-
+             
             protected override void Backoff()
             {
                 SetHandler(_stage.In, () =>
@@ -224,7 +233,7 @@ namespace Akka.Streams.Dsl
                 {
                     // do nothing
                 });
-
+                
                 // We need to ensure that the other end of the sub flow is also completed, so that we don't
                 // receive any callbacks from it.
                 if (_activeOutIn != null)
@@ -239,6 +248,8 @@ namespace Akka.Streams.Dsl
                     _activeOutIn = null;
                 }
             }
+            
+            private Flow<T, T, NotUsed> DelayCancellation<T>(TimeSpan duration) => Flow.FromGraph(new DelayCancellationStage<T>(duration, null));
         }
     }
 
@@ -250,7 +261,7 @@ namespace Akka.Streams.Dsl
         private readonly string _name;
         private readonly RestartSettings _settings;
         private readonly bool _onlyOnFailures;
-
+        
         protected Inlet<TIn> In { get; }
         protected Outlet<TOut> Out { get; }
 
@@ -407,6 +418,92 @@ namespace Akka.Streams.Dsl
         public override void PreStart() => StartGraph();
     }
 
+    /// <summary>
+    /// Temporary attribute that can override the time a [[RestartWithBackoffFlow]] waits
+    /// for a failure before cancelling.
+    /// See https://github.com/akka/akka/issues/24529
+    /// Should be removed if/when cancellation can include a cause.
+    /// </summary>
+    internal class Delay : Attributes.IAttribute, IEquatable<Delay>
+    {
+        /// <summary>
+        /// Delay duration
+        /// </summary>
+        public readonly TimeSpan Duration;
+
+        public Delay(TimeSpan duration)
+        {
+            Duration = duration;
+        }
+            
+        /// <inheritdoc/>
+        public bool Equals(Delay other) => !ReferenceEquals(other, null) && Equals(Duration, other.Duration);
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => obj is Delay && Equals((Delay)obj);
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => Duration.GetHashCode();
+
+        /// <inheritdoc/>
+        public override string ToString() => $"Duration({Duration})";
+    }
+    
+    /// <summary>
+    /// Returns a flow that is almost identical but delays propagation of cancellation from downstream to upstream.
+    /// Once the down stream is finished calls to onPush are ignored
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    internal class DelayCancellationStage<T> : SimpleLinearGraphStage<T>
+    {
+        private readonly TimeSpan _delay;
+
+        public DelayCancellationStage(TimeSpan delay, string name = null) : base(name)
+        {
+            _delay = delay;
+        }
+        
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes);
+        
+        private sealed class Logic : TimerGraphStageLogic
+        {
+            private readonly DelayCancellationStage<T> _stage;
+            
+            public Logic(DelayCancellationStage<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
+            {
+                _stage = stage;
+                
+                SetHandler(stage.Inlet, onPush: () => Push(stage.Outlet, Grab(stage.Inlet)));
+
+                SetHandler(stage.Outlet, onPull: () => Pull(stage.Inlet), onDownstreamFinish: OnDownStreamFinished );
+            }
+            
+            /// <summary>
+            /// We should really. port the Cause parameter functionality for the OnDownStreamFinished delegate
+            /// </summary>
+            private void OnDownStreamFinished()
+            {
+                //_cause = new Option<Exception>(/*cause*/);
+                ScheduleOnce("CompleteState", _stage._delay);
+                SetHandler(_stage.Inlet, onPush:DoNothing);
+            }
+
+            protected internal override void OnTimer(object timerKey)
+            {
+                Log.Debug($"Stage was cancelled after delay of {_stage._delay}");
+                CompleteStage();
+                
+                // this code will replace the CompleteStage() call once we port the Exception Cause parameter for the OnDownStreamFinished delegate
+                /*if(_cause != null)
+                    FailStage(_cause.Value); //<-- is this the same as cancelStage ?
+                else
+                {
+                    throw new IllegalStateException("Timer hitting without first getting a cancel cannot happen");
+                }*/
+            }
+        }
+    }
+    
     internal sealed class Deadline
     {
         public Deadline(TimeSpan time) => Time = time;
