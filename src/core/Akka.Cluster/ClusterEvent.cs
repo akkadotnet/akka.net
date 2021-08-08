@@ -994,7 +994,7 @@ namespace Akka.Cluster
     internal sealed class ClusterDomainEventPublisher : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly UniqueAddress _selfUniqueAddress;
-        private readonly MembershipState _emptyMembershipState = new MembershipState(Gossip.Empty, Cluster.Get(Context.System).SelfUniqueAddress);
+        private readonly MembershipState _emptyMembershipState;
         private MembershipState _membershipState;
 
         /// <summary>
@@ -1003,6 +1003,7 @@ namespace Akka.Cluster
         public ClusterDomainEventPublisher(UniqueAddress selfUniqueAddress)
         {
             _selfUniqueAddress = selfUniqueAddress;
+            _emptyMembershipState = new MembershipState(Gossip.Empty, selfUniqueAddress);
             _eventStream = Context.System.EventStream;
             _membershipState = _emptyMembershipState;
 

@@ -1083,7 +1083,6 @@ namespace Akka.Cluster
 
         private void AddCoordinatedLeave()
         {
-            var sys = Context.System;
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () =>
             {
@@ -1094,7 +1093,7 @@ namespace Akka.Cluster
             });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
-                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
                     return TaskEx.Completed;
                 else
                 {
