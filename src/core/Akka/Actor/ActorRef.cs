@@ -146,6 +146,15 @@ namespace Akka.Actor
                 }
             }
         }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="message">TBD</param>
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            base.SendSystemMessage(message);
+        }
     }
 
 
