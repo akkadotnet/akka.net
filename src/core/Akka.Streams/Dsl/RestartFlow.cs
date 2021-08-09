@@ -199,7 +199,7 @@ namespace Akka.Streams.Dsl
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, Attributes inheritedAttributes, string name)
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
             {
-                _delay = _inheritedAttributes.GetAttribute<Delay>(new Delay(TimeSpan.FromMilliseconds(50))).Duration;
+                _delay = _inheritedAttributes.GetAttribute<RestartWithBackoffFlow.Delay>(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
                 _stage = stage;
                 _inheritedAttributes = inheritedAttributes;
                 Backoff();
@@ -212,6 +212,7 @@ namespace Akka.Streams.Dsl
                 
                 var graph = Source.FromGraph(sourceOut.Source)
                     //temp fix becaues the proper fix would be to have a concept of cause of cancellation. See https://github.com/akka/akka/pull/23909
+                    //TODO register issue to track this
                     .Via(DelayCancellation<TIn>(_delay))
                     .Via(_stage.FlowFactory())
                     .To(sinkIn.Sink);
@@ -417,14 +418,15 @@ namespace Akka.Streams.Dsl
         /// </summary>
         public override void PreStart() => StartGraph();
     }
-
+    
+    public class RestartWithBackoffFlow {
     /// <summary>
     /// Temporary attribute that can override the time a [[RestartWithBackoffFlow]] waits
     /// for a failure before cancelling.
     /// See https://github.com/akka/akka/issues/24529
     /// Should be removed if/when cancellation can include a cause.
     /// </summary>
-    internal class Delay : Attributes.IAttribute, IEquatable<Delay>
+    public class Delay : Attributes.IAttribute, IEquatable<Delay>
     {
         /// <summary>
         /// Delay duration
@@ -447,6 +449,7 @@ namespace Akka.Streams.Dsl
 
         /// <inheritdoc/>
         public override string ToString() => $"Duration({Duration})";
+    }
     }
     
     /// <summary>
