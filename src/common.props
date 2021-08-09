@@ -30,9 +30,6 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <RepoRoot>$([System.IO.Path]::GetDirectoryName($([MSBuild]::GetPathOfFileAbove('.gitignore', '$(MSBuildThisFileDirectory)'))))</RepoRoot>
-  </PropertyGroup>
-  <PropertyGroup>
     <PackageReleaseNotes>Placeholder for nightlies**</PackageReleaseNotes>
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
@@ -40,8 +37,8 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(RepoRoot)\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />
-    <None Include="$(RepoRoot)\README.md" Pack="true" Visible="false" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)\..\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)\..\README.md" Pack="true" Visible="false" PackagePath="\" />
   </ItemGroup>
   <PropertyGroup>
     <!--<PublishRepositoryUrl>true</PublishRepositoryUrl>-->
@@ -52,4 +49,8 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+    <Target Name="TestValue" AfterTargets="build">
+    <Message Text="@(none)">
+    </Message>
+  </Target>
 </Project>
