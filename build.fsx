@@ -360,7 +360,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
         let projects =
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
             rawProjects |> Seq.choose filterProjects
 
         let multiNodeTestAssemblies =
@@ -401,7 +401,7 @@ Target "MultiNodeTestsNet" (fun _ ->
         let projects =
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.MultiNode.csproj"
-                                | _ -> !! "./src/**/*.Tests.MulitNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                | _ -> !! "./src/**/*.Tests.MultiNode.csproj" // if you need to filter specs for Linux vs. Windows, do it here
             rawProjects |> Seq.choose filterProjects
 
         let multiNodeTestAssemblies =
