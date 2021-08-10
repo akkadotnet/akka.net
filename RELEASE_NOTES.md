@@ -1,5 +1,19 @@
-#### 1.4.23 August 05 2021 ####
+#### 1.4.24 August 09 2021 ####
 **Placeholder for nightlies**
+
+#### 1.4.23 August 09 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.23 is designed to patch an issue that occurs on Linux machines using Akka.Cluster.Sharding with `akka.cluster.sharding.state-store-mode=ddata` and `akka.cluster.sharding.remember-entities=on`: "[System.DllNotFoundException: Unable to load shared library 'lmdb' or one of its dependencies](https://github.com/akkadotnet/akka.net/issues/5174)"
+
+In [Akka.NET v1.4.21 we added built-in support for Akka.DistributedData.LightningDb](https://github.com/akkadotnet/akka.net/releases/tag/1.4.21) for use with the `remember-entities` setting, but we never received any reports about this issue until shortly after v1.4.22 was released. Fundamentally, the problem was that our downstream dependency, Lightning.NET, doesn't include any of the necessary Linux native binaries in their distributions currently. So in the meantime, we've published our own "vendored" distribution of Lightning.NET to NuGet until a new official one is released that includes these binaries.
+
+There are some other small [fixes included in Akka.NET v1.4.23 and you can read about them here](https://github.com/akkadotnet/akka.net/milestone/54).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 136 | 2803 | Aaron Stannard |
+| 2 | 61 | 3 | Gregorius Soedharmo |
 
 #### 1.4.22 August 05 2021 ####
 **Maintenance Release for Akka.NET 1.4**
