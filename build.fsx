@@ -310,6 +310,12 @@ Target "RunTestsNet" (fun _ ->
         projects |> Seq.iter (runSingleProject)
 )
 
+let mntrRuntime = 
+    match isWindows with
+    | true -> "win-x64"
+    | false -> "linux-x64"
+
+
 Target "MultiNodeTests" (fun _ ->
     if not skipBuild.Value then
         let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.exe" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetFrameworkVersion)
@@ -349,7 +355,7 @@ Target "MultiNodeTests" (fun _ ->
 Target "MultiNodeTestsNetCore" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion  @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetCoreVersion  @@ mntrRuntime)
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -390,7 +396,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
 Target "MultiNodeTestsNet" (fun _ ->
     if not skipBuild.Value then
         setEnvironVar "AKKA_CLUSTER_ASSERT" "on" // needed to enable assert invariants for Akka.Cluster
-        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ "publish")
+        let multiNodeTestPath = findToolInSubPath "Akka.MultiNodeTestRunner.dll" (currentDirectory @@ "src" @@ "core" @@ "Akka.MultiNodeTestRunner" @@ "bin" @@ "Release" @@ testNetVersion @@ mntrRuntime)
 
         let projects =
             let rawProjects = match (isWindows) with
@@ -493,6 +499,8 @@ Target "CreateNuget" (fun _ ->
 Target "PublishMntr" (fun _ ->
     if not skipBuild.Value then
         let executableProjects = !! "./src/**/Akka.MultiNodeTestRunner.csproj"
+        
+        
 
         // Windows .NET Framework
         executableProjects |> Seq.iter (fun project ->
@@ -511,7 +519,7 @@ Target "PublishMntr" (fun _ ->
                         Project = project
                         Configuration = configuration
                         Framework = testNetFrameworkVersion
-                        Runtime = "win-x64"
+                        Runtime = mntrRuntime
                         VersionSuffix = versionSuffix }))
 
         // Windows .NET 5
@@ -522,7 +530,7 @@ Target "PublishMntr" (fun _ ->
                         Project = project
                         Configuration = configuration
                         Framework = testNetVersion
-                        Runtime = "win-x64"
+                        Runtime = mntrRuntime
                         VersionSuffix = versionSuffix }))
 
         // Windows .NET Core
@@ -533,7 +541,7 @@ Target "PublishMntr" (fun _ ->
                         Project = project
                         Configuration = configuration
                         Framework = testNetCoreVersion
-                        Runtime = "win-x64"
+                        Runtime = mntrRuntime
                         VersionSuffix = versionSuffix }))
 )
 
