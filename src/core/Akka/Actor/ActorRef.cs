@@ -134,6 +134,10 @@ namespace Akka.Actor
                     {
                         _result.TrySetResult(t);
                     }
+                    else if (message is Failure f)
+                    {
+                        _result.TrySetException(f.Exception ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    }
                     else
                     {
                         _result.TrySetException(new ArgumentException(
@@ -142,7 +146,7 @@ namespace Akka.Actor
                 }
             }
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>
