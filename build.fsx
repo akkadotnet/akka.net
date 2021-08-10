@@ -757,7 +757,7 @@ Target "RunTestsNetCoreFull" DoNothing
 "BuildRelease" ==> "PublishMntr" ==> "MultiNodeTests"
 
 // nuget dependencies
-"BuildRelease" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
+"BuildRelease" ==> "PublishMntr" ==> "CreateMntrNuget" ==> "CreateNuget" ==> "PublishNuget" ==> "Nuget"
 
 // docs
 "BuildRelease" ==> "Docfx"
