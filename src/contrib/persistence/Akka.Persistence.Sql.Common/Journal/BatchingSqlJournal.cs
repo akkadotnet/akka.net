@@ -236,6 +236,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         public string DefaultSerializer { get; }
 
+        /// <summary>
+        /// The fully qualified name of the type that should be used as timestamp provider.
+        /// </summary>
         public string TimestampProviderTypeName { get; }
 
         /// <summary>
@@ -532,6 +535,9 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// </summary>
         protected readonly bool CanPublish;
 
+        /// <summary>
+        /// The timestamp provider that will be used for the timestamp column when writing messages to the database.
+        /// </summary>
         protected ITimestampProvider TimestampProvider { get; }
 
         /// <summary>
