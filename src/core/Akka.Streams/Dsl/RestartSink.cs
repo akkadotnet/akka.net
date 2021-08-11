@@ -109,23 +109,25 @@ namespace Akka.Streams.Dsl
 
         public override SinkShape<T> Shape { get; }
 
-        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, "Sink");
+        protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this, inheritedAttributes,"Sink");
 
         private sealed class Logic : RestartWithBackoffLogic<SinkShape<T>, T, T>
         {
             private readonly RestartWithBackoffSink<T, TMat> _stage;
+            private readonly Attributes _inheritedAttributes;
 
-            public Logic(RestartWithBackoffSink<T, TMat> stage, string name)
+            public Logic(RestartWithBackoffSink<T, TMat> stage, Attributes inheritedAttributes, string name)
                 : base(name, stage.Shape, stage.In, null, stage.Settings, onlyOnFailures: false)
             {
                 _stage = stage;
+                _inheritedAttributes = inheritedAttributes;
                 Backoff();
             }
 
             protected override void StartGraph()
             {
                 var sourceOut = CreateSubOutlet(_stage.In);
-                Source.FromGraph(sourceOut.Source).RunWith(_stage.SinkFactory(), SubFusingMaterializer);
+                SubFusingMaterializer.Materialize(Source.FromGraph(sourceOut.Source).To(_stage.SinkFactory()), _inheritedAttributes);
             }
 
             protected override void Backoff() => SetHandler(_stage.In, () =>
