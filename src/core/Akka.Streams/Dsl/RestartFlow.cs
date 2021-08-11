@@ -199,9 +199,9 @@ namespace Akka.Streams.Dsl
             public Logic(RestartWithBackoffFlow<TIn, TOut, TMat> stage, Attributes inheritedAttributes, string name)
                 : base(name, stage.Shape, stage.In, stage.Out, stage.Settings, stage.OnlyOnFailures)
             {
+                _inheritedAttributes = inheritedAttributes;
                 _delay = _inheritedAttributes.GetAttribute<RestartWithBackoffFlow.Delay>(new RestartWithBackoffFlow.Delay(TimeSpan.FromMilliseconds(50))).Duration;
                 _stage = stage;
-                _inheritedAttributes = inheritedAttributes;
                 Backoff();
             }
 
