@@ -57,7 +57,7 @@ module Actors =
                     let serializer = context.System.Serialization.FindSerializerForType typeof<'Message>
                     serializer.FromBinary(bytes, typeof<'Message>) :?> 'Message
                 | _ -> raise (InvalidCastException("Tried to cast object to " + typeof<'Message>.ToString()))
-
+    
     /// <summary>
     /// Unidirectional send operator. 
     /// Sends a message object directly to actor tracked by actorRef. 
