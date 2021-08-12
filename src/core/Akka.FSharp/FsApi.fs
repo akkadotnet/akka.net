@@ -35,7 +35,7 @@ module Serialization =
         override __.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
         
                         
-    let internal exprSerializationSupport (system: ActorSystem) =
+    let exprSerializationSupport (system: ActorSystem) =
         let serializer = ExprSerializer(system :?> ExtendedActorSystem)
         system.Serialization.AddSerializer("Expr serializer", serializer)
         system.Serialization.AddSerializationMap(typeof<Expr>, serializer)

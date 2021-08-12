@@ -1,10 +1,12 @@
 ﻿module Akka.FSharp.Tests.RemoteSpecs
+
 open Akka.Actor
 open Xunit
 open Xunit.Abstractions
 open Akka.FSharp
 open Akka.Remote
 open Akka.TestKit
+open Serialization
 
 let remoteConfig port = 
         $"""
@@ -37,6 +39,8 @@ type TestUnion2 =
 
 type RemoteSpecs(output:ITestOutputHelper) as this =
     inherit AkkaSpec((remoteConfig 0), output)
+    
+    do exprSerializationSupport this.Sys
     
     /// Retrieve the bound address used by Sys
     member this.GetAddress =
