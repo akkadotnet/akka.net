@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -229,8 +230,16 @@ namespace Akka.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public override byte[] ToBinary(object obj)
         {
-            string data = JsonConvert.SerializeObject(obj, Formatting.None, Settings);
-            byte[] bytes = Encoding.UTF8.GetBytes(data);
+            var sb = new StringBuilder(256); // TODO: pool these
+            var sw = new StringWriter(sb, CultureInfo.InvariantCulture);
+            using (var jsonWriter = new JsonTextWriter(sw))
+            {
+                jsonWriter.Formatting = Formatting.None;
+                _serializer.Serialize(jsonWriter, obj);
+            }
+
+            var data = sw.ToString();
+            var bytes = Encoding.UTF8.GetBytes(data);
             return bytes;
         }
 
@@ -242,15 +251,17 @@ namespace Akka.Serialization
         /// <returns>The object contained in the array</returns>
         public override object FromBinary(byte[] bytes, Type type)
         {
-            string data = Encoding.UTF8.GetString(bytes);
-            object res = JsonConvert.DeserializeObject(data, Settings);
-            return TranslateSurrogate(res, this, type);
+            var data = Encoding.UTF8.GetString(bytes);
+            using (var jsonReader = new JsonTextReader(new StringReader(data)))
+            {
+                var res = _serializer.Deserialize(jsonReader);
+                return TranslateSurrogate(res, this, type);
+            }
         }
 
         private static object TranslateSurrogate(object deserializedValue, NewtonSoftJsonSerializer parent, Type type)
         {
-            var j = deserializedValue as JObject;
-            if (j != null)
+            if (deserializedValue is JObject j)
             {
                 //The JObject represents a special akka.net wrapper for primitives (int,float,decimal) to preserve correct type when deserializing
                 if (j["$"] != null)
@@ -262,10 +273,9 @@ namespace Akka.Serialization
                 //The JObject is not of our concern, let Json.NET deserialize it.
                 return j.ToObject(type, parent._serializer);
             }
-            var surrogate = deserializedValue as ISurrogate;
 
             //The deserialized object is a surrogate, unwrap it
-            if (surrogate != null)
+            if (deserializedValue is ISurrogate surrogate)
             {
                 return surrogate.FromSurrogate(parent.system);
             }
@@ -356,10 +366,8 @@ namespace Akka.Serialization
                 }
                 else
                 {
-                    var value1 = value as ISurrogated;
-                    if (value1 != null)
+                    if (value is ISurrogated surrogated)
                     {
-                        var surrogated = value1;
                         var surrogate = surrogated.ToSurrogate(_parent.system);
                         serializer.Serialize(writer, surrogate);
                     }
@@ -372,12 +380,12 @@ namespace Akka.Serialization
 
             private object GetString(object value)
             {
-                if (value is int)
-                    return "I" + ((int)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is float)
-                    return "F" + ((float)value).ToString(NumberFormatInfo.InvariantInfo);
-                if (value is decimal)
-                    return "M" + ((decimal)value).ToString(NumberFormatInfo.InvariantInfo);
+                if (value is int i)
+                    return "I" + i.ToString(NumberFormatInfo.InvariantInfo);
+                if (value is float f)
+                    return "F" + f.ToString(NumberFormatInfo.InvariantInfo);
+                if (value is decimal value1)
+                    return "M" + value1.ToString(NumberFormatInfo.InvariantInfo);
                 throw new NotSupportedException();
             }
         }
