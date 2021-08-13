@@ -12,7 +12,7 @@ open Akka.Actor
 open System
 open Xunit
 
-
+#if !CORECLR // not supported on .NET Core / .NET 5
 [<Fact>]
 let ``configuration loader should load data from app.config`` () =
     let config = Configuration.load()
@@ -20,6 +20,7 @@ let ``configuration loader should load data from app.config`` () =
     |> equals true
     config.GetInt "akka.test.value"
     |> equals 10
+#endif
 
 [<Fact>]
 let ``can serialize expression decider`` () =
