@@ -4,6 +4,7 @@ open System
 open Akka.Actor
 open Akka.Configuration
 open Akka.Serialization
+open Newtonsoft.Json.Converters
 open Xunit
 open Xunit.Abstractions
 open Akka.FSharp

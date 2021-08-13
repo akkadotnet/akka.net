@@ -3,6 +3,9 @@
 open Akka.Configuration
 open Akka.Serialization
 open Akka.TestKit
+open Newtonsoft.Json
+open Newtonsoft.Json
+open Newtonsoft.Json.Converters
 open Xunit
 open Xunit.Abstractions
 
@@ -53,5 +56,17 @@ type SerializationSpecs(output:ITestOutputHelper) as this =
         let s = this.Sys.Serialization.FindSerializerFor t
         let manifest = Akka.Serialization.Serialization.ManifestFor(s, t)
         Assert.True(manifest.Length > 0)
+        
+        
+    [<Fact>]
+    member _.``JSON.NET must serialize DUs`` () =
+        let du = C("a-11", B(11, "a-12"))
+        let settings = new JsonSerializerSettings()
+        settings.Converters.Add(new DiscriminatedUnionConverter())
+        
+        let serialized = JsonConvert.SerializeObject(du, settings)
+        let deserialized = JsonConvert.DeserializeObject(serialized, settings)
+        
+        Assert.Equal(du :> obj, deserialized)
         
     
