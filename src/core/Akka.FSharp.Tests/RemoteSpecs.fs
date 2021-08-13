@@ -2,6 +2,8 @@
 
 open System
 open Akka.Actor
+open Akka.Configuration
+open Akka.Serialization
 open Xunit
 open Xunit.Abstractions
 open Akka.FSharp
@@ -37,6 +39,7 @@ type TestUnion =
 type TestUnion2 = 
     | C of string * TestUnion
     | D of int
+    
 type Record1 = {Name:string;Age:int;}
 
 type Msg =
@@ -66,15 +69,10 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
                    | _ -> mailbox.Unhandled msg) @>
                 [SpawnOption.Deploy (Akka.Actor.Deploy(RemoteScope(this.GetAddress)))]
         
-        // test record serialization too
-        let testFire = { Name = "aaron"; Age = 30 }
-        aref.Tell(testFire, this.TestActor)
-        
         let msg = C("a-11", B(11, "a-12"))
         aref.Tell(msg, this.TestActor)
          
         // assert
-        this.ExpectMsg(testFire) |> ignore
         this.ExpectMsg(msg) |> ignore
         
     [<Fact>]
@@ -106,6 +104,4 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
         
         // assert
         this.ExpectMsg(msg) |> ignore
-        
-        
-
+       
