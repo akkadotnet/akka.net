@@ -1,5 +1,6 @@
 ﻿module Akka.FSharp.Tests.RemoteSpecs
 
+open System
 open Akka.Actor
 open Xunit
 open Xunit.Abstractions
@@ -36,6 +37,10 @@ type TestUnion =
 type TestUnion2 = 
     | C of string * TestUnion
     | D of int
+type Record1 = {Name:string;Age:int;}
+
+type Msg =
+    | R of Record1
 
 type RemoteSpecs(output:ITestOutputHelper) as this =
     inherit AkkaSpec((remoteConfig 0), output)
@@ -60,12 +65,47 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
                    | C("a-11", B(11, "a-12")) -> mailbox.Sender() <! msg
                    | _ -> mailbox.Unhandled msg) @>
                 [SpawnOption.Deploy (Akka.Actor.Deploy(RemoteScope(this.GetAddress)))]
-                
+        
+        // test record serialization too
+        let testFire = { Name = "aaron"; Age = 30 }
+        aref.Tell(testFire, this.TestActor)
+        
         let msg = C("a-11", B(11, "a-12"))
         aref.Tell(msg, this.TestActor)
          
         // assert
-        this.ExpectMsg(msg)
+        this.ExpectMsg(testFire) |> ignore
+        this.ExpectMsg(msg) |> ignore
+        
+    [<Fact>]
+    member _.``can serialize and deserialize discriminated F# records over remote nodes using default serializer`` () =
+        
+        // arrange
+        use clientSys = System.create "clientSys" (remoteConfig 0)
+        let addr2 = getAddress clientSys
+        
+        // act
+        let aref = 
+            spawne clientSys "a-1" <@ actorOf2 (fun mailbox (msg:obj) -> 
+                   match msg with
+                   | :? Record1 as r -> mailbox.Log.Value.Info("Received message {0}", r)
+                                        mailbox.Sender() <! r
+                   | _ ->  mailbox.Unhandled msg) @>
+                [SpawnOption.Deploy(Deploy.None)]
+        
+        let msg = { Name = "aaron"; Age = 30 }
+        
+        let selection = this.Sys.ActorSelection(new RootActorPath(addr2) / "user" / "a-1")
+        let remoteRef =
+            async {
+                let! rRef = selection.ResolveOne this.RemainingOrDefault |> Async.AwaitTask
+                return rRef
+             } |> Async.RunSynchronously       
+        
+        remoteRef.Tell(msg, this.TestActor)
+        
+        // assert
+        this.ExpectMsg(msg) |> ignore
         
         
 
