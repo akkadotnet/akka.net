@@ -53,9 +53,10 @@ type SerializationSpecs(output:ITestOutputHelper) as this =
     [<MemberData(nameof(SerializationSpecs.FSharpTypes))>]
     member _.``Must verify serialization of F#-specific types`` (t:obj) =
         this.VerifySerialization t
-        let s = this.Sys.Serialization.FindSerializerFor t
-        let manifest = Akka.Serialization.Serialization.ManifestFor(s, t)
-        Assert.True(manifest.Length > 0)
+        // uncomment the section below when experimenting with IncludeManifest = true on the Newtonsoft.Json serializer
+//        let s = this.Sys.Serialization.FindSerializerFor t
+//        let manifest = Akka.Serialization.Serialization.ManifestFor(s, t)
+//        Assert.True(manifest.Length > 0)
         
         
     [<Fact>]
