@@ -59,7 +59,7 @@ type SerializationSpecs(output:ITestOutputHelper) as this =
 //        Assert.True(manifest.Length > 0)
         
         
-    [<Fact>]
+    [<Fact(Skip="JSON.NET really does not support even basic DU serialization")>]
     member _.``JSON.NET must serialize DUs`` () =
         let du = C("a-11", B(11, "a-12"))
         let settings = new JsonSerializerSettings()
