@@ -6,7 +6,6 @@
     <AssemblyTitle>Akka.FSharp.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <IsPackable>false</IsPackable>
-    <NoWarn></NoWarn> 
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +19,8 @@
   <ItemGroup>
     <Content Include="App.config" />
     <Compile Include="SerializationSpecs.fs" />    
-    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
+    <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />    
+    <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
     <ProjectReference Include="..\Akka.FSharp\Akka.FSharp.fsproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />

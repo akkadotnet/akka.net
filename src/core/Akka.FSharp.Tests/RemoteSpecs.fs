@@ -18,6 +18,12 @@ let remoteConfig port =
             actor {{
                 ask-timeout = 5s
                 provider = remote
+                serializers {{
+                  hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+                }}
+                serialization-bindings {{
+                  "System.Object" = hyperion
+                }}
             }}
             remote {{
                 dot-netty.tcp {{
@@ -56,7 +62,7 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
         getAddress this.Sys
         
     [<Fact>]
-    member _.``can serialize and deserialize discriminated unions over remote nodes using default serializer`` () =
+    member _.``can serialize and deserialize F# discriminated unions over remote nodes using Hyperion serializer`` () =
         
         // arrange
         use clientSys = System.create "clientSys" (remoteConfig 0)
@@ -86,7 +92,7 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
         this.ExpectMsg(msg) |> ignore
         
     [<Fact>]
-    member _.``can serialize and deserialize F# records over remote nodes using default serializer`` () =
+    member _.``can serialize and deserialize F# records over remote nodes using Hyperion serializer`` () =
         
         // arrange
         use clientSys = System.create "clientSys" (remoteConfig 0)
