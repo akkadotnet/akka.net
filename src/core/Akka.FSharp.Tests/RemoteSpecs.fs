@@ -60,6 +60,7 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
         // arrange
         use clientSys = System.create "clientSys" (remoteConfig 0)
         let addr2 = getAddress clientSys
+        this.InitializeLogger(clientSys) // setup XUnit output tracking in client system
         
         // act
         let aref = 
@@ -67,16 +68,24 @@ type RemoteSpecs(output:ITestOutputHelper) as this =
                    match msg with
                    | C("a-11", B(11, "a-12")) -> mailbox.Sender() <! msg
                    | _ -> mailbox.Unhandled msg) @>
-                [SpawnOption.Deploy (Akka.Actor.Deploy(RemoteScope(this.GetAddress)))]
+                [SpawnOption.Deploy Deploy.None]
         
         let msg = C("a-11", B(11, "a-12"))
-        aref.Tell(msg, this.TestActor)
+        
+        let selection = this.Sys.ActorSelection(new RootActorPath(addr2) / "user" / "a-1")
+        let remoteRef =
+            async {
+                let! rRef = selection.ResolveOne this.RemainingOrDefault |> Async.AwaitTask
+                return rRef
+             } |> Async.RunSynchronously       
+        
+        remoteRef.Tell(msg, this.TestActor)
          
         // assert
         this.ExpectMsg(msg) |> ignore
         
     [<Fact>]
-    member _.``can serialize and deserialize discriminated F# records over remote nodes using default serializer`` () =
+    member _.``can serialize and deserialize F# records over remote nodes using default serializer`` () =
         
         // arrange
         use clientSys = System.create "clientSys" (remoteConfig 0)
