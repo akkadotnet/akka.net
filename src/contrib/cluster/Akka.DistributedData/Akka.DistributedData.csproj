@@ -14,9 +14,9 @@
     <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
-  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Hyperion" Version="$(HyperionVersion)" />
+  </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

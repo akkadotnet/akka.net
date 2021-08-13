@@ -18,7 +18,7 @@ namespace Akka.DependencyInjection.Tests
 {
     public class ServiceProviderSetupSpecs : AkkaSpec, IClassFixture<AkkaDiFixture>
     {
-        public ServiceProviderSetupSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(ServiceProviderSetup.Create(fixture.Provider)
+        public ServiceProviderSetupSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(DependencyResolverSetup.Create(fixture.Provider)
             .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), output)
         {
 
@@ -27,29 +27,29 @@ namespace Akka.DependencyInjection.Tests
         [Fact(DisplayName = "DI: Should access Microsoft.Extensions.DependencyInjection.IServiceProvider from ServiceProvider ActorSystem extension")]
         public void ShouldAccessServiceProviderFromActorSystemExtension()
         {
-            var sp = ServiceProvider.For(Sys);
-            var dep = sp.Provider.GetService<AkkaDiFixture.ITransientDependency>();
+            var sp = DependencyResolver.For(Sys);
+            var dep = sp.Resolver.GetService<AkkaDiFixture.ITransientDependency>();
             dep.Should().BeOfType<AkkaDiFixture.Transient>();
 
-            var dep2 = sp.Provider.GetService<AkkaDiFixture.ITransientDependency>();
+            var dep2 = sp.Resolver.GetService<AkkaDiFixture.ITransientDependency>();
             dep2.Should().NotBe(dep); // the two transient instances should be different
 
             // scoped services should be the same
-            var scoped1 = sp.Provider.GetService<AkkaDiFixture.IScopedDependency>();
-            var scoped2 = sp.Provider.GetService<AkkaDiFixture.IScopedDependency>();
+            var scoped1 = sp.Resolver.GetService<AkkaDiFixture.IScopedDependency>();
+            var scoped2 = sp.Resolver.GetService<AkkaDiFixture.IScopedDependency>();
 
             scoped1.Should().Be(scoped2);
 
             // create a new scope
-            using (var newScope = sp.Provider.CreateScope())
+            using (var newScope = sp.Resolver.CreateScope())
             {
-                var scoped3 = newScope.ServiceProvider.GetService<AkkaDiFixture.IScopedDependency>();
+                var scoped3 = newScope.Resolver.GetService<AkkaDiFixture.IScopedDependency>();
                 scoped1.Should().NotBe(scoped3);
             }
 
             // singleton services should be the same
-            var singleton1 = sp.Provider.GetService<AkkaDiFixture.ISingletonDependency>();
-            var singleton2 = sp.Provider.GetService<AkkaDiFixture.ISingletonDependency>();
+            var singleton1 = sp.Resolver.GetService<AkkaDiFixture.ISingletonDependency>();
+            var singleton2 = sp.Resolver.GetService<AkkaDiFixture.ISingletonDependency>();
 
             singleton1.Should().Be(singleton2);
         }
@@ -67,7 +67,7 @@ namespace Akka.DependencyInjection.Tests
         {
             Action getSp = () =>
             {
-                var sp = ServiceProvider.For(Sys);
+                var sp = DependencyResolver.For(Sys);
             };
 
             getSp.Should().Throw<ConfigurationException>();

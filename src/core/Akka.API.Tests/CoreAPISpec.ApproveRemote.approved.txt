@@ -1,4 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
@@ -203,6 +204,7 @@ namespace Akka.Remote
         public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteDeploymentWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         protected virtual Akka.Actor.IInternalActorRef CreateRemoteRef(Akka.Actor.ActorPath actorPath, Akka.Actor.Address localAddress) { }
+        protected virtual Akka.Actor.IInternalActorRef CreateRemoteRef(Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.Address localAddress, Akka.Actor.ActorPath rpath, Akka.Actor.Deploy deployment) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         protected Akka.Remote.DefaultFailureDetectorRegistry<Akka.Actor.Address> CreateRemoteWatcherFailureDetector(Akka.Actor.ActorSystem system) { }
         public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }
@@ -284,6 +286,7 @@ namespace Akka.Remote
     public class RemoteTransportException : Akka.Actor.AkkaException
     {
         public RemoteTransportException(string message, System.Exception cause = null) { }
+        protected RemoteTransportException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class RemoteWatcher : Akka.Actor.UntypedActor, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedMessageQueueSemantics>
     {
@@ -434,11 +437,11 @@ namespace Akka.Remote.Serialization
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public sealed class PrimitiveSerializers : Akka.Serialization.Serializer
+    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
     {
         public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     public class ProtobufSerializer : Akka.Serialization.Serializer
@@ -502,6 +505,7 @@ namespace Akka.Remote.Transport
     public class AkkaProtocolException : Akka.Actor.AkkaException
     {
         public AkkaProtocolException(string message, System.Exception cause = null) { }
+        protected AkkaProtocolException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class AssociateAttempt : Akka.Remote.Transport.Activity
     {
@@ -602,6 +606,7 @@ namespace Akka.Remote.Transport
     public class InvalidAssociationException : Akka.Actor.AkkaException
     {
         public InvalidAssociationException(string message, System.Exception cause = null) { }
+        protected InvalidAssociationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class ListenAttempt : Akka.Remote.Transport.Activity
     {

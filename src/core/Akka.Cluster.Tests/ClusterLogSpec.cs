@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -46,19 +47,25 @@ namespace Akka.Cluster.Tests
 
         protected void AwaitUp()
         {
-            AwaitCondition(() => ClusterView.IsSingletonCluster);
-            ClusterView.Self.Address.ShouldBe(_selfAddress);
-            ClusterView.Members.Select(m => m.Address).ShouldBe(new Address[] { _selfAddress });
-            AwaitAssert(() => ClusterView.Status.ShouldBe(MemberStatus.Up));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                AwaitCondition(() => ClusterView.IsSingletonCluster);
+                ClusterView.Self.Address.ShouldBe(_selfAddress);
+                ClusterView.Members.Select(m => m.Address).ShouldBe(new Address[] { _selfAddress });
+                AwaitAssert(() => ClusterView.Status.ShouldBe(MemberStatus.Up));
+            });
         }
         /// <summary>
         /// The expected log info pattern to intercept after a <see cref="Cluster.Join(Address)"/>.
         /// </summary>
         protected void Join(string expected)
         {
-            EventFilter
-                .Info(contains: expected)
-                .ExpectOne(() => _cluster.Join(_selfAddress));
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                EventFilter
+                    .Info(contains: expected)
+                    .ExpectOne(() => _cluster.Join(_selfAddress));
+            });
         }
 
         /// <summary>
@@ -67,9 +74,12 @@ namespace Akka.Cluster.Tests
         /// <param name="expected"></param>
         protected void Down(string expected)
         {
-            EventFilter
+            Within(TimeSpan.FromSeconds(10), () =>
+            {
+                EventFilter
                 .Info(contains: expected)
                 .ExpectOne(() => _cluster.Down(_selfAddress));
+            });
         }
     }
 

@@ -515,12 +515,10 @@ namespace Akka.Tests.Pattern
         {
         }
 
-#if SERIALIZATION
         protected TestException( SerializationInfo info, StreamingContext context )
             : base( info, context )
         {
         }
-#endif
     }
 
 }

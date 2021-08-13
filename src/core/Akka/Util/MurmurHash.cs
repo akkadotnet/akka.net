@@ -202,20 +202,20 @@ namespace Akka.Util
         {
             unchecked
             {
-                var sChar = s.ToCharArray();
+                var span = s.AsSpan();
                 var h = StartHash((uint)s.Length * StringSeed);
                 var c = HiddenMagicA;
                 var k = HiddenMagicB;
                 var j = 0;
                 while (j + 1 < s.Length)
                 {
-                    var i = (uint)((sChar[j] << 16) + sChar[j + 1]);
+                    var i = (uint)((span[j] << 16) + span[j + 1]);
                     h = ExtendHash(h, i, c, k);
                     c = NextMagicA(c);
                     k = NextMagicB(k);
                     j += 2;
                 }
-                if (j < s.Length) h = ExtendHash(h, sChar[j], c, k);
+                if (j < s.Length) h = ExtendHash(h, span[j], c, k);
                 return (int)FinalizeHash(h);
             }
         }

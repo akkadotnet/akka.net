@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using Akka.Annotations;
 using Akka.Streams.Util;
 
@@ -28,7 +29,6 @@ namespace Akka.Streams.Implementation
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="NothingToReadException"/> class.
         /// </summary>
@@ -38,7 +38,6 @@ namespace Akka.Streams.Implementation
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>

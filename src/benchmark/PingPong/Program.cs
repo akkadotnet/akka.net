@@ -67,23 +67,23 @@ namespace PingPong
                 return;
             }
 
-#if THREADS
-            int workerThreads;
-            int completionPortThreads;
-            ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
+            Console.WriteLine("Warming up...");
+            //Warm up
+            await ActorSystem.Create("WarmupSystem").Terminate();
 
-            Console.WriteLine("Worker threads:         {0}", workerThreads);
+            // print statistics AFTER warm up to observe ActorSystem impact on ThreadCount
+
+            
             Console.WriteLine("OSVersion:              {0}", Environment.OSVersion);
-#endif
             Console.WriteLine("ProcessorCount:         {0}", processorCount);
             Console.WriteLine("ClockSpeed:             {0} MHZ", CpuSpeed());
             Console.WriteLine("Actor Count:            {0}", processorCount * 2);
             Console.WriteLine("Messages sent/received: {0}  ({0:0e0})", GetTotalMessagesReceived(repeat));
             Console.WriteLine("Is Server GC:           {0}", GCSettings.IsServerGC);
+            Console.WriteLine("Thread count:           {0}", Process.GetCurrentProcess().Threads.Count);
             Console.WriteLine();
 
-            //Warm up
-            ActorSystem.Create("WarmupSystem").Terminate();
+
             Console.Write("ActorBase    first start time: ");
             await Benchmark<ClientActorBase>(1, 1, 1, PrintStats.StartTimeOnly, -1, -1);
             Console.WriteLine(" ms");
@@ -206,9 +206,9 @@ namespace PingPong
 
             await Task.WhenAll(tasks.ToArray());
             sw.Stop();
-
-            system.Terminate();
             totalWatch.Stop();
+            await system.Terminate(); // force full ActorSystem termination
+            
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : totalMessagesReceived / elapsedMilliseconds * 1000;

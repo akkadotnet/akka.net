@@ -89,7 +89,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Sinks
         };
 
         private const string NodePassStatusRegexString =
-            @"\[(\w){4}(?<node>[0-9]{1,2})(?<role>:\w+)?\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\]\[(?<status>(PASS|FAIL))\]{1}\s(?<test>.*)";
+            @"\[(\w){4}(?<node>[0-9]{1,2})(?<role>:[\w-]+)?\]\[(?<time>\d{1,4}[- /.]\d{1,4}[- /.]\d{1,4}\s\d{1,2}:\d{1,2}:\d{1,2}(\s(AM|PM)){0,1})\]\[(?<status>(PASS|FAIL))\]{1}\s(?<test>.*)";
         protected static readonly Regex NodePassStatusRegex = new Regex(NodePassStatusRegexString);
 
         private const string NodePassed = "PASS";

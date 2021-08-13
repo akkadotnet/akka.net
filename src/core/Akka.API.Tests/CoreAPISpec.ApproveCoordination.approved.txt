@@ -15,6 +15,7 @@ namespace Akka.Coordination
     {
         public LeaseException(string message) { }
         public LeaseException(string message, System.Exception innerEx) { }
+        protected LeaseException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class LeaseProvider : Akka.Actor.IExtension
     {
@@ -43,6 +44,7 @@ namespace Akka.Coordination
     {
         public LeaseTimeoutException(string message) { }
         public LeaseTimeoutException(string message, System.Exception innerEx) { }
+        protected LeaseTimeoutException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class LeaseUsageSettings
     {

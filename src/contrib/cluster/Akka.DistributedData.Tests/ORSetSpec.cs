@@ -57,16 +57,20 @@ namespace Akka.DistributedData.Tests
         [Fact]
         public void ORSet_must_be_able_to_add_element()
         {
-            var c1 = ORSet<string>.Empty;
-            var c2 = c1.Add(_node1, _user1);
-            var c3 = c2.Add(_node1, _user2);
-            var c4 = c3.Add(_node1, _user4);
-            var c5 = c4.Add(_node1, _user3);
+            for (var i = 0; i < 100; i++)
+            {
+                var c1 = ORSet<string>.Empty;
+                var c2 = c1.Add(_node1, _user1);
+                var c3 = c2.Add(_node1, _user2);
+                var c4 = c3.Add(_node1, _user4);
+                var c5 = c4.Add(_node1, _user3);
 
-            Assert.Contains(_user1, c5.Elements);
-            Assert.Contains(_user2, c5.Elements);
-            Assert.Contains(_user3, c5.Elements);
-            Assert.Contains(_user4, c5.Elements);
+                Assert.Contains(_user1, c5.Elements);
+                Assert.Contains(_user2, c5.Elements);
+                Assert.Contains(_user3, c5.Elements);
+                Assert.Contains(_user4, c5.Elements);
+            }
+           
         }
 
         [Fact]

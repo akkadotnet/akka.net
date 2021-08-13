@@ -19,12 +19,14 @@ namespace Akka.Tests.IO
     public class TcpListenerSpec : AkkaSpec
     {
         public TcpListenerSpec()
-            : base(@"akka.io.tcp.register-timeout = 500ms
+            : base(@"
+                     akka.actor.serialize-creators = on
+                     akka.actor.serialize-messages = on
+                     akka.io.tcp.register-timeout = 500ms
                      akka.io.tcp.max-received-message-size = 1024
                      akka.io.tcp.direct-buffer-size = 512
                      akka.actor.serialize-creators = on
-                     akka.io.tcp.batch-accept-limit = 2
-                    ")
+                     akka.io.tcp.batch-accept-limit = 2")
         { }
 
         [Fact]

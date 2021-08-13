@@ -191,7 +191,7 @@ namespace Akka.DistributedData
         {
             var sb = new StringBuilder("GSet(");
             sb.AppendJoin(", ", Elements);
-
+            sb.Append(')');
             return sb.ToString();
         }
 

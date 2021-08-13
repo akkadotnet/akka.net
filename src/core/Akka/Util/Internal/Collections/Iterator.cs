@@ -10,13 +10,14 @@ using System.Linq;
 
 namespace Akka.Util.Internal.Collections
 {
-    internal sealed class Iterator<T>
+    internal struct Iterator<T>
     {
         private readonly IList<T> _enumerator;
         private int _index;
 
         public Iterator(IEnumerable<T> enumerator)
         {
+            _index = 0;
             _enumerator = enumerator.ToList();
         }
 
