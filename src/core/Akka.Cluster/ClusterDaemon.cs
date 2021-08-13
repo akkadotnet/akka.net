@@ -583,7 +583,7 @@ namespace Akka.Cluster
         /// <summary>
         /// Gets a reference to the cluster core daemon.
         /// </summary>
-        internal class GetClusterCoreRef
+        internal class GetClusterCoreRef: INoSerializationVerificationNeeded
         {
             public GetClusterCoreRef(Cluster cluster) 
             {
