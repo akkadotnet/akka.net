@@ -4216,6 +4216,7 @@ namespace Akka.Routing
     {
         protected CustomRouterConfig() { }
         protected CustomRouterConfig(string routerDispatcher) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
     }
     public sealed class Deafen : Akka.Routing.ListenerMessage
     {
@@ -4250,6 +4251,7 @@ namespace Akka.Routing
         public FromConfig(Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher) { }
         public static Akka.Routing.FromConfig Instance { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
         public Akka.Actor.Props Props() { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
@@ -4274,6 +4276,7 @@ namespace Akka.Routing
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         [System.ObsoleteAttribute("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
         public System.Collections.Generic.IEnumerable<string> Paths { get; }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -4313,6 +4316,7 @@ namespace Akka.Routing
         public static Akka.Routing.NoRouter Instance { get; }
         public override string RouterDispatcher { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public Akka.Actor.Props Props(Akka.Actor.Props routeeProps) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
@@ -4331,6 +4335,7 @@ namespace Akka.Routing
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public virtual Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public virtual bool UsePoolDispatcher { get; }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Pool other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -4489,6 +4494,8 @@ namespace Akka.Routing
         public virtual string RouterDispatcher { get; }
         public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
+        [Akka.Annotations.InternalApiAttribute()]
+        public abstract Akka.Actor.ActorBase CreateRouterActor();
         public bool Equals(Akka.Routing.RouterConfig other) { }
         public override bool Equals(object obj) { }
         public virtual bool IsManagementMessage(object message) { }
