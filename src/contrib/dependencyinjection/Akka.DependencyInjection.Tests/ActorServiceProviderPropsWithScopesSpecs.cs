@@ -21,8 +21,8 @@ namespace Akka.DependencyInjection.Tests
 
     public class ActorServiceProviderPropsWithScopesSpecs : AkkaSpec, IClassFixture<AkkaDiFixture>
     {
-        public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(DependencyResolverSetup.Create(fixture.Provider)
-            .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), output)
+        public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) 
+            : base(BootstrapSetup.Create().WithDependencyInjection(fixture.Provider).WithConfig(TestKitBase.DefaultConfig), output)
         {
 
         }

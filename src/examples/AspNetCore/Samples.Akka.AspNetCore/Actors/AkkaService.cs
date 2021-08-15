@@ -39,10 +39,10 @@ namespace Samples.Akka.AspNetCore.Actors
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             var hocon = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("app.conf", cancellationToken));
-            var bootstrap = BootstrapSetup.Create().WithConfig(hocon);
-            var di = DependencyResolverSetup.Create(_sp);
-            var actorSystemSetup = bootstrap.And(di);
-            _actorSystem = ActorSystem.Create("AspNetDemo", actorSystemSetup);
+            var bootstrap = BootstrapSetup.Create().WithConfig(hocon)
+                .WithDependencyInjection(_sp);
+
+            _actorSystem = ActorSystem.Create("AspNetDemo", bootstrap);
             // </AkkaServiceSetup>
 
             // <ServiceProviderFor>

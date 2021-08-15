@@ -8,6 +8,23 @@
 using System;
 using Akka.Actor;
 using Akka.Actor.Setup;
+using Akka.DependencyInjection;
+
+namespace Akka.Actor
+{
+    public static class DependencyInjectionSetupExtensions
+    {
+        public static BootstrapSetup WithDependencyInjection(this BootstrapSetup bootstrap, IServiceProvider provider)
+        {
+            return bootstrap.WithExtensions(new DependencyResolverExtension(provider));
+        }
+
+        public static BootstrapSetup WithDependencyInjection(this BootstrapSetup bootstrap, IDependencyResolver dependencyResolver)
+        {
+            return bootstrap.WithExtensions(new DependencyResolverExtension(dependencyResolver));
+        }
+    }
+}
 
 namespace Akka.DependencyInjection
 {
@@ -20,7 +37,7 @@ namespace Akka.DependencyInjection
     ///
     /// The constructor is internal. Please use <see cref="Create"/> to create a new instance.
     /// </summary>
-    [Obsolete("Used DependencyResolverSetup instead.")]
+    [Obsolete("Used BoostrapSetup.Create().WithDependencyInjection(p) instead.")]
     public class ServiceProviderSetup : Setup
     {
         internal ServiceProviderSetup(IServiceProvider serviceProvider)
@@ -48,6 +65,7 @@ namespace Akka.DependencyInjection
     ///
     /// The constructor is internal. Please use <see cref="Create"/> to create a new instance.
     /// </summary>
+    [Obsolete("Used BoostrapSetup.Create().WithDependencyInjection(p) instead.")]
     public class DependencyResolverSetup : Setup
     {
         public IDependencyResolver DependencyResolver { get; }

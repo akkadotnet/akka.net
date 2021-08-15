@@ -111,15 +111,43 @@ namespace Akka.DependencyInjection
     /// </summary>
     public sealed class DependencyResolverExtension : ExtensionIdProvider<DependencyResolver>
     {
+        readonly IDependencyResolver _dependencyResolver;
+
+        public DependencyResolverExtension()
+        {
+        }
+
+        public DependencyResolverExtension(IDependencyResolver dependencyResolver)
+        {
+            _dependencyResolver = dependencyResolver;
+        }
+
+        public DependencyResolverExtension(IServiceProvider provider)
+        {
+            _dependencyResolver = new ServiceProviderDependencyResolver(provider);
+        }
+
         public override DependencyResolver CreateExtension(ExtendedActorSystem system)
         {
-            var setup = system.Settings.Setup.Get<DependencyResolverSetup>();
-            if (setup.HasValue) return new DependencyResolver(setup.Value.DependencyResolver);
-            
-            var exception = new ConfigurationException("Unable to find [DependencyResolverSetup] included in ActorSystem settings." +
+            var dependencyResolver = _dependencyResolver;
+
+            if(dependencyResolver is null)
+            {
+                var setup = system.Settings.Setup.Get<DependencyResolverSetup>();
+                if (!setup.HasValue)
+                {
+                    var exception = new ConfigurationException("Unable to find [DependencyResolverSetup] included in ActorSystem settings." +
                                                        " Please specify one before attempting to use dependency injection inside Akka.NET.");
-            system.EventStream.Publish(new Error(exception, "Akka.DependencyInjection", typeof(DependencyResolverExtension), exception.Message));
-            throw exception;
+                    system.EventStream.Publish(new Error(exception, "Akka.DependencyInjection", typeof(DependencyResolverExtension), exception.Message));
+                    throw exception;
+                }
+                
+                dependencyResolver = setup.Value.DependencyResolver;
+            }
+
+            return new DependencyResolver(dependencyResolver);
         }
     }
+
+    
 }
