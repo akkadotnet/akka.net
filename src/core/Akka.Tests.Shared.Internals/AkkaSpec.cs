@@ -67,6 +67,12 @@ namespace Akka.TestKit
             BeforeAll();
         }
 
+        public AkkaSpec(Setup setup, ITestOutputHelper output = null)
+            : base(ActorSystemSetup.Create(setup), GetCallerName(), output)
+        {
+            BeforeAll();
+        }
+
         public AkkaSpec(ITestOutputHelper output, Config config = null)
             : base(config.SafeWithFallback(_akkaSpecConfig), GetCallerName(), output)
         {
