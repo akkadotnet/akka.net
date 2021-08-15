@@ -78,11 +78,12 @@ namespace Akka.DistributedData
                 pruningMarkerTimeToLive: config.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromHours(6)),
                 durablePruningMarkerTimeToLive: durableConfig.GetTimeSpan("pruning-marker-time-to-live", TimeSpan.FromDays(10)),
                 maxDeltaSize: config.GetInt("delta-crdt.max-delta-size", 50),
-                restartReplicatorOnFailure: config.GetBoolean("recreate-on-failure", false));
+                restartReplicatorOnFailure: config.GetBoolean("recreate-on-failure", false),
+                preferOldest: config.GetBoolean("prefer-oldest"));
         }
 
         /// <summary>
-        /// Determines if a durable store has been configured and is used. If configuration has defined some 
+        /// Determines if a durable store has been configured and is used. If configuration has defined some
         /// durable keys, this field must be true.
         /// </summary>
         public bool IsDurable => !Equals(DurableStoreProps, Props.Empty);
@@ -103,13 +104,13 @@ namespace Akka.DistributedData
         public TimeSpan NotifySubscribersInterval { get; }
 
         /// <summary>
-        /// Maximum number of entries to transfer in one gossip message when synchronizing 
+        /// Maximum number of entries to transfer in one gossip message when synchronizing
         /// the replicas.Next chunk will be transferred in next round of gossip.
         /// </summary>
         public int MaxDeltaElements { get; }
 
         /// <summary>
-        /// Id of the dispatcher to use for Replicator actors. 
+        /// Id of the dispatcher to use for Replicator actors.
         /// If not specified the default dispatcher is used.
         /// </summary>
         public string Dispatcher { get; }
@@ -121,8 +122,8 @@ namespace Akka.DistributedData
 
         /// <summary>
         /// How long time it takes (worst case) to spread the data to all other replica nodes.
-        /// This is used when initiating and completing the pruning process of data associated 
-        /// with removed cluster nodes. The time measurement is stopped when any replica is 
+        /// This is used when initiating and completing the pruning process of data associated
+        /// with removed cluster nodes. The time measurement is stopped when any replica is
         /// unreachable, so it should be configured to worst case in a healthy cluster.
         /// </summary>
         public TimeSpan MaxPruningDissemination { get; }
@@ -139,7 +140,7 @@ namespace Akka.DistributedData
         public TimeSpan PruningMarkerTimeToLive { get; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public TimeSpan DurablePruningMarkerTimeToLive { get; }
 
@@ -150,8 +151,13 @@ namespace Akka.DistributedData
         public Props DurableStoreProps { get; }
 
         public int MaxDeltaSize { get; }
-        
+
         public bool RestartReplicatorOnFailure { get; }
+
+        /// <summary>
+        /// Update and Get operations are sent to oldest nodes first.
+        /// </summary>
+        public bool PreferOldest { get; }
 
         [Obsolete]
         public ReplicatorSettings(string role,
@@ -160,25 +166,61 @@ namespace Akka.DistributedData
                                   int maxDeltaElements,
                                   string dispatcher,
                                   TimeSpan pruningInterval,
-                                  TimeSpan maxPruningDissemination, 
-                                  IImmutableSet<string> durableKeys, 
-                                  Props durableStoreProps, 
-                                  TimeSpan pruningMarkerTimeToLive, 
+                                  TimeSpan maxPruningDissemination,
+                                  IImmutableSet<string> durableKeys,
+                                  Props durableStoreProps,
+                                  TimeSpan pruningMarkerTimeToLive,
                                   TimeSpan durablePruningMarkerTimeToLive,
                                   int maxDeltaSize)
+            : this(
+                  role,
+                  gossipInterval,
+                  notifySubscribersInterval,
+                  maxDeltaElements,
+                  dispatcher,
+                  pruningInterval,
+                  maxPruningDissemination,
+                  durableKeys,
+                  durableStoreProps,
+                  pruningMarkerTimeToLive,
+                  durablePruningMarkerTimeToLive,
+                  maxDeltaSize,
+                  false
+                 )
         {
-            Role = role;
-            GossipInterval = gossipInterval;
-            NotifySubscribersInterval = notifySubscribersInterval;
-            MaxDeltaElements = maxDeltaElements;
-            Dispatcher = dispatcher;
-            PruningInterval = pruningInterval;
-            MaxPruningDissemination = maxPruningDissemination;
-            DurableKeys = durableKeys;
-            DurableStoreProps = durableStoreProps;
-            PruningMarkerTimeToLive = pruningMarkerTimeToLive;
-            DurablePruningMarkerTimeToLive = durablePruningMarkerTimeToLive;
-            MaxDeltaSize = maxDeltaSize;
+        }
+
+        [Obsolete]
+        public ReplicatorSettings(string role,
+            TimeSpan gossipInterval,
+            TimeSpan notifySubscribersInterval,
+            int maxDeltaElements,
+            string dispatcher,
+            TimeSpan pruningInterval,
+            TimeSpan maxPruningDissemination,
+            IImmutableSet<string> durableKeys,
+            Props durableStoreProps,
+            TimeSpan pruningMarkerTimeToLive,
+            TimeSpan durablePruningMarkerTimeToLive,
+            int maxDeltaSize,
+            bool restartReplicatorOnFailure)
+            : this(
+                  role,
+                  gossipInterval,
+                  notifySubscribersInterval,
+                  maxDeltaElements,
+                  dispatcher,
+                  pruningInterval,
+                  maxPruningDissemination,
+                  durableKeys,
+                  durableStoreProps,
+                  pruningMarkerTimeToLive,
+                  durablePruningMarkerTimeToLive,
+                  maxDeltaSize,
+                  false,
+                  false
+                 )
+        {
         }
 
         public ReplicatorSettings(string role,
@@ -187,13 +229,14 @@ namespace Akka.DistributedData
             int maxDeltaElements,
             string dispatcher,
             TimeSpan pruningInterval,
-            TimeSpan maxPruningDissemination, 
-            IImmutableSet<string> durableKeys, 
-            Props durableStoreProps, 
-            TimeSpan pruningMarkerTimeToLive, 
+            TimeSpan maxPruningDissemination,
+            IImmutableSet<string> durableKeys,
+            Props durableStoreProps,
+            TimeSpan pruningMarkerTimeToLive,
             TimeSpan durablePruningMarkerTimeToLive,
             int maxDeltaSize,
-            bool restartReplicatorOnFailure)
+            bool restartReplicatorOnFailure,
+            bool preferOldest)
         {
             Role = role;
             GossipInterval = gossipInterval;
@@ -208,6 +251,7 @@ namespace Akka.DistributedData
             DurablePruningMarkerTimeToLive = durablePruningMarkerTimeToLive;
             MaxDeltaSize = maxDeltaSize;
             RestartReplicatorOnFailure = restartReplicatorOnFailure;
+            PreferOldest = preferOldest;
         }
 
         private ReplicatorSettings Copy(string role = null,
@@ -222,7 +266,8 @@ namespace Akka.DistributedData
             TimeSpan? pruningMarkerTimeToLive = null,
             TimeSpan? durablePruningMarkerTimeToLive = null,
             int? maxDeltaSize = null,
-            bool? restartReplicatorOnFailure = null)
+            bool? restartReplicatorOnFailure = null,
+            bool? preferOldest = null)
         {
             return new ReplicatorSettings(
                 role: role ?? this.Role,
@@ -237,7 +282,8 @@ namespace Akka.DistributedData
                 pruningMarkerTimeToLive: pruningMarkerTimeToLive ?? this.PruningMarkerTimeToLive,
                 durablePruningMarkerTimeToLive: durablePruningMarkerTimeToLive ?? this.DurablePruningMarkerTimeToLive,
                 maxDeltaSize: maxDeltaSize ?? this.MaxDeltaSize,
-                restartReplicatorOnFailure: restartReplicatorOnFailure ?? this.RestartReplicatorOnFailure);
+                restartReplicatorOnFailure: restartReplicatorOnFailure ?? this.RestartReplicatorOnFailure,
+                preferOldest: preferOldest ?? this.PreferOldest);
         }
 
         public ReplicatorSettings WithRole(string role) => Copy(role: role);
@@ -245,7 +291,7 @@ namespace Akka.DistributedData
         public ReplicatorSettings WithNotifySubscribersInterval(TimeSpan notifySubscribersInterval) => Copy(notifySubscribersInterval: notifySubscribersInterval);
         public ReplicatorSettings WithMaxDeltaElements(int maxDeltaElements) => Copy(maxDeltaElements: maxDeltaElements);
         public ReplicatorSettings WithDispatcher(string dispatcher) => Copy(dispatcher: string.IsNullOrEmpty(dispatcher) ? Dispatchers.InternalDispatcherId : dispatcher);
-        public ReplicatorSettings WithPruning(TimeSpan pruningInterval, TimeSpan maxPruningDissemination) => 
+        public ReplicatorSettings WithPruning(TimeSpan pruningInterval, TimeSpan maxPruningDissemination) =>
             Copy(pruningInterval: pruningInterval, maxPruningDissemination: maxPruningDissemination);
         public ReplicatorSettings WithDurableKeys(IImmutableSet<string> durableKeys) => Copy(durableKeys: durableKeys);
         public ReplicatorSettings WithDurableStoreProps(Props durableStoreProps) => Copy(durableStoreProps: durableStoreProps);
@@ -254,5 +300,7 @@ namespace Akka.DistributedData
         public ReplicatorSettings WithMaxDeltaSize(int maxDeltaSize) => Copy(maxDeltaSize: maxDeltaSize);
         public ReplicatorSettings WithRestartReplicatorOnFailure(bool restart) =>
             Copy(restartReplicatorOnFailure: restart);
+        public ReplicatorSettings WithPreferOldest(bool preferOldest) =>
+            Copy(preferOldest: preferOldest);
     }
 }

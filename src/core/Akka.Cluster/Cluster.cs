@@ -152,7 +152,7 @@ namespace Akka.Cluster
             var timeout = System.Settings.CreationTimeout;
             try
             {
-                return await _clusterDaemons.Ask<IActorRef>(InternalClusterAction.GetClusterCoreRef.Instance, timeout).ConfigureAwait(false);
+                return await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), timeout).ConfigureAwait(false);
             }
             catch (Exception ex)
             {

@@ -38,13 +38,15 @@ namespace ClusterSharding.Node
                 dot-netty.tcp {
                   public-hostname = ""localhost""
                   hostname = ""localhost""
-                  port = 0
+                  port = 14445
                 }
               }
               cluster {
                 auto-down-unreachable-after = 5s
                 sharding {
+                  remember-entities = on
                   least-shard-allocation-strategy.rebalance-threshold = 3
+                  state-store-mode = ddata
                 }
               }
               persistence {
@@ -89,7 +91,7 @@ namespace ClusterSharding.Node
             var sharding = ClusterSharding.Get(system);
             var shardRegion = sharding.Start(
                 typeName: "customer",
-                entityProps: Props.Create<Customer>(),
+                entityPropsFactory: e => Props.Create(() => new Customer(e)),
                 settings: ClusterShardingSettings.Create(system),
                 messageExtractor: new MessageExtractor(10));
 
