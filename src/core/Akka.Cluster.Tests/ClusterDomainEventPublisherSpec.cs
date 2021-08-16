@@ -63,7 +63,8 @@ namespace Akka.Cluster.Tests
             Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.LeaderChanged));
             Sys.EventStream.Subscribe(_memberSubscriber.Ref, typeof(ClusterEvent.ClusterShuttingDown));
 
-            _publisher = Sys.ActorOf(Props.Create<ClusterDomainEventPublisher>());
+            var selfUniqueAddress = Cluster.Get(Sys).SelfUniqueAddress;
+            _publisher = Sys.ActorOf(Props.Create(() => new ClusterDomainEventPublisher(selfUniqueAddress)));
             _publisher.Tell(new InternalClusterAction.PublishChanges(state0));
             _memberSubscriber.ExpectMsg(new ClusterEvent.MemberUp(aUp));
             _memberSubscriber.ExpectMsg(new ClusterEvent.LeaderChanged(aUp.Address));
