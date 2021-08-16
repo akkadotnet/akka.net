@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
+using Akka.Coordination.Tests;
 using Akka.Event;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
@@ -45,7 +46,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.testkit.auto-down-unreachable-after = 0s
                 test-lease {
-                    lease-class = ""Akka.Cluster.Tools.Tests.MultiNode.TestLeaseActorClient, Akka.Cluster.Tools.Tests.MultiNode""
+                    lease-class = ""Akka.Coordination.Tests.TestLeaseActorClient, Akka.Coordination.Tests""
                     heartbeat-interval = 1s
                     heartbeat-timeout = 120s
                     lease-operation-timeout = 3s

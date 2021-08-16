@@ -62,12 +62,12 @@ namespace Akka.Serialization
             : base(system)
         {
             Settings = settings;
-            var akkaSurrogate =
-                Surrogate
+            var surrogates = settings.Surrogates.ToList();
+            surrogates.Add(Surrogate
                 .Create<ISurrogated, ISurrogate>(
-                from => from.ToSurrogate(system),
-                to => to.FromSurrogate(system));
-
+                    from => from.ToSurrogate(system),
+                    to => to.FromSurrogate(system)));
+            
             var provider = CreateKnownTypesProvider(system, settings.KnownTypesProvider);
 
             if (system != null)
@@ -82,7 +82,7 @@ namespace Akka.Serialization
                 new HySerializer(new SerializerOptions(
                     versionTolerance: settings.VersionTolerance,
                     preserveObjectReferences: settings.PreserveObjectReferences,
-                    surrogates: new[] { akkaSurrogate },
+                    surrogates: surrogates,
                     serializerFactories: null,
                     knownTypes: provider.GetKnownTypes(),
                     ignoreISerializable:true,
@@ -163,7 +163,8 @@ namespace Akka.Serialization
             preserveObjectReferences: true,
             versionTolerance: true,
             knownTypesProvider: typeof(NoKnownTypes), 
-            packageNameOverrides: new List<Func<string, string>>());
+            packageNameOverrides: new List<Func<string, string>>(),
+            surrogates: new Surrogate[0]);
 
         /// <summary>
         /// Creates a new instance of <see cref="HyperionSerializerSettings"/> using provided HOCON config.
@@ -212,11 +213,26 @@ namespace Akka.Serialization
                 }
             }
 
+            var surrogates = new List<Surrogate>();
+            var surrogateList = config.GetStringList("surrogates");
+            foreach (var surrogateClass in surrogateList)
+            {
+                var surrogateType = Type.GetType(surrogateClass);
+                if (surrogateType == null)
+                {
+                    throw new ConfigurationException($"The surrogate type name did not resolve to an actual Type: '{surrogateClass}'");
+                }
+
+                surrogates.Add((Surrogate)Activator.CreateInstance(surrogateType));
+            }
+            
+
             return new HyperionSerializerSettings(
                 preserveObjectReferences: config.GetBoolean("preserve-object-references", true),
                 versionTolerance: config.GetBoolean("version-tolerance", true),
                 knownTypesProvider: type,
-                packageNameOverrides: packageNameOverrides);
+                packageNameOverrides: packageNameOverrides,
+                surrogates: surrogates);
         }
 
         /// <summary>
@@ -248,6 +264,12 @@ namespace Akka.Serialization
         public readonly IEnumerable<Func<string, string>> PackageNameOverrides;
 
         /// <summary>
+        /// A list of serialization surrogates for types that can not be serialized by
+        /// Hyperion directly.
+        /// </summary>
+        public readonly IEnumerable<Surrogate> Surrogates;
+
+        /// <summary>
         /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
         /// </summary>
         /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
@@ -265,8 +287,9 @@ namespace Akka.Serialization
         /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
         /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
         /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
-        /// <param name="packageNameOverrides">TBD</param>
+        /// <param name="packageNameOverrides">An array of package name overrides for cross platform compatibility</param>
         /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        [Obsolete]
         public HyperionSerializerSettings(
             bool preserveObjectReferences, 
             bool versionTolerance, 
@@ -281,6 +304,33 @@ namespace Akka.Serialization
             VersionTolerance = versionTolerance;
             KnownTypesProvider = knownTypesProvider;
             PackageNameOverrides = packageNameOverrides;
+        }
+
+        /// <summary>
+        /// Creates a new instance of a <see cref="HyperionSerializerSettings"/>.
+        /// </summary>
+        /// <param name="preserveObjectReferences">Flag which determines if serializer should keep track of references in serialized object graph.</param>
+        /// <param name="versionTolerance">Flag which determines if field data should be serialized as part of type manifest.</param>
+        /// <param name="knownTypesProvider">Type implementing <see cref="IKnownTypesProvider"/> to be used to determine a list of types implicitly known by all cooperating serializer.</param>
+        /// <param name="packageNameOverrides">An array of package name overrides for cross platform compatibility</param>
+        /// <param name="surrogates">A list of <see cref="Surrogate"/> instances that are used to de/serialize complex objects into a much simpler serialized objects.</param>
+        /// <exception cref="ArgumentException">Raised when `known-types-provider` type doesn't implement <see cref="IKnownTypesProvider"/> interface.</exception>
+        public HyperionSerializerSettings(
+            bool preserveObjectReferences, 
+            bool versionTolerance, 
+            Type knownTypesProvider, 
+            IEnumerable<Func<string, string>> packageNameOverrides,
+            IEnumerable<Surrogate> surrogates)
+        {
+            knownTypesProvider = knownTypesProvider ?? typeof(NoKnownTypes);
+            if (!typeof(IKnownTypesProvider).IsAssignableFrom(knownTypesProvider))
+                throw new ArgumentException($"Known types provider must implement an interface {typeof(IKnownTypesProvider).FullName}");
+
+            PreserveObjectReferences = preserveObjectReferences;
+            VersionTolerance = versionTolerance;
+            KnownTypesProvider = knownTypesProvider;
+            PackageNameOverrides = packageNameOverrides;
+            Surrogates = surrogates;
         }
     }
 }

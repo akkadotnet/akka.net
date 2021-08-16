@@ -7,20 +7,56 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Coordination;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Akka.Util;
 
-namespace Akka.Cluster.Tools.Tests
+namespace Akka.Coordination.Tests
 {
+    public class TestLeaseExtExtensionProvider : ExtensionIdProvider<TestLeaseExt>
+    {
+        public override TestLeaseExt CreateExtension(ExtendedActorSystem system)
+        {
+            var extension = new TestLeaseExt(system);
+            return extension;
+        }
+    }
+
+    public class TestLeaseExt : IExtension
+    {
+        public static TestLeaseExt Get(ActorSystem system)
+        {
+            return system.WithExtension<TestLeaseExt, TestLeaseExtExtensionProvider>();
+        }
+
+        private readonly ExtendedActorSystem _system;
+        private readonly ConcurrentDictionary<string, TestLease> testLeases = new ConcurrentDictionary<string, TestLease>();
+
+        public TestLeaseExt(ExtendedActorSystem system)
+        {
+            _system = system;
+            _system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
+        }
+
+        public TestLease GetTestLease(string name)
+        {
+            if (!testLeases.TryGetValue(name, out var lease))
+            {
+                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", testLeases.Keys)}");
+            }
+            return lease;
+        }
+
+        public void SetTestLease(string name, TestLease lease)
+        {
+            testLeases[name] = lease;
+        }
+    }
+
     public class TestLease : Lease
     {
         public sealed class AcquireReq : IEquatable<AcquireReq>
@@ -75,7 +111,7 @@ namespace Akka.Cluster.Tools.Tests
         {
             get { return ConfigurationFactory.ParseString(@"
                 test-lease {
-                    lease-class = ""Akka.Cluster.Tools.Tests.TestLease, Akka.Cluster.Tools.Tests""
+                    lease-class = ""Akka.Coordination.Tests.TestLease, Akka.Coordination.Tests""
                 }
                 "); }
         }
@@ -126,46 +162,6 @@ namespace Akka.Cluster.Tools.Tests
         {
             currentCallBack.GetAndSet(leaseLostCallback);
             return Acquire();
-        }
-    }
-
-    public class TestLeaseExtExtensionProvider : ExtensionIdProvider<TestLeaseExt>
-    {
-        public override TestLeaseExt CreateExtension(ExtendedActorSystem system)
-        {
-            var extension = new TestLeaseExt(system);
-            return extension;
-        }
-    }
-
-    public class TestLeaseExt : IExtension
-    {
-        public static TestLeaseExt Get(ActorSystem system)
-        {
-            return system.WithExtension<TestLeaseExt, TestLeaseExtExtensionProvider>();
-        }
-
-        private readonly ExtendedActorSystem _system;
-        private readonly ConcurrentDictionary<string, TestLease> testLeases = new ConcurrentDictionary<string, TestLease>();
-
-        public TestLeaseExt(ExtendedActorSystem system)
-        {
-            _system = system;
-            _system.Settings.InjectTopLevelFallback(LeaseProvider.DefaultConfig());
-        }
-
-        public TestLease GetTestLease(string name)
-        {
-            if (!testLeases.TryGetValue(name, out var lease))
-            {
-                throw new InvalidOperationException($"Test lease {name} has not been set yet. Current leases {string.Join(",", testLeases.Keys)}");
-            }
-            return lease;
-        }
-
-        public void SetTestLease(string name, TestLease lease)
-        {
-            testLeases[name] = lease;
         }
     }
 }

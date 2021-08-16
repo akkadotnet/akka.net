@@ -1801,6 +1801,49 @@ namespace Akka.Streams.Dsl
             return (Flow<TIn, TOut, TMat>)InternalFlowOperations.AlsoTo(flow, that);
         }
 
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="Flow{TIn,TOut,TMat}"/>, meaning that elements 
+        /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
+        /// 
+        /// <para>@see <seealso cref="DivertTo{TIn,TOut,TMat}"/></para>
+        /// 
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <typeparam name="TMat2">TBD</typeparam>
+        /// <typeparam name="TMat3">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="when">TBD</param>
+        /// <param name="materializerFunction">TBD</param>
+        /// <returns>TBD</returns>
+        public static Flow<TIn, TOut, TMat3> DivertToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(
+            this Flow<TIn, TOut, TMat> flow,
+            IGraph<SinkShape<TOut>, TMat2> that,
+            Func<TOut, bool> when,
+            Func<TMat, TMat2, TMat3> materializerFunction) => (Flow<TIn, TOut, TMat3>)InternalFlowOperations.DivertToMaterialized(flow, that, when, materializerFunction);
+
+        /// <summary>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="Flow{TIn,TOut,TMat}"/>, meaning that elements 
+        /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
+        /// 
+        /// <para>Emits when an element is available from the input and the chosen output has demand</para>
+        /// <para>Backpressures when the currently chosen output back-pressures</para>
+        /// <para>Completes when upstream completes and no output is pending</para>
+        /// <para>Cancels when when all downstreams cancel</para>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="that">TBD</param>
+        /// <param name="when">TBD</param>
+        public static Flow<TIn, TOut, TMat> DivertTo<TIn, TOut, TMat>(this Flow<TIn, TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, Func<TOut, bool> when) => 
+            (Flow<TIn, TOut, TMat>)InternalFlowOperations.DivertTo(flow, that, when);
+
         ///<summary>
         /// Materializes to <see cref="Task{NotUsed}"/> that completes on getting termination message.
         /// The task completes with success when received complete message from upstream or cancel

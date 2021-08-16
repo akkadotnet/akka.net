@@ -16,8 +16,8 @@ namespace Akka.DistributedData
 {
     internal class WriteAggregator : ReadWriteAggregator
     {
-        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable) =>
-            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, nodes, unreachable, replyTo, durable)).WithDeploy(Deploy.Local);
+        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, IActorRef replyTo, bool durable) =>
+            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, nodes, unreachable, shuffle, replyTo, durable)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly DataEnvelope _envelope;
@@ -32,9 +32,9 @@ namespace Akka.DistributedData
         private bool _gotLocalStoreReply;
         private ImmutableHashSet<Address> _gotNackFrom;
 
-        public WriteAggregator(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableSet<Address> nodes, 
-            IImmutableSet<Address> unreachable, IActorRef replyTo, bool durable)
-            : base(nodes, unreachable, consistency.Timeout)
+        public WriteAggregator(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableList<Address> nodes,
+            IImmutableSet<Address> unreachable, bool shuffle, IActorRef replyTo, bool durable)
+            : base(nodes, unreachable, consistency.Timeout, shuffle)
         {
             _selfUniqueAddress = Cluster.Cluster.Get(Context.System).SelfUniqueAddress;
             _key = key;
@@ -53,7 +53,7 @@ namespace Akka.DistributedData
 
             DoneWhenRemainingSize = GetDoneWhenRemainingSize();
         }
-        
+
         protected bool IsDone => _gotLocalStoreReply && (Remaining.Count <= DoneWhenRemainingSize || (Remaining.Except(_gotNackFrom).Count == 0) || NotEnoughNodes);
 
         protected bool NotEnoughNodes => DoneWhenRemainingSize < 0 || Nodes.Count < DoneWhenRemainingSize;
@@ -65,12 +65,24 @@ namespace Akka.DistributedData
             switch (_consistency)
             {
                 case WriteTo write: return Nodes.Count - (write.Count - 1);
-                case WriteAll write: return 0;
+                case WriteAll _: return 0;
                 case WriteMajority write:
-                    var n = Nodes.Count + 1;
-                    var w = CalculateMajorityWithMinCapacity(write.MinCapacity, n);
-                    return n - w;
-                case WriteLocal write: throw new ArgumentException("WriteAggregator does not support WriteLocal");
+                    {
+                        // +1 because local node is not included in 'Nodes'
+                        var n = Nodes.Count + 1;
+                        var w = CalculateMajority(write.MinCapacity, n, 0);
+                        Log.Debug("WriteMajority [{0}] [{1}] of [{2}].", _key, w, n);
+                        return n - w;
+                    }
+                case WriteMajorityPlus write:
+                    {
+                        // +1 because local node is not included in 'Nodes'
+                        var n = Nodes.Count + 1;
+                        var w = CalculateMajority(write.MinCapacity, n, write.Additional);
+                        Log.Debug("WriteMajorityPlus [{0}] [{1}] of [{2}].", _key, w, n);
+                        return n - w;
+                    }
+                case WriteLocal _: throw new ArgumentException("WriteAggregator does not support WriteLocal");
                 default: throw new ArgumentException("Invalid consistency level");
             }
         }
@@ -93,7 +105,7 @@ namespace Akka.DistributedData
         {
             switch (message)
             {
-                case WriteAck _ :
+                case WriteAck _:
                     Remaining = Remaining.Remove(SenderAddress);
                     if (IsDone) Reply(isTimeout: false);
                     return true;
@@ -124,9 +136,10 @@ namespace Akka.DistributedData
                         // Deltas must be applied in order and we can't keep track of ordering of
                         // simultaneous updates so there is a chance that the delta could not be applied.
                         // Try again with the full state to the primary nodes that have not acked.
-                        foreach (var address in PrimaryNodes.Intersect(Remaining))
+                        foreach (var address in PrimaryNodes)
                         {
-                            Replica(address).Tell(_write);
+                            if (Remaining.Contains(address))
+                                Replica(address).Tell(_write);
                         }
                     }
 
@@ -248,6 +261,48 @@ namespace Akka.DistributedData
             unchecked
             {
                 return (Timeout.GetHashCode() * 397) ^ MinCapacity;
+            }
+        }
+    }
+
+    /// <summary>
+    /// <see cref="WriteMajority"/> but with the given number of <see cref="Additional"/> nodes added to the majority count. At most
+    /// all nodes.
+    /// </summary>
+    public sealed class WriteMajorityPlus : IWriteConsistency, IEquatable<WriteMajorityPlus>
+    {
+        public TimeSpan Timeout { get; }
+        public int Additional { get; }
+        public int MinCapacity { get; }
+
+        public WriteMajorityPlus(TimeSpan timeout, int additional, int minCapacity = 0)
+        {
+            Timeout = timeout;
+            Additional = additional;
+            MinCapacity = minCapacity;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object obj) => Equals(obj as WriteMajorityPlus);
+
+        public override string ToString() => $"WriteMajorityPlus(timeout={Timeout}, additional={Additional})";
+
+        public bool Equals(WriteMajorityPlus other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Timeout.Equals(other.Timeout) && Additional == other.Additional && MinCapacity == other.MinCapacity;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = 13;
+                hashCode = (hashCode * 397) ^ Timeout.GetHashCode();
+                hashCode = (hashCode * 397) ^ Additional.GetHashCode();
+                hashCode = (hashCode * 397) ^ MinCapacity.GetHashCode();
+                return hashCode;
             }
         }
     }
