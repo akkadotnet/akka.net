@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Util;
@@ -108,7 +109,13 @@ namespace Akka.Routing
         /// <summary>
         /// The router "head" actor.
         /// </summary>
-        internal abstract RouterActor CreateRouterActor();
+        /// <remarks>
+        /// WARNING: make sure you know what you're doing before you attempt to implement this method.
+        ///
+        /// Should only return <see cref="RoutedActorRef"/> types.
+        /// </remarks>
+        [InternalApi]
+        public abstract ActorBase CreateRouterActor();
 
         /// <summary>
         /// Creates a surrogate representation of the current router.
@@ -191,7 +198,7 @@ namespace Akka.Routing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        internal override RouterActor CreateRouterActor()
+        public override ActorBase CreateRouterActor()
         {
             return new RouterActor();
         }
@@ -336,7 +343,7 @@ namespace Akka.Routing
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        internal override RouterActor CreateRouterActor()
+        public override ActorBase CreateRouterActor()
         {
             if (Resizer == null)
                 return new RouterPoolActor(SupervisorStrategy);
@@ -407,11 +414,8 @@ namespace Akka.Routing
         {
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        internal override RouterActor CreateRouterActor()
+        /// <inheritdoc cref="RouterConfig.CreateRouterActor"/>
+        public override ActorBase CreateRouterActor()
         {
             return new RouterActor();
         }
@@ -469,7 +473,7 @@ namespace Akka.Routing
         /// This exception is automatically thrown since <see cref="FromConfig"/> cannot create router actors.
         /// </exception>
         /// <returns>N/A</returns>
-        internal override RouterActor CreateRouterActor()
+        public override ActorBase CreateRouterActor()
         {
             throw new NotSupportedException("FromConfig must not create RouterActor");
         }
@@ -600,7 +604,7 @@ namespace Akka.Routing
         /// This exception is automatically thrown since <see cref="NoRouter"/> cannot create router actors.
         /// </exception>
         /// <returns>N/A</returns>
-        internal override RouterActor CreateRouterActor()
+        public override ActorBase CreateRouterActor()
         {
             throw new NotSupportedException("NoRouter must not create RouterActor");
         }
