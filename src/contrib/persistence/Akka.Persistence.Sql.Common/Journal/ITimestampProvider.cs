@@ -40,6 +40,11 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public static ITimestampProvider GetTimestampProvider(string typeName, IActorContext context)
         {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                return new DefaultTimestampProvider();
+            }
+
             var type = Type.GetType(typeName, true);
             var withSystem = type.GetConstructor(new[] { context.System.GetType() }) != null;
             return withSystem ?
