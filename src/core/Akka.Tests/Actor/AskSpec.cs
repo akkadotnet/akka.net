@@ -178,7 +178,7 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf<SomeActor>();
 
             // expect int, but in fact string
-            await Assert.ThrowsAsync<InvalidCastException>(async () => await actor.Ask<int>("answer"));
+            await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<int>("answer"));
         }
 
         [Fact]
@@ -187,7 +187,7 @@ namespace Akka.Tests.Actor
             AsyncContext.Run(() =>
             {
                 var actor = Sys.ActorOf<SomeActor>();
-                var res = actor.Ask<string>("answer").Result; // blocking on purpose
+                var res = actor.Ask<string>("answer", TimeSpan.FromSeconds(3)).Result; // blocking on purpose
                 res.ShouldBe("answer");
             });
         }

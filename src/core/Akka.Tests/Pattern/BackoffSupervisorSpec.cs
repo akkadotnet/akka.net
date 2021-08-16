@@ -172,7 +172,7 @@ namespace Akka.Tests.Pattern
             // TODO: use FilterException
             EventFilter.Exception<TestException>().Expect(1, () =>
             {
-                var supervisor = Create(OnStopOptions().WithDefaultStoppingStrategy());
+                var supervisor = Create(OnStopOptions().WithDefaultStoppingStrategy().WithManualReset());
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 var c1 = ExpectMsg<BackoffSupervisor.CurrentChild>().Ref;
                 Watch(c1);

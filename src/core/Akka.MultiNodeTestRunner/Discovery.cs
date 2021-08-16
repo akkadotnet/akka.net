@@ -71,8 +71,12 @@ namespace Akka.MultiNodeTestRunner
         {
             try
             {
+#if CORECLR
+                var specType = testCaseDiscoveryMessage.TestAssembly.Assembly.GetType(testClass.Name).ToRuntimeType();
+#else
                 var testAssembly = Assembly.LoadFrom(testCaseDiscoveryMessage.TestAssembly.Assembly.AssemblyPath);
                 var specType = testAssembly.GetType(testClass.Name);
+#endif
                 var roles = RoleNames(specType);
 
                 var details = roles.Select((r, i) => new NodeTest

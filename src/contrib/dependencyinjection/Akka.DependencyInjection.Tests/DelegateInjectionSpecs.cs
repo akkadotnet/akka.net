@@ -1,4 +1,10 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------
+// <copyright file="DelegateInjectionSpecs.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -73,7 +79,7 @@ namespace Akka.DependencyInjection.Tests
         internal class ParentActor : UntypedActor
         {
             public static Props Props(ActorSystem system) =>
-                ServiceProvider.For(system).Props<ParentActor>();
+                DependencyResolver.For(system).Props<ParentActor>();
 
             private readonly IActorRef _echoActor;
 
@@ -114,7 +120,7 @@ namespace Akka.DependencyInjection.Tests
 
             public Task StartAsync(CancellationToken cancellationToken)
             {
-                var setup = ServiceProviderSetup.Create(_serviceProvider)
+                var setup = DependencyResolverSetup.Create(_serviceProvider)
                     .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig));
 
                 ActorSystem = ActorSystem.Create("TestSystem", setup);

@@ -74,7 +74,7 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef Sender { get; }
         public Akka.Actor.ActorSystem System { get; }
         public Akka.Actor.Internal.ActorSystemImpl SystemImpl { get; }
-        public Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
+        public virtual Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
         public virtual Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null) { }
         public Akka.Actor.ActorSelection ActorSelection(string path) { }
         public Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath path) { }
@@ -110,11 +110,12 @@ namespace Akka.Actor
         public void Resume(System.Exception causedByFailure) { }
         public virtual void SendMessage(Akka.Actor.Envelope message) { }
         public virtual void SendMessage(Akka.Actor.IActorRef sender, object message) { }
-        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
+        public virtual void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         protected void SetActorFields(Akka.Actor.ActorBase actor) { }
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
         protected void SetTerminated() { }
+        [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
         public static Akka.Actor.NameAndUid SplitNameAndUid(string name) { }
         public virtual void Start() { }
         protected void Stash(Akka.Dispatch.SysMsg.SystemMessage msg) { }
@@ -863,9 +864,9 @@ namespace Akka.Actor
         public Failures() { }
         public System.Collections.Generic.List<Akka.Actor.Failure> Entries { get; }
     }
-    public class FutureActorRef : Akka.Actor.MinimalActorRef
+    public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
-        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<object> result, System.Action unregister, Akka.Actor.ActorPath path) { }
+        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action<System.Threading.Tasks.Task> unregister, Akka.Actor.ActorPath path) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
@@ -1325,6 +1326,7 @@ namespace Akka.Actor
         public override void Suspend() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
+    [System.ObsoleteAttribute("Not used. Will be removed in Akka.NET v1.5.")]
     public class NameAndUid
     {
         public NameAndUid(string name, int uid) { }
@@ -2480,6 +2482,8 @@ namespace Akka.Dispatch
         public object CurrentMessage { get; }
         public override int MaximumConcurrencyLevel { get; }
         protected override System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> GetScheduledTasks() { }
+        protected virtual void OnAfterTaskCompleted() { }
+        protected virtual void OnBeforeTaskStarted() { }
         protected override void QueueTask(System.Threading.Tasks.Task task) { }
         public static void RunTask(System.Action action) { }
         public static void RunTask(System.Func<System.Threading.Tasks.Task> asyncAction) { }
@@ -4808,6 +4812,7 @@ namespace Akka.Util
     {
         public const string Base64Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+~";
         public static string Base64Encode(this long value) { }
+        [System.ObsoleteAttribute("Do not use. Pass in prefix as a string instead.")]
         public static System.Text.StringBuilder Base64Encode(this long value, System.Text.StringBuilder sb) { }
         public static string Base64Encode(this string s) { }
     }
