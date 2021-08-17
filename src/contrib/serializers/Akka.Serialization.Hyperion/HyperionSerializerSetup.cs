@@ -102,7 +102,7 @@ namespace Akka.Serialization.Hyperion
         
         /// <summary>
         /// If set, will cause the Hyperion serializer to block potentially dangerous and unsafe types
-        /// from being deserialized during run-time
+        /// from being deserialized during run-time. Defaults to true.
         /// </summary>
         public Option<bool> DisallowUnsafeType { get; }
 
