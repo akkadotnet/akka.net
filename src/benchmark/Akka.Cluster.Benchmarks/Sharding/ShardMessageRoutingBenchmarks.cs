@@ -110,6 +110,26 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
             await _batchComplete;
         }
+        
+        [Benchmark]
+        public async Task SingleRequestResponseToRemoteEntity()
+        {
+            for (var i = 0; i < MsgCount; i++)
+                await _shardRegion1.Ask<ShardedMessage>(_messageToSys2);
+        }
+        
+        [Benchmark]
+        public async Task StreamingToRemoteEntity()
+        {
+            _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys2, _shardRegion1, BatchSize));
+            await _batchComplete;
+        }
+
+        [IterationCleanup]
+        public void IterationCleanup()
+        {
+            _sys1.Stop(_batchActor);
+        }
 
         [GlobalCleanup]
         public async Task Cleanup()
