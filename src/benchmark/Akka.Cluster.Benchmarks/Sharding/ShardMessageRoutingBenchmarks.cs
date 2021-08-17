@@ -70,22 +70,20 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _shardRegion1 = StartShardRegion(_sys1);
             _shardRegion2 = StartShardRegion(_sys2);
 
-            var s1Asks = new List<Task<ActorIdentity>>(20);
-            var s2Asks = new List<Task<ActorIdentity>>(20);
+            var s1Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
+            var s2Asks = new List<Task<ShardedEntityActor.ResolveResp>>(20);
 
             foreach (var i in Enumerable.Range(0, 20))
             {
-                s1Asks.Add(_shardRegion1.Ask<ActorIdentity>(new Identify(i), TimeSpan.FromSeconds(3)));
-                s2Asks.Add(_shardRegion2.Ask<ActorIdentity>(new Identify(i), TimeSpan.FromSeconds(3)));
+                s1Asks.Add(_shardRegion1.Ask<ShardedEntityActor.ResolveResp>(new ShardingEnvelope(i.ToString(), ShardedEntityActor.Resolve.Instance), TimeSpan.FromSeconds(3)));
+                s2Asks.Add(_shardRegion2.Ask<ShardedEntityActor.ResolveResp>(new ShardingEnvelope(i.ToString(), ShardedEntityActor.Resolve.Instance), TimeSpan.FromSeconds(3)));
             }
 
             // wait for all Ask operations to complete
             await Task.WhenAll(s1Asks.Concat(s2Asks));
 
-            _entityOnSys1 = s1Asks.First(x => x.Result.Subject.Path.Address.Equals(c1.SelfAddress)).Result.Subject.Path
-                .Name;
-            _entityOnSys2 = s2Asks.First(x => x.Result.Subject.Path.Address.Equals(c2.SelfAddress)).Result.Subject.Path
-                .Name;
+            _entityOnSys2 = s1Asks.First(x => x.Result.Addr.Equals(c2.SelfAddress)).Result.EntityId;
+            _entityOnSys1 = s2Asks.First(x => x.Result.Addr.Equals(c1.SelfAddress)).Result.EntityId;
 
             _messageToSys1 = new ShardedMessage(_entityOnSys1, 10);
             _messageToSys2 = new ShardedMessage(_entityOnSys2, 10);

@@ -15,8 +15,32 @@ namespace Akka.Cluster.Benchmarks.Sharding
 {
     public sealed class ShardedEntityActor : ReceiveActor
     {
+        public sealed class Resolve
+        {
+            public static readonly Resolve Instance = new Resolve();
+            private Resolve(){}
+        }
+
+        public sealed class ResolveResp
+        {
+            public ResolveResp(string entityId, Address addr)
+            {
+                EntityId = entityId;
+                Addr = addr;
+            }
+
+            public string EntityId { get; }
+            
+            public Address Addr { get; }
+        }
+        
         public ShardedEntityActor()
         {
+            Receive<ShardingEnvelope>(e =>
+            {
+                Sender.Tell(new ResolveResp(e.EntityId, Cluster.Get(Context.System).SelfAddress));
+            });
+            
             ReceiveAny(_ => Sender.Tell(_));
         }
     }
@@ -103,6 +127,11 @@ namespace Akka.Cluster.Benchmarks.Sharding
                 return sharded.EntityId;
             }
 
+            if (message is ShardingEnvelope e)
+            {
+                return e.EntityId;
+            }
+
             return null;
         }
     }
@@ -128,12 +157,14 @@ namespace Akka.Cluster.Benchmarks.Sharding
                 akka.persistence.journal.plugin = ""akka.persistence.journal.sqlite""
                 akka.persistence.journal.sqlite {{
                     class = ""Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite""
+                    auto-initialize = on
                     connection-string = ""{connectionString}""
                 }}
                 akka.persistence.snapshot-store {{
                     plugin = ""akka.persistence.snapshot-store.sqlite""
                     sqlite {{
                         class = ""Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite""
+                        auto-initialize = on
                         connection-string = ""{connectionString}""
                     }}
                 }}";
