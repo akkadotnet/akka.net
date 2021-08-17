@@ -907,7 +907,7 @@ namespace Akka.Cluster.Tools.Singleton
                 if (e.FsmEvent is OldestChangedBuffer.OldestChanged oldestChanged && e.StateData is YoungerData youngerData)
                 {
                     _oldestChangedReceived = true;
-                    if (oldestChanged.Oldest.Equals(_selfUniqueAddress))
+                    if (oldestChanged.Oldest != null && oldestChanged.Oldest.Equals(_selfUniqueAddress))
                     {
                         Log.Info("Younger observed OldestChanged: [{0} -> myself]", youngerData.Oldest.Head()?.Address);
 

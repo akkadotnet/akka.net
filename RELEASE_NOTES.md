@@ -1,3 +1,27 @@
+#### 1.4.24 August 17 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+**Bug Fixes and Improvements**
+
+* [Akka: Make `Router` open to extensions](https://github.com/akkadotnet/akka.net/pull/5201)
+* [Akka: Allow null response to `Ask<T>`](https://github.com/akkadotnet/akka.net/pull/5205)
+* [Akka.Cluster: Fix cluster startup race condition](https://github.com/akkadotnet/akka.net/pull/5185)
+* [Akka.Streams: Fix RestartFlow bug](https://github.com/akkadotnet/akka.net/pull/5181)
+* [Akka.Persistence.Sql: Implement TimestampProvider in BatchingSqlJournal](https://github.com/akkadotnet/akka.net/pull/5192)
+* [Akka.Serialization.Hyperion: Bump Hyperion version from 0.11.0 to 0.11.1](https://github.com/akkadotnet/akka.net/pull/5206)
+* [Akka.Serialization.Hyperion: Add Hyperion unsafe type filtering security feature](https://github.com/akkadotnet/akka.net/pull/5208)
+
+You can [see the full set of changes introduced in Akka.NET v1.4.24 here](https://github.com/akkadotnet/akka.net/milestone/55?closed=1)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 360 | 200 | Aaron Stannard |
+| 3 | 4 | 4 | dependabot[bot] |
+| 1 | 548 | 333 | Arjen Smits |
+| 1 | 42 | 19 | Martijn Schoemaker |
+| 1 | 26 | 27 | Andreas Dirnberger |
+| 1 | 171 | 27 | Gregorius Soedharmo |
+
 #### 1.4.23 August 09 2021 ####
 **Maintenance Release for Akka.NET 1.4**
 
