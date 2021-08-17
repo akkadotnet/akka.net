@@ -304,6 +304,43 @@ akka {
 }
 ```
 
+## Danger of polymorphic serializer
+One of the danger of polymorphic serializers is the danger of unsafe object type injection into 
+the serialization-deserialization chain. Hyperion attempted to alleviate this by blacklisting
+a set of potentially dangerous types from being deserialized:
+
+- System.Security.Claims.ClaimsIdentity
+- System.Windows.Forms.AxHost.State
+- System.Windows.Data.ObjectDataProvider
+- System.Management.Automation.PSObject
+- System.Web.Security.RolePrincipal
+- System.IdentityModel.Tokens.SessionSecurityToken
+- SessionViewStateHistoryItem
+- TextFormattingRunProperties
+- ToolboxItemContainer
+- System.Security.Principal.WindowsClaimsIdentity
+- System.Security.Principal.WindowsIdentity
+- System.Security.Principal.WindowsPrincipal
+- System.CodeDom.Compiler.TempFileCollection
+- System.IO.FileSystemInfo
+- System.Activities.Presentation.WorkflowDesigner
+- System.Windows.ResourceDictionary
+- System.Windows.Forms.BindingSource
+- Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider
+- System.Diagnostics.Process
+- System.Management.IWbemClassObjectFreeThreaded
+
+If you needed to serialize one of these class, be warned that they can be used as an attack vector
+inside your system, you can turn off this feature using this inside your HOCON settings:
+```
+akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
+```
+
+> [!WARNING]
+> Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server 
+> communication protocol, instead it is designed to be used as a server-server communication protocol, 
+> preferably inside a closed network system.
+
 ## Cross platform serialization compatibility in Hyperion
 There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
 Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.
