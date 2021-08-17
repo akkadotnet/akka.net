@@ -183,11 +183,11 @@ namespace Akka.Cluster.Benchmarks.Sharding
             return config;
         }
 
-        public static IActorRef StartShardRegion(ActorSystem system)
+        public static IActorRef StartShardRegion(ActorSystem system, string entityName = "entities")
         {
             var props = Props.Create(() => new ShardedEntityActor());
             var sharding = ClusterSharding.Get(system);
-            return sharding.Start("entities", s => props, ClusterShardingSettings.Create(system),
+            return sharding.Start(entityName, s => props, ClusterShardingSettings.Create(system),
                 new ShardMessageExtractor());
         }
     }

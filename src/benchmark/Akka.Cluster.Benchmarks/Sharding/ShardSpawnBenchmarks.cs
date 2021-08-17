@@ -10,11 +10,13 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Cluster.Sharding;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Engines;
 using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 
 namespace Akka.Cluster.Benchmarks.Sharding
 {
     [Config(typeof(MonitoringConfig))]
+    [SimpleJob(RunStrategy.ColdStart, targetCount:1, warmupCount:0)]
     public class ShardSpawnBenchmarks
     {
         [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
@@ -33,6 +35,8 @@ namespace Akka.Cluster.Benchmarks.Sharding
 
         private IActorRef _shardRegion1;
         private IActorRef _shardRegion2;
+
+        public static int _shardRegionId = 0;
         
         
         [GlobalSetup]
@@ -53,9 +57,18 @@ namespace Akka.Cluster.Benchmarks.Sharding
 
             await c1.JoinAsync(c1.SelfAddress);
             await c2.JoinAsync(c1.SelfAddress);
+        }
 
-            _shardRegion1 = StartShardRegion(_sys1);
-            _shardRegion2 = StartShardRegion(_sys2);
+        [IterationSetup]
+        public void IterationSetup()
+        {
+            /*
+             * Create a new set of shard regions each time, so all of the shards are freshly allocated
+             * on each benchmark run. 
+             */
+            _shardRegion1 = StartShardRegion(_sys1, "entities" + _shardRegionId);
+            _shardRegion2 = StartShardRegion(_sys2, "entities" + _shardRegionId);
+            _shardRegionId++;
         }
 
         [Benchmark]
