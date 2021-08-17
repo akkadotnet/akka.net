@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Claims;
 using System.Security.Principal;
@@ -135,10 +136,15 @@ akka.actor {
 
         public static IEnumerable<object[]> DangerousObjectFactory()
         {
+            var isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            
             yield return new object[]{ new FileInfo("C:\\Windows\\System32"), typeof(FileInfo) };
             yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
-            yield return new object[]{ WindowsIdentity.GetAnonymous(), typeof(WindowsIdentity) };
-            yield return new object[]{ new WindowsPrincipal(WindowsIdentity.GetAnonymous()), typeof(WindowsPrincipal)};
+            if (isWindow)
+            {
+                yield return new object[]{ WindowsIdentity.GetAnonymous(), typeof(WindowsIdentity) };
+                yield return new object[]{ new WindowsPrincipal(WindowsIdentity.GetAnonymous()), typeof(WindowsPrincipal)};
+            }
 #if NET471
             yield return new object[]{ new Process(), typeof(Process)};
 #endif

@@ -51,7 +51,7 @@ namespace Akka.Serialization.Hyperion.Tests
                     serialization-settings.hyperion {
                         preserve-object-references = false
                         version-tolerance = false
-                        disallow-unsafe-type = true
+                        disallow-unsafe-type = false
                     }
                 }
             ");
