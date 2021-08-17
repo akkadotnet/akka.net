@@ -1,5 +1,22 @@
-#### 1.4.24 August 09 2021 ####
-**Placeholder for nightlies**
+#### 1.4.24 August 17 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+* [Fix cluster startup race condition](https://github.com/akkadotnet/akka.net/pull/5185)
+* [Make `Router` open to extensions](https://github.com/akkadotnet/akka.net/pull/5201)
+* [Implement TimestampProvider in BatchingSqlJournal](https://github.com/akkadotnet/akka.net/pull/5192)
+* [Fix RestartFlow bug](https://github.com/akkadotnet/akka.net/pull/5181)
+* [Allow null response to `Ask<T>`](https://github.com/akkadotnet/akka.net/pull/5205)
+* [Bump Hyperion version from 0.11.0 to 0.11.1](https://github.com/akkadotnet/akka.net/pull/5206)
+* [Add Hyperion unsafe type filtering security feature](https://github.com/akkadotnet/akka.net/pull/5208)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 360 | 200 | Aaron Stannard |
+| 3 | 4 | 4 | dependabot[bot] |
+| 1 | 548 | 333 | Arjen Smits |
+| 1 | 42 | 19 | Martijn Schoemaker |
+| 1 | 26 | 27 | Andreas Dirnberger |
+| 1 | 171 | 27 | Gregorius Soedharmo |
 
 #### 1.4.23 August 09 2021 ####
 **Maintenance Release for Akka.NET 1.4**
