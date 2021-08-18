@@ -16,7 +16,7 @@ using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 namespace Akka.Cluster.Benchmarks.Sharding
 {
     [Config(typeof(MonitoringConfig))]
-    [SimpleJob(RunStrategy.ColdStart, targetCount:1, warmupCount:0)]
+    [SimpleJob(RunStrategy.ColdStart, targetCount:1, warmupCount:0, launchCount:5)]
     public class ShardSpawnBenchmarks
     {
         [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
@@ -84,8 +84,9 @@ namespace Akka.Cluster.Benchmarks.Sharding
         [GlobalCleanup]
         public async Task Cleanup()
         {
-            var t1 = _sys1.Terminate();
-            var t2 = _sys2.Terminate();
+            var t2 = CoordinatedShutdown.Get(_sys2).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+            var t1 = CoordinatedShutdown.Get(_sys1).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+           
             await Task.WhenAll(t1, t2);
         }
     }

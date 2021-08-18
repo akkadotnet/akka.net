@@ -9,12 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
-using Akka.Configuration;
 using Akka.Cluster.Sharding;
-using Akka.Configuration;
 using BenchmarkDotNet.Attributes;
 using static Akka.Cluster.Benchmarks.Sharding.ShardingHelper;
 
@@ -45,8 +42,6 @@ namespace Akka.Cluster.Benchmarks.Sharding
 
         private IActorRef _batchActor;
         private Task _batchComplete;
-        
-        
 
         [GlobalSetup]
         public async Task Setup()
