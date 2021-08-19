@@ -221,7 +221,7 @@ namespace Akka.Cluster.Sharding
             Passivating = Passivating.Remove(tref);
         }
 
-        public void DeliverTo(string id, object message, object payload, IActorRef sender)
+        public void DeliverTo(string id, object message, IActorRef sender)
         {
             var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
@@ -233,7 +233,7 @@ namespace Akka.Cluster.Sharding
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
-                    this.GetOrCreateEntity(id).Tell(payload, sender);
+                    this.GetOrCreateEntity(id).Tell(message, sender);
                 }
                 else
                 {
@@ -245,7 +245,7 @@ namespace Akka.Cluster.Sharding
             else
             {
                 this.TouchLastMessageTimestamp(id);
-                child.Tell(payload, sender);
+                child.Tell(message, sender);
             }
         }
     }

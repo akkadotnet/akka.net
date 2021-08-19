@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding
         void Unhandled(object message);
         void ProcessChange<T>(T evt, Action<T> handler) where T : Shard.StateChange;
         void EntityTerminated(IActorRef tref);
-        void DeliverTo(string id, object message, object payload, IActorRef sender);
+        void DeliverTo(string id, object message, IActorRef sender);
         ICancelable PassivateIdleTask { get; }
 
         ITimerScheduler Timers { get; }
@@ -491,7 +491,7 @@ namespace Akka.Cluster.Sharding
         protected override bool Receive(object message) => this.HandleCommand(message);
         public void ProcessChange<T>(T evt, Action<T> handler) where T : StateChange => this.BaseProcessChange(evt, handler);
         public void EntityTerminated(IActorRef tref) => this.BaseEntityTerminated(tref);
-        public void DeliverTo(string id, object message, object payload, IActorRef sender) => this.BaseDeliverTo(id, message, payload, sender);
+        public void DeliverTo(string id, object message, IActorRef sender) => this.BaseDeliverTo(id, message, sender);
     }
 
     internal static class Shards
@@ -626,6 +626,14 @@ namespace Akka.Cluster.Sharding
 
         public static bool HandleCommand<TShard>(this TShard shard, object message) where TShard : IShard
         {
+            // short-circuit on hot path
+            var extracted = shard.ExtractEntityId(message);
+            if (extracted.HasValue)
+            {
+                shard.DeliverMessage(extracted.Value.Item1, extracted.Value.Item2, shard.Context.Sender);
+                return true;
+            }
+
             switch (message)
             {
                 case Terminated t:
@@ -654,13 +662,8 @@ namespace Akka.Cluster.Sharding
                 case Shard.PassivateIdleTick _:
                     shard.PassivateIdleEntities();
                     return true;
-
                 case Shard.LeaseLost ll:
                     shard.HandleLeaseLost(ll);
-                    return true;
-
-                case var _ when shard.ExtractEntityId(message).HasValue:
-                    shard.DeliverMessage(message, shard.Context.Sender);
                     return true;
             }
             return false;
@@ -865,50 +868,47 @@ namespace Akka.Cluster.Sharding
 
                 if (buffer.Count != 0)
                 {
-                    shard.Log.Debug("Sending message buffer for entity [{0}] ([{1}] messages)", id, buffer.Count);
+                    if(shard.Log.IsDebugEnabled)
+                        shard.Log.Debug("Sending message buffer for entity [{0}] ([{1}] messages)", id, buffer.Count);
 
                     shard.GetOrCreateEntity(id);
 
                     // Now there is no deliveryBuffer we can try to redeliver
                     // and as the child exists, the message will be directly forwarded
-                    foreach (var pair in buffer)
-                        shard.DeliverMessage(pair.Item1, pair.Item2);
+                    foreach (var (msg, actorRef) in buffer)
+                        shard.DeliverMessage(id, msg, actorRef);
                 }
             }
         }
 
-        internal static void DeliverMessage<TShard>(this TShard shard, object message, IActorRef sender) where TShard : IShard
+        internal static void DeliverMessage<TShard>(this TShard shard, string entityId, object message, IActorRef sender) where TShard : IShard
         {
-            var t = shard.ExtractEntityId(message);
-            var id = t.Value.Item1;
-            var payload = t.Value.Item2;
-
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(entityId))
             {
                 shard.Log.Warning("Id must not be empty, dropping message [{0}]", message.GetType());
                 shard.Context.System.DeadLetters.Tell(message);
             }
             else
             {
-                if (payload is ShardRegion.StartEntity start)
+                if (message is ShardRegion.StartEntity start)
                     shard.HandleStartEntity(start);
                 else
                 {
-                    if (shard.MessageBuffers.TryGetValue(id, out var buffer))
+                    if (shard.MessageBuffers.TryGetValue(entityId, out var buffer))
                     {
                         if (shard.TotalBufferSize() >= shard.Settings.TuningParameters.BufferSize)
                         {
-                            shard.Log.Warning("Buffer is full, dropping message for entity [{0}]", id);
+                            shard.Log.Warning("Buffer is full, dropping message for entity [{0}]", entityId);
                             shard.Context.System.DeadLetters.Tell(message);
                         }
                         else
                         {
-                            shard.Log.Debug("Message for entity [{0}] buffered", id);
-                            shard.MessageBuffers = shard.MessageBuffers.SetItem(id, buffer.Add((message, sender)));
+                            shard.Log.Debug("Message for entity [{0}] buffered", entityId);
+                            shard.MessageBuffers = shard.MessageBuffers.SetItem(entityId, buffer.Add((message, sender)));
                         }
                     }
                     else
-                        shard.DeliverTo(id, message, payload, sender);
+                        shard.DeliverTo(entityId, message, sender);
                 }
             }
         }
@@ -937,10 +937,10 @@ namespace Akka.Cluster.Sharding
             shard.Passivating = shard.Passivating.Remove(tref);
         }
 
-        internal static void BaseDeliverTo<TShard>(this TShard shard, string id, object message, object payload, IActorRef sender) where TShard : IShard
+        internal static void BaseDeliverTo<TShard>(this TShard shard, string id, object message, IActorRef sender) where TShard : IShard
         {
             shard.TouchLastMessageTimestamp(id);
-            shard.GetOrCreateEntity(id).Tell(payload, sender);
+            shard.GetOrCreateEntity(id).Tell(message, sender);
         }
 
         internal static IActorRef GetOrCreateEntity<TShard>(this TShard shard, string id, Action<IActorRef> onCreate = null) where TShard : IShard

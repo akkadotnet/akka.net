@@ -159,7 +159,7 @@ namespace Akka.Cluster.Sharding
             Passivating = Passivating.Remove(tref);
         }
 
-        public void DeliverTo(string id, object message, object payload, IActorRef sender)
+        public void DeliverTo(string id, object message, IActorRef sender)
         {
             var name = Uri.EscapeDataString(id);
             var child = Context.Child(name);
@@ -171,7 +171,7 @@ namespace Akka.Cluster.Sharding
                     {
                         throw new InvalidOperationException($"Message buffers contains id [{id}].");
                     }
-                    this.GetOrCreateEntity(id).Tell(payload, sender);
+                    this.GetOrCreateEntity(id).Tell(message, sender);
                 }
                 else
                 {
@@ -183,7 +183,7 @@ namespace Akka.Cluster.Sharding
             else
             {
                 this.TouchLastMessageTimestamp(id);
-                child.Tell(payload, sender);
+                child.Tell(message, sender);
             }
         }
 
@@ -292,6 +292,12 @@ namespace Akka.Cluster.Sharding
 
         private Receive WaitingForUpdate<TEvent>(TEvent e, Action<TEvent> afterUpdateCallback) where TEvent : Shard.StateChange => message =>
         {
+            var extracted = ExtractEntityId(message);
+            if (extracted.HasValue)
+            {
+                this.DeliverTo(extracted.Value.Item1, extracted.Value.Item2, Sender);
+            }
+            
             switch (message)
             {
                 case UpdateSuccess success when Equals((((Shard.StateChange, int))success.Request).Item1, e):
@@ -323,9 +329,6 @@ namespace Akka.Cluster.Sharding
                     break;
                 case Shard.IShardQuery sq:
                     this.HandleShardRegionQuery(sq);
-                    break;
-                case var _ when ExtractEntityId(message).HasValue:
-                    this.DeliverMessage(message, Context.Sender);
                     break;
                 default:
                     Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
