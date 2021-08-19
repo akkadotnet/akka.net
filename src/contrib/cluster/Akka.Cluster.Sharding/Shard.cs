@@ -890,7 +890,7 @@ namespace Akka.Cluster.Sharding
             }
             else
             {
-                if (message is ShardRegion.StartEntity start)
+                if (message is ShardRegion.StartEntity start) // technically, this message should never make it here
                     shard.HandleStartEntity(start);
                 else
                 {
@@ -903,7 +903,8 @@ namespace Akka.Cluster.Sharding
                         }
                         else
                         {
-                            shard.Log.Debug("Message for entity [{0}] buffered", entityId);
+                            if(shard.Log.IsDebugEnabled)
+                                shard.Log.Debug("Message for entity [{0}] buffered", entityId);
                             shard.MessageBuffers = shard.MessageBuffers.SetItem(entityId, buffer.Add((message, sender)));
                         }
                     }

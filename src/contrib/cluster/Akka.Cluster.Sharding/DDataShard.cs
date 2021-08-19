@@ -142,14 +142,16 @@ namespace Akka.Cluster.Sharding
             {
                 //Note; because we're not persisting the EntityStopped, we don't need
                 // to persist the EntityStarted either.
-                Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
+                if(Log.IsDebugEnabled)
+                    Log.Debug("Starting entity [{0}] again, there are buffered messages for it", id);
                 this.SendMessageBuffer(new Shard.EntityStarted(id));
             }
             else
             {
                 if (!Passivating.Contains(tref))
                 {
-                    Log.Debug("Entity [{0}] stopped without passivating, will restart after backoff", id);
+                    if(Log.IsDebugEnabled)
+                        Log.Debug("Entity [{0}] stopped without passivating, will restart after backoff", id);
                     Context.System.Scheduler.ScheduleTellOnce(Settings.TuningParameters.EntityRestartBackoff, Self, new Shard.RestartEntity(id), ActorRefs.NoSender);
                 }
                 else
