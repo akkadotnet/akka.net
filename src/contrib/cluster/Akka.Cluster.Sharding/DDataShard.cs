@@ -292,12 +292,6 @@ namespace Akka.Cluster.Sharding
 
         private Receive WaitingForUpdate<TEvent>(TEvent e, Action<TEvent> afterUpdateCallback) where TEvent : Shard.StateChange => message =>
         {
-            var extracted = ExtractEntityId(message);
-            if (extracted.HasValue)
-            {
-                this.DeliverTo(extracted.Value.Item1, extracted.Value.Item2, Sender);
-            }
-            
             switch (message)
             {
                 case UpdateSuccess success when Equals((((Shard.StateChange, int))success.Request).Item1, e):
@@ -331,9 +325,18 @@ namespace Akka.Cluster.Sharding
                     this.HandleShardRegionQuery(sq);
                     break;
                 default:
-                    Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
-                        message.GetType(), e);
-                    Stash.Stash();
+                    var extracted = ExtractEntityId(message);
+                    if (extracted.HasValue)
+                    {
+                        DeliverTo(extracted.Value.Item1, extracted.Value.Item2, Sender);
+                    }
+                    else
+                    {
+                        Log.Debug("Stashing unexpected message [{0}] while waiting for DDataShard update of {0}",
+                            message.GetType(), e);
+                        Stash.Stash();
+                    }
+                  
                     break;
             }
             return true;

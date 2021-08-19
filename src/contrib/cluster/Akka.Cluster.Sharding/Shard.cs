@@ -626,14 +626,6 @@ namespace Akka.Cluster.Sharding
 
         public static bool HandleCommand<TShard>(this TShard shard, object message) where TShard : IShard
         {
-            // short-circuit on hot path
-            var extracted = shard.ExtractEntityId(message);
-            if (extracted.HasValue)
-            {
-                shard.DeliverMessage(extracted.Value.Item1, extracted.Value.Item2, shard.Context.Sender);
-                return true;
-            }
-
             switch (message)
             {
                 case Terminated t:
@@ -665,6 +657,14 @@ namespace Akka.Cluster.Sharding
                 case Shard.LeaseLost ll:
                     shard.HandleLeaseLost(ll);
                     return true;
+                default:
+                    var extracted = shard.ExtractEntityId(message);
+                    if (extracted.HasValue)
+                    {
+                        shard.DeliverMessage(extracted.Value.Item1, extracted.Value.Item2, shard.Context.Sender);
+                        return true;
+                    }
+                    break;
             }
             return false;
         }
