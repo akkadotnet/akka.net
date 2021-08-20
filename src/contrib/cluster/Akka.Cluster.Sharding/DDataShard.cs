@@ -330,7 +330,7 @@ namespace Akka.Cluster.Sharding
                     var extracted = ExtractEntityId(message);
                     if (extracted.HasValue)
                     {
-                        DeliverTo(extracted.Value.Item1, extracted.Value.Item2, Sender);
+                        DeliverTo(extracted.Value.Item1, extracted.Value.Item2, Context.Sender);
                     }
                     else
                     {

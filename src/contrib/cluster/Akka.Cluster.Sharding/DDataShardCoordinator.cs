@@ -306,7 +306,7 @@ namespace Akka.Cluster.Sharding
 
         private void Activate()
         {
-            Context.Become(this.Active);
+            Context.Become(Active);
             Log.Info("Sharding Coordinator was moved to the active state {0}", CurrentState);
         }
 
@@ -323,7 +323,7 @@ namespace Akka.Cluster.Sharding
         public void Update<TEvent>(TEvent e, Action<TEvent> handler) where TEvent : PersistentShardCoordinator.IDomainEvent
         {
             SendCoordinatorStateUpdate(e);
-            switch ((PersistentShardCoordinator.IDomainEvent)e)
+            switch (e)
             {
                 case PersistentShardCoordinator.ShardHomeAllocated allocated when _rememberEntities && !_shards.Contains(allocated.Shard):
                     SendShardsUpdate(allocated.Shard);
