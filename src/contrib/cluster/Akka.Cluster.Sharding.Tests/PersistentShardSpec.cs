@@ -87,5 +87,43 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectMsgAllOf(new Shard.ShardStats("shard-1", 1));
             });
         }
+        
+        [Fact]
+        public void DData_Shard_must_remember_entities_started_with_StartEntity()
+        {
+            Func<string, Props> ep = id => Props.Create(() => new EntityActor(id));
+
+            ExtractEntityId extractEntityId = _ => ("entity-1", "msg");
+
+            var props = Props.Create(() => new DDataShard(
+                "cats",
+                "shard-1",
+                ep,
+                ClusterShardingSettings.Create(Sys),
+                extractEntityId,
+                _ => "shard-1",
+                PoisonPill.Instance, 
+                DistributedData.DistributedData.Get(Sys).Replicator, 
+                100
+            ));
+
+            var persistentShard = Sys.ActorOf(props);
+            Watch(persistentShard);
+
+            persistentShard.Tell(new ShardRegion.StartEntity("entity-1"));
+            ExpectMsg(new ShardRegion.StartEntityAck("entity-1", "shard-1"));
+
+            persistentShard.Tell(PoisonPill.Instance);
+            ExpectTerminated(persistentShard);
+
+            Sys.Log.Info("Starting shard again");
+            var secondIncarnation = Sys.ActorOf(props);
+
+            secondIncarnation.Tell(Shard.GetShardStats.Instance);
+            AwaitAssert(() =>
+            {
+                ExpectMsgAllOf(new Shard.ShardStats("shard-1", 1));
+            });
+        }
     }
 }
