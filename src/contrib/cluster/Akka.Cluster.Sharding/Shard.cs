@@ -658,12 +658,15 @@ namespace Akka.Cluster.Sharding
                 case Shard.LeaseLost ll:
                     shard.HandleLeaseLost(ll);
                     return true;
-
-                case var _ when shard.ExtractEntityId(message).HasValue:
-                    shard.DeliverMessage(message, shard.Context.Sender);
+                default:
+                {
+                    var extracted = shard.ExtractEntityId(message);
+                    if (!extracted.HasValue) return false;
+                    
+                    shard.DeliverTo(extracted.Value.Item1, message, extracted.Value.Item2, shard.Context.Sender);
                     return true;
+                }
             }
-            return false;
         }
 
         internal static void HandleShardRegionQuery<TShard>(this TShard shard, Shard.IShardQuery query) where TShard : IShard

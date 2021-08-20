@@ -326,9 +326,6 @@ namespace Akka.Cluster.Sharding
                 case Shard.IShardQuery sq:
                     this.HandleShardRegionQuery(sq);
                     break;
-                case var _ when ExtractEntityId(message).HasValue:
-                    this.DeliverMessage(message, Context.Sender);
-                    break;
                 default:
                     var extracted = ExtractEntityId(message);
                     if (extracted.HasValue)
