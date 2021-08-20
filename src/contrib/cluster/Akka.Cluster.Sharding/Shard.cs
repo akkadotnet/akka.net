@@ -662,10 +662,6 @@ namespace Akka.Cluster.Sharding
                 case var _ when shard.ExtractEntityId(message).HasValue:
                     shard.DeliverMessage(message, shard.Context.Sender);
                     return true;
-                        shard.DeliverMessage(extracted.Value.Item1, extracted.Value.Item2, shard.Context.Sender);
-                        return true;
-                    }
-                    break;
             }
             return false;
         }
@@ -908,7 +904,7 @@ namespace Akka.Cluster.Sharding
                         else
                         {
                             if(shard.Log.IsDebugEnabled)
-                                shard.Log.Debug("Message for entity [{0}] buffered", entityId);
+                                shard.Log.Debug("Message for entity [{0}] buffered", id);
                             shard.MessageBuffers = shard.MessageBuffers.SetItem(id, buffer.Add((message, sender)));
                         }
                     }
