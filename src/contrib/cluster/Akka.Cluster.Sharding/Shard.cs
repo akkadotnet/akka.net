@@ -874,8 +874,8 @@ namespace Akka.Cluster.Sharding
 
                     // Now there is no deliveryBuffer we can try to redeliver
                     // and as the child exists, the message will be directly forwarded
-                    foreach (var pair in buffer)
-                        shard.DeliverMessage(pair.Item1, pair.Item2);
+                    foreach (var (msg, actorRef) in buffer)
+                        shard.DeliverMessage(msg, actorRef);
                 }
             }
         }
