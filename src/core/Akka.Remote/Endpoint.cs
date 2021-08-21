@@ -1961,6 +1961,10 @@ namespace Akka.Remote
                             {
                                 LogTransientSerializationError(ackAndMessage.MessageOption, e);
                             }
+                            catch (InvalidCastException e)
+                            {
+                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                            }
                             catch (Exception e)
                             {
                                 throw;

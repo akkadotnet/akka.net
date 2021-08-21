@@ -417,24 +417,14 @@ namespace Akka.Cluster.SBR
             throw new InvalidOperationException();
         }
 
-        public IDecision ReverseDecision(IDecision decision)
+        public IDecision ReverseDecision(IAcquireLeaseDecision decision)
         {
             switch (decision)
             {
-                case DownUnreachable _:
-                    return DownReachable.Instance;
                 case AcquireLeaseAndDownUnreachable _:
                     return DownReachable.Instance;
-                case DownReachable _:
-                    return DownUnreachable.Instance;
-                case DownAll _:
-                    return DownAll.Instance;
-                case DownIndirectlyConnected _:
-                    return ReverseDownIndirectlyConnected.Instance;
                 case AcquireLeaseAndDownIndirectlyConnected _:
                     return ReverseDownIndirectlyConnected.Instance;
-                case ReverseDownIndirectlyConnected _:
-                    return DownIndirectlyConnected.Instance;
             }
 
             throw new InvalidOperationException();
@@ -684,14 +674,16 @@ namespace Akka.Cluster.SBR
     /// </summary>
     internal class LeaseMajority : DowningStrategy
     {
-        public LeaseMajority(string role, Lease lease, TimeSpan acquireLeaseDelayForMinority)
+        public LeaseMajority(string role, Lease lease, TimeSpan acquireLeaseDelayForMinority, TimeSpan releaseAfter)
         {
             Role = role;
             Lease = lease;
             AcquireLeaseDelayForMinority = acquireLeaseDelayForMinority;
+            ReleaseAfter = releaseAfter;
         }
 
         public TimeSpan AcquireLeaseDelayForMinority { get; }
+        public TimeSpan ReleaseAfter { get; }
 
         private TimeSpan AcquireLeaseDelay
         {
