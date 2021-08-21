@@ -47,6 +47,8 @@ namespace Akka.DependencyInjection.Tests
             // all dependencies should be disposed
             AwaitAssert(() =>
             {
+                GC.Collect(1, GCCollectionMode.Forced, true);
+
                 deps1.Dependencies.All(x => x.Disposed).Should().BeTrue();
             });
             
@@ -94,6 +96,8 @@ namespace Akka.DependencyInjection.Tests
             // all previous dependencies should be disposed
             AwaitAssert(() =>
             {
+                GC.Collect(1, GCCollectionMode.Forced, true);
+
                 deps1.Dependencies.All(x => x.Disposed).Should().BeTrue();
             });
 
@@ -125,6 +129,8 @@ namespace Akka.DependencyInjection.Tests
             // all previous SCOPED dependencies should be disposed
             AwaitAssert(() =>
             {
+                GC.Collect(1, GCCollectionMode.Forced, true);
+
                 deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
             });
 
@@ -171,6 +177,8 @@ namespace Akka.DependencyInjection.Tests
 
             AwaitAssert(() =>
             {
+                GC.Collect(1, GCCollectionMode.Forced, true);
+
                 // all previous SCOPED dependencies should eventually be disposed
                 deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
             }, 
