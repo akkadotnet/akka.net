@@ -35,6 +35,7 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.True(serializer.Settings.VersionTolerance);
                 Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
+                Assert.True(serializer.Settings.DisallowUnsafeType);
             }
         }
 
@@ -50,6 +51,7 @@ namespace Akka.Serialization.Hyperion.Tests
                     serialization-settings.hyperion {
                         preserve-object-references = false
                         version-tolerance = false
+                        disallow-unsafe-type = false
                     }
                 }
             ");
@@ -59,6 +61,7 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.False(serializer.Settings.VersionTolerance);
                 Assert.False(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal("NoKnownTypes", serializer.Settings.KnownTypesProvider.Name);
+                Assert.False(serializer.Settings.DisallowUnsafeType);
             }
         }
 
@@ -82,6 +85,7 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.True(serializer.Settings.VersionTolerance);
                 Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal(typeof(DummyTypesProviderWithDefaultCtor), serializer.Settings.KnownTypesProvider);
+                Assert.True(serializer.Settings.DisallowUnsafeType);
             }
         }
 
@@ -105,6 +109,7 @@ namespace Akka.Serialization.Hyperion.Tests
                 Assert.True(serializer.Settings.VersionTolerance);
                 Assert.True(serializer.Settings.PreserveObjectReferences);
                 Assert.Equal(typeof(DummyTypesProvider), serializer.Settings.KnownTypesProvider);
+                Assert.True(serializer.Settings.DisallowUnsafeType);
             }
         }
 
