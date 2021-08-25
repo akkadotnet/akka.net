@@ -161,8 +161,6 @@ namespace Akka.Actor
                 ctr1?.Dispose();
                 ctr2?.Dispose();
                 timeoutCancellation?.Dispose();
-
-                return t;
             }, TaskContinuationOptions.ExecuteSynchronously);
 
             //The future actor needs to be registered in the temp container
