@@ -115,30 +115,34 @@ namespace Akka.Actor
             }
             else if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
             {
-                if (message is T t)
-                {
-                    if (!_result.TrySetResult(t))
-                    {
-                        //ignore canceled ask and put answer into deadletter
-                        //failed result should be AskTimeoutException 
-                        //everything else indicate a bad state
-                        if (!_result.Task.IsCanceled)
-                            _provider.DeadLetters.Tell(t);
-                    }
-                }
-                else
-                {
-                    _result.TrySetException(new ArgumentException(
-                        $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
+                bool handled;
 
-                    //put invalid answer into deadletter
-                    _provider.DeadLetters.Tell(message);
+                switch (message)
+                {
+                    case T t:
+                        handled = _result.TrySetResult(t);
+                        break;
+                    case null:
+                        handled = _result.TrySetResult(default);
+                        break;
+                    case Failure f:
+                        handled = _result.TrySetException(f.Exception
+                            ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                        break;
+                    default:
+                        handled = _result.TrySetException(new ArgumentException(
+                            $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
+                        break;
                 }
+
+                //ignore canceled ask and put unhandled answers into deadletter
+                if (!handled && !_result.Task.IsCanceled)
+                    _provider.DeadLetters.Tell(message ?? default(T), this);
             }
             else
             {
                 //put too many answers into deadletter
-                _provider.DeadLetters.Tell(message);
+                _provider.DeadLetters.Tell(message ?? default(T), this);
             }
         }
 
