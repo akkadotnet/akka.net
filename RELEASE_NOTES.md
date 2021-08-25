@@ -1,5 +1,43 @@
-#### 1.4.23 August 05 2021 ####
+#### 1.4.25 August 17 2021 ####
 **Placeholder for nightlies**
+
+#### 1.4.24 August 17 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+**Bug Fixes and Improvements**
+
+* [Akka: Make `Router` open to extensions](https://github.com/akkadotnet/akka.net/pull/5201)
+* [Akka: Allow null response to `Ask<T>`](https://github.com/akkadotnet/akka.net/pull/5205)
+* [Akka.Cluster: Fix cluster startup race condition](https://github.com/akkadotnet/akka.net/pull/5185)
+* [Akka.Streams: Fix RestartFlow bug](https://github.com/akkadotnet/akka.net/pull/5181)
+* [Akka.Persistence.Sql: Implement TimestampProvider in BatchingSqlJournal](https://github.com/akkadotnet/akka.net/pull/5192)
+* [Akka.Serialization.Hyperion: Bump Hyperion version from 0.11.0 to 0.11.1](https://github.com/akkadotnet/akka.net/pull/5206)
+* [Akka.Serialization.Hyperion: Add Hyperion unsafe type filtering security feature](https://github.com/akkadotnet/akka.net/pull/5208)
+
+You can [see the full set of changes introduced in Akka.NET v1.4.24 here](https://github.com/akkadotnet/akka.net/milestone/55?closed=1)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 5 | 360 | 200 | Aaron Stannard |
+| 3 | 4 | 4 | dependabot[bot] |
+| 1 | 548 | 333 | Arjen Smits |
+| 1 | 42 | 19 | Martijn Schoemaker |
+| 1 | 26 | 27 | Andreas Dirnberger |
+| 1 | 171 | 27 | Gregorius Soedharmo |
+
+#### 1.4.23 August 09 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+
+Akka.NET v1.4.23 is designed to patch an issue that occurs on Linux machines using Akka.Cluster.Sharding with `akka.cluster.sharding.state-store-mode=ddata` and `akka.cluster.sharding.remember-entities=on`: "[System.DllNotFoundException: Unable to load shared library 'lmdb' or one of its dependencies](https://github.com/akkadotnet/akka.net/issues/5174)"
+
+In [Akka.NET v1.4.21 we added built-in support for Akka.DistributedData.LightningDb](https://github.com/akkadotnet/akka.net/releases/tag/1.4.21) for use with the `remember-entities` setting, but we never received any reports about this issue until shortly after v1.4.22 was released. Fundamentally, the problem was that our downstream dependency, Lightning.NET, doesn't include any of the necessary Linux native binaries in their distributions currently. So in the meantime, we've published our own "vendored" distribution of Lightning.NET to NuGet until a new official one is released that includes these binaries.
+
+There are some other small [fixes included in Akka.NET v1.4.23 and you can read about them here](https://github.com/akkadotnet/akka.net/milestone/54).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 8 | 136 | 2803 | Aaron Stannard |
+| 2 | 61 | 3 | Gregorius Soedharmo |
 
 #### 1.4.22 August 05 2021 ####
 **Maintenance Release for Akka.NET 1.4**

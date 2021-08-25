@@ -347,11 +347,8 @@ namespace Akka.Cluster.Routing
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        internal override RouterActor CreateRouterActor()
+        /// <inheritdoc cref="RouterConfig.CreateRouterActor"/>
+        public override ActorBase CreateRouterActor()
         {
             return new ClusterRouterPoolActor(Local.SupervisorStrategy, Settings);
         }
@@ -497,11 +494,8 @@ namespace Akka.Cluster.Routing
             return Settings.RouteesPaths;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        internal override RouterActor CreateRouterActor()
+        /// <inheritdoc cref="RouterConfig.CreateRouterActor"/>
+        public override ActorBase CreateRouterActor()
         {
             return new ClusterRouterGroupActor(Settings);
         }
