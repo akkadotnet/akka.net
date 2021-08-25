@@ -162,8 +162,8 @@ namespace Akka.Tests.Actor
 
             await EventFilter.DeadLetter<object>().ExpectAsync(0, async () =>
             {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3)))
-                    await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("timeout", Timeout.InfiniteTimeSpan, cts.Token));
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                    await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("delay", Timeout.InfiniteTimeSpan, cts.Token));
             });
         }
 

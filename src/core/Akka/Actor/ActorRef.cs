@@ -115,7 +115,7 @@ namespace Akka.Actor
             }
             else if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
             {
-                bool handled;
+                var handled = false;
 
                 switch (message)
                 {
@@ -130,7 +130,7 @@ namespace Akka.Actor
                             ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
                         break;
                     default:
-                        handled = _result.TrySetException(new ArgumentException(
+                        _ = _result.TrySetException(new ArgumentException(
                             $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
                         break;
                 }
