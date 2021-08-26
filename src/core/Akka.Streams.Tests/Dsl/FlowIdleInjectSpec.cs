@@ -41,7 +41,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+                result.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -61,7 +61,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
                 result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                result.Result.ShouldAllBeEquivalentTo(
+                result.Result.Should().BeEquivalentTo(
                     Enumerable.Range(1, 5).Concat(new[] {0, 0, 0}).Concat(Enumerable.Range(6, 5)));
             }, Materializer);
         }
@@ -97,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             downstream.Request(10);
-            downstream.ExpectNextN(10).ShouldAllBeEquivalentTo(Enumerable.Range(1, 10));
+            downstream.ExpectNextN(10).Should().BeEquivalentTo(Enumerable.Range(1, 10));
 
             downstream.Request(1);
 

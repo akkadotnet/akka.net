@@ -8,10 +8,12 @@
 using Akka.TestKit;
 using Xunit;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Nito.AsyncEx;
 
 namespace Akka.Tests.Actor
@@ -178,7 +180,23 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf<SomeActor>();
 
             // expect int, but in fact string
-            await Assert.ThrowsAsync<InvalidCastException>(async () => await actor.Ask<int>("answer"));
+            await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<int>("answer"));
+        }
+        
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/5204
+        /// </summary>
+        [Fact]
+        public async Task Bugfix5204_should_allow_null_response_without_error()
+        {
+            var actor = Sys.ActorOf(act => act.ReceiveAny((o, context) =>
+            {
+                context.Sender.Tell(null);
+            }));
+
+            // expect a string, but the answer should be `null`
+            var resp = await actor.Ask<string>(1);
+            resp.Should().BeNullOrEmpty();
         }
 
         [Fact]
@@ -187,7 +205,7 @@ namespace Akka.Tests.Actor
             AsyncContext.Run(() =>
             {
                 var actor = Sys.ActorOf<SomeActor>();
-                var res = actor.Ask<string>("answer").Result; // blocking on purpose
+                var res = actor.Ask<string>("answer", TimeSpan.FromSeconds(3)).Result; // blocking on purpose
                 res.ShouldBe("answer");
             });
         }

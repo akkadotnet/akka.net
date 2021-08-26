@@ -664,11 +664,25 @@ namespace Akka.Cluster.Sharding
                         ? $"Coordinator [{MembersByAge.First()}] is unreachable."
                         : $"Coordinator [{MembersByAge.First()}] is reachable.";
 
-                    Log.Warning("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. Total [{2}] buffered messages. [{3}]",
-                        TypeName,
-                        string.Join(", ", actorSelections.Select(i => i.PathString)),
-                        TotalBufferSize,
-                        coordinatorMessage);
+                    var bufferSize = ShardBuffers.Count;
+                    if (bufferSize > 0)
+                    {
+                        if (Log.IsWarningEnabled)
+                        {
+                            Log.Warning("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. Total [{2}] buffered messages. [{3}]",
+                                TypeName,
+                                string.Join(", ", actorSelections.Select(i => i.PathString)),
+                                TotalBufferSize,
+                                coordinatorMessage);
+                        }
+                    }
+                    else if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug("{0}: Trying to register to coordinator at [{1}], but no acknowledgement. No buffered messages yet. [{2}]",
+                            TypeName,
+                            string.Join(", ", actorSelections.Select(i => i.PathString)),
+                            coordinatorMessage);
+                    }
                 }
                 else
                 {
@@ -678,8 +692,17 @@ namespace Akka.Cluster.Sharding
                         ? "Has Cluster Sharding been started on every node and nodes been configured with the correct role(s)?"
                         : "Probably, no seed-nodes configured and manual cluster join not performed?";
 
-                    Log.Warning("{0}: No coordinator found to register. {1} Total [{2}] buffered messages.",
-                        TypeName, possibleReason, TotalBufferSize);
+                    var bufferSize = ShardBuffers.Count;
+                    if (bufferSize > 0)
+                    {
+                        Log.Warning("{0}: No coordinator found to register. {1} Total [{2}] buffered messages.",
+                            TypeName, possibleReason, TotalBufferSize);
+                    }
+                    else
+                    {
+                        Log.Debug("{0}: No coordinator found to register. {1} No buffered messages yet.",
+                            TypeName, possibleReason);
+                    }
                 }
             }
         }

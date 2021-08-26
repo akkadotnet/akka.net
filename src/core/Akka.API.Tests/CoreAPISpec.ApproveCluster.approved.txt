@@ -1,4 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
@@ -175,6 +176,7 @@ namespace Akka.Cluster
     public class ClusterJoinFailedException : Akka.Actor.AkkaException
     {
         public ClusterJoinFailedException(string message) { }
+        protected ClusterJoinFailedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class ClusterScope : Akka.Actor.Scope
     {
@@ -219,6 +221,7 @@ namespace Akka.Cluster
         public string UseDispatcher { get; }
         public bool VerboseGossipReceivedLogging { get; }
         public bool VerboseHeartbeatLogging { get; }
+        public System.TimeSpan WeaklyUpAfter { get; }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
@@ -336,6 +339,7 @@ namespace Akka.Cluster.Routing
         public Akka.Cluster.Routing.ClusterRouterGroupSettings Settings { get; }
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -361,6 +365,7 @@ namespace Akka.Cluster.Routing
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public override Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -387,13 +392,66 @@ namespace Akka.Cluster.Routing
         public string UseRole { get; }
     }
 }
+namespace Akka.Cluster.SBR
+{
+    public sealed class KeepOldestSettings
+    {
+        public KeepOldestSettings(bool downIfAlone, string role) { }
+        public bool DownIfAlone { get; }
+        public string Role { get; }
+    }
+    public sealed class LeaseMajoritySettings
+    {
+        [System.ObsoleteAttribute()]
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role) { }
+        [System.ObsoleteAttribute()]
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role, string leaseName) { }
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, System.TimeSpan releaseAfter, string role, string leaseName) { }
+        public System.TimeSpan AcquireLeaseDelayForMinority { get; }
+        public string LeaseImplementation { get; }
+        public string LeaseName { get; }
+        public System.TimeSpan ReleaseAfter { get; }
+        public string Role { get; }
+        public string SafeLeaseName(string systemName) { }
+    }
+    public class SplitBrainResolverProvider : Akka.Cluster.IDowningProvider
+    {
+        public SplitBrainResolverProvider(Akka.Actor.ActorSystem system) { }
+        public System.TimeSpan DownRemovalMargin { get; }
+        public Akka.Actor.Props DowningActorProps { get; }
+    }
+    public sealed class SplitBrainResolverSettings
+    {
+        public static readonly System.Collections.Immutable.ImmutableHashSet<string> AllStrategyNames;
+        public const string DownAllName = "down-all";
+        public const string KeepMajorityName = "keep-majority";
+        public const string KeepOldestName = "keep-oldest";
+        public const string LeaseMajorityName = "lease-majority";
+        public const string StaticQuorumName = "static-quorum";
+        public SplitBrainResolverSettings(Akka.Configuration.Config config) { }
+        public System.TimeSpan DownAllWhenUnstable { get; }
+        public System.TimeSpan DowningStableAfter { get; }
+        public string DowningStrategy { get; }
+        public string KeepMajorityRole { get; }
+        public Akka.Cluster.SBR.KeepOldestSettings KeepOldestSettings { get; }
+        public Akka.Cluster.SBR.LeaseMajoritySettings LeaseMajoritySettings { get; }
+        public Akka.Cluster.SBR.StaticQuorumSettings StaticQuorumSettings { get; }
+    }
+    public sealed class StaticQuorumSettings
+    {
+        public StaticQuorumSettings(int size, string role) { }
+        public string Role { get; }
+        public int Size { get; }
+    }
+}
 namespace Akka.Cluster.Serialization
 {
-    public class ClusterMessageSerializer : Akka.Serialization.Serializer
+    [Akka.Annotations.InternalApiAttribute()]
+    public class ClusterMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
-        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
 }

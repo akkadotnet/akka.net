@@ -17,6 +17,7 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
 {

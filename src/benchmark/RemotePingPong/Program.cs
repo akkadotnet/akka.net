@@ -44,7 +44,7 @@ namespace RemotePingPong
         public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
-                akka {
+            akka {
               actor.provider = remote
               loglevel = ERROR
               suppress-json-serializer-warning = on
@@ -57,6 +57,7 @@ namespace RemotePingPong
                     port = 0
                     hostname = ""localhost""
                 }
+                
               }
             }");
 
@@ -67,7 +68,7 @@ namespace RemotePingPong
             return bindingConfig.WithFallback(baseConfig);
         }
 
-        private static void Main(params string[] args)
+        private static async Task Main(params string[] args)
         {
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
             uint timesToRun;
@@ -76,14 +77,12 @@ namespace RemotePingPong
                 timesToRun = 1u;
             }
 
-            Start(timesToRun);
-            Console.ReadKey();
+            await Start(timesToRun);
         }
 
-        private static async void Start(uint timesToRun)
-        {
-            const long repeat = 100000L;
+        private static bool _firstRun = true;
 
+        private static void PrintSysInfo(){
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)
             {
@@ -92,24 +91,25 @@ namespace RemotePingPong
                 return;
             }
 
-#if THREADS
-            int workerThreads;
-            int completionPortThreads;
-            ThreadPool.GetAvailableThreads(out workerThreads, out completionPortThreads);
-
-            Console.WriteLine("Worker threads:                    {0}", workerThreads);
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
-#endif
             Console.WriteLine("ProcessorCount:                    {0}", processorCount);
             Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
             Console.WriteLine("Actor Count:                       {0}", processorCount * 2);
             Console.WriteLine("Messages sent/received per client: {0}  ({0:0e0})", repeat*2);
             Console.WriteLine("Is Server GC:                      {0}", GCSettings.IsServerGC);
+            Console.WriteLine("Thread count:                      {0}", Process.GetCurrentProcess().Threads.Count);
             Console.WriteLine();
 
             //Print tables
             Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms]");
 
+            _firstRun = false;
+        }
+
+        const long repeat = 100000L;
+
+        private static async Task Start(uint timesToRun)
+        {         
             for (var i = 0; i < timesToRun; i++)
             {
                 var redCount = 0;
@@ -182,6 +182,12 @@ namespace RemotePingPong
                 throw new Exception("Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
             }
 
+            // now that the dispatchers in both ActorSystems are started, we want to measure thread count and other system
+            // metrics here - but only the very first benchmark
+            if(_firstRun){
+                PrintSysInfo();
+            }
+
             var sw = Stopwatch.StartNew();
             receivers.ForEach(c =>
             {
@@ -193,7 +199,7 @@ namespace RemotePingPong
             sw.Stop();
 
             // force clean termination
-            var termination = Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() }).Wait(TimeSpan.FromSeconds(10));
+            await Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() });
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
             long throughput = elapsedMilliseconds == 0 ? -1 : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);

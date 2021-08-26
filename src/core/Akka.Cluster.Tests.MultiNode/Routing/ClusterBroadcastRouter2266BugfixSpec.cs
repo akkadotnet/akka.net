@@ -14,6 +14,7 @@ using Akka.Configuration;
 using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing
 {
@@ -121,8 +122,7 @@ namespace Akka.Cluster.Tests.MultiNode.Routing
             var zero = Roles.Select(GetAddress).ToDictionary(c => c, c => 0);
             var replays = ReceiveWhile(5.Seconds(), msg =>
             {
-                var routee = msg as ClusterBroadcastGroupSpecConfig.Reply;
-                if (routee != null && routee.RouteeType.GetType() == routeeType.GetType())
+                if (msg is ClusterBroadcastGroupSpecConfig.Reply routee && routee.RouteeType.GetType() == routeeType.GetType())
                     return FullAddress(routee.ActorRef);
                 return null;
             }, expectedReplies).Aggregate(zero, (replyMap, address) =>

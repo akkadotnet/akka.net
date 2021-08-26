@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            seq.Invoking(x => x.AwaitResult()).ShouldThrow<Exception>().And.Should().Be(ex);
+            seq.Invoking(x => x.AwaitResult()).Should().Throw<Exception>().And.Should().Be(ex);
         }
 
         [Fact]
@@ -292,7 +292,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var seq = t.Item2;
 
-            seq.Invoking(x => x.AwaitResult()).ShouldThrow<Exception>().And.Should().Be(ex);
+            seq.Invoking(x => x.AwaitResult()).Should().Throw<Exception>().And.Should().Be(ex);
         }
 
         [Fact]

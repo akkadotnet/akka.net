@@ -33,7 +33,6 @@ namespace Akka.TestKit.Xunit2.Internals
             _args = args;
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AkkaEqualException"/> class.
         /// </summary>
@@ -43,7 +42,7 @@ namespace Akka.TestKit.Xunit2.Internals
             : base(info, context)
         {
         }
-#endif
+
         /// <summary>
         /// The message that describes the error.
         /// </summary>

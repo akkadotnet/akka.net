@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 af.Wait(TimeSpan.FromSeconds(30)).Should().BeTrue();
                 cf.Wait(TimeSpan.FromSeconds(30)).Should().BeTrue();
-                af.Result.ShouldAllBeEquivalentTo(cf.Result);
+                af.Result.Should().BeEquivalentTo(cf.Result);
             });
         }
 

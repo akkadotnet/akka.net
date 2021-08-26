@@ -42,8 +42,8 @@ namespace Akka.Persistence.Query.Tests
             Action compare1 = () => seq.CompareTo(NoOffset.Instance);
             Action compare2 = () => NoOffset.Instance.CompareTo(seq);
 
-            compare1.ShouldThrow<InvalidOperationException>();
-            compare2.ShouldThrow<InvalidOperationException>();
+            compare1.Should().Throw<InvalidOperationException>();
+            compare2.Should().Throw<InvalidOperationException>();
         }
     }
 }

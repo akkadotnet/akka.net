@@ -174,7 +174,7 @@ namespace Akka.Remote.Tests
             //so the token is cancelled before the delay completed.. 
             var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
             Assert.Equal("pong", msg);
-            Assert.IsType<FutureActorRef>(actorRef);
+            Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
 
         [Fact(Skip = "Racy")]
@@ -411,8 +411,7 @@ namespace Akka.Remote.Tests
         {
             try
             {
-                Resolve.SetResolver(new TestResolver());
-                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
+                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
             }
             finally
@@ -426,8 +425,7 @@ namespace Akka.Remote.Tests
         {
             try
             {
-                Resolve.SetResolver(new TestResolver());
-                var r = Sys.ActorOf(Props.CreateBy<Resolve<Echo2>>(), "echo");
+                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
                 r.Tell("ping", TestActor);
                 ExpectMsg(("pong", TestActor), TimeSpan.FromSeconds(1.5));
@@ -902,11 +900,24 @@ namespace Akka.Remote.Tests
             }
         }
 
-        class TestResolver : IResolver
+        class TestResolver<TActor> : IIndirectActorProducer where TActor:ActorBase
         {
-            public T Resolve<T>(object[] args)
+            public Type ActorType => typeof(TActor);
+            private readonly object[] _args;
+
+            public TestResolver(params object[] args)
             {
-                return Activator.CreateInstance(typeof(T), args).AsInstanceOf<T>();
+                _args = args;
+            }
+
+            public ActorBase Produce()
+            {
+                return (ActorBase)Activator.CreateInstance(ActorType, _args);
+            }
+
+            public void Release(ActorBase actor)
+            {
+                
             }
         }
 

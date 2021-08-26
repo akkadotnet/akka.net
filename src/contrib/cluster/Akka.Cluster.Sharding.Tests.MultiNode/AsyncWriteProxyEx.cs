@@ -43,7 +43,6 @@ namespace Akka.Cluster.Sharding.Tests
         {
         }
 
-#if SERIALIZATION
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncReplayTimeoutException"/> class.
         /// </summary>
@@ -53,7 +52,6 @@ namespace Akka.Cluster.Sharding.Tests
             : base(info, context)
         {
         }
-#endif
     }
 
     /// <summary>
@@ -438,7 +436,7 @@ namespace Akka.Cluster.Sharding.Tests
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef(result, () => { }, path);
+            var future = new FutureActorRef<object>(result, t => { }, path);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
 

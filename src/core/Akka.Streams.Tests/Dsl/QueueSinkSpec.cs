@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = probe.ExpectSubscription();
                 var future = queue.PullAsync();
                 var future2 = queue.PullAsync();
-                future2.Invoking(t => t.Wait(RemainingOrDefault)).ShouldThrow<IllegalStateException>();
+                future2.Invoking(t => t.Wait(RemainingOrDefault)).Should().Throw<IllegalStateException>();
 
                 sub.SendNext(1);
                 future.PipeTo(TestActor);
@@ -130,7 +130,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.SendError(TestException());
                 queue.Invoking(q => q.PullAsync().Wait(RemainingOrDefault))
-                    .ShouldThrow<TestException>();
+                    .Should().Throw<TestException>();
             }, _materializer);
         }
 
@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
             }, _materializer);
         }
 
-        [Fact(Skip = "Racy, see https://github.com/akkadotnet/akka.net/pull/4424#issuecomment-632284459")]
+        [Fact]
         public void QueueSink_should_fail_pull_future_when_stream_is_completed()
         {
             this.AssertAllStagesStopped(() =>
@@ -170,10 +170,8 @@ namespace Akka.Streams.Tests.Dsl
                 var result = queue.PullAsync().Result;
                 result.Should().Be(Option<int>.None);
 
-                ((Task)queue.PullAsync()).ContinueWith(t =>
-                {
-                    t.Exception.InnerException.Should().BeOfType<IllegalStateException>();
-                }, TaskContinuationOptions.OnlyOnFaulted).Wait();
+                var exception = Record.ExceptionAsync(async () => await queue.PullAsync()).Result;
+                exception.Should().BeOfType<StreamDetachedException>();
             }, _materializer);
         }
 
@@ -237,7 +235,7 @@ namespace Akka.Streams.Tests.Dsl
             Source.Single(1)
                 .Invoking(
                     s => s.RunWith(Sink.Queue<int>().WithAttributes(Attributes.CreateInputBuffer(0, 0)), _materializer))
-                .ShouldThrow<ArgumentException>();
+                .Should().Throw<ArgumentException>();
         }
     }
 }

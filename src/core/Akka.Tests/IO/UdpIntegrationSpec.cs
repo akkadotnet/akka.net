@@ -16,6 +16,7 @@ using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using FsCheck;
 
 namespace Akka.Tests.IO
@@ -26,6 +27,8 @@ namespace Akka.Tests.IO
 
         public UdpIntegrationSpec(ITestOutputHelper output)
             : base(@"
+                    akka.actor.serialize-creators = on
+                    akka.actor.serialize-messages = on
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
                     akka.io.udp.direct-buffer-pool-limit = 100

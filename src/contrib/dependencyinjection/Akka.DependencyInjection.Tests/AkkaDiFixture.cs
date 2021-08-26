@@ -7,6 +7,7 @@
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Akka.DependencyInjection.Tests
 {
@@ -94,24 +95,18 @@ namespace Akka.DependencyInjection.Tests
 
         public AkkaDiFixture()
         {
-            Services = new ServiceCollection();
+            var services = new ServiceCollection();
+            services.AddSingleton<ISingletonDependency, Singleton>()
+                        .AddScoped<IScopedDependency, Scoped>()
+                        .AddTransient<ITransientDependency, Transient>();
 
-            // <DiFixture>
-            // register some default services
-            Services.AddSingleton<ISingletonDependency, Singleton>()
-                .AddScoped<IScopedDependency, Scoped>()
-                .AddTransient<ITransientDependency, Transient>();
-            // </DiFixture>
-            Provider = Services.BuildServiceProvider();
+            Provider = services.BuildServiceProvider();
         }
-
-        public IServiceCollection Services { get; private set; }
-
+        
         public IServiceProvider Provider { get; private set; }
 
         public void Dispose()
         {
-            Services = null;
             Provider = null;
         }
     }

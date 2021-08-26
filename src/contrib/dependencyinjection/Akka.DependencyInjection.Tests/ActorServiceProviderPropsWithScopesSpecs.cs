@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,7 @@ namespace Akka.DependencyInjection.Tests
 
     public class ActorServiceProviderPropsWithScopesSpecs : AkkaSpec, IClassFixture<AkkaDiFixture>
     {
-        public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(ServiceProviderSetup.Create(fixture.Provider)
+        public ActorServiceProviderPropsWithScopesSpecs(AkkaDiFixture fixture, ITestOutputHelper output) : base(DependencyResolverSetup.Create(fixture.Provider)
             .And(BootstrapSetup.Create().WithConfig(TestKitBase.DefaultConfig)), output)
         {
 
@@ -29,7 +30,7 @@ namespace Akka.DependencyInjection.Tests
         [Fact(DisplayName = "DI: actors who receive an IServiceScope through Props should dispose of their dependencies upon termination")]
         public void ActorsWithScopedDependenciesShouldDisposeUponStop()
         {
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var props = spExtension.Props<ScopedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
@@ -44,7 +45,11 @@ namespace Akka.DependencyInjection.Tests
             ExpectTerminated(scoped1);
 
             // all dependencies should be disposed
-            deps1.Dependencies.All(x => x.Disposed).Should().BeTrue();
+            AwaitAssert(() =>
+            {
+                deps1.Dependencies.All(x => x.Disposed).Should().BeTrue();
+            });
+            
 
             // reuse the same props
             var scoped2 = Sys.ActorOf(props, "scoped2");
@@ -55,11 +60,23 @@ namespace Akka.DependencyInjection.Tests
             deps2.Dependencies.All(x => x.Disposed).Should().BeFalse();
         }
 
+        [Fact(DisplayName = "DI: should be able to start actors with untyped Props")]
+        public void ShouldStartActorWithUntypedProps()
+        {
+            var spExtension = DependencyResolver.For(Sys);
+            var props = spExtension.Props(typeof(ScopedActor));
+
+            // create a scoped actor using the props from Akka.DependencyInjection
+            var scoped1 = Sys.ActorOf(props, "scoped1");
+            scoped1.Tell(new FetchDependencies());
+            var deps1 = ExpectMsg<CurrentDependencies>();
+        }
+
         [Fact(DisplayName =
             "DI: actors who receive an IServiceScope through Props should dispose of their dependencies and recreate upon restart")]
         public void ActorsWithScopedDependenciesShouldDisposeAndRecreateUponRestart()
         {
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var props = spExtension.Props<ScopedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
@@ -75,7 +92,10 @@ namespace Akka.DependencyInjection.Tests
             });
 
             // all previous dependencies should be disposed
-            deps1.Dependencies.All(x => x.Disposed).Should().BeTrue();
+            AwaitAssert(() =>
+            {
+                deps1.Dependencies.All(x => x.Disposed).Should().BeTrue();
+            });
 
             // actor should restart with totally new dependencies
             scoped1.Tell(new FetchDependencies());
@@ -87,7 +107,7 @@ namespace Akka.DependencyInjection.Tests
             "DI: actors who receive a mix of dependencies via IServiceScope should dispose ONLY of their scoped dependencies and recreate upon restart")]
         public void ActorsWithMixedDependenciesShouldDisposeAndRecreateScopedUponRestart()
         {
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var props = spExtension.Props<MixedActor>();
 
             // create a scoped actor using the props from Akka.DependencyInjection
@@ -103,7 +123,10 @@ namespace Akka.DependencyInjection.Tests
             });
 
             // all previous SCOPED dependencies should be disposed
-            deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+            AwaitAssert(() =>
+            {
+                deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+            });
 
             // singletons should not be disposed
             deps1.Dependencies.Where(x => (x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeFalse();
@@ -123,7 +146,7 @@ namespace Akka.DependencyInjection.Tests
         public void ActorsWithNonDiDependenciesShouldStart()
         {
             // <CreateNonDiActor>
-            var spExtension = ServiceProvider.For(Sys);
+            var spExtension = DependencyResolver.For(Sys);
             var arg1 = "foo";
             var arg2 = "bar";
             var props = spExtension.Props<NonDiArgsActor>(arg1, arg2);
@@ -146,8 +169,13 @@ namespace Akka.DependencyInjection.Tests
                 scoped1.Tell(new Crash());
             });
 
-            // all previous SCOPED dependencies should be disposed
-            deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+            AwaitAssert(() =>
+            {
+                // all previous SCOPED dependencies should eventually be disposed
+                deps1.Dependencies.Where(x => !(x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeTrue();
+            }, 
+                duration: TimeSpan.FromMilliseconds(300),
+                interval: TimeSpan.FromMilliseconds(100));
 
             // singletons should not be disposed
             deps1.Dependencies.Where(x => (x is AkkaDiFixture.ISingletonDependency)).All(x => x.Disposed).Should().BeFalse();
@@ -160,6 +188,37 @@ namespace Akka.DependencyInjection.Tests
             var deps2Single = deps2.Dependencies.Single(x => (x is AkkaDiFixture.ISingletonDependency));
 
             deps1Single.Should().Be(deps2Single);
+        }
+
+        [Fact(DisplayName = "Props created via the ServiceProvider should support the standard Props copying methods")]
+        public void ServiceProvider_Props_should_support_copying()
+        {
+            // <CreateNonDiActor>
+            var spExtension = DependencyResolver.For(Sys);
+            var arg1 = "foo";
+            var arg2 = "bar";
+            var props = spExtension.Props<NonDiArgsActor>(arg1, arg2).WithRouter(new RoundRobinPool(10).WithSupervisorStrategy(new OneForOneStrategy(
+                ex =>
+                {
+                    TestActor.Tell(ex);
+                    return Directive.Restart;
+                })));
+
+            // create a scoped round robin pool using the props from Akka.DependencyInjection
+            var scoped1 = Sys.ActorOf(props, "scoped1");
+
+            // validate that non-DI'd arguments were passed to actor constructor arguments correctly
+            scoped1.Tell("fetch");
+            ExpectMsg<string>().Should().Be(arg1);
+            ExpectMsg<string>().Should().Be(arg2);
+
+            // validate that this is a router
+            scoped1.Tell(GetRoutees.Instance);
+            ExpectMsg<Routees>().Members.Count().Should().Be(10);
+
+            // validate that the router's supervision strategy has been enforced
+            scoped1.Tell(new Crash());
+            ExpectMsg<ApplicationException>();
         }
 
         public class Crash { }

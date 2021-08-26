@@ -12,6 +12,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Tests.Actor
 {
@@ -81,6 +82,19 @@ namespace Akka.Tests.Actor
             allDeadLetter.Recipient.Should().Be(deadActor);
 
             allListener.ExpectNoMsg(200.Milliseconds());
+
+            // unwrap for ActorSelection
+            Sys.ActorSelection(deadActor.Path).Tell(new SuppressedMessage());
+            Sys.ActorSelection(deadActor.Path).Tell(new NormalMessage());
+
+            // the recipient ref isn't the same as deadActor here so only checking the message
+            deadLetter = deadListener.ExpectMsg<DeadLetter>();//
+            deadLetter.Message.Should().BeOfType<NormalMessage>();
+            suppressedDeadLetter = suppressedListener.ExpectMsg<SuppressedDeadLetter>();
+            suppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
+
+            deadListener.ExpectNoMsg(200.Milliseconds());
+            suppressedListener.ExpectNoMsg(200.Milliseconds());
         }
 
         [Fact]
@@ -122,6 +136,22 @@ namespace Akka.Tests.Actor
             deadListener.ExpectNoMsg(TimeSpan.Zero);
             suppressedListener.ExpectNoMsg(TimeSpan.Zero);
             allListener.ExpectNoMsg(TimeSpan.Zero);
+
+            // unwrap for ActorSelection
+            Sys.ActorSelection(Sys.DeadLetters.Path).Tell(new SuppressedMessage());
+            Sys.ActorSelection(Sys.DeadLetters.Path).Tell(new NormalMessage());
+
+            deadLetter = deadListener.ExpectMsg<DeadLetter>();
+            deadLetter.Message.Should().BeOfType<NormalMessage>();
+            deadLetter.Sender.Should().Be(TestActor);
+            deadLetter.Recipient.Should().Be(Sys.DeadLetters);
+            suppressedDeadLetter = suppressedListener.ExpectMsg<SuppressedDeadLetter>();
+            suppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
+            suppressedDeadLetter.Sender.Should().Be(TestActor);
+            suppressedDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
+
+            deadListener.ExpectNoMsg(200.Milliseconds());
+            suppressedListener.ExpectNoMsg(200.Milliseconds());
         }
     }
 }

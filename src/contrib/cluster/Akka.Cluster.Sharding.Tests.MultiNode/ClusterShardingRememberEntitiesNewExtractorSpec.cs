@@ -36,7 +36,7 @@ namespace Akka.Cluster.Sharding.Tests
                 .WithFallback(ConfigurationFactory.ParseString($@"
                     akka.actor {{
                         serializers {{
-                            hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                            hyperion = ""Akka.Cluster.Sharding.Tests.MultiNode.HyperionSerializerWrapper, Akka.Cluster.Sharding.Tests.MultiNode""
                         }}
                         serialization-bindings {{
                             ""System.Object"" = hyperion
@@ -395,7 +395,7 @@ namespace Akka.Cluster.Sharding.Tests
                         foreach (var entityId in shardState.EntityIds)
                         {
                             var calculatedShardId = extractShardId2(int.Parse(entityId));
-                            calculatedShardId.ShouldAllBeEquivalentTo(shardState.ShardId);
+                            calculatedShardId.Should().BeEquivalentTo(shardState.ShardId);
                         }
                     }
 

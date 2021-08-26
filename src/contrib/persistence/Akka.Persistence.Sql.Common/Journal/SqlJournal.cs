@@ -506,31 +506,15 @@ namespace Akka.Persistence.Sql.Common.Journal
         {
             var connectionString = _settings.ConnectionString;
 
-#if CONFIGURATION
             if (string.IsNullOrEmpty(connectionString))
             {
                 connectionString = System.Configuration.ConfigurationManager.ConnectionStrings[_settings.ConnectionStringName].ConnectionString;
             }
-#endif
 
             return connectionString;
         }
 
-        #region obsoleted
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="typeName">TBD</param>
-        /// <returns>TBD</returns>
-        protected ITimestampProvider GetTimestampProvider(string typeName)
-        {
-            var type = Type.GetType(typeName, true);
-            var withSystem = type.GetConstructor(new[] { Context.System.GetType() }) != null;
-            return withSystem ?
-                (ITimestampProvider)Activator.CreateInstance(type, Context.System) :
-                (ITimestampProvider)Activator.CreateInstance(type);
-        }
-        #endregion
+        protected ITimestampProvider GetTimestampProvider(string typeName) =>
+            TimestampProviderProvider.GetTimestampProvider(typeName, Context);
     }
 }

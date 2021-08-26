@@ -20,7 +20,7 @@ namespace Akka.Cluster.Sharding
     using ShardId = String;
     using EntryId = String;
     using Msg = Object;
-
+    
     /// <summary>
     /// This actor creates children entity actors on demand that it is told to be
     /// responsible for. It is used when `rememberEntities` is enabled.

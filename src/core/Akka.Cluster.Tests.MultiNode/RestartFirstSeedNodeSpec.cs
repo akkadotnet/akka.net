@@ -43,7 +43,7 @@ namespace Akka.Cluster.Tests.MultiNode
     {
         private readonly RestartFirstSeedNodeSpecConfig _config;
         private Address _missedSeed;
-        private static Address _seedNode1Address;
+        private static volatile Address _seedNode1Address;
 
         private Lazy<ActorSystem> seed1System;
         private Lazy<ActorSystem> restartedSeed1System;
@@ -104,25 +104,29 @@ namespace Akka.Cluster.Tests.MultiNode
                 // now we can join seed1System, seed2, seed3 together
                 RunOn(() =>
                 {
-                    Cluster.Get(seed1System.Value).JoinSeedNodes(GetSeedNodes());
+                    var seeds = GetSeedNodes();
+                    seeds.Count.Should().Be(4); // validate that we have complete seed node list
+                    Cluster.Get(seed1System.Value).JoinSeedNodes(seeds);
                     AwaitAssert(() =>
                     {
                         Cluster.Get(seed1System.Value)
-                            .ReadView.Members.Count
+                            .State.Members.Count
                             .Should()
                             .Be(3);
                     }, TimeSpan.FromSeconds(10));
                     AwaitAssert(() =>
                     {
                         Cluster.Get(seed1System.Value)
-                            .ReadView.Members.All(c => c.Status == MemberStatus.Up)
+                            .State.Members.All(c => c.Status == MemberStatus.Up)
                             .Should()
                             .BeTrue();
                     });
                 }, _config.Seed1);
                 RunOn(() =>
                 {
-                    Cluster.JoinSeedNodes(GetSeedNodes());
+                    var seeds = GetSeedNodes();
+                    seeds.Count.Should().Be(4); // validate that we have complete seed node list
+                    Cluster.JoinSeedNodes(seeds);
                     AwaitMembersUp(3);
                 }, _config.Seed2, _config.Seed3);
                 EnterBarrier("started");
@@ -142,14 +146,14 @@ namespace Akka.Cluster.Tests.MultiNode
                         AwaitAssert(() =>
                         {
                             Cluster.Get(restartedSeed1System.Value)
-                                .ReadView.Members.Count
+                                .State.Members.Count
                                 .Should()
                                 .Be(3);
                         });
                         AwaitAssert(() =>
                         {
                             Cluster.Get(restartedSeed1System.Value)
-                                .ReadView.Members.All(c => c.Status == MemberStatus.Up)
+                                .State.Members.All(c => c.Status == MemberStatus.Up)
                                 .Should()
                                 .BeTrue();
                         });

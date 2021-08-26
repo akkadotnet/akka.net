@@ -47,7 +47,7 @@ namespace Akka.DistributedData.Tests.Serialization
             _serializer = new ReplicatorMessageSerializer((ExtendedActorSystem)Sys);
 
             // We dont have Artery implementation
-            // _protocol = ((RemoteActorRefProvider) ((ExtendedActorSystem)Sys).Provider).RemoteSettings.Artery.Enabled 
+            // _protocol = ((RemoteActorRefProvider) ((ExtendedActorSystem)Sys).Provider).RemoteSettings.Artery.Enabled
             _protocol = "akka.tcp";
 
             _address1 = new UniqueAddress(new Address("akka.tcp", Sys.Name, "some.host.org", 4711), 1);
@@ -75,9 +75,11 @@ namespace Akka.DistributedData.Tests.Serialization
             {
                 s.ToBinary(new Get(_keyA, new ReadMajority(TimeSpan.FromMilliseconds(((double)int.MaxValue) * 3)), "x"));
             })
-                .ShouldThrow<ArgumentOutOfRangeException>("Our protobuf protocol does not support timeouts larger than unsigned ints")
+                .Should().Throw<ArgumentOutOfRangeException>("Our protobuf protocol does not support timeouts larger than unsigned ints")
                 .Which.Message.Contains("unsigned int");
 
+            CheckSerialization(new Get(_keyA, new ReadMajorityPlus(TimeSpan.FromSeconds(2), 3), "x"));
+            CheckSerialization(new Get(_keyA, new ReadMajorityPlus(TimeSpan.FromSeconds(2), 3, 5), "x"));
             CheckSerialization(new GetSuccess(_keyA, null, data1));
             CheckSerialization(new GetSuccess(_keyA, "x", data1));
             CheckSerialization(new NotFound(_keyA, "x"));
@@ -144,7 +146,7 @@ namespace Akka.DistributedData.Tests.Serialization
             var expectedPruning = pruning
                 .Where(kvp => kvp.Value is PruningPerformed)
                 .ToDictionary(k => k.Key, v => v.Value);
-            deserializedDurableDataEnvelope.DataEnvelope.Pruning.ShouldAllBeEquivalentTo(expectedPruning);
+            deserializedDurableDataEnvelope.DataEnvelope.Pruning.Should().BeEquivalentTo(expectedPruning);
             deserializedDurableDataEnvelope.DataEnvelope.DeltaVersions.Count.Should().Be(0);
         }
 

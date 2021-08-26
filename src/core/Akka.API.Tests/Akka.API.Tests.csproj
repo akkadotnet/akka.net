@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <AssemblyTitle>Akka.API.Tests</AssemblyTitle>
-    <TargetFrameworks>$(NetFrameworkTestVersion)</TargetFrameworks>
+    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
     <UserSecretsId>93253ee8-0410-4483-9809-9bb2d32860fa</UserSecretsId>
   </PropertyGroup>
 
@@ -26,14 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
+      <PackageReference Include="DiffPlex" Version="1.7.0" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.assert" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
     <PackageReference Include="ApiApprover" Version="9.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="App_Packages\" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

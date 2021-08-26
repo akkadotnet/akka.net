@@ -98,7 +98,6 @@ namespace Akka.Remote.TestKit
             /// <param name="message">The message that describes the error.</param>
             public ClientDisconnectedException(string message) : base(message){}
 
-#if SERIALIZATION
             /// <summary>
             /// Initializes a new instance of the <see cref="ClientDisconnectedException"/> class.
             /// </summary>
@@ -107,7 +106,6 @@ namespace Akka.Remote.TestKit
             protected ClientDisconnectedException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
-#endif
         }
 
         public class GetNodes

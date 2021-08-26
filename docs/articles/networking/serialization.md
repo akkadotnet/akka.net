@@ -179,6 +179,19 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
+### Programatically change NewtonSoft JSON serializer settings
+You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
+
+Note that, while we try to keep everything to be compatible, there are no guarantee that your specific serializer settings use case is compatible with the rest of
+Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
+
+There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
+in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+object respectively.
+
 ### Serializer with String Manifest
 The `Serializer` illustrated above supports a class-based manifest (type hint). 
 For serialization of data that need to evolve over time, the [`SerializerWithStringManifest`](xref:Akka.Serialization.SerializerWithStringManifest) is recommended instead of `Serializer` because the manifest (type hint) is a `String` instead of a `Type`. 
@@ -290,3 +303,237 @@ akka {
   }
 }
 ```
+
+## Danger of polymorphic serializer
+One of the danger of polymorphic serializers is the danger of unsafe object type injection into 
+the serialization-deserialization chain. This issue applies to any type of polymorphic serializer,
+including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly 
+to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
+
+Generally, there are two approaches you can take to alleviate this problem:
+1. Implement a schema-based serialization that are contract bound, which is more expensive to setup at first but fundamentally faster and more secure.
+2. Implement a filtering or blacklist to block dangerous types.
+
+An example of using a schema-based serialization in Akka can be read under the title "Using Google 
+Protocol Buffers to Version State and Messages" in [this documentation](https://petabridge.com/cluster/lesson3)
+
+Hyperion chose to implement the second approach by blacklisting a set of potentially dangerous types 
+from being deserialized:
+
+- System.Security.Claims.ClaimsIdentity
+- System.Windows.Forms.AxHost.State
+- System.Windows.Data.ObjectDataProvider
+- System.Management.Automation.PSObject
+- System.Web.Security.RolePrincipal
+- System.IdentityModel.Tokens.SessionSecurityToken
+- SessionViewStateHistoryItem
+- TextFormattingRunProperties
+- ToolboxItemContainer
+- System.Security.Principal.WindowsClaimsIdentity
+- System.Security.Principal.WindowsIdentity
+- System.Security.Principal.WindowsPrincipal
+- System.CodeDom.Compiler.TempFileCollection
+- System.IO.FileSystemInfo
+- System.Activities.Presentation.WorkflowDesigner
+- System.Windows.ResourceDictionary
+- System.Windows.Forms.BindingSource
+- Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider
+- System.Diagnostics.Process
+- System.Management.IWbemClassObjectFreeThreaded
+
+Be warned that these class can be used as a man in the middle attack vector, but if you need 
+to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
+```
+akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
+```
+
+> [!IMPORTANT]
+> This feature is turned on as default since Akka.NET v1.4.24
+
+> [!WARNING]
+> Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server 
+> communication protocol, instead it is designed to be used as a server-server communication protocol, 
+> preferably inside a closed network system.
+
+## Cross platform serialization compatibility in Hyperion
+There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
+Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.
+
+There are two ways to set this up, one through the HOCON configuration file, and the other by using the `HyperionSerializerSetup` class.
+
+> [!NOTE]
+> Only the first successful name transformation is applied, the rest are ignored. 
+> If you are matching several similar names, make sure that you order them from the most specific match to the least specific one.
+
+### HOCON
+HOCON example:
+```
+akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides = {
+  netfx = [
+    {
+      fingerprint = "System.Private.CoreLib,%core%",
+      rename-from = "System.Private.CoreLib,%core%",
+      rename-to = "mscorlib,%core%"
+   }]
+  netcore = [
+    {
+      fingerprint = "mscorlib,%core%",
+      rename-from = "mscorlib,%core%",
+      rename-to = "System.Private.CoreLib,%core%"
+    }]
+  net = [
+    {
+      fingerprint = "mscorlib,%core%",
+      rename-from = "mscorlib,%core%",
+      rename-to = "System.Private.CoreLib,%core%"
+    }]
+}
+```
+
+In the example above, we're addressing the classic case where the core library name was changed between `mscorlib` in .NET Framework to `System.Private.CoreLib` in .NET Core.
+This transform is already included inside Hyperion as the default cross platform support, and used here as an illustration only. 
+
+The HOCON configuration section is composed of three object arrays named `netfx`, `netcore`, and `net`, each corresponds, respectively, to .NET Framework, .NET Core, and the new .NET 5.0 and beyond.
+The Hyperion serializer will automatically detects the platform it is running on currently and uses the correct array to use inside its deserializer. For example, if Hyperion detects 
+that it is running under .NET framework, then it will use the `netfx` array to do its deserialization transformation.
+
+The way it works that when the serializer detects that the type name contains the `fingerprint` string, it will replace the string declared in the `rename-from`
+property into the string declared in the `rename-to`.
+
+In code, we can write this behaviour as:
+```csharp
+if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
+```
+
+### HyperionSerializerSetup
+
+This behaviour can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+
+```csharp
+#if NETFRAMEWORK
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("System.Private.CoreLib,%core%")
+            ? str.Replace("System.Private.CoreLib,%core%", "mscorlib,%core%") : str
+    }
+#elif NETCOREAPP
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithPackageNameOverrides(new Func<string, string>[]
+    {
+        str => str.Contains("mscorlib,%core%")
+            ? str.Replace("mscorlib,%core%", "System.Private.CoreLib,%core%") : str
+    }
+#endif
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+In the example above, we're using compiler directives to make sure that the correct name transform are used during compilation. 
+
+## Complex object serialization using Hyperion
+
+One of the limitation of a reflection based serializer is that it would fail to serialize 
+objects with complex internal looping references in its properties or fields and ended up throwing
+a stack overflow exception as it tries to recurse through all the looping references, for example, 
+an `XmlDocument` class, but we needed to send them over the wire to another remote node in our
+cluster.
+
+While having a very complex internal structure, an `XmlDocument` object can be simplified into a 
+string that can be sent safely across the wire, but we would need to create a special code that 
+handles all of `XmlDocument` occurrences or make it so that it is stored in string format inside 
+our messages, and converting XML documents every time we needed to access this information is 
+an expensive operation that we would like to avoid while working with our code.
+
+Hyperion introduces a simple adapter called `Surrogate` that can help with de/serializing these
+type of complex objects as a man in the middle, intercepting the type and de/serialize them into
+the much simpler type for wire transfer.
+
+For this example, we would use these two classes, the class `Foo` is an imaginary "complex" class
+that we want to send across the wire and the class `FooSurrogate` is the actual class that we're
+serializing and send across the wire:
+
+```c#
+        public class Foo
+        {
+            public Foo(string bar)
+            {
+                Bar = bar;
+                ComplexProperty = ComputeComplexProperty();
+            }
+
+            public string Bar { get; }
+            public HighlyComplexComputedProperty ComplexProperty { get; }
+            
+            private  ComputeComplexProperty()
+            {
+                // ...
+            }
+        }
+        
+        public class FooSurrogate
+        {
+            public FooSurrogate(string bar)
+            {
+                Bar = bar;
+            }
+
+            public string Bar { get; }
+        }
+```
+
+### Creating and declaring `Surrogate`s via HOCON
+
+To create a serializer surrogate in HOCON, we would first create a class that inherits from
+the `Surrogate` class:
+
+```c#
+    public class FooHyperionSurrogate : Surrogate
+    {
+        public FooHyperionSurrogate()
+        {
+            From = typeof(Foo);
+            To = typeof(FooSurrogate);
+            ToSurrogate = obj => new FooSurrogate(((Foo)obj).Bar);
+            FromSurrogate = obj => new Foo(((FooSurrogate)obj).Bar);
+        }
+    }
+```
+
+This class will inform the Hyperion serializer to intercept any `Foo` class and instead of 
+reflecting actual fields and properties of `Foo` class, it will use the much simpler 
+`FooSurrogate` class instead. To tell Hyperion to use this information, we need to pass the
+surrogate information inside the HOCON settings:
+
+```
+akka.actor {
+    serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+    serialization-bindings {
+        ""System.Object"" = hyperion
+    }
+    serialization-settings.hyperion {
+        surrogates = [
+            ""MyAssembly.FooHyperionSurrogate, MyAssembly""
+        ]
+    }
+}
+```
+
+### Creating and declaring `Surrogate`s programatically using `HyperionSerializerSetup`
+
+We can also use `HyperionSerializerSetup` to declare our surrogates:
+
+```c#
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithSurrogates(new [] { Surrogate.Create<Foo, FooSurrogate>(
+        foo => new FooSurrogate(foo.Bar), 
+        surrogate => new Foo(surrogate.Bar))
+    });
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("actorSystem", bootstrap);
+```
+
+Note that we do not need to declare any bindings in HOCON for this to work, and if you do, 
+`HyperionSerializerSetup` will override the HOCON settings with the one programatically declared.

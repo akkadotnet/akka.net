@@ -54,9 +54,9 @@ namespace Akka.Streams.Tests.Dsl
 
                 var task = Task.WhenAll(t.Item1, t.Item2, t.Item3);
                 task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                task.Result[0].ShouldAllBeEquivalentTo(new[] {4, 5});
-                task.Result[1].ShouldAllBeEquivalentTo(new[] {1, 2});
-                task.Result[2].ShouldAllBeEquivalentTo(new[] {3});
+                task.Result[0].Should().BeEquivalentTo(new[] {4, 5});
+                task.Result[1].Should().BeEquivalentTo(new[] {1, 2});
+                task.Result[2].Should().BeEquivalentTo(new[] {3});
             }, Materializer);
         }
 
@@ -184,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 })).Run(Materializer);
 
                 task.Wait(RemainingOrDefault).Should().BeTrue();
-                task.Result.ShouldAllBeEquivalentTo(input);
+                task.Result.Should().BeEquivalentTo(input);
             }, Materializer);
         }
 
@@ -243,6 +243,29 @@ namespace Akka.Streams.Tests.Dsl
                 error.Message.Should()
                     .Be(
                         "partitioner must return an index in the range [0,1]. returned: [-1] for input [Int32].");
+            }, Materializer);
+        }
+
+        [Fact]
+        public void A_Partition_divertTo_must_send_matching_elements_to_the_sink()
+        {
+            this.AssertAllStagesStopped(() =>
+            {
+                var odd = this.CreateSubscriberProbe<int>();
+                var even = this.CreateSubscriberProbe<int>();
+
+                Source.From(Enumerable.Range(1, 2))
+                    .DivertTo(Sink.FromSubscriber(odd), i => i % 2 != 0)
+                    .To(Sink.FromSubscriber(even))
+                    .Run(Materializer);
+
+                even.Request(1);
+                even.ExpectNoMsg(TimeSpan.FromSeconds(1));
+                odd.Request(1);
+                odd.ExpectNext(1);
+                even.ExpectNext(2);
+                odd.ExpectComplete();
+                even.ExpectComplete();
             }, Materializer);
         }
     }

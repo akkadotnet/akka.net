@@ -17,6 +17,10 @@ namespace Akka.DependencyInjection
     /// Provides users with immediate access to the <see cref="IServiceProvider"/> bound to
     /// this <see cref="ActorSystem"/>, if any.
     /// </summary>
+    /// <remarks>
+    /// [OBSOLETE] Switch to the <see cref="DependencyResolver"/> instead.
+    /// </remarks>
+    [Obsolete("Replaced by the Akka.DependencyInjection.DependencyResolver in Akka.NET v1.4.21. Please switch to that.")]
     public sealed class ServiceProvider : IExtension
     {
         public ServiceProvider(IServiceProvider provider)
@@ -47,21 +51,6 @@ namespace Akka.DependencyInjection
             return actorSystem.WithExtension<ServiceProvider, ServiceProviderExtension>();
         }
 
-        ///// <summary>
-        ///// Uses a delegate to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
-        ///// and others are not.
-        ///// </summary>
-        ///// <remarks>
-        ///// YOU ARE RESPONSIBLE FOR MANAGING THE LIFECYCLE OF YOUR OWN DEPENDENCIES. AKKA.NET WILL NOT ATTEMPT TO DO IT FOR YOU.
-        ///// </remarks>
-        ///// <typeparam name="T">The type of actor to instantiate.</typeparam>
-        ///// <param name="producer">The delegate used to create a new instance of your actor type.</param>
-        ///// <returns>A new <see cref="Props"/> instance which uses DI internally.</returns>
-        //public Props Props<T>(Func<IServiceProvider, T> producer) where T : ActorBase
-        //{
-        //    return new ServiceProviderProps<T>(producer, Provider);
-        //}
-
         /// <summary>
         /// Uses a delegate to dynamically instantiate an actor where some of the constructor arguments are populated via dependency injection
         /// and others are not.
@@ -74,13 +63,14 @@ namespace Akka.DependencyInjection
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props<T>(params object[] args) where T : ActorBase
         {
-            return new ServiceProviderProps<T>(Provider, args);
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(Provider, args));
         }
     }
 
     /// <summary>
     /// INTERNAL API
     /// </summary>
+    [Obsolete("Use the DependencyResolverExtensions instead.")]
     public sealed class ServiceProviderExtension : ExtensionIdProvider<ServiceProvider>
     {
         public override ServiceProvider CreateExtension(ExtendedActorSystem system)
@@ -99,47 +89,47 @@ namespace Akka.DependencyInjection
     }
 
     /// <summary>
-    /// This class represents a specialized <see cref="Akka.Actor.Props"/> that uses delegate invocation
-    /// to create new actor instances, rather than a traditional <see cref="System.Activator"/>.
+    /// INTERNAL API
     ///
-    /// Relies on having an active <see cref="IServiceProvider"/> implementation available
+    /// Used to create actors via the <see cref="ActivatorUtilities"/>.
     /// </summary>
-    /// <typeparam name="TActor">The type of the actor to create.</typeparam>
-    internal class ServiceProviderProps<TActor> : Props where TActor : ActorBase
+    internal class ServiceProviderActorProducer : IIndirectActorProducer
     {
         private readonly IServiceProvider _provider;
+        private readonly object[] _args;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ServiceProviderProps{TActor}" /> class.
-        /// </summary>
-        /// <param name="provider">The <see cref="IServiceProvider"/> used to power this class</param>
-        /// <param name="args">The constructor arguments passed to the actor's constructor.</param>
-        public ServiceProviderProps(IServiceProvider provider, params object[] args)
-            : base(typeof(TActor), args)
+        public ServiceProviderActorProducer(IServiceProvider provider, Type actorType, object[] args)
         {
             _provider = provider;
+            _args = args;
+            ActorType = actorType;
         }
 
-        /// <summary>
-        /// Creates a new actor using the configured factory method.
-        /// </summary>
-        /// <returns>The actor created using the factory method.</returns>
-        public override ActorBase NewActor()
+        public ActorBase Produce()
         {
-            return ActivatorUtilities.CreateInstance<TActor>(_provider, Arguments);
+            return (ActorBase)ActivatorUtilities.CreateInstance(_provider, ActorType, _args);
         }
 
-        #region Copy methods
+        public Type ActorType { get; }
 
-        /// <summary>
-        /// Creates a copy of the current instance.
-        /// </summary>
-        /// <returns>The newly created <see cref="Akka.Actor.Props"/></returns>
-        protected override Props Copy()
+        public void Release(ActorBase actor)
         {
-            return new ServiceProviderProps<TActor>(_provider, Arguments);
+            // no-op
         }
+    }
 
-        #endregion
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Used to create actors via the <see cref="ActivatorUtilities"/>.
+    /// </summary>
+    /// <typeparam name="TActor">the actor type</typeparam>
+    internal class ServiceProviderActorProducer<TActor> : ServiceProviderActorProducer where TActor:ActorBase
+    {
+
+        public ServiceProviderActorProducer(IServiceProvider provider, object[] args)
+             : base(provider, typeof(TActor), args)
+        {
+        }
     }
 }

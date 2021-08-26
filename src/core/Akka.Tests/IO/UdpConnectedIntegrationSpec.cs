@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,6 +24,8 @@ namespace Akka.Tests.IO
 
         public UdpConnectedIntegrationSpec(ITestOutputHelper output)
             : base(@"
+                    akka.actor.serialize-creators = on
+                    akka.actor.serialize-messages = on
                     akka.io.udp-connected.nr-of-selectors = 1
                     akka.io.udp-connected.direct-buffer-pool-limit = 100
                     akka.io.udp-connected.direct-buffer-size = 1024
@@ -63,8 +66,7 @@ namespace Akka.Tests.IO
 
             var clientAddress = ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
             {
-                var received = msg as Udp.Received;
-                if (received != null)
+                if (msg is Udp.Received received)
                 {
                     received.Data.ShouldBe(data1);
                     return received.Sender;
@@ -89,8 +91,7 @@ namespace Akka.Tests.IO
 
             ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
             {
-                var received = msg as Udp.Received;
-                if (received != null)
+                if (msg is Udp.Received received)
                 {
                     received.Data.ShouldBe(data1);
                     Assert.True(received.Sender.Is(clientAddress));

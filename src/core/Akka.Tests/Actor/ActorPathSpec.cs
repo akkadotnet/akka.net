@@ -89,6 +89,17 @@ namespace Akka.Tests.Actor
             parsed.ToString().ShouldBe(remote);
         }
 
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/5083
+        /// </summary>
+        [Fact]
+        public void Supports_parsing_remote_FQDN_paths()
+        {
+            var remote = "akka://sys@host.domain.com:1234/some/ref";
+            var parsed = ActorPathParse(remote);
+            parsed.ToString().ShouldBe(remote);
+        }
+
         [Fact]
         public void Return_false_upon_malformed_path()
         {

@@ -18,6 +18,7 @@ using Akka.Remote.Transport;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {

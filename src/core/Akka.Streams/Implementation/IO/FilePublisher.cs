@@ -130,7 +130,7 @@ namespace Akka.Streams.Implementation.IO
             => message.Match()
                 .With<Request>(() => ReadAndSignal(_maxBuffer))
                 .With<Continue>(() => ReadAndSignal(_maxBuffer))
-                .With<Cancel>(() => Context.Stop(Self))
+                .With<Actors.Cancel>(() => Context.Stop(Self))
                 .WasHandled;
 
         private void ReadAndSignal(int maxReadAhead)

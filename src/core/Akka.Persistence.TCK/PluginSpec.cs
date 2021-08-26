@@ -7,6 +7,7 @@
 
 using System;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Util.Internal;
 using Xunit.Abstractions;
@@ -21,6 +22,22 @@ namespace Akka.Persistence.TCK
 
         protected PluginSpec(Config config = null, string actorSystemName = null, ITestOutputHelper output = null) 
             : base(FromConfig(config), actorSystemName, output)
+        {
+            Extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
+            Pid = "p-" + Counter.IncrementAndGet();
+            WriterGuid = Guid.NewGuid().ToString();
+        }
+
+        protected PluginSpec(ActorSystemSetup setup, string actorSystemName = null, ITestOutputHelper output = null)
+            : base(setup, actorSystemName, output)
+        {
+            Extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
+            Pid = "p-" + Counter.IncrementAndGet();
+            WriterGuid = Guid.NewGuid().ToString();
+        }
+
+        protected PluginSpec(ActorSystem system = null, ITestOutputHelper output = null)
+            : base(system, output)
         {
             Extension = Persistence.Instance.Apply(Sys as ExtendedActorSystem);
             Pid = "p-" + Counter.IncrementAndGet();

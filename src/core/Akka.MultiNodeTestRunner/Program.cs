@@ -117,10 +117,39 @@ namespace Akka.MultiNodeTestRunner
         ///             otherwise all tests will be executed
         ///     </description>
         /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.include={include filter}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which matches the comma separated wildcard
+        ///             filter will be executed, otherwise all tests will be executed
+        ///     </description>
+        /// </item>
+        /// <item>
+        ///     <term>-Dmultinode.exclude={exclude filter}</term>
+        ///     <description>
+        ///             Setting this flag means that only tests which does not match the comma separated
+        ///             wildcard filter will be executed, otherwise all tests will be executed
+        ///     </description>
+        /// </item>
         /// </list>
         /// </summary>
         static void Main(string[] args)
         {
+            // Force load the args
+            CommandLine.GetPropertyOrDefault("force load", null);
+            if (CommandLine.ShowHelp)
+            {
+                PrintHelp();
+                return;
+            }
+
+            if (CommandLine.ShowVersion)
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                Console.WriteLine($"Version: {version}");
+                return;
+            }
+            
             OutputDirectory = CommandLine.GetPropertyOrDefault("multinode.output-directory", string.Empty);
             FailedSpecsDirectory = CommandLine.GetPropertyOrDefault("multinode.failed-specs-directory", "FAILED_SPECS_LOGS");
             
@@ -130,7 +159,7 @@ namespace Akka.MultiNodeTestRunner
             var suiteName = Path.GetFileNameWithoutExtension(Path.GetFullPath(args[0].Trim('"')));
             var teamCityFormattingOn = CommandLine.GetPropertyOrDefault("multinode.teamcity", "false");
             if (!Boolean.TryParse(teamCityFormattingOn, out TeamCityFormattingOn))
-                throw new ArgumentException("Invalid argument provided for -Dteamcity");
+                throw new ArgumentException("Invalid argument provided for -Dmultinode.teamcity");
 
             var listenAddress = IPAddress.Parse(CommandLine.GetPropertyOrDefault("multinode.listen-address", "127.0.0.1"));
             var listenPort = CommandLine.GetInt32OrDefault("multinode.listen-port", 6577);
@@ -142,6 +171,9 @@ namespace Akka.MultiNodeTestRunner
             var clearOutputDirectory = CommandLine.GetInt32OrDefault("multinode.clear-output", 0);
             if (clearOutputDirectory > 0 && Directory.Exists(OutputDirectory))
                 Directory.Delete(OutputDirectory, true);
+
+            var include = new WildcardPatterns(CommandLine.GetPropertyOrDefault("multinode.include", null), true);
+            var exclude = new WildcardPatterns(CommandLine.GetPropertyOrDefault("multinode.exclude", null), false);
 
             Props coordinatorProps;
             switch (reporter.ToLowerInvariant())
@@ -221,25 +253,39 @@ namespace Akka.MultiNodeTestRunner
                     {
                         foreach (var test in discovery.Tests.Reverse())
                         {
-                            if (!string.IsNullOrEmpty(test.Value.First().SkipReason))
+                            var node = test.Value.First();
+                            if (!string.IsNullOrEmpty(node.SkipReason))
                             {
-                                PublishRunnerMessage($"Skipping test {test.Value.First().MethodName}. Reason - {test.Value.First().SkipReason}");
+                                PublishRunnerMessage($"Skipping test {node.MethodName}. Reason - {node.SkipReason}");
                                 continue;
                             }
 
                             if (!string.IsNullOrWhiteSpace(specName) &&
-                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(test.Value.First().TestName,
+                                CultureInfo.InvariantCulture.CompareInfo.IndexOf(node.TestName,
                                     specName,
                                     CompareOptions.IgnoreCase) < 0)
                             {
-                                PublishRunnerMessage($"Skipping [{test.Value.First().MethodName}] (Filtering)");
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Filtering)");
+                                continue;
+                            }
+
+                            // include filter
+                            if (!include.IsMatch(node.MethodName))
+                            {
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Include filter)");
+                                continue;
+                            }
+
+                            if (exclude.IsMatch(node.MethodName))
+                            {
+                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Exclude filter)");
                                 continue;
                             }
 
                             var processes = new List<Process>();
 
-                            PublishRunnerMessage($"Starting test {test.Value.First().MethodName}");
-                            Console.Out.WriteLine($"Starting test {test.Value.First().MethodName}");
+                            PublishRunnerMessage($"Starting test {node.MethodName}");
+                            Console.Out.WriteLine($"Starting test {node.MethodName}");
 
                             StartNewSpec(test.Value);
 #if CORECLR
@@ -490,6 +536,49 @@ namespace Akka.MultiNodeTestRunner
         private static void PublishToAllSinks(string message)
         {
             SinkCoordinator.Tell(message, ActorRefs.NoSender);
+        }
+
+        private static void PrintHelp()
+        {
+            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            Console.WriteLine($@"Akka.NET Multi Node Test Runner ({version})
+Usage: MultiNodeTestRunner [path-to-test-dll] [runtime-options]
+
+Run a compiled Akka.NET multi node test
+
+runtime-options:
+  -Dmultinode.output-directory=<path>
+      Folder where the test report will be exported.
+      Default value : current working directory.
+  -Dmultinode.failed-specs-directory=<folder-name>
+      Folder name inside the output directory where failed test log will be exported, if a test should fail.
+      Default value : FAILED_SPECS_LOG.
+  -Dmultinode.loglevel=<debug-level>
+      Sets the minimum reported log level used within the test.
+      Valid values : DEBUG, INFO, WARNING, ERROR.
+      Default value: WARNING.
+  -Dmultinode.listen-address=<host|ip-address>
+      The TCP/IP address or host name the multi node test runner should listen for test node reports/logs.
+      Default value: 127.0.0.1.
+  -Dmultinode.listen-port=<port>
+      The TCP/IP port the multi node test runner should listen for test node reports/logs.
+      Default value: 6577.
+  -Dmultinode.reporter=<reporter>
+      The report type this runner should export in. Note that report files are exported to the current directory for trx. 
+      Valid values : trx, teamcity, console.
+      Default value: console.
+  -Dmultinode.clear-output=<0|1>
+      This flag will clear the output folder before any test is run when it is set to 1.
+      Default value: 0.
+  -Dmultinode.spec=<spec-name>
+      Apply a filter to the test class names within the dll. Any fully qualified test class name that contains this string will run. 
+      Default value: (all).
+  -Dmultinode.include=<filter>
+      A comma separated list of wildcard pattern to be matched and included in the tests. The filter is applied on the name of the test method.
+      Default value: * (all). 
+  -Dmultinode.exclude=<filter>
+      A comma separated list of wildcard pattern to be matched and excluded in the tests. The filter is applied on the name of the test method.
+      Default value: (none).");
         }
     }
 

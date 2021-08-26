@@ -39,6 +39,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public virtual System.Threading.Tasks.Task DeleteBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long toSequenceNr) { }
         protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
         public virtual System.Threading.Tasks.Task InsertBatchAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, Akka.Persistence.Sql.Common.Journal.WriteJournalBatch write) { }
+        protected virtual void PreAddParameterToCommand(System.Data.Common.DbCommand command, System.Data.Common.DbParameter param) { }
         protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
         public virtual System.Threading.Tasks.Task<long> SelectAllEventsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long fromOffset, long toOffset, long max, System.Action<Akka.Persistence.Sql.Common.Journal.ReplayedEvent> callback) { }
         public virtual System.Threading.Tasks.Task<System.Collections.Immutable.ImmutableArray<string>> SelectAllPersistenceIdsAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, long offset) { }
@@ -68,12 +69,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         public int MaxConcurrentOperations { get; }
         public Akka.Persistence.Sql.Common.Journal.QueryConfiguration NamingConventions { get; }
         public Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings ReplayFilterSettings { get; }
+        public string TimestampProviderTypeName { get; }
     }
     public abstract class BatchingSqlJournal<TConnection, TCommand> : Akka.Persistence.Journal.WriteJournalBase
         where TConnection : System.Data.Common.DbConnection
         where TCommand : System.Data.Common.DbCommand
     {
-        protected readonly System.Collections.Generic.Queue<Akka.Persistence.IJournalRequest> Buffer;
         protected readonly bool CanPublish;
         protected const int IsDeletedIndex = 3;
         protected readonly Akka.Event.ILoggingAdapter Log;
@@ -98,6 +99,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected abstract System.Collections.Immutable.ImmutableDictionary<string, string> Initializers { get; }
         protected virtual string InsertEventSql { get; }
         protected Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup Setup { get; }
+        protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider TimestampProvider { get; }
         protected virtual string UpdateSequenceNrSql { get; }
         protected void AddParameter(TCommand command, string paramName, System.Data.DbType dbType, object value) { }
         protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
@@ -108,6 +110,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected virtual System.Threading.Tasks.Task HandleReplayTaggedMessages(Akka.Persistence.Sql.Common.Journal.ReplayTaggedMessages req, TCommand command) { }
         protected virtual System.Threading.Tasks.Task HandleSelectCurrentPersistenceIds(Akka.Persistence.Sql.Common.Journal.SelectCurrentPersistenceIds message, TCommand command) { }
         protected virtual void OnBufferOverflow(Akka.Persistence.IJournalMessage request) { }
+        protected virtual void PreAddParameterToCommand(TCommand command, System.Data.Common.DbParameter param) { }
         protected override void PreStart() { }
         protected virtual Akka.Persistence.IPersistentRepresentation ReadEvent(System.Data.Common.DbDataReader reader) { }
         protected virtual System.Threading.Tasks.Task<long> ReadHighestSequenceNr(string persistenceId, TCommand command) { }
@@ -186,6 +189,7 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public static readonly Akka.Persistence.Sql.Common.Journal.JournalBufferOverflowException Instance;
         public JournalBufferOverflowException() { }
+        protected JournalBufferOverflowException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public sealed class JournalEntry
     {
@@ -320,6 +324,10 @@ namespace Akka.Persistence.Sql.Common.Journal
         public readonly string Tag;
         public TaggedEventAppended(string tag) { }
     }
+    public class static TimestampProviderProvider
+    {
+        public static Akka.Persistence.Sql.Common.Journal.ITimestampProvider GetTimestampProvider(string typeName, Akka.Actor.IActorContext context) { }
+    }
     public sealed class WriteJournalBatch
     {
         public readonly System.Collections.Generic.IDictionary<Akka.Persistence.IPersistentRepresentation, System.Collections.Immutable.IImmutableSet<string>> EntryTags;
@@ -373,6 +381,7 @@ namespace Akka.Persistence.Sql.Common.Snapshot
         protected System.Data.Common.DbCommand GetCommand(System.Data.Common.DbConnection connection, string sql) { }
         protected object GetSnapshot(System.Data.Common.DbDataReader reader) { }
         public virtual System.Threading.Tasks.Task InsertAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, object snapshot, Akka.Persistence.SnapshotMetadata metadata) { }
+        protected virtual void PreAddParameterToCommand(System.Data.Common.DbCommand command, System.Data.Common.DbParameter param) { }
         protected virtual Akka.Persistence.SelectedSnapshot ReadSnapshot(System.Data.Common.DbDataReader reader) { }
         public virtual System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> SelectSnapshotAsync(System.Data.Common.DbConnection connection, System.Threading.CancellationToken cancellationToken, string persistenceId, long maxSequenceNr, System.DateTime maxTimestamp) { }
         protected virtual void SetManifestParameters(object snapshot, System.Data.Common.DbCommand command) { }

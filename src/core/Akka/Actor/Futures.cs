@@ -117,91 +117,74 @@ namespace Akka.Actor
         /// This exception is thrown if the system can't resolve the target provider.
         /// </exception>
         /// <returns>TBD</returns>
-        public static async Task<T> Ask<T>(this ICanTell self, Func<IActorRef,object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
+        public static Task<T> Ask<T>(this ICanTell self, Func<IActorRef, object> messageFactory, TimeSpan? timeout, CancellationToken cancellationToken)
         {
-            await SynchronizationContextManager.RemoveContext;
-
             IActorRefProvider provider = ResolveProvider(self);
             if (provider == null)
                 throw new ArgumentException("Unable to resolve the target Provider", nameof(self));
 
-            return (T)await Ask(self, messageFactory, provider, timeout, cancellationToken);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="self">TBD</param>
-        /// <returns>TBD</returns>
-        internal static IActorRefProvider ResolveProvider(ICanTell self)
-        {
-            if (ActorCell.Current != null)
-                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
-
-            if (self is IInternalActorRef)
-                return self.AsInstanceOf<IInternalActorRef>().Provider;
-
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
-
-            return null;
-        }
-        
-        private static async Task<object> Ask(ICanTell self, Func<IActorRef, object> messageFactory, IActorRefProvider provider,
-            TimeSpan? timeout, CancellationToken cancellationToken)
-        {
-            TaskCompletionSource<object> result = TaskEx.NonBlockingTaskCompletionSource<object>();
+            var result = TaskEx.NonBlockingTaskCompletionSource<T>();
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
-            var ctrList = new List<CancellationTokenRegistration>(2);
+
+            CancellationTokenRegistration? ctr1 = null;
+            CancellationTokenRegistration? ctr2 = null;
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
 
-                ctrList.Add(timeoutCancellation.Token.Register(() =>
+                ctr1 = timeoutCancellation.Token.Register(() =>
                 {
                     result.TrySetException(new AskTimeoutException($"Timeout after {timeout} seconds"));
-                }));
+                });
 
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 
             if (cancellationToken.CanBeCanceled)
             {
-                ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
+                ctr2 = cancellationToken.Register(() => result.TrySetCanceled());
             }
 
             //create a new tempcontainer path
             ActorPath path = provider.TempPath();
 
-            var future = new FutureActorRef(result, () => { }, path);
+            var future = new FutureActorRef<T>(result, t =>
+            {
+                provider.UnregisterTempActor(path);
+
+                ctr1?.Dispose();
+                ctr2?.Dispose();
+                timeoutCancellation?.Dispose();
+            }, path);
+
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
             var message = messageFactory(future);
             self.Tell(message, future);
 
-            try
-            {
-                return await result.Task;
-            }
-            finally
-            {
-                //callback to unregister from tempcontainer
+            return result.Task;
+        }
 
-                provider.UnregisterTempActor(path);
+        /// <summary>
+        /// Resolves <see cref="IActorRefProvider"/> for Ask pattern
+        /// </summary>
+        /// <param name="self">Reference to someone we are sending Ask request to</param>
+        /// <returns>Provider used for Ask pattern implementation</returns>
+        internal static IActorRefProvider ResolveProvider(ICanTell self)
+        {
+            if (self is ActorSelection)
+                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
 
-                for (var i = 0; i < ctrList.Count; i++)
-                {
-                    ctrList[i].Dispose();
-                }
+            if (self is IInternalActorRef)
+                return self.AsInstanceOf<IInternalActorRef>().Provider;
 
-                if (timeoutCancellation != null)
-                {
-                    timeoutCancellation.Dispose();
-                }
-            }
+            if (ActorCell.Current != null)
+                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
+
+            return null;
         }
     }
 

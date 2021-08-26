@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#if CONFIGURATION
 using System.Configuration;
 
 namespace Akka.Configuration.Hocon
@@ -42,4 +41,3 @@ namespace Akka.Configuration.Hocon
         }
     }
 }
-#endif

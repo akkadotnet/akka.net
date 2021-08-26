@@ -66,9 +66,6 @@
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="5.0.0" />
     <PackageReference Include="Reactive.Streams" Version="1.0.2" />
   </ItemGroup>
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
-  </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>

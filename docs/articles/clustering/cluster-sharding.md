@@ -43,7 +43,7 @@ public sealed class MessageExtractor : IMessageExtractor
 // register actor type as a sharded entity
 var region = await ClusterSharding.Get(system).StartAsync(
     typeName: "my-actor",
-    entityProps: Props.Create<MyActor>(),
+    entityPropsFactory: s => Props.Create(() => new MyActor(s)),
     settings: ClusterShardingSettings.Create(system),
     messageExtractor: new MessageExtractor());
 
@@ -54,6 +54,10 @@ region.Tell(new ShardEnvelope(shardId: 1, entityId: 1, message: "hello"))
 In this example, we first specify way to resolve our message recipients in context of sharded entities. For this, specialized message type called `ShardEnvelope` and resolution strategy called `MessageExtractor` have been specified. That part can be customized, and shared among many different shard regions, but it needs to be uniform among all nodes.
 
 Second part of an example is registering custom actor type as sharded entity using `ClusterSharding.Start` or `ClusterSharding.StartAsync` methods. Result is the `IActorRef` to shard region used to communicate between current actor system and target entities. Shard region must be specified once per each type on each node, that is expected to participate in sharding entities of that type. Keep in mind, that it's recommended to wait for the current node to first fully join the cluster before initializing a shard regions in order to avoid potential timeouts.
+
+> N.B. Sharded entity actors are automatically created by the Akka.Cluster.Sharding guardian actor hierarchy, hence why they live under the `/system` portion of the actor hierarchy. This is done intentionally - in the event of an `ActorSystem` termination the `/user` side of the actor hierachy is always terminated first before the `/system` actors are. 
+>
+> Therefore, this design gives the sharding system a chance to hand over all of the sharded entity actors running on the terminating node over to the other remaining nodes in the cluster.
 
 In some cases, the actor may need to know the `entityId` associated with it. This can be achieved using the `entityPropsFactory` parameter to `ClusterSharding.Start` or `ClusterSharding.StartAsync`. The entity ID will be passed to the factory as a parameter, which can then be used in the creation of the actor.
 
@@ -84,7 +88,7 @@ To reduce memory consumption, you may decide to stop entities after some period 
 
 The entities can be configured to be automatically passivated if they haven't received a message for a while using the `akka.cluster.sharding.passivate-idle-entity-after` setting, or by explicitly setting `ClusterShardingSettings.PassivateIdleEntityAfter` to a suitable time to keep the actor alive. Note that only messages sent through sharding are counted, so direct messages to the `ActorRef` of the actor or messages that it sends to itself are not counted as activity. Passivation can be disabled by setting `akka.cluster.sharding.passivate-idle-entity-after = off`. It is always disabled if [Remembering Entities](#remembering-entities) is enabled.
 
-## Remembering entities
+## Remembering Entities
 
 By default, when a shard is rebalanced to another node, the entities it stored before migration, are NOT started immediately after. Instead they are recreated ad-hoc, when new messages are incoming. This behavior can be modified by `akka.cluster.sharding.remember-entities = true` configuration. It will instruct shards to keep their state between rebalances - it also comes with extra cost due to necessity of persisting information about started/stopped entities. Additionally a message extractor logic must be aware of `ShardRegion.StartEntity` message:
 
@@ -115,22 +119,118 @@ public sealed class MessageExtractor : HashCodeMessageExtractor
 
 Using `ShardRegion.StartEntity` implies, that you're able to infer a shard id given an entity id alone. For this reason, in example above we modified a cluster sharding routing logic to make use of `HashCodeMessageExtractor` - in this variant, shard id doesn't have to be provided explicitly, as it will be computed from the hash of entity id itself. Notice a `maxNumberOfShards`, which is the maximum available number of shards allowed for this type of an actor - this value must never change during a single lifetime of a cluster. 
 
-## Retrieving sharding state
+### Remember Entities Store
+
+There are two options for the remember entities store:
+
+1. Distributed data
+2. Persistence
+
+#### Remember Entities Persistence Mode
+You can enable persistence mode (enabled by default) with:
+
+```
+akka.cluster.sharding.state-store-mode = persistence
+```
+
+This mode uses [persistence](../persistence/event-sourcing.md) to store the active shards and active entities for each shard.
+By default, cluster sharding will use the journal and snapshot store plugin defined in `akka.persistence.journal.plugin` and 
+`akka.persistence.snapshot-store.plugin` respectively; to change this behaviour, you can use these configuration:
+
+```
+akka.cluster.sharding.journal-plugin-id = <plugin>
+akka.cluster.sharding.snapshot-plugin-id = <plugin>
+```
+
+#### Remember Entities Distributed Data Mode
+
+You can enable DData mode by setting these configuration:
+
+```
+akka.cluster.sharding.state-store-mode = ddata
+```
+
+To support restarting entities after a full cluster restart (non-rolling) the remember entities store 
+is persisted to disk by distributed data. This can be disabled if not needed:
+
+```
+akka.cluster.sharding.distributed-data.durable.keys = []
+```
+
+Possible reasons for disabling remember entity storage are:
+
+- No requirement for remembering entities after a full cluster shutdown
+- Running in an environment without access to disk between restarts e.g. Kubernetes without persistent volumes
+
+For supporting remembered entities in an environment without disk storage but with access to a database, use persistence mode instead.
+
+> [!NOTE]
+> Currently, Lightning.NET library, the storage solution used to store DData in disk, is having problem
+> deploying native library files in [Linux operating system operating in x64 and ARM platforms]
+> (https://github.com/CoreyKaylor/Lightning.NET/issues/141).
+> 
+> You will need to install LightningDB in your Linux distribution manually if you wanted to use the durable DData feature.
+
+
+### Terminating Remembered Entities
+One complication that  `akka.cluster.sharding.remember-entities = true` introduces is that your sharded entity actors can no longer be terminated through the normal Akka.NET channels, i.e. `Context.Stop(Self)`, `PoisonPill.Instance`, and the like. This is because as part of the `remember-entities` contract - the sharding system is going to insist on keeping all remembered entities alive until explictily told to stop.
+
+To terminate a remembered entity, the sharded entity actor needs to send a [`Passivate` command](xref:Akka.Cluster.Sharding.Passivate) _to its parent actor_ in order to signal to the sharding system that we no longer need to remember this particular entity.
+
+```csharp
+protected override bool ReceiveCommand(object message)
+{
+    switch (message)
+    {
+        case Increment _:
+            Persist(new CounterChanged(1), UpdateState);
+            return true;
+        case Decrement _:
+            Persist(new CounterChanged(-1), UpdateState);
+            return true;
+        case Get _:
+            Sender.Tell(_count);
+            return true;
+        case ReceiveTimeout _:
+            // send Passivate to parent (shard actor) to stop remembering this entity.
+            // shard actor will send us back a `Stop.Instance` message
+            // as our "shutdown" signal - at which point we can terminate normally.
+            Context.Parent.Tell(new Passivate(Stop.Instance));
+            return true;
+        case Stop _:
+            Context.Stop(Self);
+            return true;
+    }
+    return false;
+}
+```
+
+It is common to simply use `Context.Parent.Tell(new Passivate(PoisonPill.Instance));` to passivate and shutdown remembered-entity actors.
+
+To recreate a remembered entity actor after it has been passivated all you have to do is message the `ShardRegion` actor with a message containing the entity's `EntityId` again just like how you instantiated the actor the first time.
+
+## Retrieving Sharding State
 
 You can inspect current sharding stats by using following messages:
 
 - On `GetShardRegionState` shard region will reply with `ShardRegionState` containing data about shards living in the current actor system and what entities are alive on each one of them.
 - On `GetClusterShardingStats` shard region will reply with `ClusterShardingStats` having information about shards living in the whole cluster and how many entities alive in each one of them.
 
-## Integrating cluster sharding with persistent actors
+## Integrating Cluster Sharding with Persistent Actors
 
-One of the most common scenarios, where cluster sharding is used, is to combine them with eventsourced persistent actors from [Akka.Persistence](xref:persistence-architecture) module. However as the entities are incarnated automatically based on provided props, specifying a dedicated, static unique `PersistenceId` for each entity may seem troublesome.
+One of the most common scenarios, where cluster sharding is used, is to combine them with eventsourced persistent actors from [Akka.Persistence](xref:persistence-architecture) module. 
 
-This can be resolved by getting information about shard/entity ids directly from actor's path and constructing unique id from it. For each entity actor path will follow */system/{typeName}/{shardId}/{entityId}* pattern, where *{typeName}* was the parameter provided to `ClusterSharding.Start` method, while *{shardId}* and *{entityId}* where strings returned by message extractor logic. 
+Entity actors are instantiated automatically by Akka.Cluster.Sharding - but in order for persistent actors to recover and persist their state correctly they must be given a globally unique `PersistentId`. This can be most easily accomplished using the `entityPropsFactory` overload on the `Sharding.Start` call used to create a new `ShardRegion`:
 
-> N.B. Sharded entity actors are automatically created by the Akka.Cluster.Sharding guardian actor hierarchy, hence why they live under the `/system` portion of the actor hierarchy. This is done intentionally - in the event of an `ActorSystem` termination the `/user` side of the actor hierachy is always terminated first before the `/system` actors are. 
->
-> Therefore, this design gives the sharding system a chance to hand over all of the sharded entity actors running on the terminating node over to the other remaining nodes in the cluster.
+```csharp
+// register actor type as a sharded entity
+var region = ClusterSharding.Get(system).Start(
+    typeName: "aggregate",
+    entityPropsFactory: s => Props.Create(() => new Aggregate(s)),
+    settings: ClusterShardingSettings.Create(system),
+    messageExtractor: new MessageExtractor());
+
+```
 
 Given these values we can build consistent, unique `PersistenceId`s on the fly using the `entityId` (the expectation is that `entityId` are globally unique) as in the following example:
 
@@ -139,11 +239,19 @@ public class Aggregate : PersistentActor
 {
     public override string PersistenceId { get; }
 
-    public Aggregate()
+    // Passed in via entityPropsFactory via the ShardRegion
+    public Aggregate(string persistentId)
     {
-        PersistenceId = Self.Path.Name;
+        PersistenceId = persistentId;
     }
 
-    ...
+    // rest of class
 }
 ```
+
+## Cleaning Up Akka.Persistence Shard State
+In the normal operation of an Akka.NET cluster, the sharding system automatically terminates and rebalances Akka.Cluster.Sharding regions gracefully whenever an `ActorSystem` terminates.
+
+However, in the event that an `ActorSystem` is aborted as a result of a process / hardware failure it's possible that when using `akka.cluster.sharding.state-store-mode=persistence` leftover sharding data can still be present inside the Akka.Persistence journal and snapshot store - which will prevent the Akka.Cluster.Sharding system from recovering and starting up correctly the next time it's launched.
+
+This is a _rare_, but not impossible occurence. In the event that this happens you'll need to purge the old Akka.Cluster.Sharding data before restarting the sharding system. You can purge this data automatically by [using the Akka.Cluster.Sharding.RepairTool](https://github.com/petabridge/Akka.Cluster.Sharding.RepairTool) produced by [Petabridge](https://petabridge.com/).
