@@ -853,12 +853,14 @@ namespace Akka.Actor
         }
         public delegate void TransitionHandler<TState, TData>(TState initialState, TState nextState);
     }
+    [System.ObsoleteAttribute("Use Akka.Actor.Status.Failure")]
     public class Failure
     {
         public Failure() { }
         public System.Exception Exception { get; set; }
         public System.DateTime Timestamp { get; set; }
     }
+    [System.ObsoleteAttribute("Use List of Akka.Actor.Status.Failure")]
     public class Failures
     {
         public Failures() { }
@@ -1720,16 +1722,20 @@ namespace Akka.Actor
     public abstract class Status
     {
         protected Status() { }
-        public class Failure : Akka.Actor.Status
+        public sealed class Failure : Akka.Actor.Status
         {
             public readonly System.Exception Cause;
+            public readonly object State;
             public Failure(System.Exception cause) { }
+            public Failure(System.Exception cause, object state) { }
             public override string ToString() { }
         }
-        public class Success : Akka.Actor.Status
+        public sealed class Success : Akka.Actor.Status
         {
+            public static readonly Akka.Actor.Status.Success Instance;
             public readonly object Status;
             public Success(object status) { }
+            public override string ToString() { }
         }
     }
     public class StoppingSupervisorStrategy : Akka.Actor.SupervisorStrategyConfigurator
