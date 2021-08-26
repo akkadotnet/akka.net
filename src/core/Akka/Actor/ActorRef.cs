@@ -68,7 +68,7 @@ namespace Akka.Actor
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
-    public class FutureActorRef<T> : MinimalActorRef
+    public sealed class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
         private readonly ActorPath _path;
@@ -104,45 +104,33 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
-            if (message is ISystemMessage sysM) //we have special handling for system messages
+            var handled = false;
+
+            switch (message)
             {
-                SendSystemMessage(sysM);
+                case ISystemMessage sysM:
+                    SendSystemMessage(sysM); //we have special handling for system messages
+                    handled = true;
+                    break;
+                case T t:
+                    handled = _result.TrySetResult(t);
+                    break;
+                case null:
+                    handled = _result.TrySetResult(default);
+                    break;
+                case Failure f:
+                    handled = _result.TrySetException(f.Exception
+                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    break;
+                default:
+                    _ = _result.TrySetException(new ArgumentException(
+                        $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
+                    break;
             }
-            else 
-            {
-                var handled = false;
 
-                switch (message)
-                {
-                    case T t:
-                        handled = _result.TrySetResult(t);
-                        break;
-                    case null:
-                        handled = _result.TrySetResult(default);
-                        break;
-                    case Failure f:
-                        handled = _result.TrySetException(f.Exception
-                            ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
-                        break;
-                    default:
-                        _ = _result.TrySetException(new ArgumentException(
-                            $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
-                        break;
-                }
-
-                //ignore canceled ask and put unhandled answers into deadletter
-                if (!handled && !_result.Task.IsCanceled)
-                    _provider.DeadLetters.Tell(message ?? default(T), this);
-            }
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        public override void SendSystemMessage(ISystemMessage message)
-        {
-            base.SendSystemMessage(message);
+            //ignore canceled ask and put unhandled answers into deadletter
+            if (!handled && !_result.Task.IsCanceled)
+                _provider.DeadLetters.Tell(message ?? default(T), this);            
         }
     }
 
