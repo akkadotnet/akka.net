@@ -118,6 +118,10 @@ namespace Akka.Actor
                 case null:
                     handled = _result.TrySetResult(default);
                     break;
+                case Status.Failure f:
+                    handled = _result.TrySetException(f.Cause
+                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    break;
                 case Failure f:
                     handled = _result.TrySetException(f.Exception
                         ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
