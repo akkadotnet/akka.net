@@ -97,11 +97,6 @@ namespace Akka.Actor
         /// </summary>
         public override IActorRefProvider Provider => _provider;
 
-
-        private const int INITIATED = 0;
-        private const int COMPLETED = 1;
-        private int status = INITIATED;
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -113,7 +108,7 @@ namespace Akka.Actor
             {
                 SendSystemMessage(sysM);
             }
-            else if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
+            else 
             {
                 var handled = false;
 
@@ -138,11 +133,6 @@ namespace Akka.Actor
                 //ignore canceled ask and put unhandled answers into deadletter
                 if (!handled && !_result.Task.IsCanceled)
                     _provider.DeadLetters.Tell(message ?? default(T), this);
-            }
-            else
-            {
-                //put too many answers into deadletter
-                _provider.DeadLetters.Tell(message ?? default(T), this);
             }
         }
 
