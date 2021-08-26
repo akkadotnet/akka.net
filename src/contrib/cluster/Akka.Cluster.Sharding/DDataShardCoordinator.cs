@@ -85,6 +85,7 @@ namespace Akka.Cluster.Sharding
         private readonly UniqueAddress _selfUniqueAddress;
         private readonly LWWRegisterKey<ShardCoordinator.CoordinatorState> _coordinatorStateKey;
         private ImmutableHashSet<(IActorRef, GetShardHome)> _getShardHomeRequests = ImmutableHashSet<(IActorRef, GetShardHome)>.Empty;
+        private int _initialStateRetries = 0;
         private readonly IActorRef _rememberEntitiesStore;
         private readonly bool _rememberEntities;
 
@@ -178,10 +179,16 @@ namespace Akka.Cluster.Sharding
                         return true;
 
                     case GetFailure m when m.Key.Equals(_coordinatorStateKey):
-                        Log.Error(
-                            "{0}: The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {1} millis (retrying). Has ClusterSharding been started on all nodes?",
-                            TypeName,
-                            _stateReadConsistency.Timeout.TotalMilliseconds);
+                        _initialStateRetries++;
+                        var template =
+                          "{0}: The ShardCoordinator was unable to get an initial state within 'waiting-for-state-timeout': {1} millis (retrying). Has ClusterSharding been started on all nodes?";
+                        if (_initialStateRetries == 1)
+                            Log.Info(template, TypeName, _stateReadConsistency.Timeout.TotalMilliseconds);
+                        else if (_initialStateRetries < 5)
+                            Log.Warning(template, TypeName, _stateReadConsistency.Timeout.TotalMilliseconds);
+                        else
+                            Log.Error(template, TypeName, _stateReadConsistency.Timeout.TotalMilliseconds);
+
                         // repeat until GetSuccess
                         GetCoordinatorState();
                         return true;
