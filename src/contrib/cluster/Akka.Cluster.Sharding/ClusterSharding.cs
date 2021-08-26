@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -102,7 +104,7 @@ namespace Akka.Cluster.Sharding
                 id = se.EntityId;
             else
                 id = EntityId(message);
-            
+
             return _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
     }
