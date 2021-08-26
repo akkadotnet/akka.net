@@ -168,11 +168,18 @@ namespace Akka.Cluster.Sharding.Tests
             sharding.Tell(new EntityEnvelope("1", "ping"));
             ExpectMsg("pong");
             var entity = LastSender;
-            Watch(entity);
 
             // stop without passivation
             entity.Tell("just-stop");
-            ExpectTerminated(entity);
+
+            // Make sure the shard has processed the termination
+            AwaitAssert(() =>
+            {
+                sharding.Tell(GetShardRegionState.Instance);
+                var state = ExpectMsg<CurrentShardRegionState>();
+                state.Shards.Should().HaveCount(1);
+                state.Shards.First().EntityIds.Should().BeEmpty();
+            });
 
             // the backoff is 10s by default, so plenty time to
             // bypass region and send start entity directly to shard
