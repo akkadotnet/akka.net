@@ -57,6 +57,8 @@ namespace Akka.Cluster.Sharding
         /// </summary>
         public readonly int MaxNumberOfShards;
 
+        private readonly Dictionary<int, string> _cachedIds;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -64,6 +66,11 @@ namespace Akka.Cluster.Sharding
         protected HashCodeMessageExtractor(int maxNumberOfShards)
         {
             MaxNumberOfShards = maxNumberOfShards;
+            _cachedIds = new Dictionary<int, string>(MaxNumberOfShards);
+            foreach (var c in Enumerable.Range(0, maxNumberOfShards))
+            {
+                _cachedIds[c] = c.ToString();
+            }
         }
 
         /// <summary>
@@ -95,8 +102,8 @@ namespace Akka.Cluster.Sharding
                 id = se.EntityId;
             else
                 id = EntityId(message);
-
-            return (Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards).ToString();
+            
+            return _cachedIds[(Math.Abs(MurmurHash.StringHash(id)) % MaxNumberOfShards)];
         }
     }
 
