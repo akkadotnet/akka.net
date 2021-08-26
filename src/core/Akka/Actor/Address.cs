@@ -154,7 +154,7 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
+        public override bool Equals(object obj) => obj is Address address && Equals(address);
 
         /// <inheritdoc/>
         public override int GetHashCode()
