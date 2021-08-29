@@ -141,20 +141,20 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _batchActor = _sys1.ActorOf(Props.Create(() => new BulkSendActor(tcs, MsgCount)));
         }
 
-       // [Benchmark]
+        [Benchmark]
         public async Task SingleRequestResponseToLocalEntity()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _shardRegion1.Ask<ShardedMessage>(_messageToSys1);
         }
-        
+
         [Benchmark]
         public async Task StreamingToLocalEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
             await _batchComplete;
         }
-        
+
         [Benchmark]
         public async Task SingleRequestResponseToRemoteEntity()
         {
