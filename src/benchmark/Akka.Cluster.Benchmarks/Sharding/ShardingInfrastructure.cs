@@ -45,6 +45,63 @@ namespace Akka.Cluster.Benchmarks.Sharding
         }
     }
 
+
+
+    public sealed class ShardedProxyEntityActor : ReceiveActor, IWithUnboundedStash
+    {
+        private IActorRef _shardRegion;
+        private IActorRef _sender;
+
+        
+
+      
+
+        public ShardedProxyEntityActor(IActorRef shardRegion)
+        {
+            _shardRegion = shardRegion;
+            WaitRequest();
+        }
+
+        public void WaitRequest()
+        {
+           
+            Receive<SendShardedMessage>(e =>
+            {
+                _sender = Sender;
+                _shardRegion.Tell(e.Message);
+                Become(WaitResult);
+
+            });
+
+            ReceiveAny(x => {
+                Sender.Tell(x);
+                });
+
+            
+        }
+
+
+        public void WaitResult()
+        {
+            Receive<ShardedMessage>((msg) => {
+                _sender.Tell(msg);
+                Stash.UnstashAll();
+                Become(WaitRequest);
+            });
+
+            ReceiveAny(msg =>
+                Stash.Stash()
+            );
+
+
+        }
+
+        public IStash Stash { get; set; }
+
+    }
+
+
+
     public sealed class BulkSendActor : ReceiveActor
     {
         public sealed class BeginSend
@@ -107,6 +164,22 @@ namespace Akka.Cluster.Benchmarks.Sharding
             
         public int Message { get; }
     }
+
+
+
+    public sealed class SendShardedMessage
+    {
+        public SendShardedMessage(string entityId, ShardedMessage message)
+        {
+            EntityId = entityId;
+            Message = message;
+        }
+
+        public string EntityId { get; }
+
+        public ShardedMessage Message { get; }
+    }
+
 
     /// <summary>
     /// Use a default <see cref="IMessageExtractor"/> even though it takes extra work to setup the benchmark
