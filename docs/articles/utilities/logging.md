@@ -64,17 +64,18 @@ akka {
 ```
 ## Example configuration
 ```hocon
-akka {  
-    stdout-loglevel = DEBUG
-    loglevel = DEBUG
-    log-config-on-start = on        
-    actor {                
-        debug {  
-              receive = on 
-              autoreceive = on
-              lifecycle = on
-              event-stream = on
-              unhandled = on
-        }
-    }  
+akka {
+  stdout-loglevel = DEBUG
+  loglevel = DEBUG
+  log-config-on-start = on
+  actor {
+    debug {
+      receive = on
+      autoreceive = on
+      lifecycle = on
+      event-stream = on
+      unhandled = on
+    }
+  }
+}
 ```
