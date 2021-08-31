@@ -247,6 +247,8 @@ namespace Akka.Routing
     /// </summary>
     public class Router
     {
+        private readonly Routee[] _routees;
+
         //The signature might look funky. Why not just Router(RoutingLogic logic, params ActorRef[] routees) ? 
         //We need one unique constructor to handle this call: new Router(logic). The other constructor will handle that.
         //So in order to not confuse the compiler we demand at least one ActorRef. /@hcanber
@@ -263,22 +265,22 @@ namespace Akka.Routing
         {
             if (routees == null || routees.Length == 0)
             {
-                Routees = new []{ Routee.FromActorRef(routee) };
+                _routees = new []{ Routee.FromActorRef(routee) };
             }
             else
             {
                 var routeesLength = routees.Length;
 
                 //Convert and put routee first in a new array
-                Routees = new Routee[routeesLength+1];
-                Routees[0] = Routee.FromActorRef(routee);
+                _routees = new Routee[routeesLength+1];
+                _routees[0] = Routee.FromActorRef(routee);
 
                 //Convert all routees and put them into the new array
                 for (var i = 0; i < routees.Length; i++)
                 {
                     var actorRef = routees[i];
                     var r = Routee.FromActorRef(actorRef);
-                    Routees[i + 1] = r;
+                    _routees[i + 1] = r;
                 }
             }
             RoutingLogic = logic;
@@ -292,14 +294,17 @@ namespace Akka.Routing
         /// <param name="routees">TBD</param>
         public Router(RoutingLogic logic, params Routee[] routees)
         {
-            Routees = routees ?? Array.Empty<Routee>();
+            _routees = routees ?? Array.Empty<Routee>();
             RoutingLogic = logic;
         }
         
         /// <summary>
         /// The set of <see cref="Routees"/> that this router is currently targeting.
         /// </summary>
-        public Routee[] Routees { get; }
+        public IEnumerable<Routee> Routees
+        {
+            get { return _routees; }
+        }
 
         /// <summary>
         /// The logic used to determine which <see cref="Routee"/> will process a given message.
@@ -327,14 +332,14 @@ namespace Akka.Routing
             if (message is Broadcast)
             {
                 var unwrapped = UnWrap(message);
-                foreach (var r in Routees)
+                foreach (var r in _routees)
                 {
                     r.Send(unwrapped, sender);
                 }
             }
             else
             {
-                Send(RoutingLogic.Select(message, Routees), message, sender);
+                Send(RoutingLogic.Select(message, _routees), message, sender);
             }
         }
 
@@ -367,7 +372,7 @@ namespace Akka.Routing
         /// <returns>A new <see cref="Router"/> instance with this routee added.</returns>
         public virtual Router AddRoutee(Routee routee)
         {
-            return new Router(RoutingLogic, Routees.Union(new[]{routee}).ToArray());
+            return new Router(RoutingLogic, _routees.Union(new[]{routee}).ToArray());
         }
 
         /// <summary>
@@ -397,7 +402,7 @@ namespace Akka.Routing
         /// <returns>A new <see cref="Router"/> instance with this same configuration, sans routee.</returns>
         public virtual Router RemoveRoutee(Routee routee)
         {
-            var routees = Routees.Where(r => !r.Equals(routee)).ToArray();
+            var routees = _routees.Where(r => !r.Equals(routee)).ToArray();
             return new Router(RoutingLogic, routees);
         }
 
