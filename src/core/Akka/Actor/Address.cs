@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Xml.Xsl;
 using Akka.Util;
 
 namespace Akka.Actor
@@ -245,8 +246,8 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
-            Debug.Assert(!ReferenceEquals(left, null));
-            return left.Equals(right);
+            return ReferenceEquals(left, right)
+                ||(left?.Equals(right) ?? false); // left is null, right is not
         }
 
         /// <summary>
@@ -257,8 +258,8 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Address left, Address right)
         {
-            Debug.Assert(!ReferenceEquals(left, null));
-            return !left.Equals(right);
+            return !ReferenceEquals(left, right) &&
+                   (left?.Equals(right) ?? true);
         }
 
         /// <summary>
