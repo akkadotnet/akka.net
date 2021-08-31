@@ -4472,7 +4472,7 @@ namespace Akka.Routing
         [Akka.Annotations.InternalApiAttribute()]
         public Router(Akka.Routing.RoutingLogic logic, Akka.Actor.IActorRef routee, params Akka.Actor.IActorRef[] routees) { }
         public Router(Akka.Routing.RoutingLogic logic, params Akka.Routing.Routee[] routees) { }
-        public System.Collections.Generic.IEnumerable<Akka.Routing.Routee> Routees { get; }
+        public Akka.Routing.Routee[] Routees { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
         public virtual Akka.Routing.Router AddRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router AddRoutee(Akka.Actor.IActorRef routee) { }
