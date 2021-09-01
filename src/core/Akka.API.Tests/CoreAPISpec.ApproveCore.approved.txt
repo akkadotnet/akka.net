@@ -1081,7 +1081,7 @@ namespace Akka.Actor
         bool IsTerminated { get; }
         Akka.Actor.IInternalActorRef Parent { get; }
         Akka.Actor.IActorRefProvider Provider { get; }
-        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         void Restart(System.Exception cause);
         void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) [1.1.0]")]
@@ -1202,7 +1202,7 @@ namespace Akka.Actor
         public abstract bool IsTerminated { get; }
         public abstract Akka.Actor.IInternalActorRef Parent { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
-        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         public abstract void Restart(System.Exception cause);
         public abstract void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) instead [1.1.0]")]
