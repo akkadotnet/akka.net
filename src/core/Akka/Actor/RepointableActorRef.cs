@@ -281,15 +281,14 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
-            IActorRef current = this;
-            if (name.Count == 0) return current;
+            if (name.Count == 0) return this;
 
             var next = name[0];
 
             switch (next)
             {
                 case "..":
-                    return Parent.GetChild(new ListSlice<string>(name, 1, name.Count-1));
+                    return Parent.GetChild(name.NoCopySlice(1));
                 case "":
                     return ActorRefs.Nobody;
                 default:
@@ -299,7 +298,7 @@ namespace Akka.Actor
                         if (stats is ChildRestartStats crs && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
                         {
                             if (name.Count > 1)
-                                return crs.Child.GetChild(new ListSlice<string>(name, 1, name.Count-1));
+                                return crs.Child.GetChild(name.NoCopySlice(1));
                             else
                                 return crs.Child;
                         }
