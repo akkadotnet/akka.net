@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -28,6 +29,16 @@ namespace Akka.Benchmarks.Actor
             protected override void OnReceive(object message)
             {
                 
+            }
+
+            protected override void PreStart()
+            {
+                if (Self.Path.Name.Length > 1)
+                {
+                    // recursively create children using the previous name segments
+                    var nextName = new string(Self.Path.Name.Skip(1).ToArray());
+                    Context.ActorOf(Props.Create(() => new Child()), nextName);
+                }
             }
         }
         
@@ -82,10 +93,15 @@ namespace Akka.Benchmarks.Actor
         private ActorSystem _system;
         private IActorRef _parentActor;
 
-        private ActorWithChild.Get _getMessage = new ActorWithChild.Get("foo");
-        private ActorWithChild.Create _createMessage = new ActorWithChild.Create("foo");
+        private ActorWithChild.Get _getMessage = new ActorWithChild.Get("food");
+        private ActorWithChild.Create _createMessage = new ActorWithChild.Create("food");
 
         private ActorCell _cell;
+        private RepointableActorRef _repointableActorRef;
+        private LocalActorRef _localActorRef;
+
+        private List<string> _rpChildQueryPath = new List<string>() { "food", "foo", "fo" };
+        private List<string> _lclChildQueryPath = new List<string>() { "foo", "fo", "f" };
         
         [GlobalSetup]
         public async Task Setup()
@@ -93,15 +109,28 @@ namespace Akka.Benchmarks.Actor
             _timeout = TimeSpan.FromMinutes(1);
             _system = ActorSystem.Create("system");
             _parentActor = _system.ActorOf(Props.Create(() => new ActorWithChild()), "parent");
-            await _parentActor.Ask<IActorRef>(_createMessage, _timeout);
+            _localActorRef = (LocalActorRef)await _parentActor.Ask<IActorRef>(_createMessage, _timeout);
             
             _cell = _parentActor.As<ActorRefWithCell>().Underlying.As<ActorCell>();
+            _repointableActorRef = (RepointableActorRef)_parentActor;
         }
 
         [Benchmark]
         public void ResolveChild()
         {
             _cell.TryGetSingleChild(_getMessage.Name, out var child);
+        }
+        
+        [Benchmark]
+        public void Resolve3DeepChildRepointableActorRef()
+        {
+            _repointableActorRef.GetChild(_rpChildQueryPath);
+        }
+        
+        [Benchmark]
+        public void Resolve3DeepChildLocalActorRef()
+        {
+            _localActorRef.GetChild(_lclChildQueryPath);
         }
 
         [GlobalCleanup]
