@@ -265,8 +265,7 @@ namespace Akka.Actor
         {
             get
             {
-                var terminating = ChildrenContainer as TerminatingChildrenContainer;
-                return terminating != null && terminating.Reason is SuspendReason.IWaitingForChildren;
+                return ChildrenContainer is TerminatingChildrenContainer terminating && terminating.Reason is SuspendReason.IWaitingForChildren;
             }
         }
 
@@ -325,8 +324,7 @@ namespace Akka.Actor
         /// </summary>
         private bool TryGetChildRestartStatsByName(string name, out ChildRestartStats child)
         {
-            IChildStats stats;
-            if (ChildrenContainer.TryGetByName(name, out stats))
+            if (ChildrenContainer.TryGetByName(name, out var stats))
             {
                 child = stats as ChildRestartStats;
                 if (child != null)
@@ -361,6 +359,8 @@ namespace Akka.Actor
             IInternalActorRef child;
             return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
         }
+
+        
 
         /// <summary>
         /// TBD

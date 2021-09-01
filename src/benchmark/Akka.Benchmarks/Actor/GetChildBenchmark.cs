@@ -96,7 +96,7 @@ namespace Akka.Benchmarks.Actor
         private ActorWithChild.Get _getMessage = new ActorWithChild.Get("food");
         private ActorWithChild.Create _createMessage = new ActorWithChild.Create("food");
 
-        private ActorCell _cell;
+        private IActorContext _cell;
         private RepointableActorRef _repointableActorRef;
         private LocalActorRef _localActorRef;
 
@@ -118,7 +118,7 @@ namespace Akka.Benchmarks.Actor
         [Benchmark]
         public void ResolveChild()
         {
-            _cell.TryGetSingleChild(_getMessage.Name, out var child);
+            _cell.Child(_getMessage.Name);
         }
         
         [Benchmark]
