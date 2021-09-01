@@ -1317,7 +1317,7 @@ namespace Akka.Actor
         [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
