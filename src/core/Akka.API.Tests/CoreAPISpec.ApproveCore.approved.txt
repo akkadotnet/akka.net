@@ -1245,7 +1245,7 @@ namespace Akka.Actor
         protected Akka.Actor.IInternalActorRef Supervisor { get; }
         protected Akka.Actor.ActorSystem System { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         protected virtual Akka.Actor.ActorCell NewActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef supervisor) { }
         public override void Restart(System.Exception cause) { }
