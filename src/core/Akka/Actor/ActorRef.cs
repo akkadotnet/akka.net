@@ -19,6 +19,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util;
 using Akka.Util.Internal;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor
 {
@@ -422,7 +423,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">The path elements.</param>
         /// <returns>The <see cref="IActorRef"/>, or if the requested path does not exist, returns <see cref="Nobody"/>.</returns>
-        IActorRef GetChild(IEnumerable<string> name);
+        IActorRef GetChild(IReadOnlyList<string> name);
 
         /// <summary>
         /// Resumes an actor if it has been suspended.
@@ -481,7 +482,7 @@ namespace Akka.Actor
         public abstract IActorRefProvider Provider { get; }
 
         /// <inheritdoc cref="IInternalActorRef"/>
-        public abstract IActorRef GetChild(IEnumerable<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
+        public abstract IActorRef GetChild(IReadOnlyList<string> name);    //TODO: Refactor this to use an IEnumerator instead as this will be faster instead of enumerating multiple times over name, as the implementations currently do.
 
         /// <inheritdoc cref="IInternalActorRef"/>
         public abstract void Resume(Exception causedByFailure = null);
@@ -530,7 +531,7 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc cref="InternalActorRefBase"/>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             if (name.All(string.IsNullOrEmpty))
                 return this;
@@ -874,20 +875,17 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             //Using enumerator to avoid multiple enumerations of name.
-            var enumerator = name.GetEnumerator();
-            if (!enumerator.MoveNext())
-            {
-                //name was empty
+            if (name.Count == 0)
                 return this;
-            }
-            var firstName = enumerator.Current;
+  
+            var firstName = name[0];
             if (string.IsNullOrEmpty(firstName))
                 return this;
             if (_children.TryGetValue(firstName, out var child))
-                return child.GetChild(new Enumerable<string>(enumerator));
+                return child.GetChild(new ListSlice<string>(name, 1, name.Count-1));
             return ActorRefs.Nobody;
         }
 

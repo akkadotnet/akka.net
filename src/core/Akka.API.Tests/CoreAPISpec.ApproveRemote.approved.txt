@@ -171,7 +171,7 @@ namespace Akka.Remote
         public override Akka.Actor.IInternalActorRef Parent { get; }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public bool IsWatchIntercepted(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }

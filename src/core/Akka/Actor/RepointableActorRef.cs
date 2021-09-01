@@ -15,6 +15,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Pattern;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor
 {
@@ -278,17 +279,17 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">TBD</param>
         /// <returns>TBD</returns>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
-            var current = (IActorRef)this;
-            if (!name.Any()) return current;
+            IActorRef current = this;
+            if (name.Count == 0) return current;
 
-            var next = name.FirstOrDefault() ?? "";
+            var next = name[0];
 
             switch (next)
             {
                 case "..":
-                    return Parent.GetChild(name.Skip(1));
+                    return Parent.GetChild(new ListSlice<string>(name, 1, name.Count-1));
                 case "":
                     return ActorRefs.Nobody;
                 default:
@@ -297,8 +298,8 @@ namespace Akka.Actor
                     {
                         if (stats is ChildRestartStats crs && (uid == ActorCell.UndefinedUid || uid == crs.Uid))
                         {
-                            if (name.Skip(1).Any())
-                                return crs.Child.GetChild(name.Skip(1));
+                            if (name.Count > 1)
+                                return crs.Child.GetChild(new ListSlice<string>(name, 1, name.Count-1));
                             else
                                 return crs.Child;
                         }

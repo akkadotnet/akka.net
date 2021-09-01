@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Util.Internal;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor
 {
@@ -211,14 +212,13 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
-            var current = (IActorRef)this;
+            IActorRef current = this;
             int index = 0;
-            foreach (string element in name)
+            foreach (var element in name)
             {
-                var currentLocalActorRef = current as LocalActorRef;
-                if (currentLocalActorRef != null)
+                if (current is LocalActorRef currentLocalActorRef)
                 {
                     switch (element)
                     {
@@ -237,7 +237,7 @@ namespace Akka.Actor
                     //Current is not a LocalActorRef
                     if (current != null)
                     {
-                        var rest = name.Skip(index).ToList();
+                        var rest = new ListSlice<string>(name, 1, name.Count-1);
                         return current.AsInstanceOf<IInternalActorRef>().GetChild(rest);
                     }
                     throw new NotSupportedException("Bug, we should not get here");
