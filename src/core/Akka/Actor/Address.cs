@@ -155,7 +155,7 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Address address && Equals(address);
+        public override bool Equals(object obj) => Equals(obj as Address);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -246,8 +246,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
-            return ReferenceEquals(left, right)
-                ||(left?.Equals(right) ?? false); // left is null, right is not
+            return EqualityComparer<Address>.Default.Equals(left, right);
         }
 
         /// <summary>
@@ -258,8 +257,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Address left, Address right)
         {
-            return !ReferenceEquals(left, right) &&
-                   (left?.Equals(right) ?? true);
+            return !(left == right);
         }
 
         /// <summary>
