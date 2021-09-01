@@ -4486,7 +4486,7 @@ namespace Akka.Routing
         public virtual Akka.Routing.Router RemoveRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.IActorRef routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.ActorSelection routee) { }
-        public void Route(object message, Akka.Actor.IActorRef sender) { }
+        public virtual void Route(object message, Akka.Actor.IActorRef sender) { }
         protected virtual void Send(Akka.Routing.Routee routee, object message, Akka.Actor.IActorRef sender) { }
         protected object UnWrap(object message) { }
         public virtual Akka.Routing.Router WithRoutees(params Akka.Routing.Routee[] routees) { }
