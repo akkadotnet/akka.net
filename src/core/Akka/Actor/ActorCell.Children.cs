@@ -356,8 +356,7 @@ namespace Akka.Actor
         [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
         {
-            IInternalActorRef child;
-            return TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
         }
 
         

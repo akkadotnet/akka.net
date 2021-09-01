@@ -114,7 +114,7 @@ namespace Akka.Remote
                 case null:
                     return this;
                 case "..":
-                    return Parent.GetChild(new ListSlice<string>(name, 1, name.Count-1));
+                    return Parent.GetChild(name.NoCopySlice(1));
                 default:
                     return new RemoteActorRef(Remote, LocalAddressToUse, Path / name, ActorRefs.Nobody, Props.None, Deploy.None);
             }

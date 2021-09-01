@@ -237,7 +237,7 @@ namespace Akka.Actor
                     //Current is not a LocalActorRef
                     if (current != null)
                     {
-                        var rest = new ListSlice<string>(name, index, name.Count-index);
+                        var rest = name.NoCopySlice(index);
                         return current.AsInstanceOf<IInternalActorRef>().GetChild(rest);
                     }
                     throw new NotSupportedException("Bug, we should not get here");

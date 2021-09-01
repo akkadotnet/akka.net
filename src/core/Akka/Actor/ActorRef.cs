@@ -885,7 +885,7 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
             if (string.IsNullOrEmpty(firstName))
                 return this;
             if (_children.TryGetValue(firstName, out var child))
-                return child.GetChild(new ListSlice<string>(name, 1, name.Count-1));
+                return child.GetChild(name.NoCopySlice(1));
             return ActorRefs.Nobody;
         }
 
