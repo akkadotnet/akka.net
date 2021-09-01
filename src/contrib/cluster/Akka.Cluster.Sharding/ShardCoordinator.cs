@@ -1568,7 +1568,7 @@ namespace Akka.Cluster.Sharding
                 _remaining.Remove(shardRegion);
                 if (_remaining.Count == 0)
                 {
-                    Log.Debug("{0}: All shard regions acked, handing off shard [{0}].", _typeName, _shard);
+                    Log.Debug("{0}: All shard regions acked, handing off shard [{1}].", _typeName, _shard);
                     _shardRegionFrom.Tell(new HandOff(_shard));
                     Context.Become(StoppingShard);
                 }
