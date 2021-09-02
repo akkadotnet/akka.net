@@ -241,7 +241,10 @@ namespace Akka.Actor
 
         IActorRef IActorContext.Child(string name)
         {
-            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
+            if (TryGetChildStatsByName(name, out var child) && child is ChildRestartStats s)
+                return s.Child;
+            
+            return ActorRefs.Nobody;
         }
 
         /// <summary>
