@@ -143,7 +143,11 @@ namespace Akka.Util.Internal.Collections
 
         public void CopyTo(T[] array, int arrayIndex)
         {
-            throw new System.NotImplementedException();
+            var n = 0;
+            foreach (var i in _array.Skip(Offset).Take(Count))
+            {
+                array[arrayIndex + n++] = i;
+            }
         }
 
         public bool Remove(T item)
