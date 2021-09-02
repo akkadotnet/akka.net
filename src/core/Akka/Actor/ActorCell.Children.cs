@@ -353,35 +353,19 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="name">N/A</param>
         /// <returns>N/A</returns>
-        [Obsolete("Use TryGetSingleChild [0.7.1]")]
         public IInternalActorRef GetSingleChild(string name)
-        {
-            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
-        }
-
-        
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
-        public bool TryGetSingleChild(string name, out IInternalActorRef child)
         {
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
                 if (ChildrenContainer.TryGetByName(name, out var stats) && stats is ChildRestartStats r)
                 {
-                    child = r.Child;
-                    return true;
+                    return r.Child;
                 }
 
                 if (TryGetFunctionRef(name, out var functionRef))
                 {
-                    child = functionRef;
-                    return true;
+                    return functionRef;
                 }
             }
             else
@@ -389,20 +373,17 @@ namespace Akka.Actor
                 var (s, uid) = GetNameAndUid(name);
                 if (TryGetChildRestartStatsByName(s, out var stats) && (uid == ActorCell.UndefinedUid || uid == stats.Uid))
                 {
-                    child = stats.Child;
-                        return true;
+                    return stats.Child;
                 }
 
                 if (TryGetFunctionRef(s, uid, out var functionRef))
                 {
-                    child = functionRef;
-                    return true;
+                    return functionRef;
                 }
             }
-            child = ActorRefs.Nobody;
-            return false;
+            return ActorRefs.Nobody;
         }
-
+        
         /// <summary>
         /// TBD
         /// </summary>

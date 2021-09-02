@@ -93,7 +93,6 @@ namespace Akka.Actor
         public System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> GetChildren() { }
         public static Akka.Actor.IActorRef GetCurrentSelfOrNoSender() { }
         public static Akka.Actor.IActorRef GetCurrentSenderOrNoSender() { }
-        [System.ObsoleteAttribute("Use TryGetSingleChild [0.7.1]")]
         public Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public void Init(bool sendSupervise, Akka.Dispatch.MailboxType mailboxType) { }
         public Akka.Actor.Internal.ChildRestartStats InitChild(Akka.Actor.IInternalActorRef actor) { }
@@ -127,7 +126,6 @@ namespace Akka.Actor
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject, Akka.Util.Option<object> customMessage) { }
         public bool TryGetChildStatsByName(string name, out Akka.Actor.Internal.IChildStats child) { }
         protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, out Akka.Actor.Internal.ChildRestartStats child) { }
-        public bool TryGetSingleChild(string name, out Akka.Actor.IInternalActorRef child) { }
         public void UnbecomeStacked() { }
         protected void UnreserveChild(string name) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
