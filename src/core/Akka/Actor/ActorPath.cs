@@ -597,8 +597,8 @@ namespace Akka.Actor
             if (adjustedUidLength > 0)
             {
                 var uidOffset = buffer.Length - adjustedUidLength;
-                buffer[offset++] = '#';
-                SpanHacks.CopySpans(uidSpan.Slice(0, intLength), buffer, offset);
+                buffer[uidOffset] = '#';
+                SpanHacks.CopySpans(uidSpan.Slice(0, intLength), buffer, uidOffset+1);
             }
 
             return buffer.ToString();
