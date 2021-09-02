@@ -99,9 +99,11 @@ namespace Akka.Benchmarks.Actor
         private IActorContext _cell;
         private RepointableActorRef _repointableActorRef;
         private LocalActorRef _localActorRef;
+        private VirtualPathContainer _virtualPathContainer;
 
         private List<string> _rpChildQueryPath = new List<string>() { "food", "ood", "od" };
         private List<string> _lclChildQueryPath = new List<string>() { "ood", "od", "d" };
+        private List<string> _virtualPathContainerQueryPath = new List<string>() { "foo" };
         
         [GlobalSetup]
         public async Task Setup()
@@ -113,6 +115,15 @@ namespace Akka.Benchmarks.Actor
             
             _cell = _parentActor.As<ActorRefWithCell>().Underlying.As<ActorCell>();
             _repointableActorRef = (RepointableActorRef)_parentActor;
+
+            var exp = _system.As<ExtendedActorSystem>();
+
+            var vPath = exp.Guardian.Path / "testTemp";
+            _virtualPathContainer =
+                new VirtualPathContainer(exp.Provider, vPath, exp.Guardian, exp.Log);
+
+            _virtualPathContainer.AddChild("foo",
+                new EmptyLocalActorRef(exp.Provider, vPath / "foo", exp.EventStream));
         }
 
         [Benchmark]
@@ -131,6 +142,12 @@ namespace Akka.Benchmarks.Actor
         public void Resolve3DeepChildLocalActorRef()
         {
             _localActorRef.GetChild(_lclChildQueryPath);
+        }
+        
+        [Benchmark]
+        public void ResolveVirtualPathContainer()
+        {
+            _virtualPathContainer.GetChild(_virtualPathContainerQueryPath);
         }
 
         [GlobalCleanup]
