@@ -114,10 +114,14 @@ namespace Akka.Actor
         /// </summary>
         public bool HasGlobalScope => !string.IsNullOrEmpty(Host);
 
-        private string CreateLazyToString()
+        private static string CreateLazyToString(Address addr)
         {
-            return !string.IsNullOrWhiteSpace(Host) && Port.HasValue ?
-            $"{Protocol}://{System}@{Host}:{Port}" : $"{Protocol}://{System}";
+            if (!string.IsNullOrWhiteSpace(addr.Host) && addr.Port.HasValue)
+                return $"{addr.Protocol}://{addr.System}@{addr.Host}:{addr.Port}";
+            if (!string.IsNullOrWhiteSpace(addr.Host)) // host, but no port - rare case
+                return $"{addr.Protocol}://{addr.System}@{addr.Host}";
+
+            return $"{addr.Protocol}://{addr.System}";
         }
 
         /// <summary>
@@ -133,9 +137,9 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            if (string.IsNullOrEmpty(_toString))
+            if (_toString == null)
             {
-                _toString = CreateLazyToString();
+                _toString = CreateLazyToString(this);
             }
 
             return _toString;

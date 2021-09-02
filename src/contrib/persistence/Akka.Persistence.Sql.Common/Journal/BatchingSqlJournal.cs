@@ -13,6 +13,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Persistence.Journal;
+using Akka.Persistence.Sql.Common.Journal;
 using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -232,7 +234,12 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <summary>
         /// The default serializer used when not type override matching is found
         /// </summary>
-        public string DefaultSerializer { get; } 
+        public string DefaultSerializer { get; }
+
+        /// <summary>
+        /// The fully qualified name of the type that should be used as timestamp provider.
+        /// </summary>
+        public string TimestampProviderTypeName { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BatchingSqlJournalSetup" /> class.
@@ -292,6 +299,7 @@ namespace Akka.Persistence.Sql.Common.Journal
             ReplayFilterSettings = new ReplayFilterSettings(config.GetConfig("replay-filter"));
             NamingConventions = namingConventions;
             DefaultSerializer = config.GetString("serializer", null);
+            TimestampProviderTypeName = config.GetString("timestamp-provider", null);
         }
 
         /// <summary>
@@ -528,6 +536,11 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected readonly bool CanPublish;
 
         /// <summary>
+        /// The timestamp provider that will be used for the timestamp column when writing messages to the database.
+        /// </summary>
+        protected ITimestampProvider TimestampProvider { get; }
+
+        /// <summary>
         /// Logging adapter for current journal actor .
         /// </summary>
         protected readonly ILoggingAdapter Log;
@@ -561,7 +574,8 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected BatchingSqlJournal(BatchingSqlJournalSetup setup)
         {
             Setup = setup;
-            CanPublish = Persistence.Instance.Apply(Context.System).Settings.Internal.PublishPluginCommands;
+            CanPublish = Persistence.Instance.Apply(Context.System).Settings.Internal.PublishPluginCommands;      
+            TimestampProvider = TimestampProviderProvider.GetTimestampProvider(setup.TimestampProviderTypeName, Context);      
 
             _persistenceIdSubscribers = new Dictionary<string, HashSet<IActorRef>>();
             _tagSubscribers = new Dictionary<string, HashSet<IActorRef>>();
@@ -800,8 +814,15 @@ namespace Akka.Persistence.Sql.Common.Journal
                         replayAll.ReplyTo.Tell(new EventReplayFailure(cause));
                         break;
 
+                    case SelectCurrentPersistenceIds select:
+                        // SqlJournal handled this failure case by using the default PipeTo failure
+                        // handler which sends a Status.Failure message back to the sender.
+                        select.ReplyTo.Tell(new Status.Failure(cause));
+                        break;
+
                     default:
-                        throw new Exception($"Unknown persistence journal request type [{request.GetType()}]");
+                        Log.Error(cause, $"Batching failure not reported to original sender. Unknown batched persistence journal request type [{request.GetType()}].");
+                        break;
                 }
             }
 
@@ -1096,10 +1117,12 @@ namespace Akka.Persistence.Sql.Common.Journal
             command.Parameters.Clear();
             AddParameter(command, "@Ordering", DbType.Int64, message.Offset);
 
-            var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            using (var reader = await command.ExecuteReaderAsync())
             {
-                result.Add(reader.GetString(0));
+                while (await reader.ReadAsync())
+                {
+                    result.Add(reader.GetString(0));
+                }
             }
 
             message.ReplyTo.Tell(new CurrentPersistenceIds(result, highestOrderingNumber));
@@ -1276,7 +1299,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                         persistent = persistent.WithPayload(tagged.Payload);
                     }
 
-                    WriteEvent(command, persistent.WithTimestamp(DateTime.UtcNow.Ticks), tagBuilder.ToString());
+                    WriteEvent(command, persistent.WithTimestamp(TimestampProvider.GenerateTimestamp(persistent)), tagBuilder.ToString());
 
                     await command.ExecuteNonQueryAsync();
 

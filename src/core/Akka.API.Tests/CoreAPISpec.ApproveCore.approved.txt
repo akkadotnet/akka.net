@@ -74,7 +74,7 @@ namespace Akka.Actor
         public Akka.Actor.IActorRef Sender { get; }
         public Akka.Actor.ActorSystem System { get; }
         public Akka.Actor.Internal.ActorSystemImpl SystemImpl { get; }
-        public Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
+        public virtual Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
         public virtual Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, string name = null) { }
         public Akka.Actor.ActorSelection ActorSelection(string path) { }
         public Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath path) { }
@@ -93,7 +93,6 @@ namespace Akka.Actor
         public System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> GetChildren() { }
         public static Akka.Actor.IActorRef GetCurrentSelfOrNoSender() { }
         public static Akka.Actor.IActorRef GetCurrentSenderOrNoSender() { }
-        [System.ObsoleteAttribute("Use TryGetSingleChild [0.7.1]")]
         public Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public void Init(bool sendSupervise, Akka.Dispatch.MailboxType mailboxType) { }
         public Akka.Actor.Internal.ChildRestartStats InitChild(Akka.Actor.IInternalActorRef actor) { }
@@ -110,7 +109,7 @@ namespace Akka.Actor
         public void Resume(System.Exception causedByFailure) { }
         public virtual void SendMessage(Akka.Actor.Envelope message) { }
         public virtual void SendMessage(Akka.Actor.IActorRef sender, object message) { }
-        public void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
+        public virtual void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage systemMessage) { }
         protected void SetActorFields(Akka.Actor.ActorBase actor) { }
         protected bool SetChildrenTerminationReason(Akka.Actor.Internal.SuspendReason reason) { }
         public void SetReceiveTimeout(System.Nullable<System.TimeSpan> timeout = null) { }
@@ -127,7 +126,6 @@ namespace Akka.Actor
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject, Akka.Util.Option<object> customMessage) { }
         public bool TryGetChildStatsByName(string name, out Akka.Actor.Internal.IChildStats child) { }
         protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, out Akka.Actor.Internal.ChildRestartStats child) { }
-        public bool TryGetSingleChild(string name, out Akka.Actor.IInternalActorRef child) { }
         public void UnbecomeStacked() { }
         protected void UnreserveChild(string name) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
@@ -864,9 +862,9 @@ namespace Akka.Actor
         public Failures() { }
         public System.Collections.Generic.List<Akka.Actor.Failure> Entries { get; }
     }
-    public class FutureActorRef : Akka.Actor.MinimalActorRef
+    public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
-        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<object> result, System.Action unregister, Akka.Actor.ActorPath path) { }
+        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action<System.Threading.Tasks.Task> unregister, Akka.Actor.ActorPath path) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
@@ -1081,7 +1079,7 @@ namespace Akka.Actor
         bool IsTerminated { get; }
         Akka.Actor.IInternalActorRef Parent { get; }
         Akka.Actor.IActorRefProvider Provider { get; }
-        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         void Restart(System.Exception cause);
         void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) [1.1.0]")]
@@ -1202,7 +1200,7 @@ namespace Akka.Actor
         public abstract bool IsTerminated { get; }
         public abstract Akka.Actor.IInternalActorRef Parent { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
-        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         public abstract void Restart(System.Exception cause);
         public abstract void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) instead [1.1.0]")]
@@ -1245,7 +1243,7 @@ namespace Akka.Actor
         protected Akka.Actor.IInternalActorRef Supervisor { get; }
         protected Akka.Actor.ActorSystem System { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         protected virtual Akka.Actor.ActorCell NewActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef supervisor) { }
         public override void Restart(System.Exception cause) { }
@@ -1317,7 +1315,7 @@ namespace Akka.Actor
         [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
@@ -1533,7 +1531,7 @@ namespace Akka.Actor
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public Akka.Actor.RepointableActorRef Initialize(bool async) { }
         protected virtual Akka.Actor.ActorCell NewCell() { }
@@ -2482,6 +2480,8 @@ namespace Akka.Dispatch
         public object CurrentMessage { get; }
         public override int MaximumConcurrencyLevel { get; }
         protected override System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> GetScheduledTasks() { }
+        protected virtual void OnAfterTaskCompleted() { }
+        protected virtual void OnBeforeTaskStarted() { }
         protected override void QueueTask(System.Threading.Tasks.Task task) { }
         public static void RunTask(System.Action action) { }
         public static void RunTask(System.Func<System.Threading.Tasks.Task> asyncAction) { }
@@ -4214,6 +4214,7 @@ namespace Akka.Routing
     {
         protected CustomRouterConfig() { }
         protected CustomRouterConfig(string routerDispatcher) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
     }
     public sealed class Deafen : Akka.Routing.ListenerMessage
     {
@@ -4248,6 +4249,7 @@ namespace Akka.Routing
         public FromConfig(Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher) { }
         public static Akka.Routing.FromConfig Instance { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
         public Akka.Actor.Props Props() { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
@@ -4272,6 +4274,7 @@ namespace Akka.Routing
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         [System.ObsoleteAttribute("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
         public System.Collections.Generic.IEnumerable<string> Paths { get; }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -4311,6 +4314,7 @@ namespace Akka.Routing
         public static Akka.Routing.NoRouter Instance { get; }
         public override string RouterDispatcher { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public Akka.Actor.Props Props(Akka.Actor.Props routeeProps) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
@@ -4329,6 +4333,7 @@ namespace Akka.Routing
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public virtual Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public virtual bool UsePoolDispatcher { get; }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Pool other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -4462,19 +4467,21 @@ namespace Akka.Routing
     }
     public class Router
     {
+        [Akka.Annotations.InternalApiAttribute()]
         public Router(Akka.Routing.RoutingLogic logic, Akka.Actor.IActorRef routee, params Akka.Actor.IActorRef[] routees) { }
         public Router(Akka.Routing.RoutingLogic logic, params Akka.Routing.Routee[] routees) { }
         public System.Collections.Generic.IEnumerable<Akka.Routing.Routee> Routees { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
-        public Akka.Routing.Router AddRoutee(Akka.Routing.Routee routee) { }
+        public virtual Akka.Routing.Router AddRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router AddRoutee(Akka.Actor.IActorRef routee) { }
         public Akka.Routing.Router AddRoutee(Akka.Actor.ActorSelection routee) { }
-        public Akka.Routing.Router RemoveRoutee(Akka.Routing.Routee routee) { }
+        public virtual Akka.Routing.Router RemoveRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.IActorRef routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.ActorSelection routee) { }
-        public void Route(object message, Akka.Actor.IActorRef sender) { }
+        public virtual void Route(object message, Akka.Actor.IActorRef sender) { }
         protected virtual void Send(Akka.Routing.Routee routee, object message, Akka.Actor.IActorRef sender) { }
-        public Akka.Routing.Router WithRoutees(params Akka.Routing.Routee[] routees) { }
+        protected object UnWrap(object message) { }
+        public virtual Akka.Routing.Router WithRoutees(params Akka.Routing.Routee[] routees) { }
     }
     public abstract class RouterConfig : Akka.Util.ISurrogated, System.IEquatable<Akka.Routing.RouterConfig>
     {
@@ -4485,6 +4492,8 @@ namespace Akka.Routing
         public virtual string RouterDispatcher { get; }
         public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
+        [Akka.Annotations.InternalApiAttribute()]
+        public abstract Akka.Actor.ActorBase CreateRouterActor();
         public bool Equals(Akka.Routing.RouterConfig other) { }
         public override bool Equals(object obj) { }
         public virtual bool IsManagementMessage(object message) { }

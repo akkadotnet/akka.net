@@ -30,7 +30,7 @@ namespace Akka.DependencyInjection
             return new ServiceProviderScope(ServiceProvider.CreateScope());
         }
         
-        public object GetService<T>()
+        public T GetService<T>()
         {
             return ServiceProvider.GetService<T>();
         }

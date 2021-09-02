@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Dispatch;
@@ -172,21 +173,18 @@ namespace Akka.TestKit.Internal
 
             var dispatcher = system.Dispatchers.Lookup(props.Deploy.Dispatcher);
 
-            var supervisorLocal = supervisor as LocalActorRef;
-            if (supervisorLocal != null)
+            if (supervisor is LocalActorRef supervisorLocal)
             {
                 supervisorLocal.Cell.ReserveChild(name);
             }
             else
             {
-                var supervisorRep = supervisor as RepointableActorRef;
-                if (supervisorRep != null)
+                if (supervisor is RepointableActorRef supervisorRep)
                 {
                     var repUnderlying = supervisorRep.Underlying;
                     if (repUnderlying is UnstartedCell)
                         throw new IllegalStateException("Cannot attach a TestActor to an unstarted top-level actor, ensure that it is started by sending a message and observing the reply");
-                    var cellUnderlying = repUnderlying as ActorCell;
-                    if (cellUnderlying != null)
+                    if (repUnderlying is ActorCell cellUnderlying)
                     {
                         cellUnderlying.ReserveChild(name);
                     }
@@ -197,7 +195,7 @@ namespace Akka.TestKit.Internal
                 }
             }
 
-            MailboxType mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
+            var mailbox = system.Mailboxes.GetMailboxType(props, dispatcher.Configurator.Config);
             var testActorRef = new InternalTestActorRef((ActorSystemImpl)system, props, dispatcher, mailbox, (IInternalActorRef)supervisor, supervisor.Path / name);
 
             // we need to start ourselves since the creation of an actor has been split into initialization and starting
@@ -210,6 +208,8 @@ namespace Akka.TestKit.Internal
         /// </summary>
         protected class TestActorCell : ActorCell
         {
+            private TestActorTaskScheduler _taskScheduler;
+            
             /// <summary>
             /// TBD
             /// </summary>
@@ -235,10 +235,48 @@ namespace Akka.TestKit.Internal
                     base.AutoReceiveMessage(envelope);
             }
 
+            /// <inheritdoc />
+            public override ActorTaskScheduler TaskScheduler
+            {
+                get
+                {
+                    var taskScheduler = Volatile.Read(ref _taskScheduler);
+
+                    if (taskScheduler != null)
+                        return taskScheduler;
+
+                    taskScheduler = new TestActorTaskScheduler(this);
+                    return Interlocked.CompareExchange(ref _taskScheduler, taskScheduler, null) ?? taskScheduler;
+                }
+            }
+
             /// <summary>
             /// TBD
             /// </summary>
             public new object Actor { get { return base.Actor; } }
+        }
+
+        internal class TestActorTaskScheduler : ActorTaskScheduler
+        {
+            private readonly ActorCell _testActorCell;
+
+            /// <inheritdoc />
+            internal TestActorTaskScheduler(ActorCell testActorCell) : base(testActorCell)
+            {
+                _testActorCell = testActorCell;
+            }
+
+            /// <inheritdoc />
+            protected override void OnBeforeTaskStarted()
+            {
+                ActorCellKeepingSynchronizationContext.AsyncCache = _testActorCell;
+            }
+
+            /// <inheritdoc />
+            protected override void OnAfterTaskCompleted()
+            {
+                ActorCellKeepingSynchronizationContext.AsyncCache = null;
+            }
         }
 
         /// <summary>

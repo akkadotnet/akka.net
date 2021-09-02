@@ -162,7 +162,7 @@ namespace Akka.Actor
         /// <summary>
         /// TBD
         /// </summary>
-        public ActorTaskScheduler TaskScheduler
+        public virtual ActorTaskScheduler TaskScheduler
         {
             get
             {
@@ -236,12 +236,15 @@ namespace Akka.Actor
         [Obsolete("Use TryGetChildStatsByName [0.7.1]", true)]
         public IInternalActorRef GetChildByName(string name)   //TODO: Should return  Option[ChildStats]
         {
-            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
+            return GetSingleChild(name);
         }
 
         IActorRef IActorContext.Child(string name)
         {
-            return TryGetSingleChild(name, out var child) ? child : ActorRefs.Nobody;
+            if (TryGetChildStatsByName(name, out var child) && child is ChildRestartStats s)
+                return s.Child;
+            
+            return ActorRefs.Nobody;
         }
 
         /// <summary>
@@ -315,7 +318,7 @@ namespace Akka.Actor
             BecomeStacked(m => { receive(m); return true; });
         }
 
-        private long NewUid()
+        private static long NewUid()
         {
             // Note that this uid is also used as hashCode in ActorRef, so be careful
             // to not break hashing if you change the way uid is generated

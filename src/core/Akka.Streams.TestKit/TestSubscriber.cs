@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Actors;
@@ -436,7 +437,7 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Receive messages for a given duration or until one does not match a given partial function.
             /// </summary>
-            public IEnumerable<TOther> ReceiveWhile<TOther>(TimeSpan? max = null, TimeSpan? idle = null, Func<object, TOther> filter = null, int msgs = int.MaxValue) where TOther : class
+            public IEnumerable<TOther> ReceiveWhile<TOther>(TimeSpan? max = null, TimeSpan? idle = null, Func<object, TOther> filter = null, int msgs = int.MaxValue)
             {
                 return _probe.ReceiveWhile(max, idle, filter, msgs);
             }
@@ -444,9 +445,21 @@ namespace Akka.Streams.TestKit
             /// <summary>
             /// Drains a given number of messages
             /// </summary>
-            public IEnumerable<TOther> ReceiveWithin<TOther>(TimeSpan max, int messages = int.MaxValue) where TOther : class
+            public IEnumerable<TOther> ReceiveWithin<TOther>(TimeSpan max, int messages = int.MaxValue) 
             {
-                return _probe.ReceiveWhile(max, max, msg => (msg as OnNext)?.Element as TOther, messages);
+                return _probe.ReceiveWhile(max, max, msg =>
+                {
+                    switch (msg)
+                    {
+                      case OnNext<TOther> onNext:
+                          return onNext.Element;
+                      case OnError onError:
+                          ExceptionDispatchInfo.Capture(onError.Cause).Throw();
+                          throw new Exception("Should never reach this code.", onError.Cause);
+                      case var ex:
+                          throw new Exception($"Expected OnNext or OnError, but found {ex.GetType()} instead");
+                    }
+                }, messages);
             }
 
             /// <summary>
