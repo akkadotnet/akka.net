@@ -175,7 +175,7 @@ namespace Akka.Util.Internal.Collections
 
         public T this[int index]
         {
-            get => _array.ElementAt(Offset + index);
+            get => _array[Offset + index];
             set => throw new System.NotImplementedException();
         }
     }
