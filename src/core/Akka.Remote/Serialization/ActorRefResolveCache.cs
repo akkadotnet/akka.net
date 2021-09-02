@@ -40,7 +40,7 @@ namespace Akka.Remote.Serialization
             return system.WithExtension<ActorRefResolveThreadLocalCache, ActorRefResolveThreadLocalCache>();
         }
     }
-
+    
     /// <summary>
     /// INTERNAL API
     /// </summary>
