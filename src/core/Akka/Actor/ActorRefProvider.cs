@@ -462,7 +462,7 @@ namespace Akka.Actor
         /// <param name="actorRef">TBD</param>
         /// <param name="pathElements">TBD</param>
         /// <returns>TBD</returns>
-        internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
+        internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyList<string> pathElements)
         {
             if (pathElements.Count == 0)
             {
