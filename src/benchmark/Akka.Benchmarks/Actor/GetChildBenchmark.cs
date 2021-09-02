@@ -100,8 +100,8 @@ namespace Akka.Benchmarks.Actor
         private RepointableActorRef _repointableActorRef;
         private LocalActorRef _localActorRef;
 
-        private List<string> _rpChildQueryPath = new List<string>() { "food", "foo", "fo" };
-        private List<string> _lclChildQueryPath = new List<string>() { "foo", "fo", "f" };
+        private List<string> _rpChildQueryPath = new List<string>() { "food", "ood", "od" };
+        private List<string> _lclChildQueryPath = new List<string>() { "ood", "od", "d" };
         
         [GlobalSetup]
         public async Task Setup()
