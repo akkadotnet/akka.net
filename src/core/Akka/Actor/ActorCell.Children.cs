@@ -372,12 +372,13 @@ namespace Akka.Actor
             if (name.IndexOf('#') < 0)
             {
                 // optimization for the non-uid case
-                if (TryGetChildRestartStatsByName(name, out var stats))
+                if (ChildrenContainer.TryGetByName(name, out var stats) && stats is ChildRestartStats r)
                 {
-                    child = stats.Child;
+                    child = r.Child;
                     return true;
                 }
-                else if (TryGetFunctionRef(name, out var functionRef))
+
+                if (TryGetFunctionRef(name, out var functionRef))
                 {
                     child = functionRef;
                     return true;
@@ -386,15 +387,13 @@ namespace Akka.Actor
             else
             {
                 var (s, uid) = GetNameAndUid(name);
-                if (TryGetChildRestartStatsByName(s, out var stats))
+                if (TryGetChildRestartStatsByName(s, out var stats) && (uid == ActorCell.UndefinedUid || uid == stats.Uid))
                 {
-                    if (uid == ActorCell.UndefinedUid || uid == stats.Uid)
-                    {
-                        child = stats.Child;
+                    child = stats.Child;
                         return true;
-                    }
                 }
-                else if (TryGetFunctionRef(s, uid, out var functionRef))
+
+                if (TryGetFunctionRef(s, uid, out var functionRef))
                 {
                     child = functionRef;
                     return true;
