@@ -144,7 +144,7 @@ namespace Akka.Event
             if (shouldRemoveStandardOutLogger)
             {
                 Publish(new Debug(logName, GetType(), "StandardOutLogger being removed"));
-                Unsubscribe(Logging.StandardOutLogger);
+                Unsubscribe(system.Settings.StdoutLogger);
             }
 
             Publish(new Debug(logName, GetType(), "Default Loggers started"));
@@ -226,7 +226,7 @@ namespace Akka.Event
         private void SetUpStdoutLogger(Settings config)
         {
             var logLevel = Logging.LogLevelFor(config.StdoutLogLevel);
-            SubscribeLogLevelAndAbove(logLevel, Logging.StandardOutLogger);
+            SubscribeLogLevelAndAbove(logLevel, config.StdoutLogger);
         }
 
         /// <summary>
@@ -243,7 +243,7 @@ namespace Akka.Event
                 SubscribeLogLevelAndAbove(logLevel, logger);
 
                 //unsubscribe to all levels below log level
-                foreach (var level in AllLogLevels.Where(l => l < logLevel))
+                foreach (var level in AllLogLevels.Where(l => l < logLevel && logLevel != LogLevel.OffLevel ))
                 {
                     Unsubscribe(logger, level.ClassFor());
                 }
@@ -253,7 +253,7 @@ namespace Akka.Event
         private void SubscribeLogLevelAndAbove(LogLevel logLevel, IActorRef logger)
         {
             //subscribe to given log level and above
-            foreach (var level in AllLogLevels.Where(l => l >= logLevel))
+            foreach (var level in AllLogLevels.Where(l => l >= logLevel && l != LogLevel.OffLevel))
             {
                 Subscribe(logger, level.ClassFor());
             }

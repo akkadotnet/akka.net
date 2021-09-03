@@ -31,6 +31,11 @@ namespace Akka.Event
         /// The error log level.
         /// </summary>
         ErrorLevel,
+        
+        /// <summary>
+        /// The off log level.
+        /// </summary>
+        OffLevel = int.MaxValue
     }
 }
 
