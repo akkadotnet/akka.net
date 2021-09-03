@@ -27,7 +27,7 @@ akka.loglevel = OFF
 akka.stdout-loglevel = OFF
 akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
 
-        public ShutdownLoggerSpec() : base(Config, new ThrowingOutputHelper())
+        public ShutdownLoggerSpec(ITestOutputHelper output) : base(Config, output)
         {
         }
 
@@ -74,19 +74,6 @@ akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
         { }
     }
 
-    internal class ThrowingOutputHelper : ITestOutputHelper
-    {
-        public void WriteLine(string message)
-        {
-            throw new ShutdownLogException();
-        }
-
-        public void WriteLine(string format, params object[] args)
-        {
-            throw new ShutdownLogException();
-        }
-    }
-    
     internal class ThrowingLogger : MinimalLogger
     {
         protected override void Log(object message)
