@@ -246,10 +246,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
-            if (left != null) {
-                return left.Equals(right);
-            }
-            return right == null;
+            return left?.Equals(right) ?? ReferenceEquals(right, null);
         }
 
         /// <summary>
