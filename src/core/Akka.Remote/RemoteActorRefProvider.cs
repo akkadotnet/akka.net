@@ -490,7 +490,7 @@ namespace Akka.Remote
                 {
                     if (actorPath is RootActorPath)
                         return RootGuardian;
-                    return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
+                    return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
                 }
 
                 return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
