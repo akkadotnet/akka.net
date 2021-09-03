@@ -1842,10 +1842,57 @@ namespace Akka.Remote
 
     }
 
+    internal sealed class MsgDispatcherActor : ReceiveActor
+    {
+        private readonly IInboundMessageDispatcher _msgDispatch;
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
+        public MsgDispatcherActor(IInboundMessageDispatcher dispatcher)
+        {
+            _msgDispatch = dispatcher;
+            
+            Receive<AckAndMessage>(ackAndMessage =>
+            {
+                try
+                {
+                    _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                        ackAndMessage.MessageOption.RecipientAddress,
+                        ackAndMessage.MessageOption.SerializedMessage,
+                        ackAndMessage.MessageOption.SenderOptional);
+                }
+                catch (SerializationException e)
+                {
+                    LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                }
+                catch (ArgumentException e)
+                {
+                    LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                }
+                catch (InvalidCastException e)
+                {
+                    LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                }
+            });
+        }
+        
+        private void LogTransientSerializationError(Message msg, Exception error)
+        {
+            var sm = msg.SerializedMessage;
+            _log.Warning(error,
+                "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
+                "Transient association error (association remains live). {2}",
+                sm.SerializerId,
+                sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
+                error.Message);
+
+            
+        }
+    }
+
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointReader : EndpointActor
+    internal sealed class EndpointReader : EndpointActor
     {
         /// <summary>
         /// TBD
@@ -1891,6 +1938,7 @@ namespace Akka.Remote
         private readonly IInboundMessageDispatcher _msgDispatch;
 
         private readonly IRemoteActorRefProvider _provider;
+        private IActorRef _msgDispatcherActor;
         private AckedReceiveBuffer<Message> _ackedReceiveBuffer = new AckedReceiveBuffer<Message>();
 
         #region ActorBase overrides
@@ -1908,6 +1956,8 @@ namespace Akka.Remote
                     DeliverAndAck();
                 }
             }
+
+            _msgDispatcherActor = Context.ActorOf(Props.Create(() => new MsgDispatcherActor(_msgDispatch)).WithDispatcher(Settings.Dispatcher), "dispatch");
         }
 
         /// <summary>
@@ -1946,29 +1996,7 @@ namespace Akka.Remote
                         }
                         else
                         {
-                            try
-                            {
-                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                    ackAndMessage.MessageOption.RecipientAddress,
-                                    ackAndMessage.MessageOption.SerializedMessage,
-                                    ackAndMessage.MessageOption.SenderOptional);
-                            }
-                            catch (SerializationException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (ArgumentException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (InvalidCastException e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                            catch (Exception e)
-                            {
-                                throw;
-                            }
+                           _msgDispatcherActor.Tell(ackAndMessage);
                         }
                     }
                 }
