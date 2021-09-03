@@ -414,29 +414,31 @@ namespace Akka.Cluster.Sharding.Tests
 
             CancellationTokenSource timeoutCancellation = null;
             timeout = timeout ?? provider.Settings.AskTimeout;
-            var ctrList = new List<CancellationTokenRegistration>(2);
+
+            CancellationTokenRegistration? ctr1 = null;
+            CancellationTokenRegistration? ctr2 = null;
 
             if (timeout != Timeout.InfiniteTimeSpan && timeout.Value > default(TimeSpan))
             {
                 timeoutCancellation = new CancellationTokenSource();
 
-                ctrList.Add(timeoutCancellation.Token.Register(() =>
+                ctr1 = timeoutCancellation.Token.Register(() =>
                 {
                     result.TrySetException(new AskTimeoutException($"Timeout after {timeout} seconds"));
-                }));
+                });
 
                 timeoutCancellation.CancelAfter(timeout.Value);
             }
 
             if (cancellationToken.CanBeCanceled)
             {
-                ctrList.Add(cancellationToken.Register(() => result.TrySetCanceled()));
+                ctr2 = cancellationToken.Register(() => result.TrySetCanceled());
             }
 
             //create a new tempcontainer path
-            ActorPath path = provider.TempPath();
+            var path = provider.TempPath();
 
-            var future = new FutureActorRef<object>(result, t => { }, path);
+            var future = new FutureActorRef<object>(result, path, provider);
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
 
@@ -452,15 +454,9 @@ namespace Akka.Cluster.Sharding.Tests
 
                 provider.UnregisterTempActor(path);
 
-                for (var i = 0; i < ctrList.Count; i++)
-                {
-                    ctrList[i].Dispose();
-                }
-
-                if (timeoutCancellation != null)
-                {
-                    timeoutCancellation.Dispose();
-                }
+                ctr1?.Dispose();
+                ctr2?.Dispose();
+                timeoutCancellation?.Dispose();
             }
         }
     }
