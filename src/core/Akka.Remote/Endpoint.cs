@@ -1851,26 +1851,26 @@ namespace Akka.Remote
         {
             _msgDispatch = dispatcher;
             
-            Receive<AckAndMessage>(ackAndMessage =>
+            Receive<Message>(ackAndMessage =>
             {
                 try
                 {
-                    _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                        ackAndMessage.MessageOption.RecipientAddress,
-                        ackAndMessage.MessageOption.SerializedMessage,
-                        ackAndMessage.MessageOption.SenderOptional);
+                    _msgDispatch.Dispatch(ackAndMessage.Recipient,
+                        ackAndMessage.RecipientAddress,
+                        ackAndMessage.SerializedMessage,
+                        ackAndMessage.SenderOptional);
                 }
                 catch (SerializationException e)
                 {
-                    LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                    LogTransientSerializationError(ackAndMessage, e);
                 }
                 catch (ArgumentException e)
                 {
-                    LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                    LogTransientSerializationError(ackAndMessage, e);
                 }
                 catch (InvalidCastException e)
                 {
-                    LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                    LogTransientSerializationError(ackAndMessage, e);
                 }
             });
         }
@@ -1948,6 +1948,8 @@ namespace Akka.Remote
         /// </summary>
         protected override void PreStart()
         {
+            _msgDispatcherActor = Context.ActorOf(Props.Create(() => new MsgDispatcherActor(_msgDispatch)).WithDispatcher(Settings.Dispatcher), "dispatch");
+            
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
                 if(resendState.Uid == _uid)
@@ -1956,8 +1958,6 @@ namespace Akka.Remote
                     DeliverAndAck();
                 }
             }
-
-            _msgDispatcherActor = Context.ActorOf(Props.Create(() => new MsgDispatcherActor(_msgDispatch)).WithDispatcher(Settings.Dispatcher), "dispatch");
         }
 
         /// <summary>
@@ -1996,7 +1996,7 @@ namespace Akka.Remote
                         }
                         else
                         {
-                           _msgDispatcherActor.Tell(ackAndMessage);
+                           _msgDispatcherActor.Tell(ackAndMessage.MessageOption);
                         }
                     }
                 }
@@ -2094,7 +2094,11 @@ namespace Akka.Remote
 
             // Notify writer that some messages can be acked
             Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
-            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
+
+            foreach (var m in deliverable.Deliverables)
+            {
+                _msgDispatcherActor.Tell(m);
+            }
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)
