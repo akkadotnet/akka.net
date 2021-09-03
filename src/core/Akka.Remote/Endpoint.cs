@@ -1850,6 +1850,11 @@ namespace Akka.Remote
         public MsgDispatcherActor(IInboundMessageDispatcher dispatcher)
         {
             _msgDispatch = dispatcher;
+            
+            Receive<Message>(ackAndMessage =>
+            {
+               
+            });
         }
         
         private void LogTransientSerializationError(Message msg, Exception error)
