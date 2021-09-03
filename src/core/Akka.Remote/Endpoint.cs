@@ -1842,7 +1842,7 @@ namespace Akka.Remote
 
     }
 
-    internal sealed class MsgDispatcherActor : ReceiveActor
+    internal sealed class MsgDispatcherActor : UntypedActor
     {
         private readonly IInboundMessageDispatcher _msgDispatch;
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -1853,25 +1853,7 @@ namespace Akka.Remote
             
             Receive<Message>(ackAndMessage =>
             {
-                try
-                {
-                    _msgDispatch.Dispatch(ackAndMessage.Recipient,
-                        ackAndMessage.RecipientAddress,
-                        ackAndMessage.SerializedMessage,
-                        ackAndMessage.SenderOptional);
-                }
-                catch (SerializationException e)
-                {
-                    LogTransientSerializationError(ackAndMessage, e);
-                }
-                catch (ArgumentException e)
-                {
-                    LogTransientSerializationError(ackAndMessage, e);
-                }
-                catch (InvalidCastException e)
-                {
-                    LogTransientSerializationError(ackAndMessage, e);
-                }
+               
             });
         }
         
@@ -1886,6 +1868,35 @@ namespace Akka.Remote
                 error.Message);
 
             
+        }
+
+        protected override void OnReceive(object message)
+        {
+            if (!(message is Message ackAndMessage))
+            {
+                Unhandled(message);
+                return;
+            }
+            
+            try
+            {
+                _msgDispatch.Dispatch(ackAndMessage.Recipient,
+                    ackAndMessage.RecipientAddress,
+                    ackAndMessage.SerializedMessage,
+                    ackAndMessage.SenderOptional);
+            }
+            catch (SerializationException e)
+            {
+                LogTransientSerializationError(ackAndMessage, e);
+            }
+            catch (ArgumentException e)
+            {
+                LogTransientSerializationError(ackAndMessage, e);
+            }
+            catch (InvalidCastException e)
+            {
+                LogTransientSerializationError(ackAndMessage, e);
+            }
         }
     }
 
@@ -1948,7 +1959,10 @@ namespace Akka.Remote
         /// </summary>
         protected override void PreStart()
         {
-            _msgDispatcherActor = Context.ActorOf(Props.Create(() => new MsgDispatcherActor(_msgDispatch)).WithDispatcher(Settings.Dispatcher), "dispatch");
+            _msgDispatcherActor = Context.ActorOf(
+                Props.Create(() => new MsgDispatcherActor(_msgDispatch))
+                    .WithDispatcher(Settings.Dispatcher)
+                    .WithDeploy(Deploy.Local), "dispatch");
             
             if (_receiveBuffers.TryGetValue(new EndpointManager.Link(LocalAddress, RemoteAddress), out var resendState))
             {
