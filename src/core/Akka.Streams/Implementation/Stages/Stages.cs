@@ -98,6 +98,10 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
+        public static readonly Attributes TakeUntil = Attributes.CreateName("takeUntil");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Attributes SkipWhile = Attributes.CreateName("skipWhile");
         /// <summary>
         /// TBD

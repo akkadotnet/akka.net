@@ -642,13 +642,28 @@ Pass ``n`` incoming elements downstream and then complete
 #### TakeWhile
 
 Pass elements downstream as long as a predicate function return true for the element include the element
-when the predicate first return false and then complete.
+when the predicate first return false and then complete. Note that this is different to TakeUntil in that it will 
+pull the next element from upstream to evaluate if it should be passed downstream.
 
-**emits** while the predicate is true and until the first false result
+**emits** when the predicate is true, or when the predicate is false for the first time and inclusive is true
 
 **backpressures** when downstream backpressures
 
 **completes** when predicate returned false or upstream completes
+
+
+#### TakeUntil
+
+Pass elements downstream as until a predicate function return true for an element, optionally include the element
+failing the predicate, and then complete. Note that this is different to TakeWhile in that it will not pull the next 
+element from upstream when the predicate evaluates true.
+
+**emits** when the predicate is false, or when the predicate is true and inclusive is true
+
+**backpressures** when downstream backpressures
+
+**completes** when predicate is true or upstream completes
+
 
 #### SkipWhile
 

@@ -432,6 +432,39 @@ namespace Akka.Streams.Dsl.Internal
         }
 
         /// <summary>
+        /// Terminate processing (and cancel the upstream publisher) as soon as <paramref name="predicate"/>
+        /// returns true for the first time, including the element iff inclusive is true. As soon as an element 
+        /// evaluates true, no element will be requested from upstream publishers.
+        /// 
+        /// The stream will be completed without producing any elements if <paramref name="predicate"/> is true for
+        /// the first stream element.
+        /// <para>
+        /// Emits when the <paramref name="predicate"/> is false
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when <paramref name="predicate"/> returned true (or 1 before predicate returns true if not <paramref name="inclusive"/>) or upstream completes
+        /// </para>
+        /// <para>
+        /// Cancels when downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{T, TMat}(IFlow{T, TMat}, long)"/>
+        /// <seealso cref="LimitWeighted{T, TMat}(IFlow{T, TMat}, long, Func{T, long})"/>
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <param name="inclusive">TBD</param>
+        /// <returns>TBD</returns>
+        public static IFlow<T, TMat> TakeUntil<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate, bool inclusive)
+        {
+            return flow.Via(new Fusing.TakeUntil<T>(predicate, inclusive));
+        }
+
+        /// <summary>
         /// Discard elements at the beginning of the stream while <paramref name="predicate"/> is true.
         /// All elements will be taken after <paramref name="predicate"/> returns false first time.
         /// <para>
