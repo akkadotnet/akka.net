@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky. Expected OnNext, found TestSubscriber.OnError(Substream Source has not been materialized in 00:00:00.3000000)")]
         public void GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
         {
             this.AssertAllStagesStopped(() =>
@@ -72,7 +72,7 @@ namespace Akka.Streams.Tests.Dsl
                 s2.RunWith(Sink.FromSubscriber(s2SubscriberProbe), Materializer);
                 var s2Subscription = s2SubscriberProbe.ExpectSubscription();
                 s2Subscription.Request(100);
-                s2SubscriberProbe.ExpectNext().Should().Be(2);
+                s2SubscriberProbe.ExpectNext().Should().Be(2); // FLAKY: Materialization timeout here
 
                 var s3 = subscriber.ExpectNext().Item2;
 

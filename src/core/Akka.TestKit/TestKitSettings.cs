@@ -34,10 +34,10 @@ namespace Akka.TestKit
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<TestKitSettings>();
 
-            _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", null, allowInfinite:false);
-            _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", null, allowInfinite: false);
-            _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", null, allowInfinite: false);
-            _timefactor = config.GetDouble("akka.test.timefactor", 0);
+            _defaultTimeout = config.GetTimeSpan("akka.test.default-timeout", TimeSpan.FromSeconds(5), allowInfinite:false);
+            _singleExpectDefault = config.GetTimeSpan("akka.test.single-expect-default", TimeSpan.FromSeconds(3), allowInfinite: false);
+            _testEventFilterLeeway = config.GetTimeSpan("akka.test.filter-leeway", TimeSpan.FromSeconds(3), allowInfinite: false);
+            _timefactor = config.GetDouble("akka.test.timefactor", 1.0);
             _logTestKitCalls = config.GetBoolean("akka.test.testkit.debug", false);
 
             if(_timefactor <= 0)
