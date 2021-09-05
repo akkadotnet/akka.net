@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                     .TakeUntil(i => i == 3)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(3)
-                    .ExpectNext(1, 2)
+                    .ExpectNext(1, 2, 3)
                     .ExpectComplete();
             }, Materializer);
         }
@@ -47,7 +47,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 Source.Empty<int>()
-                    .TakeUntil(i => i < 2)
+                    .TakeUntil(i => i > 2)
                     .RunWith(this.SinkProbe<int>(), Materializer)
                     .Request(1)
                     .ExpectComplete();
@@ -76,20 +76,6 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_TakeUntil_must_emit_the_element_that_caused_the_predicate_to_return_false_and_then_no_more_with_inclusive_set()
-        {
-            this.AssertAllStagesStopped(() =>
-            {
-                Source.From(Enumerable.Range(1, 10))
-                .TakeUntil(i => i == 3, true)
-                .RunWith(this.SinkProbe<int>(), Materializer)
-                .Request(4)
-                .ExpectNext(1, 2, 3)
-                .ExpectComplete();
-            }, Materializer);
-        }
-
-        [Fact]
         public void A_TakeUntil_must_not_request_upstream_after_predicate_is_true()
         {
             this.AssertAllStagesStopped(() =>
@@ -101,7 +87,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sink.Request(3);
                 source.SendNext(1).SendNext(2).SendNext(3).ExpectCancellation();
-                sink.ExpectNext(1, 2).ExpectComplete();
+                sink.ExpectNext(1, 2, 3).ExpectComplete();
 
             }, Materializer);
         }

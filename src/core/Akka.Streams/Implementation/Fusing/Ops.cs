@@ -206,46 +206,11 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : InAndOutGraphStageLogic
+        private sealed class Logic : TakeWhileLogic<T>
         {
-            private readonly TakeWhile<T> _stage;
-            private readonly Decider _decider;
-
-            public Logic(TakeWhile<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
-            {
-                _stage = stage;
-                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
-
-                SetHandler(stage.Outlet, this);
-                SetHandler(stage.Inlet, this);
-            }
-
-            public override void OnPush()
-            {
-                try
-                {
-                    var element = Grab(_stage.Inlet);
-                    if (_stage._predicate(element))
-                        Push(_stage.Outlet, element);
-                    else
-                    {
-                        if (_stage._inclusive)
-                            Push(_stage.Outlet, element);
-
-                        CompleteStage();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (_decider(ex) == Directive.Stop)
-                        FailStage(ex);
-                    else
-                        Pull(_stage.Inlet);
-                }
-            }
-
-            public override void OnPull() => Pull(_stage.Inlet);
+            public Logic(TakeWhile<T> stage, Attributes inheritedAttributes) :
+                base(stage, stage._predicate, stage._inclusive, inheritedAttributes, stage.Shape)
+            { }
 
             public override string ToString() => "TakeWhileLogic";
         }
@@ -298,46 +263,11 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region Logic
 
-        private sealed class Logic : InAndOutGraphStageLogic
+        private sealed class Logic : TakeWhileLogic<T>
         {
-            private readonly TakeUntil<T> _stage;
-            private readonly Decider _decider;
-
-            public Logic(TakeUntil<T> stage, Attributes inheritedAttributes) : base(stage.Shape)
-            {
-                _stage = stage;
-                var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
-                _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
-
-                SetHandler(stage.Outlet, this);
-                SetHandler(stage.Inlet, this);
-            }
-
-            public override void OnPush()
-            {
-                try
-                {
-                    var element = Grab(_stage.Inlet);
-                    if (!_stage._predicate(element))
-                        Push(_stage.Outlet, element);
-                    else
-                    {
-                        if (_stage._inclusive)
-                            Push(_stage.Outlet, element);
-
-                        CompleteStage();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (_decider(ex) == Directive.Stop)
-                        FailStage(ex);
-                    else
-                        Pull(_stage.Inlet);
-                }
-            }
-
-            public override void OnPull() => Pull(_stage.Inlet);
+            public Logic(TakeUntil<T> stage, Attributes inheritedAttributes) :
+                base(stage, t => !stage._predicate(t), true, inheritedAttributes, stage.Shape)
+            { }
 
             public override string ToString() => "TakeUntilLogic";
         }
@@ -345,16 +275,13 @@ namespace Akka.Streams.Implementation.Fusing
         #endregion
 
         private readonly Predicate<T> _predicate;
-        private readonly bool _inclusive;
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
-        public TakeUntil(Predicate<T> predicate, bool inclusive)
+        public TakeUntil(Predicate<T> predicate)
         {
-            _inclusive = inclusive;
             _predicate = predicate;
         }
 
@@ -378,6 +305,56 @@ namespace Akka.Streams.Implementation.Fusing
         /// A <see cref="string" /> that represents this instance.
         /// </returns>
         public override string ToString() => "TakeUntil";
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    [InternalApi]
+    public abstract class TakeWhileLogic<T> : InAndOutGraphStageLogic
+    {
+        private readonly SimpleLinearGraphStage<T> _stage;
+        private readonly Decider _decider;
+        private readonly Predicate<T> _predicate;
+        private readonly bool _inclusive;
+
+        public TakeWhileLogic(SimpleLinearGraphStage<T> stage, Predicate<T> predicate, bool inclusive, Attributes inheritedAttributes, Shape shape) : base(shape)
+        {
+            _stage = stage;
+            var attr = inheritedAttributes.GetAttribute<ActorAttributes.SupervisionStrategy>(null);
+            _decider = attr != null ? attr.Decider : Deciders.StoppingDecider;
+            _predicate = predicate;
+            _inclusive = inclusive;
+
+            SetHandler(stage.Outlet, this);
+            SetHandler(stage.Inlet, this);
+        }
+
+        public override void OnPush()
+        {
+            try
+            {
+                var element = Grab(_stage.Inlet);
+                if (_predicate(element))
+                    Push(_stage.Outlet, element);
+                else
+                {
+                    if (_inclusive)
+                        Push(_stage.Outlet, element);
+
+                    CompleteStage();
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_decider(ex) == Directive.Stop)
+                    FailStage(ex);
+                else
+                    Pull(_stage.Inlet);
+            }
+        }
+
+        public override void OnPull() => Pull(_stage.Inlet);
     }
 
 

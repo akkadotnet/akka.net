@@ -415,9 +415,8 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
-        /// Terminate processing (and cancel the upstream publisher) as soon as <paramref name="predicate"/>
-        /// returns true for the first time, including the element iff inclusive is true. As soon as an element 
-        /// evaluates true, no element will be requested from upstream publishers.
+        /// Terminate processing (and cancel the upstream publisher) after returning the element that causes <paramref name="predicate"/> to returns true. 
+        /// As soon as an element evaluates true, no element will be requested from upstream publishers.
         /// 
         /// The stream will be completed without producing any elements if <paramref name="predicate"/> is true for
         /// the first stream element.
@@ -440,11 +439,10 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
         /// <returns>TBD</returns>
-        public static SubFlow<TOut, TMat, TClosed> TakeUntil<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate, bool inclusive = false)
+        public static SubFlow<TOut, TMat, TClosed> TakeUntil<TOut, TMat, TClosed>(this SubFlow<TOut, TMat, TClosed> flow, Predicate<TOut> predicate)
         {
-            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeUntil(flow, predicate, inclusive);
+            return (SubFlow<TOut, TMat, TClosed>)InternalFlowOperations.TakeUntil(flow, predicate);
         }
 
         /// <summary>
