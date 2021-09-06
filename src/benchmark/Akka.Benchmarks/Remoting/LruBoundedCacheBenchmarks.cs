@@ -18,6 +18,7 @@ using BenchmarkDotNet.Attributes;
 namespace Akka.Benchmarks.Remoting
 {
     [Config(typeof(MicroBenchmarkConfig))]
+    [SimpleJob( invocationCount: 10_000_000)]
     public class LruBoundedCacheBenchmarks
     {
         private ActorSystem _sys1;
