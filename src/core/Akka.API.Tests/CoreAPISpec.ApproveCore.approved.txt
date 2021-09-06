@@ -93,7 +93,6 @@ namespace Akka.Actor
         public System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> GetChildren() { }
         public static Akka.Actor.IActorRef GetCurrentSelfOrNoSender() { }
         public static Akka.Actor.IActorRef GetCurrentSenderOrNoSender() { }
-        [System.ObsoleteAttribute("Use TryGetSingleChild [0.7.1]")]
         public Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public void Init(bool sendSupervise, Akka.Dispatch.MailboxType mailboxType) { }
         public Akka.Actor.Internal.ChildRestartStats InitChild(Akka.Actor.IInternalActorRef actor) { }
@@ -127,7 +126,6 @@ namespace Akka.Actor
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject, Akka.Util.Option<object> customMessage) { }
         public bool TryGetChildStatsByName(string name, out Akka.Actor.Internal.IChildStats child) { }
         protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, out Akka.Actor.Internal.ChildRestartStats child) { }
-        public bool TryGetSingleChild(string name, out Akka.Actor.IInternalActorRef child) { }
         public void UnbecomeStacked() { }
         protected void UnreserveChild(string name) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
@@ -1080,7 +1078,7 @@ namespace Akka.Actor
         bool IsTerminated { get; }
         Akka.Actor.IInternalActorRef Parent { get; }
         Akka.Actor.IActorRefProvider Provider { get; }
-        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         void Restart(System.Exception cause);
         void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) [1.1.0]")]
@@ -1201,7 +1199,7 @@ namespace Akka.Actor
         public abstract bool IsTerminated { get; }
         public abstract Akka.Actor.IInternalActorRef Parent { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
-        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         public abstract void Restart(System.Exception cause);
         public abstract void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) instead [1.1.0]")]
@@ -1244,7 +1242,7 @@ namespace Akka.Actor
         protected Akka.Actor.IInternalActorRef Supervisor { get; }
         protected Akka.Actor.ActorSystem System { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         protected virtual Akka.Actor.ActorCell NewActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef supervisor) { }
         public override void Restart(System.Exception cause) { }
@@ -1316,7 +1314,7 @@ namespace Akka.Actor
         [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
@@ -1532,7 +1530,7 @@ namespace Akka.Actor
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public Akka.Actor.RepointableActorRef Initialize(bool async) { }
         protected virtual Akka.Actor.ActorCell NewCell() { }
@@ -4479,7 +4477,7 @@ namespace Akka.Routing
         public virtual Akka.Routing.Router RemoveRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.IActorRef routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.ActorSelection routee) { }
-        public void Route(object message, Akka.Actor.IActorRef sender) { }
+        public virtual void Route(object message, Akka.Actor.IActorRef sender) { }
         protected virtual void Send(Akka.Routing.Routee routee, object message, Akka.Actor.IActorRef sender) { }
         protected object UnWrap(object message) { }
         public virtual Akka.Routing.Router WithRoutees(params Akka.Routing.Routee[] routees) { }

@@ -327,7 +327,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <param name="sender">The sender of this message - which will be propagated to the routee.</param>
-        public void Route(object message, IActorRef sender)
+        public virtual void Route(object message, IActorRef sender)
         {
             if (message is Broadcast)
             {
