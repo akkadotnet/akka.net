@@ -362,7 +362,6 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 sub.Cancel();
                 snk.Request(1);
-                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
