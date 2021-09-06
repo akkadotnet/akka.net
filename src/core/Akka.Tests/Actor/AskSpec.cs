@@ -37,24 +37,6 @@ namespace Akka.Tests.Actor
                 {
                     Sender.Tell("answer");
                 }
-
-                if (message.Equals("delay"))
-                {
-                    Thread.Sleep(3000);
-                    Sender.Tell("answer");
-                }
-
-                if (message.Equals("many"))
-                {
-                    Sender.Tell("answer1");
-                    Sender.Tell("answer2");
-                    Sender.Tell("answer2");
-                }
-
-                if (message.Equals("invalid"))
-                {
-                    Sender.Tell(123);
-                }
             }
         }
 
@@ -130,52 +112,6 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf<SomeActor>();
             await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)));
-        }
-
-        [Fact]
-        public async Task Ask_should_put_timeout_answer_into_deadletter()
-        {
-            var actor = Sys.ActorOf<SomeActor>();            
-            
-            await EventFilter.DeadLetter<object>().ExpectOneAsync(TimeSpan.FromSeconds(5), async () => 
-            {
-                await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("delay", TimeSpan.FromSeconds(1)));
-            });
-        }
-
-        [Fact]
-        public async Task Ask_should_put_too_many_answers_into_deadletter()
-        {
-            var actor = Sys.ActorOf<SomeActor>();
-
-            await EventFilter.DeadLetter<object>().ExpectAsync(2, async () =>
-            {
-                var result = await actor.Ask<string>("many", TimeSpan.FromSeconds(1));
-                result.ShouldBe("answer1");
-            });
-        }
-
-        [Fact]
-        public async Task Ask_should_not_put_canceled_answer_into_deadletter()
-        {
-            var actor = Sys.ActorOf<SomeActor>();
-
-            await EventFilter.DeadLetter<object>().ExpectAsync(0, async () =>
-            {
-                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
-                    await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("delay", Timeout.InfiniteTimeSpan, cts.Token));
-            });
-        }
-
-        [Fact]
-        public async Task Ask_should_put_invalid_answer_into_deadletter()
-        {
-            var actor = Sys.ActorOf<SomeActor>();
-
-            await EventFilter.DeadLetter<object>().ExpectOne(async () =>
-            {
-                await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<string>("invalid", TimeSpan.FromSeconds(1)));
-            });
         }
 
         [Fact]
