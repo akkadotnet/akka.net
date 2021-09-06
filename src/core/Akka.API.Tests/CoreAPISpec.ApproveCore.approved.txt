@@ -3091,7 +3091,7 @@ namespace Akka.Event
         public static string FromType(System.Type t, Akka.Actor.ActorSystem system) { }
         public static System.Type SourceType(object o) { }
     }
-    public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded
+    public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
     {
         public LoggerInitialized() { }
     }
