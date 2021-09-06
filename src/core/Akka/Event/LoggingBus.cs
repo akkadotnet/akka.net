@@ -243,7 +243,7 @@ namespace Akka.Event
                 SubscribeLogLevelAndAbove(logLevel, logger);
 
                 //unsubscribe to all levels below log level
-                foreach (var level in AllLogLevels.Where(l => l < logLevel && logLevel != LogLevel.OffLevel ))
+                foreach (var level in AllLogLevels.Where(l => l < logLevel))
                 {
                     Unsubscribe(logger, level.ClassFor());
                 }
@@ -253,7 +253,7 @@ namespace Akka.Event
         private void SubscribeLogLevelAndAbove(LogLevel logLevel, IActorRef logger)
         {
             //subscribe to given log level and above
-            foreach (var level in AllLogLevels.Where(l => l >= logLevel && l != LogLevel.OffLevel))
+            foreach (var level in AllLogLevels.Where(l => l >= logLevel))
             {
                 Subscribe(logger, level.ClassFor());
             }

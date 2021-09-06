@@ -187,8 +187,6 @@ namespace Akka.Event
                     return Warning;
                 case LogLevel.ErrorLevel:
                     return Error;
-                case LogLevel.OffLevel:
-                    return Off;
                 default:
                     throw new ArgumentException("Unknown LogLevel", nameof(logLevel));
             }
@@ -278,7 +276,7 @@ namespace Akka.Event
                 case Error:
                     return LogLevel.ErrorLevel;
                 case Off:
-                    return LogLevel.OffLevel;
+                    return (LogLevel) int.MaxValue;
                 default:
                     throw new ArgumentException($@"Unknown LogLevel: ""{logLevel}"". Valid values are: ""{Debug}"", ""{Info}"", ""{Warning}"", ""{Error}""", nameof(logLevel));
             }
