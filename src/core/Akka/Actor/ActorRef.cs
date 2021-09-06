@@ -108,9 +108,8 @@ namespace Akka.Actor
 
             switch (message)
             {
-                case ISystemMessage sysM:
-                    SendSystemMessage(sysM); //we have special handling for system messages
-                    handled = true;
+                case ISystemMessage msg:
+                    handled = _result.TrySetException(new InvalidOperationException($"system message of type '{msg.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
                     break;
                 case T t:
                     handled = _result.TrySetResult(t);

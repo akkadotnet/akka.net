@@ -15,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Nito.AsyncEx;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Tests.Actor
 {
@@ -54,6 +55,11 @@ namespace Akka.Tests.Actor
                 if (message.Equals("invalid"))
                 {
                     Sender.Tell(123);
+                }
+
+                if (message.Equals("system"))
+                {
+                    Sender.Tell(new DummySystemMessage());
                 }
             }
         }
@@ -99,6 +105,10 @@ namespace Akka.Tests.Actor
                 var requester = message.AsInstanceOf<IActorRef>();
                 requester.Tell("i_hear_ya");
             }
+        }
+
+        public sealed class DummySystemMessage : ISystemMessage
+        {
         }
 
         [Fact]
@@ -176,6 +186,14 @@ namespace Akka.Tests.Actor
             {
                 await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<string>("invalid", TimeSpan.FromSeconds(1)));
             });
+        }
+
+        [Fact]
+        public async Task Ask_should_fail_on_system_message()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await actor.Ask<ISystemMessage>("system", TimeSpan.FromSeconds(1)));
         }
 
         [Fact]
