@@ -3070,7 +3070,6 @@ namespace Akka.Event
         InfoLevel = 1,
         WarningLevel = 2,
         ErrorLevel = 3,
-        OffLevel = 2147483647,
     }
     public class LogMessage
     {
