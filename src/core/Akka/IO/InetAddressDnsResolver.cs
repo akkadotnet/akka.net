@@ -8,6 +8,8 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -43,28 +45,39 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var resolve = message as Dns.Resolve;
-            if (resolve != null)
+            if (message is Dns.Resolve resolve)
             {
                 var answer = _cache.Cached(resolve.Name);
-                if (answer == null)
+                if (answer != null)
                 {
-                    try
-                    {
-                        //TODO: IP6
-                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => 
-                                x.AddressFamily == AddressFamily.InterNetwork 
-                                || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
-                        _cache.Put(answer, _positiveTtl);
-                    }
-                    catch (SocketException ex)
-                    {
-                        if (ex.SocketErrorCode != SocketError.HostNotFound) throw;
-                         answer = new Dns.Resolved(resolve.Name, Enumerable.Empty<IPAddress>(), Enumerable.Empty<IPAddress>());
-                        _cache.Put(answer, _negativeTtl);
-                    }
+                    Sender.Tell(answer);
+                    return true;
                 }
-                Sender.Tell(answer);
+                
+                System.Net.Dns.GetHostEntryAsync(resolve.Name).ContinueWith(t =>
+                {
+                    Dns.Resolved newAnswer;
+                    if (t.IsFaulted)
+                    {
+                        foreach (var exception in t.Exception.Flatten().InnerExceptions)
+                        {
+                            if (exception is SocketException se && se.SocketErrorCode == SocketError.HostNotFound)
+                            {
+                                newAnswer = new Dns.Resolved(resolve.Name, Enumerable.Empty<IPAddress>(), Enumerable.Empty<IPAddress>());
+                                _cache.Put(newAnswer, _negativeTtl);
+                                return newAnswer;
+                            }
+                        }
+                        ExceptionDispatchInfo.Capture(t.Exception).Throw();
+                    }
+                    
+                    newAnswer = Dns.Resolved.Create(resolve.Name, t.Result.AddressList.Where(x => 
+                        x.AddressFamily == AddressFamily.InterNetwork 
+                        || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
+                    _cache.Put(newAnswer, _positiveTtl);
+                    return newAnswer;
+
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Sender);
                 return true;
             }
             return false;
