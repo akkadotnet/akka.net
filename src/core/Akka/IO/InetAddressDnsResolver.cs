@@ -47,10 +47,11 @@ namespace Akka.IO
         {
             if (message is Dns.Resolve resolve)
             {
+                var replyTo = Sender;
                 var answer = _cache.Cached(resolve.Name);
                 if (answer != null)
                 {
-                    Sender.Tell(answer);
+                    replyTo.Tell(answer);
                     return true;
                 }
                 
@@ -77,7 +78,7 @@ namespace Akka.IO
                     _cache.Put(newAnswer, _positiveTtl);
                     return newAnswer;
 
-                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Sender);
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(replyTo);
                 return true;
             }
             return false;
