@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
                 snk.ExpectError().Should().Be(kill);
             }
 
-            [Fact(Skip ="Racy")]
+            [Fact]
             public void UnfoldFlow_should_increment_integers_and_handle_KillSwitch_and_fail_after_timeout_when_aborted()
             {
                 var t = _source.ToMaterialized(this.SinkProbe<int>(), Keep.Both).Run(Sys.Materializer());
@@ -147,7 +147,6 @@ namespace Akka.Streams.Tests.Dsl
                 pub.EnsureSubscription();
                 snk.EnsureSubscription();
                 sub.Cancel();
-                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
@@ -165,7 +164,6 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 sub.Cancel();
                 snk.Request(1);
-                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
