@@ -267,7 +267,8 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// <see cref="WriteMajority"/> but with the given number of <see cref="Additional"/> nodes added to the majority count. At most
-    /// all nodes.
+    /// all nodes. Exiting nodes are excluded using `WriteMajorityPlus` because those are typically
+    /// about to be removed and will not be able to respond.
     /// </summary>
     public sealed class WriteMajorityPlus : IWriteConsistency, IEquatable<WriteMajorityPlus>
     {

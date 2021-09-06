@@ -304,6 +304,57 @@ akka {
 }
 ```
 
+## Danger of polymorphic serializer
+One of the danger of polymorphic serializers is the danger of unsafe object type injection into 
+the serialization-deserialization chain. This issue applies to any type of polymorphic serializer,
+including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly 
+to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
+
+Generally, there are two approaches you can take to alleviate this problem:
+1. Implement a schema-based serialization that are contract bound, which is more expensive to setup at first but fundamentally faster and more secure.
+2. Implement a filtering or blacklist to block dangerous types.
+
+An example of using a schema-based serialization in Akka can be read under the title "Using Google 
+Protocol Buffers to Version State and Messages" in [this documentation](https://petabridge.com/cluster/lesson3)
+
+Hyperion chose to implement the second approach by blacklisting a set of potentially dangerous types 
+from being deserialized:
+
+- System.Security.Claims.ClaimsIdentity
+- System.Windows.Forms.AxHost.State
+- System.Windows.Data.ObjectDataProvider
+- System.Management.Automation.PSObject
+- System.Web.Security.RolePrincipal
+- System.IdentityModel.Tokens.SessionSecurityToken
+- SessionViewStateHistoryItem
+- TextFormattingRunProperties
+- ToolboxItemContainer
+- System.Security.Principal.WindowsClaimsIdentity
+- System.Security.Principal.WindowsIdentity
+- System.Security.Principal.WindowsPrincipal
+- System.CodeDom.Compiler.TempFileCollection
+- System.IO.FileSystemInfo
+- System.Activities.Presentation.WorkflowDesigner
+- System.Windows.ResourceDictionary
+- System.Windows.Forms.BindingSource
+- Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider
+- System.Diagnostics.Process
+- System.Management.IWbemClassObjectFreeThreaded
+
+Be warned that these class can be used as a man in the middle attack vector, but if you need 
+to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
+```
+akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
+```
+
+> [!IMPORTANT]
+> This feature is turned on as default since Akka.NET v1.4.24
+
+> [!WARNING]
+> Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server 
+> communication protocol, instead it is designed to be used as a server-server communication protocol, 
+> preferably inside a closed network system.
+
 ## Cross platform serialization compatibility in Hyperion
 There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
 Hyperion implements a generic way of addressing this issue by transforming the names of these incompatible names during deserialization.

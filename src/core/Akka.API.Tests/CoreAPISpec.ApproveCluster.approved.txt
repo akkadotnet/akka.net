@@ -339,6 +339,7 @@ namespace Akka.Cluster.Routing
         public Akka.Cluster.Routing.ClusterRouterGroupSettings Settings { get; }
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -364,6 +365,7 @@ namespace Akka.Cluster.Routing
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public override Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -400,11 +402,15 @@ namespace Akka.Cluster.SBR
     }
     public sealed class LeaseMajoritySettings
     {
+        [System.ObsoleteAttribute()]
         public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role) { }
+        [System.ObsoleteAttribute()]
         public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, string role, string leaseName) { }
+        public LeaseMajoritySettings(string leaseImplementation, System.TimeSpan acquireLeaseDelayForMinority, System.TimeSpan releaseAfter, string role, string leaseName) { }
         public System.TimeSpan AcquireLeaseDelayForMinority { get; }
         public string LeaseImplementation { get; }
         public string LeaseName { get; }
+        public System.TimeSpan ReleaseAfter { get; }
         public string Role { get; }
         public string SafeLeaseName(string systemName) { }
     }

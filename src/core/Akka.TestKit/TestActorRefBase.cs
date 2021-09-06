@@ -258,7 +258,7 @@ namespace Akka.TestKit
 
         bool IInternalActorRef.IsTerminated { get { return _internalRef.IsTerminated; } }
 
-        IActorRef IInternalActorRef.GetChild(IEnumerable<string> name)
+        IActorRef IInternalActorRef.GetChild(IReadOnlyList<string> name)
         {
             return _internalRef.GetChild(name);
         }

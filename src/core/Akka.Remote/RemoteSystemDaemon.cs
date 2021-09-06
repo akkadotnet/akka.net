@@ -156,11 +156,9 @@ namespace Akka.Remote
                     }
                 }
 
-                var t = Rec(ImmutableList<string>.Empty);
-                var concatenatedChildNames = t.Item1;
-                var m = t.Item2;
+                var (concatenatedChildNames, m) = Rec(ImmutableList<string>.Empty);
 
-                var child = GetChild(concatenatedChildNames);
+                var child = GetChild(concatenatedChildNames.ToList());
                 if (child.IsNobody())
                 {
                     var emptyRef = new EmptyLocalActorRef(_system.Provider,
@@ -302,7 +300,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="name">The name.</param>
         /// <returns>ActorRef.</returns>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             var path = name.Join("/");
             var n = 0;
@@ -313,7 +311,7 @@ namespace Akka.Remote
                 {
                     if (uid != ActorCell.UndefinedUid && uid != child.Path.Uid)
                         return Nobody.Instance;
-                    return n == 0 ? child : child.GetChild(name.TakeRight(n));
+                    return n == 0 ? child : child.GetChild(name.TakeRight(n).ToList());
                 }
 
                 var last = path.LastIndexOf("/", StringComparison.Ordinal);
