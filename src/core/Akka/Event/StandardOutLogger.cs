@@ -18,7 +18,7 @@ namespace Akka.Event
         /// <summary>
         /// N/A
         /// </summary>
-        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="StandardOutLogger"/> does not support this property.</exception>
+        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="MinimalLogger"/> does not support this property.</exception>
         public sealed override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("This logger does not provide."); }
