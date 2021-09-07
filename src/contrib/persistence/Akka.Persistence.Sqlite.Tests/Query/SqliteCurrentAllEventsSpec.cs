@@ -30,7 +30,7 @@ namespace Akka.Persistence.Sqlite.Tests.Query
                 table-name = event_journal
                 metadata-table-name = journal_metadata
                 auto-initialize = on
-                connection-string = ""Filename=file:memdb-journal-eventsbytag-{id}.db;Mode=Memory;Cache=Shared""
+                connection-string = ""Filename=file:memdb-journal-allevents-{id}.db;Mode=Memory;Cache=Shared""
                 refresh-interval = 1s
             }}
             akka.test.single-expect-default = 10s")
