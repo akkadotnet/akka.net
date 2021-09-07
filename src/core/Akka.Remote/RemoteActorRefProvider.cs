@@ -433,9 +433,10 @@ namespace Akka.Remote
             return Deploy.None;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAddress(Address address)
         {
-            return address == _local.RootPath.Address || Transport.Addresses.Contains(address);
+            return address == RootPath.Address || Transport.Addresses.Contains(address);
         }
 
         /// <summary>
@@ -458,21 +459,6 @@ namespace Akka.Remote
             return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool TryParseCachedPath(string actorPath, out ActorPath path)
-        {
-            if (_actorPathThreadLocalCache != null)
-            {
-                path = _actorPathThreadLocalCache.Cache.GetOrCompute(actorPath);
-                return path != null;
-            }
-            else // cache not initialized yet
-            {
-                return ActorPath.TryParse(actorPath, out path);
-            }
-        }
-
-
         /// <summary>
         /// INTERNAL API.
         ///
@@ -483,20 +469,31 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
-            if (TryParseCachedPath(path, out var actorPath))
+            ActorPath actorPath;
+            if (_actorPathThreadLocalCache != null)
             {
-                //the actor's local address was already included in the ActorPath
-                if (HasAddress(actorPath.Address))
-                {
-                    if (actorPath is RootActorPath)
-                        return RootGuardian;
-                    return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
-                }
-
-                return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
+                actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path);
             }
-            _log.Debug("resolve of unknown path [{0}] failed", path);
-            return InternalDeadLetters;
+            else // cache not initialized yet
+            {
+                ActorPath.TryParse(path, out actorPath);
+            }
+
+            if (path is null)
+            {
+                _log.Debug("resolve of unknown path [{0}] failed", path);
+                return InternalDeadLetters;
+            }
+
+            if (!HasAddress(actorPath.Address))
+                return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
+
+            //the actor's local address was already included in the ActorPath
+
+            if (actorPath is RootActorPath)
+                return RootGuardian;
+
+            return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
         }
 
 

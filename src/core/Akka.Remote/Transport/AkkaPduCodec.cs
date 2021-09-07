@@ -431,9 +431,9 @@ namespace Akka.Remote.Transport
                     {
                         recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
                     }
-                    else
+                    else if (!ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress))
                     {
-                        ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress);
+                        recipientAddress = Address.AllSystems;
                     }
                     
                     var serializedMessage = envelopeContainer.Message;
