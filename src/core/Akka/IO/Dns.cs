@@ -127,11 +127,11 @@ namespace Akka.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public IImmutableList<IPAddress> Ipv4 { get; }
+            public IEnumerable<IPAddress> Ipv4 { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IImmutableList<IPAddress> Ipv6 { get; }
+            public IEnumerable<IPAddress> Ipv6 { get; }
 
             /// <summary>
             /// TBD
