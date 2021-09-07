@@ -315,16 +315,19 @@ namespace Akka.Cluster.Sharding.Tests
                     {
                         var region = _region.Value;
                         var probe = CreateTestProbe();
-                        foreach (var (id, r) in originalLocations.LocationMap)
+                        foreach (var kv in originalLocations.LocationMap)
                         {
+                            var id = kv.Key;
+                            var r = kv.Value;
                             region.Tell(new Ping(id), probe.Ref);
                             if (r.Path.Address.Equals(firstAddress))
                             {
                                 var newRef = probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1));
                                 
-                                // have to log before the assertion
+                                // have to log before we assert
                                 Sys.Log.Debug("Moved [{0}] from [{1}] to [{2}]", id, r, newRef);
                                 newRef.Should().NotBe(r);
+                                
                             }
                             else
                                 probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
