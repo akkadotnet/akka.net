@@ -974,7 +974,7 @@ namespace Akka.Cluster.Sharding
             if (GracefulShutdownInProgress)
             {
                 var actorSelections = CoordinatorSelection;
-                Log.Debug("Sending graceful shutdown to {0}", actorSelections);
+                Log.Debug("Sending graceful shutdown to {0}", string.Join(",", actorSelections.Select(c => c.ToString())));
                 actorSelections.ForEach(c => c.Tell(new PersistentShardCoordinator.GracefulShutdownRequest(Self)));
             }
         }
