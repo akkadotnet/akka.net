@@ -149,16 +149,19 @@ namespace Akka.Actor
             }
 
             //create a new tempcontainer path
-            ActorPath path = provider.TempPath();
+            var path = provider.TempPath();
 
-            var future = new FutureActorRef<T>(result, t =>
+            var future = new FutureActorRef<T>(result, path, provider);
+
+            //The future actor needs to be unregistered in the temp container
+            _ = result.Task.ContinueWith(t =>
             {
                 provider.UnregisterTempActor(path);
 
                 ctr1?.Dispose();
                 ctr2?.Dispose();
                 timeoutCancellation?.Dispose();
-            }, path);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
