@@ -193,15 +193,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Cluster.Join(Node(to).Address);
                 StartSharding();
-                Within(TimeSpan.FromSeconds(15), () =>
-                {
-                    AwaitAssert(() =>
-                    {
-                        Cluster.State.Members.Should().Contain(i => i.UniqueAddress == Cluster.SelfUniqueAddress && i.Status == MemberStatus.Up);
-                    });
-                });
             }, from);
-            EnterBarrier(from.Name + "-joined");
         }
 
         private void StartSharding()
@@ -261,6 +253,13 @@ namespace Akka.Cluster.Sharding.Tests
                 Join(_config.Second, _config.First);
                 Join(_config.Third, _config.First);
                 Join(_config.Fourth, _config.First);
+                
+                AwaitAssert(() =>
+                {
+                    Cluster.State.Members.Count.Should().Be(Roles.Count);
+                    Cluster.State.Members.Select(x => x.Status).ToImmutableHashSet().Should()
+                        .BeEquivalentTo(ImmutableHashSet<MemberStatus>.Empty.Add(MemberStatus.Up));
+                });
 
                 EnterBarrier("after-2");
             });
