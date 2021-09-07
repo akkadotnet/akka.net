@@ -193,15 +193,7 @@ namespace Akka.Cluster.Sharding.Tests
             {
                 Cluster.Join(Node(to).Address);
                 StartSharding();
-                Within(TimeSpan.FromSeconds(15), () =>
-                {
-                    AwaitAssert(() =>
-                    {
-                        Cluster.State.Members.Should().Contain(i => i.UniqueAddress == Cluster.SelfUniqueAddress && i.Status == MemberStatus.Up);
-                    });
-                });
             }, from);
-            EnterBarrier(from.Name + "-joined");
         }
 
         private void StartSharding()
@@ -261,6 +253,13 @@ namespace Akka.Cluster.Sharding.Tests
                 Join(_config.Second, _config.First);
                 Join(_config.Third, _config.First);
                 Join(_config.Fourth, _config.First);
+                
+                AwaitAssert(() =>
+                {
+                    Cluster.State.Members.Count.Should().Be(Roles.Count);
+                    Cluster.State.Members.Select(x => x.Status).ToImmutableHashSet().Should()
+                        .BeEquivalentTo(ImmutableHashSet<MemberStatus>.Empty.Add(MemberStatus.Up));
+                });
 
                 EnterBarrier("after-2");
             });
@@ -281,6 +280,7 @@ namespace Akka.Cluster.Sharding.Tests
                     .ToImmutableDictionary(kv => kv.Key, kv => kv.Value);
 
                 shardLocations.Tell(new Locations(locations));
+                Sys.Log.Debug("Original locations: {0}", string.Join(",", locations.Select(x => $"{x.Key}->{x.Value}")));
             }, _config.First);
             EnterBarrier("after-3");
         }
@@ -303,6 +303,8 @@ namespace Akka.Cluster.Sharding.Tests
                 ExpectTerminated(region, TimeSpan.FromSeconds(15));
             }, _config.First);
             EnterBarrier("stopped");
+            
+            // more stress by not having the barrier here
 
             RunOn(() =>
             {
@@ -318,7 +320,14 @@ namespace Akka.Cluster.Sharding.Tests
                             var r = kv.Value;
                             region.Tell(new Ping(id), probe.Ref);
                             if (r.Path.Address.Equals(firstAddress))
-                                probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1)).Should().NotBe(r);
+                            {
+                                var newRef = probe.ExpectMsg<IActorRef>(TimeSpan.FromSeconds(1));
+                                
+                                // have to log before we assert
+                                Sys.Log.Debug("Moved [{0}] from [{1}] to [{2}]", id, r, newRef);
+                                newRef.Should().NotBe(r);
+                                
+                            }
                             else
                                 probe.ExpectMsg(r, TimeSpan.FromSeconds(1)); // should not move
                         }

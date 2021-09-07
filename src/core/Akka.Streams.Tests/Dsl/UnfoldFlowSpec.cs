@@ -362,7 +362,6 @@ namespace Akka.Streams.Tests.Dsl
                 snk.EnsureSubscription();
                 sub.Cancel();
                 snk.Request(1);
-                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 snk.ExpectError();
             }
 
@@ -443,7 +442,6 @@ namespace Akka.Streams.Tests.Dsl
                 pub.EnsureSubscription();
                 snk.EnsureSubscription();
                 sub.Cancel();
-                snk.ExpectNoMsg(_timeout.DivideBy(2));
                 pub.SendComplete();
                 snk.ExpectComplete();
             }
