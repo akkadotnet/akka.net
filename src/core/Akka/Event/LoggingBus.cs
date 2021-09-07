@@ -102,7 +102,7 @@ namespace Akka.Event
                     throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
                 }
 
-                if (loggerType == typeof(MinimalLogger))
+                if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
                 {
                     shouldRemoveStandardOutLogger = false;
                     continue;
