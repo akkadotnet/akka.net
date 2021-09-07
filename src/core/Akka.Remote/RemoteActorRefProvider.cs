@@ -79,7 +79,7 @@ namespace Akka.Remote
         /// <see cref="IActorRefProvider.ResolveActorRef(string)"/> method.
         /// </summary>
         /// <param name="path">The path of the actor we intend to resolve.</param>
-        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
+        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise deadletters.</returns>
         IActorRef InternalResolveActorRef(string path);
 
         /// <summary>
@@ -590,19 +590,20 @@ namespace Akka.Remote
         /// <returns>The remote Address, if applicable. If not applicable <c>null</c> may be returned.</returns>
         public Address GetExternalAddressFor(Address address)
         {
-            if (HasAddress(address)) { return _local.RootPath.Address; }
-            if (!string.IsNullOrEmpty(address.Host) && address.Port.HasValue)
+            if (HasAddress(address)) 
+                return _local.RootPath.Address;
+
+            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
+                return null;
+
+            try
             {
-                try
-                {
-                    return Transport.LocalAddressForRemote(address);
-                }
-                catch
-                {
-                    return null;
-                }
+                return Transport.LocalAddressForRemote(address);
             }
-            return null;
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>

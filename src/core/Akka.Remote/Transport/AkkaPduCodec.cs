@@ -426,22 +426,15 @@ namespace Akka.Remote.Transport
                 if (envelopeContainer != null)
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
-                    Address recipientAddress;
-                    if (ActorPathCache != null)
-                    {
-                        recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
-                    }
-                    else if (!ActorPath.TryParseAddress(envelopeContainer.Recipient.Path, out recipientAddress))
-                    {
-                        recipientAddress = Address.AllSystems;
-                    }
+                    
+                    //todo get parsed address from provider
+                    var recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
                     
                     var serializedMessage = envelopeContainer.Message;
                     IActorRef senderOption = null;
                     if (envelopeContainer.Sender != null)
-                    {
                         senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender.Path, localAddress);
-                    }
+                    
                     SeqNo seqOption = null;
                     if (envelopeContainer.Seq != SeqUndefined)
                     {
@@ -450,6 +443,7 @@ namespace Akka.Remote.Transport
                             seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
                         }
                     }
+
                     messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
                 }
             }
