@@ -202,12 +202,12 @@ namespace Akka.Remote.Transport
     internal abstract class AkkaPduCodec
     {
         protected readonly ActorSystem System;
-        protected readonly AddressThreadLocalCache AddressCache;
+        protected readonly AddressThreadLocalCache ActorPathCache;
 
         protected AkkaPduCodec(ActorSystem system)
         {
             System = system;
-            AddressCache = AddressThreadLocalCache.For(system);
+            ActorPathCache = AddressThreadLocalCache.For(system);
         }
 
         /// <summary>
@@ -427,9 +427,9 @@ namespace Akka.Remote.Transport
                 {
                     var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient.Path, localAddress);
                     Address recipientAddress;
-                    if (AddressCache != null)
+                    if (ActorPathCache != null)
                     {
-                        recipientAddress = AddressCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
+                        recipientAddress = ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path);
                     }
                     else
                     {
