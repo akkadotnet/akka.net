@@ -621,7 +621,7 @@ namespace Akka.Persistence.Tests
             ExpectNoMsg(1000);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy - both Tasks run inside the same scheduler with max concurrency == 1")]
         public void Actor_PipeTo_should_not_be_delayed_by_async_receive()
         {
             var actor = Sys.ActorOf(Props.Create(() => new AsyncPipeToDelayActor("pid")));
