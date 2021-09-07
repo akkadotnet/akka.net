@@ -57,26 +57,19 @@ namespace Akka.IO
                 
                 System.Net.Dns.GetHostEntryAsync(resolve.Name).ContinueWith(t =>
                 {
-                    Dns.Resolved newAnswer;
                     if (t.IsFaulted)
                     {
-                        foreach (var exception in t.Exception.Flatten().InnerExceptions)
-                        {
-                            if (exception is SocketException se && se.SocketErrorCode == SocketError.HostNotFound)
-                            {
-                                newAnswer = new Dns.Resolved(resolve.Name, Enumerable.Empty<IPAddress>(), Enumerable.Empty<IPAddress>());
-                                _cache.Put(newAnswer, _negativeTtl);
-                                return newAnswer;
-                            }
-                        }
-                        ExceptionDispatchInfo.Capture(t.Exception).Throw();
+                        var flattened = t.Exception.Flatten().InnerExceptions;
+                        return flattened.Count == 1 
+                            ? new Dns.Resolved(resolve.Name, flattened[0]) 
+                            : new Dns.Resolved(resolve.Name, t.Exception);
                     }
                     
-                    newAnswer = Dns.Resolved.Create(resolve.Name, t.Result.AddressList.Where(x => 
+                    answer = Dns.Resolved.Create(resolve.Name, t.Result.AddressList.Where(x => 
                         x.AddressFamily == AddressFamily.InterNetwork 
                         || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
-                    _cache.Put(newAnswer, _positiveTtl);
-                    return newAnswer;
+                    _cache.Put(answer, _positiveTtl);
+                    return answer;
 
                 }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(replyTo);
                 return true;

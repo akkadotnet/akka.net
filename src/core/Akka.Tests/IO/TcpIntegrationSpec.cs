@@ -472,12 +472,9 @@ namespace Akka.Tests.IO
             replies.Count.ShouldBe(0);
         }
 
-        [SkippableFact]
+        [Fact]
         public void Should_report_Error_only_once_when_connecting_to_unreachable_DnsEndpoint()
         {
-            // Test doesn't work in Azure Pipelines Linux image
-            Skip.IfNot(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-            
             var probe = CreateTestProbe();
             var endpoint = new DnsEndPoint("fake", 1000);
             Sys.Tcp().Tell(new Tcp.Connect(endpoint), probe.Ref);
