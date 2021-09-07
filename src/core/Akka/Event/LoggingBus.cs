@@ -144,7 +144,7 @@ namespace Akka.Event
             if (shouldRemoveStandardOutLogger)
             {
                 var stdOutLogger = system.Settings.StdoutLogger;
-                Publish(new Debug(logName, GetType(), $"MinimalLogger {Logging.SimpleName(stdOutLogger)} being removed"));
+                Publish(new Debug(logName, GetType(), $"{Logging.SimpleName(stdOutLogger)} being removed"));
                 Unsubscribe(stdOutLogger);
             }
 
@@ -161,7 +161,7 @@ namespace Akka.Event
             if (!_loggers.Any(c => c is MinimalLogger))
             {
                 SetUpStdoutLogger(system.Settings);
-                Publish(new Debug(SimpleName(this), GetType(), $"Shutting down: MinimalLogger {Logging.SimpleName(system.Settings.StdoutLogger)} started"));
+                Publish(new Debug(SimpleName(this), GetType(), $"Shutting down: {Logging.SimpleName(system.Settings.StdoutLogger)} started"));
             }
 
             foreach (var logger in _loggers)
