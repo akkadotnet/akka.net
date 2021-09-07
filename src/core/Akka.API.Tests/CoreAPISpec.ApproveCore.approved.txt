@@ -862,12 +862,11 @@ namespace Akka.Actor
         public Failures() { }
         public System.Collections.Generic.List<Akka.Actor.Failure> Entries { get; }
     }
-    public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
+    public sealed class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
-        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action<System.Threading.Tasks.Task> unregister, Akka.Actor.ActorPath path) { }
+        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, Akka.Actor.ActorPath path, Akka.Actor.IActorRefProvider provider) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
@@ -3295,10 +3294,13 @@ namespace Akka.IO
         }
         public class Resolved : Akka.IO.Dns.Command
         {
+            public Resolved(string name, System.Exception ex) { }
             public Resolved(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv4, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv6) { }
             public System.Net.IPAddress Addr { get; }
+            public System.Exception Exception { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv4 { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv6 { get; }
+            public bool IsSuccess { get; }
             public string Name { get; }
             public static Akka.IO.Dns.Resolved Create(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> addresses) { }
         }
