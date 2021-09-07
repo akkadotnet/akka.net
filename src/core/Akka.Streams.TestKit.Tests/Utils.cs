@@ -77,7 +77,7 @@ namespace Akka.Streams.TestKit.Tests
 
         public static T AwaitResult<T>(this Task<T> task, TimeSpan? timeout = null)
         {
-            task.Wait(timeout??TimeSpan.FromSeconds(3)).ShouldBeTrue();
+            task.Wait(timeout??TimeSpan.FromSeconds(3)).ShouldBeTrue("Task timed out while awaiting");
             return task.Result;
         }
     }
