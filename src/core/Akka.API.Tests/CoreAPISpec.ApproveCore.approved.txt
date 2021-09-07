@@ -3295,10 +3295,13 @@ namespace Akka.IO
         }
         public class Resolved : Akka.IO.Dns.Command
         {
+            public Resolved(string name, System.Exception ex) { }
             public Resolved(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv4, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv6) { }
             public System.Net.IPAddress Addr { get; }
+            public System.Exception Exception { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv4 { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv6 { get; }
+            public bool IsSuccess { get; }
             public string Name { get; }
             public static Akka.IO.Dns.Resolved Create(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> addresses) { }
         }
