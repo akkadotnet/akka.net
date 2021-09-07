@@ -8,6 +8,7 @@
 using System;
 using Akka.Actor;
 using System.Threading;
+using System.Collections.Generic;
 
 namespace Akka.Remote.Serialization
 {
@@ -16,9 +17,11 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class ActorPathThreadLocalCache : ExtensionIdProvider<ActorPathThreadLocalCache>, IExtension
     {
-        private readonly ThreadLocal<ActorPathCache> _current = new ThreadLocal<ActorPathCache>(() => new ActorPathCache());
+        private readonly ThreadLocal<ActorPathCache> _current = new ThreadLocal<ActorPathCache>(() => new ActorPathCache(), true);
 
         public ActorPathCache Cache => _current.Value;
+
+        internal IList<ActorPathCache> All => _current.Values;
 
         public override ActorPathThreadLocalCache CreateExtension(ExtendedActorSystem system)
         {

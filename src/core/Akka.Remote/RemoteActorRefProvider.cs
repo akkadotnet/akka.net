@@ -238,8 +238,8 @@ namespace Akka.Remote
         private volatile IActorRef _remotingTerminator;
         private volatile IActorRef _remoteWatcher;
 
-        private volatile ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
-        private volatile ActorPathThreadLocalCache _actorPathThreadLocalCache;
+        private ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
+        private ActorPathThreadLocalCache _actorPathThreadLocalCache;
 
         /// <summary>
         /// The remote death watcher.
@@ -252,10 +252,10 @@ namespace Akka.Remote
         {
             _system = system;
 
-            _local.Init(system);
-
             _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
             _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
+
+            _local.Init(system);
 
             _remotingTerminator =
                 _system.SystemActorOf(
@@ -435,7 +435,7 @@ namespace Akka.Remote
 
         public bool HasAddress(Address address)
         {
-            return address == _local.RootPath.Address || address == RootPath.Address || Transport.Addresses.Any(a => a == address);
+            return address == _local.RootPath.Address || Transport.Addresses.Contains(address);
         }
 
         /// <summary>
@@ -539,7 +539,8 @@ namespace Akka.Remote
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
             {
-                return InternalResolveActorRef(path); // cache not initialized yet
+                // cache not initialized yet, should never happen
+                return InternalResolveActorRef(path); 
             }
             return _actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
         }
