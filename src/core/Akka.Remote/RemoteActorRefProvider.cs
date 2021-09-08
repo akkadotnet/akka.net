@@ -436,7 +436,7 @@ namespace Akka.Remote
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAddress(Address address)
         {
-            return address.Equals(_local.RootPath.Address) || address.Equals(RootPath.Address) || Transport.Addresses.Contains(address);
+            return address.Equals(RootPath.Address) || Transport.Addresses.Contains(address);
         }
 
         /// <summary>
