@@ -862,12 +862,11 @@ namespace Akka.Actor
         public Failures() { }
         public System.Collections.Generic.List<Akka.Actor.Failure> Entries { get; }
     }
-    public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
+    public sealed class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
-        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action<System.Threading.Tasks.Task> unregister, Akka.Actor.ActorPath path) { }
+        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, Akka.Actor.ActorPath path, Akka.Actor.IActorRefProvider provider) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
@@ -1697,6 +1696,7 @@ namespace Akka.Actor
         public bool SerializeAllMessages { get; }
         public Akka.Actor.Setup.ActorSystemSetup Setup { get; }
         public string StdoutLogLevel { get; }
+        public Akka.Event.MinimalLogger StdoutLogger { get; }
         public string SupervisorStrategyClass { get; }
         public Akka.Actor.ActorSystem System { get; }
         public System.TimeSpan UnstartedPushTimeout { get; }
@@ -3090,7 +3090,7 @@ namespace Akka.Event
         public static string FromType(System.Type t, Akka.Actor.ActorSystem system) { }
         public static System.Type SourceType(object o) { }
     }
-    public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded
+    public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
     {
         public LoggerInitialized() { }
     }
@@ -3100,7 +3100,6 @@ namespace Akka.Event
     }
     public class static Logging
     {
-        public static readonly Akka.Event.StandardOutLogger StandardOutLogger;
         public static System.Type ClassFor(this Akka.Event.LogLevel logLevel) { }
         public static Akka.Event.ILoggingAdapter GetLogger(this Akka.Actor.IActorContext context, Akka.Event.ILogMessageFormatter logMessageFormatter = null) { }
         public static Akka.Event.ILoggingAdapter GetLogger(Akka.Actor.ActorSystem system, object logSourceObj, Akka.Event.ILogMessageFormatter logMessageFormatter = null) { }
@@ -3153,6 +3152,14 @@ namespace Akka.Event
         public void SetLogLevel(Akka.Event.LogLevel logLevel) { }
         public void StartStdoutLogger(Akka.Actor.Settings config) { }
     }
+    public abstract class MinimalLogger : Akka.Actor.MinimalActorRef
+    {
+        protected MinimalLogger() { }
+        public virtual Akka.Actor.ActorPath Path { get; }
+        public virtual Akka.Actor.IActorRefProvider Provider { get; }
+        protected abstract void Log(object message);
+        protected virtual void TellInternal(object message, Akka.Actor.IActorRef sender) { }
+    }
     public sealed class NoLogger : Akka.Event.ILoggingAdapter
     {
         public static readonly Akka.Event.ILoggingAdapter Instance;
@@ -3173,18 +3180,15 @@ namespace Akka.Event
         public void Warning(string format, params object[] args) { }
         public void Warning(System.Exception cause, string format, params object[] args) { }
     }
-    public class StandardOutLogger : Akka.Actor.MinimalActorRef
+    public class StandardOutLogger : Akka.Event.MinimalLogger
     {
         public StandardOutLogger() { }
         public static System.ConsoleColor DebugColor { get; set; }
         public static System.ConsoleColor ErrorColor { get; set; }
         public static System.ConsoleColor InfoColor { get; set; }
-        public override Akka.Actor.ActorPath Path { get; }
-        public override Akka.Actor.IActorRefProvider Provider { get; }
         public static bool UseColors { get; set; }
         public static System.ConsoleColor WarningColor { get; set; }
-        public static void PrintLogEvent(Akka.Event.LogEvent logEvent) { }
-        protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
+        protected override void Log(object message) { }
     }
     public class Subscription<TSubscriber, TClassifier>
     {
@@ -3295,10 +3299,13 @@ namespace Akka.IO
         }
         public class Resolved : Akka.IO.Dns.Command
         {
+            public Resolved(string name, System.Exception ex) { }
             public Resolved(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv4, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv6) { }
             public System.Net.IPAddress Addr { get; }
+            public System.Exception Exception { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv4 { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv6 { get; }
+            public bool IsSuccess { get; }
             public string Name { get; }
             public static Akka.IO.Dns.Resolved Create(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> addresses) { }
         }

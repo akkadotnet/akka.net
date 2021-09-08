@@ -148,11 +148,6 @@ namespace Akka.Event
         private const LogLevel OffLogLevel = (LogLevel) int.MaxValue;
 
         /// <summary>
-        /// Returns a singleton instance of the standard out logger.
-        /// </summary>
-        public static readonly StandardOutLogger StandardOutLogger = new StandardOutLogger();
-
-        /// <summary>
         /// Retrieves the log event class associated with the specified log level.
         /// </summary>
         /// <param name="logLevel">The log level used to lookup the associated class.</param>
