@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\..\common.props" />
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFrameworks>$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" Version="$(BenchmarkDotNetVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
+      <ProjectReference Include="..\..\contrib\persistence\Akka.Persistence.Sqlite\Akka.Persistence.Sqlite.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\Akka.Benchmarks\Configurations\Configs.cs">
+        <Link>Configs.cs</Link>
+      </Compile>
+    </ItemGroup>
+
+</Project>
