@@ -142,22 +142,27 @@ namespace Akka.Actor
 
         private readonly Address _address;
         private readonly ActorPath _parent;
+        private readonly int _depth;
+
         private readonly string _name;
         private readonly long _uid;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ActorPath" /> class as root.
         /// </summary>
         /// <param name="address"> The address. </param>
         /// <param name="name"> The name. </param>
         protected ActorPath(Address address, string name)
         {
             _address = address;
+            _parent = null;
+            _depth = 0;
             _name = name;
+            _uid = ActorCell.UndefinedUid;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ActorPath" /> class.
+        /// Initializes a new instance of the <see cref="ActorPath" /> class as child.
         /// </summary>
         /// <param name="parentPath"> The parentPath. </param>
         /// <param name="name"> The name. </param>
@@ -166,6 +171,7 @@ namespace Akka.Actor
         {
             _parent = parentPath;
             _address = parentPath.Address;
+            _depth = parentPath._depth + 1;
             _name = name;
             _uid = uid;
         }
@@ -195,6 +201,11 @@ namespace Akka.Actor
         public ActorPath Parent => _parent;
 
         /// <summary>
+        /// The the depth of the actor.
+        /// </summary>
+        public int Depth => _depth;
+
+        /// <summary>
         /// Gets the elements.
         /// </summary>
         /// <value> The elements. </value>
@@ -202,15 +213,18 @@ namespace Akka.Actor
         {
             get
             {
-                var acc = new Stack<string>();
+                if (_depth == 0)
+                    return ImmutableArray<string>.Empty;
+
+                var b = ImmutableArray.CreateBuilder<string>(_depth);
+                b.Count = _depth;
                 var p = this;
-                while (true)
+                for(var i = 0; i < _depth; i++)
                 {
-                    if (p.IsRoot)
-                        return acc.ToList();
-                    acc.Push(p.Name);
-                    p = p.Parent;
+                    b[_depth - i - 1] = p.Name;
+                    p = p._parent;
                 }
+                return b.ToImmutable();
             }
         }
 
@@ -226,14 +240,20 @@ namespace Akka.Actor
         {
             get
             {
-                if (this is RootActorPath) return Array.Empty<string>();
-                var elements = (List<string>)Elements;
-                elements[elements.Count - 1] = AppendUidFragment(Name);
-                return elements;
+                if (_depth == 0)
+                    return ImmutableArray<string>.Empty;
+
+                var b = ImmutableArray.CreateBuilder<string>(_depth);
+                b.Count = _depth;
+                var p = this;
+                for (var i = 0; i < _depth; i++)
+                {
+                    b[_depth - i - 1] = i > 0 ? p.Name : AppendUidFragment(p.Name);
+                    p = p._parent;
+                }
+                return b.ToImmutable();
             }
         }
-
-
 
         /// <summary>
         /// The root actor path.
@@ -244,17 +264,11 @@ namespace Akka.Actor
             get
             {
                 var current = this;
-                while (current._parent is ActorPath p)
-                    current = p;
+                while (current._depth > 0)
+                    current = current.Parent;
                 return current;
             }
         }
-
-        /// <summary>
-        /// Is this instance the root actor path.
-        /// </summary>
-        [JsonIgnore]
-        public bool IsRoot => _parent is null;
 
         /// <inheritdoc/>
         public bool Equals(ActorPath other)
@@ -284,7 +298,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public int CompareTo(ActorPath other)
         {
-            if (IsRoot)
+            if (_depth == 0)
             {
                 if (other is ChildActorPath) return 1;
                 return StringComparer.Ordinal.Compare(ToString(), other?.ToString());
@@ -297,17 +311,17 @@ namespace Akka.Actor
             if (ReferenceEquals(left, right))
                 return 0;
 
-            if (left.IsRoot)
+            if (left._depth == 0)
                 return left.CompareTo(right);
 
-            if (right.IsRoot)
+            if (right._depth == 0)
                 return -right.CompareTo(left);
 
-            var nameCompareResult = StringComparer.Ordinal.Compare(left.Name, right.Name);
+            var nameCompareResult = StringComparer.Ordinal.Compare(left._name, right._name);
             if (nameCompareResult != 0)
                 return nameCompareResult;
 
-            return InternalCompareTo(left.Parent, right.Parent);
+            return InternalCompareTo(left._parent, right._parent);
         }
 
         /// <summary>
@@ -317,7 +331,7 @@ namespace Akka.Actor
         /// <returns> ActorPath. </returns>
         public ActorPath WithUid(long uid)
         {
-            if (IsRoot)
+            if (_depth == 0)
             {
                 if (uid != 0) throw new NotSupportedException("RootActorPath must have undefined Uid");
                 return this;
