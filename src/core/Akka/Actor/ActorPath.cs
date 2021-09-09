@@ -140,6 +140,11 @@ namespace Akka.Actor
             return true;
         }
 
+        private readonly Address _address;
+        private readonly ActorPath _parent;
+        private readonly string _name;
+        private readonly long _uid;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
@@ -147,34 +152,67 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         protected ActorPath(Address address, string name)
         {
-            Address = address;
-            Name = name;
+            _address = address;
+            _name = name;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ActorPath" /> class.
         /// </summary>
-        /// <param name="address"> The address. </param>
+        /// <param name="parentPath"> The parentPath. </param>
         /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
-        protected ActorPath(Address address, string name, long uid)
+        protected ActorPath(ActorPath parentPath, string name, long uid)
         {
-            Address = address;
-            Name = name;
-            Uid = uid;
+            _parent = parentPath;
+            _address = parentPath.Address;
+            _name = name;
+            _uid = uid;
         }
+
+        /// <summary>
+        /// Gets the name.
+        /// </summary>
+        /// <value> The name. </value>
+        public string Name => _name;
+
+        /// <summary>
+        /// The Address under which this path can be reached; walks up the tree to
+        /// the RootActorPath.
+        /// </summary>
+        /// <value> The address. </value>
+        public Address Address => _address;
 
         /// <summary>
         /// Gets the uid.
         /// </summary>
         /// <value> The uid. </value>
-        public long Uid { get; }
+        public long Uid => _uid;
+
+        /// <summary>
+        /// The path of the parent to this actor.
+        /// </summary>
+        public ActorPath Parent => _parent;
 
         /// <summary>
         /// Gets the elements.
         /// </summary>
         /// <value> The elements. </value>
-        public abstract IReadOnlyList<string> Elements { get; }
+        public IReadOnlyList<string> Elements
+        {
+            get
+            {
+                var acc = new Stack<string>();
+                var p = this;
+                while (true)
+                {
+                    if (p.IsRoot)
+                        return acc.ToList();
+                    acc.Push(p.Name);
+                    p = p.Parent;
+                }
+            }
+        }
 
         /// <summary>
         /// INTERNAL API.
@@ -195,28 +233,28 @@ namespace Akka.Actor
             }
         }
 
-        /// <summary>
-        /// Gets the name.
-        /// </summary>
-        /// <value> The name. </value>
-        public string Name { get; }
 
-        /// <summary>
-        /// The Address under which this path can be reached; walks up the tree to
-        /// the RootActorPath.
-        /// </summary>
-        /// <value> The address. </value>
-        public Address Address { get; }
 
         /// <summary>
         /// The root actor path.
         /// </summary>
-        public abstract ActorPath Root { get; }
+        [JsonIgnore]
+        public ActorPath Root
+        {
+            get
+            {
+                var current = this;
+                while (current._parent is ActorPath p)
+                    current = p;
+                return current;
+            }
+        }
 
         /// <summary>
-        /// The path of the parent to this actor.
+        /// Is this instance the root actor path.
         /// </summary>
-        public abstract ActorPath Parent { get; }
+        [JsonIgnore]
+        public bool IsRoot => _parent is null;
 
         /// <inheritdoc/>
         public bool Equals(ActorPath other)
@@ -244,14 +282,49 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public abstract int CompareTo(ActorPath other);
+        public int CompareTo(ActorPath other)
+        {
+            if (IsRoot)
+            {
+                if (other is ChildActorPath) return 1;
+                return StringComparer.Ordinal.Compare(ToString(), other?.ToString());
+            }
+            return InternalCompareTo(this, other);
+        }
+
+        private int InternalCompareTo(ActorPath left, ActorPath right)
+        {
+            if (ReferenceEquals(left, right))
+                return 0;
+
+            if (left.IsRoot)
+                return left.CompareTo(right);
+
+            if (right.IsRoot)
+                return -right.CompareTo(left);
+
+            var nameCompareResult = StringComparer.Ordinal.Compare(left.Name, right.Name);
+            if (nameCompareResult != 0)
+                return nameCompareResult;
+
+            return InternalCompareTo(left.Parent, right.Parent);
+        }
 
         /// <summary>
-        /// Withes the uid.
+        /// Creates a copy of the given ActorPath and applies a new Uid
         /// </summary>
         /// <param name="uid"> The uid. </param>
         /// <returns> ActorPath. </returns>
-        public abstract ActorPath WithUid(long uid);
+        public ActorPath WithUid(long uid)
+        {
+            if (IsRoot)
+            {
+                if (uid != 0) throw new NotSupportedException("RootActorPath must have undefined Uid");
+                return this;
+            }
+
+            return uid != Uid ? new ChildActorPath(_parent, Name, uid) : this;
+        }
 
         /// <summary>
         /// Creates a new <see cref="ChildActorPath"/> with the specified parent <paramref name="path"/>
@@ -553,15 +626,14 @@ namespace Akka.Actor
             return this / childName;
         }
 
-        /// <inheritdoc/>
         public override int GetHashCode()
         {
             unchecked
             {
                 var hash = 17;
                 hash = (hash * 23) ^ Address.GetHashCode();
-                foreach (var e in Elements)
-                    hash = (hash * 23) ^ e.GetHashCode();
+                for (var p = this; !(p is null); p = p.Parent)
+                    hash = (hash * 23) ^ p.Name.GetHashCode();
                 return hash;
             }
         }
@@ -690,30 +762,6 @@ namespace Akka.Actor
         {
         }
 
-        /// <inheritdoc/>
-        public override ActorPath Parent => null;
-
-        public override IReadOnlyList<string> Elements => Array.Empty<string>();
-
-        /// <inheritdoc/>
-        [JsonIgnore]
-        public override ActorPath Root => this;
-
-        /// <inheritdoc/>
-        public override ActorPath WithUid(long uid)
-        {
-            if (uid != 0)
-                throw new NotSupportedException("RootActorPath must have undefined Uid");
-
-            return this;
-        }
-
-        /// <inheritdoc/>
-        public override int CompareTo(ActorPath other)
-        {
-            if (other is ChildActorPath) return 1;
-            return StringComparer.Ordinal.Compare(ToString(), other?.ToString());
-        }
     }
 
     /// <summary>
@@ -721,8 +769,6 @@ namespace Akka.Actor
     /// </summary>
     public sealed class ChildActorPath : ActorPath
     {
-        private readonly ActorPath _parent;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ChildActorPath" /> class.
         /// </summary>
@@ -730,86 +776,8 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         /// <param name="uid"> The uid. </param>
         public ChildActorPath(ActorPath parentPath, string name, long uid)
-            : base(parentPath.Address, name, uid)
+            : base(parentPath, name, uid)
         {
-            _parent = parentPath;
-        }
-
-        /// <inheritdoc/>
-        public override ActorPath Parent => _parent;
-
-        public override IReadOnlyList<string> Elements
-        {
-            get
-            {
-                ActorPath p = this;
-                var acc = new Stack<string>();
-                while (true)
-                {
-                    if (p is RootActorPath)
-                        return acc.ToList();
-                    acc.Push(p.Name);
-                    p = p.Parent;
-                }
-            }
-        }
-
-        /// <inheritdoc/>
-        public override ActorPath Root
-        {
-            get
-            {
-                var current = _parent;
-                while (current is ChildActorPath child)
-                    current = child._parent;
-                return current.Root;
-            }
-        }
-
-        /// <summary>
-        /// Creates a copy of the given ActorPath and applies a new Uid
-        /// </summary>
-        /// <param name="uid"> The uid. </param>
-        /// <returns> ActorPath. </returns>
-        public override ActorPath WithUid(long uid)
-        {
-            return uid != Uid ? new ChildActorPath(_parent, Name, uid) : this;
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                var hash = 17;
-                hash = (hash * 23) ^ Address.GetHashCode();
-                for (ActorPath p = this; p != null; p = p.Parent)
-                    hash = (hash * 23) ^ p.Name.GetHashCode();
-                return hash;
-            }
-        }
-
-        /// <inheritdoc/>
-        public override int CompareTo(ActorPath other)
-        {
-            return InternalCompareTo(this, other);
-        }
-
-        private int InternalCompareTo(ActorPath left, ActorPath right)
-        {
-            if (ReferenceEquals(left, right)) return 0;
-
-            if (left is RootActorPath leftRoot)
-                return leftRoot.CompareTo(right);
-
-            if (right is RootActorPath rightRoot)
-                return -rightRoot.CompareTo(left);
-
-            var nameCompareResult = StringComparer.Ordinal.Compare(left.Name, right.Name);
-            if (nameCompareResult != 0)
-                return nameCompareResult;
-
-            return InternalCompareTo(left.Parent, right.Parent);
         }
     }
 }
