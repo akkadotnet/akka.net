@@ -74,7 +74,7 @@ namespace Akka.Actor
             public bool Equals(ActorPath other)
             {
                 if (other is null) return false;
-                return Equals(other.ToSurrogate(null)); //TODO: not so sure if this is OK
+                return StringComparer.Ordinal.Equals(Path, other.ToSerializationFormat());
             }
 
             /// <inheritdoc/>
@@ -120,7 +120,7 @@ namespace Akka.Actor
 
         private static bool Validate(string chars)
         {
-            int len = chars.Length;
+            var len = chars.Length;
             var pos = 0;
             while (pos < len)
             {
@@ -341,7 +341,7 @@ namespace Akka.Actor
                 return this;
             }
 
-            return uid != Uid ? new ChildActorPath(_parent, Name, uid) : this;
+            return uid != _uid ? new ChildActorPath(_parent, Name, uid) : this;
         }
 
         /// <summary>
@@ -367,10 +367,10 @@ namespace Akka.Actor
         public static ActorPath operator /(ActorPath path, IEnumerable<string> name)
         {
             var a = path;
-            foreach (string element in name)
+            foreach (var element in name)
             {
                 if (!string.IsNullOrEmpty(element))
-                    a = a / element;
+                    a /= element;
             }
             return a;
         }
@@ -587,9 +587,9 @@ namespace Akka.Actor
         {
             if (_depth == 0)
             {
-                Span<char> buffer = stackalloc char[prefix.Length+1];
+                Span<char> buffer = stackalloc char[prefix.Length + 1];
                 prefix.CopyTo(buffer);
-                buffer[buffer.Length-1] = '/';
+                buffer[buffer.Length - 1] = '/';
                 return buffer.ToString();
             }
             else
@@ -619,7 +619,7 @@ namespace Akka.Actor
                     p = p.Parent;
                 }
                 return buffer.ToString();
-            }            
+            }
         }
 
         /// <summary>
