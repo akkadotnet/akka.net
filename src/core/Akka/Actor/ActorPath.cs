@@ -219,7 +219,7 @@ namespace Akka.Actor
                 var b = ImmutableArray.CreateBuilder<string>(_depth);
                 b.Count = _depth;
                 var p = this;
-                for(var i = 0; i < _depth; i++)
+                for (var i = 0; i < _depth; i++)
                 {
                     b[_depth - i - 1] = p.Name;
                     p = p._parent;
@@ -248,7 +248,7 @@ namespace Akka.Actor
                 var p = this;
                 for (var i = 0; i < _depth; i++)
                 {
-                    b[_depth - i - 1] = i > 0 ? p.Name : AppendUidFragment(p.Name);
+                    b[_depth - i - 1] = i > 0 ? p._name : AppendUidFragment(p._name);
                     p = p._parent;
                 }
                 return b.ToImmutable();
@@ -396,6 +396,8 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool TryParse(string path, out ActorPath actorPath)
         {
+            //todo lookup address and/or root in cache
+
             if (!TryParseAddress(path, out var address, out var spanified))
             {
                 actorPath = null;
@@ -412,7 +414,8 @@ namespace Akka.Actor
                 nextSlash = spanified.IndexOf('/');
                 if (nextSlash > 0)
                 {
-                    actorPath /= spanified.Slice(0, nextSlash).ToString();
+                    var name = spanified.Slice(0, nextSlash).ToString();
+                    actorPath = new ChildActorPath(actorPath, name, ActorCell.UndefinedUid);
                 }
                 else if (nextSlash < 0 && spanified.Length > 0) // final segment
                 {
@@ -426,13 +429,14 @@ namespace Akka.Actor
                     }
                     else
                     {
-                        actorPath /= spanified.ToString();
+                        actorPath = new ChildActorPath(actorPath, spanified.ToString(), ActorCell.UndefinedUid);
                     }
 
                 }
 
                 spanified = spanified.Slice(nextSlash + 1);
-            } while (nextSlash >= 0);
+            }
+            while (nextSlash >= 0);
 
             return true;
         }
@@ -480,7 +484,8 @@ namespace Akka.Actor
             string sysName;
 
             if (firstAtPos == -1)
-            { // dealing with an absolute local Uri
+            {
+                // dealing with an absolute local Uri
                 var nextSlash = spanified.IndexOf('/');
 
                 if (nextSlash == -1)
@@ -572,36 +577,45 @@ namespace Akka.Actor
         /// <summary>
         /// Joins this instance.
         /// </summary>
+        /// <param name="prefix">the address or empty</param>
         /// <returns> System.String. </returns>
-        private string Join()
+        private string Join(ReadOnlySpan<char> prefix)
         {
-            if (this is RootActorPath)
-                return "/";
-
-            // Resolve length of final string
-            var totalLength = 0;
-            var p = this;
-            while (!(p is RootActorPath))
+            if (_depth == 0)
             {
-                totalLength += p.Name.Length + 1;
-                p = p.Parent;
+                Span<char> buffer = stackalloc char[prefix.Length+1];
+                prefix.CopyTo(buffer);
+                buffer[buffer.Length-1] = '/';
+                return buffer.ToString();
             }
-
-            // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            char[] buffer = new char[totalLength];
-            int offset = buffer.Length;
-            p = this;
-            while (!(p is RootActorPath))
+            else
             {
-                offset -= p.Name.Length + 1;
-                buffer[offset] = '/';
+                // Resolve length of final string
+                var totalLength = prefix.Length;
+                var p = this;
+                while (p._depth > 0)
+                {
+                    totalLength += p._name.Length + 1;
+                    p = p.Parent;
+                }
 
-                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+                // Concatenate segments (in reverse order) into buffer with '/' prefixes
+                Span<char> buffer = stackalloc char[totalLength];
+                prefix.CopyTo(buffer);
 
-                p = p.Parent;
-            }
-
-            return new string(buffer);
+                var offset = buffer.Length;
+                ReadOnlySpan<char> name;
+                p = this;
+                while (p._depth > 0)
+                {
+                    name = p._name.AsSpan();
+                    offset -= name.Length + 1;
+                    buffer[offset] = '/';
+                    name.CopyTo(buffer.Slice(offset + 1, name.Length));
+                    p = p.Parent;
+                }
+                return buffer.ToString();
+            }            
         }
 
         /// <summary>
@@ -612,13 +626,13 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithoutAddress()
         {
-            return Join();
+            return Join(ReadOnlySpan<char>.Empty);
         }
 
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"{Address}{Join()}";
+            return Join(_address.ToString().AsSpan());
         }
 
         /// <summary>
@@ -627,7 +641,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToStringWithUid()
         {
-            return Uid != ActorCell.UndefinedUid ? $"{ToStringWithAddress()}#{Uid}" : ToStringWithAddress();
+            return _uid != ActorCell.UndefinedUid ? $"{ToStringWithAddress()}#{_uid}" : ToStringWithAddress();
         }
 
         /// <summary>
@@ -666,7 +680,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both actor paths are equal; otherwise <c>false</c></returns>
         public static bool operator ==(ActorPath left, ActorPath right)
         {
-            return Equals(left, right);
+            return left?.Equals(right) ?? right is null;
         }
 
         /// <summary>
@@ -677,7 +691,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both actor paths are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(ActorPath left, ActorPath right)
         {
-            return !Equals(left, right);
+            return !(left == right);
         }
 
         /// <summary>
@@ -686,7 +700,7 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress()
         {
-            return ToStringWithAddress(Address);
+            return ToStringWithAddress(_address);
         }
 
         /// <summary>
@@ -717,7 +731,7 @@ namespace Akka.Actor
 
         private string AppendUidFragment(string withAddress)
         {
-            return Uid != ActorCell.UndefinedUid ? $"{withAddress}#{Uid}" : withAddress;
+            return _uid != ActorCell.UndefinedUid ? $"{withAddress}#{_uid}" : withAddress;
         }
 
         /// <summary>
@@ -734,10 +748,10 @@ namespace Akka.Actor
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            if (Address.Host != null && Address.Port.HasValue)
-                return $"{Address}{Join()}";
+            if (_address.Host != null && _address.Port.HasValue)
+                return Join(_address.ToString().AsSpan());
 
-            return $"{address}{Join()}";
+            return Join(address.ToString().AsSpan());
         }
 
         /// <summary>

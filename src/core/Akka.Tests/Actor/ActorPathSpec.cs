@@ -103,12 +103,12 @@ namespace Akka.Tests.Actor
         [Fact]
         public void Return_false_upon_malformed_path()
         {
-            ActorPath ignored;
-            ActorPath.TryParse("", out ignored).ShouldBe(false);
-            ActorPath.TryParse("://hallo", out ignored).ShouldBe(false);
-            ActorPath.TryParse("s://dd@:12", out ignored).ShouldBe(false);
-            ActorPath.TryParse("s://dd@h:hd", out ignored).ShouldBe(false);
-            ActorPath.TryParse("a://l:1/b", out ignored).ShouldBe(false);
+            ActorPath.TryParse("", out _).ShouldBe(false);
+            ActorPath.TryParse("://hallo", out _).ShouldBe(false);
+            ActorPath.TryParse("s://dd@:12", out _).ShouldBe(false);
+            ActorPath.TryParse("s://dd@h:hd", out _).ShouldBe(false);
+            ActorPath.TryParse("a://l:1/b", out _).ShouldBe(false);
+            ActorPath.TryParse("akka:/", out _).ShouldBe(false);
         }
 
         [Fact]

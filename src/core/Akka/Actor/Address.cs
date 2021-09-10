@@ -303,7 +303,7 @@ namespace Akka.Actor
         /// This class represents a surrogate of an <see cref="Address"/>.
         /// Its main use is to help during the serialization process.
         /// </summary>
-        public class AddressSurrogate : ISurrogate
+        public sealed class AddressSurrogate : ISurrogate
         {
             /// <summary>
             /// TBD
