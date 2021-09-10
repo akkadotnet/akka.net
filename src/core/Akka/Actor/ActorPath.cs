@@ -273,25 +273,25 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public bool Equals(ActorPath other)
         {
-            if (other == null)
+            if (other is null || _depth != other._depth)
                 return false;
 
             if (!Address.Equals(other.Address))
                 return false;
 
-            ActorPath a = this;
-            ActorPath b = other;
+            var a = this;
+            var b = other;
             while (true)
             {
                 if (ReferenceEquals(a, b))
                     return true;
-                else if (a == null || b == null)
+                else if (a is null || b is null)
                     return false;
-                else if (a.Name != b.Name)
+                else if (a._name != b._name)
                     return false;
 
-                a = a.Parent;
-                b = b.Parent;
+                a = a._parent;
+                b = b._parent;
             }
         }
 
@@ -300,8 +300,8 @@ namespace Akka.Actor
         {
             if (_depth == 0)
             {
-                if (other is ChildActorPath) return 1;
-                return StringComparer.Ordinal.Compare(ToString(), other?.ToString());
+                if (other is null || other._depth > 0) return 1;
+                return StringComparer.Ordinal.Compare(ToString(), other.ToString());
             }
             return InternalCompareTo(this, other);
         }
@@ -310,6 +310,10 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(left, right))
                 return 0;
+            if (right is null)
+                return 1;
+            if (left is null)
+                return -1;
 
             if (left._depth == 0)
                 return left.CompareTo(right);
