@@ -224,7 +224,7 @@ namespace Akka.Actor
                     b[_depth - i - 1] = p.Name;
                     p = p._parent;
                 }
-                return b.ToImmutable();
+                return b.MoveToImmutable();
             }
         }
 
@@ -251,7 +251,7 @@ namespace Akka.Actor
                     b[_depth - i - 1] = i > 0 ? p._name : AppendUidFragment(p._name);
                     p = p._parent;
                 }
-                return b.ToImmutable();
+                return b.MoveToImmutable();
             }
         }
 
@@ -587,7 +587,7 @@ namespace Akka.Actor
         {
             if (_depth == 0)
             {
-                Span<char> buffer = stackalloc char[prefix.Length + 1];
+                Span<char> buffer = prefix.Length < 1024 ? stackalloc char[prefix.Length + 1] : new char[prefix.Length + 1];
                 prefix.CopyTo(buffer);
                 buffer[buffer.Length - 1] = '/';
                 return buffer.ToString();
@@ -604,7 +604,7 @@ namespace Akka.Actor
                 }
 
                 // Concatenate segments (in reverse order) into buffer with '/' prefixes
-                Span<char> buffer = stackalloc char[totalLength];
+                Span<char> buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
                 prefix.CopyTo(buffer);
 
                 var offset = buffer.Length;
