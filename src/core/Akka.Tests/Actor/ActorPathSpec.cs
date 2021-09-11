@@ -112,6 +112,23 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void Supports_jumbo_actor_name_length()
+        {
+            ReadOnlySpan<char> prefix = "akka://sys@host.domain.com:1234/some/ref/".AsSpan();
+            Span<char> b = new char[10 * 1024 * 1024]; //10 MB
+            prefix.CopyTo(b);
+            b.Slice(prefix.Length).Fill('a');
+            var path = b.ToString();
+
+            ActorPath.TryParse(path, out var actorPath).ShouldBe(true);
+            actorPath.Name.Length.ShouldBe(b.Length - prefix.Length);
+            actorPath.Name.All(n => n == 'a').ShouldBe(true);
+
+            var result = actorPath.ToStringWithAddress();
+            result.AsSpan().SequenceEqual(b).ShouldBe(true);
+        }
+
+        [Fact]
         public void Create_correct_ToString()
         {
             var a = new Address("akka.tcp", "mysys");

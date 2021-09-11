@@ -590,7 +590,7 @@ namespace Akka.Actor
                 Span<char> buffer = prefix.Length < 1024 ? stackalloc char[prefix.Length + 1] : new char[prefix.Length + 1];
                 prefix.CopyTo(buffer);
                 buffer[buffer.Length - 1] = '/';
-                return buffer.ToString();
+                return buffer.ToString(); //todo use string.Create() when available
             }
             else
             {
@@ -603,7 +603,7 @@ namespace Akka.Actor
                     p = p.Parent;
                 }
 
-                // Concatenate segments (in reverse order) into buffer with '/' prefixes
+                // Concatenate segments (in reverse order) into buffer with '/' prefixes                
                 Span<char> buffer = totalLength < 1024 ? stackalloc char[totalLength] : new char[totalLength];
                 prefix.CopyTo(buffer);
 
@@ -618,7 +618,7 @@ namespace Akka.Actor
                     name.CopyTo(buffer.Slice(offset + 1, name.Length));
                     p = p.Parent;
                 }
-                return buffer.ToString();
+                return buffer.ToString(); //todo use string.Create() when available
             }
         }
 
