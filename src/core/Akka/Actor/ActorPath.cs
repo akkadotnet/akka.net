@@ -260,16 +260,7 @@ namespace Akka.Actor
         /// The root actor path.
         /// </summary>
         [JsonIgnore]
-        public ActorPath Root
-        {
-            get
-            {
-                var current = this;
-                while (current._depth > 0)
-                    current = current.Parent;
-                return current;
-            }
-        }
+        public ActorPath Root => ParentOf(0);
 
         /// <inheritdoc/>
         public bool Equals(ActorPath other)
@@ -374,6 +365,27 @@ namespace Akka.Actor
                     a /= element;
             }
             return a;
+        }
+
+        /// <summary>
+        /// Returns a parent of depth
+        /// 0: Root, 1: Guardian, -1: Parent, -2: GrandParent
+        /// </summary>
+        /// <param name="depth">The parent depth, negative depth for reverse lookup</param>
+        public ActorPath ParentOf(int depth)
+        {
+            var current = this;
+            if (depth >= 0)
+            {
+                while (current._depth > depth)
+                    current = current.Parent;
+            } 
+            else
+            {
+                for(var i = depth; i < 0 && current.Depth > 0; i++)
+                    current = current.Parent;
+            }
+            return current;
         }
 
         /// <summary>

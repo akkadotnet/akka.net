@@ -191,6 +191,7 @@ namespace Akka.Actor
         public static string FormatPathElements(System.Collections.Generic.IEnumerable<string> pathElements) { }
         public override int GetHashCode() { }
         public static bool IsValidPathElement(string s) { }
+        public Akka.Actor.ActorPath ParentOf(int depth) { }
         public static Akka.Actor.ActorPath Parse(string path) { }
         public string ToSerializationFormat() { }
         public string ToSerializationFormatWithAddress(Akka.Actor.Address address) { }
