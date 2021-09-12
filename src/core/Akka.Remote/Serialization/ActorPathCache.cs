@@ -48,7 +48,16 @@ namespace Akka.Remote.Serialization
 
         protected override ActorPath Compute(string k)
         {
-            ActorPath.TryParse(k, out var actorPath);
+            //todo lookup in address cache
+
+            if (!ActorPath.TryParseAddress(k, out var address, out var absoluteUri))
+                return null;
+
+            //todo lookup in root in cache
+
+            if (!ActorPath.TryParse(new RootActorPath(address), absoluteUri, out var actorPath))
+                return null;
+
             return actorPath;
         }
 

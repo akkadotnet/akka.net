@@ -379,10 +379,10 @@ namespace Akka.Actor
             {
                 while (current._depth > depth)
                     current = current.Parent;
-            } 
+            }
             else
             {
-                for(var i = depth; i < 0 && current.Depth > 0; i++)
+                for (var i = depth; i < 0 && current.Depth > 0; i++)
                     current = current.Parent;
             }
             return current;
@@ -398,10 +398,9 @@ namespace Akka.Actor
         /// <returns>A newly created <see cref="ActorPath"/></returns>
         public static ActorPath Parse(string path)
         {
-            if (!TryParse(path, out var actorPath))
-                throw new UriFormatException($"Can not parse an ActorPath: {path}");
-
-            return actorPath;
+            return TryParse(path, out var actorPath)
+                ? actorPath
+                : throw new UriFormatException($"Can not parse an ActorPath: {path}");
         }
 
         /// <summary>
@@ -413,45 +412,56 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool TryParse(string path, out ActorPath actorPath)
         {
-            //todo lookup address and/or root in cache
-
-            if (!TryParseAddress(path, out var address, out var spanified))
+            if (!TryParseAddress(path, out var address, out var absoluteUri))
             {
                 actorPath = null;
                 return false;
             }
 
+            return TryParse(new RootActorPath(address), absoluteUri, out actorPath);
+        }
+
+        /// <summary>
+        /// Tries to parse the uri, which should be a uri not containing protocol.
+        /// For example "/user/my-actor"
+        /// </summary>
+        /// <param name="basePath">the base path, normaly a root path</param>
+        /// <param name="absoluteUri">TBD</param>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
+        public static bool TryParse(ActorPath basePath, ReadOnlySpan<char> absoluteUri, out ActorPath actorPath)
+        {
+            actorPath = basePath;
+
             // check for Uri fragment here
             int nextSlash;
 
-            actorPath = new RootActorPath(address);
-
             do
             {
-                nextSlash = spanified.IndexOf('/');
+                nextSlash = absoluteUri.IndexOf('/');
                 if (nextSlash > 0)
                 {
-                    var name = spanified.Slice(0, nextSlash).ToString();
+                    var name = absoluteUri.Slice(0, nextSlash).ToString();
                     actorPath = new ChildActorPath(actorPath, name, ActorCell.UndefinedUid);
                 }
-                else if (nextSlash < 0 && spanified.Length > 0) // final segment
+                else if (nextSlash < 0 && absoluteUri.Length > 0) // final segment
                 {
-                    var fragLoc = spanified.IndexOf('#');
+                    var fragLoc = absoluteUri.IndexOf('#');
                     if (fragLoc > -1)
                     {
-                        var fragment = spanified.Slice(fragLoc + 1);
+                        var fragment = absoluteUri.Slice(fragLoc + 1);
                         var fragValue = SpanHacks.Parse(fragment);
-                        spanified = spanified.Slice(0, fragLoc);
-                        actorPath = new ChildActorPath(actorPath, spanified.ToString(), fragValue);
+                        absoluteUri = absoluteUri.Slice(0, fragLoc);
+                        actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), fragValue);
                     }
                     else
                     {
-                        actorPath = new ChildActorPath(actorPath, spanified.ToString(), ActorCell.UndefinedUid);
+                        actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), ActorCell.UndefinedUid);
                     }
 
                 }
 
-                spanified = spanified.Slice(nextSlash + 1);
+                absoluteUri = absoluteUri.Slice(nextSlash + 1);
             }
             while (nextSlash >= 0);
 
@@ -476,7 +486,7 @@ namespace Akka.Actor
         /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
         /// <param name="absoluteUri">A <see cref="ReadOnlySpan{T}"/> containing the path following the address.</param>
         /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
-        private static bool TryParseAddress(string path, out Address address, out ReadOnlySpan<char> absoluteUri)
+        public static bool TryParseAddress(string path, out Address address, out ReadOnlySpan<char> absoluteUri)
         {
             address = null;
 

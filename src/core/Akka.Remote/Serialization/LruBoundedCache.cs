@@ -198,6 +198,12 @@ namespace Akka.Remote.Serialization
 
         public TValue GetOrCompute(TKey k)
         {
+            TryGetOrCompute(k, out var value);
+            return value;
+        }
+
+        public bool TryGetOrCompute(TKey k, out TValue value)
+        {
             var h = Hash(k);
             unchecked { _epoch += 1; }
 
@@ -208,7 +214,7 @@ namespace Akka.Remote.Serialization
             {
                 if (_values[position] == null)
                 {
-                    var value = Compute(k);
+                    value = Compute(k);
                     if (IsCacheable(value))
                     {
                         _keys[position] = k;
@@ -216,7 +222,7 @@ namespace Akka.Remote.Serialization
                         _hashes[position] = h;
                         _epochs[position] = _epoch;
                     }
-                    return value;
+                    return false;
                 }
                 else
                 {
@@ -225,15 +231,17 @@ namespace Akka.Remote.Serialization
                     // the table since because of the Robin-Hood property we would have swapped it with the current element.
                     if (probeDistance > otherProbeDistance)
                     {
-                        var value = Compute(k);
-                        if (IsCacheable(value)) Move(position, k, h, value, _epoch, probeDistance);
-                        return value;
+                        value = Compute(k);
+                        if (IsCacheable(value)) 
+                            Move(position, k, h, value, _epoch, probeDistance);
+                        return false;
                     }
                     else if (_hashes[position] == h && k.Equals(_keys[position]))
                     {
                         // Update usage
                         _epochs[position] = _epoch;
-                        return _values[position];
+                        value = _values[position];
+                        return false;
                     }
                     else
                     {
