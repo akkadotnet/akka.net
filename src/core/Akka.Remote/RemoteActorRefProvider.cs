@@ -486,7 +486,7 @@ namespace Akka.Remote
             }
 
             if (!HasAddress(actorPath.Address))
-                return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
+                return CreateRemoteRef(actorPath, localAddress);
 
             //the actor's local address was already included in the ActorPath
 
