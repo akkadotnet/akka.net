@@ -50,9 +50,8 @@ namespace Akka.Remote.Serialization
 
         protected override ActorPath Compute(string k)
         {
-            if (ActorPath.TryParse(k, out var actorPath))
-                return actorPath;
-            return null;
+            ActorPath.TryParse(k, out var actorPath);
+            return actorPath;
         }
 
         protected override bool IsCacheable(ActorPath v)

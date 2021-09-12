@@ -58,7 +58,8 @@ namespace Akka.Actor
             /// <returns>The <see cref="ActorPath"/> encapsulated by this surrogate.</returns>
             public ISurrogated FromSurrogate(ActorSystem system)
             {
-                return TryParse(Path, out var path) ? path : null;
+                TryParse(Path, out var path);
+                return path;
             }
 
             #region Equality

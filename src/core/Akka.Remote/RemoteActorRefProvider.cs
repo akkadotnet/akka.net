@@ -469,6 +469,12 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
+            if (path is null)
+            {
+                _log.Debug("resolve of unknown path [{0}] failed", path);
+                return InternalDeadLetters;
+            }
+
             ActorPath actorPath;
             if (_actorPathThreadLocalCache != null)
             {
@@ -477,12 +483,6 @@ namespace Akka.Remote
             else // cache not initialized yet
             {
                 ActorPath.TryParse(path, out actorPath);
-            }
-
-            if (path is null)
-            {
-                _log.Debug("resolve of unknown path [{0}] failed", path);
-                return InternalDeadLetters;
             }
 
             if (!HasAddress(actorPath.Address))
