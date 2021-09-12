@@ -178,33 +178,33 @@ namespace Akka.Remote.Tests
             Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
 
-        [Fact]
-        public async Task Remoting_should_not_cache_ref_of_local_ask()
-        {
-            var localActorRefResolveCache = ActorRefResolveThreadLocalCache.For(Sys);
-            var localActorPathCache = ActorPathThreadLocalCache.For(Sys);
+        //[Fact]
+        //public async Task Remoting_should_not_cache_ref_of_local_ask()
+        //{
+        //    var localActorRefResolveCache = ActorRefResolveThreadLocalCache.For(Sys);
+        //    var localActorPathCache = ActorPathThreadLocalCache.For(Sys);
 
-            var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
-            Assert.Equal("pong", msg);
-            Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
+        //    var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
+        //    Assert.Equal("pong", msg);
+        //    Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
 
-            Assert.Equal(0, localActorRefResolveCache.All.Sum(n => n.Stats.Entries));
-            Assert.Equal(2, localActorPathCache.All.Sum(n => n.Stats.Entries));
-        }
+        //    Assert.Equal(0, localActorRefResolveCache.All.Sum(n => n.Stats.Entries));
+        //    Assert.Equal(2, localActorPathCache.All.Sum(n => n.Stats.Entries));
+        //}
 
-        [Fact]
-        public async Task Remoting_should_not_cache_ref_of_remote_ask()
-        {
-            var remoteActorRefResolveCache = ActorRefResolveThreadLocalCache.For(_remoteSystem);
-            var remoteActorPathCache = ActorPathThreadLocalCache.For(_remoteSystem);
+        //[Fact]
+        //public async Task Remoting_should_not_cache_ref_of_remote_ask()
+        //{
+        //    var remoteActorRefResolveCache = ActorRefResolveThreadLocalCache.For(_remoteSystem);
+        //    var remoteActorPathCache = ActorPathThreadLocalCache.For(_remoteSystem);
 
-            var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
-            Assert.Equal("pong", msg);
-            Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
+        //    var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
+        //    Assert.Equal("pong", msg);
+        //    Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
 
-            Assert.Equal(0, remoteActorRefResolveCache.All.Sum(n => n.Stats.Entries));
-            Assert.Equal(2, remoteActorPathCache.All.Sum(n => n.Stats.Entries)); //should be 1
-        }
+        //    Assert.Equal(0, remoteActorRefResolveCache.All.Sum(n => n.Stats.Entries));
+        //    Assert.Equal(2, remoteActorPathCache.All.Sum(n => n.Stats.Entries)); //should be 1
+        //}
 
         [Fact(Skip = "Racy")]
         public async Task Ask_does_not_deadlock()

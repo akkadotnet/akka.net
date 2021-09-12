@@ -24,7 +24,7 @@ namespace Akka.Remote.Serialization
         public ActorRefResolveThreadLocalCache(IRemoteActorRefProvider provider)
         {
             _provider = provider;
-            _current = new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider), true);
+            _current = new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider), false);
         }
 
         public override ActorRefResolveThreadLocalCache CreateExtension(ExtendedActorSystem system)
@@ -35,8 +35,6 @@ namespace Akka.Remote.Serialization
         private readonly ThreadLocal<ActorRefResolveCache> _current;
 
         public ActorRefResolveCache Cache => _current.Value;
-
-        internal IList<ActorRefResolveCache> All => _current.Values;
 
         public static ActorRefResolveThreadLocalCache For(ActorSystem system)
         {
