@@ -132,7 +132,8 @@ namespace Akka.Remote.Serialization
             _keys = new TKey[Capacity];
             _values = new TValue[Capacity];
             _hashes = new int[Capacity];
-            _epochs = Enumerable.Repeat(_epoch - evictAgeThreshold, Capacity).ToArray();
+            _epochs = new int[Capacity];
+            _epochs.AsSpan().Fill(_epoch - evictAgeThreshold);
         }
 
         public int Capacity { get; private set; }
