@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Xml.Xsl;
 using Akka.Util;
 
 namespace Akka.Actor
@@ -154,7 +155,7 @@ namespace Akka.Actor
         }
 
         /// <inheritdoc/>
-        public override bool Equals(object obj) => obj is Address && Equals((Address)obj);
+        public override bool Equals(object obj) => Equals(obj as Address);
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -245,7 +246,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
-            return Equals(left, right);
+            return left?.Equals(right) ?? ReferenceEquals(right, null);
         }
 
         /// <summary>
@@ -256,7 +257,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are not equal; otherwise <c>false</c></returns>
         public static bool operator !=(Address left, Address right)
         {
-            return !Equals(left, right);
+            return !(left == right);
         }
 
         /// <summary>
