@@ -435,7 +435,7 @@ namespace Akka.Remote
 
         public bool HasAddress(Address address)
         {
-            return address == _local.RootPath.Address || address == RootPath.Address || Transport.Addresses.Any(a => a == address);
+            return address.Equals(_local.RootPath.Address) || address.Equals(RootPath.Address) || Transport.Addresses.Contains(address);
         }
 
         /// <summary>
@@ -490,7 +490,7 @@ namespace Akka.Remote
                 {
                     if (actorPath is RootActorPath)
                         return RootGuardian;
-                    return _local.ResolveActorRef(RootGuardian, actorPath.ElementsWithUid);
+                    return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
                 }
 
                 return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);

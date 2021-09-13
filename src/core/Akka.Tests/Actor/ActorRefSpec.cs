@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
+using Akka.Util;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -290,11 +291,52 @@ namespace Akka.Tests.Actor
             ExpectNoMsg();
         }
 
+        [Fact]
+        public void An_ActorRef_Mock_should_be_like_Nobody()
+        {
+            var mock = new ActorRefMock();
+
+            mock.Tell("dummy");
+
+            mock.IsNobody().ShouldBeTrue();
+        }
+
         private void VerifyActorTermination(IActorRef actorRef)
         {
             var watcher = CreateTestProbe();
             watcher.Watch(actorRef);
             watcher.ExpectTerminated(actorRef, TimeSpan.FromSeconds(20));
+        }
+
+        private sealed class ActorRefMock : IActorRef
+        {
+            public ActorRefMock() { }
+
+            ActorPath IActorRef.Path => null;
+
+            int IComparable<IActorRef>.CompareTo(IActorRef other)
+            {
+                throw new NotSupportedException();
+            }
+
+            int IComparable.CompareTo(object obj)
+            {
+                throw new NotSupportedException();
+            }
+
+            bool IEquatable<IActorRef>.Equals(IActorRef other)
+            {
+                throw new NotSupportedException();
+            }
+
+            void ICanTell.Tell(object message, IActorRef sender)
+            {
+            }
+
+            ISurrogate ISurrogated.ToSurrogate(ActorSystem system)
+            {
+                throw new NotSupportedException();
+            }
         }
 
         private class NestingActor : ActorBase
