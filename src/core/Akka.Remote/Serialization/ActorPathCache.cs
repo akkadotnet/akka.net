@@ -82,17 +82,7 @@ namespace Akka.Remote.Serialization
             if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))
                 return null;
 
-            return actorPath;
-
-            
-        }
-
-        private static ActorPath ComputeRootPath(string path)
-        {
-            if (!Address.TryParse(path.AsSpan(), out var address))
-                return null;
-
-            return new RootActorPath(address);
+            return actorPath;            
         }
 
         protected override bool IsCacheable(ActorPath v)
