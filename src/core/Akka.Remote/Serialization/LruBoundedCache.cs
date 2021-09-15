@@ -109,19 +109,9 @@ namespace Akka.Remote.Serialization
             return StringComparer.Ordinal.Equals(x, y);
         }
 
-        public bool Equals(ReadOnlySpan<char> x, ReadOnlySpan<char> y)
-        {
-            return x.SequenceEqual(y);
-        }
-
         public int GetHashCode(string s)
         {
             return FastHash.OfStringFast(s);
-        }
-
-        public int GetHashCode(ReadOnlySpan<char> s)
-        {
-            return FastHash.OfString(s);
         }
     }
 
