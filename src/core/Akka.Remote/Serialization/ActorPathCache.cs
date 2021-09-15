@@ -37,28 +37,62 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class ActorPathCache : LruBoundedCache<string, ActorPath>
     {
-        public ActorPathCache(int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
+        public ActorPathCache(int capacity = 1024, int evictAgeThreshold = 600)
+           : base(capacity, evictAgeThreshold, FastHashComparer.Default)
         {
-        }
-
-        protected override int Hash(string k)
-        {
-            return FastHash.OfStringFast(k);
         }
 
         protected override ActorPath Compute(string k)
         {
-            //todo lookup in address cache
+            ActorPath actorPath;
 
-            if (!ActorPath.TryParseAddress(k, out var address, out var absoluteUri))
+            var path = k.AsSpan();
+
+            if (!ActorPath.TryParseParts(path, out var addressSpan, out var absoluteUri))
                 return null;
 
-            //todo lookup in root in cache
 
-            if (!ActorPath.TryParse(new RootActorPath(address), absoluteUri, out var actorPath))
+            string rootPath;
+            if(absoluteUri.Length > 1 || path.Length > addressSpan.Length)
+            {
+                //path end with /
+                rootPath = path.Slice(0, addressSpan.Length + 1).ToString();   
+            }
+            else
+            {
+                //todo replace with string.create
+                Span<char> buffer = addressSpan.Length < 1024 
+                    ? stackalloc char[addressSpan.Length + 1] 
+                    : new char[addressSpan.Length + 1];
+                path.Slice(0, addressSpan.Length).CopyTo(buffer);
+                buffer[buffer.Length - 1] = '/';
+                rootPath = buffer.ToString();
+            }
+
+            //try lookup root in cache
+            if (!TryGet(rootPath, out actorPath))
+            {
+                if (!Address.TryParse(addressSpan, out var address))
+                    return null;
+
+                actorPath = new RootActorPath(address);
+                TrySet(rootPath, actorPath);
+            }
+
+            if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))
                 return null;
 
             return actorPath;
+
+            
+        }
+
+        private static ActorPath ComputeRootPath(string path)
+        {
+            if (!Address.TryParse(path.AsSpan(), out var address))
+                return null;
+
+            return new RootActorPath(address);
         }
 
         protected override bool IsCacheable(ActorPath v)

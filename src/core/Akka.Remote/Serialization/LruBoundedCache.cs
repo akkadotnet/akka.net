@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Akka.Remote.Serialization
@@ -25,14 +26,24 @@ namespace Akka.Remote.Serialization
         /// <returns>A 32-bit pseudo-random hash value.</returns>
         public static int OfString(string s)
         {
-            var chars = s.AsSpan();
+            return OfString(s.AsSpan());
+        }
+
+        /// <summary>
+        /// Allocatey, but safe implementation of FastHash
+        /// </summary>
+        /// <param name="s">The input string.</param>
+        /// <returns>A 32-bit pseudo-random hash value.</returns>
+        public static int OfString(ReadOnlySpan<char> s)
+        {
+            var len = s.Length;
             var s0 = 391408L; // seed value 1, DON'T CHANGE
             var s1 = 601258L; // seed value 2, DON'T CHANGE
             unchecked
             {
-                for(var i = 0; i < chars.Length;i++)
+                for (var i = 0; i < len; i++)
                 {
-                    var x = s0 ^ chars[i]; // Mix character into PRNG state
+                    var x = s0 ^ s[i]; // Mix character into PRNG state
                     var y = s1;
 
                     // Xorshift128+ round
@@ -82,6 +93,36 @@ namespace Akka.Remote.Serialization
                 }
             }
         }
+
+
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class FastHashComparer : IEqualityComparer<string>
+    {
+        public readonly static FastHashComparer Default = new FastHashComparer();
+
+        public bool Equals(string x, string y)
+        {
+            return StringComparer.Ordinal.Equals(x, y);
+        }
+
+        public bool Equals(ReadOnlySpan<char> x, ReadOnlySpan<char> y)
+        {
+            return x.SequenceEqual(y);
+        }
+
+        public int GetHashCode(string s)
+        {
+            return FastHash.OfStringFast(s);
+        }
+
+        public int GetHashCode(ReadOnlySpan<char> s)
+        {
+            return FastHash.OfString(s);
+        }
     }
 
     /// <summary>
@@ -103,6 +144,8 @@ namespace Akka.Remote.Serialization
         public double AverageProbeDistance { get; }
     }
 
+
+
     /// <summary>
     /// INTERNAL API
     /// 
@@ -117,7 +160,7 @@ namespace Akka.Remote.Serialization
     /// <typeparam name="TValue">The type of value used in the cache.</typeparam>
     internal abstract class LruBoundedCache<TKey, TValue> where TValue : class
     {
-        protected LruBoundedCache(int capacity, int evictAgeThreshold)
+        protected LruBoundedCache(int capacity, int evictAgeThreshold, IEqualityComparer<TKey> keyComparer)
         {
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity), "Capacity must be larger than zero.");
@@ -128,6 +171,7 @@ namespace Akka.Remote.Serialization
             Capacity = capacity;
             EvictAgeThreshold = evictAgeThreshold;
 
+            _keyComparer = keyComparer;
             _mask = Capacity - 1;
             _keys = new TKey[Capacity];
             _values = new TValue[Capacity];
@@ -145,6 +189,7 @@ namespace Akka.Remote.Serialization
         // Practically guarantee an overflow
         private int _epoch = int.MaxValue - 1;
 
+        private readonly IEqualityComparer<TKey> _keyComparer;
         private readonly TKey[] _keys;
         private readonly TValue[] _values;
         private readonly int[] _hashes;
@@ -175,7 +220,7 @@ namespace Akka.Remote.Serialization
 
         public TValue Get(TKey k)
         {
-            var h = Hash(k);
+            var h = _keyComparer.GetHashCode(k);
 
             var position = h & _mask;
             var probeDistance = 0;
@@ -187,12 +232,37 @@ namespace Akka.Remote.Serialization
                     return null;
                 if (probeDistance > otherProbeDistance)
                     return null;
-                if (_hashes[position] == h && k.Equals(_keys[position]))
+                if (_hashes[position] == h && _keyComparer.Equals(k, _keys[position]))
                 {
                     return _values[position];
                 }
                 position = (position + 1) & _mask;
-                probeDistance = probeDistance + 1;
+                probeDistance++;
+            }
+        }
+
+        public bool TryGet(TKey k, out TValue value)
+        {
+            var h = _keyComparer.GetHashCode(k);
+
+            var position = h & _mask;
+            var probeDistance = 0;
+
+            while (true)
+            {
+                var otherProbeDistance = ProbeDistanceOf(position);
+                if (_values[position] == null || probeDistance > otherProbeDistance)
+                {
+                    value = default;
+                    return false;
+                }
+                if (_hashes[position] == h && _keyComparer.Equals(k, _keys[position]))
+                {
+                    value = _values[position];
+                    return true;
+                }
+                position = (position + 1) & _mask;
+                probeDistance++;
             }
         }
 
@@ -204,7 +274,7 @@ namespace Akka.Remote.Serialization
 
         public bool TryGetOrCompute(TKey k, out TValue value)
         {
-            var h = Hash(k);
+            var h = _keyComparer.GetHashCode(k);
             unchecked { _epoch += 1; }
 
             var position = h & _mask;
@@ -232,22 +302,69 @@ namespace Akka.Remote.Serialization
                     if (probeDistance > otherProbeDistance)
                     {
                         value = Compute(k);
-                        if (IsCacheable(value)) 
+                        if (IsCacheable(value))
                             Move(position, k, h, value, _epoch, probeDistance);
                         return false;
                     }
-                    else if (_hashes[position] == h && k.Equals(_keys[position]))
+                    else if (_hashes[position] == h && _keyComparer.Equals(k, _keys[position]))
                     {
                         // Update usage
                         _epochs[position] = _epoch;
                         value = _values[position];
-                        return false;
+                        return true;
                     }
                     else
                     {
                         // This is not our slot yet
                         position = (position + 1) & _mask;
-                        probeDistance = probeDistance + 1;
+                        probeDistance++;
+                    }
+                }
+            }
+        }
+
+        public bool TrySet(TKey key, TValue value)
+        {
+            if (!IsCacheable(value)) return false;
+
+            var h = _keyComparer.GetHashCode(key);
+            unchecked { _epoch += 1; }
+
+            var position = h & _mask;
+            var probeDistance = 0;
+
+            while (true)
+            {
+                if (_values[position] == null)
+                {
+                    _keys[position] = key;
+                    _values[position] = value;
+                    _hashes[position] = h;
+                    _epochs[position] = _epoch;
+                    return true;
+                }
+                else
+                {
+                    var otherProbeDistance = ProbeDistanceOf(position);
+                    // If probe distance of the element we try to get is larger than the current slot's, then the element cannot be in
+                    // the table since because of the Robin-Hood property we would have swapped it with the current element.
+                    if (probeDistance > otherProbeDistance)
+                    {
+                        Move(position, key, h, value, _epoch, probeDistance);
+                        return true;
+                    }
+                    else if (_hashes[position] == h && _keyComparer.Equals(key, _keys[position]))
+                    {
+                        // Update usage
+                        _epochs[position] = _epoch;
+                        _values[position] = value;
+                        return true;
+                    }
+                    else
+                    {
+                        // This is not our slot yet
+                        position = (position + 1) & _mask;
+                        probeDistance++;
                     }
                 }
             }
@@ -341,9 +458,6 @@ namespace Akka.Remote.Serialization
         {
             return ((actualSlot - idealSlot) + Capacity) & _mask;
         }
-
-
-        protected abstract int Hash(TKey k);
 
         protected abstract TValue Compute(TKey k);
 

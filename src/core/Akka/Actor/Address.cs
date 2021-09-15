@@ -246,7 +246,7 @@ namespace Akka.Actor
         /// <returns><c>true</c> if both addresses are equal; otherwise <c>false</c></returns>
         public static bool operator ==(Address left, Address right)
         {
-            return left?.Equals(right) ?? ReferenceEquals(right, null);
+            return left?.Equals(right) ?? right is null;
         }
 
         /// <summary>
@@ -297,6 +297,99 @@ namespace Akka.Actor
 
                 return new Address(protocol, systemName, host, port);
             }
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given string
+        /// </summary>
+        /// <param name="span">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(ReadOnlySpan<char> span, out Address address)
+        {
+            address = default;
+
+            var firstColonPos = span.IndexOf(':');
+
+            if (firstColonPos == -1) // not an absolute Uri
+                return false;
+
+            if (firstColonPos < 4 || 255 < firstColonPos)
+            {
+                //invalid scheme length
+                return false;
+            }
+
+            Span<char> fullScheme = stackalloc char[firstColonPos];
+            span.Slice(0, firstColonPos).ToLowerInvariant(fullScheme);
+            if (!fullScheme.StartsWith("akka".AsSpan()))
+            {
+                //invalid scheme
+                return false;
+            }
+
+            span = span.Slice(firstColonPos + 1);
+            if (span.Length < 2 || !(span[0] == '/' && span[1] == '/'))
+                return false;
+
+            span = span.Slice(2); // move past the double //
+            var firstAtPos = span.IndexOf('@');
+            string sysName;
+
+            if (firstAtPos == -1)
+            {
+                // dealing with an absolute local Uri
+                sysName = span.ToString();
+                address = new Address(fullScheme.ToString(), sysName);
+                return true;
+            }
+
+            // dealing with a remote Uri
+            sysName = span.Slice(0, firstAtPos).ToString();
+            span = span.Slice(firstAtPos + 1);
+
+            /*
+             * Need to check for:
+             * - IPV4 / hostnames
+             * - IPV6 (must be surrounded by '[]') according to spec.
+             */
+            string host;
+
+            // check for IPV6 first
+            var openBracket = span.IndexOf('[');
+            var closeBracket = span.IndexOf(']');
+            if (openBracket > -1 && closeBracket > openBracket)
+            {
+                // found an IPV6 address
+                host = span.Slice(openBracket, closeBracket - openBracket + 1).ToString();
+                span = span.Slice(closeBracket + 1); // advance past the address
+
+                // need to check for trailing colon
+                var secondColonPos = span.IndexOf(':');
+                if (secondColonPos == -1)
+                    return false;
+
+                span = span.Slice(secondColonPos + 1);
+            }
+            else
+            {
+                var secondColonPos = span.IndexOf(':');
+                if (secondColonPos == -1)
+                    return false;
+
+                host = span.Slice(0, secondColonPos).ToString();
+
+                // move past the host
+                span = span.Slice(secondColonPos + 1);
+            }
+
+            if (SpanHacks.TryParse(span, out var port) && port >= 0)
+            {
+                address = new Address(fullScheme.ToString(), sysName, host, port);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
