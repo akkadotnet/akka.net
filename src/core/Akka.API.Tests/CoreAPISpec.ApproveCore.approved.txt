@@ -205,6 +205,7 @@ namespace Akka.Actor
         public static bool TryParse(Akka.Actor.ActorPath basePath, System.ReadOnlySpan<char> absoluteUri, out Akka.Actor.ActorPath actorPath) { }
         public static bool TryParseAddress(string path, out Akka.Actor.Address address) { }
         public static bool TryParseAddress(string path, out Akka.Actor.Address address, out System.ReadOnlySpan<char> absoluteUri) { }
+        public static bool TryParseParts(System.ReadOnlySpan<char> path, out System.ReadOnlySpan<char> address, out System.ReadOnlySpan<char> absoluteUri) { }
         public Akka.Actor.ActorPath WithUid(long uid) { }
         public static Akka.Actor.ActorPath /(Akka.Actor.ActorPath path, string name) { }
         public static Akka.Actor.ActorPath /(Akka.Actor.ActorPath path, System.Collections.Generic.IEnumerable<string> name) { }
@@ -413,6 +414,7 @@ namespace Akka.Actor
         public static Akka.Actor.Address Parse(string address) { }
         public override string ToString() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address) { }
         public Akka.Actor.Address WithHost(string host = null) { }
         public Akka.Actor.Address WithPort(System.Nullable<int> port = null) { }
         public Akka.Actor.Address WithProtocol(string protocol) { }
