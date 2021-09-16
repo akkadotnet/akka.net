@@ -13,6 +13,12 @@ In this section we'll expand a bit more on what transports are and how Akka.Remo
 ## What are Transports?
 Transports in Akka.Remote are abstractions on top of actual network transports, such as TCP and UDP sockets, and in truth transports have pretty simple requirements.
 
+> [!WARNING]
+> Due to a bug in the remoting serializer, you __can not__ mix v1.4.20 - v1.4.25 systems with __older__
+> version of Akka.NET. v1.4.26 and above will need a special setting in order for it to work properly
+> with v1.4.19 and below. Please read [Running Mixed Version of Akka.NET](xref:remote-transports#running-mixed-version-of-akka.net) 
+> for more information. 
+
 > [!NOTE]
 > Most of the information below are things you, as an Akka.NET user, do not need to care about 99% of the time. Feel free to skip to the [Akka.Remote's Built-in Transports](#akkaremotes-built-in-transports) section.
 
@@ -154,6 +160,28 @@ This configuration allows the `ActorSystem`'s DotNetty TCP transport to listen o
 Why is this distinction important? Why do we care about registering an publicly accessible hostname with our `ActorSystem`? Because in the event that other systems need to connect or reconnect to this process, *they need to have a reachable address.*
 
 By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname. 
+
+## Running Mixed Version of Akka.NET
+As of v1.4.20, the primitive serializer wire format in Akka.Remote have been changed to improve
+serialized message size. This change introduces a bug that causes remote communication problem 
+between systems with v1.4.20 and above and systems with v1.4.19 and below. However, this bug was not 
+found until v1.4.25, which means that __v1.4.20 - v1.4.25 can not be mixed with any older 
+versions of Akka.NET__. In order for a new system to communicate with systems with v1.4.19 or below, 
+you will have to use v1.4.26 or above.
+
+In order for a v1.4.26 and above system to communicate properly with v1.4.19 and below systems, 
+you will have to  add this into the HOCON settings:
+```
+akka.actor.serialization-settings.primitive.use-neutral-primitives = true
+```
+This will revert the new serializer to the old behaviour and allows them to be completely compatible
+with older versions of Akka.NET.
+
+### Rolling an Update From v1.4.19 to v1.4.26 
+To do a rolling update between v1.4.19 and below systems to v1.4.26 and above, you will have to
+do 2 rolling updates:
+- Roll an update of __all__ v1.4.19 and below systems to v1.4.26 and above using the setting described above.
+- Roll another update with the setting removed.
 
 ## Additional Resources
 * [Message Framing](http://blog.stephencleary.com/2009/04/message-framing.html) by Stephen Cleary
