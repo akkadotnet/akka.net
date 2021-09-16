@@ -10,7 +10,8 @@ using Xunit;
 
 namespace Akka.Remote.TestKit
 {
-    public class MultiNodeFactAttribute : FactAttribute
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+    public class MultiNodeFactAttribute : Attribute
     {
         /// <summary>
         /// Set by MultiNodeTestRunner when running multi-node tests
@@ -28,16 +29,26 @@ namespace Akka.Remote.TestKit
                     || Environment.GetEnvironmentVariable(MultiNodeTestEnvironmentName) != null;
             });
 
-        public override string Skip
+        private string _skip;
+        /// <summary>
+        /// Marks the test so that it will not be run, and gets or sets the skip reason
+        /// </summary>
+        public virtual string Skip
         {
             get
             {
                 return ExecutedByMultiNodeRunner.Value
-                    ? base.Skip
+                    ? _skip
                     : "Must be executed by multi-node test runner";
             }
-            set { base.Skip = value; }
+            set { _skip = value; }
         }
+        
+        /// <summary>
+        /// Gets the name of the test to be used when the test is skipped. Defaults to
+        /// null, which will cause the fully qualified test name to be used.
+        /// </summary>
+        public virtual string DisplayName { get; set; }
     }
 }
 
