@@ -2,10 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internal;
-using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
@@ -145,26 +142,5 @@ akka.stdout-loglevel = DEBUG");
             public FakeException(string message) : base(message)
             { }
         }
-        
-        [Fact]
-        public async Task ShouldBeAbleToReplaceStandardOutLoggerWithCustomMinimalLogger()
-        {
-            var config = ConfigurationFactory
-                .ParseString("akka.stdout-logger-class = \"Akka.Tests.Loggers.LoggerSpec+CustomLogger, Akka.Tests\"")
-                .WithFallback(ConfigurationFactory.Default()); 
-            
-            var system = ActorSystem.Create("MinimalLoggerTest", config);
-            system.Settings.StdoutLogger.Should().BeOfType<CustomLogger>();
-            await system.Terminate();
-        }
-        
-        public class CustomLogger : MinimalLogger
-        {
-            protected override void Log(object message)
-            {
-                Console.WriteLine(message);
-            }
-        }
-        
     }
 }

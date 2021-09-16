@@ -13,12 +13,20 @@ using System.Threading;
 
 namespace Akka.Event
 {
-    public abstract class MinimalLogger : MinimalActorRef
+    /// <summary>
+    /// This class represents an event logger that logs its messages to standard output (e.g. the console).
+    /// 
+    /// <remarks>
+    /// This logger is always attached first in order to be able to log failures during application start-up,
+    /// even before normal logging is started.
+    /// </remarks>
+    /// </summary>
+    public class StandardOutLogger : MinimalActorRef
     {
         /// <summary>
         /// N/A
         /// </summary>
-        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="MinimalLogger"/> does not support this property.</exception>
+        /// <exception cref="NotImplementedException">This exception is automatically thrown since <see cref="StandardOutLogger"/> does not support this property.</exception>
         public sealed override IActorRefProvider Provider
         {
             get { throw new NotSupportedException("This logger does not provide."); }
@@ -29,33 +37,6 @@ namespace Akka.Event
         /// </summary>
         public sealed override ActorPath Path { get; } = new RootActorPath(Address.AllSystems, "/StandardOutLogger");
         
-        protected sealed override void TellInternal(object message, IActorRef sender)
-        {
-            switch (message)
-            {
-                case null:
-                    throw new ArgumentNullException(nameof(message), "The message to log must not be null.");
-                
-                default:
-                    Log(message);
-                    break;
-            }
-        }
-
-        protected abstract void Log(object message);
-    }
-    
-    /// <summary>
-    /// This class represents an event logger that logs its messages to standard output (e.g. the console).
-    /// 
-    /// <remarks>
-    /// This logger is always attached first in order to be able to log failures during application start-up,
-    /// even before normal logging is started.
-    /// </remarks>
-    /// </summary>
-    public class StandardOutLogger : MinimalLogger
-    {
-
         /// <summary>
         /// Initializes the <see cref="StandardOutLogger"/> class.
         /// </summary>
@@ -76,15 +57,20 @@ namespace Akka.Event
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown if the given <paramref name="message"/> is undefined.
         /// </exception>
-        protected override void Log(object message)
+        protected override void TellInternal(object message, IActorRef sender)
         {
             switch (message)
             {
+                case null:
+                    throw new ArgumentNullException(nameof(message), "The message to log must not be null.");
+                
                 case LogEvent logEvent:
+                    Invoked?.Invoke(logEvent);
                     PrintLogEvent(logEvent);
                     break;
                 
                 default:
+                    Invoked?.Invoke(message);
                     Console.WriteLine(message);
                     break;
             }
@@ -114,6 +100,11 @@ namespace Akka.Event
         /// Determines whether colors are used when printing events to the console. 
         /// </summary>
         public static bool UseColors { get; set; }
+
+        /// <summary>
+        /// FOR TESTING PURPOSES ONLY, DO NOT USE
+        /// </summary>
+        internal event Action<object> Invoked;
 
         /// <summary>
         /// Prints a specified event to the console.

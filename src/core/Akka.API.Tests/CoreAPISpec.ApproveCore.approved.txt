@@ -1698,7 +1698,6 @@ namespace Akka.Actor
         public bool SerializeAllMessages { get; }
         public Akka.Actor.Setup.ActorSystemSetup Setup { get; }
         public string StdoutLogLevel { get; }
-        public Akka.Event.MinimalLogger StdoutLogger { get; }
         public string SupervisorStrategyClass { get; }
         public Akka.Actor.ActorSystem System { get; }
         public System.TimeSpan UnstartedPushTimeout { get; }
@@ -3106,6 +3105,7 @@ namespace Akka.Event
     }
     public class static Logging
     {
+        public static readonly Akka.Event.StandardOutLogger StandardOutLogger;
         public static System.Type ClassFor(this Akka.Event.LogLevel logLevel) { }
         public static Akka.Event.ILoggingAdapter GetLogger(this Akka.Actor.IActorContext context, Akka.Event.ILogMessageFormatter logMessageFormatter = null) { }
         public static Akka.Event.ILoggingAdapter GetLogger(Akka.Actor.ActorSystem system, object logSourceObj, Akka.Event.ILogMessageFormatter logMessageFormatter = null) { }
@@ -3158,14 +3158,6 @@ namespace Akka.Event
         public void SetLogLevel(Akka.Event.LogLevel logLevel) { }
         public void StartStdoutLogger(Akka.Actor.Settings config) { }
     }
-    public abstract class MinimalLogger : Akka.Actor.MinimalActorRef
-    {
-        protected MinimalLogger() { }
-        public virtual Akka.Actor.ActorPath Path { get; }
-        public virtual Akka.Actor.IActorRefProvider Provider { get; }
-        protected abstract void Log(object message);
-        protected virtual void TellInternal(object message, Akka.Actor.IActorRef sender) { }
-    }
     public sealed class NoLogger : Akka.Event.ILoggingAdapter
     {
         public static readonly Akka.Event.ILoggingAdapter Instance;
@@ -3186,15 +3178,18 @@ namespace Akka.Event
         public void Warning(string format, params object[] args) { }
         public void Warning(System.Exception cause, string format, params object[] args) { }
     }
-    public class StandardOutLogger : Akka.Event.MinimalLogger
+    public class StandardOutLogger : Akka.Actor.MinimalActorRef
     {
         public StandardOutLogger() { }
         public static System.ConsoleColor DebugColor { get; set; }
         public static System.ConsoleColor ErrorColor { get; set; }
         public static System.ConsoleColor InfoColor { get; set; }
+        public virtual Akka.Actor.ActorPath Path { get; }
+        public virtual Akka.Actor.IActorRefProvider Provider { get; }
         public static bool UseColors { get; set; }
         public static System.ConsoleColor WarningColor { get; set; }
-        protected override void Log(object message) { }
+        public event System.Action<object> Invoked;
+        protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class Subscription<TSubscriber, TClassifier>
     {

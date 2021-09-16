@@ -122,6 +122,11 @@ namespace Akka.Event
     public static class Logging
     {
         /// <summary>
+        /// Returns a singleton instance of the standard out logger
+        /// </summary>
+        public static readonly StandardOutLogger StandardOutLogger = new StandardOutLogger();
+        
+        /// <summary>
         /// Returns a "safe" LogSource name for the provided object's type.
         /// </summary>
         /// <returns>The simple name of the given object's Type.</returns>

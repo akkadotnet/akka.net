@@ -41,7 +41,6 @@ namespace Akka.TestKit
                     bus.Subscribe(self, typeof(Unmute));
                     bus.Subscribe(self, typeof(DeadLetter));
                     bus.Subscribe(self, typeof(UnhandledMessage));
-                    Sender.Tell(new LoggerInitialized());
                     break;
                 }
                 case Mute mute:

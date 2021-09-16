@@ -82,15 +82,13 @@ namespace Akka.Event
         {
             if (HasMessages)
             {
-                var logger = _system.Settings.StdoutLogger;
-                
                 // Drain all remaining messages to the StandardOutLogger.
                 // CleanUp is called after switching out the mailbox, which is why
                 // this kind of look works without a limit.
                 while (TryDequeue(out var envelope))
                 {
                     // Logging.StandardOutLogger is a MinimalActorRef, i.e. not a "real" actor
-                    logger.Tell(envelope.Message, envelope.Sender);
+                    Logging.StandardOutLogger.Tell(envelope.Message, envelope.Sender);
                 }
             }
             MessageQueue.CleanUp(owner, deadletters);

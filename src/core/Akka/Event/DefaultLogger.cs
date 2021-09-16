@@ -16,8 +16,6 @@ namespace Akka.Event
     /// </summary>
     public class DefaultLogger : ActorBase, IRequiresMessageQueue<ILoggerMessageQueueSemantics>
     {
-        private MinimalLogger _stdoutLogger;
-        
         /// <summary>
         /// TBD
         /// </summary>
@@ -28,7 +26,6 @@ namespace Akka.Event
             switch (message)
             {
                 case InitializeLogger _:
-                    _stdoutLogger = Context.System.Settings.StdoutLogger;
                     Sender.Tell(new LoggerInitialized());
                     return true;
                 case LogEvent logEvent:
@@ -45,10 +42,7 @@ namespace Akka.Event
         /// <param name="logEvent">The log event that is to be output.</param>
         protected virtual void Print(LogEvent logEvent)
         {
-            if (_stdoutLogger == null)
-                throw new Exception("Logger has not been initialized yet.");
-            
-            _stdoutLogger.Tell(logEvent);
+            Logging.StandardOutLogger.Tell(logEvent);
         }
     }
 }
