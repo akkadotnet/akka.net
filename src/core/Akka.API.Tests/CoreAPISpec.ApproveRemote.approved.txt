@@ -440,7 +440,7 @@ namespace Akka.Remote.Serialization
     }
     public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
     {
-        public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system) { }
+        public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
