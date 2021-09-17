@@ -1,0 +1,10 @@
+- name: Build Process
+  href: build-process.md
+- name: Release Process
+  href: release-process.md
+- name: Approving Public API Changes
+  href: api-changes-compatibility.md
+- name: Code Guidelines
+  href: code-guidelines.md
+- name: Documentation Guidelines
+  href: documentation-guidelines.md
