@@ -445,7 +445,7 @@ namespace Akka.Actor
                 // found an IPV6 address
                 host = spanified.Slice(openBracket, closeBracket - openBracket + 1).ToString();
                 spanified = spanified.Slice(closeBracket + 1); // advance past the address
-
+                
                 // need to check for trailing colon
                 var secondColonPos = spanified.IndexOf(':');
                 if (secondColonPos == -1)
@@ -501,35 +501,107 @@ namespace Akka.Actor
         /// Joins this instance.
         /// </summary>
         /// <returns> System.String. </returns>
-        private string Join()
+        private string Join(Address addrOption = null, long? uidOption = null)
         {
-            if (this is RootActorPath)
+            if (this is RootActorPath && addrOption == null)
                 return "/";
 
             // Resolve length of final string
-            var totalLength = 0;
+            var totalPathLength = 0;
             var p = this;
+            if (p is RootActorPath)
+            {
+                totalPathLength = 1; // "/"
+            }
+            
             while (!(p is RootActorPath))
             {
-                totalLength += p.Name.Length + 1;
+                totalPathLength += p.Name.Length + 1;
                 p = p.Parent;
             }
 
+            var remote = !string.IsNullOrWhiteSpace(addrOption?.Host) && addrOption.Port.HasValue;
+            var addrLength = addrOption == null ? 0 : (remote
+                ? addrOption.Protocol.Length + 3 + addrOption.System.Length + 1 + addrOption.Host.Length + 1 + 11 // 11 MAX characters for port number
+                : addrOption.Protocol.Length + 3 + addrOption.System.Length);
+            Span<char> writeSpan = stackalloc char[addrLength];
+            if (addrOption != null)
+            {
+               
+                var curPos = 0;
+
+                var protSpan = addrOption.Protocol.AsSpan();
+                curPos += SpanHacks.CopySpans(protSpan, writeSpan, curPos);
+
+                writeSpan[curPos++] = ':';
+                writeSpan[curPos++] = '/';
+                writeSpan[curPos++] = '/';
+
+                var sysSpan = addrOption.System.AsSpan();
+                curPos += SpanHacks.CopySpans(sysSpan, writeSpan, curPos);
+
+                if (remote)
+                {
+                    writeSpan[curPos++] = '@';
+                    var hostSpan = addrOption.Host.AsSpan();
+                    curPos += SpanHacks.CopySpans(hostSpan, writeSpan, curPos);
+                    writeSpan[curPos++] = ':';
+                    Span<char> portSpan = stackalloc char[11];
+                    var length = addrOption.Port.Value.AsCharSpan(portSpan);
+                    curPos += SpanHacks.CopySpans(portSpan.Slice(0, length), writeSpan, curPos);
+                }
+
+                addrLength = curPos;
+            }
+
+            // 20 characters is the max for a long integer
+           
+            Span<char> uidSpan = stackalloc char[20];
+            var intLength = 0;
+            var adjustedUidLength = 0;
+            if (uidOption.HasValue && uidOption != ActorCell.UndefinedUid)
+            {
+                intLength = uidOption.Value.AsCharSpan(uidSpan);
+                adjustedUidLength = intLength + 1; // need 1 extra for '#'
+            }
+
             // Concatenate segments (in reverse order) into buffer with '/' prefixes
-            char[] buffer = new char[totalLength];
-            int offset = buffer.Length;
-            p = this;
+            Span<char> buffer = stackalloc char[addrLength + totalPathLength + adjustedUidLength];
+
+            // copy address
+            writeSpan.Slice(0, addrLength).CopyTo(buffer);
+
+            // need to start after address but before uid
+            var offset = buffer.Length - adjustedUidLength;
+            p = this; // need to reset local var after previous traversal
+            if (totalPathLength == 1) // RootActorPath
+            {
+                buffer[offset-1] = '/';
+            }
+
             while (!(p is RootActorPath))
             {
                 offset -= p.Name.Length + 1;
                 buffer[offset] = '/';
 
-                p.Name.CopyTo(0, buffer, offset + 1, p.Name.Length);
+                var spanified = p.Name.AsSpan();
+                var writeOffset = offset;
+                for (var i = 0; i < spanified.Length; i++)
+                {
+                    buffer[++writeOffset] = spanified[i];
+                }
 
                 p = p.Parent;
             }
 
-            return new string(buffer);
+            if (adjustedUidLength > 0)
+            {
+                var uidOffset = buffer.Length - adjustedUidLength;
+                buffer[uidOffset] = '#';
+                SpanHacks.CopySpans(uidSpan.Slice(0, intLength), buffer, uidOffset+1);
+            }
+
+            return buffer.ToString();
         }
 
         /// <summary>
@@ -546,7 +618,7 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override string ToString()
         {
-            return $"{Address}{Join()}";
+            return Join(Address);
         }
 
         /// <summary>
@@ -558,7 +630,8 @@ namespace Akka.Actor
             var uid = Uid;
             if (uid == ActorCell.UndefinedUid)
                 return ToStringWithAddress();
-            return ToStringWithAddress() + "#" + uid;
+            return Join(Address, Uid);
+            //ToStringWithAddress() + "#" + uid;
         }
 
         /// <summary>
@@ -628,7 +701,9 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public string ToSerializationFormat()
         {
-            return AppendUidFragment(ToStringWithAddress());
+            if (Uid == ActorCell.UndefinedUid)
+                return ToStringWithAddress();
+            return Join(Address, Uid);
         }
 
         /// <summary>
@@ -643,9 +718,9 @@ namespace Akka.Actor
                 // we never change address for IgnoreActorRef
                 return ToString();
             }
-            var withAddress = ToStringWithAddress(address);
-            var result = AppendUidFragment(withAddress);
-            return result;
+            //var withAddress = ToStringWithAddress(address);
+            //var result = AppendUidFragment(withAddress);
+            return Join(address, Uid);
         }
 
         private string AppendUidFragment(string withAddress)
@@ -671,9 +746,9 @@ namespace Akka.Actor
                 return ToString();
             }
             if (Address.Host != null && Address.Port.HasValue)
-                return $"{Address}{Join()}";
+                return Join(Address);
 
-            return $"{address}{Join()}";
+            return Join(address);
         }
 
         /// <summary>

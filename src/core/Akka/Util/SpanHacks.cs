@@ -11,9 +11,119 @@ namespace Akka.Util
     /// </summary>
     internal static class SpanHacks
     {
-        public static bool IsNumeric(char x)
+        /// <summary>
+        /// Parses an <see cref="int"/> into a mutable <see cref="Span{T}"/>
+        /// </summary>
+        /// <param name="i">The integer to convert.</param>
+        /// <param name="span">An 11 character span.</param>
+        /// <returns>The number of characters actually written to the span.</returns>
+        /// <remarks>
+        /// <see cref="span"/> MUST BE 11 CHARACTERS in length, as that's the maximum length
+        /// of an integer represented as a string.
+        /// </remarks>
+        public static int AsCharSpan(this int i, Span<char> span)
         {
-            return (x >= '0' && x <= '9');
+            if (i == 0)
+            {
+                span[0] = '0';
+                return 1;
+            }
+            else if (i == int.MinValue)
+            {
+                // special case - can't be converted back into positive integer
+                var negSpan = "-2147483648".AsSpan();
+                negSpan.CopyTo(span);
+                return 11;
+            }
+
+            var negative = false;
+            if (i < 0)
+            {
+                negative = true;
+                i = -i;
+            }
+
+            // max string length is 10 for integer plus 1 for negative sign
+            Span<char> startSpan = stackalloc char[11];
+            var count = 0;
+            while (i != 0)
+            {
+                var rem = i % 10;
+                startSpan[count++] = (char)((rem > 9) ? (rem - 10) + 'a' : rem + '0');
+                i = i / 10;
+            }
+
+            if (negative)
+            {
+                startSpan[count++] = '-';
+            }
+
+            // reverse the string
+            var b = 0;
+            for (var a = count - 1; a >= 0; a--)
+            {
+                span[b++] = startSpan[a];
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Parses an <see cref="long"/> into a mutable <see cref="Span{T}"/>
+        /// </summary>
+        /// <param name="i">The long integer to convert.</param>
+        /// <param name="span">A 20 character span.</param>
+        /// <returns>The number of characters actually written to the span.</returns>
+        /// <remarks>
+        /// <see cref="span"/> MUST BE 20 CHARACTERS in length, as that's the maximum length
+        /// of a long integer represented as a string.
+        /// </remarks>
+        public static int AsCharSpan(this long i, Span<char> span)
+        {
+            if (i == 0)
+            {
+                span[0] = '0';
+                return 1;
+            }
+            else if (i == long.MinValue)
+            {
+                // special case - can't be converted back into positive integer
+                var negSpan = "-9223372036854775808".AsSpan();
+                negSpan.CopyTo(span);
+                return 11;
+            }
+
+            var negative = false;
+            if (i < 0)
+            {
+                negative = true;
+                i = -i;
+            }
+
+            // max string length is 10 for integer plus 1 for negative sign
+            Span<char> startSpan = stackalloc char[20];
+            var count = 0;
+            while (i != 0)
+            {
+                var rem = i % 10;
+                startSpan[count++] = (char)((rem > 9) ? (rem - 10) + 'a' : rem + '0');
+                i = i / 10;
+            }
+
+            if (negative)
+            {
+                startSpan[count++] = '-';
+            }
+
+            // reverse the string
+            var b = 0;
+            for (var a = count - 1; a >= 0; a--)
+            {
+                span[b++] = startSpan[a];
+            }
+
+            return count;
+
         }
 
         /// <summary>
@@ -53,7 +163,7 @@ namespace Akka.Util
 
             for (; pos < str.Length; pos++)
             {
-                if (!IsNumeric(str[pos]))
+                if (!char.IsNumber(str[pos]))
                     return false;
                 returnValue = returnValue * 10 + str[pos] - '0';
             }
@@ -77,6 +187,16 @@ namespace Akka.Util
                 output[i] = char.ToLowerInvariant(input[i]);
             }
             return output.ToString();
+        }
+
+        public static int CopySpans(ReadOnlySpan<char> inSpan, Span<char> outSpan, int outIndex)
+        {
+            for (var i = 0; i < inSpan.Length; i++)
+            {
+                outSpan[outIndex++] = inSpan[i];
+            }
+
+            return inSpan.Length;
         }
     }
 }
