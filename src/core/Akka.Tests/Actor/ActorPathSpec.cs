@@ -100,6 +100,27 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
+        public void Supports_rebase_a_path()
+        {
+            var path = "akka://sys@host:1234/";
+            ActorPath.TryParse(path, out var root).ShouldBe(true);
+            root.ToString().ShouldBe(path);
+
+            ActorPath.TryParse(root, "/", out var newPath).ShouldBe(true);
+            newPath.ShouldBe(root);
+
+            var uri1 = "/abc/def";
+            ActorPath.TryParse(root, uri1, out newPath).ShouldBe(true);
+            newPath.ToStringWithAddress().ShouldBe($"{path}{uri1.Substring(1)}");
+            newPath.ParentOf(-2).ShouldBe(root);
+
+            var uri2 = "/def";
+            ActorPath.TryParse(newPath, uri2, out newPath).ShouldBe(true);
+            newPath.ToStringWithAddress().ShouldBe($"{path}{uri1.Substring(1)}{uri2}");
+            newPath.ParentOf(-3).ShouldBe(root);
+        }
+
+        [Fact]
         public void Return_false_upon_malformed_path()
         {
             ActorPath.TryParse("", out _).ShouldBe(false);

@@ -432,6 +432,19 @@ namespace Akka.Actor
         /// <param name="absoluteUri">TBD</param>
         /// <param name="actorPath">TBD</param>
         /// <returns>TBD</returns>
+        public static bool TryParse(ActorPath basePath, string absoluteUri, out ActorPath actorPath)
+        {
+            return TryParse(basePath, absoluteUri.AsSpan(), out actorPath);
+        }
+
+        /// <summary>
+        /// Tries to parse the uri, which should be a uri not containing protocol.
+        /// For example "/user/my-actor"
+        /// </summary>
+        /// <param name="basePath">the base path, normaly a root path</param>
+        /// <param name="absoluteUri">TBD</param>
+        /// <param name="actorPath">TBD</param>
+        /// <returns>TBD</returns>
         public static bool TryParse(ActorPath basePath, ReadOnlySpan<char> absoluteUri, out ActorPath actorPath)
         {
             actorPath = basePath;
