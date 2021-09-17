@@ -171,7 +171,7 @@ namespace Akka.Actor
         protected ActorPath(ActorPath parentPath, string name, long uid)
         {
             _parent = parentPath;
-            _address = parentPath.Address;
+            _address = parentPath._address;
             _depth = parentPath._depth + 1;
             _name = name;
             _uid = uid;
@@ -222,7 +222,7 @@ namespace Akka.Actor
                 var p = this;
                 for (var i = 0; i < _depth; i++)
                 {
-                    b[_depth - i - 1] = p.Name;
+                    b[_depth - i - 1] = p._name;
                     p = p._parent;
                 }
                 return b.MoveToImmutable();
@@ -267,6 +267,9 @@ namespace Akka.Actor
         {
             if (other is null || _depth != other._depth)
                 return false;
+
+            if (ReferenceEquals(this, other))
+                return true;
 
             if (!Address.Equals(other.Address))
                 return false;
@@ -378,12 +381,12 @@ namespace Akka.Actor
             if (depth >= 0)
             {
                 while (current._depth > depth)
-                    current = current.Parent;
+                    current = current._parent;
             }
             else
             {
-                for (var i = depth; i < 0 && current.Depth > 0; i++)
-                    current = current.Parent;
+                for (var i = depth; i < 0 && current._depth > 0; i++)
+                    current = current._parent;
             }
             return current;
         }
@@ -516,7 +519,7 @@ namespace Akka.Actor
                 absoluteUri = path;
                 return false;
             }
-                        
+
             var doubleSlash = path.Slice(firstAtPos + 1);
             if (doubleSlash.Length < 2 || !(doubleSlash[0] == '/' && doubleSlash[1] == '/'))
             {
@@ -537,7 +540,7 @@ namespace Akka.Actor
                 address = path.Slice(0, firstAtPos + 3 + nextSlash);
                 absoluteUri = path.Slice(address.Length);
             }
-            
+
             return true;
         }
 
@@ -564,7 +567,7 @@ namespace Akka.Actor
                 while (p._depth > 0)
                 {
                     totalLength += p._name.Length + 1;
-                    p = p.Parent;
+                    p = p._parent;
                 }
 
                 // Concatenate segments (in reverse order) into buffer with '/' prefixes                
@@ -580,7 +583,7 @@ namespace Akka.Actor
                     offset -= name.Length + 1;
                     buffer[offset] = '/';
                     name.CopyTo(buffer.Slice(offset + 1, name.Length));
-                    p = p.Parent;
+                    p = p._parent;
                 }
                 return buffer.ToString(); //todo use string.Create() when available
             }
@@ -628,8 +631,8 @@ namespace Akka.Actor
             {
                 var hash = 17;
                 hash = (hash * 23) ^ Address.GetHashCode();
-                for (var p = this; !(p is null); p = p.Parent)
-                    hash = (hash * 23) ^ p.Name.GetHashCode();
+                for (var p = this; !(p is null); p = p._parent)
+                    hash = (hash * 23) ^ p._name.GetHashCode();
                 return hash;
             }
         }
