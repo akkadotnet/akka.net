@@ -4,8 +4,12 @@ title: Making Public API Changes
 ---
 
 # Making Public API Changes
+Akka.NET follows the [practical semantic versioning methodology](https://aaronstannard.com/oss-semver/), and as such the most important convention we have to be mindful of is accurately communicating to our users whether or not Akka.NET is compatible with previous versions of the API.
 
-Akka.NET follows the [semantic versioning methodology](http://semver.org/), and as such the most important convention we have to be mindful of is accurately communicating to our users whether or not Akka.NET is compatible with previous versions of the API.
+Here is what that entails:
+
+* Not all `public` types are part of the "public API" - some public types that are marked with the `InternalApi` attribute or live inside an `.Internal` namespace, for instance, might be public for reasons that have to do with extensibility or completeness but they are not part of the supported public API. We may make breaking changes on those APIs even between revision releases because they're explicitly advertised as not for public use.
+* Everything else that is `public`, including components that can be loaded via reflection, is generally considered to be part of the public API.
 
 As such, we have automated procedures designed to ensure that accidental breaking / incompatible changes to the Akka.NET public API can't sail through the pull request process without some human acknowledgement first.
 
@@ -32,25 +36,28 @@ The approval file is located at:
 
 After modifying some code in Akka.NET that results in a public API change - this can be any change, such as adding an overload to a public method or adding a new public class, you will immediately see an API change when you attempt to run the `Akka.API.Tests` unit tests:
 
-![Failed API approval test](../images/api-diff-fail.png)
+![Failed API approval test](~/images/api-diff-fail.png)
 
 The tests will fail, because the `.approved.txt` file doesn't match the new `.received.txt`, but you will be prompted by [ApprovalTests](https://github.com/approvals/ApprovalTests.Net) to view the diff between the two files in your favorite diff viewer:
 
-![API difference as seen in a diff viewer like TortoiseMerge or WinMerge](../images/api-diff-viewer.png)
+![API difference as seen in a diff viewer like TortoiseMerge or WinMerge](~/images/api-diff-viewer.png)
 
 After you've merged the changes generated from your code into the `approved.txt` file, the tests will pass:
 
-![Passed API approval test](../images/api-diff-approve.png)
+![Passed API approval test](~/images/api-diff-approve.png)
 
 And then once you've merged in those changes, added them to a Git commit, and sent them in a pull request then other Akka.NET contributors will review your pull request and view the differences between the current `approved.txt` file and the one included in your PR:
 
-![approved.txt differences as reported by Git](../images/diff-results.png)
+![approved.txt differences as reported by Git](~/images/diff-results.png)
 
 ## Unacceptable API Changes
 
 The following types of API changes will generally not be approved:
 
-1. Any modification to a commonly used public interface;
-2. Changing any public method signature or removing any public members;
+1. Any breaking modification to a commonly used public interface;
+2. Modifying existing public API member signatures - extension is fine, modification is not;
 3. Renaming public classes or members; and
 4. Changing an access modifier from public to private / internal / protected on any member that is or is meant to be used.
+
+## How to Safely Introduce Public API Changes
+So if we need to expose a new member and / or deprecate an existing member inside the public API, how can this be done safely?
