@@ -560,7 +560,7 @@ namespace Helios.Concurrency
             private struct CacheLinePadding
             { }
 
-            private readonly SemaphoreSlim m_semaphore;
+            private readonly Semaphore m_semaphore;
 
             // padding to ensure we get our own cache line
 #pragma warning disable 169
@@ -571,7 +571,7 @@ namespace Helios.Concurrency
 
             public UnfairSemaphore()
             {
-                m_semaphore = new SemaphoreSlim(0, short.MaxValue);
+                m_semaphore = new Semaphore(0, short.MaxValue);
             }
 
             public bool Wait()
@@ -650,7 +650,7 @@ namespace Helios.Concurrency
                 //
                 // Now we're a waiter
                 //
-                bool waitSucceeded = m_semaphore.Wait(timeout);
+                bool waitSucceeded = m_semaphore.WaitOne(timeout);
 
                 while (true)
                 {
