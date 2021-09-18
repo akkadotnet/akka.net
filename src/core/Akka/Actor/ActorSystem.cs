@@ -133,6 +133,11 @@ namespace Akka.Actor
         /// </summary>
         public Option<ProviderSelection> ActorRefProvider { get; }
 
+
+        /// <summary>
+        /// Extensions that should be loaded on system startup.
+        /// Registered extensions have priority over the same entries from 'akka.extensions' config section.
+        /// </summary>
         public ImmutableArray<IExtensionId> Extensions { get; }
 
         /// <summary>
