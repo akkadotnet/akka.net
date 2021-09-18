@@ -108,6 +108,22 @@ namespace Akka.Remote
     /// </summary>
     internal interface IPriorityMessage { }
 
+    internal sealed class AddressEqualityComparer : EqualityComparer<Address>
+    {
+        public static readonly AddressEqualityComparer Instance =
+            new AddressEqualityComparer();
+        public override bool Equals(Address x, Address y)
+        {
+            if (x != null)
+                return x.Equals(y);
+            return (y == null);
+        }
+
+        public override int GetHashCode(Address obj)
+        {
+            return obj.GetHashCode();
+        }
+    }
     /// <summary>
     /// INTERNAL API
     /// </summary>
@@ -196,7 +212,8 @@ namespace Akka.Remote
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if(akkaProtocolTransports.Count==0)
                         throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
+                    
+                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address), AddressEqualityComparer.Instance);
 
                     IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
                         akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
@@ -208,7 +225,7 @@ namespace Akka.Remote
                     }
 
                     _defaultAddress = akkaProtocolTransports.Head().Address;
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
+                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address), AddressEqualityComparer.Instance);
 
                     _log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
 

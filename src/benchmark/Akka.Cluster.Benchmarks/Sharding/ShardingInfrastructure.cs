@@ -223,6 +223,12 @@ namespace Akka.Cluster.Benchmarks.Sharding
             var connectionString =
                 "Filename=file:memdb-journal-" + DbId.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared";
             var config = $@"
+akka.actor {{
+serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                    serialization-bindings {{
+                ""System.Object"" = hyperion
+                }}
+}}
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.state-store-mode=persistence
@@ -248,6 +254,12 @@ namespace Akka.Cluster.Benchmarks.Sharding
         public static Config CreateDDataConfig(bool rememberEntities = false)
         {
             var config = $@"
+akka.actor {{
+serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                    serialization-bindings {{
+                ""System.Object"" = hyperion
+                }}
+}}
                 akka.actor.provider = cluster
                 akka.remote.dot-netty.tcp.port = 0
                 akka.cluster.sharding.state-store-mode=ddata

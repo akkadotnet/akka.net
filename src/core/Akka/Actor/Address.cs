@@ -65,6 +65,7 @@ namespace Akka.Actor
         private readonly int? _port;
         private readonly string _system;
         private readonly string _protocol;
+        private int _hashCode;
 
         /// <summary>
         /// TBD
@@ -160,14 +161,19 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
+            if (_hashCode == 0)
             {
-                var hashCode = (Host != null ? Host.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ Port.GetHashCode();
-                hashCode = (hashCode * 397) ^ (System != null ? System.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (Protocol != null ? Protocol.GetHashCode() : 0);
-                return hashCode;
+                unchecked
+                {
+                    var hashCode = (Host != null ? Host.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ Port.GetHashCode();
+                    hashCode = (hashCode * 397) ^ (System != null ? System.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ (Protocol != null ? Protocol.GetHashCode() : 0);
+                    _hashCode = hashCode;
+                }    
             }
+
+            return _hashCode;
         }
 
         int IComparable.CompareTo(object obj)
@@ -329,23 +335,21 @@ namespace Akka.Actor
             }
 
             span = span.Slice(firstColonPos + 1);
-            if (span.Length < 2 || !(span[0] == '/' && span[1] == '/'))
+            if (span.StartsWith("//".AsSpan()) == false)
                 return false;
 
             span = span.Slice(2); // move past the double //
             var firstAtPos = span.IndexOf('@');
-            string sysName;
+            
 
             if (firstAtPos == -1)
             {
                 // dealing with an absolute local Uri
-                sysName = span.ToString();
-                address = new Address(fullScheme.ToString(), sysName);
+                address = new Address(fullScheme.ToString(), span.ToString());
                 return true;
             }
-
             // dealing with a remote Uri
-            sysName = span.Slice(0, firstAtPos).ToString();
+            string sysName = span.Slice(0, firstAtPos).ToString();
             span = span.Slice(firstAtPos + 1);
 
             /*

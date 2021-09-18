@@ -89,11 +89,7 @@ namespace Akka.Util.Internal.Collections
 
         public ListSlice(IReadOnlyList<T> array)
         {
-           
-            if (array == null)
-                throw new ArgumentNullException(nameof(array));
-
-            _array = array;
+            _array = array ?? throw new ArgumentNullException(nameof(array));
             Offset = 0;
             Count = array.Count;
         }

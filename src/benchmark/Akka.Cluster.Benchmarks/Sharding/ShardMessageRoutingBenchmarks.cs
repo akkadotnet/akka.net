@@ -21,7 +21,7 @@ namespace Akka.Cluster.Benchmarks.Sharding
     [Config(typeof(MonitoringConfig))]
     public class ShardMessageRoutingBenchmarks
     {
-        [Params(StateStoreMode.Persistence, StateStoreMode.DData)]
+        [Params(StateStoreMode.Persistence)]
         public StateStoreMode StateMode;
 
         [Params(10000)]
@@ -141,14 +141,14 @@ namespace Akka.Cluster.Benchmarks.Sharding
             _batchActor = _sys1.ActorOf(Props.Create(() => new BulkSendActor(tcs, MsgCount)));
         }
 
-        [Benchmark]
+        //[Benchmark]
         public async Task SingleRequestResponseToLocalEntity()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _shardRegion1.Ask<ShardedMessage>(_messageToSys1);
         }
 
-        [Benchmark]
+        //[Benchmark]
         public async Task StreamingToLocalEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys1, _shardRegion1, BatchSize));
@@ -163,14 +163,14 @@ namespace Akka.Cluster.Benchmarks.Sharding
         }
 
 
-        [Benchmark]
+        //[Benchmark]
         public async Task SingleRequestResponseToRemoteEntityWithLocalProxy()
         {
             for (var i = 0; i < MsgCount; i++)
                 await _localRouter.Ask<ShardedMessage>(new SendShardedMessage(_messageToSys2.EntityId, _messageToSys2));
         }
 
-        [Benchmark]
+        //[Benchmark]
         public async Task StreamingToRemoteEntity()
         {
             _batchActor.Tell(new BulkSendActor.BeginSend(_messageToSys2, _shardRegion1, BatchSize));

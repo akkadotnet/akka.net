@@ -946,20 +946,24 @@ namespace Akka.Cluster.Sharding
         internal static IActorRef GetOrCreateEntity<TShard>(this TShard shard, string id, Action<IActorRef> onCreate = null) where TShard : IShard
         {
             var name = Uri.EscapeDataString(id);
-            var child = shard.Context.Child(name).GetOrElse(() =>
-            {
-                shard.Log.Debug("Starting entity [{0}] in shard [{1}]", id, shard.ShardId);
+            var child = shard.Context.Child(name);
+            if (!child.IsNobody()) return child;
+            return CreateEntity(shard, id, onCreate, name);
+        }
 
-                var a = shard.Context.Watch(shard.Context.ActorOf(shard.EntityProps(id), name));
-                shard.IdByRef = shard.IdByRef.SetItem(a, id);
-                shard.RefById = shard.RefById.SetItem(id, a);
-                shard.TouchLastMessageTimestamp(id);
-                shard.State = new Shard.ShardState(shard.State.Entries.Add(id));
-                onCreate?.Invoke(a);
-                return a;
-            });
+        private static IActorRef CreateEntity<TShard>(TShard shard, string id,
+            Action<IActorRef> onCreate, string name) where TShard : IShard
+        {
+            shard.Log.Debug("Starting entity [{0}] in shard [{1}]", id, shard.ShardId);
 
-            return child;
+            var a = shard.Context.Watch(
+                shard.Context.ActorOf(shard.EntityProps(id), name));
+            shard.IdByRef = shard.IdByRef.SetItem(a, id);
+            shard.RefById = shard.RefById.SetItem(id, a);
+            shard.TouchLastMessageTimestamp(id);
+            shard.State = new Shard.ShardState(shard.State.Entries.Add(id));
+            onCreate?.Invoke(a);
+            return a;
         }
 
         internal static int TotalBufferSize<TShard>(this TShard shard) where TShard : IShard =>

@@ -532,9 +532,8 @@ namespace Akka.Actor
                 absoluteUri = path;
                 return false;
             }
-
-            var doubleSlash = path.Slice(firstAtPos + 1);
-            if (doubleSlash.Length < 2 || !(doubleSlash[0] == '/' && doubleSlash[1] == '/'))
+            
+            if (path.Slice(firstAtPos + 1).StartsWith("//".AsSpan()) == false)
             {
                 //missing double slash
                 address = default;

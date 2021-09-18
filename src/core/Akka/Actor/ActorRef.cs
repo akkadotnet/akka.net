@@ -509,9 +509,16 @@ namespace Akka.Actor
         /// <inheritdoc cref="InternalActorRefBase"/>
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
-            if (name.All(x => string.IsNullOrEmpty(x)))
-                return this;
-            return ActorRefs.Nobody;
+            foreach (var s in name)
+            {
+                if (string.IsNullOrEmpty(s) == false)
+                    return ActorRefs.Nobody;
+            }
+
+            return this;
+            //if (name.All(x => string.IsNullOrEmpty(x)))
+            //    return this;
+            //return ActorRefs.Nobody;
         }
 
         /// <inheritdoc cref="InternalActorRefBase"/>
