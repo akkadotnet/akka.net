@@ -65,7 +65,8 @@ namespace Akka.Remote.Serialization
 
         protected override bool IsCacheable(IActorRef v)
         {
-            return !(v is EmptyLocalActorRef);
+            // don't cache any FutureActorRefs, et al
+            return !(v is MinimalActorRef && !(v is FunctionRef));
         }
     }
 }
