@@ -300,14 +300,57 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Parses a new <see cref="Address"/> from a given string
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="path">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(string path, out Address address)
+        {
+            return TryParse(path.AsSpan(), out address);
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="path">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <param name="absolutUri">If <c>true</c>, the absolut uri of the path. Otherwise default.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(string path, out Address address, out string absolutUri)
+        {
+            if (TryParse(path.AsSpan(), out address, out var uri))
+            {
+                absolutUri = uri.ToString();
+                return true;
+            }
+
+            absolutUri = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
         /// </summary>
         /// <param name="span">The span of address to parse</param>
         /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
         /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
         public static bool TryParse(ReadOnlySpan<char> span, out Address address)
         {
+            return TryParse(span, out address, out _);
+        }
+
+        /// <summary>
+        /// Parses a new <see cref="Address"/> from a given path
+        /// </summary>
+        /// <param name="span">The span of address to parse</param>
+        /// <param name="address">If <c>true</c>, the parsed <see cref="Address"/>. Otherwise <c>null</c>.</param>
+        /// <param name="absolutUri">If <c>true</c>, the absolut uri of the path. Otherwise default.</param>
+        /// <returns><c>true</c> if the <see cref="Address"/> could be parsed, <c>false</c> otherwise.</returns>
+        public static bool TryParse(ReadOnlySpan<char> span, out Address address, out ReadOnlySpan<char> absolutUri)
+        {
             address = default;
+            absolutUri = default;
 
             var firstColonPos = span.IndexOf(':');
 
@@ -333,6 +376,19 @@ namespace Akka.Actor
                 return false;
 
             span = span.Slice(2); // move past the double //
+
+            // cut the absolute Uri off
+            var uriStart = span.IndexOf('/');
+            if (uriStart > -1)
+            {
+                absolutUri = span.Slice(uriStart);
+                span = span.Slice(0, uriStart);
+            } 
+            else
+            {
+                absolutUri = "/".AsSpan();
+            }               
+
             var firstAtPos = span.IndexOf('@');
             string sysName;
 
@@ -382,6 +438,8 @@ namespace Akka.Actor
                 // move past the host
                 span = span.Slice(secondColonPos + 1);
             }
+
+            
 
             if (SpanHacks.TryParse(span, out var port) && port >= 0)
             {
