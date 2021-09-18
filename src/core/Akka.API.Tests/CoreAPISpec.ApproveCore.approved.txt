@@ -415,7 +415,10 @@ namespace Akka.Actor
         public static Akka.Actor.Address Parse(string address) { }
         public override string ToString() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public static bool TryParse(string path, out Akka.Actor.Address address) { }
+        public static bool TryParse(string path, out Akka.Actor.Address address, out string absolutUri) { }
         public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address, out System.ReadOnlySpan<char> absolutUri) { }
         public Akka.Actor.Address WithHost(string host = null) { }
         public Akka.Actor.Address WithPort(System.Nullable<int> port = null) { }
         public Akka.Actor.Address WithProtocol(string protocol) { }
