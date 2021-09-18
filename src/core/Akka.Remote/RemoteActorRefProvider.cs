@@ -436,7 +436,7 @@ namespace Akka.Remote
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAddress(Address address)
         {
-            return address.Equals(RootPath.Address) || Transport.Addresses.Contains(address);
+            return RootPath.Address.Equals(address) || Transport.Addresses.Contains(address);
         }
 
         /// <summary>
@@ -485,7 +485,7 @@ namespace Akka.Remote
                 ActorPath.TryParse(path, out actorPath);
             }
 
-            if (!HasAddress(actorPath.Address))
+            if (!HasAddress(actorPath?.Address))
                 return CreateRemoteRef(actorPath, localAddress);
 
             //the actor's local address was already included in the ActorPath
