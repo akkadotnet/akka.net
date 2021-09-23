@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using System.Threading;
 using System.Collections.Generic;
-using BitFaster.Caching.Lru;
+using Akka.Remote.Serialization.BitFasterBased;
 
 namespace Akka.Remote.Serialization
 {
@@ -72,22 +72,22 @@ namespace Akka.Remote.Serialization
 
         public void Set(string actorPath, ActorPath actorPathObj)
         {
-            _cache.AddOrUpdate(actorPath,actorPathObj);
+            _cache.TryAdd(actorPath,actorPathObj);
         }
         
     }
 
     internal sealed class ActorPathBitfasterCache
     {
-        public FastConcurrentLru<string, ActorPath> _cache =
+        public readonly FastConcurrentLru<string, ActorPath> _cache =
             new FastConcurrentLru<string, ActorPath>(Environment.ProcessorCount,
                 1030, FastHashComparer.Default);
-        public FastConcurrentLru<string, ActorPath> _rootCache =
+        public readonly FastConcurrentLru<string, ActorPath> _rootCache =
             new FastConcurrentLru<string, ActorPath>(Environment.ProcessorCount,
-                1030, FastHashComparer.Default);
-        public ActorPath GetOrCompute(string k)
+                540, FastHashComparer.Default);
+        public ActorPath GetOrCompute(string k, bool mayBeTempActor)
         {
-            if (k.Contains("/temp/"))
+            if (mayBeTempActor)
             {
                 return ParsePath(k);
             }
@@ -99,7 +99,7 @@ namespace Akka.Remote.Serialization
             outPath = ParsePath(k);
             if (outPath != null)
             {
-                _cache.AddOrUpdate(k,outPath);
+                _cache.TryAdd(k,outPath);
             }
 
             return outPath;
@@ -138,7 +138,7 @@ namespace Akka.Remote.Serialization
                     return null;
 
                 actorPath = new RootActorPath(address);
-                _rootCache.AddOrUpdate(rootPath, actorPath);
+                _rootCache.TryAdd(rootPath, actorPath);
             }
 
             if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))

@@ -478,25 +478,17 @@ namespace Akka.Remote
                 return InternalDeadLetters;
             }
 
+            bool mayBeTempActor = path.Contains("/temp/");
             ActorPath actorPath = null;
             if (_actorPathThreadLocalCache != null && _actorPathAskResolverCache != null)
             {
                 if (senderOption.HasValue && senderOption.Value == true)
                 {
-                    actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path);    
+                    actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path, mayBeTempActor);    
                 }
                 else
                 {
-                    if (path.Contains("/temp/") == true)
-                    {
-                        actorPath =
-                            _actorPathAskResolverCache.Cache.GetOrNull(path);    
-                    }
-                    if (actorPath == null)
-                    {
-                        actorPath =
-                            _actorPathThreadLocalCache.Cache.GetOrCompute(path);
-                    }
+                    actorPath = ExtractRecipientActorPath(path, mayBeTempActor);
                 }
             }
             else // cache not initialized yet
@@ -512,7 +504,25 @@ namespace Akka.Remote
             if (actorPath is RootActorPath)
                 return RootGuardian;
 
-            return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
+            return (IInternalActorRef)ResolveActorRefOpt(path, mayBeTempActor); // so we can use caching
+        }
+
+        private ActorPath ExtractRecipientActorPath(string path, bool mayBeTempActor)
+        {
+            ActorPath actorPath = null;
+            if (mayBeTempActor)
+            {
+                actorPath =
+                    _actorPathAskResolverCache.Cache.GetOrNull(path);
+            }
+
+            if (actorPath == null)
+            {
+                actorPath =
+                    _actorPathThreadLocalCache.Cache.GetOrCompute(path, mayBeTempActor);
+            }
+
+            return actorPath;
         }
 
 
@@ -548,6 +558,11 @@ namespace Akka.Remote
         /// <returns>A local <see cref="IActorRef"/> if it exists, <see cref="ActorRefs.Nobody"/> otherwise.</returns>
         public IActorRef ResolveActorRef(string path)
         {
+            return ResolveActorRefOpt(path, true);
+        }
+
+        private IActorRef ResolveActorRefOpt(string path, bool checkAsk)
+        {
             if (IgnoreActorRef.IsIgnoreRefPath(path))
                 return IgnoreRef;
 
@@ -559,8 +574,12 @@ namespace Akka.Remote
                 return InternalResolveActorRef(path); 
             }
 
-            var ask = _actorRefResolveAskCache.Cache.GetOrNull(path);
-            return ask??_actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
+            IActorRef actorRef = null;
+            if (checkAsk)
+            {
+                actorRef = _actorRefResolveAskCache.Cache.GetOrNull(path);    
+            }
+            return actorRef??_actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
         }
 
         /// <summary>

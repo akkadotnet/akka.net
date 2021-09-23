@@ -9,8 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor;
+using Akka.Remote.Serialization.BitFasterBased;
 using Akka.Util.Internal;
-using BitFaster.Caching.Lru;
 
 namespace Akka.Remote.Serialization
 {
@@ -95,7 +95,7 @@ namespace Akka.Remote.Serialization
 
         public void Set(string actorPath, IActorRef actorRef)
         {
-            _cache.AddOrUpdate(actorPath,actorRef);
+            _cache.TryAdd(actorPath,actorRef);
         }
         
     }
@@ -121,7 +121,7 @@ namespace Akka.Remote.Serialization
             outRef= _provider.InternalResolveActorRef(k);
             if (!(outRef is MinimalActorRef && !(outRef is FunctionRef)))
             {
-                _cache.AddOrUpdate(k, outRef);
+                _cache.TryAdd(k, outRef);
             }
 
             return outRef;

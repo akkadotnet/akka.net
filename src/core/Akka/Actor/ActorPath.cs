@@ -525,7 +525,8 @@ namespace Akka.Actor
         public static bool TryParseParts(ReadOnlySpan<char> path, out ReadOnlySpan<char> address, out ReadOnlySpan<char> absoluteUri)
         {
             var firstAtPos = path.IndexOf(':');
-            if (firstAtPos < 4 || 255 < firstAtPos)
+            if (firstAtPos < 4 || 255 < firstAtPos 
+                               || path.Length<firstAtPos+3 || path[firstAtPos+1] !='/' || path[firstAtPos+2] != '/')
             {
                 //missing or invalid scheme
                 address = default;
@@ -533,13 +534,13 @@ namespace Akka.Actor
                 return false;
             }
             
-            if (path.Slice(firstAtPos + 1).StartsWith("//".AsSpan()) == false)
-            {
-                //missing double slash
-                address = default;
-                absoluteUri = path;
-                return false;
-            }
+            //if (path.Slice(firstAtPos + 1).StartsWith("//".AsSpan()) == false)
+            //{
+            //    //missing double slash
+            //    address = default;
+            //    absoluteUri = path;
+            //    return false;
+            //}
 
             var nextSlash = path.Slice(firstAtPos + 3).IndexOf('/');
             if (nextSlash == -1)

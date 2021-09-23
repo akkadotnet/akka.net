@@ -90,13 +90,13 @@ namespace Akka.Benchmarks.Remoting
         [Benchmark]
         public void ActorPathCacheHitBenchmark()
         {
-            _pathCache.Cache.GetOrCompute(_cacheHitPath);
+            _pathCache.Cache.GetOrCompute(_cacheHitPath, false);
         }
         
         [Benchmark]
         public void ActorPathCacheMissBenchmark()
         {
-            _pathCache.Cache.GetOrCompute(_cacheMissPath);
+            _pathCache.Cache.GetOrCompute(_cacheMissPath, false);
         }
         
         [GlobalCleanup]
