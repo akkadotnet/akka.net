@@ -72,7 +72,7 @@ namespace Akka.Remote
         /// <param name="path">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress);
+        IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress, bool? senderOption);
 
         /// <summary>
         /// INTERNAL API: this is used by the <see cref="ActorRefResolveCache"/> via the public
@@ -239,7 +239,9 @@ namespace Akka.Remote
         private IActorRef _remoteWatcher;
 
         private ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
+        private ActorRefResolveAskCache _actorRefResolveAskCache;
         private ActorPathThreadLocalCache _actorPathThreadLocalCache;
+        private ActorPathAskResolverCache _actorPathAskResolverCache;
 
         /// <summary>
         /// The remote death watcher.
@@ -254,7 +256,8 @@ namespace Akka.Remote
 
             _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
             _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
-
+         _actorRefResolveAskCache = ActorRefResolveAskCache.For(system);
+         _actorPathAskResolverCache = ActorPathAskResolverCache.For(system);
             _local.Init(system);
 
             _remotingTerminator =
@@ -467,7 +470,7 @@ namespace Akka.Remote
         /// <param name="path">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
+        public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress, bool? senderOption = null)
         {
             if (path is null)
             {
@@ -475,10 +478,26 @@ namespace Akka.Remote
                 return InternalDeadLetters;
             }
 
-            ActorPath actorPath;
-            if (_actorPathThreadLocalCache != null)
+            ActorPath actorPath = null;
+            if (_actorPathThreadLocalCache != null && _actorPathAskResolverCache != null)
             {
-                actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path);
+                if (senderOption.HasValue && senderOption.Value == true)
+                {
+                    actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path);    
+                }
+                else
+                {
+                    if (path.Contains("/temp/") == true)
+                    {
+                        actorPath =
+                            _actorPathAskResolverCache.Cache.GetOrNull(path);    
+                    }
+                    if (actorPath == null)
+                    {
+                        actorPath =
+                            _actorPathThreadLocalCache.Cache.GetOrCompute(path);
+                    }
+                }
             }
             else // cache not initialized yet
             {
@@ -534,12 +553,14 @@ namespace Akka.Remote
 
             // using thread local LRU cache, which will call InternalResolveActorRef
             // if the value is not cached
-            if (_actorRefResolveThreadLocalCache == null)
+            if (_actorRefResolveThreadLocalCache == null || _actorRefResolveAskCache == null)
             {
                 // cache not initialized yet, should never happen
                 return InternalResolveActorRef(path); 
             }
-            return _actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
+
+            var ask = _actorRefResolveAskCache.Cache.GetOrNull(path);
+            return ask??_actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
         }
 
         /// <summary>

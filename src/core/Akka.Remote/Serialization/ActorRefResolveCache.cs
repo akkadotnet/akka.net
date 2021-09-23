@@ -5,10 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Akka.Actor;
 using Akka.Util.Internal;
+using BitFaster.Caching.Lru;
 
 namespace Akka.Remote.Serialization
 {
@@ -24,7 +26,8 @@ namespace Akka.Remote.Serialization
         public ActorRefResolveThreadLocalCache(IRemoteActorRefProvider provider)
         {
             _provider = provider;
-            _current = new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider));
+            //_current =  new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider));
+            _current = new ActorRefResolveBitfasterCache(_provider);
         }
 
         public override ActorRefResolveThreadLocalCache CreateExtension(ExtendedActorSystem system)
@@ -32,13 +35,96 @@ namespace Akka.Remote.Serialization
             return new ActorRefResolveThreadLocalCache((IRemoteActorRefProvider)system.Provider);
         }
 
-        private readonly ThreadLocal<ActorRefResolveCache> _current;
+        //private readonly ThreadLocal<ActorRefResolveCache> _current;
+        private readonly ActorRefResolveBitfasterCache _current;
 
-        public ActorRefResolveCache Cache => _current.Value;
+        //public ActorRefResolveCache Cache => _current.Value;
+        public ActorRefResolveBitfasterCache Cache => _current;
 
         public static ActorRefResolveThreadLocalCache For(ActorSystem system)
         {
             return system.WithExtension<ActorRefResolveThreadLocalCache, ActorRefResolveThreadLocalCache>();
+        }
+    }
+    
+    /// <summary>
+    /// INTERNAL API
+    /// </summary>
+    internal sealed class ActorRefResolveAskCache : ExtensionIdProvider<ActorRefResolveAskCache>, IExtension
+    {
+        private readonly IRemoteActorRefProvider _provider;
+        
+        public ActorRefResolveAskCache()
+        {
+            //_current =  new ThreadLocal<ActorRefResolveCache>(() => new ActorRefResolveCache(_provider));
+            _current = new ActorRefAskResolverCache();
+        }
+
+        public override ActorRefResolveAskCache CreateExtension(ExtendedActorSystem system)
+        {
+            return new ActorRefResolveAskCache();
+        }
+
+        //private readonly ThreadLocal<ActorRefResolveCache> _current;
+        private readonly ActorRefAskResolverCache _current;
+
+        //public ActorRefResolveCache Cache => _current.Value;
+        public ActorRefAskResolverCache Cache => _current;
+
+        public static ActorRefResolveAskCache For(ActorSystem system)
+        {
+            return system.WithExtension<ActorRefResolveAskCache, ActorRefResolveAskCache>();
+        }
+    }
+
+    public class ActorRefAskResolverCache
+    {
+        private readonly FastConcurrentLru<string, IActorRef> _cache =
+            new FastConcurrentLru<string, IActorRef>(Environment.ProcessorCount,
+                1030, FastHashComparer.Default);
+
+        public IActorRef GetOrNull(string actorPath)
+        {
+            if (_cache.TryGet(actorPath, out IActorRef askRef))
+            {
+                return askRef;
+            }
+
+            return null;
+        }
+
+        public void Set(string actorPath, IActorRef actorRef)
+        {
+            _cache.AddOrUpdate(actorPath,actorRef);
+        }
+        
+    }
+
+    public class ActorRefResolveBitfasterCache
+    {
+        private readonly IRemoteActorRefProvider _provider;
+
+        private readonly FastConcurrentLru<string, IActorRef> _cache =
+            new FastConcurrentLru<string, IActorRef>(Environment.ProcessorCount,
+                1030, FastHashComparer.Default);
+        public ActorRefResolveBitfasterCache(IRemoteActorRefProvider provider)
+        {
+            _provider = provider;
+        }
+
+        public IActorRef GetOrCompute(string k)
+        {
+            if (_cache.TryGet(k, out IActorRef outRef))
+            {
+                return outRef;
+            }
+            outRef= _provider.InternalResolveActorRef(k);
+            if (!(outRef is MinimalActorRef && !(outRef is FunctionRef)))
+            {
+                _cache.AddOrUpdate(k, outRef);
+            }
+
+            return outRef;
         }
     }
 

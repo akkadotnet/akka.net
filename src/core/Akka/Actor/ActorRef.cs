@@ -64,12 +64,17 @@ namespace Akka.Actor
         bool IsStarted { get; }
     }
 
+    public abstract class FutureActorRef : MinimalActorRef
+    {
+        
+    }
+
     /// <summary>
     /// INTERNAL API.
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
-    public sealed class FutureActorRef<T> : MinimalActorRef
+    public sealed class FutureActorRef<T> : FutureActorRef
     {
         private readonly TaskCompletionSource<T> _result;
         private readonly ActorPath _path;
