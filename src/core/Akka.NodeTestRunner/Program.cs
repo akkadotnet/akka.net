@@ -36,6 +36,8 @@ namespace Akka.NodeTestRunner
 
         static int Main(string[] args)
         {
+            CommandLine.Initialize(args);
+            
             var nodeIndex = CommandLine.GetInt32("multinode.index");
             var nodeRole = CommandLine.GetProperty("multinode.role");
             var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");

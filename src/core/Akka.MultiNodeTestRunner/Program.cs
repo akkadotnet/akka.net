@@ -135,8 +135,8 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         static void Main(string[] args)
         {
-            // Force load the args
-            CommandLine.GetPropertyOrDefault("force load", null);
+            CommandLine.Initialize(args);
+            
             if (CommandLine.ShowHelp)
             {
                 PrintHelp();

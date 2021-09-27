@@ -26,17 +26,14 @@ namespace Akka.Remote.TestKit
     ///     var testName = CommandLine.GetProperty("multinode.test-method");
     /// </code>
     /// </summary>
-    public class CommandLine
+    public static class CommandLine
     {
-        private static readonly StringDictionary Values;
+        private static readonly StringDictionary Values = new StringDictionary();
 
-        static CommandLine()
+        public static void Initialize(string[] args)
         {
-            Values = new StringDictionary();
-
             // Detect and fix PowerShell command line input.
             // PowerShell splits command line arguments on '.'
-            var args = Environment.GetCommandLineArgs();
             var fixedArgs = new List<string>();
             for (var i = 1; i < args.Length - 1; ++i)
             {
@@ -71,7 +68,7 @@ namespace Akka.Remote.TestKit
 
                 if (tokens.Length == 2)
                 {
-                    Values.Add(tokens[0], tokens[1]);
+                    Values.Add(tokens[0], tokens[1].Trim().Trim('"'));
                 }
                 else
                 {
