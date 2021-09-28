@@ -61,3 +61,5 @@ The following types of API changes will generally not be approved:
 
 ## How to Safely Introduce Public API Changes
 So if we need to expose a new member and / or deprecate an existing member inside the public API, how can this be done safely?
+
+At the center of it all is extend-only design
