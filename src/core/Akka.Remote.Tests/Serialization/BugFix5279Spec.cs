@@ -23,7 +23,7 @@ namespace Akka.Remote.Tests.Serialization
         [InlineData("1", "S")]
         public void PrimitiveSerializer_without_useNeutralPrimitives_should_return_custom_manifest(object data, string manifest)
         {
-            var config = ConfigurationFactory.ParseString("use-neutral-primitives = off");
+            var config = ConfigurationFactory.ParseString("use-legacy-behavior = off");
             var serializer = new PrimitiveSerializers((ExtendedActorSystem)Sys, config);
             serializer.Manifest(data).Should().Be(manifest);
         }
@@ -34,7 +34,7 @@ namespace Akka.Remote.Tests.Serialization
         [InlineData("1")]
         public void PrimitiveSerializer_without_useNeutralPrimitives_should_return_type_manifest(object data)
         {
-            var config = ConfigurationFactory.ParseString("use-neutral-primitives = on");
+            var config = ConfigurationFactory.ParseString("use-legacy-behavior = on");
             var serializer = new PrimitiveSerializers((ExtendedActorSystem)Sys, config);
             serializer.Manifest(data).Should().Be(data.GetType().TypeQualifiedName());
         }
