@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
@@ -62,6 +63,7 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
 
         private static Dictionary<string, List<NodeTest>> DiscoverSpecs()
         {
+            Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, "1");
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(typeof(DiscoveryCases).GetTypeInfo().Assembly.CodeBase).LocalPath))	
             {
                 using (var discovery = new Discovery())
