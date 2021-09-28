@@ -9,9 +9,9 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 ## Upgrading to Akka.NET v1.4.20 from Older Versions
 
 > [!NOTE]
-> This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `string`, `double`) directly over Akka.Remote or Akka.Persistence.
+> This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `long`, `string`) directly over Akka.Remote or Akka.Persistence.
 
-Between Akka.NET v1.4.19 and [v1.4.20](https://github.com/akkadotnet/akka.net/releases/tag/1.4.20) we introduced a regression in the wire format of the "primitive" serializer in Akka.NET v1.4.20 - the serializer responsible for transmitting `int`, `long`, `string`, `double`, and `float` as stand-alone messages in Akka.Remote and Akka.Persistence.
+Between Akka.NET v1.4.19 and [v1.4.20](https://github.com/akkadotnet/akka.net/releases/tag/1.4.20) we introduced a regression in the wire format of the "primitive" serializer in Akka.NET v1.4.20 - the serializer responsible for transmitting `int`, `long`, and `string` as stand-alone messages in Akka.Remote and Akka.Persistence.
 
 The error message would look like this in clusters that are running a combination of v1.4.20 and any previous versions of Akka.NET:
 
@@ -31,7 +31,7 @@ To work around this issue, if you're affected by it (most users are not:)
 ## Upgrading to Akka.NET v1.4.26 from Older Versions
 
 > [!NOTE]
-> This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `string`, `double`) directly over Akka.Remote or Akka.Persistence.
+> This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `long`, `string`) directly over Akka.Remote or Akka.Persistence.
 
 In Akka.NET v1.4.26 we have introduced a new setting:
 
