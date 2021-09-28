@@ -36,10 +36,10 @@ To work around this issue, if you're affected by it (most users are not:)
 In Akka.NET v1.4.26 we have introduced a new setting:
 
 ```
-akka.actor.serialization-settings.primitive.use-neutral-primitives = off
+akka.actor.serialization-settings.primitive.use-legacy-behavior = on
 ```
 
-This setting is set of `off` by default and it resolves the backwards compatibility issue introduced in the "primitives" serializer described in our [v1.4.20 upgrade advisory](#upgrading-to-akkanet-v1420-from-older-versions).
+This setting is set of `on` by default and it resolves the backwards compatibility issue introduced in the "primitives" serializer described in our [v1.4.20 upgrade advisory](#upgrading-to-akkanet-v1420-from-older-versions).
 
 > [!IMPORTANT]
 > If you have: 
@@ -51,17 +51,17 @@ This setting is set of `off` by default and it resolves the backwards compatibil
 If you are running a mixed .NET Core and .NET Framework cluster, see the process below.
 
 ### Deploying v1.4.26 into Mixed .NET Core and .NET Framework Environments
-*However*, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `on` in order to faciliate smooth operation between both platforms.
+*However*, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `off` in order to faciliate smooth operation between both platforms.
 
 #### Already Deployed v1.4.20 or Later
 If you've already deployed v1.4.20 and you have not had any issues with the primitives serializer, do the following:
 
-1. Before you upgrade to v1.4.26 or later, set `akka.actor.serialization-settings.primitive.use-neutral-primitives = on`;
+1. Before you upgrade to v1.4.26 or later set `akka.actor.serialization-settings.primitive.use-legacy-behavior = off` - so any future serialization of primitives will be handled correctly in a cross-platform way;
 2. Run your normal deployment process.
 
 #### Have Not Deployed v1.4.20 or Later
 If you have not previously deployed to v1.4.20 or later, then do the following:
 
-1. Deploy once with `akka.actor.serialization-settings.primitive.use-neutral-primitives = off` (the default);
-2. Once all nodes are completely upgraded to v1.4.26 and later, prepare a second deployment with `akka.actor.serialization-settings.primitive.use-neutral-primitives = on`;
+1. Deploy once with `akka.actor.serialization-settings.primitive.use-legacy-behavior = on` (the default);
+2. Once all nodes are completely upgraded to v1.4.26 and later, prepare a second deployment with `akka.actor.serialization-settings.primitive.use-legacy-behavior = off`;
 3. Complete the second deployment - you will be fine with all rolling upgrades moving forward.
