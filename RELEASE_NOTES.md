@@ -1,5 +1,18 @@
-#### 1.4.26 September 08 2021 ####
-**Placeholder for nightlies**
+#### 1.4.26 September 28 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+Akka.NET v1.4.26 is a very small release that addresses one wire format regression introduced in Akka.NET v1.4.20.
+
+**Bug Fixes and Improvements**
+* [Akka.Remote / Akka.Persistence: PrimitiveSerializers manifest backwards compatibility problem](https://github.com/akkadotnet/akka.net/issues/5279) - this could cause regressions when upgrading to Akka.NET v1.4.20 and later. We have resolved this issue in Akka.NET v1.4.26. [Please see our Akka.NET v1.4.26 upgrade advisory for details](https://getakka.net/community/whats-new/akkadotnet-v1.4-upgrade-advisories.html#upgrading-to-akkanet-v1426-from-older-versions).
+* [Akka.DistributedData.LightningDb: Revert #5180, switching back to original LightningDB packages](https://github.com/akkadotnet/akka.net/pull/5286)
+
+You can [see the full set of changes introduced in Akka.NET v1.4.26 here](https://github.com/akkadotnet/akka.net/milestone/57?closed=1)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 4 | 99 | 96 | Gregorius Soedharmo |
+| 3 | 79 | 5 | Aaron Stannard |
+| 1 | 1 | 1 | dependabot[bot] |
 
 #### 1.4.25 September 08 2021 ####
 **Maintenance Release for Akka.NET 1.4**
