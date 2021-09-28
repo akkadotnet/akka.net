@@ -242,6 +242,7 @@ namespace Akka.MultiNodeTestRunner
             }
 #endif
 
+            Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, "1");
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyPath))
             {
                 using (var discovery = new Discovery())

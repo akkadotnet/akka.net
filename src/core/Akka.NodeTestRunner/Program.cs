@@ -66,6 +66,7 @@ namespace Akka.NodeTestRunner
 #endif
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
+            Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, "1");
             using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))
             {
                 /* need to pass in just the assembly name to Discovery, not the full path

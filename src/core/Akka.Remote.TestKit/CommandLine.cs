@@ -30,6 +30,11 @@ namespace Akka.Remote.TestKit
     {
         private static readonly StringDictionary Values = new StringDictionary();
 
+        static CommandLine()
+        {
+            Initialize(Environment.GetCommandLineArgs());
+        }
+
         public static void Initialize(string[] args)
         {
             // Detect and fix PowerShell command line input.
@@ -68,7 +73,7 @@ namespace Akka.Remote.TestKit
 
                 if (tokens.Length == 2)
                 {
-                    Values.Add(tokens[0], tokens[1].Trim().Trim('"'));
+                    Values[tokens[0]] = tokens[1].Trim().Trim('"');
                 }
                 else
                 {
