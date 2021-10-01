@@ -19,6 +19,23 @@ namespace Akka.Tests.Actor
             var address = new Address("akka", "test", "HOSTNAME");
             address.Host.ShouldBe("hostname");
         }
+
+        [Theory]
+        [InlineData("akka://sys@host:1234/abc/def/", true, "akka://sys@host:1234", "/abc/def/")]
+        [InlineData("akka://sys/abc/def/", true, "akka://sys", "/abc/def/")]
+        [InlineData("akka://host:1234/abc/def/", true, "akka://host:1234", "/abc/def/")]
+        [InlineData("akka://sys@host:1234", true, "akka://sys@host:1234", "/")]
+        [InlineData("akka://sys@host:1234/", true, "akka://sys@host:1234", "/")]
+        [InlineData("akka://sys@host/abc/def/", false, "", "")]
+        public void Supports_parse_full_actor_path(string path, bool valid, string expectedAddress, string expectedUri)
+        {
+            Address.TryParse(path, out var address, out var absolutUri).ShouldBe(valid);
+            if(valid)
+            {
+                address.ToString().ShouldBe(expectedAddress);
+                absolutUri.ToString().ShouldBe(expectedUri);
+            }                        
+        }
     }
 }
 
