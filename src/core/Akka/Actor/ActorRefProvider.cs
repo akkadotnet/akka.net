@@ -92,6 +92,18 @@ namespace Akka.Actor
         void UnregisterTempActor(ActorPath path);
 
         /// <summary>
+        /// Automatically generates a <see cref="FutureActorRef{T}"/> with a temporary path.
+        /// </summary>
+        /// <remarks>
+        /// Does not call <see cref="RegisterTempActor"/> or <see cref="UnregisterTempActor"/>.
+        /// </remarks>
+        /// <param name="tcs">A typed <see cref="TaskCompletionSource{T}"/></param>
+        /// <typeparam name="T">The type of output this <see cref="FutureActorRef{T}"/> expects.</typeparam>
+        /// <returns>A new, single-use <see cref="FutureActorRef{T}"/> instance.</returns>
+        [InternalApi]
+        FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs);
+
+        /// <summary>
         /// Actor factory with create-only semantics: will create an actor as
         /// described by <paramref name="props"/> with the given <paramref name="supervisor"/> and <paramref name="path"/> (may be different
         /// in case of remote supervision). If <paramref name="systemService"/> is true, deployment is
@@ -384,6 +396,16 @@ namespace Akka.Actor
             if (path.Parent != _tempNode)
                 throw new InvalidOperationException("Cannot UnregisterTempActor() with anything not obtained from tempPath()");
             _tempContainer.RemoveChild(path.Name);
+        }
+
+        /// <inheritdoc cref="IActorRefProvider.CreateFutureRef{T}"/>
+        public FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs)
+        {
+            //create a new tempcontainer path
+            var path = TempPath();
+
+            var future = new FutureActorRef<T>(tcs, path, this);
+            return future;
         }
 
         /// <summary>

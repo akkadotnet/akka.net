@@ -968,6 +968,8 @@ namespace Akka.Actor
         Akka.Actor.IInternalActorRef TempContainer { get; }
         System.Threading.Tasks.Task TerminationTask { get; }
         Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async);
+        [Akka.Annotations.InternalApiAttribute()]
+        Akka.Actor.FutureActorRef<T> CreateFutureRef<T>(System.Threading.Tasks.TaskCompletionSource<T> tcs);
         Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address);
         void Init(Akka.Actor.Internal.ActorSystemImpl system);
         void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path);
@@ -1279,6 +1281,7 @@ namespace Akka.Actor
         public Akka.Actor.IInternalActorRef TempContainer { get; }
         public System.Threading.Tasks.Task TerminationTask { get; }
         public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
+        public Akka.Actor.FutureActorRef<T> CreateFutureRef<T>(System.Threading.Tasks.TaskCompletionSource<T> tcs) { }
         public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }
         public void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
         public void RegisterExtraName(string name, Akka.Actor.IInternalActorRef actor) { }

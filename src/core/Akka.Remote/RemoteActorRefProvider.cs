@@ -235,6 +235,12 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
+        /// <inheritdoc/>
+        public FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs)
+        {
+            return _local.CreateFutureRef(tcs);
+        }
+
         private IActorRef _remotingTerminator;        
         private IActorRef _remoteWatcher;
 
