@@ -148,10 +148,8 @@ namespace Akka.Actor
                 ctr2 = cancellationToken.Register(() => result.TrySetCanceled());
             }
 
-            //create a new tempcontainer path
-            var path = provider.TempPath();
-
-            var future = new FutureActorRef<T>(result, path, provider);
+            var future = provider.CreateFutureRef(result);
+            var path = future.Path;
 
             //The future actor needs to be unregistered in the temp container
             _ = result.Task.ContinueWith(t =>
