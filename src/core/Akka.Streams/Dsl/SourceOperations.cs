@@ -404,6 +404,36 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Terminate processing (and cancel the upstream publisher) after returning the element that causes <paramref name="predicate"/> to returns true. 
+        /// As soon as an element evaluates true, no element will be requested from upstream publishers.
+        /// 
+        /// The stream will be completed without producing any elements if <paramref name="predicate"/> is true for
+        /// the first stream element.
+        /// <para>
+        /// Emits when the <paramref name="predicate"/> is false
+        /// </para>
+        /// <para>
+        /// Backpressures when downstream backpressures
+        /// </para>
+        /// <para>
+        /// Completes when <paramref name="predicate"/> returned true or upstream completes
+        /// </para>
+        /// <para>
+        /// Cancels when downstream cancels
+        /// </para>
+        /// <seealso cref="Limit{T, TMat}(Source{T, TMat}, long)"/> <seealso cref="LimitWeighted{T, TMat}(Source{T, TMat}, long, Func{T, long})"/>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="predicate">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut, TMat> TakeUntil<TOut, TMat>(this Source<TOut, TMat> flow, Predicate<TOut> predicate)
+        {
+            return (Source<TOut, TMat>)InternalFlowOperations.TakeUntil(flow, predicate);
+        }
+
+        /// <summary>
         /// Discard elements at the beginning of the stream while <paramref name="predicate"/> is true.
         /// All elements will be taken after <paramref name="predicate"/> returns false first time.
         /// <para>
