@@ -28,7 +28,7 @@ namespace Akka.Remote
     /// <summary>
     ///  INTERNAL API
     /// </summary>
-    internal class DaemonMsgCreate : IDaemonMsg
+    internal sealed class DaemonMsgCreate : IDaemonMsg
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="DaemonMsgCreate" /> class.
@@ -77,7 +77,7 @@ namespace Akka.Remote
     /// 
     /// It acts as the brain of the remote that responds to system remote messages and executes actions accordingly.
     /// </summary>
-    internal class RemoteSystemDaemon : VirtualPathContainer
+    internal sealed class RemoteSystemDaemon : VirtualPathContainer
     {
         private readonly ActorSystemImpl _system;
         private readonly Switch _terminating = new Switch(false);

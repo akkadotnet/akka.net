@@ -24,8 +24,13 @@ namespace Akka.Remote.TestKit
             get
             {
                 if (_executedByMultiNodeRunner == null)
-                    _executedByMultiNodeRunner =
-                        Environment.GetEnvironmentVariable(MultiNodeTestEnvironmentName) != null;
+                {
+                    CommandLine.Initialize(Environment.GetCommandLineArgs());
+                    var cmd = CommandLine.GetPropertyOrDefault("multinode.test-runner", null);
+                    var env = Environment.GetEnvironmentVariable(MultiNodeTestEnvironmentName); 
+                    _executedByMultiNodeRunner = env != null || cmd == "multinode";
+                }
+                
                 return _executedByMultiNodeRunner != null && _executedByMultiNodeRunner.Value
                     ? base.Skip
                     : "Must be executed by multi-node test runner";

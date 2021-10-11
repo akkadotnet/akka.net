@@ -472,10 +472,9 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstComplet
 
 The `SmallestMailboxPool` router will send the message to the routee with fewest messages in mailbox. The selection is done in this order:
 
-1. Pick any idle routee (not processing message) with empty mailbox
-2. Pick any routee with empty mailbox
-3. Pick routee with fewest pending messages in mailbox
-4. Pick any remote routee, remote actors are consider lowest priority, since their mailbox size is unknown
+1. Pick any routee with empty mailbox
+2. Pick routee with fewest pending messages in mailbox
+3. Pick any remote routee, remote actors are consider lowest priority, since their mailbox size is unknown
 
 ![SmallestMailbox Router](/images/SmallestMailbox.png)
 
