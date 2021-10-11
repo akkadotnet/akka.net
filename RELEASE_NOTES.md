@@ -1,4 +1,4 @@
-#### 1.4.27 September 29 2021 ####
+#### 1.4.27 October 11 2021 ####
 **Maintenance Release for Akka.NET 1.4**
 Akka.NET v1.4.27 is a small release that contains some _major_ performance improvements for Akka.Remote.
 
