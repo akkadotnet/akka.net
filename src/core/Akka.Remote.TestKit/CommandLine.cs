@@ -28,7 +28,7 @@ namespace Akka.Remote.TestKit
     /// </summary>
     public static class CommandLine
     {
-        private static readonly StringDictionary Values = new StringDictionary();
+        private static readonly Dictionary<string, string> Values = new Dictionary<string, string>();
 
         static CommandLine()
         {
@@ -87,7 +87,7 @@ namespace Akka.Remote.TestKit
 
         public static string GetProperty(string key)
         {
-            return Values[key];
+            return Values.TryGetValue(key, out var value) ? value : null;
         }
 
         public static string GetPropertyOrDefault(string key, string defaultStr)
