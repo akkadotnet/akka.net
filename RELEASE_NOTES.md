@@ -47,7 +47,32 @@ Num clients, Total [msg], Msgs/sec, Total [ms]
         30, 6000000,    281492,   21315.35
 ```
 
+To put these numbers in comparison, here's what Akka.NET's performance looked like as of v1.4.0:
 
+```
+Num clients (actors)    Total [msg] Msgs/sec    Total [ms]
+1   200000  69736   2868.60
+5   1000000 141243  7080.98
+10  2000000 136771  14623.27
+15  3000000 38190   78556.49
+20  4000000 32401   123454.60
+25  5000000 33341   149967.08
+30  6000000 126093  47584.92
+```
+
+
+We've made Akka.Remote consistently faster, more predictable, and reduced total memory consumption significantly in the process.
+
+
+You can [see the full set of changes introduced in Akka.NET v1.4.27 here](https://github.com/akkadotnet/akka.net/milestone/57?closed=1)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 89 | 8 | Aaron Stannard |
+| 1 | 856 | 519 | Andreas Dirnberger |
+| 1 | 3 | 4 | Vadym Artemchuk |
+| 1 | 261 | 233 | Gregorius Soedharmo |
+| 1 | 1 | 1 | dependabot[bot] |
 
 #### 1.4.26 September 28 2021 ####
 **Maintenance Release for Akka.NET 1.4**
