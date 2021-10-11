@@ -41,13 +41,9 @@ namespace Akka.Remote.Serialization
     /// </summary>
     internal sealed class AddressCache : LruBoundedCache<string, Address>
     {
-        public AddressCache(int capacity = 1024, int evictAgeThreshold = 600) : base(capacity, evictAgeThreshold)
+        public AddressCache(int capacity = 1024, int evictAgeThreshold = 600) 
+            : base(capacity, evictAgeThreshold, FastHashComparer.Default)
         {
-        }
-
-        protected override int Hash(string k)
-        {
-            return FastHash.OfStringFast(k);
         }
 
         protected override Address Compute(string k)

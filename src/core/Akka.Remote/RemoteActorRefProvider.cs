@@ -79,7 +79,7 @@ namespace Akka.Remote
         /// <see cref="IActorRefProvider.ResolveActorRef(string)"/> method.
         /// </summary>
         /// <param name="path">The path of the actor we intend to resolve.</param>
-        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise nobody.</returns>
+        /// <returns>An <see cref="IActorRef"/> if a match was found. Otherwise deadletters.</returns>
         IActorRef InternalResolveActorRef(string path);
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace Akka.Remote
         }
 
         private readonly LocalActorRefProvider _local;
-        private volatile Internals _internals;
+        private Internals _internals;
         private ActorSystemImpl _system;
 
         private Internals RemoteInternals
@@ -235,34 +235,40 @@ namespace Akka.Remote
             _local.UnregisterTempActor(path);
         }
 
-        private volatile IActorRef _remotingTerminator;
-        private volatile IActorRef _remoteWatcher;
+        /// <inheritdoc/>
+        public FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs)
+        {
+            return _local.CreateFutureRef(tcs);
+        }
 
-        private volatile ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
-        private volatile ActorPathThreadLocalCache _actorPathThreadLocalCache;
+        private IActorRef _remotingTerminator;        
+        private IActorRef _remoteWatcher;
+
+        private ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
+        private ActorPathThreadLocalCache _actorPathThreadLocalCache;
 
         /// <summary>
         /// The remote death watcher.
         /// </summary>
         public IActorRef RemoteWatcher => _remoteWatcher;
-        private volatile IActorRef _remoteDeploymentWatcher;
+        private IActorRef _remoteDeploymentWatcher;
 
         /// <inheritdoc/>
         public virtual void Init(ActorSystemImpl system)
         {
             _system = system;
 
-            _local.Init(system);
-
             _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
             _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
+
+            _local.Init(system);
 
             _remotingTerminator =
                 _system.SystemActorOf(
                     RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
                     "remoting-terminator");
 
-            _internals = CreateInternals();
+            _internals = CreateInternals();                              
 
             _remotingTerminator.Tell(RemoteInternals);
 
@@ -433,9 +439,10 @@ namespace Akka.Remote
             return Deploy.None;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAddress(Address address)
         {
-            return address.Equals(_local.RootPath.Address) || address.Equals(RootPath.Address) || Transport.Addresses.Contains(address);
+            return RootPath.Address.Equals(address) || Transport.Addresses.Contains(address);
         }
 
         /// <summary>
@@ -458,21 +465,6 @@ namespace Akka.Remote
             return _local.ActorOf(system, props, supervisor, path, systemService, deploy, lookupDeploy, async);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool TryParseCachedPath(string actorPath, out ActorPath path)
-        {
-            if (_actorPathThreadLocalCache != null)
-            {
-                path = _actorPathThreadLocalCache.Cache.GetOrCompute(actorPath);
-                return path != null;
-            }
-            else // cache not initialized yet
-            {
-                return ActorPath.TryParse(actorPath, out path);
-            }
-        }
-
-
         /// <summary>
         /// INTERNAL API.
         ///
@@ -483,20 +475,31 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public IInternalActorRef ResolveActorRefWithLocalAddress(string path, Address localAddress)
         {
-            if (TryParseCachedPath(path, out var actorPath))
+            if (path is null)
             {
-                //the actor's local address was already included in the ActorPath
-                if (HasAddress(actorPath.Address))
-                {
-                    if (actorPath is RootActorPath)
-                        return RootGuardian;
-                    return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
-                }
-
-                return CreateRemoteRef(new RootActorPath(actorPath.Address) / actorPath.ElementsWithUid, localAddress);
+                _log.Debug("resolve of unknown path [{0}] failed", path);
+                return InternalDeadLetters;
             }
-            _log.Debug("resolve of unknown path [{0}] failed", path);
-            return InternalDeadLetters;
+
+            ActorPath actorPath;
+            if (_actorPathThreadLocalCache != null)
+            {
+                actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path);
+            }
+            else // cache not initialized yet
+            {
+                ActorPath.TryParse(path, out actorPath);
+            }
+
+            if (!HasAddress(actorPath?.Address))
+                return CreateRemoteRef(actorPath, localAddress);
+
+            //the actor's local address was already included in the ActorPath
+
+            if (actorPath is RootActorPath)
+                return RootGuardian;
+
+            return (IInternalActorRef)ResolveActorRef(path); // so we can use caching
         }
 
 
@@ -539,7 +542,8 @@ namespace Akka.Remote
             // if the value is not cached
             if (_actorRefResolveThreadLocalCache == null)
             {
-                return InternalResolveActorRef(path); // cache not initialized yet
+                // cache not initialized yet, should never happen
+                return InternalResolveActorRef(path); 
             }
             return _actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
         }
@@ -592,19 +596,20 @@ namespace Akka.Remote
         /// <returns>The remote Address, if applicable. If not applicable <c>null</c> may be returned.</returns>
         public Address GetExternalAddressFor(Address address)
         {
-            if (HasAddress(address)) { return _local.RootPath.Address; }
-            if (!string.IsNullOrEmpty(address.Host) && address.Port.HasValue)
+            if (HasAddress(address)) 
+                return _local.RootPath.Address;
+
+            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
+                return null;
+
+            try
             {
-                try
-                {
-                    return Transport.LocalAddressForRemote(address);
-                }
-                catch
-                {
-                    return null;
-                }
+                return Transport.LocalAddressForRemote(address);
             }
-            return null;
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>

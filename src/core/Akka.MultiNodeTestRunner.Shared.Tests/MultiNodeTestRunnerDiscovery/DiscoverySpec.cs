@@ -64,14 +64,21 @@ namespace Akka.MultiNodeTestRunner.Shared.Tests.MultiNodeTestRunnerDiscovery
         private static Dictionary<string, List<NodeTest>> DiscoverSpecs()
         {
             Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, "1");
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(typeof(DiscoveryCases).GetTypeInfo().Assembly.CodeBase).LocalPath))	
+            try
             {
-                using (var discovery = new Discovery())
+                using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, new System.Uri(typeof(DiscoveryCases).GetTypeInfo().Assembly.CodeBase).LocalPath))	
                 {
-                    controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
-                    discovery.Finished.WaitOne();
-                    return discovery.Tests;
+                    using (var discovery = new Discovery())
+                    {
+                        controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
+                        discovery.Finished.WaitOne();
+                        return discovery.Tests;
+                    }
                 }
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, null);
             }
         }
 
