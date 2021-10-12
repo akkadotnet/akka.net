@@ -243,7 +243,7 @@ root/akka.multinodetestrunner/lib/netcoreapp1.1/Akka.MultiNodeTestRunner.dll
 
 Depending on what framework you're building your application against, you'll want to pick the appropriate tool (.NET Framework or .NET Core.)
 
-Next, we have to pass in our commandline arguments to the MNTR:
+Next, we have to pass in our command-line arguments to the MNTR:
 
 ```
 Akka.MultiNodeTestRunner.exe [path to assembly] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.spec={spec name}]

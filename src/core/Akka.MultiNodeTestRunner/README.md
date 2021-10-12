@@ -12,7 +12,7 @@ Right now the only options for running the `MultiNodeTestRunner` is to build fro
 
 ![MultiNodeTestRunner binaries](../../../documentation/wiki/images/multinode-teskit/multi-node-testrunner-binaries.png)
 
-## Commandline Arguments
+## Command-line Arguments
 
 ```
 C:> Akka.MultiNodeTestRunner.exe [assembly name] 
@@ -40,7 +40,7 @@ C:> Akka.MultiNodeTestRunner.exe [assembly name]
 - __-Dmultinode.include__ : A "`,`" (comma) separted list of wildcard pattern to be matched and included in the tests. Default value is `*` (all). The filter is applied on the name of the test method.
 - __-Dmultinode.exclude__ : A "`,`" (comma) separted list of wildcard pattern to be matched and excluded in the tests. Default value is (none). The filter is applied on the name of the test method.
 
-## Deprecated Commandline Arguments
+## Deprecated Command-line Arguments
 - __-Dmultinode.teamcity__ : This argument is no longer processed. Use __-Dmultinode.reporter__ with `teamcity` value instead.
 
 ### Built-in Tests for Akka.Cluster
