@@ -54,7 +54,7 @@ A processing stage with _exactly one output_, emitting data elements whenever do
 A processing stage with _exactly one input_, requesting and accepting data elements possibly slowing down the upstream producer of elements
   
 **Flow**  
-A processing stage which has _exactly one input and output_, which connects its up- and downstreams by transforming the data elements flowing through it.
+A processing stage which has _exactly one input and output_, which connects its up- and down-streams by transforming the data elements flowing through it.
   
 **RunnableGraph**  
 A Flow that has both ends "attached" to a `Source` and `Sink` respectively, and is ready to be `run()`.
