@@ -15,14 +15,21 @@
         "Gitter",
         "HOCON",
         "journaled",
+        "Lauck",
         "materializer",
         "MNTR",
         "Petabridge",
         "Quic",
         "Quickstart",
         "remoting",
+        "roadmap",
+        "runtimes",
         "Ryzen",
-        "serializers"
+        "serializers",
+        "Serilog",
+        "testkit",
+        "Tweetinvi",
+        "Varghese"
     ],
     "ignoreWords": [
         "Hanselminutes",
