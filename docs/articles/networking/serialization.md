@@ -189,7 +189,7 @@ Note that, while we try to keep everything to be compatible, there are no guaran
 Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
 
 There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
-in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+in the Json settings object. Those settings, by default, will always be overridden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
 object respectively.
 
 ### Serializer with String Manifest
@@ -306,7 +306,7 @@ akka {
 
 ## Danger of polymorphic serializer
 One of the danger of polymorphic serializers is the danger of unsafe object type injection into 
-the serialization-deserialization chain. This issue applies to any type of polymorphic serializer,
+the serialization/de-serialization chain. This issue applies to any type of polymorphic serializer,
 including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly 
 to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
 
