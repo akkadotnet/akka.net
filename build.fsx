@@ -238,7 +238,9 @@ Target "RunTests" (fun _ ->
         let rawProjects = match (isWindows) with
                             | true -> !! "./src/**/*.Tests.*sproj"
                                       ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                      -- "./src/**/*.Tests.MultiNode.csproj"
                             | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                   -- "./src/**/*.Tests.MultiNode.csproj"
         rawProjects |> Seq.choose filterProjects
 
     let runSingleProject project =
@@ -264,7 +266,9 @@ Target "RunTestsNetCore" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                          -- "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                       -- "./src/**/*.Tests.MultiNode.csproj"
             rawProjects |> Seq.choose filterProjects
 
         let runSingleProject project =
@@ -290,7 +294,9 @@ Target "RunTestsNet" (fun _ ->
             let rawProjects = match (isWindows) with
                                 | true -> !! "./src/**/*.Tests.*sproj"
                                           ++ "./src/**/Akka.Streams.Tests.TCK.csproj"
+                                          -- "./src/**/*.Tests.MultiNode.csproj"
                                 | _ -> !! "./src/**/*.Tests.*sproj" // if you need to filter specs for Linux vs. Windows, do it here
+                                       -- "./src/**/*.Tests.MultiNode.csproj"
             rawProjects |> Seq.choose filterProjects
 
         let runSingleProject project =
