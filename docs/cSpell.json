@@ -6,6 +6,7 @@
         "Akka",
         "Allman",
         "appender",
+        "backends",
         "backoff",
         "backpressure",
         "backpressured",
