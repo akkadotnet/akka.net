@@ -3,16 +3,32 @@
     "language": "en",
     "words": [
         "Akka",
-        "Petabridge",
-        "HOCON",
+        "appender",
+        "Bootcamp",
+        "combinator",
+        "combinators",
+        "composability",
+        "compositionality",
+        "CQRS",
         "CRDT",
+        "denormalization",
         "Gitter",
+        "HOCON",
+        "journaled",
+        "materializer",
+        "MNTR",
+        "Petabridge",
+        "Quic",
+        "Quickstart",
         "remoting",
-        "Bootcamp"
+        "Ryzen",
+        "serializers"
     ],
     "ignoreWords": [
         "Hanselminutes",
-        "Resharper"
+        "Resharper",
+        "Bartosz",
+        "Bartosz's"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links
