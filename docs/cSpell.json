@@ -15,6 +15,7 @@
         "Bidi",
         "blackhole",
         "Bootcamp",
+        "Cleary",
         "combinator",
         "combinators",
         "composability",
@@ -60,6 +61,7 @@
         "-- snippet:(.*)", // snippet references
         "\\<\\[sample:(.*)", // another kind of snippet reference
         "/^\\s*```[\\s\\S]*?^\\s*```/gm", // ignoring multi-line code blocks
-        "/^---[\\s\\S]+?---/gm" //front-matter
+        "/^---[\\s\\S]+?---/gm", //front-matter
+        "\\<iframe(.*)iframe\\>" // iframe snippets
     ]
 }
