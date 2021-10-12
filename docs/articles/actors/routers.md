@@ -580,7 +580,7 @@ However, a `PoisonPill` message sent to a router may still affect its routees, a
 If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
 
 > [!NOTE]
-> The above method will stop all routees, even if they are not created by the router. E.g. routees programatically provided to the router.
+> The above method will stop all routees, even if they are not created by the router. E.g. routees programmatically provided to the router.
 
 ```cs
 actorSystem.ActorOf(Props.Create<Worker>(), "worker1");

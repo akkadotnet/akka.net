@@ -179,8 +179,8 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
-### Programatically change NewtonSoft JSON serializer settings
-You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programatically
+### programmatically change NewtonSoft JSON serializer settings
+You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programmatically
 change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
@@ -407,7 +407,7 @@ if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-f
 
 ### HyperionSerializerSetup
 
-This behavior can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+This behavior can also be implemented programmatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
 
 ```csharp
 #if NETFRAMEWORK
@@ -520,7 +520,7 @@ akka.actor {
 }
 ```
 
-### Creating and declaring `Surrogate`s programatically using `HyperionSerializerSetup`
+### Creating and declaring `Surrogate`s programmatically using `HyperionSerializerSetup`
 
 We can also use `HyperionSerializerSetup` to declare our surrogates:
 
@@ -536,4 +536,4 @@ var system = ActorSystem.Create("actorSystem", bootstrap);
 ```
 
 Note that we do not need to declare any bindings in HOCON for this to work, and if you do, 
-`HyperionSerializerSetup` will override the HOCON settings with the one programatically declared.
+`HyperionSerializerSetup` will override the HOCON settings with the one programmatically declared.
