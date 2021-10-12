@@ -90,7 +90,7 @@ The entities can be configured to be automatically passivated if they haven't re
 
 ## Remembering Entities
 
-By default, when a shard is rebalanced to another node, the entities it stored before migration, are NOT started immediately after. Instead they are recreated ad-hoc, when new messages are incoming. This behavior can be modified by `akka.cluster.sharding.remember-entities = true` configuration. It will instruct shards to keep their state between rebalances - it also comes with extra cost due to necessity of persisting information about started/stopped entities. Additionally a message extractor logic must be aware of `ShardRegion.StartEntity` message:
+By default, when a shard is rebalanced to another node, the entities it stored before migration, are NOT started immediately after. Instead they are recreated ad-hoc, when new messages are incoming. This behavior can be modified by `akka.cluster.sharding.remember-entities = true` configuration. It will instruct shards to keep their state between re-balances - it also comes with extra cost due to necessity of persisting information about started/stopped entities. Additionally a message extractor logic must be aware of `ShardRegion.StartEntity` message:
 
 ```csharp
 public sealed class ShardEnvelope
@@ -250,7 +250,7 @@ public class Aggregate : PersistentActor
 ```
 
 ## Cleaning Up Akka.Persistence Shard State
-In the normal operation of an Akka.NET cluster, the sharding system automatically terminates and rebalances Akka.Cluster.Sharding regions gracefully whenever an `ActorSystem` terminates.
+In the normal operation of an Akka.NET cluster, the sharding system automatically terminates and re-balances Akka.Cluster.Sharding regions gracefully whenever an `ActorSystem` terminates.
 
 However, in the event that an `ActorSystem` is aborted as a result of a process / hardware failure it's possible that when using `akka.cluster.sharding.state-store-mode=persistence` leftover sharding data can still be present inside the Akka.Persistence journal and snapshot store - which will prevent the Akka.Cluster.Sharding system from recovering and starting up correctly the next time it's launched.
 

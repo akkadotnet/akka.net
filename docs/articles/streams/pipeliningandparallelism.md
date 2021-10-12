@@ -167,7 +167,7 @@ var kitchen = pancakeChefs1.Via(pancakeChefs2);
 
 This usage pattern is less common but might be usable if a certain step in the pipeline might take wildly different
 times to finish different jobs. The reason is that there are more balance-merge steps in this pattern
-compared to the parallel pipelines. This pattern rebalances after each step, while the previous pattern only balances
+compared to the parallel pipelines. This pattern re-balances after each step, while the previous pattern only balances
 at the entry point of the pipeline. This only matters however if the processing time distribution has a large
 deviation.
 
