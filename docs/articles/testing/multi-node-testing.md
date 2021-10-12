@@ -188,7 +188,7 @@ In this example, the `TestConductor.Blackhole` method is used to create 100% pac
 
 The `Task` returned by `TestConductor.Blackhole` will complete once the Akka.Remote transport has enabled "blackhole" mode for that connection, which usually doesn't take longer than a few milliseconds.
 
-To stop blackholding these nodes, we'd need to call the `TestConductor.PassThrough` method on these same two `RoleName` instances:
+To stop black-holing these nodes, we'd need to call the `TestConductor.PassThrough` method on these same two `RoleName` instances:
 
 ```csharp
 RunOn(() =>
