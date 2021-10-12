@@ -180,7 +180,7 @@ Afterwards the configuration would need to be updated to reflect which name to b
 serializer.
 
 ### Programatically change NewtonSoft JSON serializer settings
-You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programatically
 change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
@@ -400,14 +400,14 @@ that it is running under .NET framework, then it will use the `netfx` array to d
 The way it works that when the serializer detects that the type name contains the `fingerprint` string, it will replace the string declared in the `rename-from`
 property into the string declared in the `rename-to`.
 
-In code, we can write this behaviour as:
+In code, we can write this behavior as:
 ```csharp
 if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
 ```
 
 ### HyperionSerializerSetup
 
-This behaviour can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+This behavior can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
 
 ```csharp
 #if NETFRAMEWORK

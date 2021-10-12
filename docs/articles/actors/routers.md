@@ -543,7 +543,7 @@ The default resizer works by checking the pool size every X messages, and decidi
 
 ## Specially Handled Messages
 
-Most messages sent to router will be forwarded according to router's routing logic. However there are a few types of messages that have special behaviour.
+Most messages sent to router will be forwarded according to router's routing logic. However there are a few types of messages that have special behavior.
 
 ### Broadcast Messages
 

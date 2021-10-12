@@ -135,7 +135,7 @@ akka.cluster.sharding.state-store-mode = persistence
 
 This mode uses [persistence](../persistence/event-sourcing.md) to store the active shards and active entities for each shard.
 By default, cluster sharding will use the journal and snapshot store plugin defined in `akka.persistence.journal.plugin` and 
-`akka.persistence.snapshot-store.plugin` respectively; to change this behaviour, you can use these configuration:
+`akka.persistence.snapshot-store.plugin` respectively; to change this behavior, you can use these configuration:
 
 ```
 akka.cluster.sharding.journal-plugin-id = <plugin>

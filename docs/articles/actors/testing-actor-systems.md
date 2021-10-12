@@ -265,7 +265,7 @@ TODO describe how to pass custom config
 
 Testing the business logic inside `Actor` classes can be divided into two parts: first, each atomic operation must work in isolation, then sequences of incoming events must be processed correctly, even in the presence of some possible variability in the ordering of events. The former is the primary use case for single-threaded unit testing, while the latter can only be verified in integration tests.
 
-Normally, the `IActorRef` shields the underlying `Actor` instance from the outside, the only communications channel is the actor's mailbox. This restriction is an impediment to unit testing, which led to the inception of the `TestActorRef`. This special type of reference is designed specifically for test purposes and allows access to the actor in two ways: either by obtaining a reference to the underlying actor instance, or by invoking or querying the actor's behaviour (receive). Each one warrants its own section below.
+Normally, the `IActorRef` shields the underlying `Actor` instance from the outside, the only communications channel is the actor's mailbox. This restriction is an impediment to unit testing, which led to the inception of the `TestActorRef`. This special type of reference is designed specifically for test purposes and allows access to the actor in two ways: either by obtaining a reference to the underlying actor instance, or by invoking or querying the actor's behavior (receive). Each one warrants its own section below.
 
 > [!NOTE]
 > It is highly recommended to stick to traditional behavioral testing (using messaging to ask the `Actor` to reply with the state you want to run assertions against), instead of using `TestActorRef` whenever possible.
