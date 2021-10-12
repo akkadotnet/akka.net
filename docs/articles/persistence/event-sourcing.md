@@ -45,7 +45,7 @@ The number of concurrent recoveries of recoveries that can be in progress at the
 > Accessing the `Sender` for replayed messages will always result in a `DeadLetters` reference, as the original sender is presumed to be long gone. If you indeed have to notify an actor during recovery in the future, store its `ActorPath` explicitly in your persisted events.
 
 ### Recovery customization
-Applications may also customise how recovery is performed by returning a customised `Recovery` object in the recovery method of a `UntypedPersistentActor`.
+Applications may also customize how recovery is performed by returning a customized `Recovery` object in the recovery method of a `UntypedPersistentActor`.
 
 To skip loading snapshots and replay all events you can use `SnapshotSelectionCriteria.None`. This can be useful if snapshot serialization format has changed in an incompatible way. It should typically not be used when events have been deleted.
 

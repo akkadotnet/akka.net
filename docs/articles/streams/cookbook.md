@@ -43,7 +43,7 @@ Another approach to logging is to use ``Log()`` operation which allows configuri
 the stream as well as completion and erroring.
 
 ```csharp
-// customise log levels
+// customize log levels
 mySource.Log("before-select")
     .WithAttributes(Attributes.CreateLogLevels(onElement: LogLevel.WarningLevel))
     .Select(Analyse);
