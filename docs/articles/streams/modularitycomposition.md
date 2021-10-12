@@ -119,7 +119,7 @@ As a first example, let's look at a more complex layout:
 
 ![Compose graph](/images/compose_graph.png)
 
-The diagram shows a `RunnableGraph` (remember, if there are no unwired ports, the graph is closed, and therefore
+The diagram shows a `RunnableGraph` (remember, if there are no un-wired ports, the graph is closed, and therefore
 can be materialized) that encapsulates a non-trivial stream processing network. It contains fan-in, fan-out stages,
 directed and non-directed cycles. The ``Runnable()`` method of the `GraphDSL` object allows the creation of a
 general, closed, and runnable graph. For example the network on the diagram can be realized like this:
