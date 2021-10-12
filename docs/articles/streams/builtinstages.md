@@ -973,7 +973,7 @@ and returns a pair containing a strict sequence of the taken element and a strea
 
 #### GroupBy
 
-Demultiplex the incoming stream into separate output streams.
+De-multiplex the incoming stream into separate output streams.
 
 **emits** an element for which the grouping function returns a group that has not yet been created. Emits the new group
 there is an element pending for a group whose substream backpressures
