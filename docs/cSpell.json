@@ -11,6 +11,8 @@
         "Bootcamp"
     ],
     "ignoreWords": [
+        "Hanselminutes",
+        "Resharper"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links
@@ -19,6 +21,7 @@
         "\\<a(.*)\\>", // link contents
         "-- snippet:(.*)", // snippet references
         "\\<\\[sample:(.*)", // another kind of snippet reference
-        "/^\\s*```[\\s\\S]*?^\\s*```/gm" // ignoring multi-line code blocks
+        "/^\\s*```[\\s\\S]*?^\\s*```/gm", // ignoring multi-line code blocks
+        "/^---[\\s\\S]+?---/gm" //front-matter
     ]
 }
