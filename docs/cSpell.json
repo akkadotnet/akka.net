@@ -7,6 +7,8 @@
         "appender",
         "backoff",
         "backpressure",
+        "backpressures",
+        "backpressuring",
         "Bootcamp",
         "combinator",
         "combinators",
@@ -31,6 +33,7 @@
         "serializers",
         "Serilog",
         "substream",
+        "substreams",
         "testkit",
         "Tweetinvi",
         "Varghese"
