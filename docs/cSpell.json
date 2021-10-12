@@ -5,6 +5,8 @@
         "Akka",
         "Allman",
         "appender",
+        "backoff",
+        "backpressure",
         "Bootcamp",
         "combinator",
         "combinators",
@@ -28,6 +30,7 @@
         "Ryzen",
         "serializers",
         "Serilog",
+        "substream",
         "testkit",
         "Tweetinvi",
         "Varghese"
