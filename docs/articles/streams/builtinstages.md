@@ -470,7 +470,7 @@ All flows by default backpressure if the computation they encapsulate is not fas
 incoming elements from the preceding stage. There are differences though how the different stages handle when some of
 their downstream stages backpressure them.
 
-Most stages stop and propagate the failure downstream as soon as any of their upstreams emit a failure.
+Most stages stop and propagate the failure downstream as soon as any of their up-streams emit a failure.
 This happens to ensure reliable teardown of streams and cleanup when failures happen. Failures are meant to
 be to model unrecoverable conditions, therefore they are always eagerly propagated.
 For in-band error handling of normal errors (dropping elements if a map fails for example) you should use the
@@ -1120,7 +1120,7 @@ Merge multiple sources. Picks elements randomly if all sources has elements read
 
 **backpressures** when downstream backpressures
 
-**completes** when all upstreams complete (This behavior is changeable to completing when any upstream completes by setting ``eagerComplete=true``.)
+**completes** when all up-streams complete (This behavior is changeable to completing when any upstream completes by setting ``eagerComplete=true``.)
 
 #### MergeSorted
 
@@ -1131,7 +1131,7 @@ smallest element.
 
 **backpressures** when downstream backpressures
 
-**completes** when all upstreams complete
+**completes** when all up-streams complete
 
 #### MergePreferred
 
@@ -1141,7 +1141,7 @@ Merge multiple sources. Prefer one source if all sources has elements ready.
 
 **backpressures** when downstream backpressures
 
-**completes** when all upstreams complete (This behavior is changeable to completing when any upstream completes by setting `eagerComplete=true`.)
+**completes** when all up-streams complete (This behavior is changeable to completing when any upstream completes by setting `eagerComplete=true`.)
 
 #### MergePrioritized
 
@@ -1152,7 +1152,7 @@ sources has elements ready the relative priorities for those sources are used to
 
 **backpressures** when downstream backpressures
 
-**completes** when all upstreams complete (This behavior is changeable to completing when any upstream completes by setting `eagerComplete=true`.)
+**completes** when all up-streams complete (This behavior is changeable to completing when any upstream completes by setting `eagerComplete=true`.)
 
 #### Zip
 
@@ -1193,7 +1193,7 @@ After completion of the original upstream the elements of the given source will 
 
 **backpressures** when downstream backpressures
 
-**completes** when all upstreams complete
+**completes** when all up-streams complete
 
 #### Prepend
 
@@ -1205,7 +1205,7 @@ If materialized values needs to be collected ``prependMat`` is available.
 
 **backpressures** when downstream backpressures
 
-**completes** when all upstreams complete
+**completes** when all up-streams complete
 
 #### OrElse
 
@@ -1234,7 +1234,7 @@ source completes the rest of the other stream will be emitted.
 
 **backpressures** when upstream backpressures
 
-**completes** when both upstreams have completed
+**completes** when both up-streams have completed
 
 # Fan-out stages
 
