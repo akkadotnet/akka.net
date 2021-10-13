@@ -242,7 +242,7 @@ It should be noted that the `Terminated` message is generated independent of the
 
 Registering multiple times does not necessarily lead to multiple messages being generated, but there is no guarantee that only exactly one such message is received: if termination of the watched actor has generated and queued the message, and another registration is done before this message has been processed, then a second message will be queued, because registering for monitoring of an already terminated actor leads to the immediate generation of the `Terminated` message.
 
-It is also possible to deregister from watching another actor's liveliness using `Context.Unwatch(target)`. This works even if the Terminated message has already been enqueued in the mailbox; after calling unwatch no `Terminated` message for that actor will be processed anymore.
+It is also possible to deregister from watching another actor's liveliness using `Context.Unwatch(target)`. This works even if the Terminated message has already been enqueued in the mailbox; after calling `Unwatch` no `Terminated` message for that actor will be processed anymore.
 
 ### Start Hook
 Right after starting the actor, its `PreStart` method is invoked.
