@@ -1146,7 +1146,7 @@ Merge multiple sources. Prefer one source if all sources has elements ready.
 #### MergePrioritized
 
 Merge multiple sources. Prefer sources depending on priorities if all sources has elements ready. If a subset of all
-sources has elements ready the relative priorities for those sources are used to prioritise.
+sources has elements ready the relative priorities for those sources are used to prioritize.
 
 **emits** when one of the inputs has an element available, preferring inputs based on their priorities if multiple have elements available
 

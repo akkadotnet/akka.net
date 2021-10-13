@@ -178,7 +178,7 @@ var linesStream = rawData
 **Situation:** Given a stream of elements, we want to calculate some aggregated value on different subgroups of the
 elements.
 
-The "hello world" of reduce-by-key style operations is *wordcount* which we demonstrate below. Given a stream of words
+The "hello world" of reduce-by-key style operations is `wordcount` which we demonstrate below. Given a stream of words
 we first create a new stream that groups the words according to the ``identity`` function, i.e. now
 we have a stream of streams, where every substream will serve identical words.
 
@@ -213,7 +213,7 @@ var counts = words
     .MergeSubstreams();
 ```
 
-By extracting the parts specific to *wordcount* into
+By extracting the parts specific to `wordcount` into
 
 * a ``GroupKey`` function that defines the groups
 * a ``Select`` map each element to value that is used by the reduce on the substream
