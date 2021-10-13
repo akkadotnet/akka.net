@@ -630,7 +630,7 @@ All routers implemented through *routing logic* classes (eg. RoundRobinRoutingLo
 
 These classes are considered low-level and are exposed for extensibility purposes. They shouldn't be needed in normal applications. Pools and Groups are the recommended way to use routers.
 
-Here is an example of how to use the routerlogic directly:
+Here is an example of how to use the router logic directly:
 
 ```cs
 var routees = Enumerable
