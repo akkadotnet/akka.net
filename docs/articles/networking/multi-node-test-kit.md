@@ -281,7 +281,7 @@ Here's the set of arguments that the MultiNodeTestRunner takes:
 * `-Dmultinode.enable-filesink=(on|off)` writes test output to disk
 * `-Dmultinode.spec=("fully qualified spec method name)` executes a specific test method instead of all of them
 
-Here's an example of what invoking the test runner might look like if all of our multinodetests were packaged into Akka.MultiNodeTests.dll.
+Here's an example of what invoking the test runner might look like if all of our multi-node tests were packaged into `Akka.MultiNodeTests.dll`.
 
 ```cmd
 Akka.MultiNodeTestRunner.exe "Akka.MultiNodetests.dll" -Dmultinode.enable-filesink=on
