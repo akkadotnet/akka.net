@@ -87,7 +87,7 @@ protected override void OnCommand(object message)
 }
 ```
 
-And we need `OnRecover` to be implemented so that the internal state is replyed when the actor is restarted.
+And we need `OnRecover` to be implemented so that the internal state is replayed when the actor is restarted.
 
 ``` csharp
 protected override void OnRecover(object message)
