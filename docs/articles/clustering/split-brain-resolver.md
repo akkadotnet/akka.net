@@ -63,7 +63,7 @@ The following strategies are supported:
 * `lease-majority`
 * `keep-referee` - only available with the legacy split brain resolver.
 
-All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
+All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this threshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
 
 ```hocon
 akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster"
