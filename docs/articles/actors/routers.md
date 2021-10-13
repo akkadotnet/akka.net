@@ -601,7 +601,7 @@ router.Tell(new Broadcast(PoisonPill.Instance));
 With the code shown above, each routee will receive a `PoisonPill` message. Each routee will continue to process its messages as normal, eventually processing the `PoisonPill`. This will cause the routee to stop. After all routees have stopped the router will itself be stopped automatically unless it is a dynamic router, e.g. using a resizer.
 
 ### Kill Message
-As with the `PoisonPill` messasge, there is a distinction between killing a router, which indirectly kills its children (who happen to be routees), and killing routees directly (some of whom may not be children.) To kill routees directly the router should be sent a Kill message wrapped in a `Broadcast` message.
+As with the `PoisonPill` message, there is a distinction between killing a router, which indirectly kills its children (who happen to be routees), and killing routees directly (some of whom may not be children.) To kill routees directly the router should be sent a Kill message wrapped in a `Broadcast` message.
 
 See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) for more details on how `Kill` message works.
 
