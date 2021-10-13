@@ -43,7 +43,7 @@ namespace Foo.Bar
 
 ### Creating the Akka.NET resources
 
-Hosting inside an ASP.NET application is easy. The Global.asax would be the designated place to start.
+Hosting inside an ASP.NET application is easy. The `Global.asax` would be the designated place to start.
 
 ```csharp
 public class MvcApplication : System.Web.HttpApplication
