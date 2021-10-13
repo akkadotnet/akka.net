@@ -321,7 +321,7 @@ As the `TestActorRef` is a subclass of `LocalActorRef` with a few special extras
 One more special aspect which is overridden for single-threaded tests is the `ReceiveTimeout`, as including that would entail asynchronous queuing of `ReceiveTimeout` messages, violating the synchronous contract.
 
 ### The Way In-Between: Expecting Exceptions
-If you want to test the actor behavior, including ho-tswapping, but without involving a dispatcher and without having the `TestActorRef` swallow any thrown exceptions, then there is another mode available for you: just use the receive method on `TestActorRef`, which will be forwarded to the underlying actor:
+If you want to test the actor behavior, including hot-swapping, but without involving a dispatcher and without having the `TestActorRef` swallow any thrown exceptions, then there is another mode available for you: just use the receive method on `TestActorRef`, which will be forwarded to the underlying actor:
 ```csharp
 var props = Props.Create<MyActor>();
 var myTestActor = new TestActorRef<MyActor>(Sys, props, null, "testB");
