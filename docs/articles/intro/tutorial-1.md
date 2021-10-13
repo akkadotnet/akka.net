@@ -250,10 +250,10 @@ to rewrite our architecture diagram that contained nested boxes into a tree:
 
 ![actor tree diagram of the architecture](/images/arch_tree_diagram.png)
 
-In simple terms, every component manages the lifecycle of the subcomponents. No
-subcomponent can outlive the parent component. This is exactly how the actor
+In simple terms, every component manages the lifecycle of the sub-components. No
+sub-component can outlive the parent component. This is exactly how the actor
 hierarchy works. Furthermore, it is desirable that a component handles the
-failure of its subcomponents. Together, these two desirable properties lead to
+failure of its sub-components. Together, these two desirable properties lead to
 the conclusion that the "contained-in" relationship of components should be
 mapped to the "children-of" relationship of actors.
 
