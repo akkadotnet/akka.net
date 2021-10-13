@@ -9,18 +9,8 @@ on:
     branches:
       - dev
       - master
-      
+
 jobs:
-  linting:
-    name: "Markdown linting"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        name: Check out the code
-      - name: Lint Code Base
-        uses: docker://avtodev/markdown-lint:v1
-        with:
-          args: "docs/**/*.md"
   spellcheck:
     name: "Spell check"
     runs-on: ubuntu-latest
