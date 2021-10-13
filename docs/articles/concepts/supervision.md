@@ -75,7 +75,7 @@ Another common use case is that an actor needs to fail in the absence of an exte
 ### Delayed restarts with the BackoffSupervisor pattern
 Provided as a built-in pattern the `Akka.Pattern.BackoffSupervisor` implements the so-called exponential backoff supervision strategy, starting a child actor again when it fails, each time with a growing time delay between restarts.
 
-This pattern is useful when the started actor fails because some external resource is not available, and we need to give it some time to start-up again. One of the prime examples when this is useful is when a `UntypedPersistentActor` fails (by stopping) with a persistence failure - which indicates that the database may be down or overloaded, in such situations it makes most sense to give it a little bit of time to recover before the peristent actor is started.
+This pattern is useful when the started actor fails because some external resource is not available, and we need to give it some time to start-up again. One of the prime examples when this is useful is when a `UntypedPersistentActor` fails (by stopping) with a persistence failure - which indicates that the database may be down or overloaded, in such situations it makes most sense to give it a little bit of time to recover before the persistent actor is started.
 
 The following C# snippet shows how to create a backoff supervisor which will start the given echo actor after it has stopped because of a failure, in increasing intervals of 3, 6, 12, 24 and finally 30 seconds:
 ```csharp
