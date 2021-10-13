@@ -33,7 +33,7 @@ advantage of using parallelism > 1 even though the actor will only process one m
 because then there is already a message in the mailbox when the actor has completed previous message. 
 
 The actor must reply to the `Sender` for each message from the stream. That reply will complete 
-the `CompletionStage` of the `Ask` and it will be the element that is emitted down-streams 
+the `CompletionStage` of the `Ask` and it will be the element that is emitted downstreams 
 from `SelectAsync`.
 
 ```csharp
@@ -165,7 +165,7 @@ sendEmails.Run(materializer);
 
 ``SelectAsync`` is applying the given function that is calling out to the external service to
 each of the elements as they pass through this processing step. The function returns a `Task`
-and the value of that task will be emitted down-streams. The number of Tasks
+and the value of that task will be emitted downstreams. The number of Tasks
 that shall run in parallel is given as the first argument to ``SelectAsync``.
 These Tasks may complete in any order, but the elements that are emitted
 downstream are in the same order as received from upstream.

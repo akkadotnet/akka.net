@@ -346,7 +346,7 @@ public Flow<TIn, TOut, NotUsed> Balancer<TIn, TOut>(Flow<TIn, TOut, NotUsed> wor
 {
     return Flow.FromGraph(GraphDsl.Create(b =>
     {
-        var balancer = b.Add(new Balance<TIn>(workerCount, waitForAlldown-streams: true));
+        var balancer = b.Add(new Balance<TIn>(workerCount, waitForAllDownstreams: true));
         var merge = b.Add(new Merge<TOut>(workerCount));
 
         for (var i = 0; i < workerCount; i++)

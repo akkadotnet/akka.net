@@ -721,7 +721,7 @@ used anymore it is important to make sure this will happen in all circumstances 
 
 Cleaning up resources should be done in `GraphStageLogic.PostStop` and not in the `InHandler` and `OutHandler`
 callbacks. The reason for this is that when the stage itself completes or is failed there is no signal from the up-streams
-for the down-streams. Even for stages that do not complete or fail in this manner, this can happen when the
+for the downstreams. Even for stages that do not complete or fail in this manner, this can happen when the
 `Materializer` is shutdown or the `ActorSystem` is terminated while a stream is still running, what is called an
 "abrupt termination".
 

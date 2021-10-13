@@ -844,7 +844,7 @@ Delay every element passed through with a specific duration.
 
 # Backpressure aware stages
 
-These stages are aware of the backpressure provided by their down-streams and able to adapt their behavior to that signal.
+These stages are aware of the backpressure provided by their downstreams and able to adapt their behavior to that signal.
 
 #### Conflate
 
@@ -1243,7 +1243,7 @@ multiple outputs at the same time.
 
 #### Unzip
 
-Takes a stream of two element tuples and unzips the two elements into two different down-streams.
+Takes a stream of two element tuples and unzips the two elements into two different downstreams.
 
 **emits** when all of the outputs stops backpressuring and there is an input element available
 
@@ -1253,7 +1253,7 @@ Takes a stream of two element tuples and unzips the two elements into two differ
 
 #### UnzipWith
 
-Splits each element of input into multiple down-streams using a function
+Splits each element of input into multiple downstreams using a function
 
 **emits** when all of the outputs stops backpressuring and there is an input element available
 
@@ -1293,7 +1293,7 @@ to the partitioner function applied to the element
 
 **completes** when upstream completes and no output is pending
 
-**cancels** when when all down-streams cancel
+**cancels** when when all downstreams cancel
 
 
 # Watching status stages
