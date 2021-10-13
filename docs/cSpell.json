@@ -62,7 +62,8 @@
         "Resharper",
         "Bartosz",
         "Bartosz's",
-        "networky"
+        "networky",
+        "Inport"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links
