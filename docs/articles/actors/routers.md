@@ -296,7 +296,7 @@ There are 3 ways to define what data to use for the consistent hash key.
   var msg = new ConsistentHashableEnvelope(originalMsg, originalMsg.GroupID);
 ```
 
-You may implement more than one hashing mechanism at the same time. Akka.NET will try them in the order above. That is, if the HashMapping method returns null, Akka.NET will check for the IConsistentHashable interface in the message (2 and 3 are technically the same).
+You may implement more than one hashing mechanism at the same time. Akka.NET will try them in the order above. That is, if the HashMapping method returns null, Akka.NET will check for the `IConsistentHashable` interface in the message (2 and 3 are technically the same).
 
 #### Usage:
 
