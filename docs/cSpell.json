@@ -24,6 +24,7 @@
         "CQRS",
         "CRDT",
         "denormalization",
+        "deserialization",
         "downstream",
         "downstreams",
         "Gitter",
@@ -60,7 +61,8 @@
         "Hanselminutes",
         "Resharper",
         "Bartosz",
-        "Bartosz's"
+        "Bartosz's",
+        "networky"
     ],
     "ignoreRegExpList": [
         "\\((.*)\\)", // Markdown links
