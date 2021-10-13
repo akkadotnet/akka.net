@@ -24,6 +24,8 @@
         "CQRS",
         "CRDT",
         "denormalization",
+        "downstream",
+        "downstreams",
         "Gitter",
         "Hipsterize",
         "HOCON",
@@ -32,6 +34,7 @@
         "materializer",
         "MNTR",
         "parallelizable",
+        "partitioner",
         "Petabridge",
         "pluggable",
         "protobuf",
@@ -49,11 +52,9 @@
         "threadpool",
         "Tweetinvi",
         "Unbecome",
-        "Varghese",
         "upstream",
-        "downstream",
         "upstreams",
-        "downstreams"
+        "Varghese"
     ],
     "ignoreWords": [
         "Hanselminutes",
