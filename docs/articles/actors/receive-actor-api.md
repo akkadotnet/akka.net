@@ -140,7 +140,7 @@ This strategy is typically declared inside the actor in order to have access to 
   * parent supervisor
   * supervised children
   * lifecycle monitoring
-  * hotswap behavior stack as described in [HotSwap](#becomeunbecome)
+  * hot-swap behavior stack as described in [HotSwap](#becomeunbecome)
 
 The remaining visible methods are user-overridable life-cycle hooks which are described in the following:
 
@@ -649,12 +649,12 @@ In the above example a `"shutdown"` message is sent to the target actor to initi
 
 ## Become/Unbecome
 ### Upgrade
-Akka supports hotswapping the Actor’s message loop (e.g. its implementation) at runtime. Use the `Context.Become` method from within the Actor. The hotswapped code is kept in a `Stack` which can be pushed (replacing or adding at the top) and popped.
+Akka supports hot-swapping the Actor’s message loop (e.g. its implementation) at runtime. Use the `Context.Become` method from within the Actor. The hot-swapped code is kept in a `Stack` which can be pushed (replacing or adding at the top) and popped.
 
 > [!WARNING]
 > Please note that the actor will revert to its original behavior when restarted by its Supervisor.
 
-To hotswap the Actor using `Context.Become`:
+To hot-swap the Actor using `Context.Become`:
 
 ```csharp
 public class HotSwapActor : ReceiveActor
