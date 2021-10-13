@@ -50,7 +50,7 @@ Here's how Akka.DependencyInjection is used to instantiate this actor via `Props
 
 [!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=CreateNonDiActor)]
 
-The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your depedency injection container.
+The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your dependency injection container.
 
 Akka.DependencyInjection does not manage the lifecycle of your dependencies automatically - in fact, Akka.NET recommends that you follow [Microsoft's own dependency injection guidelines](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines):
 
