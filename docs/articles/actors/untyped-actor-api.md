@@ -566,7 +566,7 @@ When `GracefulStop()` returns successfully, the actor’s `PostStop()` hook will
 In the above example a `"shutdown"` message is sent to the target actor to initiate the process of stopping the actor. You can use `PoisonPill` for this, but then you have limited possibilities to perform interactions with other actors before stopping the target actor. Simple cleanup tasks can be handled in `PostStop`.
 
 > [!WARNING]
-> Keep in mind that an actor stopping and its name being deregistered are separate events which happen asynchronously from each other. Therefore it may be that you will find the name still in use after `GracefulStop()` returned. In order to guarantee proper deregistration, only reuse names from within a supervisor you control and only in response to a `Terminated` message, i.e. not for top-level actors.
+> Keep in mind that an actor stopping and its name being deregistered are separate events which happen asynchronously from each other. Therefore it may be that you will find the name still in use after `GracefulStop()` returned. In order to guarantee proper de-registration, only reuse names from within a supervisor you control and only in response to a `Terminated` message, i.e. not for top-level actors.
 
 ## Become/Unbecome
 ### Upgrade
