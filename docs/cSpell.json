@@ -51,6 +51,8 @@
         "Ryzen",
         "serializers",
         "Serilog",
+        "sharded",
+        "Stannard",
         "substream",
         "substreams",
         "testkit",
