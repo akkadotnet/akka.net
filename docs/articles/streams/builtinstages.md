@@ -249,7 +249,7 @@ completes. If the stream completes with no elements the task is failed.
 
 **backpressures** never
 
-#### LasrOrDefault
+#### LastOrDefault
 
 Materialize a ``Task<T>`` which completes with the last value
 emitted when the stream completes. if the stream completes with no elements the task is
