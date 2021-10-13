@@ -215,7 +215,7 @@ When all mentioned above behaviors are not enough, it is always possible to impl
 
 ### Built-in snapshot store behaviors
 
-Snpahost store behaviors are following the same naming pattern as journal behaviors:
+Snapshot store behaviors are following the same naming pattern as journal behaviors:
 
 * `Pass` - standard in-memory snapshot store behavior, all operations will happen without any errors or delays;
 * `Fail` - the snapshot store will always fail. All `Fail*` behaviors will crash the snapshot store. Use this and other `Fail*` methods to test snapshot store communication problems.
