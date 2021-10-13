@@ -1,3 +1,5 @@
+open System.Runtime.ExceptionServices
+
 #I @"tools/FAKE/tools"
 #r "FakeLib.dll"
 
@@ -337,10 +339,16 @@ Target "MultiNodeTestsNetCore" (fun _ ->
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
 
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputMultiNode
-        projects |> Seq.iter (runSingleProject)
+        projects |> Seq.iter ( fun project ->
+            try
+                runSingleProject project
+            with
+                ex ->
+                    raise (Exception(sprintf "Exception thrown while testing %s" project, ex))
+                )
 )
 
 Target "MultiNodeTestsNet" (fun _ ->
@@ -364,11 +372,16 @@ Target "MultiNodeTestsNet" (fun _ ->
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
                 info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
 
-            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.DontFailBuild result
+            ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
         CreateDir outputMultiNode
-        projects |> Seq.iter (runSingleProject)
-
+        projects |> Seq.iter ( fun project ->
+            try
+                runSingleProject project
+            with
+                ex ->
+                    raise (Exception(sprintf "Exception thrown while testing %s" project, ex))
+                )
 )
 Target "NBench" (fun _ ->
     ensureDirectory outputPerfTests
