@@ -84,7 +84,7 @@ The `SerializationSetup` takes a function with the following signature:
 Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>
 ```
 
-The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a construtor argument.
+The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a constructor argument.
 
 For each serialization binding you wish to create, you need to create [a `SerializerDetails` object](xref:Akka.Serialization.SerializerDetails) using the `SerializerDetails.Create` method:
 
