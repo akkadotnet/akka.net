@@ -62,7 +62,7 @@ This means that actors are always organized into a tree. In general, creating an
 actor can only happen from inside another actor. This 'creator' actor becomes
 the _parent_ of the newly created _child_ actor. You might ask then, who is the
 parent of the _first_ actor you create? To create a top-level actor one must
-first initialise an _actor system_, let's refer to this as the object `System`.
+first initialize an _actor system_, let's refer to this as the object `System`.
 This is followed by a call to `System.ActorOf()` which returns a reference to
 the newly created actor. This does not create a "freestanding" actor though,
 instead, it injects the corresponding actor as a child into an already existing

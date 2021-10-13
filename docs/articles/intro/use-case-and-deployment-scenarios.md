@@ -54,7 +54,7 @@ public class MvcApplication : System.Web.HttpApplication
 
     protected void Application_Start()
     {
-        //your mvc config. Does not really matter if you initialise
+        //your mvc config. Does not really matter if you initialize
         //your actor system before or after
 
         ActorSystem = ActorSystem.Create("app");
