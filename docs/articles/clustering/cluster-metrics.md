@@ -154,7 +154,7 @@ akka.cluster.metrics {
     # Supervision strategy.
     strategy {
 
-      # FQCN of class providing `akka.actor.SupervisorStrategy`.
+      # Fully-qualified class name of the class providing `akka.actor.SupervisorStrategy`.
       # Must have a constructor with signature `<init>(com.typesafe.config.Config)`.
       # Default metrics strategy provider is a configurable extension of `OneForOneStrategy`.
       provider = "Akka.Cluster.Metrics.ClusterMetricsStrategy, Akka.Cluster.Metrics"
@@ -183,7 +183,7 @@ akka.cluster.metrics {
     # to /system/cluster-metrics actor: `akka.cluster.metrics.{CollectionStartMessage,CollectionStopMessage}`
     enabled = on
 
-    # FQCN of the metrics collector implementation.
+    # Fully-qualified class name of the metrics collector implementation.
     # It must implement `akka.cluster.metrics.MetricsCollector` and
     # have public constructor with akka.actor.ActorSystem parameter.
     # Will try to load in the following order of priority:
