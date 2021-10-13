@@ -140,7 +140,7 @@ This strategy is typically declared inside the actor in order to have access to 
   * parent supervisor
   * supervised children
   * lifecycle monitoring
-  * hot-swap behavior stack as described in [HotSwap](#becomeunbecome)
+  * hot-swap behavior stack as described in [Become/Unbecome](#becomeunbecome)
 
 The remaining visible methods are user-overridable life-cycle hooks which are described in the following:
 
