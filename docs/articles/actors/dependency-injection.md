@@ -137,7 +137,7 @@ actors. So any scope which interferes with that is not supported.
 
 This also means that when injecting dependencies into your actor, using a
 Singleton or Transient scope is fine. But having that dependency scoped per
-httpwebrequest for example won't work.
+`HttpWebRequest` for example won't work.
 
 Techniques for dependency injection and integration with dependency injection
 frameworks are described in more depth in the
