@@ -268,7 +268,7 @@ The first actor happens to be rather simple now, as we have not implemented any
 of the components yet. What is new is that we have dropped using
 `Console.WriteLine()` and instead use `ILoggingAdapter` which allows us to use
 the logging facility built into Akka.NET directly. Furthermore, we are using a
-recommended creational pattern for actors; define a static `Props()` method in
+recommended pattern for creating actors; define a static `Props()` method in
 the the actor:
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotSupervisor.cs?name=iot-supervisor)]
