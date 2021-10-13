@@ -10,9 +10,9 @@
 
 ## Technical Overview
 
-### Eventsourced recovery cycle
+### Event-sourced recovery cycle
 
-Eventsourced recovery cycle starts in `PreStart` phase by actor sending a `Recover` message to itself. Eventsourced actor always starts in **Recovery pending** phase. During most of the recovery cycle it will only react on persistence system messages necessary to finish recovery cycle, stashing all other messages to be proceeded when actor state will recover.
+Event-sourced recovery cycle starts in `PreStart` phase by actor sending a `Recover` message to itself. Event-sourced actor always starts in **Recovery pending** phase. During most of the recovery cycle it will only react on persistence system messages necessary to finish recovery cycle, stashing all other messages to be proceeded when actor state will recover.
 
 1. **Recovery pending** - when actor receives a `Recover` message, it sends `LoadSnapshot` request to the snapshot store (by default it tries to recover from the latests snapshot found) and changes to **Recovery started** state.
 2. **Recovery started** - actor waits for the `LoadSnapshotResult` response from snapshot store, as requested in previous state. If response contains a snapshot, it becomes wrapped in `SnapshotOffer` object and invoked by actor's `ReceiveRecover` method. Actor's last sequence number becomes updated from snapshot metadata. After that, a `ReplayMessages` request is sent to the journal and actor comes into `ReplayStarted` state.
@@ -28,11 +28,11 @@ Eventsourced recovery cycle starts in `PreStart` phase by actor sending a `Recov
 
 ### Persistent view recovery cycle
 
-Since persistent views are read-only variant of the persistence mechanism, their recovery states are slightly different from the other eventsourced actors - i.e. no journal writing steps are being performed. 
+Since persistent views are read-only variant of the persistence mechanism, their recovery states are slightly different from the other event-sourced actors - i.e. no journal writing steps are being performed. 
 
-1. **Recovery pending** - same as Eventsourced.
-2. **Recovery started** - same as Eventsourced.
-3. **Replay started** - same as Eventsourced, except that `ReplayMessagesSuccess` and `ReplayMessagesFailure` both leads to the **Idle** state.
-4. **Replay failed** - same as Eventsourced.
-5. **Prepare restart** - same as Eventsourced, except no journal batch flushing is being performed.
+1. **Recovery pending** - same as Event-sourced.
+2. **Recovery started** - same as Event-sourced.
+3. **Replay started** - same as Event-sourced, except that `ReplayMessagesSuccess` and `ReplayMessagesFailure` both leads to the **Idle** state.
+4. **Replay failed** - same as Event-sourced.
+5. **Prepare restart** - same as Event-sourced, except no journal batch flushing is being performed.
 6. **Idle** - final persistent state, in which all messages are passed to view's `Receive` method. The only exception is the `Update` controll message, which orders view to replay latests events found inside journal. By default this message is sent periodicaly to the view (details can be changed through HOCON config).

@@ -218,7 +218,7 @@ You can inspect current sharding stats by using following messages:
 
 ## Integrating Cluster Sharding with Persistent Actors
 
-One of the most common scenarios, where cluster sharding is used, is to combine them with eventsourced persistent actors from [Akka.Persistence](xref:persistence-architecture) module. 
+One of the most common scenarios, where cluster sharding is used, is to combine them with event-sourced persistent actors from [Akka.Persistence](xref:persistence-architecture) module. 
 
 Entity actors are instantiated automatically by Akka.Cluster.Sharding - but in order for persistent actors to recover and persist their state correctly they must be given a globally unique `PersistentId`. This can be most easily accomplished using the `entityPropsFactory` overload on the `Sharding.Start` call used to create a new `ShardRegion`:
 
