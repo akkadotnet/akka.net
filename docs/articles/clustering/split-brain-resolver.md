@@ -35,9 +35,11 @@ akka.cluster {
 Keep in mind that split brain resolver will NOT work when `akka.cluster.auto-down-unreachable-after` is used.
 
 ## Split Brain Resolution Strategies
+
 Beginning in Akka.NET v1.4.16, the Akka.NET project has ported the original split brain resolver implementations from Lightbend as they are now open source. The following section of documentation describes how Akka.NET's hand-rolled split brain resolvers are implemented.
 
 ### Picking a Strategy
+
 In order to enable an Akka.NET split brain resolver in your cluster (they are not enabled by default), you will want to update your `akka.cluster` HOCON configuration to the following:
 
 ```hocon
@@ -200,6 +202,7 @@ akka.cluster.split-brain-resolver {
 ```
 
 #### Down All
+
 As the name implies, this strategy results in all members of the being downed unconditionally - forcing a full rebuild and recreation of the entire cluster if there are any unreachable nodes alive for longer than  `akka.cluster.split-brain-resolver.stable-after` (20 seconds by default.)
 
 You can enable this strategy via the following:
@@ -212,6 +215,7 @@ akka.cluster {
 ```
 
 #### Keep Referee
+
 This strategy is only available with the legacy Akka.Cluster split brain resolver, which you can enable via the following HOCON:
 
 ```hocon
@@ -242,6 +246,7 @@ Things to keep in mind:
 You can configure a minimum required amount of reachable nodes to maintain operability by using `down-all-if-less-than-nodes`. If a strategy will detect that the number of reachable nodes will go below that minimum it will down the entire partition even when referee node was reachable.
 
 #### Lease Majority
+
 The `lease-majority` downing provider strategy keeps all of the nodes in the cluster who are able to successfully acquire an [`Akka.Coordination.Lease`](xref:Akka.Coordination.Lease) - and the implementation of which must be specified by the user via configuration:
 
 ```hocon
