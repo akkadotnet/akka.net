@@ -145,11 +145,13 @@ The key to performance tuning the DotNetty TCP transport is picking the best val
 * If your application has a small number of remote actors who need to communicate with the lowest possible latency, decrease the `max-pending-writes` value so you don't have to wait for the `flush-interval` to hit.
 * If your application has a large number of actors sending a large number of messages that vary in size, use the default values - they're tailored for that case.
 
+<!-- markdownlint-disable MD028 -->
 > [!TIP]
 > If you're worried about adverse impact of implementing batching in your Akka.NET application because you aren't sure yet how it should be calibrated for your specific use cases, you can disable batching via `akka.remote.dot-netty.tcp.batching.enabled = false` - this will allow the DotNetty transport to continue to run as it did prior to Akka.NET v1.4.0-beta4.
 
 > [!IMPORTANT]
 > Later on in the Akka.NET v1.4.0 release cycle we will be releasing some tools built into Akka.Remote that will make it easier to collect profiling data about your application's performance. This should make it much easier to determine what sort of configuration you may want to use with the DotNetty TCP batching system.
+<!-- markdownlint-enable MD028 -->
 
 ## Further Reading
 
