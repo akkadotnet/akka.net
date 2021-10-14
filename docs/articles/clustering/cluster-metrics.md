@@ -19,6 +19,7 @@ Metrics collection is delegated to an implementation of `Akka.Cluster.Metrics.IM
 
 Different collector implementations may provide different subsets of metrics published to the cluster. 
 Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics` class:
+
 * `MemoryUsed` - total memory allocated to the currently running process
 * `MemoryAvailable` - memory, available for the process
 * `MaxMemoryRecommended` - if set, memory limit recommended for current process
@@ -35,6 +36,7 @@ which collects all metrics defined above.
 You can also plug-in your own metrics collector implementation.
 
 By default, metrics extension will use collector provider fall back and will try to load them in this order:
+
 1. configured user-provided collector (see `Configuration` section for details)
 2. built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector
 

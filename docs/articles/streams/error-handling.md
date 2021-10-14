@@ -146,6 +146,7 @@ For many stages it may not even make sense to implement support for supervision 
 For stages that do implement supervision, the strategies for how to handle exceptions from processing stream elements can be selected when materializing the stream through use of an attribute.
 
 There are three ways to handle exceptions from application code:
+
 - `Stop` - The stream is completed with failure.
 - `Resume` - The element is dropped and the stream continues.
 - `Restart` - The element is dropped and the stream continues after restarting the stage. Restarting a stage means that any accumulated state is cleared. This is typically performed by creating a new instance of the stage.

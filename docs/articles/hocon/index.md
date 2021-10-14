@@ -65,6 +65,7 @@ The last element in an array or last field in an object may be followed by a sin
 These same comma rules apply to fields in objects.
 
 Examples:
+
  - `[1,2,3,]` and `[1,2,3]` are the same array.
  - `[1\n2\n3]` and `[1,2,3]` are the same array.
  - `[1,2,3,,]` is invalid because it has two trailing commas.

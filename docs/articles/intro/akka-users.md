@@ -23,6 +23,7 @@ Any system that has the need for high-throughput and low latency is a good candi
 #### Concurrency/parallelism (any app)
 
 Share of an article by Joel Mueller, Software Architect, SNL Financial
+
 * [SNL Financial (a subsidiary of McGraw Hill): Akka.NET Goes to Wall Street](https://petabridge.com/blog/akkadotnet-goes-to-wall-street/)
 
 #### Simulation
@@ -44,6 +45,7 @@ Scale up, scale out, fault-tolerance / HA
 #### Business Intelligence/Data Mining/general purpose crunching
 
 Tweet from Philip Laureano with links.
+
 * [Real-time Clickstream Processing at Domain.au with Octopus Deploy and Akka.NET](https://twitter.com/philiplaureano/status/735976018993778688)
 
 #### Internet of Things

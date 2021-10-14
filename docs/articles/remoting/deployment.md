@@ -6,6 +6,7 @@ title: Remote Deployment
 # Remotely Deploying Actors
 
 Deploying an actor means two things simultaneously:
+
 1. Creating an actor instance with specific, explicitly configured properties and
 2. Getting an `IActorRef` to that actor.
 

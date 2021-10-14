@@ -14,6 +14,7 @@ title: Resources
 ## Blog posts
 
 **Petabridge**
+
 - [Akka.NET: What is an Actor?](https://petabridge.com/blog/akkadotnet-what-is-an-actor/) (Aaron Stannard on January 25, 2015)
 - [How to Do Asynchronous I/O with Akka.NET Actors Using PipeTo](https://petabridge.com/blog/akkadotnet-async-actors-using-pipeto/) (Aaron Stannard on January 27, 2015)
 - [How actors recover from failure](https://petabridge.com/blog/how-actors-recover-from-failure-hierarchy-and-supervision/) (Andrew Skotzko on February 6, 2015)
@@ -41,6 +42,7 @@ title: Resources
 - [Introducing Petabridge.Cmd - a Command-line Management Tool for Akka.NET Applications](https://petabridge.com/blog/petabridgecmd-release/) (Aaron Stannard on June 7, 2017)
 
 **Others**
+
 - [Deploying actors with Akka.NET](https://rogeralsing.com/2014/03/09/deploying-actors-with-akka-net/) (Roger Johansson on March 9, 2014)
 - [FSharp and Akka.net - the functional way](http://bartoszsypytkowski.com/fsharp-and-akka-net-the-functional-way/) (Bartosz Sypytkowski on July 5th, 2014)
 - [Map reduce with FSharp and Akka.net](http://bartoszsypytkowski.com/map-reduce-with-fsharp-and-akka-net/) (Bartosz Sypytkowski on July 8th, 2014)
