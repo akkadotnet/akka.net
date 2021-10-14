@@ -3,11 +3,13 @@ uid: persistence-query
 title: Persistence Query
 ---
 # Persistence Query
+
 Akka persistence query complements Persistence by providing a universal asynchronous stream based query interface that various journal plugins can implement in order to expose their query capabilities.
 
 The most typical use case of persistence query is implementing the so-called query side (also known as "read side") in the popular CQRS architecture pattern - in which the writing side of the application (e.g. implemented using akka persistence) is completely separated from the "query side". Akka Persistence Query itself is not directly the query side of an application, however it can help to migrate data from the write side to the query side database. In very simple scenarios Persistence Query may be powerful enough to fulfill the query needs of your app, however we highly recommend (in the spirit of CQRS) of splitting up the write/read sides into separate datastores as the need arises.
 
 ## Design overview
+
 Akka Persistence Query is purposely designed to be a very loosely specified API. This is in order to keep the provided APIs general enough for each journal implementation to be able to expose its best features, e.g. a SQL journal can use complex SQL queries or if a journal is able to subscribe to a live event stream this should also be possible to expose the same API - a typed stream of events.
 
 **Each read journal must explicitly document which types of queries it supports**. Refer to your journal's plugins documentation for details on which queries and semantics it supports.
@@ -15,6 +17,7 @@ Akka Persistence Query is purposely designed to be a very loosely specified API.
 While Akka Persistence Query does not provide actual implementations of ReadJournals, it defines a number of pre-defined query types for the most common query scenarios, that most journals are likely to implement (however they are not required to).
 
 ## Read Journals
+
 In order to issue queries one has to first obtain an instance of a ReadJournal. Read journals are implemented as Community plugins, each targeting a specific datastore (for example Cassandra or ADO.NET databases). For example, given a library that provides a akka.persistence.query.my-read-journal obtaining the related journal is as simple as:
 
 ```csharp
@@ -41,6 +44,7 @@ Journal implementers are encouraged to put this identifier in a variable known t
 Read journal implementations are available as Community plugins.
 
 ### Predefined queries
+
 Akka persistence query comes with a number of query interfaces built in and suggests Journal implementors to implement them according to the semantics described below. It is important to notice that while these query types are very common a journal is not required to implement all of them - for example because in a given journal such query would be significantly inefficient.
 
 > [!NOTE]
@@ -194,6 +198,7 @@ As you can see, we can use all the usual stream combinators available from Akka 
 If your usage does not require a live stream, you can use the `CurrentEventsByTag` query.
 
 ### Materialized values of queries
+
 Journals are able to provide additional information related to a query by exposing materialized values, which are a feature of Akka Streams that allows to expose additional values at stream materialization time.
 
 More advanced query journals may use this technique to expose information about the character of the materialized stream, for example if it's finite or infinite, strictly ordered or not ordered at all. The materialized value type is defined as the second type parameter of the returned `Source`, which allows journals to provide users with their specialized query object, as demonstrated in the sample below:
@@ -246,6 +251,7 @@ query
 ```
 
 ## Performance and denormalization
+
 When building systems using Event sourcing and CQRS ([Command & Query Responsibility Segregation](https://msdn.microsoft.com/en-us/library/jj554200.aspx)) techniques it is tremendously important to realise that the write-side has completely different needs from the read-side, and separating those concerns into datastores that are optimized for either side makes it possible to offer the best experience for the write and read sides independently.
 
 For example, in a bidding system it is important to "take the write" and respond to the bidder that we have accepted the bid as soon as possible, which means that write-throughput is of highest importance for the write-side – often this means that data stores which are able to scale to accommodate these requirements have a less expressive query side.
@@ -256,6 +262,7 @@ On the other hand the same application may have some complex statistics view or 
 > When referring to Materialized Views in Akka Persistence think of it as "some persistent storage of the result of a Query". In other words, it means that the view is created once, in order to be afterwards queried multiple times, as in this format it may be more efficient or interesting to query it (instead of the source events directly).
 
 ### Materialize view to Reactive Streams compatible datastore
+
 If the read datastore exposes a Reactive Streams interface then implementing a simple projection is as simple as, using the read-journal and feeding it into the databases driver interface, for example like so:
 
 ```csharp
@@ -277,6 +284,7 @@ readJournal
 ```
 
 ### Materialize view using SelectAsync
+
 If the target database does not provide a reactive streams Subscriber that can perform writes, you may have to implement the write logic using plain functions or Actors instead.
 
 In case your write logic is state-less and you just need to convert the events from one data type to another before writing into the alternative datastore, then the projection is as simple as:
@@ -301,6 +309,7 @@ readJournal
 ```
 
 ### Resumable projections
+
 Sometimes you may need to implement "resumable" projections, that will not start from the beginning of time each time when run. In this case you will need to store the sequence number (or offset) of the processed event and use it the next time this projection is started. This pattern is not built-in, however is rather simple to implement yourself.
 
 The example below additionally highlights how you would use Actors to implement the write side, in case you need to do some complex logic that would be best handled inside an Actor before persisting the event into the other datastore:
@@ -341,7 +350,9 @@ public class TheOneWhoWritesToQueryJournal(id: String) : ActorBase
   }
 }
 ```
+
 ## Configuration
+
 Configuration settings can be defined in the configuration section with the absolute path corresponding to the identifier, which is `Akka.Persistence.Query.Journal.Sqlite` for the default `SqlReadJournal.Identifier`.
 
 It can be configured with the following properties:
