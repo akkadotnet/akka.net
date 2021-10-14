@@ -232,6 +232,7 @@ pairUpWithToString.RunWith(Source.From(new[] {1}), Sink.First<Tuple<int, string>
 ```
 
 ## Combining Sources and Sinks with simplified API
+
 There is a simplified API you can use to combine sources and sinks with junctions like: ``Broadcast<T>``, ``Balance<T>``,  ``Merge<In>`` and ``Concat<A>`` without the need for using the Graph DSL. The combine method takes care of constructing the necessary graph underneath. In following example we combine two sources into one (fan-in):
 
 ```csharp
@@ -255,6 +256,7 @@ Source.From(new[] {0, 1, 2}).RunWith(sink, materializer);
 ```
 
 ## Building reusable Graph components
+
 It is possible to build reusable, encapsulated components of arbitrary input and output ports using the graph DSL.
 
 As an example, we will build a graph junction that represents a pool of workers, where a worker is expressed
@@ -310,6 +312,7 @@ public class PriorityWorkerPoolShape<TIn, TOut> : Shape
 ```
 
 ## Predefined shapes
+
 In general a custom `Shape` needs to be able to provide all its input and output ports, be able to copy itself, and also be
 able to create a new instance from given ports. There are some predefined shapes provided to avoid unnecessary
 boilerplate:
@@ -401,6 +404,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
 ```
 
 ## Bidirectional Flows
+
 A graph topology that is often useful is that of two flows going in opposite directions. Take for example a codec stage that serializes outgoing messages and deserializes incoming octet streams. Another such stage could add a framing protocol that attaches a length header to outgoing data and parses incoming frames back into the original octet stream chunks. These two stages are meant to be composed, applying one atop the other as part of a protocol stack. For this purpose exists the special type `BidiFlow` which is a graph that has exactly two open inlets and two open outlets. The corresponding shape is called `BidiShape` and is defined like this:
 
 ```csharp
@@ -663,6 +667,7 @@ result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 10));
 This example demonstrates how `BidiFlow` subgraphs can be hooked together and also turned around with the ``.Reversed`` method. The test simulates both parties of a network communication protocol without actually having to open a network connection—the flows can just be connected directly.
 
 ## Accessing the materialized value inside the Graph
+
 In certain cases it might be necessary to feed back the materialized value of a Graph (partial, closed or backing a
 Source, Sink, Flow or BidiFlow). This is possible by using ``builder.MaterializedValue`` which gives an ``Outlet`` that
 can be used in the graph as an ordinary source or outlet, and which will eventually emit the materialized value.
@@ -698,6 +703,7 @@ var cyclicAggregate = Source.FromGraph(GraphDsl.Create(Sink.Aggregate<int, int>(
 ```
 
 ## Graph cycles, liveness and deadlocks
+
 Cycles in bounded stream topologies need special considerations to avoid potential deadlocks and other liveness issues. This section shows several examples of problems that can arise from the presence of feedback arcs in stream processing graphs.
 
 The first example demonstrates a graph that contains a naïve cycle. The graph takes elements from the source, prints them, then broadcasts those elements to a consumer (we just used ``Sink.Ignore`` for now) and to a feedback arc that is merged back into the main stream via a ``Merge`` junction.

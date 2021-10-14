@@ -51,6 +51,7 @@ best practice to do specific deletes with `deleteSnapshot` or to include a `minS
 for the `SnapshotSelectionCriteria`.
 
 ## Snapshot status handling
+
 Saving or deleting snapshots can either succeed or fail – this information is reported back to the persistent actor via status messages as illustrated in the following table.
 
 |Method	         | Success                |	Failure message

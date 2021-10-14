@@ -4,6 +4,7 @@ title: Remote Deployment
 ---
 
 # Remotely Deploying Actors
+
 Deploying an actor means two things simultaneously:
 1. Creating an actor instance with specific, explicitly configured properties and
 2. Getting an `IActorRef` to that actor.
@@ -11,6 +12,7 @@ Deploying an actor means two things simultaneously:
 With Akka.Remote we get a new exciting detail: the **network location to which an actor is deployed becomes a configuration detail**.
 
 ## Remote Deployment Example
+
 That's right - we can *deploy code over the network* with Akka.Remote.
 
 Here's what that concept looks like expressed as Akka.NET code:
@@ -162,6 +164,7 @@ That's because the Deployer created the actors... but it created them INSIDE Dep
 
 
 ## Syntax
+
 In the above example, it's this piece of HOCON configuration:
 
 ```xml
@@ -181,6 +184,7 @@ Props.Create(() => new EchoActor()).WithDeploy(Deploy.None.WithScope(new RemoteS
 That actually specify to deploy the configured actor onto the specified remote `Address`, which belongs to the DeployTarget in this case.
 
 ## How Remote Deployment Actually Works
+
 The process of remote deployment feels magical, but it's actually pretty simple.
 
 ![How remote deployment works](/images/how-remote-actor-deployment-works.png)
@@ -198,6 +202,7 @@ However, in the happy event that we can form a remote association with DeployTar
 And once all of that is done, we've successfully deployed an `EchoActor` over the network from Deployer to DeployTarget.
 
 ### Important Things to Know About Remote Actor Deployments
+
 Here are some important things to remember about remote actor deployments:
 
 1. All names for remote actors are determined *by the deploying `ActorSystem`*. 1000 Deployer instances could all deploy an actor named `echoactor` onto the same DeployTarget instance and all 1000 of those operations would be successful. That's because the local actor created on DeployTarget has an `ActorPath` that looks like `akka.tcp://DeployTarget@localhost:8090/remote/akka.tcp/Deploye@localhost:19600/user/echoactor/` - the full `Address` of each Deployer `ActorSystem` is appended to the front of the `ActorPath`, thereby guaranteeing that each remote deployed actor name is unique to the Deployer.
@@ -205,6 +210,7 @@ Here are some important things to remember about remote actor deployments:
 3. All of the constructor arguments for `EchoActor` and any other remote-deployed actor must be serializable, again, because otherwise it can't be deployed.
 
 ## When to Use Remote Deployment
+
 When would you want to remotely deploy a new actor versus just sending a message to a remote actor that already exists somewhere else on the network?
 
 There are two common scenarios for when you would want to deploy an actor remotely:

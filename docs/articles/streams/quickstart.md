@@ -49,6 +49,7 @@ The nice thing about Akka Streams is that the `Source` is just a description of 
 First we use the `scan` combinator to run a computation over the whole stream: starting with the number 1 `(BigInteger(1))` we multiple by each of the incoming numbers, one after the other; the `scan` operation emits the initial value and then every calculation result. This yields the series of factorial numbers which we stash away as a Source for later reuse --it is important to keep in mind that nothing is actually computed yet, this is just a description of what we want to have computed once we run the stream. Then we convert the resulting series of numbers into a stream of `ByteString` objects describing lines in a text file. This stream is then run by attaching a file as the receiver of the data. In the terminology of Akka Streams this is called a `Sink. IOResult` is a type that IO operations return in Akka Streams in order to tell you how many bytes or elements were consumed and whether the stream terminated normally or exceptionally.
 
 ## Reusable Pieces
+
 One of the nice parts of Akka Stream --and something that other stream libraries do not offer-- is that not only sources can be reused like blueprints, all other elements can be as well. We can take the file-writing `Sink`, prepend the processing steps necessary to get the `ByteString` elements from incoming string and package that up as a reusable piece as well. Since the language for writing these streams always flows from left to right (just like plain English), we need a starting point that is like a source but with an "open" input. In Akka Streams this is called a `Flow`:
 ```csharp
 public static Sink<string, Task<IOResult>> LineSink(string filename) {
@@ -65,6 +66,7 @@ factorials.Select(_ => _.ToString()).RunWith(LineSink("factorial2.txt"), materia
 ```
 
 ## Time-Based Processing
+
 Before we start looking at a more involved example we explore the streaming nature of what Akka Streams can do. Starting from the `factorials` source we transform the stream by zipping it together with another stream, represented by a `Source` that emits the number 0 to 100: the first number emitted by the `factorials` source is the factorial of zero, the second is the factorial of one, and so on. We combine these two by forming strings like "3! = 6".
 
 ```csharp
