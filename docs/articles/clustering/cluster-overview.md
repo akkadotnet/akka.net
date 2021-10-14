@@ -82,6 +82,7 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 
 
 #### Seed Node Configuration
+
 ```xml
 akka {
     actor.provider = cluster
@@ -105,6 +106,7 @@ You can, and should, specify multiple seed nodes inside this field - and seed no
 > If you're using dedicated seed nodes (such as [Lighthouse](https://github.com/petabridge/lighthouse)), you should run at least 2 or 3. If you only have one seed node and that machine crashes, the cluster will continue operating but no new members can join the cluster!
 
 #### Non-Seed Node Configuration
+
 ```xml
 akka {
     actor.provider = cluster

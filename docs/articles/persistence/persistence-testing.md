@@ -167,6 +167,7 @@ public interface ISnapshotStoreInterceptor
 
 This is a specialized test kit with a pre-configured persistence plugin that uses `TestJournal` and `TestSnapshotStore` by default. This class provides the following methods to control journal behavior: `WithJournalRecovery` and `WithJournalWrite`; to control snapshot store it provides `WithSnapshotSave`, `WithSnapshotLoad` and `WithSnapshotDelete` methods;
 Usage example:
+
 ``` csharp
 public class PersistentActorSpec : PersistenceTestKit
 {

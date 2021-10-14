@@ -840,6 +840,7 @@ arc that injects a single element using ``Source.Single``.
 
 > [!WARNING]
 > We have to add an Async call after creating the instance of Concat. Otherwise Concat will wait upstream to be empty and that will never happen in this case.
+
 ```csharp
 RunnableGraph.FromGraph(GraphDsl.Create(b =>
 {

@@ -185,7 +185,9 @@ public class Sender : ReceiveActor
     }
 }
 ```
+
 It can send messages to the path from anywhere in the cluster:
+
 ```csharp
 RunOn(() =>
 {

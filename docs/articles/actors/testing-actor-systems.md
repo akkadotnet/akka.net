@@ -216,6 +216,7 @@ The `CallingThreadDispatcher` serves good purposes in unit testing, as described
 
 ### How to use it
 Just set the dispatcher as you normally would
+
 ```csharp
 Sys.ActorOf(Props.Create<MyActor>().WithDispatcher(CallingThreadDispatcher.Id));
 ```
@@ -244,6 +245,7 @@ The testing facilities described up to this point were aiming at formulating ass
 - Logging of the actor lifecycle. Actor creation, start, restart, monitor start, monitor stop and stop may be traced by enabling the setting *akka.actor.debug.lifecycle*; this, too, is enabled uniformly on all actors.
 
 All these messages are logged at `DEBUG` level. To summarize, you can enable full logging of actor activities using this configuration fragment:
+
 ```hocon
 akka {
   loglevel = "DEBUG"
@@ -309,6 +311,7 @@ All methods shown above directly access the FSM state without any synchronizatio
 
 ##Testing the Actor's behavior
 When the dispatcher invokes the processing behavior of an actor on a message, it actually calls apply on the current behavior registered for the actor. This starts out with the return value of the declared receive method, but it may also be changed using become and unbecome in response to external messages. All of this contributes to the overall actor behavior and it does not lend itself to easy testing on the `Actor` itself. Therefore the TestActorRef offers a different mode of operation to complement the `Actor` testing: it supports all operations also valid on normal `IActorRef`. Messages sent to the actor are processed synchronously on the current thread and answers may be sent back as usual. This trick is made possible by the `CallingThreadDispatcher` described below; this dispatcher is set implicitly for any actor instantiated into a `TestActorRef`.
+
 ```csharp
 var props = Props.Create<MyActor>();
 var myTestActor = new TestActorRef<MyActor>(Sys, props, null, "testB");
@@ -316,12 +319,14 @@ Task<int> future = myTestActor.Ask<int>("say42", TimeSpan.FromMilliseconds(3000)
 Assert.True(future.IsCompleted);
 Assert.Equal(42, await future);
 ```
+
 As the `TestActorRef` is a subclass of `LocalActorRef` with a few special extras, also aspects like supervision and restarting work properly, but beware that execution is only strictly synchronous as long as all actors involved use the `CallingThreadDispatcher`. As soon as you add elements which include more sophisticated scheduling you leave the realm of unit testing as you then need to think about asynchronicity again (in most cases the problem will be to wait until the desired effect had a chance to happen).
 
 One more special aspect which is overridden for single-threaded tests is the `ReceiveTimeout`, as including that would entail asynchronous queuing of `ReceiveTimeout` messages, violating the synchronous contract.
 
 ### The Way In-Between: Expecting Exceptions
 If you want to test the actor behavior, including hot-swapping, but without involving a dispatcher and without having the `TestActorRef` swallow any thrown exceptions, then there is another mode available for you: just use the receive method on `TestActorRef`, which will be forwarded to the underlying actor:
+
 ```csharp
 var props = Props.Create<MyActor>();
 var myTestActor = new TestActorRef<MyActor>(Sys, props, null, "testB");
@@ -342,6 +347,7 @@ However DeadLetter messages and Exceptions ultimately also result in a `LogEvent
 
 These are all things that can be intercepted, and asserted upon using the `EventFilter`.
 An example of how you can get a reference to the `EventFilter`
+
 ```csharp
     var filter = CreateEventFilter(Sys);
             

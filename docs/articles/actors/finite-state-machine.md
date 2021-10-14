@@ -9,6 +9,7 @@ title: FSM
 To demonstrate most of the features of the `FSM` class, consider an actor which shall receive and queue messages while they arrive in a burst and send them on after the burst ended or a flush request is received.
 
 First, consider all of the below to use these import statements:
+
 ```csharp
 using Akka.Actor;
 using Akka.Event;
@@ -78,9 +79,11 @@ The `FSM` class takes two type parameters:
 
 ### Defining States
 A state is defined by one or more invocations of the method
+
 ```csharp
 When(<stateName>, <stateFunction>[, timeout = <timeout>]).
 ```
+
 The given name must be an object which is type-compatible with the first type parameter given to the `FSM` class. This object is used as a hash key, so you must ensure that it properly implements `Equals` and `GetHashCode`; in particular it must not be mutable. The easiest fit for these requirements are case objects.
 
 If the `timeout` parameter is given, then all transitions into this state, including staying, receive this timeout by default. Initiating the transition with an explicit timeout may be used to override this default, see [Initiating Transitions](#initiating-transitions) for more information. The state timeout of any state may be changed during action processing with `SetStateTimeout(state, duration)`. This enables runtime configuration e.g. via external message.
@@ -91,9 +94,11 @@ The `stateFunction` argument is a `delegate State<TState, TData> StateFunction(E
 
 ### Defining the Initial State
 Each `FSM` needs a starting point, which is declared using
+
 ```csharp
 StartWith(state, data[, timeout])
 ```
+
 The optionally given timeout argument overrides any specification given for the desired initial state. If you want to cancel a default timeout, use `null`.
 
 ### Unhandled Events
@@ -114,6 +119,7 @@ WhenUnhandled(state =>
     }
 });
 ```
+
 Within this handler the state of the `FSM` may be queried using the stateName method.
 
 > [!IMPORTANT]
@@ -127,6 +133,7 @@ The result of any stateFunction must be a definition of the next state unless te
 - `Replying(msg)`. This modifier sends a reply to the currently processed message and otherwise does not modify the state transition.
 
 All modifiers can be chained to achieve a nice and concise description:
+
 ```csharp
 When(State.SomeState, state => {
   return GoTo(new Processing())
@@ -141,9 +148,11 @@ Transitions occur "between states" conceptually, which means after any actions y
 
 #### Internal Monitoring
 Up to this point, the `FSM DSL` has been centered on states and events. The dual view is to describe it as a series of transitions. This is enabled by the method
+
 ```csharp
 OnTransition(handler)
 ```
+
 which associates actions with a transition instead of with a state and event. The handler is a delegate `void TransitionHandler(TState initialState, TState nextState)` function which takes a pair of states as input; no resulting state is needed as it is not possible to modify the transition in progress.
 
 ```csharp
@@ -193,6 +202,7 @@ Timers may be canceled using
 CancelTimer(name);
 
 ```
+
 which is guaranteed to work immediately, meaning that the scheduled message will not be processed after this call even if the timer already fired and queued it. The status of any timer may be inquired with
 
 ```csharp
@@ -203,9 +213,11 @@ These named timers complement state timeouts because they are not affected by in
 
 ### Termination from Inside
 The `FSM` is stopped by specifying the result state as
+
 ```csharp
 Stop(reason, stateData);
 ```
+
 The reason must be one of `Normal` (which is the default), `Shutdown` or `Failure(reason)`, and the second argument may be given to change the state data which is available during termination handling.
 
 > [!NOTE]
@@ -242,6 +254,7 @@ OnTermination(termination =>
     }
 });
 ```
+
 As for the `WhenUnhandled` case, this handler is not stacked, so each invocation of `OnTermination` replaces the previously installed handler.
 
 ### Termination from Outside

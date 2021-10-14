@@ -92,6 +92,7 @@ var system = ActorSystem.Create("MySystem");
 // Create the dependency resolver for the actor system
 IDependencyResolver resolver = new XyzDependencyResolver(someContainer, system);
 ```
+
 When creating actorRefs straight off your ActorSystem instance, you can use the DI() Extension.
 
 ```csharp
