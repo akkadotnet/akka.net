@@ -46,6 +46,7 @@ While establishing a connection to a receptionist the `ClusterClient` will buffe
 It's worth noting that messages can always be lost because of the distributed nature of these actors. As always, additional logic should be implemented in the destination (acknowledgement) and in the client (retry) actors to ensure at-least-once message delivery.
 
 ## An Example
+
 On the cluster nodes first start the receptionist. Note, it is recommended to load the extension when the actor system is started by defining it in the akka.extensions configuration property:
 
 ```hocon
@@ -94,6 +95,7 @@ var settings = ClusterClientSettings.Create(Sys).WithInitialContacts(initialCont
 You will probably define the address information of the initial contact points in configuration or system property. See also Configuration.
 
 ## ClusterClientReceptionist Extension
+
 In the example above the receptionist is started and accessed with the `Akka.Cluster.Tools.Client.ClusterClientReceptionist` extension. That is convenient and perfectly fine in most cases, but it can be good to know that it is possible to start the `akka.cluster.client.ClusterReceptionist` actor as an ordinary actor and you can have several different receptionists at the same time, serving different types of clients.
 
 Note that the `ClusterClientReceptionist` uses the `DistributedPubSub` extension, which is described in Distributed Publish Subscribe in Cluster.
@@ -105,6 +107,7 @@ akka.extensions = ["Akka.Cluster.Tools.Client.ClusterClientReceptionistExtension
 ```
 
 ## Events
+
 As mentioned earlier, both the `ClusterClient` and `ClusterClientReceptionist` emit events that can be subscribed to. The following code snippet declares an actor that will receive notifications on contact points (addresses to the available receptionists), as they become available. The code illustrates subscribing to the events and receiving the `ClusterClient` initial state.
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/ClusterClient/ClientListener.cs?name=ClusterClient)]
@@ -114,6 +117,7 @@ Similarly we can have an actor that behaves in a similar fashion for learning wh
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/ClusterClient/ReceptionistListener.cs?name=ReceptionistListener)]
 
 ## Configuration
+
 The `ClusterClientReceptionist` extension (or `ClusterReceptionistSettings`) can be configured with the following properties:
 
 [!code-json[ConfigReference](../../../src/contrib/cluster/Akka.Cluster.Tools/Client/reference.conf)]
@@ -124,9 +128,11 @@ The 'akka.cluster.client' configuration properties are read by the `ClusterClien
 
 
 ## Failure handling
+
 When the cluster client is started it must be provided with a list of initial contacts which are cluster nodes where receptionists are running. It will then repeatedly (with an interval configurable by `establishing-get-contacts-interval`) try to contact those until it gets in contact with one of them. While running, the list of contacts are continuously updated with data from the receptionists (again, with an interval configurable with `refresh-contacts-interval`), so that if there are more receptionists in the cluster than the initial contacts provided to the client the client will learn about them.
 
 While the client is running it will detect failures in its connection to the receptionist by heartbeats if more than a configurable amount of heartbeats are missed the client will try to reconnect to its known set of contacts to find a receptionist it can access.
 
 ## When the cluster cannot be reached at all
+
 It is possible to make the cluster client stop entirely if it cannot find a receptionist it can talk to within a configurable interval. This is configured with the `reconnect-timeout`, which defaults to off. This can be useful when initial contacts are provided from some kind of service registry, cluster node addresses are entirely dynamic and the entire cluster might shut down or crash, be restarted on new addresses. Since the client will be stopped in that case a monitoring actor can watch it and upon `Terminate` a new set of initial contacts can be fetched and a new cluster client started.
