@@ -167,7 +167,7 @@ For supporting remembered entities in an environment without disk storage but wi
 > [!NOTE]
 > Currently, Lightning.NET library, the storage solution used to store DData in disk, is having problem
 > deploying native library files in [Linux operating system operating in x64 and ARM platforms]
-> (https://github.com/CoreyKaylor/Lightning.NET/issues/141).
+> (<https://github.com/CoreyKaylor/Lightning.NET/issues/141>).
 > 
 > You will need to install LightningDB in your Linux distribution manually if you wanted to use the durable DData feature.
 
