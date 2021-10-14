@@ -18,6 +18,7 @@ Members:
 - `UnconfirmedCount` property shows the number of unconfirmed messages.
 
 ## Relationship between Deliver and ConfirmDelivery
+
 To send messages to the destination path, use the `Deliver` method after you have persisted the intent to send the message.
 
 The destination actor must send back a confirmation message. When the sending actor receives this confirmation message you should persist the fact that the message was delivered successfully and then call the `ConfirmDelivery` method.
