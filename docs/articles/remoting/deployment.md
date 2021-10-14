@@ -223,7 +223,9 @@ There are two common scenarios for when you would want to deploy an actor remote
 
 ## Additional Resources
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/kOm8lGBkrM8" frameborder="0" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 * [Akka.Remote: How to Remotely Deploy Actors (Video)](https://www.youtube.com/watch?v=kOm8lGBkrM8)
 * [Akka.NET remote deployment with F#](http://bartoszsypytkowski.com/akka-net-remote-deployment-with-f/)
