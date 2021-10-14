@@ -17,7 +17,7 @@ The error message would look like this in clusters that are running a combinatio
 
 > `Serializer not defined for message with serializer id [6] and manifest []. Transient association error (association remains live). Cannot find manifest class [S] for serializer with id [17].`
 
-You can see the PR that introduced this regression here: https://github.com/akkadotnet/akka.net/issues/4986
+You can see the PR that introduced this regression here: <https://github.com/akkadotnet/akka.net/issues/4986>
 
 This change was originally introduced to assist with cross-platform wire compatibility between .NET Framework and .NET Core, because Microsoft changed the names of all primitive types between the two runtimes when .NET Core was originally introduced.
 

@@ -460,7 +460,7 @@ Just like in case of `Source.FromObservable`, `Source.FromEvents` can take optio
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
 
-- Reactive Streams: http://reactive-streams.org/
+- Reactive Streams: <http://reactive-streams.org/>
 
 
 The two most important interfaces in Reactive Streams are the `IPublisher` and `ISubscriber`.

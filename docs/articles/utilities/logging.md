@@ -4,7 +4,7 @@ title: Logging
 ---
 
 # Logging
-For more info see real Akka's documentation: http://doc.akka.io/docs/akka/2.0/scala/logging.html
+For more info see real Akka's documentation: <http://doc.akka.io/docs/akka/2.0/scala/logging.html>
 
 ## How to Log
 To log in an actor, create a logger and assign it to a private field:
@@ -63,7 +63,7 @@ akka {
 	loggers = ["Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog"]
 }
 ```
-The above NLog components can be found on Nuget (https://www.nuget.org/packages/Akka.Logger.NLog/)
+The above NLog components can be found on Nuget (<https://www.nuget.org/packages/Akka.Logger.NLog/>)
 
 ## Configuring Custom Loggers
 
