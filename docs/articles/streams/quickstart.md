@@ -71,9 +71,9 @@ Before we start looking at a more involved example we explore the streaming natu
 
 ```csharp
  await factorials
-	 .ZipWith(Source.From(Enumerable.Range(0, 100)), (num, idx) => $"{idx}! = {num}")
-	 .Throttle(1, TimeSpan.FromSeconds(1), 1, ThrottleMode.Shaping)
-	 .RunForeach(Console.WriteLine, materializer);
+     .ZipWith(Source.From(Enumerable.Range(0, 100)), (num, idx) => $"{idx}! = {num}")
+     .Throttle(1, TimeSpan.FromSeconds(1), 1, ThrottleMode.Shaping)
+     .RunForeach(Console.WriteLine, materializer);
 ```
 All operations so far have been time-independent and could have been performed in the same fashion on strict collections of elements. The next line demonstrates that we are in fact dealing with streams that can flow at a certain speed: we use the `throttle` combinator to slow down the stream to 1 element per second (the second 1 in the argument list is the maximum size of a burst that we want to allow--passing 1 means that the first element gets through immediately and the second then has to wait for one second and so on).
 

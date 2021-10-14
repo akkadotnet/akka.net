@@ -333,7 +333,7 @@ The idea of self-referential substitution is to allow a new value for a field to
 ```
 is equal to:
 ```
-	path : "a:b:c:d"
+    path : "a:b:c:d"
 ```
 
 Examples of self-referential fields:

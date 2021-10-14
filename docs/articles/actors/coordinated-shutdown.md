@@ -91,8 +91,8 @@ More phases can be added to an application by overriding the HOCON of an existin
 ```
 akka.coordinated-shutdown.phases.before-cluster-shutdown.depends-on = [service-stop, my-phase]
 my-phase{
-	timeout = 10s
-	recover = on
+    timeout = 10s
+    recover = on
 }
 ```
 
@@ -112,7 +112,7 @@ For instance, if you're using [Akka.Cluster](xref:cluster-overview) it's commonp
 var coordShutdown = CoordinatedShutdown.Get(myActorSystem);
 coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "cleanup-my-api", () =>
 {
-	return _myCustomSocketApi.CloseAsync().ContinueWith(tr => Done.Instance);
+    return _myCustomSocketApi.CloseAsync().ContinueWith(tr => Done.Instance);
 });
 ```
 

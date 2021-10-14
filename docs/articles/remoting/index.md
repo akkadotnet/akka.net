@@ -84,7 +84,7 @@ Enabling Akka.Remote in your own applications is simple:
 
 First you need to install the Akka.Remote NuGet package, which you can do like this:
 
-	PS> Install-Package Akka.Remote
+    PS> Install-Package Akka.Remote
 
 Next, you'll need to enable the `RemoteActorRefProvider` inside [HOCON configuration](xref:configuration) and bind your transport to an accessible IP address and port combination. Here's an example:
 

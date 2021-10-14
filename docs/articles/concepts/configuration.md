@@ -161,8 +161,8 @@ var f2 = ConfigurationFactory.ParseString("c = baz");
 var f3 = ConfigurationFactory.ParseString("a = foo");
 
 var yourConfig = f0.WithFallback(f1)
-				   .WithFallback(f2)
-				   .WithFallback(f3);
+                   .WithFallback(f2)
+                   .WithFallback(f3);
 ```
 
 If we request a value for a HOCON object with key "a", using the following code:

@@ -65,18 +65,18 @@ public class IssueTrackerMailbox : UnboundedPriorityMailbox
 {
   protected override int PriorityGenerator(object message)
   {
-	  var issue = message as Issue;
+      var issue = message as Issue;
 
-	  if (issue != null)
-	  {
-		  if (issue.IsSecurityFlaw)
-			  return 0;
+      if (issue != null)
+      {
+          if (issue.IsSecurityFlaw)
+              return 0;
 
-		  if (issue.IsBug)
-			  return 1;
-	  }
+          if (issue.IsBug)
+              return 1;
+      }
 
-	  return 2;
+      return 2;
   }
 }
 ```

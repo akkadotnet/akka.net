@@ -129,9 +129,9 @@ default-fork-join-dispatcher {
   type = ForkJoinDispatcher
   throughput = 100
   dedicated-thread-pool {
-	  thread-count = 3
-	  deadlock-timeout = 3s
-	  threadtype = background
+      thread-count = 3
+      deadlock-timeout = 3s
+      threadtype = background
   }
 }
 ```

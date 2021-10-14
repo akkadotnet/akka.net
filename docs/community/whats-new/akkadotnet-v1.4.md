@@ -82,9 +82,9 @@ Akka.NET v1.4 changes that - now that [Akka.DistributedData](../../articles/clus
 
 ```
 akka.cluster{
-	sharding{
-		state-store-mode = ddata
-	}
+    sharding{
+        state-store-mode = ddata
+    }
 }
 ```
 

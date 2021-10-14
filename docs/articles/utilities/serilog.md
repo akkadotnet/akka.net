@@ -26,9 +26,9 @@ Next, you'll need to configure the global `Log.Logger` and also specify to use
 the logger in the config when creating the system, for example like this:
 ```csharp
 var logger = new LoggerConfiguration()
-	.WriteTo.Console()
-	.MinimumLevel.Information()
-	.CreateLogger();
+    .WriteTo.Console()
+    .MinimumLevel.Information()
+    .CreateLogger();
 
 Serilog.Log.Logger = logger;
 
@@ -75,9 +75,9 @@ If the configured output template is, for example, `"[{CorrelationId}] {Message}
 ```csharp
 // configure sink with an output template
 var logger = new LoggerConfiguration()
-	.WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
-	.MinimumLevel.Information()
-	.CreateLogger();
+    .WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
+    .MinimumLevel.Information()
+    .CreateLogger();
 ```
 
 ## HOCON configuration

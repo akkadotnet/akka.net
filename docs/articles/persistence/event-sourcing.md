@@ -82,13 +82,13 @@ Sometimes there is a need for performing additional initialization when the reco
 ```csharp
 protected override void OnRecover(object message)
 {
-	switch(message)
-	{
-		case RecoveryCompleted _:
-			// perform init after recovery, before any other messages
-			break;
-		// ...
-	}
+    switch(message)
+    {
+        case RecoveryCompleted _:
+            // perform init after recovery, before any other messages
+            break;
+        // ...
+    }
 }
 
 protected override void OnCommand(object message)
@@ -254,12 +254,12 @@ Message deletion doesn't affect the highest sequence number of the journal, even
 
 ## Persistence status handling
 
-| Method   	             | Success      	        |  Failure / Rejection 	| After failure handler invoked
-|------                  |------                    |------	                |------	  
-| Persist / PersistAsync | persist handler invoked	| OnPersistFailure  	| Actor is stopped.
+| Method                    | Success                  |  Failure / Rejection     | After failure handler invoked
+|------                  |------                    |------                    |------      
+| Persist / PersistAsync | persist handler invoked    | OnPersistFailure      | Actor is stopped.
 |                        |                          | OnPersistRejected     | No automatic actions.
-| Recovery 	             | RecoverySuccess   	    | OnRecoveryFailure 	| Actor is stopped.
-| DeleteMessages 	     | DeleteMessagesSuccess 	| DeleteMessagesFailure | No automatic actions.
+| Recovery                  | RecoverySuccess           | OnRecoveryFailure     | Actor is stopped.
+| DeleteMessages          | DeleteMessagesSuccess     | DeleteMessagesFailure | No automatic actions.
 
 The most important operations (Persist and Recovery) have failure handlers modelled as explicit callbacks which the user can override in the `UntypedPersistentActor`. The default implementations of these handlers emit a log message (error for persist/recovery failures, and warning for others), logging the failure cause and information about which message caused the failure.
 
