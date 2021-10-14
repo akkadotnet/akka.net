@@ -124,7 +124,7 @@ You have complete flexibility here in mixing and matching the `TestKit` faciliti
 > [!WARNING]
 > Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
 
-###Watching Other Actors from probes
+### Watching Other Actors from probes
 A `TestProbe` can register itself for DeathWatch of any other actor:
 
 ```csharp
