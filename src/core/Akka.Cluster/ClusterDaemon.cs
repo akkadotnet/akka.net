@@ -583,21 +583,14 @@ namespace Akka.Cluster
         /// <summary>
         /// Gets a reference to the cluster core daemon.
         /// </summary>
-        internal class GetClusterCoreRef
+        internal class GetClusterCoreRef: INoSerializationVerificationNeeded
         {
-            private GetClusterCoreRef() { }
-            private static readonly GetClusterCoreRef _instance = new GetClusterCoreRef();
-
-            /// <summary>
-            /// The singleton instance
-            /// </summary>
-            public static GetClusterCoreRef Instance
+            public GetClusterCoreRef(Cluster cluster) 
             {
-                get
-                {
-                    return _instance;
-                }
+                Cluster = cluster;
             }
+
+            public Cluster Cluster { get; }
         }
 
         /// <summary>
@@ -919,6 +912,8 @@ namespace Akka.Cluster
     /// </summary>
     internal class ClusterCoreSupervisor : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        private Cluster _cluster;
+
         private IActorRef _publisher;
         private IActorRef _coreDaemon;
 
@@ -937,7 +932,7 @@ namespace Akka.Cluster
             Receive<InternalClusterAction.GetClusterCoreRef>(cr =>
             {
                 if (_coreDaemon == null)
-                    CreateChildren();
+                    CreateChildren(cr.Cluster);
                 Sender.Tell(_coreDaemon);
             });
         }
@@ -952,7 +947,7 @@ namespace Akka.Cluster
             {
                 //TODO: JVM version matches NonFatal. Can / should we do something similar?
                 _log.Error(e, "Cluster node [{0}] crashed, [{1}] - shutting down...",
-                    Cluster.Get(Context.System).SelfAddress, e);
+                    _cluster?.SelfAddress, e);
                 Self.Tell(PoisonPill.Instance);
                 return Directive.Stop;
             });
@@ -963,14 +958,15 @@ namespace Akka.Cluster
         /// </summary>
         protected override void PostStop()
         {
-            Cluster.Get(Context.System).Shutdown();
+            _cluster?.Shutdown();
         }
 
-        private void CreateChildren()
+        private void CreateChildren(Cluster cluster)
         {
+            _cluster = cluster;
             _publisher =
-                Context.ActorOf(Props.Create<ClusterDomainEventPublisher>().WithDispatcher(Context.Props.Dispatcher), "publisher");
-            _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
+                Context.ActorOf(Props.Create(() => new ClusterDomainEventPublisher(_cluster.SelfUniqueAddress)).WithDispatcher(Context.Props.Dispatcher), "publisher");
+            _coreDaemon = Context.ActorOf(Props.Create(() => new ClusterCoreDaemon(_cluster, _publisher)).WithDispatcher(Context.Props.Dispatcher), "daemon");
             Context.Watch(_coreDaemon);
         }
     }
@@ -1025,10 +1021,11 @@ namespace Akka.Cluster
         /// <summary>
         /// Creates a new cluster core daemon instance.
         /// </summary>
+        /// <param name="cluster">A reference to the <see cref="Cluster"/>.</param>
         /// <param name="publisher">A reference to the <see cref="ClusterDomainEventPublisher"/>.</param>
-        public ClusterCoreDaemon(IActorRef publisher)
+        public ClusterCoreDaemon(Cluster cluster, IActorRef publisher)
         {
-            _cluster = Cluster.Get(Context.System);
+            _cluster = cluster;
             _membershipState = new MembershipState(Gossip.Empty, _cluster.SelfUniqueAddress);
             _publisher = publisher;
             SelfUniqueAddress = _cluster.SelfUniqueAddress;
@@ -1086,7 +1083,6 @@ namespace Akka.Cluster
 
         private void AddCoordinatedLeave()
         {
-            var sys = Context.System;
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExiting, "wait-exiting", () =>
             {
@@ -1097,7 +1093,7 @@ namespace Akka.Cluster
             });
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterExitingDone, "exiting-completed", () =>
             {
-                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
+                if (_cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
                     return TaskEx.Completed;
                 else
                 {
@@ -1460,7 +1456,7 @@ namespace Akka.Cluster
             else
             {
                 // TODO: add config checking
-                _cluster.LogInfo("Sending InitJoinNack message from node [{0}] to [{1}]", SelfUniqueAddress.Address,
+                _cluster.LogInfo("Sending InitJoinAck message from node [{0}] to [{1}]", SelfUniqueAddress.Address,
                     Sender);
                 Sender.Tell(new InternalClusterAction.InitJoinAck(_cluster.SelfAddress));
             }
@@ -1565,8 +1561,9 @@ namespace Akka.Cluster
         /// Received `Join` message and replies with `Welcome` message, containing
         /// current gossip state, including the new joining member.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="roles">TBD</param>
+        /// <param name="node">The unique address of the joining node.</param>
+        /// <param name="roles">The roles, if any, of the joining node.</param>
+        /// <param name="appVersion">The software version of the joining node.</param>
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;
@@ -1964,7 +1961,7 @@ namespace Akka.Cluster
                 {
                     _cluster.FailureDetector.Remove(node.Address);
                 }
-                    
+
             }
 
             _log.Debug("Cluster Node [{0}] - Receiving gossip from [{1}]", _cluster.SelfAddress, from);
@@ -2085,7 +2082,7 @@ namespace Akka.Cluster
                 {
                     // If it's time to try to gossip to some nodes with a different view
                     // gossip to a random alive member with preference to a member with older gossip version
-                    preferredGossipTarget = ImmutableList.CreateRange(localGossip.Members.Where(m => !localGossip.SeenByNode(m.UniqueAddress) 
+                    preferredGossipTarget = ImmutableList.CreateRange(localGossip.Members.Where(m => !localGossip.SeenByNode(m.UniqueAddress)
                         && _membershipState.ValidNodeForGossip(m.UniqueAddress)).Select(m => m.UniqueAddress));
                 }
                 else
@@ -2639,7 +2636,7 @@ namespace Akka.Cluster
         public void PublishMembershipState()
         {
             if (_cluster.Settings.VerboseGossipReceivedLogging)
-                _log.Debug("Cluster Node [{0}] - New gossip published [{0}]", SelfUniqueAddress, _membershipState.LatestGossip);
+                _log.Debug("Cluster Node [{0}] - New gossip published [{1}]", SelfUniqueAddress, _membershipState.LatestGossip);
 
             _publisher.Tell(new InternalClusterAction.PublishChanges(_membershipState));
             if (_cluster.Settings.PublishStatsInterval == TimeSpan.Zero)

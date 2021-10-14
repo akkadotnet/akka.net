@@ -22,12 +22,17 @@ using Akka.Configuration;
 
 namespace Akka.Cluster.Metrics
 {
+    public interface IClusterMetricsRoutingLogic
+    {
+        void MetricsChanged(ClusterMetricsChanged @event);
+    }
+    
     /// <summary>
     /// Load balancing of messages to cluster nodes based on cluster metric data.
     ///
     /// It uses random selection of routees based on probabilities derived from the remaining capacity of corresponding node.
     /// </summary>
-    public sealed class AdaptiveLoadBalancingRoutingLogic : RoutingLogic
+    public sealed class AdaptiveLoadBalancingRoutingLogic : RoutingLogic, IClusterMetricsRoutingLogic
     {
         private readonly ActorSystem _system;
         private readonly IMetricsSelector _metricsSelector;
@@ -176,7 +181,7 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override Props RoutingLogicController(RoutingLogic routingLogic)
         {
-            return Actor.Props.Create(() => new AdaptiveLoadBalancingMetricsListener(routingLogic as AdaptiveLoadBalancingRoutingLogic));
+            return Actor.Props.Create(() => new AdaptiveLoadBalancingMetricsListener((IClusterMetricsRoutingLogic)routingLogic));
         }
         
         /// <inheritdoc />
@@ -328,7 +333,7 @@ namespace Akka.Cluster.Metrics
         /// <inheritdoc />
         public override Props RoutingLogicController(RoutingLogic routingLogic)
         {
-            return Actor.Props.Create(() => new AdaptiveLoadBalancingMetricsListener(routingLogic as AdaptiveLoadBalancingRoutingLogic));
+            return Actor.Props.Create(() => new AdaptiveLoadBalancingMetricsListener((IClusterMetricsRoutingLogic)routingLogic));
         }
 
         /// <inheritdoc />
@@ -392,10 +397,10 @@ namespace Akka.Cluster.Metrics
     [InternalApi]
     public class AdaptiveLoadBalancingMetricsListener : ActorBase
     {
-        private readonly AdaptiveLoadBalancingRoutingLogic _routingLogic;
+        private readonly IClusterMetricsRoutingLogic _routingLogic;
         private readonly ClusterMetrics _extension = ClusterMetrics.Get(Context.System);
 
-        public AdaptiveLoadBalancingMetricsListener(AdaptiveLoadBalancingRoutingLogic routingLogic)
+        public AdaptiveLoadBalancingMetricsListener(IClusterMetricsRoutingLogic routingLogic)
         {
             _routingLogic = routingLogic;
         }

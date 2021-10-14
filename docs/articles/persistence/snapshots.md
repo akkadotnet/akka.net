@@ -38,7 +38,7 @@ If not specified, they default to `SnapshotSelectionCriteria.Latest` which selec
 
 > [!NOTE]
 > In order to use snapshots, a default snapshot-store (`akka.persistence.snapshot-store.plugin`) must be configured, or the `UntypedPersistentActor` can pick a snapshot store explicitly by overriding `SnapshotPluginId`.
-> Since it is acceptable for some applications to not use any snapshotting, it is legal to not configure a snapshot store. However, Akka will log a warning message when this situation is detected and then continue to operate until an actor tries to store a snapshot, at which point the operation will fail (by replying with an `SaveSnapshotFailure` for example).
+> Since it is acceptable for some applications to not use any snap-shotting, it is legal to not configure a snapshot store. However, Akka will log a warning message when this situation is detected and then continue to operate until an actor tries to store a snapshot, at which point the operation will fail (by replying with an `SaveSnapshotFailure` for example).
 > Note that `Cluster Sharding` is using snapshots, so if you use Cluster Sharding you need to define a snapshot store plugin.
 
 ## Snapshot deletion

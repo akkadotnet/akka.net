@@ -249,7 +249,7 @@ completes. If the stream completes with no elements the task is failed.
 
 **backpressures** never
 
-#### LasrOrDefault
+#### LastOrDefault
 
 Materialize a ``Task<T>`` which completes with the last value
 emitted when the stream completes. if the stream completes with no elements the task is
@@ -739,6 +739,15 @@ a function has to be provided to calculate the individual cost of each element.
 
 **completes** when upstream completes
 
+### DivertTo
+
+Each upstream element will either be diverted to the given sink, or the downstream consumer according to the predicate function applied to the element.
+
+**emits** when the chosen output stops backpressuring and there is an input element available
+
+**backpressures** when the chosen output backpressures
+
+**completes** when upstream completes and no output is pending
 
 # Asynchronous processing stages
 
@@ -964,7 +973,7 @@ and returns a pair containing a strict sequence of the taken element and a strea
 
 #### GroupBy
 
-Demultiplex the incoming stream into separate output streams.
+De-multiplex the incoming stream into separate output streams.
 
 **emits** an element for which the grouping function returns a group that has not yet been created. Emits the new group
 there is an element pending for a group whose substream backpressures
@@ -1137,7 +1146,7 @@ Merge multiple sources. Prefer one source if all sources has elements ready.
 #### MergePrioritized
 
 Merge multiple sources. Prefer sources depending on priorities if all sources has elements ready. If a subset of all
-sources has elements ready the relative priorities for those sources are used to prioritise.
+sources has elements ready the relative priorities for those sources are used to prioritize.
 
 **emits** when one of the inputs has an element available, preferring inputs based on their priorities if multiple have elements available
 

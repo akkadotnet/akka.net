@@ -50,7 +50,12 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             "QWRkcmVzcxgBIAEoCzIwLkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJv",
             "dG8uTXNnLkFkZHJlc3NEYXRhEk4KBXN0YXRzGAIgASgLMj8uQWtrYS5DbHVz",
             "dGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLlNoYXJkUmVn",
-            "aW9uU3RhdHNiBnByb3RvMw=="));
+            "aW9uU3RhdHMiUwoOQ3VycmVudFJlZ2lvbnMSQQoHcmVnaW9ucxgBIAMoCzIw",
+            "LkFra2EuUmVtb3RlLlNlcmlhbGl6YXRpb24uUHJvdG8uTXNnLkFkZHJlc3NE",
+            "YXRhIjAKClNoYXJkU3RhdGUSDwoHc2hhcmRJZBgBIAEoCRIRCgllbnRpdHlJ",
+            "ZHMYAiADKAkiZAoXQ3VycmVudFNoYXJkUmVnaW9uU3RhdGUSSQoGc2hhcmRz",
+            "GAEgAygLMjkuQWtrYS5DbHVzdGVyLlNoYXJkaW5nLlNlcmlhbGl6YXRpb24u",
+            "UHJvdG8uTXNnLlNoYXJkU3RhdGViBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.DurationReflection.Descriptor, global::Akka.Remote.Serialization.Proto.Msg.ContainerFormatsReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
@@ -68,7 +73,10 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.StartEntityAck), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.StartEntityAck.Parser, new[]{ "EntityId", "ShardId" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.GetClusterShardingStats), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.GetClusterShardingStats.Parser, new[]{ "Timeout" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ClusterShardingStats), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ClusterShardingStats.Parser, new[]{ "Regions" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionWithAddress), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionWithAddress.Parser, new[]{ "NodeAddress", "Stats" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionWithAddress), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionWithAddress.Parser, new[]{ "NodeAddress", "Stats" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentRegions), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentRegions.Parser, new[]{ "Regions" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState.Parser, new[]{ "ShardId", "EntityIds" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentShardRegionState), global::Akka.Cluster.Sharding.Serialization.Proto.Msg.CurrentShardRegionState.Parser, new[]{ "Shards" }, null, null, null)
           }));
     }
     #endregion
@@ -2160,6 +2168,361 @@ namespace Akka.Cluster.Sharding.Serialization.Proto.Msg {
               stats_ = new global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardRegionStats();
             }
             input.ReadMessage(stats_);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class CurrentRegions : pb::IMessage<CurrentRegions> {
+    private static readonly pb::MessageParser<CurrentRegions> _parser = new pb::MessageParser<CurrentRegions>(() => new CurrentRegions());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<CurrentRegions> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ClusterShardingMessagesReflection.Descriptor.MessageTypes[15]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public CurrentRegions() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public CurrentRegions(CurrentRegions other) : this() {
+      regions_ = other.regions_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public CurrentRegions Clone() {
+      return new CurrentRegions(this);
+    }
+
+    /// <summary>Field number for the "regions" field.</summary>
+    public const int RegionsFieldNumber = 1;
+    private static readonly pb::FieldCodec<global::Akka.Remote.Serialization.Proto.Msg.AddressData> _repeated_regions_codec
+        = pb::FieldCodec.ForMessage(10, global::Akka.Remote.Serialization.Proto.Msg.AddressData.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> regions_ = new pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Remote.Serialization.Proto.Msg.AddressData> Regions {
+      get { return regions_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as CurrentRegions);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(CurrentRegions other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!regions_.Equals(other.regions_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= regions_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      regions_.WriteTo(output, _repeated_regions_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      size += regions_.CalculateSize(_repeated_regions_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(CurrentRegions other) {
+      if (other == null) {
+        return;
+      }
+      regions_.Add(other.regions_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            regions_.AddEntriesFrom(input, _repeated_regions_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class ShardState : pb::IMessage<ShardState> {
+    private static readonly pb::MessageParser<ShardState> _parser = new pb::MessageParser<ShardState>(() => new ShardState());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<ShardState> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ClusterShardingMessagesReflection.Descriptor.MessageTypes[16]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ShardState() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ShardState(ShardState other) : this() {
+      shardId_ = other.shardId_;
+      entityIds_ = other.entityIds_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ShardState Clone() {
+      return new ShardState(this);
+    }
+
+    /// <summary>Field number for the "shardId" field.</summary>
+    public const int ShardIdFieldNumber = 1;
+    private string shardId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string ShardId {
+      get { return shardId_; }
+      set {
+        shardId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "entityIds" field.</summary>
+    public const int EntityIdsFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_entityIds_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> entityIds_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<string> EntityIds {
+      get { return entityIds_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as ShardState);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(ShardState other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ShardId != other.ShardId) return false;
+      if(!entityIds_.Equals(other.entityIds_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ShardId.Length != 0) hash ^= ShardId.GetHashCode();
+      hash ^= entityIds_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (ShardId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(ShardId);
+      }
+      entityIds_.WriteTo(output, _repeated_entityIds_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (ShardId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ShardId);
+      }
+      size += entityIds_.CalculateSize(_repeated_entityIds_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(ShardState other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ShardId.Length != 0) {
+        ShardId = other.ShardId;
+      }
+      entityIds_.Add(other.entityIds_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            ShardId = input.ReadString();
+            break;
+          }
+          case 18: {
+            entityIds_.AddEntriesFrom(input, _repeated_entityIds_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  internal sealed partial class CurrentShardRegionState : pb::IMessage<CurrentShardRegionState> {
+    private static readonly pb::MessageParser<CurrentShardRegionState> _parser = new pb::MessageParser<CurrentShardRegionState>(() => new CurrentShardRegionState());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<CurrentShardRegionState> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ClusterShardingMessagesReflection.Descriptor.MessageTypes[17]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public CurrentShardRegionState() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public CurrentShardRegionState(CurrentShardRegionState other) : this() {
+      shards_ = other.shards_.Clone();
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public CurrentShardRegionState Clone() {
+      return new CurrentShardRegionState(this);
+    }
+
+    /// <summary>Field number for the "shards" field.</summary>
+    public const int ShardsFieldNumber = 1;
+    private static readonly pb::FieldCodec<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState> _repeated_shards_codec
+        = pb::FieldCodec.ForMessage(10, global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState.Parser);
+    private readonly pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState> shards_ = new pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<global::Akka.Cluster.Sharding.Serialization.Proto.Msg.ShardState> Shards {
+      get { return shards_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as CurrentShardRegionState);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(CurrentShardRegionState other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!shards_.Equals(other.shards_)) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= shards_.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      shards_.WriteTo(output, _repeated_shards_codec);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      size += shards_.CalculateSize(_repeated_shards_codec);
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(CurrentShardRegionState other) {
+      if (other == null) {
+        return;
+      }
+      shards_.Add(other.shards_);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 10: {
+            shards_.AddEntriesFrom(input, _repeated_shards_codec);
             break;
           }
         }

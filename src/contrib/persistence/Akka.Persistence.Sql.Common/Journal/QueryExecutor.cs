@@ -543,6 +543,7 @@ namespace Akka.Persistence.Sql.Common.Journal
                         var persistent = ReadEvent(reader);
                         callback(persistent);
                     }
+                    command.Cancel();
                 }
             }
         }

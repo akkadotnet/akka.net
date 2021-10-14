@@ -207,7 +207,7 @@ namespace Akka.TestKit
         /// <param name="filter">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)
         {
             return ReceiveWhile(filter, max, idle, msgs);
         }
@@ -227,7 +227,7 @@ namespace Akka.TestKit
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(Func<object, T> filter, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue)
         {
             var maxValue = RemainingOrDilated(max);
             var start = Now;

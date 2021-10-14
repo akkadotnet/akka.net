@@ -521,7 +521,7 @@ namespace Akka.Tests.Serialization
             Sys.EventStream.Subscribe(TestActor, typeof(object));
             var empty = Sys.ActorOf<EmptyActor>();
             empty.Ask("hello");
-            var f = ExpectMsg<FutureActorRef>();
+            var f = ExpectMsg<FutureActorRef<object>>();
 
 
             var message = new SomeMessage

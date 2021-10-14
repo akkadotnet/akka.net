@@ -168,7 +168,7 @@ One of the issue of CRDTs, is that they accumulate history of changes (including
 
 There are several different HOCON settings, that can be used to configure distributed data plugin. By default, they all live under `akka.cluster.distributed-data` node:
 
-- `name` of replicator actor. Default: *ddataReplicator*.
+- `name` of replicator actor. Default: `ddataReplicator`.
 - `role` used to limit expected DistributedData capability to nodes having that role. None by default.
 - `gossip-interval` tells replicator, how often replicas should be gossiped over the cluster. Default: *2 seconds*
 - `notify-subscribers-interval` tells, how often replicator subscribers should be notified with replica state changes. Default: *0.5 second*

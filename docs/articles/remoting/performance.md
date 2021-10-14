@@ -10,7 +10,7 @@ If you're building a large-scale system using Akka.NET, the performance of Akka.
 Akka.NET is [horizontally scalable using Akka.Cluster](../clustering/cluster-overview.md), meaning that Akka.NET applications typically respond to surges in demand by scaling up and down the number of nodes inside the network - however, ensuring that the messages per node throughput is consistently high will give you the most value on a per-node basis.
 
 ## Akka.NET v1.4.14 and Later
-In Akka.NET v1.4.14 we introduced a [self-optimizing batching system for DotNetty](https://github.com/akkadotnet/akka.net/pull/4685), which means that end-users no longer manually need to specify explicit batching thresholds in their configuration. The default DotNetty transport for Akka.NET will now automatically group and ungroup batches in a manner that reduces latency for light workloads and increases throughput for heavy workloads automatically without any need for tuning.
+In Akka.NET v1.4.14 we introduced a [self-optimizing batching system for DotNetty](https://github.com/akkadotnet/akka.net/pull/4685), which means that end-users no longer manually need to specify explicit batching thresholds in their configuration. The default DotNetty transport for Akka.NET will now automatically group and un-group batches in a manner that reduces latency for light workloads and increases throughput for heavy workloads automatically without any need for tuning.
 
 ### Performance Comparison
 Here is how Akka.NET v1.4.14 performs with batching enabled (it's on by default) on an AMD Ryzen 7 1700 Eight Core 3.2 Ghz processor running Windows 10 on .NET Core 3.1:

@@ -132,7 +132,7 @@ It's safe to call this method multiple times as the shutdown process will only b
 > It's possible to subclass the `CoordinatedShutdown.Reason` type and pass in a custom implementation which includes custom properties and data. This data is accessible inside the shutdown phases themselves via the [`CoordinatedShutdown.ShutdownReason` property](/api/Akka.Actor.CoordinatedShutdown.html#Akka_Actor_CoordinatedShutdown_ShutdownReason).
 
 ### Automatic `ActorSystem` and Process Termination
-By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. This behaviour can be changed by setting the following HOCON value in your configuration:
+By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. This behavior can be changed by setting the following HOCON value in your configuration:
 
 ```
 akka.coordinated-shutdown.terminate-actor-system = off

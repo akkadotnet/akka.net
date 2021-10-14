@@ -50,7 +50,7 @@ Here's how Akka.DependencyInjection is used to instantiate this actor via `Props
 
 [!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=CreateNonDiActor)]
 
-The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your depedency injection container.
+The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your dependency injection container.
 
 Akka.DependencyInjection does not manage the lifecycle of your dependencies automatically - in fact, Akka.NET recommends that you follow [Microsoft's own dependency injection guidelines](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines):
 
@@ -137,7 +137,7 @@ actors. So any scope which interferes with that is not supported.
 
 This also means that when injecting dependencies into your actor, using a
 Singleton or Transient scope is fine. But having that dependency scoped per
-httpwebrequest for example won't work.
+`HttpWebRequest` for example won't work.
 
 Techniques for dependency injection and integration with dependency injection
 frameworks are described in more depth in the

@@ -176,6 +176,14 @@ namespace Akka.Remote.Tests
             s.BatchWriterSettings.EnableBatching.Should().BeTrue();
             s.BatchWriterSettings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
         }
+        
+        [Fact]
+        public void Remoting_should_contain_correct_PrimitiveSerializer_settings_in_ReferenceConf()
+        {
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.actor.serialization-settings.primitive");
+            c.Should().NotBeNull();
+            c.GetBoolean("use-legacy-behavior").Should().BeTrue();
+        }
    }
 }
 

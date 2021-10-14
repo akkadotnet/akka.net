@@ -176,7 +176,7 @@ Please note that a state change includes the action of performing an `GoTo(S)`, 
 
 External monitors may be unregistered by sending `UnsubscribeTransitionCallBack(IActorRef)` to the `FSM` actor.
 
-Stopping a listener without unregistering will not remove the listener from the subscription list; use `UnsubscribeTransitionCallback` before stopping the listener.
+Stopping a listener without un-registering will not remove the listener from the subscription list; use `UnsubscribeTransitionCallback` before stopping the listener.
 
 ### Timers
 Besides state timeouts, `FSM` manages timers identified by String names. You may set a timer using
