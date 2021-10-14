@@ -19,7 +19,7 @@ streams, such that the second one is consumed after the first one has completed)
 ## Constructing Graphs
 
 Graphs are built from simple Flows which serve as the linear connections within the graphs as well as junctions
-which serve as fan-in and fan-out points for Flows. Thanks to the junctions having meaningful types based on their behaviour
+which serve as fan-in and fan-out points for Flows. Thanks to the junctions having meaningful types based on their behavior
 and making them explicit elements these elements should be rather straightforward to use.
 
 Akka Streams currently provide these junctions (for a detailed list see [Overview of built-in stages and their semantics](xref:streams-builtin-stages)):
@@ -35,7 +35,7 @@ Akka Streams currently provide these junctions (for a detailed list see [Overvie
  - ``MergePreferred<In>`` – like `Merge` but if elements are available on ``preferred`` port, it picks from it, otherwise randomly from ``others``
   - `MergePrioritized<In>` – like `Merge` but if elements are available on all input ports, it picks from them randomly based on their `priority`
   - ``ZipWith<A,B,...,Out>`` – *(N inputs, 1 output)* which takes a function of N inputs that given a value for each input emits 1 output element
- - ``Zip<A,B>`` – *(2 inputs, 1 output)* is a `ZipWith` specialised to zipping input streams of ``A`` and ``B`` into an ``(A,B)`` tuple stream
+ - ``Zip<A,B>`` – *(2 inputs, 1 output)* is a `ZipWith` specialized to zipping input streams of ``A`` and ``B`` into an ``(A,B)`` tuple stream
  - ``Concat<A>`` – *(2 inputs, 1 output)* concatenates two streams (first consume one, then the second one)
 
 One of the goals of the GraphDSL DSL is to look similar to how one would draw a graph on a whiteboard, so that it is

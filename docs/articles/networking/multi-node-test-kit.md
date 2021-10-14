@@ -277,15 +277,15 @@ To actually run this specification, we have to execute the `Akka.MultiNodeTestRu
 
 Here's the set of arguments that the MultiNodeTestRunner takes:
 
-    Akka.MultiNodeTestRunner.exe path-to-dll # path to DLL containing tests
-	[-Dmultinode.enable-filesink=(on|off)] # writes test output to disk
-	[-Dmultinode.spec=("fully qualified spec method name)] # execute a specific test method
-															    # instead of all of them
+* `Akka.MultiNodeTestRunner.exe path-to-dll` with path to DLL containing tests
+* `-Dmultinode.enable-filesink=(on|off)` writes test output to disk
+* `-Dmultinode.spec=("fully qualified spec method name)` executes a specific test method instead of all of them
 
-Here's an example of what invoking the test runner might look like if all of our multinodetests were packaged into Akka.MultiNodeTests.dll.
+Here's an example of what invoking the test runner might look like if all of our multi-node tests were packaged into `Akka.MultiNodeTests.dll`.
 
-
-    C:\> Akka.MultiNodeTestRunner.exe "Akka.MultiNodetests.dll" -Dmultinode.enable-filesink=on
+```cmd
+Akka.MultiNodeTestRunner.exe "Akka.MultiNodetests.dll" -Dmultinode.enable-filesink=on
+```
 
 The output of a multi node test run will include the results for each specification for every node participating in the test. Here's a sample of what the final output at the end of a full test run looks like:
 

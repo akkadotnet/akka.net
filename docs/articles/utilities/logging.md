@@ -30,7 +30,7 @@ Akka.NET comes with two built in loggers.
 class. Its job is simply to output all `LogEvent`s emitted by the `EventBus` onto the console. 
 Since it is not an actual actor, ie. it doesn't need the `ActorSystem` to operate, it is also 
 used to log other loggers activity at the very start and very end of the `ActorSystem` life cycle. 
-You can change the minimal logger start and end life cycle behaviour by changing the 
+You can change the minimal logger start and end life cycle behavior by changing the 
 `akka.stdout-loglevel` HOCON settings to `OFF` if you do not need these feature in your application.
 
 ### Advanced MinimalLogger Setup

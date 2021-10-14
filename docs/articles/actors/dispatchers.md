@@ -20,7 +20,7 @@ There are some other common reasons to select a different dispatcher. These reas
   * ensure high-load actors don't starve the system by consuming too much cpu-time;
   * ensure important actors always have a dedicated thread to do their job;
   * create [bulkheads](http://skife.org/architecture/fault-tolerance/2009/12/31/bulkheads.html), ensuring problems created in one part of the system do not leak to others;
-* allow actors to execute in a specific SyncrhonizationContext;
+* allow actors to execute in a specific SynchronizationContext;
 
 > [!NOTE]
 > Consider using custom dispatchers for special cases only. Correctly configuring dispatchers requires some understanding of how the framework works. Custom dispatchers *should not* be considered the default solution for performance problems. It's considered normal for complex applications to have one or a few custom dispatchers, it's not usual for most or all actors in a system to require a custom dispatcher configuration.

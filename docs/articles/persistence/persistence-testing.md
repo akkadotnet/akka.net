@@ -87,7 +87,7 @@ protected override void OnCommand(object message)
 }
 ```
 
-And we need `OnRecover` to be implemented so that the internal state is replyed when the actor is restarted.
+And we need `OnRecover` to be implemented so that the internal state is replayed when the actor is restarted.
 
 ``` csharp
 protected override void OnRecover(object message)
@@ -165,7 +165,7 @@ public interface ISnapshotStoreInterceptor
 
 ### PersistenceTestKit
 
-This is a specialized test kit with a preconfigured persistence plugin that uses `TestJournal` and `TestSnapshotStore` by default. This class provides the following methods to control journal behavior: `WithJournalRecovery` and `WithJournalWrite`; to control snapshot store it provides `WithSnapshotSave`, `WithSnapshotLoad` and `WithSnapshotDelete` methods;
+This is a specialized test kit with a pre-configured persistence plugin that uses `TestJournal` and `TestSnapshotStore` by default. This class provides the following methods to control journal behavior: `WithJournalRecovery` and `WithJournalWrite`; to control snapshot store it provides `WithSnapshotSave`, `WithSnapshotLoad` and `WithSnapshotDelete` methods;
 Usage example:
 ``` csharp
 public class PersistentActorSpec : PersistenceTestKit
@@ -215,7 +215,7 @@ When all mentioned above behaviors are not enough, it is always possible to impl
 
 ### Built-in snapshot store behaviors
 
-Snpahost store behaviors are following the same naming pattern as journal behaviors:
+Snapshot store behaviors are following the same naming pattern as journal behaviors:
 
 * `Pass` - standard in-memory snapshot store behavior, all operations will happen without any errors or delays;
 * `Fail` - the snapshot store will always fail. All `Fail*` behaviors will crash the snapshot store. Use this and other `Fail*` methods to test snapshot store communication problems.

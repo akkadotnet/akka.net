@@ -91,7 +91,7 @@ title: Resources
 - [.NET Rocks! (November 2014)](http://www.dotnetrocks.com/default.aspx?showNum=1058) — Overview of the project discussed w/ [Roger Alsing](https://twitter.com/rogeralsing).
 
 ## Code samples / Demos
-- [Using Akka.Cluster to build a webcrawler](https://github.com/petabridge/akkadotnet-code-samples/tree/master/Cluster.WebCrawler)
+- [Using Akka.Cluster to build a web crawler](https://github.com/petabridge/akkadotnet-code-samples/tree/master/Cluster.WebCrawler)
 
 ## Non-English resources
 - [Distributed Programming Using Akka.NET Framework (in Polish)](https://www.youtube.com/watch?v=_6vDp2-VCjc) (Bartosz Sypytkowski on March 6, 2015)

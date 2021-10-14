@@ -84,7 +84,7 @@ The `SerializationSetup` takes a function with the following signature:
 Func<ExtendedActorSystem, ImmutableHashSet<SerializerDetails>>
 ```
 
-The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a construtor argument.
+The `ExtendedActorSystem` passed into this method is the `ActorSystem` you're configuring, as all `Serializer` classes in Akka.NET require an `ExtendedActorSystem` as a constructor argument.
 
 For each serialization binding you wish to create, you need to create [a `SerializerDetails` object](xref:Akka.Serialization.SerializerDetails) using the `SerializerDetails.Create` method:
 
@@ -179,8 +179,8 @@ The only thing left to do for this class would be to fill in the serialization l
 Afterwards the configuration would need to be updated to reflect which name to bind to and the classes that use this
 serializer.
 
-### Programatically change NewtonSoft JSON serializer settings
-You can change the JSON serializer behaviour by using the `NewtonSoftJsonSerializerSetup` class to programatically
+### programmatically change NewtonSoft JSON serializer settings
+You can change the JSON serializer behavior by using the `NewtonSoftJsonSerializerSetup` class to programmatically
 change the settings used inside the Json serializer by passing it into the an `ActorSystemSetup`.
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ProgrammaticJsonSerializerSetup.cs?name=CustomJsonSetup)]
@@ -189,7 +189,7 @@ Note that, while we try to keep everything to be compatible, there are no guaran
 Akka.NET serialization schemes; please test your system in a development environment before deploying it into production.
 
 There are a couple limitation with this method, in that you can not change the `ObjectCreationHandling` and the `ContractResolver` settings
-in the Json settings object. Those settings, by default, will always be overriden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
+in the Json settings object. Those settings, by default, will always be overridden with `ObjectCreationHandling.Replace` and the [`AkkaContractResolver`](xref:Akka.Serialization.NewtonSoftJsonSerializer.AkkaContractResolver) 
 object respectively.
 
 ### Serializer with String Manifest
@@ -306,7 +306,7 @@ akka {
 
 ## Danger of polymorphic serializer
 One of the danger of polymorphic serializers is the danger of unsafe object type injection into 
-the serialization-deserialization chain. This issue applies to any type of polymorphic serializer,
+the serialization/de-serialization chain. This issue applies to any type of polymorphic serializer,
 including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly 
 to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
 
@@ -320,26 +320,26 @@ Protocol Buffers to Version State and Messages" in [this documentation](https://
 Hyperion chose to implement the second approach by blacklisting a set of potentially dangerous types 
 from being deserialized:
 
-- System.Security.Claims.ClaimsIdentity
-- System.Windows.Forms.AxHost.State
-- System.Windows.Data.ObjectDataProvider
-- System.Management.Automation.PSObject
-- System.Web.Security.RolePrincipal
-- System.IdentityModel.Tokens.SessionSecurityToken
-- SessionViewStateHistoryItem
-- TextFormattingRunProperties
-- ToolboxItemContainer
-- System.Security.Principal.WindowsClaimsIdentity
-- System.Security.Principal.WindowsIdentity
-- System.Security.Principal.WindowsPrincipal
-- System.CodeDom.Compiler.TempFileCollection
-- System.IO.FileSystemInfo
-- System.Activities.Presentation.WorkflowDesigner
-- System.Windows.ResourceDictionary
-- System.Windows.Forms.BindingSource
-- Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider
-- System.Diagnostics.Process
-- System.Management.IWbemClassObjectFreeThreaded
+- `System.Security.Claims.ClaimsIdentity`
+- `System.Windows.Forms.AxHost.State`
+- `System.Windows.Data.ObjectDataProvider`
+- `System.Management.Automation.PSObject`
+- `System.Web.Security.RolePrincipal`
+- `System.IdentityModel.Tokens.SessionSecurityToken`
+- `SessionViewStateHistoryItem`
+- `TextFormattingRunProperties`
+- `ToolboxItemContainer`
+- `System.Security.Principal.WindowsClaimsIdentity`
+- `System.Security.Principal.WindowsIdentity`
+- `System.Security.Principal.WindowsPrincipal`
+- `System.CodeDom.Compiler.TempFileCollection`
+- `System.IO.FileSystemInfo`
+- `System.Activities.Presentation.WorkflowDesigner`
+- `System.Windows.ResourceDictionary`
+- `System.Windows.Forms.BindingSource`
+- `Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider`
+- `System.Diagnostics.Process`
+- `System.Management.IWbemClassObjectFreeThreaded`
 
 Be warned that these class can be used as a man in the middle attack vector, but if you need 
 to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
@@ -400,14 +400,14 @@ that it is running under .NET framework, then it will use the `netfx` array to d
 The way it works that when the serializer detects that the type name contains the `fingerprint` string, it will replace the string declared in the `rename-from`
 property into the string declared in the `rename-to`.
 
-In code, we can write this behaviour as:
+In code, we can write this behavior as:
 ```csharp
 if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
 ```
 
 ### HyperionSerializerSetup
 
-This behaviour can also be implemented programatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
+This behavior can also be implemented programmatically by providing a `HyperionSerializerSetup` instance during `ActorSystem` creation.
 
 ```csharp
 #if NETFRAMEWORK
@@ -520,7 +520,7 @@ akka.actor {
 }
 ```
 
-### Creating and declaring `Surrogate`s programatically using `HyperionSerializerSetup`
+### Creating and declaring `Surrogate`s programmatically using `HyperionSerializerSetup`
 
 We can also use `HyperionSerializerSetup` to declare our surrogates:
 
@@ -536,4 +536,4 @@ var system = ActorSystem.Create("actorSystem", bootstrap);
 ```
 
 Note that we do not need to declare any bindings in HOCON for this to work, and if you do, 
-`HyperionSerializerSetup` will override the HOCON settings with the one programatically declared.
+`HyperionSerializerSetup` will override the HOCON settings with the one programmatically declared.

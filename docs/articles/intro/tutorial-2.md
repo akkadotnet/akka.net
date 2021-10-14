@@ -138,7 +138,7 @@ For the full details on delivery guarantees please refer to the [reference page]
 
 ### Revisiting the Query Protocol
 
-There is nothing wrong with our first query protocol but it limits our flexibility. If we want to implement resends
+There is nothing wrong with our first query protocol but it limits our flexibility. If we want to implement re-sends
 in the actor that queries our device actor (because of timed out requests) or want to query multiple actors it
 can be helpful to put an additional query ID field in the message which helps us correlate requests with responses.
 
