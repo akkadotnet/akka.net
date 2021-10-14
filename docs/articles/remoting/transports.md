@@ -19,12 +19,14 @@ Transports in Akka.Remote are abstractions on top of actual network transports, 
 > Most of the information below are things you, as an Akka.NET user, do not need to care about 99% of the time. Feel free to skip to the [Akka.Remote's Built-in Transports](#akkaremotes-built-in-transports) section.
 
 Transports **do not need to care** about:
+
 * **Serialization** - that's handled by Akka.NET itself;
 * **Connection-oriented behavior** - the association process inside Akka.Remote ensures this, even over connection-less transports like UDP;
 * **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor`](xref:at-least-once-delivery) class, part of Akka.Persistence;
 * **Handling network failures** - all a transport needs to do is forward that information back up to Akka.Remote.
 
 Transports **do need to care** about:
+
 * **IP addressing and ports** - all Akka.NET endpoints have to be resolved to a reachable IP address and port number;
 * **Message delivery** - getting bytes from point A to point B;
 * **Message framing** - distinguishing individual messages within a network stream;

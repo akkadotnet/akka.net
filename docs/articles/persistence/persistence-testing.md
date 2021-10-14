@@ -187,6 +187,7 @@ public class PersistentActorSpec : PersistenceTestKit
 ```
 
 Each method accepts 2 arguments:
+
 1. Behavior selector for operation under test;
 2. Actual code which must be tested when selected behavior is applied. 
 

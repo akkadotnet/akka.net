@@ -323,6 +323,7 @@ including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects deve
 to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
 
 Generally, there are two approaches you can take to alleviate this problem:
+
 1. Implement a schema-based serialization that are contract bound, which is more expensive to setup at first but fundamentally faster and more secure.
 2. Implement a filtering or blacklist to block dangerous types.
 
