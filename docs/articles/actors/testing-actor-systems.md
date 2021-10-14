@@ -124,7 +124,7 @@ You have complete flexibility here in mixing and matching the `TestKit` faciliti
 > [!WARNING]
 > Any message send from a `TestProbe` to another actor which runs on the `CallingThreadDispatcher` runs the risk of dead-lock, if that other actor might also send to this probe. The implementation of `TestProbe.Watch` and `TestProbe.Unwatch` will also send a message to the watchee, which means that it is dangerous to try watching e.g. `TestActorRef` from a `TestProbe`.
 
-###Watching Other Actors from probes
+### Watching Other Actors from probes
 A `TestProbe` can register itself for DeathWatch of any other actor:
 
 ```csharp
@@ -137,17 +137,17 @@ A `TestProbe` can register itself for DeathWatch of any other actor:
   Assert.Equal(msg.ActorRef, target);
 ```
 
-###Replying to Messages Received by Probes
+### Replying to Messages Received by Probes
 The probes stores the sender of the last dequeued message (i.e. after its `ExpectMsg*` reception), which may be retrieved using the `GetLastSender()` method. This information can also implicitly be used for having the probe reply to the last received message:
 
 [!code-csharp[ReplyingToProbeMessages](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ReplyingToProbeMessages_0)]
 
-###Forwarding Messages Received by Probes
+### Forwarding Messages Received by Probes
 The probe can also forward a received message (i.e. after its `ExpectMsg*` reception), retaining the original sender:
 
 [!code-csharp[ForwardingProbeMessages](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ForwardingProbeMessages_0)]
 
-###Auto-Pilot
+### Auto-Pilot
 Receiving messages in a queue for later inspection is nice, but in order to keep a test running and verify traces later you can also install an `AutoPilot` in the participating test probes (actually in any `TestKit`) which is invoked before enqueueing to the inspection queue. This code can be used to forward messages, e.g. in a chain `A --> Probe --> B`, as long as a certain protocol is obeyed.
 
 [!code-csharp[ProbeAutopilot](../../../src/core/Akka.Docs.Tests/Testkit/ProbeSampleTest.cs?name=ProbeAutopilot_0)]
@@ -155,10 +155,10 @@ Receiving messages in a queue for later inspection is nice, but in order to keep
 The `run` method must return the auto-pilot for the next message. There are multiple options here:
 You can return the `AutoPilot.NoAutoPilot` to stop the autopilot, or `AutoPilot.KeepRunning` to keep using the current `AutoPilot`. Obviously you can also chain a new `AutoPilot` instance to switch behaviors.
 
-###Caution about Timing Assertions
+### Caution about Timing Assertions
 The behavior of `Within` blocks when using test probes might be perceived as counter-intuitive: you need to remember that the nicely scoped deadline as described **above** is local to each probe. Hence, probes do not react to each other's deadlines or to the deadline set in an enclosing `TestKit` instance.
 
-##Testing parent-child relationships
+## Testing parent-child relationships
 
 The parent of an actor is always the actor that created it. At times this leads to a coupling between the two that may not be straightforward to test. There are several approaches to improve testability of a child actor that needs to refer to its parent:
 
@@ -174,22 +174,22 @@ For example, the structure of the code you want to test may follow this pattern:
 
 [!code-csharp[ParentStructure](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=ParentStructure_0)]
 
-###Introduce child to its parent
+### Introduce child to its parent
 The first option is to avoid use of the `context.parent` function and create a child with a custom parent by passing an explicit reference to its parent instead.
 
 [!code-csharp[DependentChild](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=DependentChild_0)]
 
-###Create the child using the TestProbe
+### Create the child using the TestProbe
 The `TestProbe` class can directly create child actors using the `ChildActorOf` methods.  
 
 [!code-csharp[TestProbeChild](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=TestProbeChild_0)]
 
-###Using a fabricated parent
+### Using a fabricated parent
 If you prefer to avoid modifying the parent or child constructor you can create a fabricated parent in your test. This, however, does not enable you to test the parent actor in isolation.
 
 [!code-csharp[FabrikatedParent](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=FabrikatedParent_0)]
 
-###Externalize child making from the parent
+### Externalize child making from the parent
 Alternatively, you can tell the parent how to create its child. There are two ways to do this: by giving it a `Props` object or by giving it a function which takes care of creating the child actor:
 
 [!code-csharp[FabrikatedParent](../../../src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs?name=FabrikatedParent_1)]
@@ -210,7 +210,7 @@ And like this in your application code:
 
 Which of these methods is the best depends on what is most important to test. The most generic option is to create the parent actor by passing it a function that is responsible for the Actor creation, but using TestProbe or having a fabricated parent is often sufficient.
 
-##CallingThreadDispatcher
+## CallingThreadDispatcher
 
 The `CallingThreadDispatcher` serves good purposes in unit testing, as described above, but originally it was conceived in order to allow contiguous stack traces to be generated in case of an error. As this special dispatcher runs everything which would normally be queued directly on the current thread, the full history of a message's processing chain is recorded on the call stack, so long as all intervening actors run on this dispatcher.
 
@@ -256,12 +256,12 @@ akka {
 }
 ```
 
-##Configuration
+## Configuration
 There are several configuration properties for the TestKit module, please refer to the [reference configuration](https://github.com/akkadotnet/akka.net/blob/master/src/core/Akka.TestKit/Configs/TestScheduler.conf)
 
 TODO describe how to pass custom config
 
-##Synchronous Testing: TestActorRef
+## Synchronous Testing: TestActorRef
 
 Testing the business logic inside `Actor` classes can be divided into two parts: first, each atomic operation must work in isolation, then sequences of incoming events must be processed correctly, even in the presence of some possible variability in the ordering of events. The former is the primary use case for single-threaded unit testing, while the latter can only be verified in integration tests.
 
@@ -281,7 +281,7 @@ Having access to the actual `Actor` object allows application of all traditional
 
 Since `TestActorRef` is generic in the actor type it returns the underlying actor with its proper static type. From this point on you may bring any unit testing tool to bear on your actor as usual.
 
-##Testing Finite State Machines
+## Testing Finite State Machines
 If your actor under test is a `FSM`, you may use the special `TestFSMRef` which offers all features of a normal `TestActorRef` and in addition allows access to the internal state:
 
 ```csharp
@@ -307,7 +307,7 @@ Assert.False(fsm.IsTimerActive("test"));
 
 All methods shown above directly access the FSM state without any synchronization; this is perfectly alright if the `CallingThreadDispatcher` is used and no other threads are involved, but it may lead to surprises if you were to actually exercise timer events, because those are executed on the `Scheduler` thread.
 
-##Testing the Actor's behavior
+## Testing the Actor's behavior
 When the dispatcher invokes the processing behavior of an actor on a message, it actually calls apply on the current behavior registered for the actor. This starts out with the return value of the declared receive method, but it may also be changed using become and unbecome in response to external messages. All of this contributes to the overall actor behavior and it does not lend itself to easy testing on the `Actor` itself. Therefore the TestActorRef offers a different mode of operation to complement the `Actor` testing: it supports all operations also valid on normal `IActorRef`. Messages sent to the actor are processed synchronously on the current thread and answers may be sent back as usual. This trick is made possible by the `CallingThreadDispatcher` described below; this dispatcher is set implicitly for any actor instantiated into a `TestActorRef`.
 ```csharp
 var props = Props.Create<MyActor>();
@@ -335,7 +335,7 @@ catch (Exception e)
 }
 ```
 
-##EventFilters
+## EventFilters
 
 EventFilters are a tool use can use to scan and expect for LogEvents generated by your actors. Typically these are generated by custom calls on the `Context.GetLogger()` object, when you log something. 
 However DeadLetter messages and Exceptions ultimately also result in a `LogEvent` message being generated.
