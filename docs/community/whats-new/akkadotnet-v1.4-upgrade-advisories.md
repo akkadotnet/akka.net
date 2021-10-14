@@ -4,6 +4,7 @@ title: Akka.NET v1.4 Upgrade Advisories
 ---
 
 # Akka.NET v1.4 Upgrade Advisories
+
 This document contains specific upgrade suggestions, warnings, and notices that you will want to pay attention to when upgrading between versions within the Akka.NET v1.4 roadmap.
 
 ## Upgrading to Akka.NET v1.4.20 from Older Versions
@@ -51,15 +52,18 @@ This setting is set of `on` by default and it resolves the backwards compatibili
 If you are running a mixed .NET Core and .NET Framework cluster, see the process below.
 
 ### Deploying v1.4.26 into Mixed .NET Core and .NET Framework Environments
+
 *However*, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `off` in order to facilitate smooth operation between both platforms.
 
 #### Already Deployed v1.4.20 or Later
+
 If you've already deployed v1.4.20 and you have not had any issues with the primitives serializer, do the following:
 
 1. Before you upgrade to v1.4.26 or later set `akka.actor.serialization-settings.primitive.use-legacy-behavior = off` - so any future serialization of primitives will be handled correctly in a cross-platform way;
 2. Run your normal deployment process.
 
 #### Have Not Deployed v1.4.20 or Later
+
 If you have not previously deployed to v1.4.20 or later, then do the following:
 
 1. Deploy once with `akka.actor.serialization-settings.primitive.use-legacy-behavior = on` (the default);

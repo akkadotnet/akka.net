@@ -4,12 +4,14 @@ title: Custom stream processing
 ---
 
 # Custom stream processing
+
 While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for performance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
 
 > [!NOTE]
 > A custom graph stage should not be the first tool you reach for, defining graphs using flows and the graph DSL is in general easier and does to a larger extent protect you from mistakes that might be easy to make with a custom `GraphStage`
 
 ## Custom processing with GraphStage
+
 The `GraphStage` abstraction can be used to create arbitrary graph processing stages with any number of input or output ports. It is a counterpart of the `GraphDSL.Create()` method which creates new stream processing stages by composing others. Where `GraphStage` differs is that it creates a stage that is itself not divisible into smaller ones, and allows state to be maintained inside it in a safe way.
 
 As a first motivating example, we will build a new `Source` that will simply emit numbers from 1 until it is cancelled. To start, we need to define the "interface" of our stage, which is called shape in Akka Streams terminology (this is explained in more detail in the section [Modularity, Composition and Hierarchy](xref:streams-modularity)). This is how this looks like:
@@ -384,30 +386,30 @@ The stage gets access to the `Log` property which it can safely use from any ``G
 ```csharp
 private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 {
-	#region internal classes
+    #region internal classes
 
-	private sealed class Logic : GraphStageLogic
-	{
-		public Logic(RandomLettersSource stage) : base(stage.Shape)
-		{
-			SetHandler(stage.Out, onPull: () =>
-			{
-				var c = NextChar(); // ASCII lower case letters
+    private sealed class Logic : GraphStageLogic
+    {
+        public Logic(RandomLettersSource stage) : base(stage.Shape)
+        {
+            SetHandler(stage.Out, onPull: () =>
+            {
+                var c = NextChar(); // ASCII lower case letters
 
-				Log.Debug($"Randomly generated: {c}");	
+                Log.Debug($"Randomly generated: {c}");    
 
-				Push(stage.Out, c.ToString());
-			});
-		}
+                Push(stage.Out, c.ToString());
+            });
+        }
 
-		private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
-	}
+        private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
+    }
 
-	#endregion
+    #endregion
 
     public RandomLettersSource()
     {
-	    Shape = new SourceShape<string>(Out);
+        Shape = new SourceShape<string>(Out);
     }
 
     private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
@@ -421,14 +423,14 @@ private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 [Fact]
 public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 {
-	const int n = 10;
-	EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
-	{
-		Source.FromGraph(new RandomLettersSource())
-			.Take(n)
-			.RunWith(Sink.Ignore<string>(), Materializer)
-			.Wait(TimeSpan.FromSeconds(3));
-	});
+    const int n = 10;
+    EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+    {
+        Source.FromGraph(new RandomLettersSource())
+            .Take(n)
+            .RunWith(Sink.Ignore<string>(), Materializer)
+            .Wait(TimeSpan.FromSeconds(3));
+    });
 }
 ```
 

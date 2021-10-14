@@ -4,9 +4,11 @@ title: Akka.NET Nightly Builds
 ---
 
 # Nightly & Developer Builds
+
 If you're interested in working on the Akka.NET project or just want to try out the very latest Akka.NET edge releases, you can subscribe to the project's nightly package feed.
 
 ## Nightly Package Feed URL
+
 Below is the URL for the Akka.NET nightly package feeds.
 
 > **<https://f.feedz.io/akkadotnet/akka/nuget/index.json>**
@@ -20,6 +22,7 @@ Once you've done that you can use the Package Manager in Visual Studio and consu
 > Make sure you allow for *pre-release* builds - otherwise you won't see the nightly builds!
 
 ## Accessing Nightly Symbols
+
 If you want access to debug symbols for the Akka.NET nightly packages, you can access them here:
 
 > **<https://f.feedz.io/akkadotnet/akka/symbols>**
@@ -27,6 +30,7 @@ If you want access to debug symbols for the Akka.NET nightly packages, you can a
 Follow [these instructions for adding this to Visual Studio or JetBrains Rider](https://feedz.io/docs/package-types/symbols).
 
 ## Adding SourceLink Support for Debugging Akka.NET
+
 Akka.NET supports [SourceLink](https://github.com/dotnet/sourcelink), which allows you to step directly into the source code associated with your local version of Akka.NET while debugging.
 
 If you need help configuring Visual Studio to use SourceLink, please read: "[How to Configure Visual Studio to Use SourceLink to Step into NuGet Package Source](https://aaronstannard.com/visual-studio-sourcelink-setup/)"

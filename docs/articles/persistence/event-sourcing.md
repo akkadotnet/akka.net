@@ -25,6 +25,7 @@ If persistence of an event fails, `OnPersistFailure` will be invoked (logging th
 > It's also possible to switch between different command handlers during normal processing and recovery with `Context.Become` and `Context.Unbecome`. To get the actor into the same state after recovery you need to take special care to perform the same state transitions with become and unbecome in the `OnRecover` method as you would have done in the command handler. Note that when using become from `OnRecover` it will still only use the `OnRecover` behavior when replaying the events. When replay is completed it will use the new behavior.
 
 ## Identifiers
+
 A persistent actor must have an identifier that doesn't change across different actor incarnations. The identifier must be defined with the `PersistenceId` method.
 
 ```csharp
@@ -35,6 +36,7 @@ public override string PersistenceId { get; } = "my-stable-persistence-id";
 > `PersistenceId` must be unique to a given entity in the journal (database table/keyspace). When replaying messages persisted to the journal, you query messages with a `PersistenceId`. So, if two different entities share the same `PersistenceId`, message-replaying behavior is corrupted.
 
 ## Recovery
+
 By default, a persistent actor is automatically recovered on start and on restart by replaying journaled messages. New messages sent to a persistent actor during recovery do not interfere with replayed messages. They are stashed and received by a persistent actor after recovery phase completes.
 
 The number of concurrent recoveries of recoveries that can be in progress at the same time is limited to not overload the system and the backend data store. When exceeding the limit the actors will wait until other recoveries have been completed. This is configured by:
@@ -45,6 +47,7 @@ The number of concurrent recoveries of recoveries that can be in progress at the
 > Accessing the `Sender` for replayed messages will always result in a `DeadLetters` reference, as the original sender is presumed to be long gone. If you indeed have to notify an actor during recovery in the future, store its `ActorPath` explicitly in your persisted events.
 
 ### Recovery customization
+
 Applications may also customize how recovery is performed by returning a customized `Recovery` object in the recovery method of a `UntypedPersistentActor`.
 
 To skip loading snapshots and replay all events you can use `SnapshotSelectionCriteria.None`. This can be useful if snapshot serialization format has changed in an incompatible way. It should typically not be used when events have been deleted.
@@ -66,6 +69,7 @@ public override Recovery Recovery => Recovery.None;
 ```
 
 ### Recovery status
+
 A persistent actor can query its own recovery status via the methods
 
 ```csharp
@@ -78,13 +82,13 @@ Sometimes there is a need for performing additional initialization when the reco
 ```csharp
 protected override void OnRecover(object message)
 {
-	switch(message)
-	{
-		case RecoveryCompleted _:
-			// perform init after recovery, before any other messages
-			break;
-		// ...
-	}
+    switch(message)
+    {
+        case RecoveryCompleted _:
+            // perform init after recovery, before any other messages
+            break;
+        // ...
+    }
 }
 
 protected override void OnCommand(object message)
@@ -97,6 +101,7 @@ The actor will always receive a `RecoveryCompleted` message, even if there are n
 If there is a problem with recovering the state of the actor from the journal, `OnRecoveryFailure` is called (logging the error by default) and the actor will be stopped.
 
 ## Internal stash
+
 The persistent actor has a private stash for internally caching incoming messages during `Recovery` or the `Persist` \ `PersistAll` method persisting events. However You can use inherited stash or create one or more stashes if needed. The internal stash doesn't interfere with these stashes apart from user inherited `UnstashAll` method, which prepends all messages in the inherited stash to the internal stash instead of mailbox. Hence, If the message in the inherited stash need to be handled after the messages in the internal stash, you should call inherited un-stash method.
 
 You should be careful to not send more messages to a persistent actor than it can keep up with, otherwise the number of stashed messages will grow. It can be wise to protect against `OutOfMemoryException` by defining a maximum stash capacity in the mailbox configuration:
@@ -138,6 +143,7 @@ In the below example, the event callbacks may be called "at any time", even afte
 > The callback will not be invoked if the actor is restarted (or stopped) in between the call to `PersistAsync` and the journal has confirmed the write.
 
 ## Deferring actions until preceding persist handlers have executed
+
 Sometimes when working with `PersistAsync` or `Persist` you may find that it would be nice to define some actions in terms of happens-after the previous `PersistAsync`/`Persist` handlers have been invoked. `PersistentActor` provides an utility method called `DeferAsync`, which works similarly to `PersistAsync` yet does not persist the passed in event. It is recommended to use it for read operations, and actions which do not have corresponding events in your domain model.
 
 Using this method is very similar to the persist family of methods, yet it does **not** persist the passed in event. It will be kept in memory and used when invoking the handler.
@@ -197,6 +203,7 @@ While it is possible to nest mixed `Persist` and `PersistAsync` with keeping the
 > While it is possible to nest `Persist` calls within one another, it is not legal call persist from any other `Thread` than the Actors message processing `Thread`. For example, it is not legal to call `Persist` from tasks! Doing so will break the guarantees that the persist methods aim to provide. Always call `Persist` and `PersistAsync` from within the Actor's receive block (or methods synchronously invoked from there).
 
 ## Failures
+
 If persistence of an event fails, `OnPersistFailure` will be invoked (logging the error by default), and the actor will unconditionally be stopped.
 
 The reason that it cannot resume when persist fails is that it is unknown if the event was actually persisted or not, and therefore it is in an inconsistent state. Restarting on persistent failures will most likely fail anyway since the journal is probably unavailable. It is better to stop the actor and after a back-off timeout start it again. The `BackoffSupervisor` actor is provided to support such restarts.
@@ -221,6 +228,7 @@ If persistence of an event is rejected before it is stored, e.g. due to serializ
 If there is a problem with recovering the state of the actor from the journal when the actor is started, `OnRecoveryFailure` is called (logging the error by default), and the actor will be stopped. Note that failure to load snapshot is also treated like this, but you can disable loading of snapshots if you for example know that serialization format has changed in an incompatible way, see [Recovery customization](#recovery-customization).
 
 ## Atomic writes
+
 Each event is of course stored atomically, but it is also possible to store several events atomically by using the `PersistAll` or `PersistAllAsync` method. That means that all events passed to that method are stored or none of them are stored if there is an error.
 
 The recovery of a persistent actor will therefore never be done partially with only a subset of events persisted by `PersistAll`.
@@ -228,6 +236,7 @@ The recovery of a persistent actor will therefore never be done partially with o
 Some journals may not support atomic writes of several events and they will then reject the `PersistAll` command, i.e. `OnPersistRejected` is called with an exception (typically `NotSupportedException`).
 
 ## Batch writes
+
 In order to optimize throughput when using `PersistAsync`, a persistent actor internally batches events to be stored under high load before writing them to the journal (as a single batch). The batch size is dynamically determined by how many events are emitted during the time of a journal round-trip: after sending a batch to the journal no further batch can be sent before confirmation has been received that the previous batch has been written. Batch writes are never timer-based which keeps latencies at a minimum.
 
 ## Message deletion
@@ -245,12 +254,12 @@ Message deletion doesn't affect the highest sequence number of the journal, even
 
 ## Persistence status handling
 
-| Method   	             | Success      	        |  Failure / Rejection 	| After failure handler invoked
-|------                  |------                    |------	                |------	  
-| Persist / PersistAsync | persist handler invoked	| OnPersistFailure  	| Actor is stopped.
+| Method                    | Success                  |  Failure / Rejection     | After failure handler invoked
+|------                  |------                    |------                    |------      
+| Persist / PersistAsync | persist handler invoked    | OnPersistFailure      | Actor is stopped.
 |                        |                          | OnPersistRejected     | No automatic actions.
-| Recovery 	             | RecoverySuccess   	    | OnRecoveryFailure 	| Actor is stopped.
-| DeleteMessages 	     | DeleteMessagesSuccess 	| DeleteMessagesFailure | No automatic actions.
+| Recovery                  | RecoverySuccess           | OnRecoveryFailure     | Actor is stopped.
+| DeleteMessages          | DeleteMessagesSuccess     | DeleteMessagesFailure | No automatic actions.
 
 The most important operations (Persist and Recovery) have failure handlers modelled as explicit callbacks which the user can override in the `UntypedPersistentActor`. The default implementations of these handlers emit a log message (error for persist/recovery failures, and warning for others), logging the failure cause and information about which message caused the failure.
 
@@ -275,6 +284,7 @@ The example below highlights how messages arrive in the Actor's mailbox and how 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Persistence/PersistentActor/AvoidPoisonPill.cs?name=AvoidPoisonPill2)]
 
 ## Replay filter
+
 There could be cases where event streams are corrupted and multiple writers (i.e. multiple persistent actor instances) journaled different messages with the same sequence number. In such a case, you can configure how you filter replayed messages from multiple writers, upon recovery.
 
 In your configuration, under the `akka.persistence.journal.xxx.replay-filter` section (where xxx is your journal plugin id), you can select the replay filter mode from one of the following values:

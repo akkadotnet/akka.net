@@ -23,6 +23,7 @@ changes to Akka.NET:
   with the `discussion` tag or reach out to [AkkaDotNet on Twitter](https://twitter.com/AkkaDotNet).
 
 ## Coding conventions
+
 - Use the default Resharper guidelines for code
   - Start private member fields with `_`, i.e. `_camelCased`
   - Use PascalCase for public and protected Properties and Methods
