@@ -7,7 +7,9 @@ title: Supervision
 
 This document outlines the concept behind supervision and what that means for your Akka.NET actors at run-time.
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/CC2XdYlpmvo" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 ## What Supervision Means
 

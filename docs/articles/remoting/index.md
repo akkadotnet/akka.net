@@ -215,7 +215,9 @@ That's how associations work in a nutshell!
 
 We have a video that illustrates how this process works - this video was really designed for Akka.NET contributors who work on Akka.Remote, but there's a lot of benefit in understanding it as an end-user of Akka.NET too!
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/6c1gVLyYcMM" frameborder="0" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 ## Additional Resources
 
