@@ -78,7 +78,7 @@ The frontend that receives user jobs and delegates to the backends via the route
 
 As you can see, the router is defined in the same way as other routers, and in this case it is configured as follows:
 
-```
+```hocon
 akka.actor.deployment {
   /factorialFrontend/factorialBackendRouter = {
     # Router type provided by metrics extension.
@@ -128,7 +128,7 @@ Custom metrics collector implementation class must be specified in the `akka.clu
 
 The Cluster metrics extension can be configured with the following properties:
 
-```
+```hocon
 ##############################################
 # Akka Cluster Metrics Reference Config File #
 ##############################################

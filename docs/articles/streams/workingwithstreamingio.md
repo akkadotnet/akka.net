@@ -29,7 +29,7 @@ Closing connections is possible by cancelling the incoming connection `Flow` fro
 
 We can then test the TCP server by sending data to the TCP Socket using `netcat` (on Windows it is possible to use Linux Subsystem for Windows):
 
-```
+```sh
 echo -n "Hello World" | netcat 127.0.0.1 8888
 Hello World!!!
 ```

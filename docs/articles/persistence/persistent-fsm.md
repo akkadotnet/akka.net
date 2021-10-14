@@ -70,7 +70,7 @@ On recovery state data is initialized according to the latest available snapshot
 
 You can enable periodical `SaveStateSnapshot()` calls in `PersistentFSM` if you turn the following flag on in `reference.conf`
 
-```
+```hocon
 akka.persistence.fsm.snapshot-after = 1000
 ```
 

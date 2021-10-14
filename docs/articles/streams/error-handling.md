@@ -40,7 +40,7 @@ Source.From(Enumerable.Range(0, 6)).Select(n =>
 
 This will output:
 
-```
+```text
 0
 1
 2
@@ -76,7 +76,7 @@ Source.From(Enumerable.Range(0, 10)).Select(n =>
 
 This will output:
 
-```
+```text
 0
 1
 2

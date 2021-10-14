@@ -22,7 +22,7 @@ To run a stage asynchronously it has to be marked explicitly as such using the .
 
 Running the above example, one of the possible outputs looks like this:
 
-```
+```text
 A: 2
 B: 1
 A: 3

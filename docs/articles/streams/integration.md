@@ -295,7 +295,7 @@ Source.From(new[] {"a", "B", "C", "D", "e", "F", "g", "H", "i", "J"})
 
 The output may look like this:
 
-```
+```text
 before: a
 before: B
 before: C
@@ -365,7 +365,7 @@ var result = Source.From(new[] {"a", "B", "C", "D", "e", "F", "g", "H", "i", "J"
 
 The output may look like this:
 
-```
+```text
 before: a
 before: B
 before: C

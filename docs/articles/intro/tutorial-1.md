@@ -118,7 +118,7 @@ counterpart. This is how it looks like in practice:
 
 We see that the following two lines are printed
 
-```
+```text
 First : Actor[akka://testSystem/user/first-actor#1053618476]
 Second: Actor[akka://testSystem/user/first-actor/second-actor#-1544706041]
 ```
@@ -180,7 +180,7 @@ Again, we can try out all this with a simple experiment:
 
 After running it, we get the output
 
-```
+```text
 first started
 second started
 second stopped
@@ -211,7 +211,7 @@ the default strategy in this simple experiment:
 
 After running the snippet, we see the following output on the console:
 
-```
+```text
 supervised actor started
 supervised actor fails now
 supervised actor stopped

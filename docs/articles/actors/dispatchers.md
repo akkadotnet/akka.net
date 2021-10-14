@@ -181,7 +181,7 @@ During its initial development and benchmarks, we observed the following:
 
 The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecutor` to determine its effective upper and lower parallelism limits, and you can configure the `ChannelExecutor` to run inside your `ActorSystem` via the following HOCON configuration:
 
-```
+```hocon
 akka.actor.default-dispatcher = {
     executor = channel-executor
     fork-join-executor { #channelexecutor will re-use these settings

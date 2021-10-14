@@ -221,7 +221,7 @@ For testing, it is possible to enable a special stream execution mode that exerc
 more aggressively (at the cost of reduced performance) and therefore helps exposing race conditions in tests. To
 enable this setting add the following line to your configuration:
 
-```
+```hocon
 akka.stream.materializer.debug.fuzzing-mode = on
 ```
 

@@ -11,13 +11,13 @@ An actor system that is not part of the cluster can communicate with actors some
 
 Also, note it's necessary to change akka.actor.provider from `Akka.Actor.LocalActorRefProvider` to `Akka.Remote.RemoteActorRefProvider` or `Akka.Cluster.ClusterActorRefProvider` when using the cluster client.
 
-```
+```hocon
   akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
 ```
 
   or this shorthand notation
 
-```
+```hocon
   akka.actor.provider = cluster
 ```
 
