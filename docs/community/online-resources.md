@@ -6,11 +6,13 @@ title: Resources
 # Resources
 
 ## Akka.NET Bootcamp
+
 [Akka.NET Bootcamp](http://learnakka.net/) is a free, self-directed learning course brought to you by the folks at [Petabridge](https://petabridge.com). Over the three units of this bootcamp you will learn how to create fully-functional, real-world programs using Akka.NET actors and many other parts of the core Akka.NET framework.
 
 [**Start Bootcamp here.**](http://learnakka.net/)
 
 ## Blog posts
+
 **Petabridge**
 - [Akka.NET: What is an Actor?](https://petabridge.com/blog/akkadotnet-what-is-an-actor/) (Aaron Stannard on January 25, 2015)
 - [How to Do Asynchronous I/O with Akka.NET Actors Using PipeTo](https://petabridge.com/blog/akkadotnet-async-actors-using-pipeto/) (Aaron Stannard on January 27, 2015)
@@ -61,6 +63,7 @@ title: Resources
 - [Actor model and using of Akka.NET](https://rubikscode.net/2017/05/28/actor-model-and-using-of-akka-net/) (Nikola Živković on May 28th, 2017)
 
 ## Videos
+
 - [The Actor Model in F# and Akka.Net](https://www.youtube.com/watch?v=RiWXo_5CAvg) (March 17, 2015)
 - [Streaming ETL w/ Akka.NET](https://vimeo.com/123452527) (Andrew Skotzko on March 18, 2015)
 - [Akka.NET Internals: How Akka.Remote Connections Work](https://www.youtube.com/watch?v=6c1gVLyYcMM) (Aaron Stannard on May 5, 2015)
@@ -74,6 +77,7 @@ title: Resources
 - [Channel 9: Building distributed applications with Akka.NET](https://channel9.msdn.com/Shows/On-NET/Building-distributed-applications-with-AkkaNET) (Aaron Stannard on April 3, 2018)
 
 ## Courses
+
 - [Building Concurrent Applications with the Actor Model in Akka.NET (Pluralsight)](https://www.pluralsight.com/courses/akka-dotnet-actor-model-building-concurrent-applications) (Jason Roberts on 5 August 2015)
 - [Implementing Logging and Dependency Injection in Akka.NET](https://www.pluralsight.com/courses/akka-dotnet-implementing-logging-dependency-injection) (Jason Roberts on 22 August 2015)
 - [Building Reactive Concurrent WPF Applications with Akka.NET](https://www.pluralsight.com/courses/akka-dotnet-building-reactive-concurrent-wpf-applications) (Jason Roberts on 10 September 2015)
@@ -91,9 +95,11 @@ title: Resources
 - [.NET Rocks! (November 2014)](http://www.dotnetrocks.com/default.aspx?showNum=1058) — Overview of the project discussed w/ [Roger Alsing](https://twitter.com/rogeralsing).
 
 ## Code samples / Demos
+
 - [Using Akka.Cluster to build a web crawler](https://github.com/petabridge/akkadotnet-code-samples/tree/master/Cluster.WebCrawler)
 
 ## Non-English resources
+
 - [Distributed Programming Using Akka.NET Framework (in Polish)](https://www.youtube.com/watch?v=_6vDp2-VCjc) (Bartosz Sypytkowski on March 6, 2015)
 - [Intro to Akka.NET (in Swedish)](https://www.youtube.com/watch?v=Ta6qLA9OsjE) (Håkan Canberger on March 23, 2015)
 - [Writing scalable and distributed systems with Akka.NET](https://www.youtube.com/watch?v=fwWA6Bugg_c) (Nikita Tsukanov on June 5, 2015)

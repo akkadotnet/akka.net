@@ -5,6 +5,7 @@ One of the most powerful testing features of Akka.NET is its ability to create a
 This is precisely what the Multi-Node TestKit and TestRunner (MNTR) does in Akka.NET.
 
 ### MNTR Components
+
 The Akka.NET Multi-Node TestKit consists of the following publicly available NuGet packages:
 
 * [Akka.MultiNodeTestRunner](https://www.nuget.org/packages/Akka.MultiNodeTestRunner) - the test runner that can launch a multi-node testing environment;
@@ -12,6 +13,7 @@ The Akka.NET Multi-Node TestKit consists of the following publicly available NuG
 * [Akka.Cluster.TestKit](https://www.nuget.org/packages/Akka.Cluster.TestKit) - a set of test helper methods for [Akka.Cluster](xref:cluster-overview) applications built on top of the Akka.Remote.TestKit.
 
 ### How the MNTR Works
+
 The MultiNodeTestRunner works via the following process:
 
 1. Consumes a .DLL that has Akka.Remote.TestKit or Akka.Cluster.TestKit classes contained inside it;
@@ -38,6 +40,7 @@ Next, you need to plan out your test scenario for your application. Here's a sim
 So this sounds like a rather complicated procedure, but in actuality the MNTR makes it easy for us to test scenarios just like these.
 
 ### Step 1 - Create a Test Configuration
+
 The first step in creating an effective multi-node test is to define the configuration class for this test - this is going to tell the MNTR how many nodes there will need to be, how each node should be configured, and what features should be enabled for this unit test.
 
 [!code-csharp[RestartNode2Spec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/RestartNode2Spec.cs?name=MultiNodeSpecConfig)]
@@ -47,6 +50,7 @@ The declaration of the `RoleName` properties is what the MNTR uses to determine 
 The `CommonConfig` element of the [`MultiNodeConfig` implementation class](../../api/Akka.Remote.TestKit.MultiNodeConfig.html) is the common config that will be used throughout all of the nodes inside the multi-node test. So, for instance, if you want all of the nodes in your test to run [Akka.Cluster.Sharding](xref:cluster-sharding) you'd want to include those configuration elements inside the `CommonConfig` property.
 
 #### Configuring Individual Nodes Differently
+
 In addition to passing a `CommonConfig` object throughout all nodes in your multi-node test, you can also provide configurations for individual nodes during each test.
 
 For example: if you're taking advantage of the `akka.cluster.roles` property to have some nodes execute different workloads than others, this might be something you'd want to specify for nodes individually. 
@@ -68,6 +72,7 @@ Right after setting `CommonConfig` inside the constructor of your `MultiNodeConf
 > `NodeConfig` takes precedent over `CommonConfig`
 
 #### Enabling TestTransport to Simulate Network Errors
+
 One final but important thing you might want to during the design of a multi-node test is to enable the `TestTransport`, which exposes a capability inside your tests that allows for you to create network partitions, disconnects, and latency on the fly.
 
 [!code-csharp[SurviveNetworkInstabilitySpec.cs](../../../src/core/Akka.Cluster.Tests.MultiNode/SurviveNetworkInstabilitySpec.cs?name=MultiNodeSpecConfig)]
@@ -77,6 +82,7 @@ To enable the `TestTransport`, all you have to do is set `TestTransport = true` 
 Once that's done, you'll be able to use the `TestConductor` inside your multi-node tests to enable all kinds of simulated network partitions.
 
 ### Step 2 - Create Your MultiNodeClusterSpec or MultiNodeSpec
+
 Once you've created your `MultiNodeConfig`, you'll want to create a `MultiNodeClusterSpec` if you're using Akka.Cluster or a `MultiNodeSpec` if you just want to use Akka.Remote.
 
 We're going to show you a full code sample first and walk through how it works in detail below.
@@ -119,6 +125,7 @@ public void RestartNode2Specs()
 This method is what will be executed by the multi-node test runner.
 
 #### Addressing Nodes
+
 All nodes in the multi-node test runner are going to be given randomized addresses and ports - thus we can never predict those addresses at the time we design our tests. Therefore, the way we always refer to nodes is by their `RoleName`s.
 
 If we want to resolve the Akka.NET `Address` of a specific node, we can do this via the `GetAddress` method:
@@ -136,6 +143,7 @@ private ImmutableList<Address> SeedNodes
 The `GetAddress` method accepts a `RoleName` and returns the `Address` that was assigned to the node by the multi-node test runner.
 
 #### Running Code on Specific Nodes
+
 The most important tool in the `Akka.Remote.TestKit`, the base library where all multi-node testing tools are defined, is the `RunOn` method:
 
 ```csharp
@@ -165,11 +173,13 @@ Notice that the first `RunOn` call takes an argument of `_config.Seed2`, whereas
 Given that each node runs inside its own process, it's likely that both of these blocks of code will be executing simultaneously.
 
 #### Synchronizing Test Progression on Different Nodes
+
 In order to make multi-node tests effective, we must have some means of synchronizing all of the nodes in each test - such that they all reach the same assertions at the same time. This is precisely what the `EnterBarrier` method helps us do, as you can see in the code sample above.
 
 `EnterBarrier` creates a synchronization barrier between processes - no processes can advance past it until all processes have reached it. If one process fails to reach the barrier within 30 seconds (this is configurable via the [Akka.Remote.TestKit reference configuration](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Remote.TestKit/Internals/Reference.conf)), the test will throw an assertion error and fail.
 
 #### Terminating, Aborting, and Disconnecting Nodes
+
 One of the most useful features of the multi-node testkit is its ability to simulate real-world networking issues, and this can be accomplished using some of the APIs found in the Akka.Remote.TestKit.
 
 **Creating Network Partitions**
@@ -227,6 +237,7 @@ RunOn(() => {
 Once a node has exited the test, it will no longer be able to wait on `EnterBarrier` calls and the multi-node test runner will not try to collect any data from that node from that point onward.
 
 ## Running Multi-Node Tests
+
 Once you've coded your multi-node tests and compiled them, it's now time to run them. Akka.NET ships a custom XUnit2 runner that it uses to create the simulated networks and clusters and you will need to install that via NuGet in order to run your tests:
 
 ```

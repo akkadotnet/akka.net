@@ -3,6 +3,7 @@ uid: event-adapters
 title: Event Adapters
 ---
 # Event adapters
+
 In long running projects using event sourcing sometimes the need arises to detach the data model from the domain model completely.
 
 Event Adapters help in situations where:

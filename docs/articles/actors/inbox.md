@@ -4,6 +4,7 @@ title: Inbox
 ---
 
 # The Inbox
+
 When writing code outside of actors which shall communicate with actors, the ask pattern can be a solution (see below), but there are two things it cannot do: receiving multiple replies (e.g. by subscribing an `IActorRef` to a notification service) and watching other actors' lifecycle. For these purposes there is the `Inbox` class:
 ```csharp
 var target = system.ActorOf(Props.Empty);

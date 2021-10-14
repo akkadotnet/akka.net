@@ -3,6 +3,7 @@ uid: coordinated-shutdown
 title: Coordinated Shutdown
 ---
 # Coordinated Shutdown
+
 There's an `ActorSystem` extension called `CoordinatedShutdown` that will stop certain Akka.NET actors / services and execute tasks in a programmable order during shutdown.
 
 The default phases and their orderings are defined in the default HOCON configuration as `akka.coordinated-shutdown.phases`, and they are defined below:
@@ -120,6 +121,7 @@ Each shutdown task added to a phase must specify a function that returns a value
 Tasks should be registered as early as possible, preferably at system startup, in order to ensure that all registered tasks are run. If tasks are added after the `CoordinatedShutdown` have begun its run, it's possible that the newly registered tasks will not be executed.
 
 ## Running `CoordinatedShutdown` 
+
 There are a few different ways to start the `CoordinatedShutdown` process.
 
 If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`. 
@@ -132,6 +134,7 @@ It's safe to call this method multiple times as the shutdown process will only b
 > It's possible to subclass the `CoordinatedShutdown.Reason` type and pass in a custom implementation which includes custom properties and data. This data is accessible inside the shutdown phases themselves via the [`CoordinatedShutdown.ShutdownReason` property](/api/Akka.Actor.CoordinatedShutdown.html#Akka_Actor_CoordinatedShutdown_ShutdownReason).
 
 ### Automatic `ActorSystem` and Process Termination
+
 By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. This behavior can be changed by setting the following HOCON value in your configuration:
 
 ```
@@ -157,6 +160,7 @@ akka.coordinated-shutdown.exit-clr = on
 If this setting is enabled (it's disabled by default), you'll be able to shutdown the current running process automatically via an `Environment.Exit(0)` call made during the final phase of the `CoordinatedShutdown`.
 
 ### `CoordinatedShutdown` and Akka.Cluster
+
 If you're using Akka.Cluster, the `CoordinatedShutdown` will automatically register tasks for completing the following:
 
 1. Gracefully leaving the cluster;
@@ -172,6 +176,7 @@ akka.cluster.run-coordinated-shutdown-when-down = off
 ```
 
 ### Invoking `CoordinatedShutdown.Run()` on Process Exit
+
 By default `CoordinatedShutdown.Run()` will be called whenever the current process attempts to exit (using the `AppDomain.ProcessExit` event hook) and this will give the `ActorSystem` and the underlying clustering tools an opportunity to cleanup gracefully before the process finishes exiting.
 
 If you wish to disable this behavior, you can pass in the following HOCON configuration value:

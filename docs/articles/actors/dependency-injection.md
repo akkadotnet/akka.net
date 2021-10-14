@@ -3,6 +3,7 @@ uid: dependency-injection
 title: Dependency injection
 ---
 # Dependency Injection
+
 As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyInjection library, which integrates directly with Microsoft.Extensions.DependencyInjection and deprecates the previous Akka.DI.Core and Akka.DI.* libraries.
 
 You can install Akka.DependencyInjection via NuGet:
@@ -14,6 +15,7 @@ PS> Install-Package Akka.DependencyInjection
 Akka.DependencyInjection allows users to pass in an [`IServiceProvider`](https://docs.microsoft.com/en-us/dotnet/api/system.iserviceprovider) into the `ActorSystem` before the latter is created, via [a new kind of programmatic configuration `Setup` that was introduced in Akka.NET v1.4](xref:configuration#programmatic-configuration-with-setup)
 
 ## Integrating with Microsoft.Extensions.DependencyInjection
+
 Many .NET applications begin with a `Startup` class that uses the Microsoft.Extensions.DependencyInjection to build an `IServiceCollection` that contains 1 or more service bindings:
 
 [!code-csharp[Startup](../../../src/examples/AspNetCore/Samples.Akka.AspNetCore/Startup.cs?name=DiSetup)]
@@ -36,6 +38,7 @@ From there, we want to call `ServiceProvider.Props` to create a set of `Props` f
 > Akka.DependencyInjection is not going to manage the lifecycle of your dependencies for you. Keep reading.
 
 ### Managing Lifecycle Dependencies with Akka.DependencyInjection
+
 Akka.DependencyInjection allows Akka.NET developers to mix and match injected dependencies along with non-injected dependencies - for instance:
 
 [!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=NonDiArgsActor)]
@@ -101,6 +104,7 @@ var worker2Ref = system.ActorOf(system.DI().Props<TypedWorker>(), "Worker2");
 ```
 
 ### Creating Child Actors using DI
+
 When you want to create child actors from within your existing actors using
 Dependency Injection you can use the Actor Content extension just like in
 the following example.

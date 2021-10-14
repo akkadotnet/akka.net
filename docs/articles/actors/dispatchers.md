@@ -6,6 +6,7 @@ title: Dispatchers
 # Dispatchers
 
 ## What Do Dispatchers Do?
+
 Dispatchers are responsible for scheduling all code that run inside the `ActorSystem`. Dispatchers are one of the most important parts of Akka.NET, as they control the throughput and time share for each of the actors, giving each one a fair share of resources.
 
 By default, all actors share a single **Global Dispatcher**. Unless you change the configuration, this dispatcher uses the *.NET Thread Pool* behind the scenes, which is optimized for most common scenarios. **That means the default configuration should be *good enough* for most cases.**
@@ -167,6 +168,7 @@ private void Form1_Load(object sender, System.EventArgs e)
 ```
 
 ### `ChannelExecutor`
+
 In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
 
 During its initial development and benchmarks, we observed the following:
