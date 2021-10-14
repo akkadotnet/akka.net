@@ -24,7 +24,7 @@ You can play around with HOCON syntax in real-time by going to [hocon-playground
 
 ## Syntax
 
-Much of this is defined with reference to JSON; you can find the JSON spec at http://json.org/.
+Much of this is defined with reference to JSON; you can find the JSON spec at <http://json.org/>.
 
 ### Unchanged from JSON
 
@@ -313,6 +313,7 @@ For example, the the ambient environment might have this definition ...
 ```
 set Path=A;B;C
 ```
+
 ... we just don't know. But if the HOCON needs "PATH", then the start script must take a precautionary approach and enforce the necessary case as follows ...
 
 ```
@@ -331,9 +332,11 @@ The idea of self-referential substitution is to allow a new value for a field to
     path : "a:b:c"
     path : ${path}":d"
 ```
+
 is equal to:
+
 ```
-	path : "a:b:c:d"
+    path : "a:b:c:d"
 ```
 
 Examples of self-referential fields:

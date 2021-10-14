@@ -29,6 +29,7 @@ The `PersistenceId` identifies the persistent actor from which the view receives
 It is possible to determine if a message was sent from the Journal or from another actor in user-land by calling the `IsPersistent` property. Having that said, very often you don't need this information at all and can simply apply the same logic to both cases (skip the if `IsPersistent` check).
 
 ## Updates
+
 The default update interval of all persistent views of an actor system is configurable:
 
 ```hocon
@@ -45,15 +46,19 @@ view.Tell(new Update(true));
 If the await parameter is set to true, messages that follow the `Update` request are processed when the incremental message replay, triggered by that update request, completed. If set to false (default), messages following the update request may interleave with the replayed message stream. 
 
 Automated updates of all persistent views of an actor system can be turned off by configuration:
+
 ```hocon
 akka.persistence.view.auto-update = off
 ```
+
 Implementation classes may override the configured default value by overriding the autoUpdate method. To limit the number of replayed messages per update request, applications can configure a custom *akka.persistence.view.auto-update-replay-max* value or override the `AutoUpdateReplayMax` property. The number of replayed messages for manual updates can be limited with the replayMax parameter of the Update message.
 
 ## Recovery
+
 Initial recovery of persistent views works the very same way as for persistent actors (i.e. by sending a `Recover` message to self). The maximum number of replayed messages during initial recovery is determined by `AutoUpdateReplayMax`. Further possibilities to customize initial recovery are explained in section Recovery.
 
 ## Identifiers
+
 A persistent view must have an identifier that doesn't change across different actor incarnations. The identifier must be defined with the `ViewId` method.
 
 The `ViewId` must differ from the referenced `PersistenceId`, unless Snapshots of a view and its persistent actor should be shared (which is what applications usually do not want).

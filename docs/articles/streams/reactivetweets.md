@@ -96,6 +96,7 @@ using (var sys = ActorSystem.Create("Reactive-Tweets"))
 ```
 
 ## Flattening sequences in streams
+
 In the previous section we were working on 1:1 relationships of elements which is the most common case, but sometimes
 we might want to map from one element to a number of elements and receive a "flattened" stream, similarly like ``SelectMany``
 works on .Net Collections. In order to get a flattened stream of hashtags from our stream of tweets we can use the ``SelectMany``
@@ -106,6 +107,7 @@ Source<IHashtagEntity, NotUsed> hashTags = tweetSource.SelectMany(tweet => tweet
 ```
 
 ## Broadcasting a stream
+
 Now let's say we want to persist all hashtags, as well as all author names from this one live stream.
 For example we'd like to write all author handles into one file, and all hashtags into another file on disk.
 This means we have to split the source stream into two streams which will handle the writing to these different files.

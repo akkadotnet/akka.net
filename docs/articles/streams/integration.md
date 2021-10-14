@@ -6,6 +6,7 @@ title: Integration
 # Integration
 
 ## Integrating with Actors
+
 For piping the elements of a stream as messages to an ordinary actor you can use ``Ask`` in a 
 ``SelectAsync`` or use ``Sink.ActorRefWithAck``.
 
@@ -13,6 +14,7 @@ Messages can be sent to a stream with ``Source.Queue`` or via the ``IActorRef`` 
 materialized by ``Source.ActorRef``.
 
 ### SelectAsync + Ask
+
 A nice way to delegate some processing of elements in a stream to an actor is to use ``Ask`` 
 in ``SelectAsync``. The back-pressure of the stream is maintained by the ``Task`` of the ``Ask``
 and the mailbox of the actor will not be filled with more messages than the given 
@@ -21,10 +23,10 @@ and the mailbox of the actor will not be filled with more messages than the give
 ```csharp
 var words = Source.From(new [] { "hello", "hi" });
 words
-	.SelectAsync(5, elem => _actorRef.Ask(elem, TimeSpan.FromSeconds(5)))
-	.Select(elem => (string)elem)
-	.Select(elem => elem.ToLower())
-	.RunWith(Sink.Ignore<string>(), _actorMaterializer);
+    .SelectAsync(5, elem => _actorRef.Ask(elem, TimeSpan.FromSeconds(5)))
+    .Select(elem => (string)elem)
+    .Select(elem => elem.ToLower())
+    .RunWith(Sink.Ignore<string>(), _actorMaterializer);
 ```
 
 Note that the messages received in the actor will be in the same order as the stream elements, 
@@ -39,17 +41,18 @@ from `SelectAsync`.
 ```csharp
 public class Translator : ReceiveActor
 {
-	public Translator()
-	{
-		Receive<string>(word => {
-			// ... process message
-			string reply = word.ToUpper();
-			// reply to the ask
-			Sender.Tell(reply, Self);
-		});
-	}
+    public Translator()
+    {
+        Receive<string>(word => {
+            // ... process message
+            string reply = word.ToUpper();
+            // reply to the ask
+            Sender.Tell(reply, Self);
+        });
+    }
 }
 ```
+
 The stream can be completed with failure by sending `Akka.Actor.Status.Failure` as reply from the actor.
 
 If the `Ask` fails due to timeout the stream will be completed with `TimeoutException` failure. 
@@ -63,6 +66,7 @@ The same pattern can be used with [Actor routers](xref:routers). Then you can us
 downstream elements (the replies).
 
 ### Sink.ActorRefWithAck
+
 The sink sends the elements of the stream to the given `IActorRef` that sends back back-pressure signal.
 First element is always `OnInitMessage`, then stream is waiting for the given acknowledgement message 
 from the given actor which means that it is ready to process elements. 
@@ -80,6 +84,7 @@ is completed with failure a `Akka.Actor.Status.Failure` message will be sent to 
 >It's often better to use `Sink.ActorRefWithAck` or `Ask` in `SelectAsync`, though. 
 
 ### Source.Queue
+
 `Source.Queue` can be used for emitting elements to a stream from an actor (or from anything running 
 outside the stream). The elements will be buffered until the stream can process them. You can `Offer`
 elements to  the queue and they will be emitted to the stream if there is demand from downstream, 
@@ -98,6 +103,7 @@ When used from an actor you typically `pipe` the result of the `Task` back to th
 to continue processing.
 
 ### Source.ActorRef
+
 Messages sent to the actor that is materialized by ``Source.ActorRef`` will be emitted to the
 stream if there is demand from downstream, otherwise they will be buffered until request for
 demand is received.
@@ -118,6 +124,7 @@ The actor will be stopped when the stream is completed, failed or cancelled from
 i.e. you can watch it to get notified when that happens.
 
 ## Integrating with External Services
+
 Stream transformations and side effects involving external non-stream based services can be
 performed with ``SelectAsync`` or ``SelectAsyncUnordered``.
 
@@ -221,6 +228,7 @@ If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
 
 
 ### Illustrating ordering and parallelism
+
 Let us look at another example to get a better understanding of the ordering
 and parallelism characteristics of ``SelectAsync`` and ``SelectAsyncUnordered``.
 
@@ -456,11 +464,12 @@ Just like in case of `Source.FromObservable`, `Source.FromEvents` can take optio
 
 
 ### Integrating with Reactive Streams
+
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
 
-- Reactive Streams: http://reactive-streams.org/
+- Reactive Streams: <http://reactive-streams.org/>
 
 
 The two most important interfaces in Reactive Streams are the `IPublisher` and `ISubscriber`.
@@ -587,6 +596,7 @@ These can be consumed by other Reactive Stream libraries or used as an Akka Stre
 > the stream may deadlock.
 
 ### ActorPublisher
+
 Extend `Akka.Streams.Actor.ActorPublisher` to implement a stream publisher that keeps track of the subscription life cycle and requested elements.
 
 Here is an example of such an actor. It dispatches incoming jobs to the attached subscriber:
@@ -726,6 +736,7 @@ actorRef.Tell(new Job("c"));
 You can only attach one subscriber to this publisher. Use a ``Broadcast``-element or attach a ``Sink.AsPublisher(true)`` to enable multiple subscribers.
 
 ### ActorSubscriber
+
 Extend `Akka.Streams.Actor.ActorSubscriber` to make your class a stream subscriber with full control of stream back pressure. It will receive `OnNext`, `OnComplete` and `OnError` messages from the stream. It can also receive other, non-stream messages, in the same way as any actor.
 
 Here is an example of such an actor. It dispatches incoming jobs to child worker actors:

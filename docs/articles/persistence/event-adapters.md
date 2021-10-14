@@ -3,6 +3,7 @@ uid: event-adapters
 title: Event Adapters
 ---
 # Event adapters
+
 In long running projects using event sourcing sometimes the need arises to detach the data model from the domain model completely.
 
 Event Adapters help in situations where:
@@ -30,22 +31,25 @@ public class MyEventAdapter : IEventAdapter
     }
 }
 ```
+
 Then in order for it to be used on events coming to and from the journal you must bind it using the below configuration syntax:
+
 ```hocon
 akka.persistence.journal {
-	<journal_identifier> {
-		event-adapters {
-			tagging = "<fully qualified event adapter type name with assembly>"
-			v1 = "<fully qualified event adapter type name with assembly>"
-			v2 = "<fully qualified event adapter type name with assembly>"
-		}
+    <journal_identifier> {
+        event-adapters {
+            tagging = "<fully qualified event adapter type name with assembly>"
+            v1 = "<fully qualified event adapter type name with assembly>"
+            v2 = "<fully qualified event adapter type name with assembly>"
+        }
 
-		event-adapter-bindings {
-			"<fully qualified event type name with assembly>" = v1
-			"<fully qualified event type name with assembly>" = [v2, tagging]
-		}
-	}
+        event-adapter-bindings {
+            "<fully qualified event type name with assembly>" = v1
+            "<fully qualified event type name with assembly>" = [v2, tagging]
+        }
+    }
 }
 ```
+
 It is possible to bind multiple adapters to one class for recovery, in which case the `FromJournal` methods of all bound adapters will be applied to a given matching event (in order of definition in the configuration). Since each adapter may return from 0 to n adapted events (called as `EventSequence`), each adapter can investigate the event and if it should indeed adapt it return the adapted event(s) for it. Other adapters which do not have anything to contribute during this adaptation simply return `EventSequence.Empty`. The adapted events are then delivered in-order to the `PersistentActor` during replay.
 

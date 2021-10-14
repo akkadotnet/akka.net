@@ -48,6 +48,7 @@ The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event wil
 other cluster member nodes metrics gossip which was received during the collector sample interval.
 
 You can subscribe your metrics listener actors to these events in order to implement custom node lifecycle:
+
 ```c#
 ClusterMetrics.Get(Sys).Subscribe(metricsListenerActor);
 ```

@@ -50,10 +50,12 @@ parameters) and then call the method when the message is received.
 ```
 Context.System.Scheduler.ScheduleTellRepeatedly(....);
 ```
+
 > [!WARNING]
 > All scheduled task will be executed when the `ActorSystem` is terminated. i.e. the task may execute before its timeout.
 
 ## The scheduler interface
+
 The actual scheduler implementation is defined by config and loaded upon ActorSystem start-up, which means that it is possible to provide a different one using the `akka.scheduler.implementation` configuration property. The referenced class must implement the `Akka.Actor.IScheduler` and `Akka.Actor.IAdvancedScheduler` interfaces
 
 ## The cancellable interface

@@ -60,6 +60,7 @@ For more details about the behavior of these and how to add additional buffers r
 [Buffers and working with rate](xref:streams-buffers).
 
 ## Parallel processing
+
 Chris uses the two frying pans symmetrically. He uses both pans to fully fry a pancake on both sides, then puts
 the results on a shared plate. Whenever a pan becomes empty, he takes the next scoop from the shared bowl of batter.
 In essence he parallelizes the same process over multiple pans. This is how this setup will look like if implemented
@@ -84,6 +85,7 @@ var pancakeChef = Flow.FromGraph(GraphDsl.Create(b =>
     return new FlowShape<ScoopOfBatter, Pancake>(dispatchBatter.In, mergePancakes.Out);
 }));
 ```
+
 The benefit of parallelizing is that it is easy to scale. In the pancake example
 it is easy to add a third frying pan with Chris' method, but Bartosz cannot add a third frying pan,
 since that would require a third processing step, which is not practically possible in the case of frying pancakes.

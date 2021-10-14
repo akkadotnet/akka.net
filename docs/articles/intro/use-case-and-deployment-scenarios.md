@@ -72,7 +72,9 @@ As you can see the main point here is keeping a static reference to your `ActorS
 Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a separate Windows Service via Akka.Remote / Akka.Cluster.
 
 ### Interaction between Controllers and Akka.NET
+
 In the sample below, we use an Web API Controller:
+
 ```csharp
 public class SomeController  : ApiController
 {
@@ -95,6 +97,7 @@ to build your Windows Services. It radically simplifies hosting Windows Services
 The quickest way to get started with TopShelf is by creating a Console Application. Which would look like this:
 
 #### Program.cs
+
 ```csharp
 using Akka.Actor;
 using Topshelf;
@@ -159,6 +162,7 @@ The quickest way to get started with Akka.Net is to create a simple Worker Role 
 user-actor in the RunAsync() method, as follows:
 
 #### WorkerRole.cs
+
 ```csharp
 using Akka.Actor;
 
