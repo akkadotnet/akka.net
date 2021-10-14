@@ -171,7 +171,7 @@ namespace Akka.Remote
         public override Akka.Actor.IInternalActorRef Parent { get; }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public bool IsWatchIntercepted(Akka.Actor.IActorRef watchee, Akka.Actor.IActorRef watcher) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
@@ -202,6 +202,7 @@ namespace Akka.Remote
         public System.Threading.Tasks.Task TerminationTask { get; }
         public Akka.Remote.RemoteTransport Transport { get; }
         public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
+        public Akka.Actor.FutureActorRef<T> CreateFutureRef<T>(System.Threading.Tasks.TaskCompletionSource<T> tcs) { }
         protected virtual Akka.Actor.IActorRef CreateRemoteDeploymentWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
         protected virtual Akka.Actor.IInternalActorRef CreateRemoteRef(Akka.Actor.ActorPath actorPath, Akka.Actor.Address localAddress) { }
         protected virtual Akka.Actor.IInternalActorRef CreateRemoteRef(Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.Address localAddress, Akka.Actor.ActorPath rpath, Akka.Actor.Deploy deployment) { }
@@ -401,6 +402,7 @@ namespace Akka.Remote.Routing
         public override string RouterDispatcher { get; }
         public override Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.RouterConfig other) { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
@@ -439,7 +441,7 @@ namespace Akka.Remote.Serialization
     }
     public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
     {
-        public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system) { }
+        public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }

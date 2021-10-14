@@ -148,17 +148,18 @@ namespace Akka.Actor
                 ctr2 = cancellationToken.Register(() => result.TrySetCanceled());
             }
 
-            //create a new tempcontainer path
-            ActorPath path = provider.TempPath();
+            var future = provider.CreateFutureRef(result);
+            var path = future.Path;
 
-            var future = new FutureActorRef<T>(result, t =>
+            //The future actor needs to be unregistered in the temp container
+            _ = result.Task.ContinueWith(t =>
             {
                 provider.UnregisterTempActor(path);
 
                 ctr1?.Dispose();
                 ctr2?.Dispose();
                 timeoutCancellation?.Dispose();
-            }, path);
+            }, TaskContinuationOptions.ExecuteSynchronously);
 
             //The future actor needs to be registered in the temp container
             provider.RegisterTempActor(future, path);
@@ -175,14 +176,14 @@ namespace Akka.Actor
         /// <returns>Provider used for Ask pattern implementation</returns>
         internal static IActorRefProvider ResolveProvider(ICanTell self)
         {
-            if (self is ActorSelection)
-                return ResolveProvider(self.AsInstanceOf<ActorSelection>().Anchor);
+            if (self is ActorSelection selection)
+                return ResolveProvider(selection.Anchor);
 
-            if (self is IInternalActorRef)
-                return self.AsInstanceOf<IInternalActorRef>().Provider;
+            if (self is IInternalActorRef actorRef)
+                return actorRef.Provider;
 
-            if (ActorCell.Current != null)
-                return InternalCurrentActorCellKeeper.Current.SystemImpl.Provider;
+            if (ActorCell.Current is ActorCell cell)
+                return cell.SystemImpl.Provider;
 
             return null;
         }

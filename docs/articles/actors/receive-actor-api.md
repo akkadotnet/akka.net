@@ -140,7 +140,7 @@ This strategy is typically declared inside the actor in order to have access to 
   * parent supervisor
   * supervised children
   * lifecycle monitoring
-  * hotswap behavior stack as described in [HotSwap](#becomeunbecome)
+  * hot-swap behavior stack as described in [Become/Unbecome](#becomeunbecome)
 
 The remaining visible methods are user-overridable life-cycle hooks which are described in the following:
 
@@ -215,7 +215,7 @@ It should be noted that the `Terminated` message is generated independent of the
 
 Registering multiple times does not necessarily lead to multiple messages being generated, but there is no guarantee that only exactly one such message is received: if termination of the watched actor has generated and queued the message, and another registration is done before this message has been processed, then a second message will be queued, because registering for monitoring of an already terminated actor leads to the immediate generation of the `Terminated` message.
 
-It is also possible to deregister from watching another actor's liveliness using `Context.Unwatch(target)`. This works even if the Terminated message has already been enqueued in the mailbox; after calling unwatch no `Terminated` message for that actor will be processed anymore.
+It is also possible to deregister from watching another actor's liveliness using `Context.Unwatch(target)`. This works even if the Terminated message has already been enqueued in the mailbox; after calling `Unwatch` no `Terminated` message for that actor will be processed anymore.
 
 ### Start Hook
 Right after starting the actor, its `PreStart` method is invoked.
@@ -243,7 +243,7 @@ An actor restart replaces only the actual actor object; the contents of the mail
 > Be aware that the ordering of failure notifications relative to user messages is not deterministic. In particular, a parent might restart its child before it has processed the last messages sent by the child before the failure. See Discussion: [Message Ordering for details](xref:message-delivery-reliability#discussion-message-ordering).
 
 ### Stop Hook
-After stopping an actor, its `PostStop` hook is called, which may be used e.g. for deregistering this actor from other services. This hook is guaranteed to run after message queuing has been disabled for this actor, i.e. messages sent to a stopped actor will be redirected to the `DeadLetters` of the `ActorSystem`.
+After stopping an actor, its `PostStop` hook is called, which may be used e.g. for de-registering this actor from other services. This hook is guaranteed to run after message queuing has been disabled for this actor, i.e. messages sent to a stopped actor will be redirected to the `DeadLetters` of the `ActorSystem`.
 
 ## Identifying Actors via Actor Selection
 As described in Actor References, Paths and Addresses, each actor has a unique logical path, which is obtained by following the chain of actors from child to parent until reaching the root of the actor system, and it has a physical path, which may differ if the supervision chain includes any remote supervisors. These paths are used by the system to look up actors, e.g. when a remote message is received and the recipient is searched, but they are also useful more directly: actors may look up other actors by specifying absolute or relative paths—logical or physical—and receive back an `ActorSelection` with the result:
@@ -645,16 +645,16 @@ When `GracefulStop()` returns successfully, the actor’s `PostStop()` hook will
 In the above example a `"shutdown"` message is sent to the target actor to initiate the process of stopping the actor. You can use `PoisonPill` for this, but then you have limited possibilities to perform interactions with other actors before stopping the target actor. Simple cleanup tasks can be handled in `PostStop`.
 
 > [!WARNING]
-> Keep in mind that an actor stopping and its name being deregistered are separate events which happen asynchronously from each other. Therefore it may be that you will find the name still in use after `GracefulStop()` returned. In order to guarantee proper deregistration, only reuse names from within a supervisor you control and only in response to a `Terminated` message, i.e. not for top-level actors.
+> Keep in mind that an actor stopping and its name being deregistered are separate events which happen asynchronously from each other. Therefore it may be that you will find the name still in use after `GracefulStop()` returned. In order to guarantee proper de-registration, only reuse names from within a supervisor you control and only in response to a `Terminated` message, i.e. not for top-level actors.
 
 ## Become/Unbecome
 ### Upgrade
-Akka supports hotswapping the Actor’s message loop (e.g. its implementation) at runtime. Use the `Context.Become` method from within the Actor. The hotswapped code is kept in a `Stack` which can be pushed (replacing or adding at the top) and popped.
+Akka supports hot-swapping the Actor’s message loop (e.g. its implementation) at runtime. Use the `Context.Become` method from within the Actor. The hot-swapped code is kept in a `Stack` which can be pushed (replacing or adding at the top) and popped.
 
 > [!WARNING]
 > Please note that the actor will revert to its original behavior when restarted by its Supervisor.
 
-To hotswap the Actor using `Context.Become`:
+To hot-swap the Actor using `Context.Become`:
 
 ```csharp
 public class HotSwapActor : ReceiveActor
@@ -751,7 +751,7 @@ static void Main(string[] args)
 ```
 
 ## Stash
-The `IWithUnboundedStash` interface enables an actor to temporarily stash away messages that can not or should not be handled using the actor's current behavior. Upon changing the actor's message handler, i.e., right before invoking `Context.BecomeStacked()` or `Context.UnbecomeStacked()`;, all stashed messages can be "unstashed", thereby prepending them to the actor's mailbox. This way, the stashed messages can be processed in the same order as they have been received originally. An actor that implements `IWithUnboundedStash` will automatically get a deque-based mailbox.
+The `IWithUnboundedStash` interface enables an actor to temporarily stash away messages that can not or should not be handled using the actor's current behavior. Upon changing the actor's message handler, i.e., right before invoking `Context.BecomeStacked()` or `Context.UnbecomeStacked()`;, all stashed messages can be "un-stashed", thereby prepending them to the actor's mailbox. This way, the stashed messages can be processed in the same order as they have been received originally. An actor that implements `IWithUnboundedStash` will automatically get a dequeue-based mailbox.
 
 Here is an example of the `IWithUnboundedStash` interface in action:
 ```csharp
@@ -824,7 +824,7 @@ The rich lifecycle hooks of `Actors` provide a useful toolkit to implement vario
 One may think about the new instances as "incarnations". Initialization might be necessary for every incarnation of an actor, but sometimes one needs initialization to happen only at the birth of the first instance when the `IActorRef` is created. The following sections provide patterns for different initialization needs.
 
 ### Initialization via constructor
-Using the constructor for initialization has various benefits. First of all, it makes it possible to use readonly fields to store any state that does not change during the life of the actor instance, making the implementation of the actor more robust. The constructor is invoked for every incarnation of the actor, therefore the internals of the actor can always assume that proper initialization happened. This is also the drawback of this approach, as there are cases when one would like to avoid reinitializing internals on restart. For example, it is often useful to preserve child actors across restarts. The following section provides a pattern for this case.
+Using the constructor for initialization has various benefits. First of all, it makes it possible to use readonly fields to store any state that does not change during the life of the actor instance, making the implementation of the actor more robust. The constructor is invoked for every incarnation of the actor, therefore the internals of the actor can always assume that proper initialization happened. This is also the drawback of this approach, as there are cases when one would like to avoid re-initializing internals on restart. For example, it is often useful to preserve child actors across restarts. The following section provides a pattern for this case.
 
 ### Initialization via PreStart
 The method `PreStart()` of an actor is only called once directly during the initialization of the first instance, that is, at creation of its ActorRef. In the case of restarts, `PreStart()` is called from `PostRestart()`, therefore if not overridden, `PreStart()` is called on every incarnation. However, overriding `PostRestart()` one can disable this behavior, and ensure that there is only one call to `PreStart()`.

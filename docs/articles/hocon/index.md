@@ -73,7 +73,7 @@ Examples:
 
 ### Duplicate keys and object merging
 
-Duplicate keys that are declared later in the string have different behaviours:
+Duplicate keys that are declared later in the string have different behaviors:
 
  - A key with any values will override previous values if they are of different types.
  - A key with literal or array value will override any previous key value.

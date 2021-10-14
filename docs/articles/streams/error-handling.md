@@ -104,7 +104,7 @@ Configurable parameters are:
 * `maxBackoff` caps the exponential backoff
 * `randomFactor` allows addition of a random delay following backoff calculation
 * `maxRestarts` caps the total number of restarts
-* `maxRestartsWithin` sets a timeframe during which restarts are counted towards the same total for `maxRestarts`
+* `maxRestartsWithin` sets a time-frame during which restarts are counted towards the same total for `maxRestarts`
 
 The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource` 
 which will supervise the given `Source`. The `Source` in this case is a 

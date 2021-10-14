@@ -45,7 +45,7 @@ The number of concurrent recoveries of recoveries that can be in progress at the
 > Accessing the `Sender` for replayed messages will always result in a `DeadLetters` reference, as the original sender is presumed to be long gone. If you indeed have to notify an actor during recovery in the future, store its `ActorPath` explicitly in your persisted events.
 
 ### Recovery customization
-Applications may also customise how recovery is performed by returning a customised `Recovery` object in the recovery method of a `UntypedPersistentActor`.
+Applications may also customize how recovery is performed by returning a customized `Recovery` object in the recovery method of a `UntypedPersistentActor`.
 
 To skip loading snapshots and replay all events you can use `SnapshotSelectionCriteria.None`. This can be useful if snapshot serialization format has changed in an incompatible way. It should typically not be used when events have been deleted.
 
@@ -97,7 +97,7 @@ The actor will always receive a `RecoveryCompleted` message, even if there are n
 If there is a problem with recovering the state of the actor from the journal, `OnRecoveryFailure` is called (logging the error by default) and the actor will be stopped.
 
 ## Internal stash
-The persistent actor has a private stash for internally caching incoming messages during `Recovery` or the `Persist` \ `PersistAll` method persisting events. However You can use inherited stash or create one or more stashes if needed. The internal stash doesn't interfere with these stashes apart from user inherited `UnstashAll` method, which prepends all messages in the inherited stash to the internal stash instead of mailbox. Hence, If the message in the inherited stash need to be handled after the messages in the internal stash, you should call inherited unstash method.
+The persistent actor has a private stash for internally caching incoming messages during `Recovery` or the `Persist` \ `PersistAll` method persisting events. However You can use inherited stash or create one or more stashes if needed. The internal stash doesn't interfere with these stashes apart from user inherited `UnstashAll` method, which prepends all messages in the inherited stash to the internal stash instead of mailbox. Hence, If the message in the inherited stash need to be handled after the messages in the internal stash, you should call inherited un-stash method.
 
 You should be careful to not send more messages to a persistent actor than it can keep up with, otherwise the number of stashed messages will grow. It can be wise to protect against `OutOfMemoryException` by defining a maximum stash capacity in the mailbox configuration:
 
@@ -105,7 +105,7 @@ You should be careful to not send more messages to a persistent actor than it ca
 akka.actor.default-mailbox.stash-capacity = 10000
 ```
 
-Note that the stash capacity is per actor. If you have many persistent actors, e.g. when using cluster sharding, you may need to define a small stash capacity to ensure that the total number of stashed messages in the system doesn't consume too much memory. Additionally, the persistent actor defines three strategies to handle failure when the internal stash capacity is exceeded. The default overflow strategy is the `ThrowOverflowExceptionStrategy`, which discards the current received message and throws a `StashOverflowException`, causing actor restart if the default supervision strategy is used. You can override the `InternalStashOverflowStrategy` property to return `DiscardToDeadLetterStrategy` or `ReplyToStrategy` for any "individual" persistent actor, or define the "default" for all persistent actors by providing FQCN, which must be a subclass of `StashOverflowStrategyConfigurator`, in the persistence configuration:
+Note that the stash capacity is per actor. If you have many persistent actors, e.g. when using cluster sharding, you may need to define a small stash capacity to ensure that the total number of stashed messages in the system doesn't consume too much memory. Additionally, the persistent actor defines three strategies to handle failure when the internal stash capacity is exceeded. The default overflow strategy is the `ThrowOverflowExceptionStrategy`, which discards the current received message and throws a `StashOverflowException`, causing actor restart if the default supervision strategy is used. You can override the `InternalStashOverflowStrategy` property to return `DiscardToDeadLetterStrategy` or `ReplyToStrategy` for any "individual" persistent actor, or define the "default" for all persistent actors by providing a fully-qualified class name, which must be a subclass of `StashOverflowStrategyConfigurator`, in the persistence configuration:
 
 ```hocon
 akka.persistence.internal-stash-overflow-strategy = "akka.persistence.ThrowExceptionConfigurator"
@@ -234,7 +234,7 @@ In order to optimize throughput when using `PersistAsync`, a persistent actor in
 
 It is possible to delete all messages (journaled by a single persistent actor) up to a specified sequence number; Persistent actors may call the `DeleteMessages` method to this end.
 
-Deleting messages in event sourcing based applications is typically either not used at all, or used in conjunction with snapshotting, i.e. after a snapshot has been successfully stored, a `DeleteMessages` (`ToSequenceNr`) up until the sequence number of the data held by that snapshot can be issued to safely delete the previous events while still having access to the accumulated state during replays - by loading the snapshot.
+Deleting messages in event sourcing based applications is typically either not used at all, or used in conjunction with snap-shotting, i.e. after a snapshot has been successfully stored, a `DeleteMessages` (`ToSequenceNr`) up until the sequence number of the data held by that snapshot can be issued to safely delete the previous events while still having access to the accumulated state during replays - by loading the snapshot.
 
 > [!WARNING]
 > If you are using [Persistence Query](xref:persistence-query), query results may be missing deleted messages in a journal, depending on how deletions are implemented in the journal plugin. Unless you use a plugin which still shows deleted messages in persistence query results, you have to design your application so that it is not affected by missing messages.

@@ -188,7 +188,7 @@ In this example, the `TestConductor.Blackhole` method is used to create 100% pac
 
 The `Task` returned by `TestConductor.Blackhole` will complete once the Akka.Remote transport has enabled "blackhole" mode for that connection, which usually doesn't take longer than a few milliseconds.
 
-To stop blackholding these nodes, we'd need to call the `TestConductor.PassThrough` method on these same two `RoleName` instances:
+To stop black-holing these nodes, we'd need to call the `TestConductor.PassThrough` method on these same two `RoleName` instances:
 
 ```csharp
 RunOn(() =>
@@ -243,7 +243,7 @@ root/akka.multinodetestrunner/lib/netcoreapp1.1/Akka.MultiNodeTestRunner.dll
 
 Depending on what framework you're building your application against, you'll want to pick the appropriate tool (.NET Framework or .NET Core.)
 
-Next, we have to pass in our commandline arguments to the MNTR:
+Next, we have to pass in our command-line arguments to the MNTR:
 
 ```
 Akka.MultiNodeTestRunner.exe [path to assembly] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.spec={spec name}]
