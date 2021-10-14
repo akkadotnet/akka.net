@@ -359,7 +359,7 @@ to serialize one of these class, you can turn off this feature using this inside
 ```
 akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 ```
-
+<!-- markdownlint-disable MD028 -->
 > [!IMPORTANT]
 > This feature is turned on as default since Akka.NET v1.4.24
 
@@ -367,6 +367,7 @@ akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 > Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server 
 > communication protocol, instead it is designed to be used as a server-server communication protocol, 
 > preferably inside a closed network system.
+<!-- markdownlint-enable MD028 -->
 
 ## Cross platform serialization compatibility in Hyperion
 
