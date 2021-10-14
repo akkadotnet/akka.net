@@ -72,6 +72,7 @@ As you can see the main point here is keeping a static reference to your `ActorS
 Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a separate Windows Service via Akka.Remote / Akka.Cluster.
 
 ### Interaction between Controllers and Akka.NET
+
 In the sample below, we use an Web API Controller:
 
 ```csharp

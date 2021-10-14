@@ -6,6 +6,7 @@ title: Serilog
 # Using Serilog
 
 ## Setup
+
 Install the package __Akka.Logger.Serilog__ via nuget to utilize
 [Serilog](https://serilog.net/), this will also install the required Serilog package dependencies.
 
@@ -26,9 +27,9 @@ the logger in the config when creating the system, for example like this:
 
 ```csharp
 var logger = new LoggerConfiguration()
-	.WriteTo.Console()
-	.MinimumLevel.Information()
-	.CreateLogger();
+    .WriteTo.Console()
+    .MinimumLevel.Information()
+    .CreateLogger();
 
 Serilog.Log.Logger = logger;
 
@@ -36,6 +37,7 @@ var system = ActorSystem.Create("my-test-system", "akka { loglevel=INFO,  logger
 ```
 
 ## Logging
+
 To log inside an actor, using the normal `string.Format()` syntax, get the
 logger and log:
 
@@ -76,9 +78,9 @@ If the configured output template is, for example, `"[{CorrelationId}] {Message}
 ```csharp
 // configure sink with an output template
 var logger = new LoggerConfiguration()
-	.WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
-	.MinimumLevel.Information()
-	.CreateLogger();
+    .WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
+    .MinimumLevel.Information()
+    .CreateLogger();
 ```
 
 ## HOCON configuration

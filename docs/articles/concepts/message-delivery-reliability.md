@@ -251,6 +251,7 @@ As explained in the previous section local message sends obey transitive causal 
 It might take longer time for M1 to "travel" to node-3 than it takes for M2 to "travel" to node-3 via node-2.
 
 ## Higher-level abstractions
+
 Based on a small and consistent tool set in Akka's core, Akka.NET also provides
 powerful, higher-level abstractions on top it.
 

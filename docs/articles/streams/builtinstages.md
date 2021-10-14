@@ -4,6 +4,7 @@ title: Overview of built-in stages and their semantics
 ---
 
 # Source stages
+
 These built-in sources are available from ``akka.stream.scaladsl.Source``:
 
 
@@ -233,6 +234,7 @@ after this the stream is canceled. If no element is emitted, the task is be fail
 **backpressures** never
 
 #### FirstOrDefault
+
 Materializes into a ``Task<T>`` which completes with the first value arriving,
 or a ``default(T)`` if the stream completes without any elements emitted.
 
@@ -450,6 +452,7 @@ closing the ``Stream`` will complete the ``Source``.
 
 File IO Sinks and Sources
 -------------------------
+
 Sources and sinks for reading and writing files can be found on ``FileIO``.
 
 #### FromFile

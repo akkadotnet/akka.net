@@ -3,6 +3,7 @@ uid: event-adapters
 title: Event Adapters
 ---
 # Event adapters
+
 In long running projects using event sourcing sometimes the need arises to detach the data model from the domain model completely.
 
 Event Adapters help in situations where:
@@ -35,18 +36,18 @@ Then in order for it to be used on events coming to and from the journal you mus
 
 ```hocon
 akka.persistence.journal {
-	<journal_identifier> {
-		event-adapters {
-			tagging = "<fully qualified event adapter type name with assembly>"
-			v1 = "<fully qualified event adapter type name with assembly>"
-			v2 = "<fully qualified event adapter type name with assembly>"
-		}
+    <journal_identifier> {
+        event-adapters {
+            tagging = "<fully qualified event adapter type name with assembly>"
+            v1 = "<fully qualified event adapter type name with assembly>"
+            v2 = "<fully qualified event adapter type name with assembly>"
+        }
 
-		event-adapter-bindings {
-			"<fully qualified event type name with assembly>" = v1
-			"<fully qualified event type name with assembly>" = [v2, tagging]
-		}
-	}
+        event-adapter-bindings {
+            "<fully qualified event type name with assembly>" = v1
+            "<fully qualified event type name with assembly>" = [v2, tagging]
+        }
+    }
 }
 ```
 

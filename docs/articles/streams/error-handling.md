@@ -16,6 +16,7 @@ In many cases you may want to avoid complete stream failure, this can be done in
 In addition to these built in tools for error handling, a common pattern is to wrap the stream inside an actor, and have the actor restart the entire stream on failure.
 
 ## Recover
+
 `Recover` allows you to emit a final element and then complete the stream on an upstream failure. Deciding which exceptions should be recovered is done through a `delegate`. If an exception does not have a matching case the stream is failed.
 
 Recovering can be useful if you want to gracefully complete a stream on failure while letting downstream know that there was a failure.
@@ -49,6 +50,7 @@ stream truncated
 ```
 
 ## Recover with retries
+
 `RecoverWithRetries` allows you to put a new upstream in place of the failed one, recovering stream failures up to a specified maximum number of times.
 
 Deciding which exceptions should be recovered is done through a `delegate`. If an exception does not have a matching case the stream is failed.
@@ -219,6 +221,7 @@ var result = source.Limit(1000).RunWith(Sink.Seq<int>(), materializer);
 ```
 
 ## Errors from SelectAsync
+
 Stream supervision can also be applied to the tasks of `SelectAsync` and `SelectAsyncUnordered` even if such failures happen in the task rather than inside the stage itself. .
 
 Let's say that we use an external service to lookup email addresses and we would like to

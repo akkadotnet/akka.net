@@ -4,6 +4,7 @@ title: Scheduling Future and Recurring Actor Messages
 ---
 
 # Scheduling Future and Recurring Actor Messages
+
 A useful feature of Akka.NET is the ability to schedule messages to be delivered in the future or on a recurring basis. This functionality can be used for all sorts of use cases, such as:
 
 1. Creating conditional timeouts;
@@ -11,6 +12,7 @@ A useful feature of Akka.NET is the ability to schedule messages to be delivered
 3. Throttling or delaying work.
 
 ## Scheduling Actor Messages Using `IWithTimers` (Recommended Approach)
+
 As of Akka.NET v1.4.4 we introduced the [`IWithTimers` interface](xref:Akka.Actor.IWithTimers), which gives Akka.NET actors a way of accessing the `ActorSystem`'s scheduler without having to remember to manually dispose of scheduled tasks afterwards. Any scheduled or recurring tasks created by the `IWithTimers` interface will be automatically cancelled once the [actor terminates](xref:supervision).
 
 [!code-csharp[IWithTimersSample](../../../src/core/Akka.Docs.Tests/Actors/SchedulerSpecs.cs?name=TimerActor)]
@@ -30,6 +32,7 @@ And that key can be used to stop those timers as well:
 To use the `IWithTimer` interface, simply decorate your actor class with it and call the [`Timer.StartPeriodicTimer`](xref:Akka.Actor.ITimerScheduler#Akka_Actor_ITimerScheduler_StartPeriodicTimer_System_Object_System_Object_System_TimeSpan_) and [`Timer.StartSingleTimer`](xref:Akka.Actor.ITimerScheduler#Akka_Actor_ITimerScheduler_StartSingleTimer_System_Object_System_Object_System_TimeSpan_) methods. All of those timers will automatically be cancelled when the actor terminates.
 
 ### Testing for Idle Timeouts with `ReceiveTimeout`
+
 One specific case with actors, and this is particularly useful for areas like [Akka.Cluster.Sharding](xref:cluster-sharding), is the ability to time out "idle" actors after a specified period of inactivity.
 
 This can be accomplished using the `ReceiveTimeout` capability.
@@ -42,6 +45,7 @@ This can be accomplished using the `ReceiveTimeout` capability.
 * The `ReceiveTimeout` will automatically be cancelled when the actor terminates.
 
 ## Scheduling Recurring Tasks with `IScheduler`
+
 While the `IWithTimers` interface is the recommended approach for working with actors, the `ActorSystem` itself includes the underlying [`IScheduler` interface](xref:Akka.Actor.IScheduler), which exposes timing primitives that can be used inside or outside of individual actors.
 
 [!code-csharp[Scheduler](../../../src/core/Akka.Docs.Tests/Actors/SchedulerSpecs.cs?name=Scheduler)]

@@ -60,6 +60,7 @@ For more details about the behavior of these and how to add additional buffers r
 [Buffers and working with rate](xref:streams-buffers).
 
 ## Parallel processing
+
 Chris uses the two frying pans symmetrically. He uses both pans to fully fry a pancake on both sides, then puts
 the results on a shared plate. Whenever a pan becomes empty, he takes the next scoop from the shared bowl of batter.
 In essence he parallelizes the same process over multiple pans. This is how this setup will look like if implemented

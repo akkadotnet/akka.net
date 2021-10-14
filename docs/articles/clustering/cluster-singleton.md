@@ -26,6 +26,7 @@ You can access the singleton actor by using the provided `Akka.Cluster.Tools.Sin
 It's worth noting that messages can always be lost because of the distributed nature of these actors. As always, additional logic should be implemented in the singleton (acknowledgement) and in the client (retry) actors to ensure at-least-once message delivery.
 
 ## Potential problems to be aware of
+
 This pattern may seem to be very tempting to use at first, but it has several drawbacks, some of them are listed below:
 
 - the cluster singleton may quickly become a performance bottleneck,
@@ -35,6 +36,7 @@ This pattern may seem to be very tempting to use at first, but it has several dr
 Especially the last point is something you should be aware of — in general when using the Cluster Singleton pattern you should take care of downing nodes yourself and not rely on the timing based auto-down feature.
 
 ## An Example
+
 Assume that we need one single entry point to an external system. An actor that receives messages from a JMS queue with the strict requirement that only one JMS consumer must exist to be make sure that the messages are processed in order. That is perhaps not how one would like to design things, but a typical real-world scenario when integrating with external systems.
 
 On each node in the cluster you need to start the `ClusterSingletonManager` and supply the Props of the singleton actor, in this case the JMS queue consumer.
@@ -61,6 +63,7 @@ system.ActorOf(ClusterSingletonProxy.Props(
 ```
 
 ## Configuration
+
 The following configuration properties are read by the `ClusterSingletonManagerSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterSingletonManagerSettings` or create it from another config section with the same layout as below. `ClusterSingletonManagerSettings` is a parameter to the `ClusterSingletonManager.props` factory method, i.e. each singleton can be configured with different settings if needed.
 
 ```hocon
