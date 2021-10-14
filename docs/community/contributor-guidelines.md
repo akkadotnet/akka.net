@@ -12,7 +12,7 @@ changes to Akka.NET:
 - Be .NET idiomatic, e.g. do not port `Duration` or `Future`, use `Timespan`
   and `Task<T>`.
 - Stay as close as possible to the original JVM implementation,
-  https://github.com/akka/akka.
+  <https://github.com/akka/akka>.
 - Do not add features that do not exist in JVM Akka into the core Akka.NET
   framework.
 - Please include relevant unit tests / specs along with your changes, if appropriate.

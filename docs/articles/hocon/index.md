@@ -24,7 +24,7 @@ You can play around with HOCON syntax in real-time by going to [hocon-playground
 
 ## Syntax
 
-Much of this is defined with reference to JSON; you can find the JSON spec at http://json.org/.
+Much of this is defined with reference to JSON; you can find the JSON spec at <http://json.org/>.
 
 ### Unchanged from JSON
 

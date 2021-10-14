@@ -11,7 +11,7 @@ If you're interested in working on the Akka.NET project or just want to try out 
 
 Below is the URL for the Akka.NET nightly package feeds.
 
-> **https://f.feedz.io/akkadotnet/akka/nuget/index.json**
+> **<https://f.feedz.io/akkadotnet/akka/nuget/index.json>**
 
 To consume this package feed in Visual Studio, [follow the steps outlined in the NuGet documentation for adding a package source to Visual Studio (and use the feed URL above)](http://docs.nuget.org/create/hosting-your-own-nuget-feeds).
 
@@ -25,7 +25,7 @@ Once you've done that you can use the Package Manager in Visual Studio and consu
 
 If you want access to debug symbols for the Akka.NET nightly packages, you can access them here:
 
-> **https://f.feedz.io/akkadotnet/akka/symbols**
+> **<https://f.feedz.io/akkadotnet/akka/symbols>**
 
 Follow [these instructions for adding this to Visual Studio or JetBrains Rider](https://feedz.io/docs/package-types/symbols).
 

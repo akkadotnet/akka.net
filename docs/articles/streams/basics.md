@@ -204,7 +204,7 @@ Source.From(Enumerable.Range(1, 6)).To(otherSink);
    
 ### Illegal stream elements
 
-In accordance to the Reactive Streams specification ([Rule 2.13] (https://github.com/reactive-streams/reactive-streams-jvm#2.13>))
+In accordance to the Reactive Streams specification ([Rule 2.13] (<https://github.com/reactive-streams/reactive-streams-jvm#2.13>))
 Akka Streams do not allow ``null`` to be passed through the stream as an element. In case you want to model the concept
 of absence of a value we recommend using ``Akka.Streams.Util.Option<T>`` or ``Akka.Util.Either<TA,TB>``.  
 
