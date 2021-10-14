@@ -45,6 +45,7 @@ Each actor path has an address component, describing the protocol and location b
 "akka://my-sys/user/service-a/worker1"                   // purely local
 "akka.tcp://my-sys@host.example.com:5678/user/service-b" // remote
 ````
+
 Here, `akka.tcp` is the default remote transport; other transports are pluggable. A remote host using UDP would be accessible by using akka.udp. The interpretation of the host and port part (i.e.``serv.example.com:5678`` in the example) depends on the transport mechanism used, but it must abide by the URI structural rules.
 
 ### Logical Actor Paths
@@ -75,10 +76,13 @@ In addition to ActorSystem.actorSelection there is also `ActorContext.ActorSelec
 ````csharp
 Context.ActorSelection("../brother").Tell(msg);
 ````
+
 Absolute paths may of course also be looked up on context in the usual way, i.e.
+
 ````csharp
 Context.ActorSelection("/user/serviceA").Tell(msg);
 ````
+
 will work as expected.
 
 ### Querying the Logical Actor Hierarchy
@@ -87,6 +91,7 @@ Since the actor system forms a file-system like hierarchy, matching on paths is 
 ```csharp
 Context.ActorSelection("../*").Tell(msg);
 ```
+
 will send msg to all siblings including the current actor.
 
 ## Summary: `ActorOf` vs. `ActorSelection`

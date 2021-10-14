@@ -92,6 +92,7 @@ protected override void OnCommand(object message)
     // ..
 }
 ```
+
 The actor will always receive a `RecoveryCompleted` message, even if there are no events in the journal and the snapshot store is empty, or if it's a new persistent actor with a previously unused `PersistenceId`.
 
 If there is a problem with recovering the state of the actor from the journal, `OnRecoveryFailure` is called (logging the error by default) and the actor will be stopped.
@@ -114,6 +115,7 @@ akka.persistence.internal-stash-overflow-strategy = "akka.persistence.ThrowExcep
 The `DiscardToDeadLetterStrategy` strategy also has a pre-packaged companion configurator `DiscardConfigurator`.
 
 You can also query the default strategy via the Akka persistence extension singleton:
+
 ```csharp
 Context.System.DefaultInternalStashOverflowStrategy
 ```
@@ -200,6 +202,7 @@ While it is possible to nest mixed `Persist` and `PersistAsync` with keeping the
 If persistence of an event fails, `OnPersistFailure` will be invoked (logging the error by default), and the actor will unconditionally be stopped.
 
 The reason that it cannot resume when persist fails is that it is unknown if the event was actually persisted or not, and therefore it is in an inconsistent state. Restarting on persistent failures will most likely fail anyway since the journal is probably unavailable. It is better to stop the actor and after a back-off timeout start it again. The `BackoffSupervisor` actor is provided to support such restarts.
+
 ```csharp
 protected override void PreStart()
 {
@@ -285,6 +288,7 @@ In your configuration, under the `akka.persistence.journal.xxx.replay-filter` se
 - off
 
 For example, if you configure the replay filter for `sqlite` plugin, it looks like this:
+
 ```hocon
 # The replay filter can detect a corrupt event stream by inspecting
 # sequence numbers and writerUuid when replaying events.

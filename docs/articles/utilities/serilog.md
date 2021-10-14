@@ -23,6 +23,7 @@ PM> Install-Package Serilog.Sinks.Console
 
 Next, you'll need to configure the global `Log.Logger` and also specify to use
 the logger in the config when creating the system, for example like this:
+
 ```csharp
 var logger = new LoggerConfiguration()
 	.WriteTo.Console()
@@ -37,6 +38,7 @@ var system = ActorSystem.Create("my-test-system", "akka { loglevel=INFO,  logger
 ## Logging
 To log inside an actor, using the normal `string.Format()` syntax, get the
 logger and log:
+
 ```csharp
 var log = Context.GetLogger();
 ...
@@ -44,11 +46,13 @@ log.Info("The value is {0}", counter);
 ```
 
 Or alternatively
+
 ```csharp
 var log = Context.GetLogger();
 ...
 log.Info("The value is {Counter}", counter);
 ```
+
 ## Extensions
 
 The package __Akka.Logger.Serilog__ also includes the extension method `ForContext()` for `ILoggingAdapter` (the object returned by `Context.GetLogger()`). This is analogous to Serilog's `ForContext()` but instead of returning a Serilog `ILogger` it returns an Akka.NET `ILoggingAdapter`. This instance acts as contextual logger that will attach a property to all events logged through it.

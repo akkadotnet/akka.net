@@ -42,6 +42,7 @@ Here is how everything is wired together:
 [!code-csharp[WebStoreCustomerFSMActor.cs](../../../src/core/Akka.Docs.Tests/Persistence/WebStoreCustomerFSMActor.cs?name=persistent-fsm-apply-event)]
 
 `AndThen` can be used to define actions which will be executed following event’s persistence - convenient for "side effects" like sending a message or logging. Notice that actions defined in andThen block are not executed on recovery:
+
 ```cs
 GoTo(Paid.Instance).Applying(OrderExecuted.Instance).AndThen(cart =>
 {
@@ -51,7 +52,9 @@ GoTo(Paid.Instance).Applying(OrderExecuted.Instance).AndThen(cart =>
     }
 });
 ```
+
 A snapshot of state data can be persisted by calling the `SaveStateSnapshot()` method:
+
 ```cs
 Stop().Applying(OrderDiscarded.Instance).AndThen(cart =>
 {
@@ -59,14 +62,17 @@ Stop().Applying(OrderDiscarded.Instance).AndThen(cart =>
     SaveStateSnapshot();
 });
 ```
+
 On recovery state data is initialized according to the latest available snapshot, then the remaining domain events are replayed, triggering the `ApplyEvent` method.
 
 ## Periodical snapshot by snapshot-after
 
 You can enable periodical `SaveStateSnapshot()` calls in `PersistentFSM` if you turn the following flag on in `reference.conf`
+
 ```
 akka.persistence.fsm.snapshot-after = 1000
 ```
+
 this means `SaveStateSnapshot()` is called after the sequence number reaches multiple of 1000.
 
 > [!NOTE]

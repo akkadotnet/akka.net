@@ -36,7 +36,9 @@ Source.From(Enumerable.Range(0, 6)).Select(n =>
     })
     .RunForeach(Console.WriteLine, materializer);
 ```
+
 This will output:
+
 ```
 0
 1

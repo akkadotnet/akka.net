@@ -50,6 +50,7 @@ parameters) and then call the method when the message is received.
 ```
 Context.System.Scheduler.ScheduleTellRepeatedly(....);
 ```
+
 > [!WARNING]
 > All scheduled task will be executed when the `ActorSystem` is terminated. i.e. the task may execute before its timeout.
 

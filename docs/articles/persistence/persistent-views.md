@@ -45,9 +45,11 @@ view.Tell(new Update(true));
 If the await parameter is set to true, messages that follow the `Update` request are processed when the incremental message replay, triggered by that update request, completed. If set to false (default), messages following the update request may interleave with the replayed message stream. 
 
 Automated updates of all persistent views of an actor system can be turned off by configuration:
+
 ```hocon
 akka.persistence.view.auto-update = off
 ```
+
 Implementation classes may override the configured default value by overriding the autoUpdate method. To limit the number of replayed messages per update request, applications can configure a custom *akka.persistence.view.auto-update-replay-max* value or override the `AutoUpdateReplayMax` property. The number of replayed messages for manual updates can be limited with the replayMax parameter of the Update message.
 
 ## Recovery

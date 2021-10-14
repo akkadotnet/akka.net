@@ -14,7 +14,9 @@ Also, note it's necessary to change akka.actor.provider from `Akka.Actor.LocalAc
 ```
   akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
 ```
+
   or this shorthand notation
+
 ```
   akka.actor.provider = cluster
 ```
@@ -79,6 +81,7 @@ RunOn(() =>
     c.Tell(new Client.ClusterClient.SendToAll("/user/serviceB", "hi"));
 }, client);
 ```
+
 The `initialContacts` parameter is a `IEnumerable<ActorPath>`, which can be created like this:
 
 ```csharp

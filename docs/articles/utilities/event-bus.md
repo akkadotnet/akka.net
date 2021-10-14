@@ -53,6 +53,7 @@ public class ExpendableActor : ReceiveActor {  }
 ```
 
 sample capture
+
 ```string
 DeadLetter captured: another message, sender: [akka://MySystem/deadLetters], recipient: [akka://MySystem/user/ExpendableActor#1469246785]
 ```

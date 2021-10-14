@@ -11,11 +11,13 @@ Akka.NET's build system is a modified version of [Petabridge's `dotnet new` temp
 This project supports a wide variety of commands, all of which can be listed via:
 
 **Windows**
+
 ```
 c:\> build.cmd help
 ```
 
 **Linux / OS X**
+
 ```
 c:\> build.sh help
 ```
@@ -52,6 +54,7 @@ This option will work locally on Linux or Windows.
 This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](src/common.props).
 
 **RELEASE_NOTES.md**
+
 ```
 #### 0.1.0 October 05 2019 ####
 First release
@@ -60,6 +63,7 @@ First release
 In this instance, the NuGet and assembly version will be `0.1.0` based on what's available at the top of the `RELEASE_NOTES.md` file.
 
 **RELEASE_NOTES.md**
+
 ```
 #### 0.1.0-beta1 October 05 2019 ####
 First release
