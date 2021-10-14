@@ -24,6 +24,7 @@ PM> Install-Package Serilog.Sinks.Console
 
 Next, you'll need to configure the global `Log.Logger` and also specify to use
 the logger in the config when creating the system, for example like this:
+
 ```csharp
 var logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -39,6 +40,7 @@ var system = ActorSystem.Create("my-test-system", "akka { loglevel=INFO,  logger
 
 To log inside an actor, using the normal `string.Format()` syntax, get the
 logger and log:
+
 ```csharp
 var log = Context.GetLogger();
 ...
@@ -46,6 +48,7 @@ log.Info("The value is {0}", counter);
 ```
 
 Or alternatively
+
 ```csharp
 var log = Context.GetLogger();
 ...

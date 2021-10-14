@@ -19,6 +19,7 @@ The Actor Model provides a higher level of abstraction for writing concurrent an
 Actors in C# are implemented by extending the `UntypedActor` class and and implementing the `OnReceive` method. This method takes the message as a parameter.
 
 Here is an example:
+
 ```csharp
 public class MyActor : UntypedActor
 {
@@ -42,12 +43,14 @@ public class MyActor : UntypedActor
 ### Props
 
 `Props` is a configuration class to specify options for the creation of actors, think of it as an immutable and thus freely shareable recipe for creating an actor including associated deployment information (e.g. which dispatcher to use, see more below). Here are some examples of how to create a `Props` instance
+
 ```csharp
 Props props1 = Props.Create(typeof(MyActor));
 Props props2 = Props.Create(() => new MyActorWithArgs("arg"));
 Props props3 = Props.Create<MyActor>();
 Props props4 = Props.Create(typeof(MyActorWithArgs), "arg");
 ```
+
 The second variant shows how to pass constructor arguments to the `Actor` being created, but it should only be used outside of actors as explained below.
 
 #### Recommended Practices
@@ -82,6 +85,7 @@ system.ActorOf(DemoActor.Props(42), "demo");
 ```
 
 Another good practice is to declare what messages an `Actor` can receive in the companion object of the `Actor`, which makes easier to know what it can receive:
+
 ```csharp
 public class DemoMessagesActor : UntypedActor
 {
@@ -198,6 +202,7 @@ protected override void PostStop()
 {
 }
 ```
+
 The implementations shown above are the defaults provided by the `UntypedActor` class.
 
 ### Actor Lifecycle
@@ -293,6 +298,7 @@ Context.ActorSelection("/user/serviceA/actor");
 // will look up sibling beneath same supervisor
 Context.ActorSelection("../joe");
 ```
+
 > [!NOTE]
 > It is always preferable to communicate with other Actors using their `IActorRef` instead of relying upon `ActorSelection`. Exceptions are: sending messages using the At-Least-Once Delivery facility, initiating first contact with a remote system. In all other cases `ActorRefs` can be provided during Actor creation or initialization, passing them from parent to child or introducing Actors by sending their `ActorRefs` to other Actors within messages.
 
@@ -307,6 +313,7 @@ Context.ActorSelection("/user/serviceB/worker*");
 // will look up all siblings beneath same supervisor
 Context.ActorSelection("../*");
 ```
+
 Messages can be sent via the `ActorSelection` and the path of the `ActorSelection`is looked up when delivering each message. If the selection does not match any actors the message will be dropped.
 
 To acquire an `IActorRef` for an `ActorSelection` you need to send a message to the selection and use the `Sender` reference of the reply from the actor. There is a built-in `Identify` message that all Actors will understand and automatically reply to with a `ActorIdentity` message containing the `IActorRef`. This message is handled specially by the actors which are traversed in the sense that if a concrete name lookup fails (i.e. a non-wildcard path element does not correspond to a live actor) then a negative result is generated. Please note that this does not mean that delivery of that reply is guaranteed, it still is a normal message.
@@ -364,6 +371,7 @@ This is the preferred way of sending messages. No blocking waiting for a message
 // don’t forget to think about who is the sender (2nd argument)
 target.Tell(message, Self);
 ```
+
 The sender reference is passed along with the message and available within the receiving actor via its `Sender` property while processing this message. Inside of an actor it is usually `Self` who shall be the sender, but there can be cases where replies shall be routed to some other actor—e.g. the parent—in which the second argument to `Tell` would be a different one. Outside of an actor and if no reply is needed the second argument can be `null`; if a reply is needed outside of an actor you can use the ask-pattern described next.
 
 ### Ask: Send-And-Receive-Future
@@ -417,6 +425,7 @@ target.Forward(result, Context);
 When an actor receives a message it is passed into the `OnReceive` method, this is an abstract method on the `UntypedActor` base class that needs to be defined.
 
 Here is an example:
+
 ```csharp
 public class MyActor : UntypedActor
 {
@@ -702,6 +711,7 @@ static void Main(string[] args)
 The `IWithUnboundedStash` interface enables an actor to temporarily stash away messages that can not or should not be handled using the actor's current behavior. Upon changing the actor's message handler, i.e., right before invoking `Context.BecomeStacked()` or `Context.UnbecomeStacked()`;, all stashed messages can be "un-stashed", thereby prepending them to the actor's mailbox. This way, the stashed messages can be processed in the same order as they have been received originally. An actor that implements `IWithUnboundedStash` will automatically get a dequeue-based mailbox.
 
 Here is an example of the `IWithUnboundedStash` interface in action:
+
 ```csharp
 public class ActorWithProtocol : UntypedActor, IWithUnboundedStash
 {
@@ -807,6 +817,7 @@ protected override void PreRestart(Exception reason, object message)
     PostStop();
 }
 ```
+
 Please note, that the child actors are *still restarted*, but no new `IActorRef` is created. One can recursively apply the same principles for the children, ensuring that their `PreStart()` method is called only at the creation of their refs.
 
 For more information see [What Restarting Means](xref:supervision#what-restarting-means).
@@ -814,6 +825,7 @@ For more information see [What Restarting Means](xref:supervision#what-restartin
 #### Initialization via message passing
 
 There are cases when it is impossible to pass all the information needed for actor initialization in the constructor, for example in the presence of circular dependencies. In this case the actor should listen for an initialization message, and use `Become()` or a finite state-machine state transition to encode the initialized and uninitialized states of the actor.
+
 ```csharp
 public class Service : UntypedActor
 {
@@ -837,6 +849,7 @@ public class Service : UntypedActor
     }
 }
 ```
+
 If the actor may receive messages before it has been initialized, a useful tool can be the `Stash` to save messages until the initialization finishes, and replaying them after the actor became initialized.
 
 > [!WARNING]

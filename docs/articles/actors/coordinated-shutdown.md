@@ -140,6 +140,7 @@ By default, when the final phase of the `CoordinatedShutdown` executes the calli
 ```
 akka.coordinated-shutdown.terminate-actor-system = off
 ```
+
 If this setting is disabled (it is enabled b default), the `ActorSystem` will not be terminated as the final phase of the `CoordinatedShutdown` phases.
 
 `CoordinatedShutdown` phases, by default, are also executed when the `ActorSystem` is terminated. You can change this behavior by disabling this HOCON value in your configuration:

@@ -313,6 +313,7 @@ For example, the the ambient environment might have this definition ...
 ```
 set Path=A;B;C
 ```
+
 ... we just don't know. But if the HOCON needs "PATH", then the start script must take a precautionary approach and enforce the necessary case as follows ...
 
 ```
@@ -331,7 +332,9 @@ The idea of self-referential substitution is to allow a new value for a field to
     path : "a:b:c"
     path : ${path}":d"
 ```
+
 is equal to:
+
 ```
     path : "a:b:c:d"
 ```

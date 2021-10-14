@@ -85,6 +85,7 @@ var pancakeChef = Flow.FromGraph(GraphDsl.Create(b =>
     return new FlowShape<ScoopOfBatter, Pancake>(dispatchBatter.In, mergePancakes.Out);
 }));
 ```
+
 The benefit of parallelizing is that it is easy to scale. In the pancake example
 it is easy to add a third frying pan with Chris' method, but Bartosz cannot add a third frying pan,
 since that would require a third processing step, which is not practically possible in the case of frying pancakes.

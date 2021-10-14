@@ -52,6 +52,7 @@ public class Translator : ReceiveActor
     }
 }
 ```
+
 The stream can be completed with failure by sending `Akka.Actor.Status.Failure` as reply from the actor.
 
 If the `Ask` fails due to timeout the stream will be completed with `TimeoutException` failure. 

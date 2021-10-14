@@ -23,4 +23,5 @@ akka.actor {
   }
 }
 ```
+
 to the application configuration. If not specified, a default serializer is used.

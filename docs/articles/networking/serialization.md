@@ -124,6 +124,7 @@ akka {
   }
 }
 ```
+
 If you want to verify that your `Props` are serializable, you can enable the following config option:
 
 ```hocon
@@ -354,6 +355,7 @@ from being deserialized:
 
 Be warned that these class can be used as a man in the middle attack vector, but if you need 
 to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
+
 ```
 akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 ```
@@ -380,6 +382,7 @@ There are two ways to set this up, one through the HOCON configuration file, and
 ### HOCON
 
 HOCON example:
+
 ```
 akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides = {
   netfx = [
@@ -414,6 +417,7 @@ The way it works that when the serializer detects that the type name contains th
 property into the string declared in the `rename-to`.
 
 In code, we can write this behavior as:
+
 ```csharp
 if(packageName.Contains(fingerprint)) packageName = packageName.Replace(rename-from, rename-to);
 ```

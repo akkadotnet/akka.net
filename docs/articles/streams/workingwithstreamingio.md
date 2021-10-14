@@ -28,6 +28,7 @@ Closing connections is possible by cancelling the incoming connection `Flow` fro
 [!code-csharp[StreamTcpDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpDocTests.cs?name=close-incoming-connection)]
 
 We can then test the TCP server by sending data to the TCP Socket using `netcat` (on Windows it is possible to use Linux Subsystem for Windows):
+
 ```
 echo -n "Hello World" | netcat 127.0.0.1 8888
 Hello World!!!

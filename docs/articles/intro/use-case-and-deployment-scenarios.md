@@ -74,6 +74,7 @@ Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, 
 ### Interaction between Controllers and Akka.NET
 
 In the sample below, we use an Web API Controller:
+
 ```csharp
 public class SomeController  : ApiController
 {

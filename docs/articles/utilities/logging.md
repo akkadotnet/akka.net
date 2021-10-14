@@ -65,11 +65,13 @@ Note that you need to modify the config as explained below.
 ### NLog Configuration
 
 Example NLog configuration inside your app.config or web.config:
+
 ```hocon
 akka {
     loggers = ["Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog"]
 }
 ```
+
 The above NLog components can be found on Nuget (<https://www.nuget.org/packages/Akka.Logger.NLog/>)
 
 ## Configuring Custom Loggers
