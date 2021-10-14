@@ -21,10 +21,10 @@ and the mailbox of the actor will not be filled with more messages than the give
 ```csharp
 var words = Source.From(new [] { "hello", "hi" });
 words
-	.SelectAsync(5, elem => _actorRef.Ask(elem, TimeSpan.FromSeconds(5)))
-	.Select(elem => (string)elem)
-	.Select(elem => elem.ToLower())
-	.RunWith(Sink.Ignore<string>(), _actorMaterializer);
+    .SelectAsync(5, elem => _actorRef.Ask(elem, TimeSpan.FromSeconds(5)))
+    .Select(elem => (string)elem)
+    .Select(elem => elem.ToLower())
+    .RunWith(Sink.Ignore<string>(), _actorMaterializer);
 ```
 
 Note that the messages received in the actor will be in the same order as the stream elements, 
@@ -39,15 +39,15 @@ from `SelectAsync`.
 ```csharp
 public class Translator : ReceiveActor
 {
-	public Translator()
-	{
-		Receive<string>(word => {
-			// ... process message
-			string reply = word.ToUpper();
-			// reply to the ask
-			Sender.Tell(reply, Self);
-		});
-	}
+    public Translator()
+    {
+        Receive<string>(word => {
+            // ... process message
+            string reply = word.ToUpper();
+            // reply to the ask
+            Sender.Tell(reply, Self);
+        });
+    }
 }
 ```
 The stream can be completed with failure by sending `Akka.Actor.Status.Failure` as reply from the actor.

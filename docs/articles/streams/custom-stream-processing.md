@@ -384,30 +384,30 @@ The stage gets access to the `Log` property which it can safely use from any ``G
 ```csharp
 private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 {
-	#region internal classes
+    #region internal classes
 
-	private sealed class Logic : GraphStageLogic
-	{
-		public Logic(RandomLettersSource stage) : base(stage.Shape)
-		{
-			SetHandler(stage.Out, onPull: () =>
-			{
-				var c = NextChar(); // ASCII lower case letters
+    private sealed class Logic : GraphStageLogic
+    {
+        public Logic(RandomLettersSource stage) : base(stage.Shape)
+        {
+            SetHandler(stage.Out, onPull: () =>
+            {
+                var c = NextChar(); // ASCII lower case letters
 
-				Log.Debug($"Randomly generated: {c}");	
+                Log.Debug($"Randomly generated: {c}");    
 
-				Push(stage.Out, c.ToString());
-			});
-		}
+                Push(stage.Out, c.ToString());
+            });
+        }
 
-		private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
-	}
+        private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
+    }
 
-	#endregion
+    #endregion
 
     public RandomLettersSource()
     {
-	    Shape = new SourceShape<string>(Out);
+        Shape = new SourceShape<string>(Out);
     }
 
     private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
@@ -421,14 +421,14 @@ private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 [Fact]
 public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 {
-	const int n = 10;
-	EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
-	{
-		Source.FromGraph(new RandomLettersSource())
-			.Take(n)
-			.RunWith(Sink.Ignore<string>(), Materializer)
-			.Wait(TimeSpan.FromSeconds(3));
-	});
+    const int n = 10;
+    EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+    {
+        Source.FromGraph(new RandomLettersSource())
+            .Take(n)
+            .RunWith(Sink.Ignore<string>(), Materializer)
+            .Wait(TimeSpan.FromSeconds(3));
+    });
 }
 ```
 

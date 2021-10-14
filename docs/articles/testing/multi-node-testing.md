@@ -55,11 +55,11 @@ The `NodeConfig` method allows you to do just that:
 
 ```csharp
 NodeConfig(new List<RoleName> { First }, 
-	new List<Config> { 	ConfigurationFactory.ParseString(
-		@"akka.cluster.roles =[""a"", ""c""]") });
+    new List<Config> {     ConfigurationFactory.ParseString(
+        @"akka.cluster.roles =[""a"", ""c""]") });
 NodeConfig(new List<RoleName> { Second, Third }, 
-	new List<Config> { ConfigurationFactory.ParseString(
-		@"akka.cluster.roles =[""b"", ""c""]") });
+    new List<Config> { ConfigurationFactory.ParseString(
+        @"akka.cluster.roles =[""b"", ""c""]") });
 ```
 
 Right after setting `CommonConfig` inside the constructor of your `MultiNodeConfig` class you can call `NodeConfig` for the specified `RoleName`s and each of them will have their `Config`s added to their `ActorSystem` configurations at startup.
@@ -96,7 +96,7 @@ protected RestartNode2Spec(RestartNode2SpecConfig config) : base(config, typeof(
 {
     _config = config;
     seed1System = new Lazy<ActorSystem>(() => ActorSystem.Create(Sys.Name, 
-    	Sys.Settings.Config));
+        Sys.Settings.Config));
     restartedSeed1System = new Lazy<ActorSystem>(
         () => ActorSystem.Create(Sys.Name, ConfigurationFactory
             .ParseString("akka.remote.netty.tcp.port = " + SeedNodes.First().Port)
@@ -179,7 +179,7 @@ In order to create a network partition between two or more nodes, the `TestTrans
 RunOn(() =>
 {
     TestConductor.Blackhole(_config.First, _config.Second, 
-    	ThrottleTransportAdapter.Direction.Both).Wait();
+        ThrottleTransportAdapter.Direction.Both).Wait();
 }, _config.First);
 EnterBarrier("blackhole-2");
 ```
@@ -194,7 +194,7 @@ To stop black-holing these nodes, we'd need to call the `TestConductor.PassThrou
 RunOn(() =>
 {
     TestConductor.PassThrough(_config.First, _config.Second, 
-    	ThrottleTransportAdapter.Direction.Both).Wait();
+        ThrottleTransportAdapter.Direction.Both).Wait();
 }, _config.First);
 EnterBarrier("repair-2");
 ```

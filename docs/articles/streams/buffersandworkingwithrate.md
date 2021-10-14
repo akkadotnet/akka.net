@@ -58,21 +58,21 @@ var flow = Flow.FromGraph(section)
 Here is an example of a code that demonstrate some of the issues caused by internal buffers:
 ```csharp
 RunnableGraph.FromGraph(GraphDsl.Create(b => {
-	// this is the asynchronous stage in this graph
-	var zipper = b.Add(ZipWith.Apply<Tick,int,int>((tick, count) => count).Async());
+    // this is the asynchronous stage in this graph
+    var zipper = b.Add(ZipWith.Apply<Tick,int,int>((tick, count) => count).Async());
 
-	var s = b.Add(Source.Tick(TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3), new Tick()));
-	b.From(s).To(zipper.In0);
+    var s = b.Add(Source.Tick(TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3), new Tick()));
+    b.From(s).To(zipper.In0);
 
-	var s2 = b.Add(Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "message!")
-		.ConflateWithSeed(seed => 1, (count, _) => count + 1));
-	
-	b.From(s2).To(zipper.In1);
+    var s2 = b.Add(Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1), "message!")
+        .ConflateWithSeed(seed => 1, (count, _) => count + 1));
+    
+    b.From(s2).To(zipper.In1);
 
-	b.From(zipper.Out).To(Sink.ForEach<int>(i => Console.WriteLine($"test: {i}"))
-		.MapMaterializedValue(_ => NotUsed.Instance));
+    b.From(zipper.Out).To(Sink.ForEach<int>(i => Console.WriteLine($"test: {i}"))
+        .MapMaterializedValue(_ => NotUsed.Instance));
    
-	return ClosedShape.Instance;
+    return ClosedShape.Instance;
                 }));
 ```
 Running the above example one would expect the number 3 to be printed in every 3 seconds (the `conflateWithSeed` step here is configured so that it counts the number of elements received before the downstream `ZipWith` consumes them). What is being printed is different though, we will see the number 1. The reason for this is the internal buffer which is by default 16 elements large, and pre-fetches elements before the `ZipWith` starts consuming them. It is possible to fix this issue by changing the buffer size of `ZipWith` (or the whole graph) to 1. We will still see a leading 1 though which is caused by an initial pre-fetch of the `ZipWith` element.

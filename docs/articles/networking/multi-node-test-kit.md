@@ -29,7 +29,7 @@ public class JoinInProgressMultiNodeConfig : MultiNodeConfig
         Second = Role("second");
 
         CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
-			.WithFallback(ConfigurationFactory.ParseString(@"
+            .WithFallback(ConfigurationFactory.ParseString(@"
                 akka.stdout-loglevel = DEBUG
                 akka.cluster {
                     # simulate delay in gossip by turning it off
