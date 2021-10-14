@@ -85,7 +85,6 @@ Objects are merged by:
  - Non-object fields in overriding object will override field with the same path on previous object.
  - Object fields with the same path in both objects will be recursively merged according to these same rules.
 
-
     {
         "foo" : { "a" : 42 },
         "foo" : { "b" : 43 }
@@ -96,7 +95,6 @@ will be merged to:
     {
         "foo" : { "a" : 42, "b" : 43 }
     }
-
 
 In this example:
 

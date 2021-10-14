@@ -125,10 +125,7 @@ The `ClusterClientReceptionist` extension (or `ClusterReceptionistSettings`) can
 
 [!code-json[ConfigReference](../../../src/contrib/cluster/Akka.Cluster.Tools/Client/reference.conf)]
 
-
-
 The 'akka.cluster.client' configuration properties are read by the `ClusterClientSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterClientSettings` or create it from another config section with the same layout in the reference config. `ClusterClientSettings` is a parameter to the `ClusterClient.Props()` factory method, i.e. each client can be configured with different settings if needed.
-
 
 ## Failure handling
 

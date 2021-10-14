@@ -211,7 +211,6 @@ EnterBarrier("repair-2");
 
 This will allow Akka.Remote to resume normal execution over the network.
 
-
 **Killing Nodes**
 There are two ways to kill a node in a running multi-node test.
 

@@ -75,7 +75,6 @@ class Program
 }
 ```
 
-
 **Deployer (process that does deploying)**
 
 ```csharp
@@ -164,7 +163,6 @@ As far as the **DeployTarget** is concerned, it's receiving messages from a `Rem
 But wait! Wait a minute! We didn't actually create any actors in the DeployTarget process!!!!
 
 That's because the Deployer created the actors... but it created them INSIDE DeployTarget's process. Over the network.
-
 
 ## Syntax
 
