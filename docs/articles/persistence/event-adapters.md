@@ -52,4 +52,3 @@ akka.persistence.journal {
 ```
 
 It is possible to bind multiple adapters to one class for recovery, in which case the `FromJournal` methods of all bound adapters will be applied to a given matching event (in order of definition in the configuration). Since each adapter may return from 0 to n adapted events (called as `EventSequence`), each adapter can investigate the event and if it should indeed adapt it return the adapted event(s) for it. Other adapters which do not have anything to contribute during this adaptation simply return `EventSequence.Empty`. The adapted events are then delivered in-order to the `PersistentActor` during replay.
-

@@ -125,7 +125,6 @@ The following operations are available for *input* ports:
 
 The events corresponding to an *input* port can be received in an `Action` registered to the input port using `setHandler(in, action)`. This handler has three callbacks:
 
-
 * `onPush` is called when the output port has now a new element. Now it is possible to acquire this element using `Grab(in)` and/or call `Pull(in)` on the port to request the next element. It is not mandatory to grab the element, but if it is pulled while the element has not been grabbed it will drop the buffered element.
 * `onUpstreamFinish` is called once the upstream has completed and no longer can be pulled for new elements. No more `onPush` will arrive after this event. If not overridden this will default to stopping the stage.
 * `onUpstreamFailure` is called if the upstream failed with an exception and no longer can be pulled for new elements. No more `onPush` will arrive after this event. If not overridden this will default to failing the stage.
@@ -715,7 +714,6 @@ In essence, the above guarantees are similar to what `Actor`'s provide, if one t
 > [!WARNING]
 > It is **not** safe to access the state of any custom stage outside of the callbacks that it provides, just like it is unsafe to access the state of an actor from the outside. This means that Future callbacks should not close over internal state of custom stages because such access can be concurrent with the provided callbacks, leading to undefined behavior.
 
-
 ## Resources and the stage lifecycle
 
 If a stage manages a resource with a lifecycle, for example objects that need to be shutdown when they are not
@@ -726,7 +724,6 @@ callbacks. The reason for this is that when the stage itself completes or is fai
 for the downstreams. Even for stages that do not complete or fail in this manner, this can happen when the
 `Materializer` is shutdown or the `ActorSystem` is terminated while a stream is still running, what is called an
 "abrupt termination".
-
 
 ## Extending Flow Combinators with Custom Operators
 

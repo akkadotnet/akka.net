@@ -72,7 +72,6 @@ Periodic polling of new `PersistenceIds` are done on the query side by retrievin
 
 The stream is completed with failure if there is a failure in executing the query in the backend journal.
 
-
 **EventsByPersistenceIdQuery and CurrentEventsByPersistenceIdQuery**
 
 `EventsByPersistenceId` is used for retrieving events for a specific `PersistentActor` identified by `PersistenceId`.
