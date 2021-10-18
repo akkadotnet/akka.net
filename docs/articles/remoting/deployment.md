@@ -6,6 +6,7 @@ title: Remote Deployment
 # Remotely Deploying Actors
 
 Deploying an actor means two things simultaneously:
+
 1. Creating an actor instance with specific, explicitly configured properties and
 2. Getting an `IActorRef` to that actor.
 
@@ -74,7 +75,6 @@ class Program
     }
 }
 ```
-
 
 **Deployer (process that does deploying)**
 
@@ -164,7 +164,6 @@ As far as the **DeployTarget** is concerned, it's receiving messages from a `Rem
 But wait! Wait a minute! We didn't actually create any actors in the DeployTarget process!!!!
 
 That's because the Deployer created the actors... but it created them INSIDE DeployTarget's process. Over the network.
-
 
 ## Syntax
 

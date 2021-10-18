@@ -44,6 +44,7 @@ This setting is set of `on` by default and it resolves the backwards compatibili
 
 > [!IMPORTANT]
 > If you have: 
+>
 > * Previously upgraded to Akka.NET v1.4.20+ and you have not run into any issues;
 > * You have not yet upgraded to Akka.NET v1.4.20+; and
 > * You _do not_ plan on running both .NET Framework and .NET Core in the same cluster

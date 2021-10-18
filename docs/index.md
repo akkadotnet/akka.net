@@ -34,7 +34,6 @@ h2:before{
     </div>
 </div>
 
-
 <section>
     <div class="container">
         <h2 class="lead">Build powerful concurrent &amp; distributed applications <strong>more easily</strong>.</h2>

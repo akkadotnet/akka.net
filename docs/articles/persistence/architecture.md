@@ -17,6 +17,7 @@ Akka.Persistence features are available through new set of actor base classes:
 - `SnapshotStore` is used to persist snapshots of either persistent actor's or view's internal state. They can be used to reduce recovery times in case when a lot of events needs to be replayed for specific persistent actor. Storage backend of the snapshot store is pluggable. By default it uses local file system.
 
 Receive Actors
+
 - `ReceivePersistentActor` - receive actor version of `UntypedPersistentActor`.
 - `AtLeastOnceDeliveryReceiveActor` - receive actor version of `AtLeastOnceDeliveryActor`.
 

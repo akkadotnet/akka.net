@@ -174,7 +174,6 @@ var linesStream = rawData
 
 #### Implementing reduce-by-key
 
-
 **Situation:** Given a stream of elements, we want to calculate some aggregated value on different subgroups of the
 elements.
 
