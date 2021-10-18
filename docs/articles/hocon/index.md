@@ -24,7 +24,7 @@ You can play around with HOCON syntax in real-time by going to [hocon-playground
 
 ## Syntax
 
-Much of this is defined with reference to JSON; you can find the JSON spec at http://json.org/.
+Much of this is defined with reference to JSON; you can find the JSON spec at <http://json.org/>.
 
 ### Unchanged from JSON
 
@@ -65,6 +65,7 @@ The last element in an array or last field in an object may be followed by a sin
 These same comma rules apply to fields in objects.
 
 Examples:
+
  - `[1,2,3,]` and `[1,2,3]` are the same array.
  - `[1\n2\n3]` and `[1,2,3]` are the same array.
  - `[1,2,3,,]` is invalid because it has two trailing commas.
@@ -73,7 +74,7 @@ Examples:
 
 ### Duplicate keys and object merging
 
-Duplicate keys that are declared later in the string have different behaviours:
+Duplicate keys that are declared later in the string have different behaviors:
 
  - A key with any values will override previous values if they are of different types.
  - A key with literal or array value will override any previous key value.
@@ -85,7 +86,6 @@ Objects are merged by:
  - Non-object fields in overriding object will override field with the same path on previous object.
  - Object fields with the same path in both objects will be recursively merged according to these same rules.
 
-
     {
         "foo" : { "a" : 42 },
         "foo" : { "b" : 43 }
@@ -96,7 +96,6 @@ will be merged to:
     {
         "foo" : { "a" : 42, "b" : 43 }
     }
-
 
 In this example:
 
@@ -310,12 +309,13 @@ The only way to ensure that your environment variables have the desired case is 
 
 For example, the the ambient environment might have this definition ...
 
-```
+```cmd
 set Path=A;B;C
 ```
+
 ... we just don't know. But if the HOCON needs "PATH", then the start script must take a precautionary approach and enforce the necessary case as follows ...
 
-```
+```cmd
 set OLDPATH=%PATH%
 set PATH=
 set PATH=%OLDPATH%
@@ -327,13 +327,15 @@ You cannot know what ambient environment variables might exist in the ambient en
 
 The idea of self-referential substitution is to allow a new value for a field to be based on the older value.
 
-```
+```text
     path : "a:b:c"
     path : ${path}":d"
 ```
+
 is equal to:
-```
-	path : "a:b:c:d"
+
+```text
+    path : "a:b:c:d"
 ```
 
 Examples of self-referential fields:

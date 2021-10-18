@@ -24,7 +24,7 @@ when you have actors with multiple dependencies.
 - Create a class and implement the `IDependencyResolver`
 
 Let's walk through the process of creating one for the CastleWindsor container.
-You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka, and CastleWindosor.
+You need to create  a new project named Akka.DI.CastleWindsor with all the necessary references including Akka.DI.Core, Akka, and CastleWindsor.
 Name the initial class `WindsorDependencyResolver`.
 
 ```csharp

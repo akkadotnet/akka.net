@@ -49,6 +49,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var props = Props.Create<Worker>().WithRouter(FromConfig.Instance);
 var actor = system.ActorOf(props, "workers");
@@ -64,6 +65,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var props = Props.Create<Worker>().WithRouter(FromConfig.Instance);
 var actor = system.ActorOf(props, "workers");
@@ -118,6 +120,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -138,6 +141,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -167,6 +171,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -187,6 +192,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -214,6 +220,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -234,6 +241,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -266,6 +274,7 @@ By using a `ConsistentHash` router we can now process multiple commands in paral
 There are 3 ways to define what data to use for the consistent hash key.
 
 1. You can define a *hash mapping delegate* using the `WithHashMapper` method of the router to map incoming messages to their consistent hash key. This makes the decision transparent for the sender.
+
 ```cs
   new ConsistentHashingPool(5).WithHashMapping(o =>
   {
@@ -277,6 +286,7 @@ There are 3 ways to define what data to use for the consistent hash key.
 ```
 
 2. The messages may implement `IConsistentHashable`. The key is part of the message and it's convenient to define it together with the message definition.
+
 ```cs
   public class SomeMessage : IConsistentHashable
   {
@@ -286,6 +296,7 @@ There are 3 ways to define what data to use for the consistent hash key.
 ```
 
 3. The messages can be wrapped in a `ConsistentHashableEnvelope` to define what data to use for the consistent hash key. The sender knows the key to use.
+
 ```cs
   public class SomeMessage
   {
@@ -296,7 +307,7 @@ There are 3 ways to define what data to use for the consistent hash key.
   var msg = new ConsistentHashableEnvelope(originalMsg, originalMsg.GroupID);
 ```
 
-You may implement more than one hashing mechanism at the same time. Akka.NET will try them in the order above. That is, if the HashMapping method returns null, Akka.NET will check for the IConsistentHashable interface in the message (2 and 3 are technically the same).
+You may implement more than one hashing mechanism at the same time. Akka.NET will try them in the order above. That is, if the HashMapping method returns null, Akka.NET will check for the `IConsistentHashable` interface in the message (2 and 3 are technically the same).
 
 #### Usage:
 
@@ -311,6 +322,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -332,6 +344,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -344,6 +357,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(wo
 ```
 
 > [!NOTE]
+>
 > 1. `virtual-nodes-factor` is the number of virtual nodes per routee that is used in the consistent hash node ring - if not defined, the default value is 10 and you shouldn't need to change it unless you understand how the algorithm works and know what you are doing.
 > 2. It is possible to define this value in code using the `WithVirtualFactor(...)` method of the ConsistentHashingPool/Group object.
 
@@ -369,6 +383,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -393,6 +408,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -407,6 +423,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new TailChoppingGroup(workers
 ```
 
 > [!NOTE]
+>
 > 1. `within` is the time to wait for a reply from any routee before timing out
 > 2. `tail-chopping-router.interval` is the interval between requests to the other routees
 
@@ -431,6 +448,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -453,6 +471,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -466,6 +485,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstComplet
 ```
 
 > [!NOTE]
+>
 > 1. `within` is the time to wait for a reply from any routee before timing out
 
 ### SmallestMailbox
@@ -490,6 +510,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -524,6 +545,7 @@ You can also set a resizer in code when creating a router.
 ```cs
 new RoundRobinPool(5, new DefaultResizer(1, 10))
 ```
+
 These are settings you usually change in the resizer:
 
 * `enabled` - Turns on or off the resizer. The default is `off`.
@@ -543,7 +565,7 @@ The default resizer works by checking the pool size every X messages, and decidi
 
 ## Specially Handled Messages
 
-Most messages sent to router will be forwarded according to router's routing logic. However there are a few types of messages that have special behaviour.
+Most messages sent to router will be forwarded according to router's routing logic. However there are a few types of messages that have special behavior.
 
 ### Broadcast Messages
 
@@ -571,6 +593,7 @@ router.Tell(new Broadcast("Hello, workers"));
 In this example, the router received the `Broadcast` message, extracted its payload (`Hello, workers`), and then dispatched it to all its routees. It is up to each routee actor to handle the payload.
 
 ### PoisonPill Messages
+
 When an actor received `PoisonPill` message, that actor will be stopped. (see [PoisonPill](xref:receive-actor-api#poisonpill) for details).
 
 For a router, which normally passes on messages to routees, the `PoisonPill` messages are processed __by the router only__. `PoisonPill` messages sent to a router will __not__ be sent on to its routees.
@@ -580,7 +603,7 @@ However, a `PoisonPill` message sent to a router may still affect its routees, a
 If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
 
 > [!NOTE]
-> The above method will stop all routees, even if they are not created by the router. E.g. routees programatically provided to the router.
+> The above method will stop all routees, even if they are not created by the router. E.g. routees programmatically provided to the router.
 
 ```cs
 actorSystem.ActorOf(Props.Create<Worker>(), "worker1");
@@ -601,7 +624,8 @@ router.Tell(new Broadcast(PoisonPill.Instance));
 With the code shown above, each routee will receive a `PoisonPill` message. Each routee will continue to process its messages as normal, eventually processing the `PoisonPill`. This will cause the routee to stop. After all routees have stopped the router will itself be stopped automatically unless it is a dynamic router, e.g. using a resizer.
 
 ### Kill Message
-As with the `PoisonPill` messasge, there is a distinction between killing a router, which indirectly kills its children (who happen to be routees), and killing routees directly (some of whom may not be children.) To kill routees directly the router should be sent a Kill message wrapped in a `Broadcast` message.
+
+As with the `PoisonPill` message, there is a distinction between killing a router, which indirectly kills its children (who happen to be routees), and killing routees directly (some of whom may not be children.) To kill routees directly the router should be sent a Kill message wrapped in a `Broadcast` message.
 
 See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) for more details on how `Kill` message works.
 
@@ -630,7 +654,7 @@ All routers implemented through *routing logic* classes (eg. RoundRobinRoutingLo
 
 These classes are considered low-level and are exposed for extensibility purposes. They shouldn't be needed in normal applications. Pools and Groups are the recommended way to use routers.
 
-Here is an example of how to use the routerlogic directly:
+Here is an example of how to use the router logic directly:
 
 ```cs
 var routees = Enumerable

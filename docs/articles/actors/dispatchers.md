@@ -6,6 +6,7 @@ title: Dispatchers
 # Dispatchers
 
 ## What Do Dispatchers Do?
+
 Dispatchers are responsible for scheduling all code that run inside the `ActorSystem`. Dispatchers are one of the most important parts of Akka.NET, as they control the throughput and time share for each of the actors, giving each one a fair share of resources.
 
 By default, all actors share a single **Global Dispatcher**. Unless you change the configuration, this dispatcher uses the *.NET Thread Pool* behind the scenes, which is optimized for most common scenarios. **That means the default configuration should be *good enough* for most cases.**
@@ -20,7 +21,7 @@ There are some other common reasons to select a different dispatcher. These reas
   * ensure high-load actors don't starve the system by consuming too much cpu-time;
   * ensure important actors always have a dedicated thread to do their job;
   * create [bulkheads](http://skife.org/architecture/fault-tolerance/2009/12/31/bulkheads.html), ensuring problems created in one part of the system do not leak to others;
-* allow actors to execute in a specific SyncrhonizationContext;
+* allow actors to execute in a specific SynchronizationContext;
 
 > [!NOTE]
 > Consider using custom dispatchers for special cases only. Correctly configuring dispatchers requires some understanding of how the framework works. Custom dispatchers *should not* be considered the default solution for performance problems. It's considered normal for complex applications to have one or a few custom dispatchers, it's not usual for most or all actors in a system to require a custom dispatcher configuration.
@@ -128,9 +129,9 @@ default-fork-join-dispatcher {
   type = ForkJoinDispatcher
   throughput = 100
   dedicated-thread-pool {
-	  thread-count = 3
-	  deadlock-timeout = 3s
-	  threadtype = background
+      thread-count = 3
+      deadlock-timeout = 3s
+      threadtype = background
   }
 }
 ```
@@ -167,6 +168,7 @@ private void Form1_Load(object sender, System.EventArgs e)
 ```
 
 ### `ChannelExecutor`
+
 In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
 
 During its initial development and benchmarks, we observed the following:
@@ -179,7 +181,7 @@ During its initial development and benchmarks, we observed the following:
 
 The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecutor` to determine its effective upper and lower parallelism limits, and you can configure the `ChannelExecutor` to run inside your `ActorSystem` via the following HOCON configuration:
 
-```
+```hocon
 akka.actor.default-dispatcher = {
     executor = channel-executor
     fork-join-executor { #channelexecutor will re-use these settings
