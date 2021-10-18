@@ -3239,6 +3239,15 @@ namespace Akka.IO.Buffers
         System.ArraySegment<byte> Rent();
         System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> Rent(int minimumSize);
     }
+    public class SimpleBufferPool : Akka.IO.Buffers.IBufferPool
+    {
+        public SimpleBufferPool(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public SimpleBufferPool(int bufferSize, int capacity) { }
+        public void Release(System.ArraySegment<byte> buf) { }
+        public void Release(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> bufs) { }
+        public System.ArraySegment<byte> Rent() { }
+        public System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> Rent(int minimumSize) { }
+    }
 }
 namespace Akka.IO
 {
