@@ -4,12 +4,14 @@ title: Custom stream processing
 ---
 
 # Custom stream processing
+
 While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for performance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
 
 > [!NOTE]
 > A custom graph stage should not be the first tool you reach for, defining graphs using flows and the graph DSL is in general easier and does to a larger extent protect you from mistakes that might be easy to make with a custom `GraphStage`
 
 ## Custom processing with GraphStage
+
 The `GraphStage` abstraction can be used to create arbitrary graph processing stages with any number of input or output ports. It is a counterpart of the `GraphDSL.Create()` method which creates new stream processing stages by composing others. Where `GraphStage` differs is that it creates a stage that is itself not divisible into smaller ones, and allows state to be maintained inside it in a safe way.
 
 As a first motivating example, we will build a new `Source` that will simply emit numbers from 1 until it is cancelled. To start, we need to define the "interface" of our stage, which is called shape in Akka Streams terminology (this is explained in more detail in the section [Modularity, Composition and Hierarchy](xref:streams-modularity)). This is how this looks like:
@@ -122,7 +124,6 @@ The following operations are available for *input* ports:
  * `Cancel(in)` closes the input port.
 
 The events corresponding to an *input* port can be received in an `Action` registered to the input port using `setHandler(in, action)`. This handler has three callbacks:
-
 
 * `onPush` is called when the output port has now a new element. Now it is possible to acquire this element using `Grab(in)` and/or call `Pull(in)` on the port to request the next element. It is not mandatory to grab the element, but if it is pulled while the element has not been grabbed it will drop the buffered element.
 * `onUpstreamFinish` is called once the upstream has completed and no longer can be pulled for new elements. No more `onPush` will arrive after this event. If not overridden this will default to stopping the stage.
@@ -384,30 +385,30 @@ The stage gets access to the `Log` property which it can safely use from any ``G
 ```csharp
 private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 {
-	#region internal classes
+    #region internal classes
 
-	private sealed class Logic : GraphStageLogic
-	{
-		public Logic(RandomLettersSource stage) : base(stage.Shape)
-		{
-			SetHandler(stage.Out, onPull: () =>
-			{
-				var c = NextChar(); // ASCII lower case letters
+    private sealed class Logic : GraphStageLogic
+    {
+        public Logic(RandomLettersSource stage) : base(stage.Shape)
+        {
+            SetHandler(stage.Out, onPull: () =>
+            {
+                var c = NextChar(); // ASCII lower case letters
 
-				Log.Debug($"Randomly generated: {c}");	
+                Log.Debug($"Randomly generated: {c}");    
 
-				Push(stage.Out, c.ToString());
-			});
-		}
+                Push(stage.Out, c.ToString());
+            });
+        }
 
-		private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
-	}
+        private static char NextChar() => (char) ThreadLocalRandom.Current.Next('a', 'z'1);
+    }
 
-	#endregion
+    #endregion
 
     public RandomLettersSource()
     {
-	    Shape = new SourceShape<string>(Out);
+        Shape = new SourceShape<string>(Out);
     }
 
     private Outlet<string> Out { get; } = new Outlet<string>("RandomLettersSource.out");
@@ -421,14 +422,14 @@ private sealed class RandomLettersSource : GraphStage<SourceShape<string>>
 [Fact]
 public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 {
-	const int n = 10;
-	EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
-	{
-		Source.FromGraph(new RandomLettersSource())
-			.Take(n)
-			.RunWith(Sink.Ignore<string>(), Materializer)
-			.Wait(TimeSpan.FromSeconds(3));
-	});
+    const int n = 10;
+    EventFilter.Debug(start: "Randomly generated").Expect(n, () =>
+    {
+        Source.FromGraph(new RandomLettersSource())
+            .Take(n)
+            .RunWith(Sink.Ignore<string>(), Materializer)
+            .Wait(TimeSpan.FromSeconds(3));
+    });
 }
 ```
 
@@ -713,7 +714,6 @@ In essence, the above guarantees are similar to what `Actor`'s provide, if one t
 > [!WARNING]
 > It is **not** safe to access the state of any custom stage outside of the callbacks that it provides, just like it is unsafe to access the state of an actor from the outside. This means that Future callbacks should not close over internal state of custom stages because such access can be concurrent with the provided callbacks, leading to undefined behavior.
 
-
 ## Resources and the stage lifecycle
 
 If a stage manages a resource with a lifecycle, for example objects that need to be shutdown when they are not
@@ -724,7 +724,6 @@ callbacks. The reason for this is that when the stage itself completes or is fai
 for the downstreams. Even for stages that do not complete or fail in this manner, this can happen when the
 `Materializer` is shutdown or the `ActorSystem` is terminated while a stream is still running, what is called an
 "abrupt termination".
-
 
 ## Extending Flow Combinators with Custom Operators
 

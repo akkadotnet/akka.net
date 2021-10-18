@@ -19,7 +19,7 @@ To solve this kind of problems we need to determine a common strategy, in which 
 
 Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrarily define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state. 
 
-In the past the only available opt-in strategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowning about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
+In the past the only available opt-in strategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowing about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
 
 Split brain resolver feature brings ability to apply different strategies for managing node lifecycle in face of network issues and machine crashes. It works as a custom downing provider. Therefore in order to use it, **all of your Akka.NET cluster nodes must define it with the same configuration**. Here's how minimal configuration looks like:
 
@@ -35,9 +35,11 @@ akka.cluster {
 Keep in mind that split brain resolver will NOT work when `akka.cluster.auto-down-unreachable-after` is used.
 
 ## Split Brain Resolution Strategies
+
 Beginning in Akka.NET v1.4.16, the Akka.NET project has ported the original split brain resolver implementations from Lightbend as they are now open source. The following section of documentation describes how Akka.NET's hand-rolled split brain resolvers are implemented.
 
 ### Picking a Strategy
+
 In order to enable an Akka.NET split brain resolver in your cluster (they are not enabled by default), you will want to update your `akka.cluster` HOCON configuration to the following:
 
 ```hocon
@@ -63,7 +65,7 @@ The following strategies are supported:
 * `lease-majority`
 * `keep-referee` - only available with the legacy split brain resolver.
 
-All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this treshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
+All strategies will be applied only after cluster state has reached stability for specified time threshold (no nodes transitioning between different states for some time), specified by `stable-after` setting. Nodes which are joining will not affect this threshold, as they won't be promoted to UP status in face unreachable nodes. For the same reason they won't be taken into account, when a strategy will be applied.
 
 ```hocon
 akka.cluster.downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster"
@@ -200,6 +202,7 @@ akka.cluster.split-brain-resolver {
 ```
 
 #### Down All
+
 As the name implies, this strategy results in all members of the being downed unconditionally - forcing a full rebuild and recreation of the entire cluster if there are any unreachable nodes alive for longer than  `akka.cluster.split-brain-resolver.stable-after` (20 seconds by default.)
 
 You can enable this strategy via the following:
@@ -212,6 +215,7 @@ akka.cluster {
 ```
 
 #### Keep Referee
+
 This strategy is only available with the legacy Akka.Cluster split brain resolver, which you can enable via the following HOCON:
 
 ```hocon
@@ -242,6 +246,7 @@ Things to keep in mind:
 You can configure a minimum required amount of reachable nodes to maintain operability by using `down-all-if-less-than-nodes`. If a strategy will detect that the number of reachable nodes will go below that minimum it will down the entire partition even when referee node was reachable.
 
 #### Lease Majority
+
 The `lease-majority` downing provider strategy keeps all of the nodes in the cluster who are able to successfully acquire an [`Akka.Coordination.Lease`](xref:Akka.Coordination.Lease) - and the implementation of which must be specified by the user via configuration:
 
 ```hocon

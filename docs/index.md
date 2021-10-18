@@ -3,6 +3,7 @@ documentType: index
 title: Akka.NET Documentation
 tagline: A straightforward approach to building distributed, high-scale applications in .NET
 ---
+<!-- markdownlint-disable MD033 -->
 <style>
 .subtitle {
     font-size:20px;
@@ -33,7 +34,6 @@ h2:before{
       </div>
     </div>
 </div>
-
 
 <section>
     <div class="container">

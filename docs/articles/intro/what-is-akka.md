@@ -51,4 +51,3 @@ As computational entities, actors have these characteristics:
     * Create other (child) actors
     * Send messages to other actors
     * Stop (child) actors or themselves
-

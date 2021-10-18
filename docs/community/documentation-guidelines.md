@@ -24,6 +24,7 @@ When documenting code, please use the standard .NET convention of [XML documenta
 Please be mindful to including *useful* comments when documenting a class or method. *Useful* comments means including full English sentences when summarizing the code and not relying on pre-generated comments from a tool like GhostDoc. Tools like these are great in what they do *if* supplemented with well-reasoned grammar.
 
 **BAD** obviously auto-generated comment
+
 ```csharp
 /// <summary>
 /// Class Serializer.
@@ -41,6 +42,7 @@ public abstract class Serializer
 ```
 
 **GOOD** clear succinct comment
+
 ```csharp
 /// <summary>
 /// A Serializer represents a bimap between an object and an array of bytes representing that object.

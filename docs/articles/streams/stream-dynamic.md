@@ -77,6 +77,7 @@ Therefore you need to explicitly specify at the moment of defining a flow stage,
 There are many cases when consumers or producers of a certain service (represented as a Sink, Source, or possibly Flow) are dynamic and not known in advance. The Graph DSL does not allow to represent this, all connections of the graph must be known in advance and must be connected upfront. To allow dynamic fan-in and fan-out streaming, the Hubs should be used. They provide means to construct Sink and Source pairs that are “attached” to each other, but one of them can be materialized multiple times to implement dynamic fan-in or fan-out.
 
 ### Using the MergeHub
+
 A `MergeHub` allows to implement a dynamic fan-in junction point in a graph where elements coming from different producers are emitted in a First-Comes-First-Served fashion. If the consumer cannot keep up then all of the producers are backpressured. The hub itself comes as a Source to which the single consumer can be attached. It is not possible to attach any producers until this `Source` has been materialized (started). This is ensured by the fact that we only get the corresponding `Sink` as a materialized value. Usage might look like this:
 
 [!code-csharp[HubsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/HubsDocTests.cs?name=merge-hub)]
@@ -110,7 +111,6 @@ We now wrap the `Sink` and `Source` in a Flow using `Flow.FromSinkAndSource`. Th
 The resulting `Flow` now has a type of `Flow<string, string, UniqueKillSwitch>` representing a publish-subscribe channel which can be used any number of times to attach new producers or consumers. In addition, it materializes to a `UniqueKillSwitch` (see [UniqueKillSwitch](xref:streams-dynamic-handling#uniquekillswitch)) that can be used to deregister a single user externally:
 
 [!code-csharp[HubsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/HubsDocTests.cs?name=pub-sub-4)]
-
 
 ### Using the PartitionHub
 
@@ -147,7 +147,6 @@ The above example illustrate a stateless partition function. For more advanced s
 
 Note that it is a factory of a function to to be able to hold stateful variables that are 
 unique for each materialization.
-
 
 The function takes two parameters; the first is information about active consumers, including an array of 
 consumer identifiers and the second is the stream element. The function should return the selected consumer
