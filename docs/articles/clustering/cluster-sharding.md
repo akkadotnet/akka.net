@@ -130,7 +130,7 @@ There are two options for the remember entities store:
 
 You can enable persistence mode (enabled by default) with:
 
-```
+```hocon
 akka.cluster.sharding.state-store-mode = persistence
 ```
 
@@ -138,7 +138,7 @@ This mode uses [persistence](../persistence/event-sourcing.md) to store the acti
 By default, cluster sharding will use the journal and snapshot store plugin defined in `akka.persistence.journal.plugin` and 
 `akka.persistence.snapshot-store.plugin` respectively; to change this behavior, you can use these configuration:
 
-```
+```hocon
 akka.cluster.sharding.journal-plugin-id = <plugin>
 akka.cluster.sharding.snapshot-plugin-id = <plugin>
 ```
@@ -147,14 +147,14 @@ akka.cluster.sharding.snapshot-plugin-id = <plugin>
 
 You can enable DData mode by setting these configuration:
 
-```
+```hocon
 akka.cluster.sharding.state-store-mode = ddata
 ```
 
 To support restarting entities after a full cluster restart (non-rolling) the remember entities store 
 is persisted to disk by distributed data. This can be disabled if not needed:
 
-```
+```hocon
 akka.cluster.sharding.distributed-data.durable.keys = []
 ```
 
@@ -171,7 +171,6 @@ For supporting remembered entities in an environment without disk storage but wi
 > (<https://github.com/CoreyKaylor/Lightning.NET/issues/141>).
 > 
 > You will need to install LightningDB in your Linux distribution manually if you wanted to use the durable DData feature.
-
 
 ### Terminating Remembered Entities
 

@@ -39,13 +39,13 @@ akka {
 
 You can silence the logging of cluster events at info level with configuration property:
 
-```
+```hocon
 akka.cluster.log-info = off
 ```
 
 You can enable verbose logging of cluster events at info level, e.g. for temporary troubleshooting, with configuration property:
 
-```
+```hocon
 akka.cluster.log-info-verbose = on
 ```
 

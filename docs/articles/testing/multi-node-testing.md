@@ -211,7 +211,6 @@ EnterBarrier("repair-2");
 
 This will allow Akka.Remote to resume normal execution over the network.
 
-
 **Killing Nodes**
 There are two ways to kill a node in a running multi-node test.
 
@@ -240,13 +239,13 @@ Once a node has exited the test, it will no longer be able to wait on `EnterBarr
 
 Once you've coded your multi-node tests and compiled them, it's now time to run them. Akka.NET ships a custom XUnit2 runner that it uses to create the simulated networks and clusters and you will need to install that via NuGet in order to run your tests:
 
-```
+```console
 PS> nuget.exe Install-Package Akka.MultiNodeTestRunner -NoVersion
 ```
 
 This will install the [Akka.MultiNodeTestRunner NuGet package](https://www.nuget.org/packages/Akka.MultiNodeTestRunner) with the following directory and file structure:
 
-```
+```text
 root/akka.multinodetestrunner
 root/akka.multinodetestrunner/lib/net452/Akka.MultiNodeTestRunner.exe
 root/akka.multinodetestrunner/lib/netcoreapp1.1/Akka.MultiNodeTestRunner.dll
@@ -256,7 +255,7 @@ Depending on what framework you're building your application against, you'll wan
 
 Next, we have to pass in our command-line arguments to the MNTR:
 
-```
+```console
 Akka.MultiNodeTestRunner.exe [path to assembly] [-Dmultinode.enable-filesink=on] [-Dmultinode.output-directory={dir path}] [-Dmultinode.spec={spec name}]
 ```
 

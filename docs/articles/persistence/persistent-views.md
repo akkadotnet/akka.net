@@ -6,6 +6,7 @@ title: Persistence Views
 
 > [!WARNING]
 > `PersistentView` is deprecated. Use [PersistenceQuery](xref:persistence-query) when it will be ported. The corresponding query type is `EventsByPersistenceId`. There are several alternatives for connecting the `Source` to an actor corresponding to a previous `PersistentView` actor:
+>
 > - `Sink.ActorRef` is simple, but has the disadvantage that there is no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages fast enough the mailbox of the actor will grow
 > - `MapAsync` combined with [Ask: Send-And-Receive-Future](xref:receive-actor-api#ask-send-and-receive-future) is almost as simple with the advantage of back-pressure being propagated all the way
 > - `ActorSubscriber` in case you need more fine grained control

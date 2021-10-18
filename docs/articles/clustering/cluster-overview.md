@@ -79,7 +79,7 @@ Now that we've gone over some of the concepts and distributed programming concer
 
 The first step towards using Akka.Cluster is to install the [Akka.Cluster NuGet package](http://www.nuget.org/packages/Akka.Cluster/ "Akka.Cluster NuGet Package"), which you can do inside the Package Manager Console in Visual Studio:
 
-```
+```console
 PM> Install-Package Akka.Cluster
 ```
 
@@ -87,7 +87,6 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 
 > [!NOTE]
 > Akka.Cluster depends on Akka.Remote.
-
 
 #### Seed Node Configuration
 

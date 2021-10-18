@@ -8,7 +8,7 @@ There's an `ActorSystem` extension called `CoordinatedShutdown` that will stop c
 
 The default phases and their orderings are defined in the default HOCON configuration as `akka.coordinated-shutdown.phases`, and they are defined below:
 
-```
+```hocon
 phases {
 
   # The first pre-defined phase that applications can add tasks to.
@@ -88,7 +88,7 @@ As an end-user, you can register tasks to execute during any of these shutdown p
 
 More phases can be added to an application by overriding the HOCON of an existing phase to include additional members in its `phase.depends-on` property. Here's an example where an additional phase might be executing before shutting down the cluster, for instance:
 
-```
+```hocon
 akka.coordinated-shutdown.phases.before-cluster-shutdown.depends-on = [service-stop, my-phase]
 my-phase{
     timeout = 10s
@@ -108,7 +108,7 @@ The default phases are defined in a linear order, but in practice the phases are
 
 For instance, if you're using [Akka.Cluster](xref:cluster-overview) it's commonplace to register application-specific cleanup tasks during the `cluster-leave` and `cluster-exiting` phases. Here's an example:
 
-```
+```csharp
 var coordShutdown = CoordinatedShutdown.Get(myActorSystem);
 coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "cleanup-my-api", () =>
 {
@@ -137,7 +137,7 @@ It's safe to call this method multiple times as the shutdown process will only b
 
 By default, when the final phase of the `CoordinatedShutdown` executes the calling `ActorSystem` will be terminated. This behavior can be changed by setting the following HOCON value in your configuration:
 
-```
+```hocon
 akka.coordinated-shutdown.terminate-actor-system = off
 ```
 
@@ -145,7 +145,7 @@ If this setting is disabled (it is enabled b default), the `ActorSystem` will no
 
 `CoordinatedShutdown` phases, by default, are also executed when the `ActorSystem` is terminated. You can change this behavior by disabling this HOCON value in your configuration:
 
-```
+```hocon
 akka.coordinated-shutdown.run-by-actor-system-terminate = off
 ```
 
@@ -154,7 +154,7 @@ akka.coordinated-shutdown.run-by-actor-system-terminate = off
 
 The CLR process will still be running, even when the `ActorSystem` is terminated by the `CoordinatedShutdown`. If you'd like to automatically terminate the process running your `ActorSystem`, you can set the following HOCON value in your configuration:
 
-```
+```hocon
 akka.coordinated-shutdown.exit-clr = on
 ```
 
@@ -172,7 +172,7 @@ By default, this graceful leave action will by triggered whenever the `Coordinat
 
 `CoordinatedShutdown.Run()` will also be executed if a node is removed via `Cluster.Down` (non-graceful exit), but this can be disabled by changing the following Akka.Cluster HOCON setting:
 
-```
+```hocon
 akka.cluster.run-coordinated-shutdown-when-down = off
 ```
 
@@ -182,6 +182,6 @@ By default `CoordinatedShutdown.Run()` will be called whenever the current proce
 
 If you wish to disable this behavior, you can pass in the following HOCON configuration value:
 
-```
+```hocon
 akka.coordinated-shutdown.run-by-clr-shutdown-hook = off
 ```
