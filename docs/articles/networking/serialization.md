@@ -302,7 +302,7 @@ Starting from Akka.NET v1.5, default Newtonsoft.Json serializer will be replaced
 
 Then bind `hyperion` serializer using following HOCON configuration in your actor system settings:
 
-```
+```hocon
 akka {
   actor {
     serializers {
@@ -357,7 +357,7 @@ from being deserialized:
 Be warned that these class can be used as a man in the middle attack vector, but if you need 
 to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
 
-```
+```hocon
 akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 ```
 
@@ -384,7 +384,7 @@ There are two ways to set this up, one through the HOCON configuration file, and
 
 HOCON example:
 
-```
+```hocon
 akka.actor.serialization-settings.hyperion.cross-platform-package-name-overrides = {
   netfx = [
     {
@@ -524,7 +524,7 @@ reflecting actual fields and properties of `Foo` class, it will use the much sim
 `FooSurrogate` class instead. To tell Hyperion to use this information, we need to pass the
 surrogate information inside the HOCON settings:
 
-```
+```hocon
 akka.actor {
     serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
     serialization-bindings {

@@ -8,7 +8,7 @@ As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyI
 
 You can install Akka.DependencyInjection via NuGet:
 
-```
+```console
 PS> Install-Package Akka.DependencyInjection
 ```
 

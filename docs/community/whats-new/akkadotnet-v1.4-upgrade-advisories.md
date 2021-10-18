@@ -36,7 +36,7 @@ To work around this issue, if you're affected by it (most users are not:)
 
 In Akka.NET v1.4.26 we have introduced a new setting:
 
-```
+```hocon
 akka.actor.serialization-settings.primitive.use-legacy-behavior = on
 ```
 

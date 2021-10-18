@@ -309,13 +309,13 @@ The only way to ensure that your environment variables have the desired case is 
 
 For example, the the ambient environment might have this definition ...
 
-```
+```cmd
 set Path=A;B;C
 ```
 
 ... we just don't know. But if the HOCON needs "PATH", then the start script must take a precautionary approach and enforce the necessary case as follows ...
 
-```
+```cmd
 set OLDPATH=%PATH%
 set PATH=
 set PATH=%OLDPATH%
@@ -327,14 +327,14 @@ You cannot know what ambient environment variables might exist in the ambient en
 
 The idea of self-referential substitution is to allow a new value for a field to be based on the older value.
 
-```
+```text
     path : "a:b:c"
     path : ${path}":d"
 ```
 
 is equal to:
 
-```
+```text
     path : "a:b:c:d"
 ```
 

@@ -79,7 +79,7 @@ At the moment, Akka.Cluster.Sharding still defaults to what it did in Akka.NET v
 
 Akka.NET v1.4 changes that - now that [Akka.DistributedData](../../articles/clustering/distributed-data.md) is out of beta we can change our Akka.Cluster.Sharding to use DistributedData to manage all of our shard allocation data instead.
 
-```
+```hocon
 akka.cluster{
     sharding{
         state-store-mode = ddata

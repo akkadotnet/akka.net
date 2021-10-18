@@ -10,7 +10,7 @@ title: Serilog
 Install the package __Akka.Logger.Serilog__ via nuget to utilize
 [Serilog](https://serilog.net/), this will also install the required Serilog package dependencies.
 
-```
+```console
 PM> Install-Package Akka.Logger.Serilog
 ```
 
@@ -18,7 +18,7 @@ PM> Install-Package Akka.Logger.Serilog
 
 The following example uses Serilog's __Console__ sink available via nuget, there are wide range of other sinks available depending on your needs, for example a rolling log file sink.  See serilog's documentation for details on these.
 
-```
+```console
 PM> Install-Package Serilog.Sinks.Console
 ```
 
