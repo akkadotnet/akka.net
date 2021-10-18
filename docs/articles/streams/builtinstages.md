@@ -7,8 +7,6 @@ title: Overview of built-in stages and their semantics
 
 These built-in sources are available from ``akka.stream.scaladsl.Source``:
 
-
-
 #### FromEnumerator
 
 Stream the values from an ``Enumerator``, requesting the next value when there is demand. The enumerator will be created anew
@@ -27,7 +25,6 @@ Stream the values of an ``IEnumerable<T>``.
 **emits** the next value of the enumerable
 
 **completes** when the last element of the enumerable has been emitted
-
 
 #### Single
 
@@ -195,11 +192,9 @@ a strategy specified by the user. Functionality for tracking when an element has
 
 Integration with Reactive Streams, materializes into a ``Reactive.Streams.ISubscriber``.
 
-
 #### FromPublisher
 
 Integration with Reactive Streams, subscribes to a ``Reactive.Streams.IPublisher``.
-
 
 #### ZipN
 
@@ -209,7 +204,6 @@ Combine the elements of multiple streams into a stream of sequences.
 
 **completes** when any upstream completes
 
-
 #### ZipWithN
 
 Combine the elements of multiple streams into a stream of sequences using a combiner function.
@@ -218,11 +212,9 @@ Combine the elements of multiple streams into a stream of sequences using a comb
 
 **completes** when any upstream completes
 
-
 # Sink stages
 
 These built-in sinks are available from ``Akka.Stream.DSL.Sink``:
-
 
 #### First
 
@@ -297,7 +289,6 @@ Note that it is not safe to mutate state from the procedure.
 
 **backpressures** when the previous procedure invocation has not yet completed
 
-
 #### ForeachParallel
 
 Like ``Foreach`` but allows up to ``parallellism`` procedure calls to happen in parallel.
@@ -306,7 +297,6 @@ Like ``Foreach`` but allows up to ``parallellism`` procedure calls to happen in 
 
 **backpressures** when the previous parallel procedure invocations has not yet completed
 
-
 #### OnComplete
 
 Invoke a callback when the stream has completed or failed.
@@ -314,7 +304,6 @@ Invoke a callback when the stream has completed or failed.
 **cancels** never
 
 **backpressures** never
-
 
 #### Aggregate
 
@@ -341,7 +330,6 @@ Materializes into a task that will be completed by the last result of the reduct
 
 **backpressures** when the previous reduction function invocation has not yet completed
 
-
 #### Combine
 
 Combine several sinks into one using a user specified strategy
@@ -350,7 +338,6 @@ Combine several sinks into one using a user specified strategy
 
 **backpressures** depends on the strategy
 
-
 #### ActorRef
 
 Send the elements from the stream to an ``IActorRef``. No backpressure so care must be taken to not overflow the inbox.
@@ -358,7 +345,6 @@ Send the elements from the stream to an ``IActorRef``. No backpressure so care m
 **cancels** when the actor terminates
 
 **backpressures** never
-
 
 #### ActorRefWithAck
 
@@ -375,7 +361,6 @@ Materializes this Sink, immediately returning (1) its materialized value, and (2
 
 Useful for when you need a materialized value of a Sink when handing it out to someone to materialize it for you.
 
-
 #### ActorSubscriber
 
 Create an actor from a ``Props`` upon materialization, where the actor implements ``ActorSubscriber``, which will
@@ -387,18 +372,13 @@ Materializes into an ``IActorRef`` to the created actor.
 
 **backpressures** depends on the actor implementation
 
-
 #### AsPublisher
 
 Integration with Reactive Streams, materializes into a ``Reactive.Streams.IPublisher``.
 
-
 #### FromSubscriber
 
 Integration with Reactive Streams, wraps a ``Reactive.Streams.ISubscriber`` as a sink
-
-
-
 
 # Additional Sink and Source converters
 
@@ -464,8 +444,6 @@ a ``IOResult`` upon reaching the end of the file or if there is a failure.
 
 Create a sink which will write incoming ``ByteString`` s to a given file.
 
-
-
 Flow stages
 -----------
 
@@ -479,7 +457,6 @@ be to model unrecoverable conditions, therefore they are always eagerly propagat
 For in-band error handling of normal errors (dropping elements if a map fails for example) you should use the
 supervision support, or explicitly wrap your element types in a proper container that can express error or success
 states (for example ``try`` in C#).
-
 
 Simple processing stages
 ------------------------
@@ -641,7 +618,6 @@ Pass ``n`` incoming elements downstream and then complete
 
 **completes** when the defined number of elements has been taken or upstream completes
 
-
 #### TakeWhile
 
 Pass elements downstream as long as a predicate function return true for the element include the element
@@ -730,7 +706,6 @@ Detach upstream demand from downstream demand without detaching the stream rates
 
 **completes** when upstream completes
 
-
 #### Throttle
 
 Limit the throughput to a specific number of elements per time unit, or a specific total cost per time unit, where
@@ -756,7 +731,6 @@ Each upstream element will either be diverted to the given sink, or the downstre
 
 These stages encapsulate an asynchronous computation, properly handling backpressure while taking care of the asynchronous
 operation at the same time (usually handling the completion of a Task).
-
 
 #### SelectAsync
 
@@ -785,7 +759,6 @@ If a Task fails, the stream also fails (unless a different supervision strategy 
 
 **completes** upstream completes and all tasks has been completed  and all elements has been emitted
 
-
 # Timer driven stages
 
 These stages process elements using timers, delaying, dropping or grouping elements for certain time durations.
@@ -799,7 +772,6 @@ Pass elements downstream within a timeout and then complete.
 **backpressures** downstream backpressures
 
 **completes** upstream completes or timer fires
-
 
 #### SkipWithin
 
@@ -822,7 +794,6 @@ whichever happens first.
 
 **completes** when upstream completes
 
-
 #### InitialDelay
 
 Delay the initial element by a user specified duration from stream materialization.
@@ -833,7 +804,6 @@ Delay the initial element by a user specified duration from stream materializati
 
 **completes** when upstream completes
 
-
 #### Delay
 
 Delay every element passed through with a specific duration.
@@ -843,7 +813,6 @@ Delay every element passed through with a specific duration.
 **backpressures** differs, depends on ``OverflowStrategy`` set
 
 **completes** when upstream completes and buffered elements has been drained
-
 
 # Backpressure aware stages
 
@@ -890,7 +859,6 @@ aggregated to the batched value.
 **backpressures** when batched elements reached the max limit of allowed batched elements & downstream backpressures
 
 **completes** when upstream completes and a "possibly pending" element was drained
-
 
 #### BatchWeighted
 
@@ -956,7 +924,6 @@ the flow with a ``BufferOverflowException``.
 
 **completes** when upstream completes and buffered elements has been drained
 
-
 # Nesting and flattening stages
 
 These stages either take a stream and turn it into a stream of streams (nesting) or they take a stream that contains
@@ -972,7 +939,6 @@ and returns a pair containing a strict sequence of the taken element and a strea
 **backpressures** when downstream backpressures or substream backpressures
 
 **completes** when prefix elements has been consumed and substream has been consumed
-
 
 #### GroupBy
 
@@ -1014,7 +980,6 @@ concatenation. This means each source is fully consumed before consumption of th
 
 **completes** when upstream completes and all consumed substreams complete
 
-
 #### MergeMany
 
 Transform each input element into a ``Source`` whose elements are then flattened into the output stream through
@@ -1025,7 +990,6 @@ merging. The maximum number of merged sources has to be specified.
 **backpressures** when downstream backpressures
 
 **completes** when upstream completes and all consumed substreams complete
-
 
 # Time aware stages
 
@@ -1108,7 +1072,6 @@ Delays the initial element by the specified duration.
 **completes** when upstream completes
 
 **cancels** when downstream cancels
-
 
 # Fan-in stages
 
@@ -1284,7 +1247,6 @@ Fan-out the stream to several streams. Each upstream element is emitted to the f
 
 **completes** when upstream completes
 
-
 #### Partition
 
 Fan-out the stream to several streams. emitting an incoming upstream element to one downstream consumer according
@@ -1298,7 +1260,6 @@ to the partitioner function applied to the element
 
 **cancels** when when all downstreams cancel
 
-
 # Watching status stages
 
 #### WatchTermination
@@ -1311,7 +1272,6 @@ The stage otherwise passes through elements unchanged.
 **backpressures** when output backpressures
 
 **completes** when upstream completes
-
 
 #### Monitor
 

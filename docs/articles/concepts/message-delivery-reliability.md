@@ -120,6 +120,7 @@ The guarantee is illustrated in the following:
 > Actor ``A3`` sends messages ``M4``, ``M5``, ``M6`` to ``A2``.
 
 > This means that:
+>
 > - If ``M1`` is delivered it must be delivered before ``M2`` and ``M3``
 > - If ``M2`` is delivered it must be delivered before ``M3``
 > - If ``M4`` is delivered it must be delivered before ``M5`` and ``M6``

@@ -6,6 +6,7 @@ title: Remote Deployment
 # Remotely Deploying Actors
 
 Deploying an actor means two things simultaneously:
+
 1. Creating an actor instance with specific, explicitly configured properties and
 2. Getting an `IActorRef` to that actor.
 
@@ -74,7 +75,6 @@ class Program
     }
 }
 ```
-
 
 **Deployer (process that does deploying)**
 
@@ -165,7 +165,6 @@ But wait! Wait a minute! We didn't actually create any actors in the DeployTarge
 
 That's because the Deployer created the actors... but it created them INSIDE DeployTarget's process. Over the network.
 
-
 ## Syntax
 
 In the above example, it's this piece of HOCON configuration:
@@ -223,7 +222,9 @@ There are two common scenarios for when you would want to deploy an actor remote
 
 ## Additional Resources
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/kOm8lGBkrM8" frameborder="0" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 * [Akka.Remote: How to Remotely Deploy Actors (Video)](https://www.youtube.com/watch?v=kOm8lGBkrM8)
 * [Akka.NET remote deployment with F#](http://bartoszsypytkowski.com/akka-net-remote-deployment-with-f/)

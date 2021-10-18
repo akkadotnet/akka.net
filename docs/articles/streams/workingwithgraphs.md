@@ -167,7 +167,6 @@ Then we import it (all of its nodes and connections) explicitly into the closed 
 > [!WARNING]
 > Please note that `GraphDSL` is not able to provide compile time type-safety about whether or not all elements have been properly connected—this validation is performed as a runtime check during the graph's instantiation. A partial graph also verifies that all ports are either connected or part of the returned `Shape`.
 
-
 ## Constructing Sources, Sinks and Flows from Partial Graphs
 
 Instead of treating a partial graph as simply a collection of flows and junctions which may not yet all be

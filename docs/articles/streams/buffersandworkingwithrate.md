@@ -22,7 +22,7 @@ To run a stage asynchronously it has to be marked explicitly as such using the .
 
 Running the above example, one of the possible outputs looks like this:
 
-```
+```text
 A: 2
 B: 1
 A: 3
@@ -189,5 +189,3 @@ var driftFlow = Flow.Create<int>()
 ```
 
 Note that all of the elements coming from upstream will go through expand at least once. This means that the output of this flow is going to report a drift of zero if producer is fast enough, or a larger drift otherwise.
-
-

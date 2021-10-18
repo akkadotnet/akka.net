@@ -23,7 +23,6 @@ When your `ActorSystem` boots, it won't have any associations to other remote sy
 
 Let's consider the following two actors and some message classes.
 
-
 ```csharp
 // Written into a shared library
 public class Msg {

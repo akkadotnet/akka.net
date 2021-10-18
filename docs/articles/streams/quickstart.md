@@ -7,7 +7,7 @@ title: Quickstart
 
 To use Akka Streams, an additional module is required, so we first make sure ```Akka.Streams``` is added to our project:
 
-```
+```powershell
 Install-Package Akka.Streams
 ```
 

@@ -453,7 +453,7 @@ Receive<string>(s => Console.WriteLine("Also received string: " + s)); //2
 Receive<object>(o => Console.WriteLine("Received object: " + o));      //3
 ```
 
-> **Example**<br/>
+> **Example**
 > The actor receives a message of type string. Only the first handler is invoked, even though all three handlers can handle that message.
 
 ### Using predicates
@@ -474,16 +474,16 @@ Receive<string>(s => s.Length > 2, s => Console.WriteLine("2: " + s));    //2
 Receive<string>(s => Console.WriteLine("3: " + s));                     //3
 ```
 
-> **Example**<br/>
+> **Example**
 > The actor receives the message "123456". Since the length of is 6, the predicate specified for the first handler will return true, and the first handler will be invoked resulting in "1: 123456" being written to the console.
 
 > [!NOTE]
 > Note that even though the predicate for the second handler matches, and that the third handler matches all messages of type string only the first handler is invoked.
 
-> **Example**<br/>
+> **Example**
 > If the actor receives the message "1234", then "2: 1234" will be written to the console.
 
-> **Example**<br/>
+> **Example**
 > If the actor receives the message "12", then "3: 12" will be written on the console.
 
 Predicates can be specified before the action handler or after. These two declarations are equivalent:

@@ -67,7 +67,6 @@ The following guidelines help to arrive at the right granularity:
  * Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and be restored
    individually.
 
-
 ## The Registration Protocol
 
 As the first step, we need to design the protocol for registering a device and create an actor that will be responsible

@@ -72,6 +72,7 @@ public class Buncher : FSM<State, IData>
 > The `FSM` class defines a receive method which handles internal messages and passes everything else through to the `FSM` logic (according to the current state). When overriding the receive method, keep in mind that e.g. state timeout handling depends on actually passing the messages through the `FSM` logic.
 
 The `FSM` class takes two type parameters:
+
 - the supertype of all state names, usually an enum,
 - the type of the state data which are tracked by the `FSM` module itself.
 

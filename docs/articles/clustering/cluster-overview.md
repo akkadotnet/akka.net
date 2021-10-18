@@ -79,7 +79,7 @@ Now that we've gone over some of the concepts and distributed programming concer
 
 The first step towards using Akka.Cluster is to install the [Akka.Cluster NuGet package](http://www.nuget.org/packages/Akka.Cluster/ "Akka.Cluster NuGet Package"), which you can do inside the Package Manager Console in Visual Studio:
 
-```
+```console
 PM> Install-Package Akka.Cluster
 ```
 
@@ -87,7 +87,6 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 
 > [!NOTE]
 > Akka.Cluster depends on Akka.Remote.
-
 
 #### Seed Node Configuration
 
@@ -221,7 +220,7 @@ Each role within the cluster also has a leader, just for that role. Its primary 
 
 ### Reachability
 
-Nodes send each other <a href="https://en.wikipedia.org/wiki/Heartbeat_(computing)">heartbeats</a> on an ongoing basis. If a node misses enough heartbeats, this will trigger `unreachable` gossip messages from its peers. The leader will wait for the node to either become reachable again, restart or get downed. Until that happens, the cluster is not in a consistent state and the leader indicates that it is unable to perform its duties. If the gossip from a quorum of cluster nodes agree that the node is unreachable ("convergence"), the leader will mark it as down and begin removing the node from the cluster. You can control how long the cluster waits for unreachable nodes through the auto-down-unreachable-after setting.
+Nodes send each other [heartbeats](<https://en.wikipedia.org/wiki/Heartbeat_(computing)>) on an ongoing basis. If a node misses enough heartbeats, this will trigger `unreachable` gossip messages from its peers. The leader will wait for the node to either become reachable again, restart or get downed. Until that happens, the cluster is not in a consistent state and the leader indicates that it is unable to perform its duties. If the gossip from a quorum of cluster nodes agree that the node is unreachable ("convergence"), the leader will mark it as down and begin removing the node from the cluster. You can control how long the cluster waits for unreachable nodes through the auto-down-unreachable-after setting.
 
 When marked as unreachable, the node can restart and join the cluster again, however the association will only be formed if that node is identified as the same node that became unreachable. If you use dynamic addressing (port 0), starting a node again might result in a different port being assigned upon restart. The result of that is that the cluster remains in an inconsistent state, waiting to the unreachable node to either become reachable or get downed.
 
@@ -233,7 +232,9 @@ A node might also exit the cluster gracefully, preventing it from being marked a
 
 ## Additional Resources
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mUTKvGyxbOA" frameborder="0" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 - [How to Create Scalable Clustered Akka.NET Apps Using Akka.Cluster](https://petabridge.com/blog/intro-to-akka-cluster/)
 - [Video: Introduction to Akka.Cluster](https://www.youtube.com/watch?v=mUTKvGyxbOA)

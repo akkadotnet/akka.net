@@ -19,6 +19,7 @@ Metrics collection is delegated to an implementation of `Akka.Cluster.Metrics.IM
 
 Different collector implementations may provide different subsets of metrics published to the cluster. 
 Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics` class:
+
 * `MemoryUsed` - total memory allocated to the currently running process
 * `MemoryAvailable` - memory, available for the process
 * `MaxMemoryRecommended` - if set, memory limit recommended for current process
@@ -35,6 +36,7 @@ which collects all metrics defined above.
 You can also plug-in your own metrics collector implementation.
 
 By default, metrics extension will use collector provider fall back and will try to load them in this order:
+
 1. configured user-provided collector (see `Configuration` section for details)
 2. built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector
 
@@ -78,7 +80,7 @@ The frontend that receives user jobs and delegates to the backends via the route
 
 As you can see, the router is defined in the same way as other routers, and in this case it is configured as follows:
 
-```
+```hocon
 akka.actor.deployment {
   /factorialFrontend/factorialBackendRouter = {
     # Router type provided by metrics extension.
@@ -128,7 +130,7 @@ Custom metrics collector implementation class must be specified in the `akka.clu
 
 The Cluster metrics extension can be configured with the following properties:
 
-```
+```hocon
 ##############################################
 # Akka Cluster Metrics Reference Config File #
 ##############################################

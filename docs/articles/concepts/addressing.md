@@ -110,6 +110,7 @@ will send msg to all siblings including the current actor.
 
 > [!NOTE]
 > What the above sections described in some detail can be summarized and memorized easily as follows:
+>
 > * `ActorOf` only ever creates a new actor, and it creates it as a direct child of the context on which this method is invoked (which may be any actor or actor system).
 > * `ActorSelection` only ever looks up existing actors when messages are delivered, i.e. does not create actors, or verify existence of actors when the selection is created.
 
