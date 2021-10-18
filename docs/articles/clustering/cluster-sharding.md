@@ -172,7 +172,6 @@ For supporting remembered entities in an environment without disk storage but wi
 > 
 > You will need to install LightningDB in your Linux distribution manually if you wanted to use the durable DData feature.
 
-
 ### Terminating Remembered Entities
 
 One complication that  `akka.cluster.sharding.remember-entities = true` introduces is that your sharded entity actors can no longer be terminated through the normal Akka.NET channels, i.e. `Context.Stop(Self)`, `PoisonPill.Instance`, and the like. This is because as part of the `remember-entities` contract - the sharding system is going to insist on keeping all remembered entities alive until explicitly told to stop.

@@ -11,7 +11,6 @@ Akka.NET v1.4.0 is the culmination of many major architectural changes, improvem
 
 The high-level summary of changes:
 
-
 1. [Akka.Cluster.Sharding](../../articles/clustering/cluster-sharding.md) and [Akka.DistributedData](../../articles/clustering/distributed-data.md) are now out of beta status, have stable wire formats, and all sharding functionality is fully supported using either `akka.cluster.sharding.state-store-mode = "persistence"` or `akka.cluster.sharding.state-store-mode = "ddata"`.
 2. Akka.Remote's performance has significantly increased as a function of our new batching mode ([see the numbers](../../articles/remoting/performance.md#no-io-batching)) - which is tunable via HOCON configuration to best support your needs. [Learn how to performance optimize Akka.Remote here](../../articles/remoting/performance.md).
 3. Added a new module, [Akka.Cluster.Metrics](../../articles/cluster/cluster-metrics.md), which allows clustering users to receive performance data about each of the nodes in their cluster and even create some routers that can direct the flow of messages based on these metrics. 

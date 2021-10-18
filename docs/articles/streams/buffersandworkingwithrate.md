@@ -189,5 +189,3 @@ var driftFlow = Flow.Create<int>()
 ```
 
 Note that all of the elements coming from upstream will go through expand at least once. This means that the output of this flow is going to report a drift of zero if producer is fast enough, or a larger drift otherwise.
-
-

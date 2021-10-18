@@ -357,6 +357,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(wo
 ```
 
 > [!NOTE]
+>
 > 1. `virtual-nodes-factor` is the number of virtual nodes per routee that is used in the consistent hash node ring - if not defined, the default value is 10 and you shouldn't need to change it unless you understand how the algorithm works and know what you are doing.
 > 2. It is possible to define this value in code using the `WithVirtualFactor(...)` method of the ConsistentHashingPool/Group object.
 
@@ -422,6 +423,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new TailChoppingGroup(workers
 ```
 
 > [!NOTE]
+>
 > 1. `within` is the time to wait for a reply from any routee before timing out
 > 2. `tail-chopping-router.interval` is the interval between requests to the other routees
 
@@ -483,6 +485,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstComplet
 ```
 
 > [!NOTE]
+>
 > 1. `within` is the time to wait for a reply from any routee before timing out
 
 ### SmallestMailbox
