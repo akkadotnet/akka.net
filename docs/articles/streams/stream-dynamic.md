@@ -112,7 +112,6 @@ The resulting `Flow` now has a type of `Flow<string, string, UniqueKillSwitch>` 
 
 [!code-csharp[HubsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/HubsDocTests.cs?name=pub-sub-4)]
 
-
 ### Using the PartitionHub
 
 **This is a [may change](xref:may-change) feature**
@@ -148,7 +147,6 @@ The above example illustrate a stateless partition function. For more advanced s
 
 Note that it is a factory of a function to to be able to hold stateful variables that are 
 unique for each materialization.
-
 
 The function takes two parameters; the first is information about active consumers, including an array of 
 consumer identifiers and the second is the stream element. The function should return the selected consumer

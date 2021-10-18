@@ -29,7 +29,7 @@ Here is how Akka.NET v1.4.14 performs with batching enabled (it's on by default)
 
 Versus the numbers with 
 
-```
+```hocon
 akka.remote.dot-netty.tcp.batching.enabled = false
 ```
 
@@ -49,7 +49,7 @@ The way the I/O batching system works is by grouping messages that written in su
 
 The Akka.Remote batching system can be disabled and tuned via the following settings:
 
-```
+```hocon
 akka.remote.dot-netty.tcp{
       batching{
 
@@ -116,7 +116,7 @@ You can achieve similar results for your application.
 
 To take advantage of I/O batching in DotNetty, you need to [tailor the following Akka.Remote configuration values to your use case](../../configuration/akka.remote.md):
 
-```
+```hocon
 akka.remote.dot-netty.tcp{
       batching{
 

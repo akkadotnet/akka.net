@@ -277,7 +277,6 @@ public void ConvergenceSpecTests()
 
 This unfortunate design is a byproduct of Xunit and how it recreates the entire test class on each method.
 
-
 ### Running MultiNode Specs
 
 To actually run this specification, we have to execute the `Akka.MultiNodeTestRunner.exe` against the .DLL that contains our specs.

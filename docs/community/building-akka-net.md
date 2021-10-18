@@ -13,14 +13,14 @@ This project supports a wide variety of commands, all of which can be listed via
 
 **Windows**
 
-```
-c:\> build.cmd help
+```console
+C:\> build.cmd help
 ```
 
 **Linux / OS X**
 
-```
-c:\> build.sh help
+```console
+build.sh help
 ```
 
 However, please see this readme for full details.
@@ -46,7 +46,7 @@ This build script is powered by [FAKE](https://fake.build/); please see their AP
 
 Akka.NET is a large project, so it's often necessary to run tests incrementally in order to reduce the total end-to-end build time during development. In Akka.NET this is accomplished using [the Incrementalist project](https://github.com/petabridge/Incrementalist) - which can be invoked by adding the `incremental` option to any `build.sh` or `build.cmd` command:
 
-```
+```console
 PS> build.cmd MultiNodeTestsNetCore spec={className} incremental
 ```
 
@@ -58,7 +58,7 @@ This project will automatically populate its release notes in all of its modules
 
 **RELEASE_NOTES.md**
 
-```
+```text
 #### 0.1.0 October 05 2019 ####
 First release
 ```
@@ -67,7 +67,7 @@ In this instance, the NuGet and assembly version will be `0.1.0` based on what's
 
 **RELEASE_NOTES.md**
 
-```
+```text
 #### 0.1.0-beta1 October 05 2019 ####
 First release
 ```
@@ -76,7 +76,7 @@ But in this case the NuGet and assembly version will be `0.1.0-beta1`.
 
 If you add any new projects to the solution created with this template, be sure to add the following line to each one of them in order to ensure that you can take advantage of `common.props` for standardization purposes:
 
-```
+```xml
 <Import Project="..\common.props" />
 ```
 
@@ -100,7 +100,7 @@ All of the documentation will be statically generated and the output will be pla
 
 To preview the documentation for this project, execute the following command at the root of this folder:
 
-```
+```console
 C:\> serve-docs.cmd
 ```
 

@@ -16,7 +16,7 @@ The release of Akka.NET version 1.2.0 introduces the default [DotNetty](https://
 
 Once you've installed valid SSL certificates, TLS is enabled via your HOCON configuration by setting `enable-ssl = true` and configuring the `ssl` HOCON configuration section like below:
 
-```
+```hocon
 akka {
   loglevel = DEBUG
   actor {

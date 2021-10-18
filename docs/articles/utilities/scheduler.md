@@ -47,7 +47,7 @@ parameters) and then call the method when the message is received.
 
 ## From inside the actor
 
-```
+```csharp
 Context.System.Scheduler.ScheduleTellRepeatedly(....);
 ```
 

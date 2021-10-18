@@ -211,7 +211,6 @@ sendEmails.Run(materializer);
 In the above example the services conveniently returned a `Task` of the result.
 If that is not the case you need to wrap the call in a `Task`. 
 
-
 For a service that is exposed as an actor, or if an actor is used as a gateway in front of an
 external service, you can use ``Ask``:
 
@@ -225,7 +224,6 @@ var saveTweets = akkaTweets
 
 Note that if the ``Ask`` is not completed within the given timeout the stream is completed with failure.
 If that is not desired outcome you can use ``Recover`` on the ``Ask`` `Task`.
-
 
 ### Illustrating ordering and parallelism
 
@@ -277,7 +275,6 @@ Elements starting with a lower case character are simulated to take longer time 
 
 Here is how we can use it with ``SelectAsync``:
 
-
 ```csharp
 var service = new SometimesSlowService();
 var settings = ActorMaterializerSettings.Create(sys).WithInputBuffer(4, 4);
@@ -295,7 +292,7 @@ Source.From(new[] {"a", "B", "C", "D", "e", "F", "g", "H", "i", "J"})
 
 The output may look like this:
 
-```
+```text
 before: a
 before: B
 before: C
@@ -365,7 +362,7 @@ var result = Source.From(new[] {"a", "B", "C", "D", "e", "F", "g", "H", "i", "J"
 
 The output may look like this:
 
-```
+```text
 before: a
 before: B
 before: C
@@ -462,7 +459,6 @@ Source.FromEvent<EventHandler<RoutedEventArgs>, RoutedEventArgs>(
 
 Just like in case of `Source.FromObservable`, `Source.FromEvents` can take optional parameters used to configure buffering strategy applied for incoming events.
 
-
 ### Integrating with Reactive Streams
 
 `Reactive Streams` defines a standard for asynchronous stream processing with non-blocking
@@ -470,7 +466,6 @@ back pressure. It makes it possible to plug together stream libraries that adher
 Akka Streams is one such library.
 
 - Reactive Streams: <http://reactive-streams.org/>
-
 
 The two most important interfaces in Reactive Streams are the `IPublisher` and `ISubscriber`.
 
