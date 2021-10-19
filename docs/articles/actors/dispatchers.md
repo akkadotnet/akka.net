@@ -30,9 +30,9 @@ There are some other common reasons to select a different dispatcher. These reas
 
 Throughout this documentation and most Akka literature available, the term *dispatcher* is used to refer to *dispatcher configurations*, but they are in fact different things.
 
-- **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
+* **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
 
-- **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
+* **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
 
 Therefore, when you read about *"creating a custom dispatcher"* it usually means "*using a custom configuration for one of the built-in dispatchers*".
 
