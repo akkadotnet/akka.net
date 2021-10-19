@@ -23,7 +23,7 @@ To make an actor use a specific mailbox, you can set it up one of the following 
   Props.Create<ActorType>().WithMailbox("my-custom-mailbox");
   ```
 
-2. In the actor's deployment configuration
+1. In the actor's deployment configuration
 
   ```hocon
   akka.actor.deployment {
