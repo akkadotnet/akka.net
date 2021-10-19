@@ -337,7 +337,7 @@ Target "MultiNodeTestsNetCore" (fun _ ->
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
-                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 90.0)
 
             ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
@@ -370,7 +370,7 @@ Target "MultiNodeTestsNet" (fun _ ->
             let result = ExecProcess(fun info ->
                 info.FileName <- "dotnet"
                 info.WorkingDirectory <- (Directory.GetParent project).FullName
-                info.Arguments <- arguments) (TimeSpan.FromMinutes 30.0)
+                info.Arguments <- arguments) (TimeSpan.FromMinutes 90.0)
 
             ResultHandling.failBuildIfXUnitReportedError TestRunnerErrorLevel.Error result
 
