@@ -41,7 +41,7 @@ namespace Akka.IO
                 throw ConfigurationException.NullOrEmptyConfig<TcpSettings>();
 
             return new TcpSettings(
-                bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.direct-buffer-pool"),
+                bufferPoolConfigPath: config.GetString("buffer-pool", "akka.io.tcp.disabled-buffer-pool"),
                 initialSocketAsyncEventArgs: config.GetInt("nr-of-socket-async-event-args", 32),
                 traceLogging: config.GetBoolean("trace-logging", false),
                 batchAcceptLimit: config.GetInt("batch-accept-limit", 10),
