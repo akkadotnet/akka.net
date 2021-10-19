@@ -192,7 +192,7 @@ namespace Akka.Routing
             var pressure = Pressure(routees);
             var delta = Filter(pressure, currentSize);
             var proposed = currentSize + delta;
-
+            
             if (proposed < LowerBound)
                 return delta + (LowerBound - proposed);
             if (proposed > UpperBound)
@@ -226,6 +226,9 @@ namespace Akka.Routing
                         var underlying = actorRef.Underlying;
                         if (underlying is ActorCell cell)
                         {
+                            if (cell.Mailbox.IsSuspended() && cell.Mailbox.NumberOfMessages >= PressureThreshold)
+                                return true;
+                            
                             if (PressureThreshold == 1)
                                 return cell.Mailbox.IsScheduled() && cell.Mailbox.HasMessages;
                             if (PressureThreshold < 1)
