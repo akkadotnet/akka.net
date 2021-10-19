@@ -115,7 +115,7 @@ namespace Akka.Remote.Transport.DotNetty
         void InitInbound(IChannel channel, IPEndPoint socketAddress, object msg)
         {
             // disable automatic reads
-            channel.Configuration.AutoRead = false;
+            channel.Configuration.IsAutoRead = false;
 
             _associationEventListener.ContinueWith(r =>
             {
@@ -169,7 +169,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override bool Write(ByteString payload)
         {
-            if (_channel.Open)
+            if (_channel.IsOpen)
             {
                 var data = ToByteBuffer(_channel, payload);
                 _channel.WriteAndFlushAsync(data);

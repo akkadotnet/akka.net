@@ -13,8 +13,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BitFaster.Caching" Version="1.0.4" />
-    <PackageReference Include="DotNetty.Handlers" Version="0.6.0" />
+    <!--<PackageReference Include="DotNetty.Handlers" Version="0.6.0" />-->
     <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageReference Include="SpanNetty.Handlers" Version="0.7.2012.2221" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>

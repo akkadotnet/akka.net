@@ -14,6 +14,7 @@ using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
+
 using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 
 namespace Akka.Remote.Transport.DotNetty
@@ -81,22 +82,30 @@ namespace Akka.Remote.Transport.DotNetty
             return ctx.ConnectAsync(remoteAddress, localAddress);
         }
 
-        public override Task DisconnectAsync(IChannelHandlerContext ctx)
+        
+        //public override Task DisconnectAsync(IChannelHandlerContext ctx)
+        public override void Disconnect(IChannelHandlerContext ctx, IPromise promise)
         {
             _log.Info("Channel {0} disconnect", ctx.Channel);
-            return ctx.DisconnectAsync();
+            base.Disconnect(ctx,promise);
+            //return ctx.DisconnectAsync();
         }
 
-        public override Task CloseAsync(IChannelHandlerContext ctx)
+        //public override Task CloseAsync(IChannelHandlerContext ctx)
+        public override void Close(IChannelHandlerContext ctx, IPromise promise)
         {
             _log.Info("Channel {0} close", ctx.Channel);
-            return ctx.CloseAsync();
+            //return ctx.CloseAsync();
+            base.Close(ctx, promise);
         }
 
-        public override Task DeregisterAsync(IChannelHandlerContext ctx)
+        //public override Task DeregisterAsync(IChannelHandlerContext ctx)
+        public override void Deregister(IChannelHandlerContext ctx, IPromise promise)
         {
+            
             _log.Debug("Channel {0} deregister", ctx.Channel);
-            return ctx.DeregisterAsync();
+            base.Deregister(ctx, promise);
+            //return ctx.DeregisterAsync();
         }
 
         public override void ChannelRead(IChannelHandlerContext ctx, object message)
@@ -110,14 +119,17 @@ namespace Akka.Remote.Transport.DotNetty
             ctx.FireChannelRead(message);
         }
 
-        public override Task WriteAsync(IChannelHandlerContext ctx, object message)
+        //public override Task WriteAsync(IChannelHandlerContext ctx, object message)
+        public override void Write(IChannelHandlerContext ctx, object message, IPromise promise)
         {
+            
             if (_log.IsDebugEnabled)
             {
                 // have to force a .ToString() here otherwise the reference count on the buffer might be illegal
                 _log.Debug("Channel {0} writing a message ({1}) of type [{2}]", ctx.Channel, message?.ToString(), message == null ? "NULL" : message.GetType().TypeQualifiedName());
             }
-            return ctx.WriteAsync(message);
+            base.Write(ctx, message, promise);
+            //return ctx.WriteAsync(message);
         }
 
         public override void Flush(IChannelHandlerContext ctx)
