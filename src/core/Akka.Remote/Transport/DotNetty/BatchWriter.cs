@@ -10,7 +10,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using DotNetty.Transport.Channels;
 using Akka.Configuration;
-using DotNetty.Common.Concurrency;
 
 namespace Akka.Remote.Transport.DotNetty
 {
@@ -134,22 +133,18 @@ namespace Akka.Remote.Transport.DotNetty
             context.FireExceptionCaught(exception);
         }
 
-        //public override Task DisconnectAsync(IChannelHandlerContext context)
-        public override void Disconnect(IChannelHandlerContext context, IPromise promise)
+        public override Task DisconnectAsync(IChannelHandlerContext context)
         {
             // Try to flush one last time if flushes are pending before disconnect the channel.
             ResetReadAndFlushIfNeeded(context);
-            //return context.DisconnectAsync();
-            base.Disconnect(context, promise);
+            return context.DisconnectAsync();
         }
 
-        //public override Task CloseAsync(IChannelHandlerContext context)
-        public override void Close(IChannelHandlerContext context, IPromise promise)
+        public override Task CloseAsync(IChannelHandlerContext context)
         {
             // Try to flush one last time if flushes are pending before disconnect the channel.
             ResetReadAndFlushIfNeeded(context);
-            context.CloseAsync(promise);
-            //return context.CloseAsync();
+            return context.CloseAsync();
         }
 
         public override void ChannelWritabilityChanged(IChannelHandlerContext context)

@@ -18,7 +18,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.Util;
-using Akka.Util.Internal;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
 using DotNetty.Common.Utilities;
@@ -82,7 +81,7 @@ namespace Akka.Remote.Transport.DotNetty
                 {
                     var listener = s.Result;
                     RegisterListener(channel, listener, msg, remoteSocketAddress);
-                    channel.Configuration.IsAutoRead = true; // turn reads back on
+                    channel.Configuration.AutoRead = true; // turn reads back on
                 }, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.NotOnCanceled | TaskContinuationOptions.NotOnFaulted);
                 op = handle;
             }
@@ -191,7 +190,7 @@ namespace Akka.Remote.Transport.DotNetty
                 // Block reads until a handler actor is registered
                 // no incoming connections will be accepted until this value is reset
                 // it's possible that the first incoming association might come in though
-                newServerChannel.Configuration.IsAutoRead = false;
+                newServerChannel.Configuration.AutoRead = false;
                 ConnectionGroup.TryAdd(newServerChannel);
                 ServerChannel = newServerChannel;
 
@@ -207,7 +206,7 @@ namespace Akka.Remote.Transport.DotNetty
                 LocalAddress = addr;
                 // resume accepting incoming connections
 #pragma warning disable 4014 // we WANT this task to run without waiting
-                AssociationListenerPromise.Task.ContinueWith(result => newServerChannel.Configuration.IsAutoRead = true,
+                AssociationListenerPromise.Task.ContinueWith(result => newServerChannel.Configuration.AutoRead = true,
                     TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
 #pragma warning restore 4014
 
@@ -231,7 +230,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override async Task<AssociationHandle> Associate(Address remoteAddress)
         {
-            if (!ServerChannel.IsOpen)
+            if (!ServerChannel.Open)
                 throw new ChannelException("Transport is not open");
 
             return await AssociateInternal(remoteAddress).ConfigureAwait(false);
