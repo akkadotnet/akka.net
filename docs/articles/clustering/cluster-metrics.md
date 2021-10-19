@@ -19,6 +19,7 @@ Metrics collection is delegated to an implementation of `Akka.Cluster.Metrics.IM
 
 Different collector implementations may provide different subsets of metrics published to the cluster. 
 Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics` class:
+
 * `MemoryUsed` - total memory allocated to the currently running process
 * `MemoryAvailable` - memory, available for the process
 * `MaxMemoryRecommended` - if set, memory limit recommended for current process
@@ -35,6 +36,7 @@ which collects all metrics defined above.
 You can also plug-in your own metrics collector implementation.
 
 By default, metrics extension will use collector provider fall back and will try to load them in this order:
+
 1. configured user-provided collector (see `Configuration` section for details)
 2. built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector
 
@@ -48,6 +50,7 @@ The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event wil
 other cluster member nodes metrics gossip which was received during the collector sample interval.
 
 You can subscribe your metrics listener actors to these events in order to implement custom node lifecycle:
+
 ```c#
 ClusterMetrics.Get(Sys).Subscribe(metricsListenerActor);
 ```
@@ -77,7 +80,7 @@ The frontend that receives user jobs and delegates to the backends via the route
 
 As you can see, the router is defined in the same way as other routers, and in this case it is configured as follows:
 
-```
+```hocon
 akka.actor.deployment {
   /factorialFrontend/factorialBackendRouter = {
     # Router type provided by metrics extension.
@@ -127,7 +130,7 @@ Custom metrics collector implementation class must be specified in the `akka.clu
 
 The Cluster metrics extension can be configured with the following properties:
 
-```
+```hocon
 ##############################################
 # Akka Cluster Metrics Reference Config File #
 ##############################################
@@ -154,7 +157,7 @@ akka.cluster.metrics {
     # Supervision strategy.
     strategy {
 
-      # FQCN of class providing `akka.actor.SupervisorStrategy`.
+      # Fully-qualified class name of the class providing `akka.actor.SupervisorStrategy`.
       # Must have a constructor with signature `<init>(com.typesafe.config.Config)`.
       # Default metrics strategy provider is a configurable extension of `OneForOneStrategy`.
       provider = "Akka.Cluster.Metrics.ClusterMetricsStrategy, Akka.Cluster.Metrics"
@@ -183,7 +186,7 @@ akka.cluster.metrics {
     # to /system/cluster-metrics actor: `akka.cluster.metrics.{CollectionStartMessage,CollectionStopMessage}`
     enabled = on
 
-    # FQCN of the metrics collector implementation.
+    # Fully-qualified class name of the metrics collector implementation.
     # It must implement `akka.cluster.metrics.MetricsCollector` and
     # have public constructor with akka.actor.ActorSystem parameter.
     # Will try to load in the following order of priority:

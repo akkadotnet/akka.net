@@ -62,7 +62,7 @@ This means that actors are always organized into a tree. In general, creating an
 actor can only happen from inside another actor. This 'creator' actor becomes
 the _parent_ of the newly created _child_ actor. You might ask then, who is the
 parent of the _first_ actor you create? To create a top-level actor one must
-first initialise an _actor system_, let's refer to this as the object `System`.
+first initialize an _actor system_, let's refer to this as the object `System`.
 This is followed by a call to `System.ActorOf()` which returns a reference to
 the newly created actor. This does not create a "freestanding" actor though,
 instead, it injects the corresponding actor as a child into an already existing
@@ -118,7 +118,7 @@ counterpart. This is how it looks like in practice:
 
 We see that the following two lines are printed
 
-```
+```text
 First : Actor[akka://testSystem/user/first-actor#1053618476]
 Second: Actor[akka://testSystem/user/first-actor/second-actor#-1544706041]
 ```
@@ -180,7 +180,7 @@ Again, we can try out all this with a simple experiment:
 
 After running it, we get the output
 
-```
+```text
 first started
 second started
 second stopped
@@ -211,7 +211,7 @@ the default strategy in this simple experiment:
 
 After running the snippet, we see the following output on the console:
 
-```
+```text
 supervised actor started
 supervised actor fails now
 supervised actor stopped
@@ -250,10 +250,10 @@ to rewrite our architecture diagram that contained nested boxes into a tree:
 
 ![actor tree diagram of the architecture](/images/arch_tree_diagram.png)
 
-In simple terms, every component manages the lifecycle of the subcomponents. No
-subcomponent can outlive the parent component. This is exactly how the actor
+In simple terms, every component manages the lifecycle of the sub-components. No
+sub-component can outlive the parent component. This is exactly how the actor
 hierarchy works. Furthermore, it is desirable that a component handles the
-failure of its subcomponents. Together, these two desirable properties lead to
+failure of its sub-components. Together, these two desirable properties lead to
 the conclusion that the "contained-in" relationship of components should be
 mapped to the "children-of" relationship of actors.
 
@@ -268,7 +268,7 @@ The first actor happens to be rather simple now, as we have not implemented any
 of the components yet. What is new is that we have dropped using
 `Console.WriteLine()` and instead use `ILoggingAdapter` which allows us to use
 the logging facility built into Akka.NET directly. Furthermore, we are using a
-recommended creational pattern for actors; define a static `Props()` method in
+recommended pattern for creating actors; define a static `Props()` method in
 the the actor:
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotSupervisor.cs?name=iot-supervisor)]

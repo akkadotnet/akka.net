@@ -12,7 +12,7 @@ changes to Akka.NET:
 - Be .NET idiomatic, e.g. do not port `Duration` or `Future`, use `Timespan`
   and `Task<T>`.
 - Stay as close as possible to the original JVM implementation,
-  https://github.com/akka/akka.
+  <https://github.com/akka/akka>.
 - Do not add features that do not exist in JVM Akka into the core Akka.NET
   framework.
 - Please include relevant unit tests / specs along with your changes, if appropriate.
@@ -23,6 +23,7 @@ changes to Akka.NET:
   with the `discussion` tag or reach out to [AkkaDotNet on Twitter](https://twitter.com/AkkaDotNet).
 
 ## Coding conventions
+
 - Use the default Resharper guidelines for code
   - Start private member fields with `_`, i.e. `_camelCased`
   - Use PascalCase for public and protected Properties and Methods

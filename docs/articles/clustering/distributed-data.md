@@ -6,7 +6,7 @@ title: Distributed Data
 
 Akka.DistributedData plugin can be used as in-memory, highly-available, distributed key-value store, where values conform to so called [Conflict-Free Replicated Data Types](http://hal.upmc.fr/inria-00555588/document) (CRDT). Those data types can have replicas across multiple nodes in the cluster, where DistributedData plugin has been initialized. We are free to perform concurrent updates on replicas with the same corresponding key without need of coordination (distributed locks or transactions) - all state changes will eventually converge with conflicts being automatically resolved, thanks to the nature of CRDTs. To use distributed data plugin, simply install it via NuGet:
 
-```
+```console
 install-package Akka.DistributedData
 ```
 
@@ -168,7 +168,7 @@ One of the issue of CRDTs, is that they accumulate history of changes (including
 
 There are several different HOCON settings, that can be used to configure distributed data plugin. By default, they all live under `akka.cluster.distributed-data` node:
 
-- `name` of replicator actor. Default: *ddataReplicator*.
+- `name` of replicator actor. Default: `ddataReplicator`.
 - `role` used to limit expected DistributedData capability to nodes having that role. None by default.
 - `gossip-interval` tells replicator, how often replicas should be gossiped over the cluster. Default: *2 seconds*
 - `notify-subscribers-interval` tells, how often replicator subscribers should be notified with replica state changes. Default: *0.5 second*

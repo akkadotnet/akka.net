@@ -120,6 +120,7 @@ The guarantee is illustrated in the following:
 > Actor ``A3`` sends messages ``M4``, ``M5``, ``M6`` to ``A2``.
 
 > This means that:
+>
 > - If ``M1`` is delivered it must be delivered before ``M2`` and ``M3``
 > - If ``M2`` is delivered it must be delivered before ``M3``
 > - If ``M4`` is delivered it must be delivered before ``M5`` and ``M6``
@@ -211,7 +212,7 @@ observer.
 
 ### Ordering of Local Message Sends
 
-Assuming strict FIFO mailboxes the abovementioned caveat of non-transitivity of
+Assuming strict FIFO mailboxes the above-mentioned caveat of non-transitivity of
 the message ordering guarantee is eliminated under certain conditions. As you
 will note, these are quite subtle as it stands, and it is even possible that
 future performance optimizations will invalidate this whole paragraph. The
@@ -222,7 +223,7 @@ possibly non-exhaustive list of counter-indications is:
   implication is that enqueue requests from different senders which arrive
   during the actor's construction (figuratively, the details are more involved)
   may be reordered depending on low-level thread scheduling. Since completely
-  fair locks do not exist on the CLR this is unfixable.
+  fair locks do not exist on the CLR this is un-fixable.
 
 - The same mechanism is used during the construction of a Router, more
   precisely the routed ActorRef, hence the same problem exists for actors
@@ -251,6 +252,7 @@ As explained in the previous section local message sends obey transitive causal 
 It might take longer time for M1 to "travel" to node-3 than it takes for M2 to "travel" to node-3 via node-2.
 
 ## Higher-level abstractions
+
 Based on a small and consistent tool set in Akka's core, Akka.NET also provides
 powerful, higher-level abstractions on top it.
 
