@@ -30,9 +30,9 @@ The actor can be in two states: no message queued (aka `Idle`) or some message q
 
 The basic strategy is to declare the actor, inherit from `FSM` class and specifying the possible states and data values as type parameters. Within the body of the actor a DSL is used for declaring the state machine:
 
-- `StartWith` defines the initial state and initial data
-- then there is one `When(<state>, () => {})` declaration per state to be handled
-- finally starting it up using initialize, which performs the transition into the initial state and sets up timers (if required).
+* `StartWith` defines the initial state and initial data
+* then there is one `When(<state>, () => {})` declaration per state to be handled
+* finally starting it up using initialize, which performs the transition into the initial state and sets up timers (if required).
 
 In this case, we start out in the `Idle` and `Uninitialized` state, where only the `SetTarget()` message is handled; stay prepares to end this event’s processing for not leaving the current state, while the using modifier makes the `FSM` replace the internal state (which is `Uninitialized` at this point) with a fresh `Todo()` object containing the target actor reference. The `Active` state has a state timeout declared, which means that if no message is received for 1 second, a `FSM.StateTimeout` message will be generated. This has the same effect as receiving the `Flush` command in this case, namely to transition back into the Idle state and resetting the internal queue to the empty vector. But how do messages get queued? Since this shall work identically in both states, we make use of the fact that any event which is not handled by the `When()` block is passed to the `WhenUnhandled()` block:
 
@@ -73,8 +73,8 @@ public class Buncher : FSM<State, IData>
 
 The `FSM` class takes two type parameters:
 
-- the supertype of all state names, usually an enum,
-- the type of the state data which are tracked by the `FSM` module itself.
+* the supertype of all state names, usually an enum,
+* the type of the state data which are tracked by the `FSM` module itself.
 
 > [!NOTE]
 > The state data together with the state name describe the internal state of the state machine; if you stick to this scheme and do not add mutable fields to the `FSM` class you have the advantage of making all changes of the internal state explicit in a few well-known places.
@@ -134,9 +134,9 @@ Within this handler the state of the `FSM` may be queried using the stateName me
 
 The result of any stateFunction must be a definition of the next state unless terminating the `FSM`, which is described in [Termination from Inside](#termination-from-inside). The state definition can either be the current state, as described by the stay directive, or it is a different state as given by `Goto(state)`. The resulting object allows further qualification by way of the modifiers described in the following:
 
-- `ForMax(duration)`. This modifier sets a state timeout on the next state. This means that a timer is started which upon expiry sends a `StateTimeout` message to the `FSM`. This timer is canceled upon reception of any other message in the meantime; you can rely on the fact that the StateTimeout message will not be processed after an intervening message. This modifier can also be used to override any default timeout which is specified for the target state. If you want to cancel the default timeout, use `null`.
-- `Using(data)`. This modifier replaces the old state data with the new data given. If you follow the advice above, this is the only place where internal state data are ever modified.
-- `Replying(msg)`. This modifier sends a reply to the currently processed message and otherwise does not modify the state transition.
+* `ForMax(duration)`. This modifier sets a state timeout on the next state. This means that a timer is started which upon expiry sends a `StateTimeout` message to the `FSM`. This timer is canceled upon reception of any other message in the meantime; you can rely on the fact that the StateTimeout message will not be processed after an intervening message. This modifier can also be used to override any default timeout which is specified for the target state. If you want to cancel the default timeout, use `null`.
+* `Using(data)`. This modifier replaces the old state data with the new data given. If you follow the advice above, this is the only place where internal state data are ever modified.
+* `Replying(msg)`. This modifier sends a reply to the currently processed message and otherwise does not modify the state transition.
 
 All modifiers can be chained to achieve a nice and concise description:
 
