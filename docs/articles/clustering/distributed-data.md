@@ -164,7 +164,7 @@ Keep in mind, that most of the replicated collections add/remove methods require
 
 One of the issue of CRDTs, is that they accumulate history of changes (including removed elements), producing a garbage, that effectively pile up in memory. While this is still a problem, it can be limited by replicator, which is able to remove data associated with nodes, that no longer exist in the cluster. This process is known as a pruning.
 
-## Settings 
+## Settings
 
 There are several different HOCON settings, that can be used to configure distributed data plugin. By default, they all live under `akka.cluster.distributed-data` node:
 
