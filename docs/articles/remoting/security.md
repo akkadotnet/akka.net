@@ -7,8 +7,8 @@ title: Network Security
 
 There are 2 ways you may like to achieve network security when using Akka.Remote:
 
-- Transport Layer Security (introduced with Akka.Remote Version 1.2)
-- Virtual Private Networks
+* Transport Layer Security (introduced with Akka.Remote Version 1.2)
+* Virtual Private Networks
 
 ### Akka.Remote with TLS (Transport Layer Security)
 
