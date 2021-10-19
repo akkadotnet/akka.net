@@ -16,9 +16,9 @@ Akka.NET is built upon a conscious decision to offer APIs that are minimal and c
 
 From this follows that the principles implemented by Akka Streams are:
 
-- all features are explicit in the API, no magic
-- supreme compositionality: combined pieces retain the function of each part
-- exhaustive model of the domain of distributed bounded stream processing
+* all features are explicit in the API, no magic
+* supreme compositionality: combined pieces retain the function of each part
+* exhaustive model of the domain of distributed bounded stream processing
 
 This means that we provide all the tools necessary to express any stream processing topology, that we model all the essential aspects of this domain (back-pressure, buffering, transformations, failure recovery, etc.) and that whatever the user builds is reusable in a larger context.
 
@@ -26,10 +26,10 @@ This means that we provide all the tools necessary to express any stream process
 
 One important consequence of offering only features that can be relied upon is the restriction that Akka Streams cannot ensure that all objects sent through a processing topology will be processed. Elements can be dropped for a number of reason:
 
-- plan user code can consume on element in a Select(...) stage and produce an entirely different one as its result
-- Common stream operators drop elements intentionally, e.g., take/drop/where/conflate/buffer
-- stream failure will tear down the stream without waiting for processing to finish, all elements that are in flight will be discarded
-- stream cancellation will propagate upstream (e.g. from a take operator) leading to upstream processing steps being terminated without having processed all of their inputs
+* plan user code can consume on element in a Select(...) stage and produce an entirely different one as its result
+* Common stream operators drop elements intentionally, e.g., take/drop/where/conflate/buffer
+* stream failure will tear down the stream without waiting for processing to finish, all elements that are in flight will be discarded
+* stream cancellation will propagate upstream (e.g. from a take operator) leading to upstream processing steps being terminated without having processed all of their inputs
 
 This means that sending CLR objects into a stream that needs to be cleaned up will require the user to ensure that this happens outside of the Akka Streams facilities (e.g. by cleaning them up after a time-out or when their results are observed on the stream output, or by other means like finalizers etc.)
 
@@ -51,8 +51,8 @@ This means that `Sink.AsPublisher<T>(true)` (for enabling fan-out support) must 
 
 We expect libraries to be built on top of Akka Streams. In order to allow users to profit from the principles that are described for Akka Streams above, the following rules are established:
 
-- libraries shall provide their users with reusable pieces, i.e expose factories that return graphs, allowing full compositionality
-- libraries may optionally and additionally provide facilities that consume and materialize graphs
+* libraries shall provide their users with reusable pieces, i.e expose factories that return graphs, allowing full compositionality
+* libraries may optionally and additionally provide facilities that consume and materialize graphs
 
 The reasoning behind the first rule is that compositionality would be destroyed if different libraries only accepted graphs and expected to materialize them: using two of these together would be impossible because materialization can only happen once. As a consequence, the functionality of a library must be expressed such that materialization can be done by the user, outside of the library's control.
 
@@ -66,11 +66,11 @@ The second rule allows a library to additionally provide nice sugar for the comm
 
 Akka Streams must enable a library to express any stream processing utility in terms of immutable blueprints. The most common building blocks are
 
-- Source: something with exactly one output stream
-- Sink: something with exactly one input stream
-- Flow: something with exactly one input and one output stream
-- BidiFlow: something with exactly two input streams and two output streams that conceptually behave like two Flows of opposite direction
-- Graph: a packaged stream processing topology that exposes a certain set of input and output ports, characterized by an object of type `Shape`.
+* Source: something with exactly one output stream
+* Sink: something with exactly one input stream
+* Flow: something with exactly one input and one output stream
+* BidiFlow: something with exactly two input streams and two output streams that conceptually behave like two Flows of opposite direction
+* Graph: a packaged stream processing topology that exposes a certain set of input and output ports, characterized by an object of type `Shape`.
 
 > [!NOTE]
 > A source that emits a stream of streams is still just a normal Source, the kind of elements that are produced does not play a role in the static stream topology that is being expressed.

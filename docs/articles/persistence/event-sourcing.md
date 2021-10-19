@@ -292,10 +292,10 @@ There could be cases where event streams are corrupted and multiple writers (i.e
 
 In your configuration, under the `akka.persistence.journal.xxx.replay-filter` section (where xxx is your journal plugin id), you can select the replay filter mode from one of the following values:
 
-- repair-by-discard-old
-- fail
-- warn
-- off
+* repair-by-discard-old
+* fail
+* warn
+* off
 
 For example, if you configure the replay filter for `sqlite` plugin, it looks like this:
 
