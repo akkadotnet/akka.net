@@ -52,10 +52,12 @@ namespace Akka.Remote
                 if (oldInfo == null)
                     Akka.Serialization.Serialization.CurrentTransportInformation =
                         system.Provider.SerializationInformation;
-
+                
+                
                 var serializedMsg = new SerializedMessage
                 {
-                    Message = ByteString.CopyFrom(serializer.ToBinary(message)),
+                    Message = UnsafeByteOperations.UnsafeWrap(serializer.ToBinary(message)),
+                    //Message = ByteString.CopyFrom(serializer.ToBinary(message)),
                     SerializerId = serializer.Identifier
                 };
 

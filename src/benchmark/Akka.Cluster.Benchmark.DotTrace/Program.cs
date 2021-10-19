@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Cluster.Benchmarks.Sharding;
 using Akka.Cluster.Sharding;
@@ -21,12 +22,14 @@ namespace Akka.Cluster.Benchmark.DotTrace
                 await container.Setup();
                 await runIters(20, container);
                 await container.SingleRequestResponseToRemoteEntity();
+                var sw = new Stopwatch();
                 MeasureProfiler.StartCollectingData();
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < 20; i++)
                 {
-                    Console.WriteLine($"Try {i}");
+                    sw.Restart();
+                    Console.WriteLine($"Try {i+1}");
                     await runIters(10000, container);
-                    
+                    Console.WriteLine($"Completed {i+1} in {sw.Elapsed.TotalSeconds:F2} seconds");
                 }
 
                 MeasureProfiler.SaveData();

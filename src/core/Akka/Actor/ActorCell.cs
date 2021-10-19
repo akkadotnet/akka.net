@@ -382,6 +382,25 @@ namespace Akka.Actor
                 InternalCurrentActorCellKeeper.Current = tmp;
             }
         }
+        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="action">TBD</param>
+        public void UseThreadContext<T>(Action<T> action, T state)
+        {
+            var tmp = InternalCurrentActorCellKeeper.Current;
+            InternalCurrentActorCellKeeper.Current = this;
+            try
+            {
+                action(state);
+            }
+            finally
+            {
+                //ensure we set back the old context
+                InternalCurrentActorCellKeeper.Current = tmp;
+            }
+        }
 
         /// <summary>
         /// TBD

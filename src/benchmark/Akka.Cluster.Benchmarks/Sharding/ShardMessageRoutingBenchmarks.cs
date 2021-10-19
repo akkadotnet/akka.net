@@ -161,6 +161,21 @@ namespace Akka.Cluster.Benchmarks.Sharding
             for (var i = 0; i < MsgCount; i++)
                 await _shardRegion1.Ask<ShardedMessage>(_messageToSys2);
         }
+        //[Benchmark]
+        public async Task DoubleRequestResponseToRemoteEntity()
+        {
+            for (var i = 0; i < MsgCount; i++)
+            {
+                Task[] tasks = new Task[8];
+                for (int j = 0; j < tasks.Length; j++)
+                {
+                    tasks[j] =_shardRegion1.Ask<ShardedMessage>(_messageToSys2); 
+                }
+                
+                await Task.WhenAll(tasks);
+            }
+                
+        }
 
 
         //[Benchmark]

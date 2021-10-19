@@ -99,6 +99,41 @@ namespace Akka.Remote
         /// the current endpoint writer will be stopped (dropping system messages) and the address will be gated
         /// </param>
         void Quarantine(Address address, int? uid);
+
+        IActorRef RefAskCache();
+        ActorRefAskResolverCache RefAskCacheInst();
+    }
+
+    public class RemoteAskCacheActor : ActorBase
+    {
+        private ActorRefAskResolverCache _cache;
+
+        public RemoteAskCacheActor(ActorRefAskResolverCache cache)
+        {
+            _cache = cache;
+        }
+        protected override bool Receive(object message)
+        {
+            if (message is CacheAdd m)
+            {
+                try
+                {
+                    _cache.Set(m.key, m.value);
+                }
+                catch
+                {
+                }
+
+                return true;
+            }
+            return false;
+        }
+    }
+
+    public class CacheAdd
+    {
+        public string key { get; set; }
+        public IActorRef value { get; set; }
     }
 
     /// <summary>
@@ -241,14 +276,17 @@ namespace Akka.Remote
         private ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
         private ActorRefResolveAskCache _actorRefResolveAskCache;
         private ActorPathThreadLocalCache _actorPathThreadLocalCache;
-        private ActorPathAskResolverCache _actorPathAskResolverCache;
+        //private ActorPathAskResolverCache _actorPathAskResolverCache;
 
         /// <summary>
         /// The remote death watcher.
         /// </summary>
         public IActorRef RemoteWatcher => _remoteWatcher;
         private IActorRef _remoteDeploymentWatcher;
+        private IActorRef _remoteAskHandler;
 
+        public IActorRef RefAskCache() => _remoteAskHandler;
+        public ActorRefAskResolverCache RefAskCacheInst() => _actorRefResolveAskCache.Cache;
         /// <inheritdoc/>
         public virtual void Init(ActorSystemImpl system)
         {
@@ -257,7 +295,7 @@ namespace Akka.Remote
             _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
             _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
          _actorRefResolveAskCache = ActorRefResolveAskCache.For(system);
-         _actorPathAskResolverCache = ActorPathAskResolverCache.For(system);
+         //_actorPathAskResolverCache = ActorPathAskResolverCache.For(system);
             _local.Init(system);
 
             _remotingTerminator =
@@ -268,7 +306,10 @@ namespace Akka.Remote
             _internals = CreateInternals();                              
 
             _remotingTerminator.Tell(RemoteInternals);
-
+            _remoteAskHandler = _system.SystemActorOf( 
+                RemoteSettings.ConfigureDispatcher(Props.Create(() =>
+                    new RemoteAskCacheActor(_actorRefResolveAskCache.Cache))),
+                "remoting-ask-cache");
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
@@ -478,17 +519,18 @@ namespace Akka.Remote
                 return InternalDeadLetters;
             }
 
-            bool mayBeTempActor = path.Contains("/temp/");
+            bool isTempActor = false;
+            //bool mayBeTempActor = path.Contains("/temp/");
             ActorPath actorPath = null;
-            if (_actorPathThreadLocalCache != null && _actorPathAskResolverCache != null)
+            if (_actorPathThreadLocalCache != null && _actorRefResolveAskCache != null)
             {
                 if (senderOption.HasValue && senderOption.Value == true)
                 {
-                    actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path, mayBeTempActor);    
+                    actorPath = _actorPathThreadLocalCache.Cache.GetOrCompute(path, out isTempActor);    
                 }
                 else
                 {
-                    actorPath = ExtractRecipientActorPath(path, mayBeTempActor);
+                    actorPath = ExtractRecipientActorPath(path, out isTempActor);
                 }
             }
             else // cache not initialized yet
@@ -504,22 +546,29 @@ namespace Akka.Remote
             if (actorPath is RootActorPath)
                 return RootGuardian;
 
-            return (IInternalActorRef)ResolveActorRefOpt(path, mayBeTempActor); // so we can use caching
+            return (IInternalActorRef)ResolveActorRefOpt(path, isTempActor); // so we can use caching
         }
 
-        private ActorPath ExtractRecipientActorPath(string path, bool mayBeTempActor)
+        private ActorPath ExtractRecipientActorPath(string path, out bool mayBeTempActor)
         {
             ActorPath actorPath = null;
-            if (mayBeTempActor)
+            mayBeTempActor = false;
+            //if (mayBeTempActor)
             {
-                actorPath =
-                    _actorPathAskResolverCache.Cache.GetOrNull(path);
+                var maybeRef = _actorRefResolveAskCache.Cache.GetOrNull(path);
+                if (maybeRef != null)
+                {
+                    actorPath = maybeRef.Path;
+                    mayBeTempActor = true;
+                }
+                //actorPath =
+                //    _actorPathAskResolverCache.Cache.GetOrNull(path);
             }
 
             if (actorPath == null)
             {
                 actorPath =
-                    _actorPathThreadLocalCache.Cache.GetOrCompute(path, mayBeTempActor);
+                    _actorPathThreadLocalCache.Cache.GetOrCompute(path, out mayBeTempActor);
             }
 
             return actorPath;

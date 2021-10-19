@@ -16,6 +16,8 @@ using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
 using Akka.Configuration;
+using LanguageExt;
+using LanguageExt.TypeClasses;
 
 namespace Akka.Remote
 {
@@ -108,6 +110,20 @@ namespace Akka.Remote
     /// </summary>
     internal interface IPriorityMessage { }
 
+    public struct AddressEq : Eq<Address>
+    {
+        public int GetHashCode(Address x)
+        {
+            return x.GetHashCode();
+        }
+
+        public bool Equals(Address x, Address y)
+        {
+            if (x != null)
+                return x.Equals(y);
+            return (y == null);
+        }
+    }
     internal sealed class AddressEqualityComparer : EqualityComparer<Address>
     {
         public static readonly AddressEqualityComparer Instance =
@@ -130,12 +146,13 @@ namespace Akka.Remote
     internal sealed class Remoting : RemoteTransport
     {
         private readonly ILoggingAdapter _log;
-        private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
+        private volatile IDictionary<string, System.Collections.Generic.HashSet<ProtocolTransportAddressPair>> _transportMapping;
         private volatile IActorRef _endpointManager;
 
         // This is effectively a write-once variable similar to a lazy val. The reason for not using a lazy val is exception
         // handling.
-        private volatile HashSet<Address> _addresses;
+        //private volatile HashSet<Address> _addresses;
+        private LanguageExt.HashSet<AddressEq,Address> _addresses;
 
         // This variable has the same semantics as the addresses variable, in the sense it is written once, and emulates
         // a lazy val
@@ -162,7 +179,8 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public override ISet<Address> Addresses
+        public override HashSet<AddressEq,Address> Addresses
+        //public override ISet<Address> Addresses
         {
             get { return _addresses; }
         }
@@ -212,20 +230,26 @@ namespace Akka.Remote
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if(akkaProtocolTransports.Count==0)
                         throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
-                    
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address), AddressEqualityComparer.Instance);
+
+                    _addresses =
+                        _addresses.AddRange(
+                            akkaProtocolTransports.Select(a => a.Address)); 
+                        //new System.Collections.Generic.HashSet<Address>(akkaProtocolTransports.Select(a => a.Address), AddressEqualityComparer.Instance);
 
                     IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
                         akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
-                    _transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
+                    _transportMapping = new Dictionary<string, System.Collections.Generic.HashSet<ProtocolTransportAddressPair>>();
                     foreach (var g in tmp)
                     {
-                        var set = new HashSet<ProtocolTransportAddressPair>(g);
+                        var set = new System.Collections.Generic.HashSet<ProtocolTransportAddressPair>(g);
                         _transportMapping.Add(g.Key, set);
                     }
 
                     _defaultAddress = akkaProtocolTransports.Head().Address;
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address), AddressEqualityComparer.Instance);
+                    _addresses =
+                        new HashSet<AddressEq, Address>().AddRange(
+                            akkaProtocolTransports.Select(x => x.Address)); 
+                    //_addresses = new System.Collections.Generic.HashSet<Address>(akkaProtocolTransports.Select(x => x.Address), AddressEqualityComparer.Instance);
 
                     _log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
 
@@ -392,7 +416,7 @@ namespace Akka.Remote
         /// <exception cref="RemoteTransportException">TBD</exception>
         /// <returns>TBD</returns>
         internal static Address LocalAddressForRemote(
-            IDictionary<string, HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
+            IDictionary<string, System.Collections.Generic.HashSet<ProtocolTransportAddressPair>> transportMapping, Address remote)
         {
             if (transportMapping.TryGetValue(remote.Protocol, out var transports))
             {

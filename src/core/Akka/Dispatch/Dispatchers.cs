@@ -261,8 +261,13 @@ namespace Akka.Dispatch
         public override void Execute(IRunnable run)
         {
             if (Volatile.Read(ref _shuttingDown) == 1)
-                throw new RejectedExecutionException("ForkJoinExecutor is shutting down");
-            _dedicatedThreadPool.QueueUserWorkItem(run.Run);
+                ThrowShutdownHelper();
+            _dedicatedThreadPool.QueueUserWorkItem(r=>r.Run(), run);
+        }
+
+        private static void ThrowShutdownHelper()
+        {
+            throw new RejectedExecutionException("ForkJoinExecutor is shutting down");
         }
 
         /// <summary>

@@ -19,6 +19,8 @@ using Akka.Util;
 using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Akka.Configuration;
+using LanguageExt;
+using LanguageExt.TypeClasses;
 
 namespace Akka.Serialization
 {
@@ -142,8 +144,44 @@ namespace Akka.Serialization
 
         private readonly Serializer _nullSerializer;
 
-        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>();
-        private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
+        private class TypeEqualityComparer : IEqualityComparer<Type>
+        {
+            public static readonly TypeEqualityComparer Default =
+                new TypeEqualityComparer();
+
+            public bool Equals(Type x, Type y)
+            {
+                return x == y;
+            }
+
+            public int GetHashCode(Type obj)
+            {
+                return obj.GetHashCode();
+            }
+        }
+        private struct TypeEq : Eq<Type>
+        {
+            public int GetHashCode(Type x)
+            {
+                if (x is null)
+                {
+                    return 0;
+                }
+                return x.GetHashCode();
+            }
+
+            public bool Equals(Type x, Type y)
+            {
+                return (x == y) ;
+            }
+        }
+
+        //private HashMap<TypeEq,Type, Serializer> _serializerMap =
+        //    new HashMap<TypeEq,Type, Serializer>();
+        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new ConcurrentDictionary<Type, Serializer>(TypeEqualityComparer.Default);
+
+        private readonly Serializer[] _serializersById = new Serializer[1024];
+        //private readonly Dictionary<int, Serializer> _serializersById = new Dictionary<int, Serializer>();
         private readonly Dictionary<string, Serializer> _serializersByName = new Dictionary<string, Serializer>();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
@@ -326,7 +364,8 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
+            _serializersById[serializer.Identifier + 255] = serializer;
+            //_serializersById.Add(serializer.Identifier, serializer);
         }
 
         /// <summary>
@@ -337,7 +376,8 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(string name, Serializer serializer)
         {
-            _serializersById.Add(serializer.Identifier, serializer);
+            _serializersById[serializer.Identifier + 255] = serializer;
+            //_serializersById.Add(serializer.Identifier, serializer);
             _serializersByName.Add(name, serializer);
         }
 
@@ -350,6 +390,7 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
+            //_serializerMap = _serializerMap.AddOrUpdate(type, serializer);
             _serializerMap[type] = serializer;
         }
 
@@ -377,7 +418,9 @@ namespace Akka.Serialization
         {
             return WithTransport(() =>
             {
-                if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                var serializer = _serializersById[serializerId + 255];
+                if (serializer == null)
+                //if (!_serializersById.TryGetValue(serializerId, out var serializer))
                     throw new SerializationException(
                         $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
                         " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
@@ -399,10 +442,10 @@ namespace Akka.Serialization
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
         {
-            if (!_serializersById.TryGetValue(serializerId, out var serializer))
-                throw new SerializationException(
-                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
-                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+            var serializer = _serializersById[serializerId + 255];
+            if (serializer == null)
+            //if (!_serializersById.TryGetValue(serializerId, out var serializer)) 
+                ThrowCannotFindSerializerHelper(serializerId, manifest);
 
             // not using `withTransportInformation { () =>` because deserializeByteBuffer is supposed to be the
             // possibility for allocation free serialization
@@ -435,6 +478,14 @@ namespace Akka.Serialization
             }
         }
 
+        private static void ThrowCannotFindSerializerHelper(int serializerId,
+            string manifest)
+        {
+            throw new SerializationException(
+                $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
+                " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+        }
+
         /// <summary>
         /// Returns the Serializer configured for the given object, returns the NullSerializer if it's null.
         /// </summary>
@@ -464,6 +515,8 @@ namespace Akka.Serialization
         /// <returns>The serializer configured for the given object type</returns>
         public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
+            //var fullMatchSerializer = _serializerMap.Find(objectType).IfNoneUnsafe((Serializer)null);
+            //if (fullMatchSerializer != null)
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
                 return fullMatchSerializer;
 
@@ -486,6 +539,8 @@ namespace Akka.Serialization
 
             // do a final check for the "object" serializer
             if (serializer == null)
+                //serializer = _serializerMap.Find(_objectType)
+                //    .IfNoneUnsafe((Serializer)null);
                 _serializerMap.TryGetValue(_objectType, out serializer);
 
             if (serializer == null)
@@ -557,7 +612,8 @@ namespace Akka.Serialization
 
         internal Serializer GetSerializerById(int serializerId)
         {
-            return _serializersById[serializerId];
+            return _serializersById[serializerId+255];
+            //return _serializersById[serializerId];
         }
     }
 }

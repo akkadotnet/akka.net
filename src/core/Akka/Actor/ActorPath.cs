@@ -216,7 +216,6 @@ namespace Akka.Actor
             {
                 if (_depth == 0)
                     return ImmutableArray<string>.Empty;
-
                 var b = ImmutableArray.CreateBuilder<string>(_depth);
                 b.Count = _depth;
                 var p = this;
@@ -265,12 +264,15 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public bool Equals(ActorPath other)
         {
-            if (other is null || _depth != other._depth)
+            if (other is null)
                 return false;
 
             if (ReferenceEquals(this, other))
                 return true;
-
+            if (_depth != other._depth)
+            {
+                return false;
+            }
             if (!Address.Equals(other.Address))
                 return false;
 
@@ -421,7 +423,7 @@ namespace Akka.Actor
                 return false;
             }
 
-            return TryParse(new RootActorPath(address), absoluteUri, out actorPath);
+            return TryParse(new RootActorPath(address), absoluteUri, out actorPath);//, out bool isTemp);
         }
 
         /// <summary>
@@ -434,7 +436,7 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static bool TryParse(ActorPath basePath, string absoluteUri, out ActorPath actorPath)
         {
-            return TryParse(basePath, absoluteUri.AsSpan(), out actorPath);
+            return TryParse(basePath, absoluteUri.AsSpan(), out actorPath); //, out bool isTemp);
         }
 
         /// <summary>
@@ -445,10 +447,12 @@ namespace Akka.Actor
         /// <param name="absoluteUri">TBD</param>
         /// <param name="actorPath">TBD</param>
         /// <returns>TBD</returns>
-        public static bool TryParse(ActorPath basePath, ReadOnlySpan<char> absoluteUri, out ActorPath actorPath)
+        public static bool TryParse(ActorPath basePath, ReadOnlySpan<char> absoluteUri, out ActorPath actorPath
+            )
+            //, out bool isTemp)
         {
             actorPath = basePath;
-
+            //isTemp = false;
             // check for Uri fragment here
             int nextSlash;
 
@@ -457,16 +461,21 @@ namespace Akka.Actor
                 nextSlash = absoluteUri.IndexOf('/');
                 if (nextSlash > 0)
                 {
-                    var name = absoluteUri.Slice(0, nextSlash).ToString();
-                    actorPath = new ChildActorPath(actorPath, name, ActorCell.UndefinedUid);
+                    //var name = absoluteUri.Slice(0, nextSlash).ToString();
+                    actorPath = new ChildActorPath(actorPath, absoluteUri.Slice(0, nextSlash).ToString(), ActorCell.UndefinedUid);
                 }
                 else if (nextSlash < 0 && absoluteUri.Length > 0) // final segment
                 {
+                    //if (string.Equals(actorPath._name, "temp",
+                    //    StringComparison.OrdinalIgnoreCase))
+                    //{
+                    //    isTemp = true;
+                    //}
                     var fragLoc = absoluteUri.IndexOf('#');
                     if (fragLoc > -1)
                     {
-                        var fragment = absoluteUri.Slice(fragLoc + 1);
-                        var fragValue = SpanHacks.Parse(fragment);
+                        //var fragment = absoluteUri.Slice(fragLoc + 1);
+                        var fragValue = SpanHacks.Parse(absoluteUri.Slice(fragLoc + 1));
                         absoluteUri = absoluteUri.Slice(0, fragLoc);
                         actorPath = new ChildActorPath(actorPath, absoluteUri.ToString(), fragValue);
                     }
@@ -588,11 +597,10 @@ namespace Akka.Actor
                 prefix.CopyTo(buffer);
 
                 var offset = buffer.Length;
-                ReadOnlySpan<char> name;
                 p = this;
                 while (p._depth > 0)
                 {
-                    name = p._name.AsSpan();
+                    var name = p._name.AsSpan();
                     offset -= name.Length + 1;
                     buffer[offset] = '/';
                     name.CopyTo(buffer.Slice(offset + 1, name.Length));
@@ -715,7 +723,12 @@ namespace Akka.Actor
 
         private string AppendUidFragment(string withAddress)
         {
-            return _uid != ActorCell.UndefinedUid ? $"{withAddress}#{_uid}" : withAddress;
+            return _uid != ActorCell.UndefinedUid
+                ?
+                //string.Concat(withAddress,"#",Uid.ToString())
+                string.Concat(withAddress, "#", Uid.ToString())
+            //$"{withAddress}#{_uid}" 
+                : withAddress;
         }
 
         /// <summary>

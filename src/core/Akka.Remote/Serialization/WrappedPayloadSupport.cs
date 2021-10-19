@@ -28,8 +28,8 @@ namespace Akka.Remote.Serialization
 
             var payloadProto = new Proto.Msg.Payload();
             var serializer = _system.Serialization.FindSerializerFor(payload);
-
-            payloadProto.Message = ByteString.CopyFrom(serializer.ToBinary(payload));
+            payloadProto.Message = UnsafeByteOperations.UnsafeWrap(serializer.ToBinary(payload));
+            //payloadProto.Message =  ByteString.CopyFrom(serializer.ToBinary(payload));
             payloadProto.SerializerId = serializer.Identifier;
 
             // get manifest

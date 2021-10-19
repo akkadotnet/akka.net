@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
+using LanguageExt;
 
 namespace Akka.Remote
 {
@@ -51,7 +52,8 @@ namespace Akka.Remote
         /// <summary>
         /// Addresses to be used in <see cref="RootActorPath"/> of refs generated for this transport.
         /// </summary>
-        public abstract ISet<Address> Addresses { get; }
+        //public abstract ISet<Address> Addresses { get; }
+        public abstract HashSet<AddressEq,Address> Addresses { get; }
 
         /// <summary>
         /// The default transport address of the <see cref="ActorSystem"/>. 

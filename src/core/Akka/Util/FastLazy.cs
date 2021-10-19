@@ -67,18 +67,24 @@ namespace Akka.Util
             {
                 if (IsValueCreatedInternal())
                     return _createdValue;
-                if (!IsValueCreationInProgress())
-                {
-                    Volatile.Write(ref _creating, 1);
-                    _createdValue = _producer();
-                    Volatile.Write(ref _created, 1);
-                }
-                else
-                {
-                    SpinWait.SpinUntil(IsValueCreatedInternal);
-                }
-                return _createdValue;
+                return ReturnCreation();
             }
+        }
+
+        private T ReturnCreation()
+        {
+            if (!IsValueCreationInProgress())
+            {
+                Volatile.Write(ref _creating, 1);
+                _createdValue = _producer();
+                Volatile.Write(ref _created, 1);
+            }
+            else
+            {
+                SpinWait.SpinUntil(IsValueCreatedInternal);
+            }
+
+            return _createdValue;
         }
     }
 

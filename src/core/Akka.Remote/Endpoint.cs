@@ -1468,7 +1468,10 @@ namespace Akka.Remote
                 }
 
                 var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    this.SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck, 
+                    _provider
+                        .RefAskCache()
+                    );
 
                 _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 

@@ -32,7 +32,7 @@ namespace Akka.Util.Reflection
         /// <returns>TBD</returns>
         public static Type GetType(string typeName)
         {
-            return TypeMap.GetOrAdd(typeName, GetTypeInternal);
+            return TypeMap.GetOrAdd(typeName,(val)=>Type.GetType(val, true));
         }
 
         private static Type GetTypeInternal(string typeName)

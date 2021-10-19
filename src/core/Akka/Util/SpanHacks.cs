@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Akka.Util
@@ -29,6 +30,26 @@ namespace Akka.Util
             if (TryParse(str, out var i))
                 return i;
             throw new FormatException($"[{str.ToString()}] is now a valid numeric format");
+        }
+
+        private static readonly char[] numStrings = new[]
+        {
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+        };
+        public static string ToString(long number)
+        {
+            return number.ToString();
+            Span<char> charArr = stackalloc char[19];
+            int length = 1;
+            long curr = 0;
+            long theNum = number;
+            do
+            {
+                curr = theNum % 10;
+                charArr[19 - length] = numStrings[theNum % 10];
+                theNum = theNum / 10;
+            } while (curr != 0);
+
         }
 
         /// <summary>

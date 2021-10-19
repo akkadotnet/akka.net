@@ -5,6 +5,7 @@
 // // </copyright>
 // //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding;
@@ -272,7 +273,9 @@ serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serializati
         {
             var props = Props.Create(() => new ShardedEntityActor());
             var sharding = ClusterSharding.Get(system);
-            return sharding.Start(entityName, s => props, ClusterShardingSettings.Create(system),
+            return sharding.Start(entityName, s => props, ClusterShardingSettings.Create(system)
+                    .WithPassivateIdleAfter(TimeSpan.Zero)
+                ,
                 new ShardMessageExtractor());
         }
     }

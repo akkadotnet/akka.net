@@ -17,8 +17,137 @@ using BitFaster.Caching.Lru;
 
 namespace Akka.Remote.Serialization.BitFasterBased
 {
+    public interface IPolicy<in K, in V, I> where I : LruItem<K, V>
+    {
+        I CreateItem(K key, V value);
+
+        void Touch(I item);
+
+        bool ShouldDiscard(I item);
+
+        ItemDestination RouteHot(I item);
+
+        ItemDestination RouteWarm(I item);
+
+        ItemDestination RouteCold(I item);
+    }
+    /// <summary>
+    /// Discards the least recently used items first. 
+    /// </summary>
+    public readonly struct LruPolicy<K, V> : IPolicy<K, V, LruItem<K, V>>
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LruItem<K, V> CreateItem(K key, V value)
+        {
+            return new LruItem<K, V>(key, value);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Touch(LruItem<K, V> item)
+        {
+            item.SetAccessed();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ShouldDiscard(LruItem<K, V> item)
+        {
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ItemDestination RouteHot(LruItem<K, V> item)
+        {
+            if (item.WasAccessed)
+            {
+                return ItemDestination.Warm;
+            }
+
+            return ItemDestination.Cold;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ItemDestination RouteWarm(LruItem<K, V> item)
+        {
+            if (item.WasAccessed)
+            {
+                return ItemDestination.Warm;
+            }
+
+            return ItemDestination.Cold;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ItemDestination RouteCold(LruItem<K, V> item)
+        {
+            if (item.WasAccessed)
+            {
+                return ItemDestination.Warm;
+            }
+
+            return ItemDestination.Remove;
+        }
+    }
+    
+    [Flags]
+    public enum LruItemStatus
+    {
+        WasRemoved = 1,
+        WasAccessed = 2,
+        ShouldToss = 4
+    }
+    public class LruItem<K, V>
+    {
+        private volatile LruItemStatus _status;
+        //private volatile bool wasAccessed;
+        //private volatile bool wasRemoved;
+
+        public LruItem(K k, V v)
+        {
+            this.Key = k;
+            this.Value = v;
+        }
+
+        public readonly K Key;
+
+        public V Value { get; set; }
+
+        public bool WasAccessed
+        {
+            get => (this._status & LruItemStatus.WasAccessed) == LruItemStatus.WasAccessed;
+            //set => this._status = this._status & LruItemStatus.WasAccessed;
+        }
+
+        public void SetAccessed()
+        {
+            this._status = this._status & LruItemStatus.WasAccessed;
+        }
+
+        public void SetUnaccessed()
+        {
+            this._status = (this._status & (LruItemStatus)int.MaxValue -
+                (int)LruItemStatus.WasAccessed);
+        }
+
+        public bool WasRemoved
+        {
+            get => (this._status & LruItemStatus.WasRemoved) == LruItemStatus.WasRemoved;
+            
+        }
+
+        public void SetRemoved()
+        {
+            this._status = this._status & LruItemStatus.WasRemoved;
+        }
+
+        public bool ShouldFastDiscard
+        {
+            get => (this._status & LruItemStatus.ShouldToss) ==
+                   LruItemStatus.ShouldToss;
+            set => this._status = this._status & LruItemStatus.ShouldToss;
+        }
+    }
     ///<inheritdoc/>
-    public sealed class FastConcurrentLru<K, V> : TemplateConcurrentLru<K, V, LruItem<K, V>, LruPolicy<K, V>, NullHitCounter>
+    public sealed class FastConcurrentLru<K, V> : TemplateConcurrentLru<K, V, NullHitCounter>
     {
         /// <summary>
         /// Initializes a new instance of the FastConcurrentLru class with the specified capacity that has the default 
@@ -60,16 +189,14 @@ namespace Akka.Remote.Serialization.BitFasterBased
     /// 5. When warm is full, warm tail is moved to warm head or cold depending on WasAccessed.
     /// 6. When cold is full, cold tail is moved to warm head or removed from dictionary on depending on WasAccessed.
     /// </remarks>
-    public class TemplateConcurrentLru<K, V, I, P, H> : ICache<K, V>
-        where I : LruItem<K, V>
-        where P : struct, IPolicy<K, V, I>
+    public class TemplateConcurrentLru<K, V, H> : ICache<K, V>
         where H : struct, IHitCounter
     {
-        private readonly ConcurrentDictionary<K, I> dictionary;
+        private readonly ConcurrentDictionary<K, LruItem<K,V>> dictionary;
 
-        private readonly ConcurrentQueue<I> hotQueue;
-        private readonly ConcurrentQueue<I> warmQueue;
-        private readonly ConcurrentQueue<I> coldQueue;
+        private readonly ConcurrentQueue<LruItem<K,V>> hotQueue;
+        private readonly ConcurrentQueue<LruItem<K,V>> warmQueue;
+        private readonly ConcurrentQueue<LruItem<K,V>> coldQueue;
 
         // maintain count outside ConcurrentQueue, since ConcurrentQueue.Count holds a global lock
         private int hotCount;
@@ -80,7 +207,7 @@ namespace Akka.Remote.Serialization.BitFasterBased
         private readonly int warmCapacity;
         private readonly int coldCapacity;
 
-        private readonly P policy;
+        private readonly LruPolicy<K,V> policy;
 
         // Since H is a struct, making it readonly will force the runtime to make defensive copies
         // if mutate methods are called. Therefore, field must be mutable to maintain count.
@@ -90,7 +217,7 @@ namespace Akka.Remote.Serialization.BitFasterBased
             int concurrencyLevel,
             int capacity,
             IEqualityComparer<K> comparer,
-            P itemPolicy,
+            LruPolicy<K,V> itemPolicy,
             H hitCounter)
         {
             if (capacity < 3)
@@ -108,13 +235,13 @@ namespace Akka.Remote.Serialization.BitFasterBased
             this.warmCapacity = queueCapacity.warm;
             this.coldCapacity = queueCapacity.cold;
 
-            this.hotQueue = new ConcurrentQueue<I>();
-            this.warmQueue = new ConcurrentQueue<I>();
-            this.coldQueue = new ConcurrentQueue<I>();
+            this.hotQueue = new ConcurrentQueue<LruItem<K,V>>();
+            this.warmQueue = new ConcurrentQueue<LruItem<K,V>>();
+            this.coldQueue = new ConcurrentQueue<LruItem<K,V>>();
 
             int dictionaryCapacity = this.hotCapacity + this.warmCapacity + this.coldCapacity + 1;
 
-            this.dictionary = new ConcurrentDictionary<K, I>(concurrencyLevel, dictionaryCapacity, comparer);
+            this.dictionary = new ConcurrentDictionary<K, LruItem<K,V>>(concurrencyLevel, dictionaryCapacity, comparer);
             this.policy = itemPolicy;
             this.hitCounter = hitCounter;
         }
@@ -131,7 +258,7 @@ namespace Akka.Remote.Serialization.BitFasterBased
         ///<inheritdoc/>
         public bool TryGet(K key, out V value)
         {
-            I item;
+            LruItem<K,V> item;
             if (dictionary.TryGetValue(key, out item))
             {
                 return GetOrDiscard(item, out value);
@@ -144,23 +271,23 @@ namespace Akka.Remote.Serialization.BitFasterBased
         
         public bool TryPullLazy(K key, out V value)
         {
-            if (this.dictionary.TryRemove(key, out var existing))
+            if (this.dictionary.TryGetValue(key, out var existing))
             {
                 bool retVal = GetOrDiscard(existing, out value);
-                existing.WasAccessed = false;
-                existing.WasRemoved = true;
-
+                //existing.WasAccessed = false;
+                existing.SetRemoved();
+                existing.ShouldFastDiscard = true;
                 // serialize dispose (common case dispose not thread safe)
-                if (existing.Value is IDisposable)
-                {
-                    lock (existing)
-                    {
-                        if (existing.Value is IDisposable d)
-                        {
-                            d.Dispose();
-                        }
-                    }    
-                }
+                //if (existing.Value is IDisposable)
+                //{
+                //    lock (existing)
+                //    {
+                //        if (existing.Value is IDisposable d)
+                //        {
+                //            d.Dispose();
+                //        }
+                //    }    
+                //}
 
                 return retVal;
             }
@@ -172,7 +299,7 @@ namespace Akka.Remote.Serialization.BitFasterBased
         // AggressiveInlining forces the JIT to inline policy.ShouldDiscard(). For LRU policy 
         // the first branch is completely eliminated due to JIT time constant propogation.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool GetOrDiscard(I item, out V value)
+        private bool GetOrDiscard(LruItem<K,V> item, out V value)
         {
             if (this.policy.ShouldDiscard(item))
             {
@@ -241,29 +368,31 @@ namespace Akka.Remote.Serialization.BitFasterBased
         {
             if (this.dictionary.TryGetValue(key, out var existing))
             {
-                var kvp = new KeyValuePair<K, I>(key, existing);
+                var kvp = new KeyValuePair<K, LruItem<K,V>>(key, existing);
 
                 // hidden atomic remove
                 // https://devblogs.microsoft.com/pfxteam/little-known-gems-atomic-conditional-removals-from-concurrentdictionary/
-                if (((ICollection<KeyValuePair<K, I>>)this.dictionary).Remove(kvp))
+                if (((ICollection<KeyValuePair<K, LruItem<K,V>>>)this.dictionary).Remove(kvp))
                 {
                     // Mark as not accessed, it will later be cycled out of the queues because it can never be fetched 
                     // from the dictionary. Note: Hot/Warm/Cold count will reflect the removed item until it is cycled 
                     // from the queue.
-                    existing.WasAccessed = false;
-                    existing.WasRemoved = true;
+                    //existing.WasAccessed = false;
+                    existing.SetUnaccessed();
+                    existing.SetRemoved();
+                    //existing.WasRemoved = true;
 
                     // serialize dispose (common case dispose not thread safe)
-                    if (existing.Value is IDisposable)
-                    {
-                        lock (existing)
-                        {
-                            if (existing.Value is IDisposable d)
-                            {
-                                d.Dispose();
-                            }
-                        }    
-                    }
+                    //if (existing.Value is IDisposable)
+                    //{
+                    //    lock (existing)
+                    //    {
+                    //        if (existing.Value is IDisposable d)
+                    //        {
+                    //            d.Dispose();
+                    //        }
+                    //    }    
+                    //}
                     
 
                     return true;
@@ -289,10 +418,10 @@ namespace Akka.Remote.Serialization.BitFasterBased
                         V oldValue = existing.Value;
                         existing.Value = value;
 
-                        if (oldValue is IDisposable d)
-                        {
-                            d.Dispose();
-                        }
+                        //if (oldValue is IDisposable d)
+                        //{
+                        //    d.Dispose();
+                        //}
 
                         return true;
                     }
@@ -472,9 +601,9 @@ namespace Akka.Remote.Serialization.BitFasterBased
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Move(I item, ItemDestination where)
+        private void Move(LruItem<K,V> item, ItemDestination where)
         {
-            item.WasAccessed = false;
+            item.SetUnaccessed();
             if (item.WasRemoved)
                 return;
             switch (where)
@@ -488,25 +617,36 @@ namespace Akka.Remote.Serialization.BitFasterBased
                     Interlocked.Increment(ref this.coldCount);
                     break;
                 case ItemDestination.Remove:
-
-                    var kvp = new KeyValuePair<K, I>(item.Key, item);
-
-                    // hidden atomic remove
-                    // https://devblogs.microsoft.com/pfxteam/little-known-gems-atomic-conditional-removals-from-concurrentdictionary/
-                    if (((ICollection<KeyValuePair<K, I>>)this.dictionary).Remove(kvp))
+                    if (item.ShouldFastDiscard == false)
                     {
-                        item.WasRemoved = true;
 
-                        if (item.Value is IDisposable)
+                        var kvp =
+                            new KeyValuePair<K, LruItem<K, V>>(item.Key, item);
+
+                        // hidden atomic remove
+                        // https://devblogs.microsoft.com/pfxteam/little-known-gems-atomic-conditional-removals-from-concurrentdictionary/
+                        if (((ICollection<KeyValuePair<K, LruItem<K, V>>>)this
+                            .dictionary).Remove(kvp))
                         {
-                            lock (item)
-                            {
-                                if (item.Value is IDisposable d)
-                                {
-                                    d.Dispose();
-                                }
-                            }
+                            item.SetRemoved();
+                            //item.WasRemoved = true;
+
+                            //if (item.Value is IDisposable)
+                            //{
+                            //    lock (item)
+                            //    {
+                            //        if (item.Value is IDisposable d)
+                            //        {
+                            //            d.Dispose();
+                            //        }
+                            //    }
+                            //}
                         }
+
+                    }
+                    else
+                    {
+                        this.dictionary.TryRemove(item.Key, out var trash);
                     }
 
                     break;

@@ -204,13 +204,13 @@ namespace Akka.Remote.Transport
         protected readonly ActorSystem System;
         protected readonly ActorPathThreadLocalCache ActorPathCache;
         protected readonly ActorRefResolveAskCache AskRefCache;
-        protected readonly ActorPathAskResolverCache AskPathCache;
+        //protected readonly ActorPathAskResolverCache AskPathCache;
         protected AkkaPduCodec(ActorSystem system)
         {
             System = system;
             ActorPathCache = ActorPathThreadLocalCache.For(system);
             AskRefCache = ActorRefResolveAskCache.For(system);
-            AskPathCache = ActorPathAskResolverCache.For(system);
+            //AskPathCache = ActorPathAskResolverCache.For(system);
         }
 
         /// <summary>
@@ -289,9 +289,15 @@ namespace Akka.Remote.Transport
         /// <param name="senderOption">TBD</param>
         /// <param name="seqOption">TBD</param>
         /// <param name="ackOption">TBD</param>
+        /// <param name="refAskCache"></param>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructMessage(Address localAddress, IActorRef recipient,
-            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null);
+        public abstract ByteString ConstructMessage(Address localAddress,
+            IActorRef recipient,
+            SerializedMessage serializedMessage, IActorRef senderOption = null,
+            SeqNo seqOption = null, Ack ackOption = null,
+            //IRemoteActorRefProvider provider = null
+            IActorRef refAskCache = null
+            );
 
         /// <summary>
         /// TBD
@@ -473,9 +479,15 @@ namespace Akka.Remote.Transport
         /// <param name="senderOption">TBD</param>
         /// <param name="seqOption">TBD</param>
         /// <param name="ackOption">TBD</param>
+        /// <param name="refAskCache"></param>
         /// <returns>TBD</returns>
-        public override ByteString ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
-            IActorRef senderOption = null, SeqNo seqOption = null, Ack ackOption = null)
+        public override ByteString ConstructMessage(Address localAddress,
+            IActorRef recipient, SerializedMessage serializedMessage,
+            IActorRef senderOption = null, SeqNo seqOption = null,
+            Ack ackOption = null,
+            //IRemoteActorRefProvider provider = null
+            IActorRef refAskCache = null
+            )
         {
             var ackAndEnvelope = new AckAndEnvelopeContainer();
             var envelope = new RemoteEnvelope() { Recipient = SerializeActorRef(recipient.Path.Address, recipient) };
@@ -484,8 +496,9 @@ namespace Akka.Remote.Transport
                 envelope.Sender = SerializeActorRef(localAddress, senderOption);
                 if (senderOption is FutureActorRef)
                 {
-                    AskRefCache.Cache.Set(envelope.Sender.Path, senderOption);
-                    AskPathCache.Cache.Set(envelope.Sender.Path, senderOption.Path);
+                    //provider?.RefAskCacheInst().Set(envelope.Sender.Path, senderOption);
+                    refAskCache.Tell(new CacheAdd(){key = envelope.Sender.Path, value = senderOption});
+                    //AskPathCache.Cache.Set(envelope.Sender.Path, senderOption.Path);
                 }
             }
 

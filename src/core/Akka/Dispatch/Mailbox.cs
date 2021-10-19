@@ -352,11 +352,11 @@ namespace Akka.Dispatch
             {
                 if (!IsClosed()) // Volatile read, needed here
                 {
-                    Actor.UseThreadContext(() =>
+                    Actor.UseThreadContext((state) =>
                     {
-                        ProcessAllSystemMessages(); // First, deal with any system messages
-                        ProcessMailbox(); // Then deal with messages
-                    });
+                        state.ProcessAllSystemMessages(); // First, deal with any system messages
+                        state.ProcessMailbox(); // Then deal with messages
+                    },this);
                 }
             }
             finally

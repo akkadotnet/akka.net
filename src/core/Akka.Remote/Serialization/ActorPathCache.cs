@@ -85,23 +85,26 @@ namespace Akka.Remote.Serialization
         public readonly FastConcurrentLru<string, ActorPath> _rootCache =
             new FastConcurrentLru<string, ActorPath>(Environment.ProcessorCount,
                 540, FastHashComparer.Default);
-        public ActorPath GetOrCompute(string k, bool mayBeTempActor)
+        public ActorPath GetOrCompute(string k, out bool isTempActor)
         {
-            if (mayBeTempActor)
-            {
-                return ParsePath(k);
-            }
+            //if (mayBeTempActor)
+            //{
+            //    return ParsePath(k);
+            //}
             if (_cache.TryGet(k, out ActorPath outPath))
             {
+                isTempActor = true;
                 return outPath;
             }
 
             outPath = ParsePath(k);
-            if (outPath != null)
+
+            isTempActor = k.Contains("/temp/"); 
+            if (outPath != null && !isTempActor)
             {
+                
                 _cache.TryAdd(k,outPath);
             }
-
             return outPath;
         }
 
@@ -141,7 +144,7 @@ namespace Akka.Remote.Serialization
                 _rootCache.TryAdd(rootPath, actorPath);
             }
 
-            if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))
+            if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))//, out bool mayBeTemp))
                 return null;
 
             return actorPath;
@@ -195,7 +198,7 @@ namespace Akka.Remote.Serialization
                 TrySet(rootPath, actorPath);
             }
 
-            if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))
+            if (!ActorPath.TryParse(actorPath, absoluteUri, out actorPath))//, out bool isTemp))
                 return null;
 
             return actorPath;            
