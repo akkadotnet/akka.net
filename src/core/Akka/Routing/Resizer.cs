@@ -226,13 +226,10 @@ namespace Akka.Routing
                         var underlying = actorRef.Underlying;
                         if (underlying is ActorCell cell)
                         {
-                            if (cell.Mailbox.IsSuspended() && cell.Mailbox.NumberOfMessages >= PressureThreshold)
-                                return true;
-                            
                             if (PressureThreshold == 1)
-                                return cell.Mailbox.IsScheduled() && cell.Mailbox.HasMessages;
+                                return (cell.Mailbox.IsScheduled() || cell.Mailbox.IsSuspended()) && cell.Mailbox.HasMessages;
                             if (PressureThreshold < 1)
-                                return cell.Mailbox.IsScheduled() && cell.CurrentMessage != null;
+                                return (cell.Mailbox.IsScheduled() || cell.Mailbox.IsSuspended()) && cell.CurrentMessage != null;
 
                             return cell.Mailbox.NumberOfMessages >= PressureThreshold;
                         }
