@@ -106,20 +106,17 @@ namespace Akka.Cluster.Tests.MultiNode
                 {
                     var seeds = GetSeedNodes();
                     seeds.Count.Should().Be(4); // validate that we have complete seed node list
-                    Cluster.Get(seed1System.Value).JoinSeedNodes(seeds);
+                    var cluster = Cluster.Get(seed1System.Value);
+                    cluster.JoinSeedNodes(seeds);
                     AwaitAssert(() =>
                     {
-                        Cluster.Get(seed1System.Value)
-                            .State.Members.Count
-                            .Should()
-                            .Be(3);
-                    }, TimeSpan.FromSeconds(10));
+                        cluster.State.Members.Count.Should().Be(3);
+                    }, TimeSpan.FromSeconds(20));
                     AwaitAssert(() =>
                     {
-                        Cluster.Get(seed1System.Value)
+                        cluster
                             .State.Members.All(c => c.Status == MemberStatus.Up)
-                            .Should()
-                            .BeTrue();
+                            .Should().BeTrue();
                     });
                 }, _config.Seed1);
                 RunOn(() =>
