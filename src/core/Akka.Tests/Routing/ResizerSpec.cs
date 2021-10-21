@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
@@ -61,6 +62,24 @@ namespace Akka.Tests.Routing
                 Receive<string>(s => s == "echo", s =>
                 {
                     Sender.Tell("reply");
+                });
+            }
+        }
+
+        private class PressureAsyncActor : ReceiveActor
+        {
+            public PressureAsyncActor()
+            {
+                ReceiveAsync<TimeSpan>(async d =>
+                {
+                    await Task.Delay(d);
+                    Sender.Tell("done");
+                });
+
+                ReceiveAsync<string>(s => s == "echo", s =>
+                {
+                    Sender.Tell("reply");
+                    return Task.CompletedTask;
                 });
             }
         }
@@ -266,6 +285,55 @@ namespace Akka.Tests.Routing
             RouteeSize(router).Should().Be(resizer.UpperBound);
         }
 
+        [Fact]
+        public async Task DefaultResizer_with_ReceiveAsync_must_grow_as_needed_under_pressure()
+        {
+            var resizer = new DefaultResizer(
+                lower: 3,
+                upper: 5,
+                rampupRate: 0.1,
+                backoffRate: 0.0,
+                pressureThreshold: 1,
+                messagesPerResize: 1,
+                backoffThreshold: 0.0);
+
+            var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<PressureAsyncActor>()));
+
+            // first message should create the minimum number of routees
+            router.Tell("echo");
+            ExpectMsg("reply");
+
+            RouteeSize(router).Should().Be(resizer.LowerBound);
+
+            Func<int, TimeSpan, Task> loop = async (loops, d) =>
+            {
+                for (var i = 0; i < loops; i++)
+                {
+                    router.Tell(d);
+
+                    //sending too quickly will result in skipped resize due to many ResizeInProgress conflicts
+                    await Task.Delay(Dilated(20.Milliseconds()));
+                }
+
+                var max = d.TotalMilliseconds * loops / resizer.LowerBound + Dilated(2.Seconds()).TotalMilliseconds;
+                Within(TimeSpan.FromMilliseconds(max), () =>
+                {
+                    for (var i = 0; i < loops; i++)
+                    {
+                        ExpectMsg("done");
+                    }
+                });
+            };
+
+            // 2 more should go through without triggering more
+            await loop(2, 200.Milliseconds());
+            RouteeSize(router).Should().Be(resizer.LowerBound);
+
+            // a whole bunch should max it out
+            await loop(20, 500.Milliseconds());
+            RouteeSize(router).Should().Be(resizer.UpperBound);
+        }
+        
         [Fact(Skip = "Racy due to Resizer / Mailbox impl")]
         public void DefaultResizer_must_backoff()
         {
