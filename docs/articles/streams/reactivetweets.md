@@ -16,10 +16,7 @@ systems. Instead Akka Streams depend on internal backpressure signals that
 allow to control what should happen in such scenarios.
 
 > [!NOTE]
-> You can find a example implementation [here](https://github.com/Silv3rcircl3/Akka.Net-Streams-reactive-tweets), it's using
-  [Tweetinvi](https://github.com/linvi/tweetinvi) to call the Twitter STREAM API.
-  Due to the fact that Tweetinvi doesn't implement the Reactive Streams specifications, we push the tweets into the stream
-  via the `IActorRef` that is materialized from the following Source `Source.ActorRef<ITweet>(100, OverflowStrategy.DropHead);`.
+> You can find an example implementation [here](https://github.com/Silv3rcircl3/Akka.Net-Streams-reactive-tweets), using [Tweetinvi](https://github.com/linvi/tweetinvi) to call the Twitter STREAM API. Due to the fact that Tweetinvi doesn't implement the Reactive Streams specifications, we push the tweets into the stream via the `IActorRef` that is materialized from the following Source `Source.ActorRef<ITweet>(100, OverflowStrategy.DropHead);`.
 
 ## Transforming and consuming simple streams
 
