@@ -581,6 +581,7 @@ an `Actor` class.
 
 These can be consumed by other Reactive Stream libraries or used as an Akka Streams `Source` class or `Sink` class.
 
+<!-- markdownlint-disable MD028 -->
 > [!WARNING]
 > `ActorPublisher` class and `ActorSubscriber` class will probably be deprecated in 
 > future versions of Akka.
@@ -589,6 +590,7 @@ These can be consumed by other Reactive Stream libraries or used as an Akka Stre
 > `ActorPublisher` class and `ActorSubscriber` class cannot be used with remote actors,
 > because if signals of the Reactive Streams protocol (e.g. ``Request``) are lost the
 > the stream may deadlock.
+<!-- markdownlint-enable MD028 -->
 
 ### ActorPublisher
 
