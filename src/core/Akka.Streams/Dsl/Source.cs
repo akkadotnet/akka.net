@@ -526,7 +526,15 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="task">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));
+        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));        
+
+        /// <summary>
+        /// Never emits any elements, never completes and never fails.
+        /// This stream could be useful in tests.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
+        public static Source<T, NotUsed> Never<T>() => FromTask(new TaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
 
         /// <summary>
         /// Elements are emitted periodically with the specified interval.
