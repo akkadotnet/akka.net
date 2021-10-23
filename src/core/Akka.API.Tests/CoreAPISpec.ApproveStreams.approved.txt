@@ -1948,6 +1948,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> FromTask<T>(System.Threading.Tasks.Task<T> task) { }
         public static Akka.Streams.Dsl.Source<TOut, System.Threading.Tasks.Task<TMat>> Lazily<TOut, TMat>(System.Func<Akka.Streams.Dsl.Source<TOut, TMat>> create) { }
         public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.TaskCompletionSource<T>> Maybe<T>() { }
+        public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Never<T>() { }
         public static Akka.Streams.Dsl.Source<T, Akka.Streams.ISourceQueueWithComplete<T>> Queue<T>(int bufferSize, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public static Akka.Streams.Dsl.Source<T, Akka.NotUsed> Repeat<T>(T element) { }
         public static Akka.Streams.SourceShape<T> Shape<T>(string name) { }
@@ -4456,6 +4457,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Akka.Streams.Attributes MaybeSource;
         public static readonly Akka.Streams.Attributes Merge;
         public static readonly Akka.Streams.Attributes MergePreferred;
+        public static readonly Akka.Streams.Attributes NeverSource;
         public static readonly Akka.Streams.Attributes OrElse;
         public static readonly Akka.Streams.Attributes OutputStreamSink;
         public static readonly Akka.Streams.Attributes OutputStreamSource;

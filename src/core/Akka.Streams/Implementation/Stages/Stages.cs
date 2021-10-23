@@ -318,6 +318,10 @@ namespace Akka.Streams.Implementation.Stages
         /// <summary>
         /// TBD
         /// </summary>
+        public static readonly Attributes NeverSource = Attributes.CreateName("neverSource");
+        /// <summary>
+        /// TBD
+        /// </summary>
         public static readonly Attributes FailedSource = Attributes.CreateName("failedSource");
         /// <summary>
         /// TBD

@@ -26,6 +26,14 @@ Stream the values of an ``IEnumerable<T>``.
 
 **completes** when the last element of the enumerable has been emitted
 
+#### Never
+
+A source which never emits any elements, never completes and never fails. Useful for tests.
+
+**emits** never
+
+**completes** never
+
 #### Single
 
 Stream a single object
