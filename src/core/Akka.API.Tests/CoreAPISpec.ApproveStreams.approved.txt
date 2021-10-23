@@ -4702,7 +4702,7 @@ namespace Akka.Streams.Stage
             public void Cancel() { }
             public T Grab() { }
             public void Pull() { }
-            public void SetHandler(Akka.Streams.Stage.InHandler handler) { }
+            public void SetHandler(Akka.Streams.Stage.IInHandler handler) { }
             public override string ToString() { }
         }
         [Akka.Annotations.InternalApiAttribute()]
