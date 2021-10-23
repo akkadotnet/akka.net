@@ -1680,7 +1680,7 @@ namespace Akka.Streams.Stage
         /// 
         /// This allows the dynamic creation of an Inlet for a GraphStage which is
         /// connected to a Sink that is available for materialization (e.g. using
-        /// the <see cref="GraphStageLogic.SubFusingMaterializer"/>). Care needs to be taken to cancel this Inlet
+        /// the <see cref="SubFusingMaterializer"/>). Care needs to be taken to cancel this Inlet
         /// when the stage shuts down lest the corresponding Sink be left hanging.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
@@ -1688,7 +1688,7 @@ namespace Akka.Streams.Stage
         protected class SubSinkInlet<T>
         {
             private readonly string _name;
-            private InHandler _handler;
+            private IInHandler _handler;
             private Option<T> _elem;
             private bool _closed;
             private bool _pulled;
@@ -1736,7 +1736,7 @@ namespace Akka.Streams.Stage
             /// TBD
             /// </summary>
             /// <param name="handler">TBD</param>
-            public void SetHandler(InHandler handler) => _handler = handler;
+            public void SetHandler(IInHandler handler) => _handler = handler;
 
             /// <summary>
             /// TBD
