@@ -73,7 +73,7 @@ private void ProcessMessage(string correlationId)
 }
 ```
 
-If the configured output template is, for example, `"[{CorrelationId}] {Message}{NewLine}"`, and the parameter `correlationId` is `"1234"` then the resulting log would contain the line `[1234] Processing message`. 
+If the configured output template is, for example, `"[{CorrelationId}] {Message}{NewLine}"`, and the parameter `correlationId` is `"1234"` then the resulting log would contain the line `[1234] Processing message`.
 
 ```csharp
 // configure sink with an output template

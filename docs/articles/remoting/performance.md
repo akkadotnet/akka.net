@@ -5,7 +5,7 @@ title: Network and Performance Optimization
 
 # Akka.Remote Performance Optimization
 
-If you're building a large-scale system using Akka.NET, the performance of Akka.Remote is going to be one of the most critical factors of your application as it's directly responsible for managing the rate at which messages move across a single connection between two nodes. 
+If you're building a large-scale system using Akka.NET, the performance of Akka.Remote is going to be one of the most critical factors of your application as it's directly responsible for managing the rate at which messages move across a single connection between two nodes.
 
 Akka.NET is [horizontally scalable using Akka.Cluster](../clustering/cluster-overview.md), meaning that Akka.NET applications typically respond to surges in demand by scaling up and down the number of nodes inside the network - however, ensuring that the messages per node throughput is consistently high will give you the most value on a per-node basis.
 
@@ -27,7 +27,7 @@ Here is how Akka.NET v1.4.14 performs with batching enabled (it's on by default)
 | 25                   | 5000000     | 190462   | 26252.27   |
 | 30                   | 6000000     | 189281   | 31699.14   |
 
-Versus the numbers with 
+Versus the numbers with
 
 ```hocon
 akka.remote.dot-netty.tcp.batching.enabled = false
@@ -72,7 +72,7 @@ The default transport in Akka.Remote is the DotNetty TCP transport, which is a g
 
 As of Akka.NET v1.4.0-beta4, we've added a new feature to Akka.Remote called a "batch writer" which has tremendously improved the performance of outbound writes in Akka.Remote by grouping many logical writes into a smaller number of physical writes (actual flush calls to the underlying socket.)
 
-Here are some performance numbers from our [RemotePingPong benchmark](https://github.com/akkadotnet/akka.net/tree/dev/src/benchmark/RemotePingPong), which uses high volumes of small messages. 
+Here are some performance numbers from our [RemotePingPong benchmark](https://github.com/akkadotnet/akka.net/tree/dev/src/benchmark/RemotePingPong), which uses high volumes of small messages.
 
 These numbers were all produced on a 12 core Intel i7 2.6Ghz Dell laptop over a single Akka.Remote connection running .NET Core 2.1 on Windows 10:
 

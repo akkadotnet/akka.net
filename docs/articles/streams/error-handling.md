@@ -96,7 +96,7 @@ supervision strategy*, starting a stage again when it fails or completes, each t
 
 This pattern is useful when the stage fails or completes because some external resource is not available
 and we need to give it some time to start-up again. One of the prime examples when this is useful is
-when a WebSocket connection fails due to the HTTP server it's running on going down, perhaps because it is overloaded. 
+when a WebSocket connection fails due to the HTTP server it's running on going down, perhaps because it is overloaded.
 By using an exponential backoff, we avoid going into a tight reconnect look, which both gives the HTTP server some time
 to recover, and it avoids using needless resources on the client side.
 
@@ -110,8 +110,8 @@ Configurable parameters are:
 * `maxRestarts` caps the total number of restarts
 * `maxRestartsWithin` sets a time-frame during which restarts are counted towards the same total for `maxRestarts`
 
-The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource` 
-which will supervise the given `Source`. The `Source` in this case is a 
+The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource`
+which will supervise the given `Source`. The `Source` in this case is a
 `HttpResponseMessage`, produced by `HttpCLient`. If the stream fails or completes at any point, the request will
 be made again, in increasing intervals of 3, 6, 12, 24 and finally 30 seconds (at which point it will remain capped due
 to the `maxBackoff` parameter):
