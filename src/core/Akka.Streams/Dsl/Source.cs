@@ -537,6 +537,18 @@ namespace Akka.Streams.Dsl
         public static Source<T, NotUsed> Never<T>() => FromTask(new TaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
 
         /// <summary>
+        /// Streams the elements of the given future source once it successfully completes.
+        /// If the <see cref="Task{T}"/> fails the stream is failed with the exception from the future. If downstream cancels before the
+        /// stream completes the materialized <see cref="Task{M}"/> will be failed with a <see cref="StreamDetachedException"/>
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="M">TBD</typeparam>
+        /// <param name="task">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, Task<M>> FromTaskSource<T, M>(Task<Source<T, M>> task) =>
+            FromGraph(new TaskFlattenSource<T, M>(task));
+
+        /// <summary>
         /// Elements are emitted periodically with the specified interval.
         /// The tick element will be delivered to downstream consumers that has requested any elements.
         /// If a consumer has not requested any elements at the point in time when the tick
