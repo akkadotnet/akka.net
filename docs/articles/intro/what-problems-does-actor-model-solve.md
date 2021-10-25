@@ -9,7 +9,7 @@ unique challenges of highly distributed systems. To fully understand why the act
 identify mismatches between traditional approaches to programming and the realities of concurrent and distributed
 computing.
 
-### The illusion of encapsulation
+## The illusion of encapsulation
 
 Object-oriented programming (OOP) is a widely-accepted, familiar programming model. One of its core pillars is
 _encapsulation_. Encapsulation dictates that the internal data of an object is not accessible directly from the outside;
@@ -83,7 +83,7 @@ As a result, threads are what really drive execution:
    are inefficient and easily lead to deadlocks in any application of real-world scale.**
 * **Locks work locally, attempts to make them distributed exist, but offer limited potential for scaling out.**
 
-### The illusion of shared memory on modern computer architectures
+## The illusion of shared memory on modern computer architectures
 
 Programming models of the 80'-90's conceptualize that writing to a variable means writing to a memory location directly
 (which somewhat muddies the water that local variables might exist only in registers). On modern architectures -
@@ -107,7 +107,7 @@ or which atomic structures to use is a dark art.
 * **There is no real shared memory anymore, CPU cores pass chunks of data (cache lines) explicitly to each other just as computers on a network do. Inter-CPU communication and network communication have more in common than many realize. Passing messages is the norm now be it across CPUs or networked computers.**
 * **Instead of hiding the message passing aspect through variables marked as shared or using atomic data structures, a more disciplined and principled approach is to keep state local to a concurrent entity and propagate data or events between concurrent entities explicitly via messages.**
 
-### The illusion of a call stack
+## The illusion of a call stack
 
 Today, we often take call stacks for granted. But, they were invented in an era where concurrent programming
 was not as important because multi-CPU systems were not common. Call stacks do not cross threads and hence,
@@ -154,7 +154,7 @@ involved (where message losses are to be expected).**
    (a long queue), delays caused by garbage collection, etc. In face of these, concurrent systems should handle response
    deadlines in the form of timeouts, just like networked/distributed systems.**  
 
-### How the actor model meets the needs of concurrent, distributed systems
+## How the actor model meets the needs of concurrent, distributed systems
 
 As described in the sections above, common programming practices cannot properly address the needs of modern concurrent
 and distributed systems.
@@ -170,7 +170,7 @@ In particular, we would like to:
 
 The actor model accomplishes all of these goals. The following topics describe how.
 
-### Usage of message passing avoids locking and blocking
+## Usage of message passing avoids locking and blocking
 
 Instead of calling methods, actors send messages to each other. Sending a message does not transfer the thread
 of execution from the sender to the destination. An actor can send a message and continue without blocking.
@@ -230,7 +230,7 @@ This is a very simple model and it solves the issues enumerated previously:
 * State of actors is local and not shared, changes and data is propagated via messages, which maps to how modern
    memory hierarchy actually works.    In many cases, this means transferring over only the cache lines that contain the data in the message while keeping local state and data cached at the original core. The same model maps exactly to remote communication where the state is kept in the RAM of machines and changes/data is propagated over the network as packets.
 
-### Actors handle error situations gracefully
+## Actors handle error situations gracefully
 
 Since we have no longer a shared call stack between actors that send messages to each other, we need to handle
 error situations differently. There are two kinds of errors we need to consider:

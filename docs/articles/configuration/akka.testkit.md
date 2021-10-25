@@ -1,4 +1,4 @@
-## Akka.TestKit Configuration
+# Akka.TestKit Configuration
 
 Below is the default HOCON configuration for the base `Akka.TestKit` package.
 

@@ -88,7 +88,7 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 > [!NOTE]
 > Akka.Cluster depends on Akka.Remote.
 
-#### Seed Node Configuration
+### Seed Node Configuration
 
 ```xml
 akka {
