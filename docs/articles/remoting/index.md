@@ -124,7 +124,7 @@ So in the case of our previous example, `localhost:8080` is the inbound (listeni
 
 So imagine we have the following two actor systems configured to both use the `dot-netty.tcp` Akka.Remote transport:
 
-**Client**
+### Client
 
 ```xml
 akka {  
@@ -140,7 +140,7 @@ akka {
 }
 ```
 
-**Server**
+### Server
 
 ```xml
 akka {  
