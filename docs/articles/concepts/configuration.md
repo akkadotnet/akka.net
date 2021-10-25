@@ -81,7 +81,7 @@ When an actor is instantiated within the `ActorSystem` it can be deployed in one
 
 When an actor is deployed by the `ActorSystem`, it has a range of configuration settings. These settings control a wide range of behavior options for the actor such as: is this actor going to be a router? What `Dispatcher` will it use? What type of mailbox will it have? (More on these concepts in later lessons.)
 
-We haven't gone over what all these options mean, but *the key thing to know for now is that the settings used by the `ActorSystem` to deploy an actor into service can be set within HOCON. *
+We haven't gone over what all these options mean, but **the key thing to know for now is that the settings used by the `ActorSystem` to deploy an actor into service can be set within HOCON.**
 
 ***This also means that you can change the behavior of actors dramatically (by changing these settings) without having to actually touch the actor code itself.***
 
