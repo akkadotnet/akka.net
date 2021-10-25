@@ -28,6 +28,14 @@ Stream the values of an ``IEnumerable<T>``.
 
 **completes** when the last element of the enumerable has been emitted
 
+### Never
+
+A source which never emits any elements, never completes and never fails. Useful for tests.
+
+**emits** never
+
+**completes** never
+
 ### Single
 
 Stream a single object
@@ -72,6 +80,15 @@ If the task fails the stream is failed with that exception.
 **emits** the task completes
 
 **completes** after the task has completed
+
+### FromTaskSource
+
+Streams the elements of the given ``Task`` source once it successfully completes.
+If the task fails the stream is failed.
+
+**emits** the next value from the ``Task`` source, once it has completed
+
+**completes** after the ``Task`` source completes
 
 ### Unfold
 

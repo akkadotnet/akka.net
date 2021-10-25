@@ -59,7 +59,7 @@ The reasoning behind the first rule is that compositionality would be destroyed 
 The second rule allows a library to additionally provide nice sugar for the common case.
 
 > [!NOTE]
-> One important consequence of this is that a reusable flow description cannot be bound to "live" resources, any connection to or allocation of such resources must be deferred until materialization time. Examples of "live" resources are already existing TCP connections, a multicast Publisher, etc.; a TickSource does not fall into this category if its timer is created only upon materialization (as is the case for our implementation). 
+> One important consequence of this is that a reusable flow description cannot be bound to "live" resources, any connection to or allocation of such resources must be deferred until materialization time. Examples of "live" resources are already existing TCP connections, a multicast Publisher, etc.; a TickSource does not fall into this category if its timer is created only upon materialization (as is the case for our implementation).
 > Exceptions from this need to be well-justified and carefully documented.
 
 ### Resulting Implementation Constraints

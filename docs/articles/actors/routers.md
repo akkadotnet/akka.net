@@ -600,7 +600,7 @@ For a router, which normally passes on messages to routees, the `PoisonPill` mes
 
 However, a `PoisonPill` message sent to a router may still affect its routees, as it will stop the router which in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
 
-If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
+If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message.
 
 > [!NOTE]
 > The above method will stop all routees, even if they are not created by the router. E.g. routees programmatically provided to the router.
@@ -629,7 +629,7 @@ As with the `PoisonPill` message, there is a distinction between killing a route
 
 See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) for more details on how `Kill` message works.
 
-### Management Messages 
+### Management Messages
 
 Sending one of the following messages to a router can be used to manage its routees.
 

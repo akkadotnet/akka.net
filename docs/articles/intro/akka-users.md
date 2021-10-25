@@ -5,7 +5,7 @@ title: Akka.NET Users and Use Cases
 
 # Akka.NET Users and Use Cases
 
-Akka.NET is used by many large organizations and in industries such as investment and merchant banking, retail and social media, simulation, gaming and betting, automobile and traffic systems, health care, data analytics, and much more. 
+Akka.NET is used by many large organizations and in industries such as investment and merchant banking, retail and social media, simulation, gaming and betting, automobile and traffic systems, health care, data analytics, and much more.
 Any system that has the need for high-throughput and low latency is a good candidate for using Akka.NET.
 
 ## Akka.NET Users
