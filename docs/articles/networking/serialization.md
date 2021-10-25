@@ -333,26 +333,26 @@ Protocol Buffers to Version State and Messages" in [this documentation](https://
 Hyperion chose to implement the second approach by blacklisting a set of potentially dangerous types
 from being deserialized:
 
-- `System.Security.Claims.ClaimsIdentity`
-- `System.Windows.Forms.AxHost.State`
-- `System.Windows.Data.ObjectDataProvider`
-- `System.Management.Automation.PSObject`
-- `System.Web.Security.RolePrincipal`
-- `System.IdentityModel.Tokens.SessionSecurityToken`
-- `SessionViewStateHistoryItem`
-- `TextFormattingRunProperties`
-- `ToolboxItemContainer`
-- `System.Security.Principal.WindowsClaimsIdentity`
-- `System.Security.Principal.WindowsIdentity`
-- `System.Security.Principal.WindowsPrincipal`
-- `System.CodeDom.Compiler.TempFileCollection`
-- `System.IO.FileSystemInfo`
-- `System.Activities.Presentation.WorkflowDesigner`
-- `System.Windows.ResourceDictionary`
-- `System.Windows.Forms.BindingSource`
-- `Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider`
-- `System.Diagnostics.Process`
-- `System.Management.IWbemClassObjectFreeThreaded`
+* `System.Security.Claims.ClaimsIdentity`
+* `System.Windows.Forms.AxHost.State`
+* `System.Windows.Data.ObjectDataProvider`
+* `System.Management.Automation.PSObject`
+* `System.Web.Security.RolePrincipal`
+* `System.IdentityModel.Tokens.SessionSecurityToken`
+* `SessionViewStateHistoryItem`
+* `TextFormattingRunProperties`
+* `ToolboxItemContainer`
+* `System.Security.Principal.WindowsClaimsIdentity`
+* `System.Security.Principal.WindowsIdentity`
+* `System.Security.Principal.WindowsPrincipal`
+* `System.CodeDom.Compiler.TempFileCollection`
+* `System.IO.FileSystemInfo`
+* `System.Activities.Presentation.WorkflowDesigner`
+* `System.Windows.ResourceDictionary`
+* `System.Windows.Forms.BindingSource`
+* `Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider`
+* `System.Diagnostics.Process`
+* `System.Management.IWbemClassObjectFreeThreaded`
 
 Be warned that these class can be used as a man in the middle attack vector, but if you need
 to serialize one of these class, you can turn off this feature using this inside your HOCON settings:

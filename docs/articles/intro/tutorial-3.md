@@ -27,11 +27,11 @@ levels:
 
 ![device manager tree](/images/device_manager_tree.png)
 
- * The top level is the supervisor actor representing the component. It is also the entry point to look up or create
+* The top level is the supervisor actor representing the component. It is also the entry point to look up or create
    group and device actors.
- * Device group actors are supervisors of the devices belonging to the group. Apart from supervising the device actors they
+* Device group actors are supervisors of the devices belonging to the group. Apart from supervising the device actors they
    also provide extra services, like querying the temperature readings from all the devices available.
- * Device actors manage all the interactions with the actual devices, storing temperature readings for example.
+* Device actors manage all the interactions with the actual devices, storing temperature readings for example.
 
 When designing actor systems one of the main challenges is to decide on the granularity of the actors. For example, it
 would be perfectly possible to have only a single actor maintaining all the groups and devices in `Dictionary`s for
@@ -40,16 +40,16 @@ the group actor.
 
 We chose this three-layered architecture for the following reasons:
 
- * Having groups as individual actors:
-   * Allows us to isolate failures happening in a group. If a programmer error would
+* Having groups as individual actors:
+  * Allows us to isolate failures happening in a group. If a programmer error would
      happen in the single actor that keeps all state, it would be all wiped out once that actor is restarted affecting groups that are otherwise non-faulty.
-   * Simplifies the problem of querying all the devices belonging to a group (since it only contains state related
+  * Simplifies the problem of querying all the devices belonging to a group (since it only contains state related
      to the given group).
-   * Increases the parallelism of the system by allowing to query multiple groups concurrently. Since groups have
+  * Increases the parallelism of the system by allowing to query multiple groups concurrently. Since groups have
      dedicated actors, all of them can run concurrently.
- * Having devices as individual actors:
-   * Allows us to isolate failures happening in a device actor from the rest of the devices.
-   * Increases the parallelism of collecting temperature readings as actual network connections from different devices
+* Having devices as individual actors:
+  * Allows us to isolate failures happening in a device actor from the rest of the devices.
+  * Increases the parallelism of collecting temperature readings as actual network connections from different devices
      can talk to the individual device actors directly, reducing contention points.
 
 In practice, a system can be organized in multiple ways, all depending on the characteristics of the interactions
@@ -57,14 +57,14 @@ between actors.
 
 The following guidelines help to arrive at the right granularity:
 
- * Prefer larger granularity to smaller. Introducing more fine-grained actors than needed causes more problems than
+* Prefer larger granularity to smaller. Introducing more fine-grained actors than needed causes more problems than
    it solves.
- * Prefer finer granularity if it enables higher concurrency in the system.
- * Prefer finer granularity if actors need to handle complex conversations with other actors and hence have many
+* Prefer finer granularity if it enables higher concurrency in the system.
+* Prefer finer granularity if actors need to handle complex conversations with other actors and hence have many
    states. We will see a very good example for this in the next chapter.
- * Prefer finer granularity if there is too much state to keep around in one place compared to dividing into smaller
+* Prefer finer granularity if there is too much state to keep around in one place compared to dividing into smaller
    actors.
- * Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and be restored
+* Prefer finer granularity if the current actor has multiple unrelated responsibilities that can fail and be restored
    individually.
 
 ## The Registration Protocol
@@ -174,9 +174,9 @@ device IDs:
 
 We almost have everything to test the removal of devices. What is missing is:
 
- * Stopping a device actor from our test case, from the outside: any actor can be stopped by simply sending a special
+* Stopping a device actor from our test case, from the outside: any actor can be stopped by simply sending a special
    built-in message, `PoisonPill`, which instructs the actor to stop.
- * Be notified once the device actor is stopped: we can use the _Death Watch_ facility for this purpose, too. Thankfully
+* Be notified once the device actor is stopped: we can use the _Death Watch_ facility for this purpose, too. Thankfully
    the `TestProbe` has two messages that we can easily use, `Watch()` to watch a specific actor, and `ExpectTerminated`
    to assert that the watched actor has been terminated.
 
@@ -201,9 +201,9 @@ actor.
 We have now a hierarchical component for registering and tracking devices and recording measurements. We have seen
 some conversation patterns like:
 
- * Request-respond (for temperature recordings).
- * Delegate-respond (for registration of devices).
- * Create-watch-terminate (for creating the group and device actor as children).
+* Request-respond (for temperature recordings).
+* Delegate-respond (for registration of devices).
+* Create-watch-terminate (for creating the group and device actor as children).
 
 In the next chapter, we will introduce group query capabilities, which will establish a new conversation pattern of
 scatter-gather. In particular, we will implement the functionality that allows users to query the status of all

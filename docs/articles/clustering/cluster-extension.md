@@ -206,4 +206,4 @@ Cluster.SendCurrentClusterState (Self);
 
 ## Additional Resources
 
-- [`SimpleClusterListener` example](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/Cluster/Samples.Cluster.Simple/SimpleClusterListener.cs)
+* [`SimpleClusterListener` example](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/Cluster/Samples.Cluster.Simple/SimpleClusterListener.cs)

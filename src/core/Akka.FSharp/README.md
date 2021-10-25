@@ -11,9 +11,9 @@ Example:
 
 F# also gives you it's own actor system Configuration module with support of following functions:
 
--   `defaultConfig() : Config` - returns default F# Akka configuration.
--   `parse(hoconString : string) : Config` - parses a provided Akka configuration string.
--   `load() : Config` - loads an Akka configuration found inside current project's *.config* file.
+* `defaultConfig() : Config` - returns default F# Akka configuration.
+* `parse(hoconString : string) : Config` - parses a provided Akka configuration string.
+* `load() : Config` - loads an Akka configuration found inside current project's *.config* file.
 
 ### Creating actors with `actor` computation expression
 
@@ -35,8 +35,8 @@ Example:
 
 Since construct used in an example above is quite popular, you may also use following shorthand functions to define message handler's behavior:
 
--   `actorOf (fn : 'Message -> unit) (mailbox : Actor<'Message>) : Cont<'Message, 'Returned>` - uses a function, which takes a message as the only parameter. Mailbox parameter is injected by spawning functions.
--   `actorOf2 (fn : Actor<'Message> -> 'Message -> unit) (mailbox : Actor<'Message>) : Cont<'Message, 'Returned>` - uses a function, which takes both the message and an Actor instance as the parameters. Mailbox parameter is injected by spawning functions.
+* `actorOf (fn : 'Message -> unit) (mailbox : Actor<'Message>) : Cont<'Message, 'Returned>` - uses a function, which takes a message as the only parameter. Mailbox parameter is injected by spawning functions.
+* `actorOf2 (fn : Actor<'Message> -> 'Message -> unit) (mailbox : Actor<'Message>) : Cont<'Message, 'Returned>` - uses a function, which takes both the message and an Actor instance as the parameters. Mailbox parameter is injected by spawning functions.
 
 Example:
 
@@ -52,11 +52,11 @@ Example:
 
 Paragraph above already has shown, how actors may be created with help of the spawning function. There are several spawning function, which may be used to instantiate actors:
 
--   `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally.
--   `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally.
--   `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
--   `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
--   `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
+* `spawn (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) : ActorRef` - spawns an actor using specified actor computation expression. The actor can only be used locally.
+* `spawnOpt (actorFactory : ActorRefFactory) (name : string) (f : Actor<'Message> -> Cont<'Message, 'Returned>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, with custom spawn option settings. The actor can only be used locally.
+* `spawne (actorFactory : ActorRefFactory) (name : string) (expr : Expr<Actor<'Message> -> Cont<'Message, 'Returned>>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor computation expression, using an Expression AST. The actor code can be deployed remotely.
+* `spawnObj (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) : ActorRef` - spawns an actor using specified actor quotation. The actor can only be used locally.
+* `spawnObjOpt (actorFactory : ActorRefFactory) (name : string) (f : Quotations.Expr<(unit -> #ActorBase)>) (options : SpawnOption list) : ActorRef` - spawns an actor using specified actor quotation, with custom spawn option settings. The actor can only be used locally.
 
 All of these functions may be used with either actor system or actor itself. In the first case spawned actor will be placed under */user* root guardian of the current actor system hierarchy. In second option spawned actor will become child of the actor used as [actorFactory] parameter of the spawning function.
 
@@ -82,11 +82,11 @@ Example:
 
 To be able to specify more precise actor creation behavior, you may use `spawnOpt` and `spawne` methods, both taking a list of `SpawnOption` values. Each specific option should be present only once in the collection. When a conflict occurs (more than one option of specified type has been found), the latest value found inside the list will be chosen.
 
--   `SpawnOption.Deploy(Akka.Actor.Deploy)` - defines deployment strategy for created actors (see: Deploy). This option may be used along with `spawne` function to enable remote actors deployment.
--   `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://getakka.net/docs/working-with-actors/Routers)).
--   `SpawnOption.SupervisiorStrategy(Akka.Actor.SupervisiorStrategy)` - defines a supervisor strategy of the current actor. It will affect it's children (see: [Supervision](http://getakka.net/docs/concepts/supervision)).
--   `SpawnOption.Dispatcher(string)` - defines a type of the dispatcher used for resources management for the created actors. (See: [Dispatchers](http://getakka.net/docs/working-with-actors/Dispatchers))
--   `SpawnOption.Mailbox(string)` - defines a type of the mailbox used for the created actors. (See: [Mailboxes](http://getakka.net/docs/working-with-actors/Mailbox))
+* `SpawnOption.Deploy(Akka.Actor.Deploy)` - defines deployment strategy for created actors (see: Deploy). This option may be used along with `spawne` function to enable remote actors deployment.
+* `SpawnOption.Router(Akka.Routing.RouterConfig)` - defines an actor to be a router as well as it's routing specifics (see: [Routing](http://getakka.net/docs/working-with-actors/Routers)).
+* `SpawnOption.SupervisiorStrategy(Akka.Actor.SupervisiorStrategy)` - defines a supervisor strategy of the current actor. It will affect it's children (see: [Supervision](http://getakka.net/docs/concepts/supervision)).
+* `SpawnOption.Dispatcher(string)` - defines a type of the dispatcher used for resources management for the created actors. (See: [Dispatchers](http://getakka.net/docs/working-with-actors/Dispatchers))
+* `SpawnOption.Mailbox(string)` - defines a type of the mailbox used for the created actors. (See: [Mailboxes](http://getakka.net/docs/working-with-actors/Mailbox))
 
 Example (deploy actor remotely):
 
@@ -108,7 +108,7 @@ Example:
 
 Actors may be referenced not only by `ActorRef`s, but also through actor path selection (see: [Addressing](http://getakka.net/docs/concepts/addressing)). With F# API you may select an actor with known path using `select` function:
 
--   `select (path : string) (selector : ActorRefFactory) : ActorSelection` - where path is a valid URI string used to recognize actor path, and the selector is either actor system or actor itself.
+* `select (path : string) (selector : ActorRefFactory) : ActorSelection` - where path is a valid URI string used to recognize actor path, and the selector is either actor system or actor itself.
 
 Example:
 
@@ -121,10 +121,10 @@ Example:
 
 Inboxes are actor-like objects used to be listened by other actors. They are a good choice to watch over other actors lifecycle. Some of the inbox-related functions may block current thread and therefore should not be used inside actors.
 
--   `inbox (system : ActorSystem) : Inbox` - creates a new inbox in provided actor system scope.
--   `receive (timeout : TimeSpan) (i : Inbox) : 'Message option` - receives a next message sent to the inbox. This is a blocking operation. Returns `None` if timeout occurred or message is incompatible with expected response type.
--   `filterReceive (timeout : TimeSpan) (predicate : 'Message -> bool) (i : Inbox) : 'Message option` - receives a next message sent to the inbox, which satisfies provided predicate. This is a blocking operation. Returns `None` if timeout occurred or message is incompatible with expected response type.
--   `asyncReceive (i : Inbox) : Async<'Message option>` - Awaits in async block for a next message sent to the inbox. Returns `None` if message is incompatible with expected response type.
+* `inbox (system : ActorSystem) : Inbox` - creates a new inbox in provided actor system scope.
+* `receive (timeout : TimeSpan) (i : Inbox) : 'Message option` - receives a next message sent to the inbox. This is a blocking operation. Returns `None` if timeout occurred or message is incompatible with expected response type.
+* `filterReceive (timeout : TimeSpan) (predicate : 'Message -> bool) (i : Inbox) : 'Message option` - receives a next message sent to the inbox, which satisfies provided predicate. This is a blocking operation. Returns `None` if timeout occurred or message is incompatible with expected response type.
+* `asyncReceive (i : Inbox) : Async<'Message option>` - Awaits in async block for a next message sent to the inbox. Returns `None` if message is incompatible with expected response type.
 
 Inboxes may be configured to accept a limited number of incoming messages (default is 1000):
 
@@ -140,8 +140,8 @@ Inboxes may be configured to accept a limited number of incoming messages (defau
 
 Actors and Inboxes may be used to monitor lifetime of other actors. This is done by `monitor`/`demonitor` functions:
 
--   `monitor (subject: ActorRef) (watcher: ICanWatch) : ActorRef` - starts monitoring a referred actor.
--   `demonitor (subject: ActorRef) (watcher: ICanWatch) : ActorRef` - stops monitoring of the previously monitored actor.
+* `monitor (subject: ActorRef) (watcher: ICanWatch) : ActorRef` - starts monitoring a referred actor.
+* `demonitor (subject: ActorRef) (watcher: ICanWatch) : ActorRef` - stops monitoring of the previously monitored actor.
 
 Monitored actors will automatically send a `Terminated` message to their watchers when they die.
 
@@ -149,12 +149,12 @@ Monitored actors will automatically send a `Terminated` message to their watcher
 
 Actors have a place in their system's hierarchy trees. To manage failures done by the child actors, their parents/supervisors may decide to use specific supervisor strategies (see: [Supervision](http://getakka.net/docs/concepts/supervision)) in order to react to the specific types of errors. In F# this may be configured using functions of the `Strategy` module:
 
--   `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
--   `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
--   `OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
--   `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
--   `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
--   `AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
+* `Strategy.OneForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution.
+* `Strategy.OneForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+* `OneForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan)  : SupervisorStrategy` - returns a supervisor strategy applicable only to child actor which faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
+* `Strategy.AllForOne (decider : exn -> Directive) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution.
+* `Strategy.AllForOne (decider : exn -> Directive, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` -  returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur.
+* `AllForOne (decider : Expr<(exn -> Directive)>, ?retries : int, ?timeout : TimeSpan) : SupervisorStrategy` - returns a supervisor strategy applicable to each supervised actor when any of them had faulted during execution. [retries] param defines a number of times, an actor could be restarted. If it's a negative value, there is not limit. [timeout] param defines a time window for number of retries to occur. **Strategies created this way may be serialized and deserialized on remote nodes** .
 
 Example:
 
@@ -177,9 +177,9 @@ Example:
 
 While you may use built-in set of the event stream methods (see: Event Streams), there is an option of using dedicated F# API functions:
 
--   `subscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
--   `unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
--   `publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
+* `subscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - subscribes an actor reference to target channel of the provided event stream. Channels are associated with specific types of a message emitted by the publishers.
+* `unsubscribe (channel: System.Type) (ref: ActorRef) (eventStream: Akka.Event.EventStream) : bool` - unsubscribes an actor reference from target channel of the provided event stream.
+* `publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit` - publishes an event on the provided event stream. Event channel is resolved from event's type.
 
 Example:
 
@@ -225,12 +225,12 @@ Both groups support logging on various levels (DEBUG, &lt;default&gt; INFO, WARN
 
 F# API provides following logging methods:
 
--   `log (level : LogLevel) (mailbox : Actor<'Message>) (msg : string) : unit`, `logf (level : LogLevel) (mailbox : Actor<'Message>) (format:StringFormat<'T, 'Result>) : 'T` - both functions takes an `Akka.Event.LogLevel` enum parameter to specify log level explicitly.
--   `logDebug`, `logDebugf` - message will be logged at Debug level.
--   `logInfo`, `logInfof` - message will be logged at Info level.
--   `logWarning`, `logWarningf` - message will be logged at Warning level.
--   `logError`, `logError` - message will be logged at Error level.
--   `logException (mailbox: Actor<'a>) (e : exn) : unit` - this function logs a message from provided `System.Exception` object at the Error level.
+* `log (level : LogLevel) (mailbox : Actor<'Message>) (msg : string) : unit`, `logf (level : LogLevel) (mailbox : Actor<'Message>) (format:StringFormat<'T, 'Result>) : 'T` - both functions takes an `Akka.Event.LogLevel` enum parameter to specify log level explicitly.
+* `logDebug`, `logDebugf` - message will be logged at Debug level.
+* `logInfo`, `logInfof` - message will be logged at Info level.
+* `logWarning`, `logWarningf` - message will be logged at Warning level.
+* `logError`, `logError` - message will be logged at Error level.
+* `logException (mailbox: Actor<'a>) (e : exn) : unit` - this function logs a message from provided `System.Exception` object at the Error level.
 
 ### Interop with Task Parallel Library
 

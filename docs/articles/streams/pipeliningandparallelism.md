@@ -130,9 +130,9 @@ in sequence.
 
 It is also possible to organize parallelized stages into pipelines. This would mean employing four chefs:
 
- - the first two chefs prepare half-cooked pancakes from batter, in parallel, then putting those on a large enough
+* the first two chefs prepare half-cooked pancakes from batter, in parallel, then putting those on a large enough
    flat surface.
- - the second two chefs take these and fry their other side in their own pans, then they put the pancakes on a shared
+* the second two chefs take these and fry their other side in their own pans, then they put the pancakes on a shared
    plate.
 
 This is again straightforward to implement with the streams API:

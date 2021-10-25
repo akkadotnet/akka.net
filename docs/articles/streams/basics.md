@@ -259,10 +259,10 @@ the rate at which its upstream would like to emit data elements.
 Since the ``Publisher`` is not allowed to signal more elements than the pending demand signalled by the ``Subscriber``,
 it will have to abide to this back-pressure by applying one of the below strategies:
 
-- not generate elements, if it is able to control their production rate,
-- try buffering the elements in a *bounded* manner until more demand is signalled,
-- drop elements until more demand is signalled,
-- tear down the stream if unable to apply any of the above strategies.
+* not generate elements, if it is able to control their production rate,
+* try buffering the elements in a *bounded* manner until more demand is signalled,
+* drop elements until more demand is signalled,
+* tear down the stream if unable to apply any of the above strategies.
 
 As we can see, this scenario effectively means that the ``Subscriber`` will *pull* the elements from the Publisher –
 this mode of operation is referred to as pull-based back-pressure.
@@ -290,8 +290,8 @@ which will be running on the thread pools they have been configured to run on - 
 
 By default Akka Streams will fuse the stream operators. This means that the processing steps of a flow or stream graph can be executed within the same Actor and has two consequences:
 
-- passing elements from one processing stage to the next is a lot faster between fused stages due to avoiding the asynchronous messaging overhead
-- fused stream processing stages does not run in parallel to each other, meaning that only up to one CPU core is used for each fused part
+* passing elements from one processing stage to the next is a lot faster between fused stages due to avoiding the asynchronous messaging overhead
+* fused stream processing stages does not run in parallel to each other, meaning that only up to one CPU core is used for each fused part
 
 To allow for parallel processing you will have to insert asynchronous boundaries manually into your flows and graphs by way of adding ``Attributes.AsyncBoundary`` using the method
 ``Async`` on ``Source``, ``Sink`` and ``Flow`` to pieces that shall communicate with the rest of the graph in an

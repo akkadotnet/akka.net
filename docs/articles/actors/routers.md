@@ -558,9 +558,9 @@ The default resizer works by checking the pool size every X messages, and decidi
 * `rampup-rate` - Percentage to increase the pool size. The default is `0.2`, meaning it will increase the pool size in 20% when resizing.
 * `backoff-rate` - Percentage to decrease the pool size. The default is `0.1`, meaning it will decrease the pool size in 10% when resizing.
 * `pressure-threshold` - A threshold used to decide if the pool should be increased. The default is `1`, meaning it will decide to increase the pool if all routees are busy and have at least 1 message in the mailbox.
-    * `0` - the routee is busy and have no messages in the mailbox
-    * `1` - the routee is busy and have at least 1 message waiting in the mailbox
-    * `N` - the routee is busy and have N messages waiting in the mailbox (where N > 1)
+  * `0` - the routee is busy and have no messages in the mailbox
+  * `1` - the routee is busy and have at least 1 message waiting in the mailbox
+  * `N` - the routee is busy and have N messages waiting in the mailbox (where N > 1)
 * `backoff-threshold` - A threshold used to decide if the pool should be decreased. The default is `0.3`, meaning it will decide to decrease the pool if less than 30% of the routers are busy.
 
 ## Specially Handled Messages
@@ -633,10 +633,10 @@ See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) 
 
 Sending one of the following messages to a router can be used to manage its routees.
 
-- `Akka.Routing.GetRoutees` The router actor will respond with a `Akka.Routing.Routees` message, which contains a list of currently used routees.
-- `Akka.Routing.AddRoutee` The router actor will add the provided to its collection of routees.
-- `Akka.Routing.RemoveRoutee` The router actor will remove the provided routee to its collection of routees.
-- `Akka.Routing.AdjustPoolSize` The pool router actor will add or remove that number of routees to its collection of routees.
+* `Akka.Routing.GetRoutees` The router actor will respond with a `Akka.Routing.Routees` message, which contains a list of currently used routees.
+* `Akka.Routing.AddRoutee` The router actor will add the provided to its collection of routees.
+* `Akka.Routing.RemoveRoutee` The router actor will remove the provided routee to its collection of routees.
+* `Akka.Routing.AdjustPoolSize` The pool router actor will add or remove that number of routees to its collection of routees.
 
 ## Advanced
 

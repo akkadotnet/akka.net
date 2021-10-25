@@ -11,9 +11,9 @@ the term **may change**.
 
 Concretely **may change** means that an API or module is in early access mode and that it:
 
- * is not guaranteed to be binary compatible in minor releases
- * may have its API change in breaking ways in minor releases
- * may be entirely dropped from Akka in a minor release
+* is not guaranteed to be binary compatible in minor releases
+* may have its API change in breaking ways in minor releases
+* may be entirely dropped from Akka in a minor release
 
 Complete modules can be marked as **may change**, this will can be found in their module description and in the docs.
 
