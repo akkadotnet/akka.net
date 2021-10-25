@@ -39,21 +39,21 @@ From there, we can create our `ActorSystem`:
 
 Akka.NET leverages a configuration format, called HOCON, to allow you to configure your Akka.NET applications with whatever level of granularity you want.
 
-#### What is HOCON?
+### What is HOCON?
 
 HOCON (Human-Optimized Config Object Notation) is a flexible and extensible configuration format.
 It allows you to configure everything from Akka.NET's `IActorRefProvider` implementation: logging, network transports, and (more commonly) how individual actors are deployed.
 
 Values returned by HOCON are strongly typed, which means you can fetch out an `int`, a `Timespan`, etc.
 
-#### What can I do with HOCON?
+### What can I do with HOCON?
 
 HOCON allows you to embed easy-to-read configuration inside of the otherwise hard-to-read XML in App.config and Web.config.
 HOCON also lets you query configs by their section paths, and those sections are exposed strongly typed and parsed values you can use inside your applications.
 
 HOCON also lets you nest and/or chain sections of configuration, creating layers of granularity and providing you a semantically namespaced config.
 
-#### What is HOCON usually used for?
+### What is HOCON usually used for?
 
 HOCON is commonly used for tuning logging settings, enabling special modules (such as `Akka.Remote`), or configuring deployments such as the `Dispatcher` or `Router` used for a particular actor.
 
@@ -73,7 +73,7 @@ var system = ActorSystem.Create("MyActorSystem", config);
 
 As you can see in that example, a HOCON `Config` object can be parsed from a `string` using the `ConfigurationFactory.ParseString` method. Once you have a `Config` object, you can then pass this to your `ActorSystem` inside the `ActorSystem.Create` method.
 
-#### "Deployment"? What's that?
+### "Deployment"? What's that?
 
 Deployment is a vague concept, but it's closely tied to HOCON. An actor is "deployed" when it is instantiated and put into service within the `ActorSystem` somewhere.
 
