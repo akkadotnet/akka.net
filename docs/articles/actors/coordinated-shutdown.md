@@ -120,17 +120,17 @@ Each shutdown task added to a phase must specify a function that returns a value
 
 Tasks should be registered as early as possible, preferably at system startup, in order to ensure that all registered tasks are run. If tasks are added after the `CoordinatedShutdown` have begun its run, it's possible that the newly registered tasks will not be executed.
 
-## Running `CoordinatedShutdown` 
+## Running `CoordinatedShutdown`
 
 There are a few different ways to start the `CoordinatedShutdown` process.
 
-If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`. 
+If you wish to execute the `CoordinatedShutdown` yourself, you can simply call `CoordinatedShutdown.Run(CoordinatedShutdown.Reason)`, which takes a [`CoordinatedShutdown.Reason`](/api/Akka.Actor.CoordinatedShutdown.Reason.html) argument will return a `Task<Done>`.
 
 [!code-csharp[CoordinatedShutdownSpecs.cs](../../../src/core/Akka.Docs.Tests/Actors/CoordinatedShutdownSpecs.cs?name=coordinated-shutdown-builtin)]
 
 It's safe to call this method multiple times as the shutdown process will only be run once and will return the same completion task each time. The `Task<Done>` will complete once all phases have run successfully, or a phase with `recover = off` failed.
 
-> [!NOTE] 
+> [!NOTE]
 > It's possible to subclass the `CoordinatedShutdown.Reason` type and pass in a custom implementation which includes custom properties and data. This data is accessible inside the shutdown phases themselves via the [`CoordinatedShutdown.ShutdownReason` property](/api/Akka.Actor.CoordinatedShutdown.html#Akka_Actor_CoordinatedShutdown_ShutdownReason).
 
 ### Automatic `ActorSystem` and Process Termination

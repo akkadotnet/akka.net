@@ -371,10 +371,10 @@ Stages by default automatically stop once all of their ports (input and output) 
 
 Logging debug or other important information in your stages is often a very good idea, especially when developing
 more advances stages which may need to be debugged at some point.
- 
+
 The `Log` property is provided to enable you to easily obtain a `LoggingAdapter`
 inside of a `GraphStage` as long as the `Materializer` you're using is able to provide you with a logger.
-In that sense, it serves a very similar purpose as `ActorLogging` does for Actors. 
+In that sense, it serves a very similar purpose as `ActorLogging` does for Actors.
 
 > [!NOTE]
 > Please note that you can always simply use a logging library directly inside a Stage.
@@ -434,7 +434,7 @@ public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 ```
 
 > [!NOTE]
-> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing 
+> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing
 `IMaterializerLoggingProvider` in your `Materializer`.
 
 ### Using timers
@@ -601,7 +601,8 @@ class FirstValue<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<T>>
 
 ## Using attributes to affect the behavior of a stage
 
-**This section is a stub and will be extended in the next release**
+> [!NOTE] 
+> This section is a stub and will be extended in the next release.
 
 Stages can access the `Attributes` object created by the materializer. This contains all the applied (inherited) attributes applying to the stage, ordered from least specific (outermost) towards the most specific (innermost) attribute. It is the responsibility of the stage to decide how to reconcile this inheritance chain to a final effective decision.
 

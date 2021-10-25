@@ -5,7 +5,7 @@ title: Configuration
 
 # Akka.NET Configuration
 
-Akka.NET relies on [HOCON](xref:hocon) configuration to configure its various knobs and dials. 
+Akka.NET relies on [HOCON](xref:hocon) configuration to configure its various knobs and dials.
 
 However, as of Akka.NET v1.4 we now support the [`Setup` class](xref:Akka.Actor.Setup.Setup) and the [`BootstrapSetup` constructs](xref:Akka.Actor.BootstrapSetup), which allow developers to configure various parts of Akka.NET using programmatic configuration in addition to HOCON.
 
@@ -33,7 +33,7 @@ From there, we can create our `ActorSystem`:
 
 [!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Verification)]
 
-## HOCON 
+## HOCON
 
 *Quoted from [Akka.NET Bootcamp: Unit 2, Lesson 1 - "Using HOCON Configuration to Configure Akka.NET"](https://github.com/petabridge/akka-bootcamp/tree/master/src/Unit-2/lesson1 "Using HOCON Configuration to Configure Akka.NET")*
 
@@ -81,7 +81,7 @@ When an actor is instantiated within the `ActorSystem` it can be deployed in one
 
 When an actor is deployed by the `ActorSystem`, it has a range of configuration settings. These settings control a wide range of behavior options for the actor such as: is this actor going to be a router? What `Dispatcher` will it use? What type of mailbox will it have? (More on these concepts in later lessons.)
 
-We haven't gone over what all these options mean, but *the key thing to know for now is that the settings used by the `ActorSystem` to deploy an actor into service can be set within HOCON. *
+We haven't gone over what all these options mean, but **the key thing to know for now is that the settings used by the `ActorSystem` to deploy an actor into service can be set within HOCON.**
 
 ***This also means that you can change the behavior of actors dramatically (by changing these settings) without having to actually touch the actor code itself.***
 
