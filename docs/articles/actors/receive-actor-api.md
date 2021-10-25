@@ -474,7 +474,7 @@ Receive<string>(s => s.Length > 2, s => Console.WriteLine("2: " + s));    //2
 Receive<string>(s => Console.WriteLine("3: " + s));                     //3
 ```
 
-Some examples: 
+Some examples:
 
 * The actor receives the message "123456". Since the length of is 6, the predicate specified for the first handler will return true, and the first handler will be invoked resulting in "1: 123456" being written to the console.
 

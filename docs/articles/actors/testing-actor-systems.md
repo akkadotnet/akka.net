@@ -50,7 +50,7 @@ Keep receiving messages as long as the time is not used up and the partial funct
 
 In addition to message reception assertions there are also methods which help with messages flows:
 
-* `object ReceiveOne(TimeSpan? max = null)` 
+* `object ReceiveOne(TimeSpan? max = null)`
 
 Receive one message from the internal queue of the TestActor. This method blocks the specified duration or until a message is received. If no message was received, null is returned.
 
