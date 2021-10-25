@@ -51,7 +51,7 @@ one thread will enter the method at any given time, this is a very costly strate
    unacceptable, we want to keep user-facing parts of applications (its UI) to be responsive even when a
    long background job is running. In the backend, blocking is outright wasteful.
    One might think that this can be compensated by launching new threads, but threads are also a costly abstraction.
-* Locks introduce a new menace: deadlocks.     
+* Locks introduce a new menace: deadlocks.
 
 These realities result in a no-win situation:
 

@@ -601,7 +601,7 @@ class FirstValue<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<T>>
 
 ## Using attributes to affect the behavior of a stage
 
-> [!NOTE] 
+> [!NOTE]
 > This section is a stub and will be extended in the next release.
 
 Stages can access the `Attributes` object created by the materializer. This contains all the applied (inherited) attributes applying to the stage, ordered from least specific (outermost) towards the most specific (innermost) attribute. It is the responsibility of the stage to decide how to reconcile this inheritance chain to a final effective decision.

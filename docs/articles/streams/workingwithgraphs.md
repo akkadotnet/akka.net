@@ -28,7 +28,7 @@ Akka Streams currently provide these junctions (for a detailed list see [Overvie
   * ``Broadcast<T>`` – *(1 input, N outputs)* given an input element emits to each output
   * ``Balance<T>`` – *(1 input, N outputs)* given an input element emits to one of its output ports
   * ``UnzipWith<In,A,B,...>`` – *(1 input, N outputs)* takes a function of 1 input that given a value for each input emits N output elements (where N <= 20)
-  * ``UnZip<A,B>`` – *(1 input, 2 outputs)* splits a stream of ``(A,B)`` tuples into two streams, one of type ``A`` and one of type ``B``   
+  * ``UnZip<A,B>`` – *(1 input, 2 outputs)* splits a stream of ``(A,B)`` tuples into two streams, one of type ``A`` and one of type ``B``
 * **Fan-in**
   * ``Merge<In>`` – *(N inputs , 1 output)* picks randomly from inputs pushing them one by one to its output
   * ``MergePreferred<In>`` – like `Merge` but if elements are available on ``preferred`` port, it picks from it, otherwise randomly from ``others``
