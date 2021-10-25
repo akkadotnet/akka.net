@@ -4,6 +4,7 @@ title: Streams Cookbook
 ---
 
 # Streams Cookbook
+
 ## Introduction
 
 This is a collection of patterns to demonstrate various usage of the Akka Streams API by solving small targeted
