@@ -18,31 +18,31 @@ The very first issue we face is that the set of devices is dynamic, and each dev
 can stop at any time. At the beginning of the query, we need to ask all of the device actors for the current temperature
 that we know about. However, during the lifecycle of the query:
 
- * A device actor may stop and not respond back with a temperature reading.
- * A new device actor might start up, but we missed asking it for the current temperature.
+* A device actor may stop and not respond back with a temperature reading.
+* A new device actor might start up, but we missed asking it for the current temperature.
 
 There are many approaches that can be taken to address these issues, but the important point is to settle on what is
 the desired behavior. We will pick the following two guarantees:
 
- * When a query arrives at the group, the group actor takes a _snapshot_ of the existing device actors and will only
+* When a query arrives at the group, the group actor takes a _snapshot_ of the existing device actors and will only
    ask those for the temperature. Actors that are started _after_ the arrival of the query are simply ignored.
- * When an actor stops during the query without answering (i.e. before all the actors we asked for the temperature
+* When an actor stops during the query without answering (i.e. before all the actors we asked for the temperature
    responded) we simply report back that fact to the sender of the query message.
 
 Apart from device actors coming and going dynamically, some actors might take a long time to answer, for example, because
 they are stuck in an accidental infinite loop, or because they failed due to a bug and dropped our request. Ideally,
 we would like to give a deadline to our query:
 
- * The query is considered completed if either all actors have responded (or confirmed being stopped), or we reach
+* The query is considered completed if either all actors have responded (or confirmed being stopped), or we reach
    the deadline.
 
 Given these decisions, and the fact that a device might not have a temperature to record, we can define four states
 that each device can be in, according to the query:
 
- * It has a temperature available: `Temperature`.
- * It has responded, but has no temperature available yet: `TemperatureNotAvailable`.
- * It has stopped before answering: `DeviceNotAvailable`.
- * It did not respond before the deadline: `DeviceTimedOut`.
+* It has a temperature available: `Temperature`.
+* It has responded, but has no temperature available yet: `TemperatureNotAvailable`.
+* It has stopped before answering: `DeviceNotAvailable`.
+* It did not respond before the deadline: `DeviceTimedOut`.
 
 Summarizing these in message types we can add the following to `DeviceGroup`:
 
@@ -69,10 +69,10 @@ First, we need to design the lifecycle of our query actor. This consists of iden
 the first action to be taken by the actor, then, the cleanup if necessary. There are a few things the query should
 need to be able to work:
 
- * The snapshot of active device actors to query, and their IDs.
- * The requestID of the request that started the query (so we can include it in the reply).
- * The `IActorRef` of the actor who sent the group actor the query. We will send the reply to this actor directly.
- * A timeout parameter, how long the query should wait for replies. Keeping this as a parameter will simplify testing.
+* The snapshot of active device actors to query, and their IDs.
+* The requestID of the request that started the query (so we can include it in the reply).
+* The `IActorRef` of the actor who sent the group actor the query. We will send the reply to this actor directly.
+* A timeout parameter, how long the query should wait for replies. Keeping this as a parameter will simplify testing.
 
 Since we need to have a timeout for how long we are willing to wait for responses, it is time to introduce a new feature that we have
 not used yet: timers. Akka has a built-in scheduler facility for this exact purpose. Using it is simple, the

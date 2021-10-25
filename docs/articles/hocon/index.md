@@ -14,13 +14,13 @@ You can play around with HOCON syntax in real-time by going to [hocon-playground
 
 ## Definitions
 
- - A **field** is a key-value pair consisting a _key_, _separator_, and a _value_.
- - A **separator** is the `:` or `=` character.
- - A **key** is a string to the left of the _separator_.
- - A **value** is any "value" to the right of the _separator_, as defined in the JSON spec, plus unquoted strings, triple quoted strings and substitutions.
- - A **simple value** or a **literal value** is any value that are not objects or arrays.
- - A **newline** is defined as the newline character `\n` (unicode value `0x000A`)
- - References to a **file** ("the file being parsed") can be understood to mean any byte stream being parsed, not just literal files in a filesystem.
+* A **field** is a key-value pair consisting a _key_, _separator_, and a _value_.
+* A **separator** is the `:` or `=` character.
+* A **key** is a string to the left of the _separator_.
+* A **value** is any "value" to the right of the _separator_, as defined in the JSON spec, plus unquoted strings, triple quoted strings and substitutions.
+* A **simple value** or a **literal value** is any value that are not objects or arrays.
+* A **newline** is defined as the newline character `\n` (unicode value `0x000A`)
+* References to a **file** ("the file being parsed") can be understood to mean any byte stream being parsed, not just literal files in a filesystem.
 
 ## Syntax
 
@@ -28,10 +28,10 @@ Much of this is defined with reference to JSON; you can find the JSON spec at <h
 
 ### Unchanged from JSON
 
- - files must be valid UTF-8
- - quoted strings are in the same format as JSON strings
- - values have possible types: string, number, object, array, boolean, null
- - allowed number formats matches JSON.
+* files must be valid UTF-8
+* quoted strings are in the same format as JSON strings
+* values have possible types: string, number, object, array, boolean, null
+* allowed number formats matches JSON.
 
 ### Comments
 
@@ -66,25 +66,25 @@ These same comma rules apply to fields in objects.
 
 Examples:
 
- - `[1,2,3,]` and `[1,2,3]` are the same array.
- - `[1\n2\n3]` and `[1,2,3]` are the same array.
- - `[1,2,3,,]` is invalid because it has two trailing commas.
- - `[,1,2,3]` is invalid because it has an initial comma.
- - `[1,,2,3]` is invalid because it has two commas in a row.
+* `[1,2,3,]` and `[1,2,3]` are the same array.
+* `[1\n2\n3]` and `[1,2,3]` are the same array.
+* `[1,2,3,,]` is invalid because it has two trailing commas.
+* `[,1,2,3]` is invalid because it has an initial comma.
+* `[1,,2,3]` is invalid because it has two commas in a row.
 
 ### Duplicate keys and object merging
 
 Duplicate keys that are declared later in the string have different behaviors:
 
- - A key with any values will override previous values if they are of different types.
- - A key with literal or array value will override any previous key value.
- - A key with object value will be recursively merged with previous object value.
+* A key with any values will override previous values if they are of different types.
+* A key with literal or array value will override any previous key value.
+* A key with object value will be recursively merged with previous object value.
 
 Objects are merged by:
 
- - Fields present in only one of the two objects are added to the merged object.
- - Non-object fields in overriding object will override field with the same path on previous object.
- - Object fields with the same path in both objects will be recursively merged according to these same rules.
+* Fields present in only one of the two objects are added to the merged object.
+* Non-object fields in overriding object will override field with the same path on previous object.
+* Object fields with the same path in both objects will be recursively merged according to these same rules.
 
     {
         "foo" : { "a" : 42 },
@@ -224,9 +224,9 @@ is equivalent to:
 
 Because path expressions are always converted to strings, even single values that would normally have another type become strings.
 
-   - `true : 42` is `"true" : 42`
-   - `3 : 42` is `"3" : 42`
-   - `3.14 : 42` is `"3" : { "14" : 42 }`
+* `true : 42` is `"true" : 42`
+* `3 : 42` is `"3" : 42`
+* `3.14 : 42` is `"3" : { "14" : 42 }`
 
 As a special rule, the unquoted string `include` may not begin a path expression in a key, because it has a special interpretation (see below).
 
@@ -236,8 +236,8 @@ Substitutions are a way of referring to other parts of the configuration tree.
 
 The syntax is `${pathexpression}` or `${?pathexpression}` where the `pathexpression` is a path expression as described above. This path expression has the same syntax that you could use for an object key.
 
- - When you start a substitution with `${?`, the substitution is an _optional substitution_. The `?` in `${?pathexpression}` must not have whitespace before it; the three characters `${?` must be exactly like that, grouped together.
- - A substitution without question mark (`${`) is called a _required substitution_.
+* When you start a substitution with `${?`, the substitution is an _optional substitution_. The `?` in `${?pathexpression}` must not have whitespace before it; the three characters `${?` must be exactly like that, grouped together.
+* A substitution without question mark (`${`) is called a _required substitution_.
 
 Substitutions are not parsed inside quoted strings. To get a string containing a substitution, you must use value concatenation with the substitution in the unquoted portion:
 
@@ -259,9 +259,9 @@ If a substitution does not match any value present in the configuration and is n
 
 If an _optional substitution_ is undefined:
 
- - If it is the value of an object field then the field would not be created. If the field would have overridden a previously-set value for the same field, then the previous value remains.
- - If it is an array element then the element would not be added.
- - If it is part of a value concatenation with another string then it would become an empty string; if part of a value concatenation with an object or array it would become an empty object or array.
+* If it is the value of an object field then the field would not be created. If the field would have overridden a previously-set value for the same field, then the previous value remains.
+* If it is an array element then the element would not be added.
+* If it is part of a value concatenation with another string then it would become an empty string; if part of a value concatenation with an object or array it would become an empty object or array.
 
 `foo : ${?bar}` would avoid creating field `foo` if `bar` is undefined. `foo : ${?bar}${?baz}` would also avoid creating the field if _both_ `bar` and `baz` are undefined.
 
@@ -289,10 +289,10 @@ It's recommended that HOCON keys always use lowercase, because environment varia
 
 Environment variables are interpreted as follows:
 
- - Env variables set to the empty string are kept as such (set to empty string, rather than undefined)
- - If `Environment.GetEnvironmentVariable()` throws SecurityException, then it is treated as not present
- - Encoding is handled by C# (`Environment.GetEnvironmentVariable()` already returns a Unicode string)
- - Environment variables always become a string value, though if an app asks for another type automatic type conversion would kick in
+* Env variables set to the empty string are kept as such (set to empty string, rather than undefined)
+* If `Environment.GetEnvironmentVariable()` throws SecurityException, then it is treated as not present
+* Encoding is handled by C# (`Environment.GetEnvironmentVariable()` already returns a Unicode string)
+* Environment variables always become a string value, though if an app asks for another type automatic type conversion would kick in
 
 ##### Note on Windows and case sensitivity of environment variables
 
@@ -345,8 +345,8 @@ Examples of self-referential fields:
 
 Note that an object or array with a substitution inside it is **not** considered self-referential for this purpose. The self-referential rules do **not** apply to:
 
- - `a : { b : ${a} }`
- - `a : [${a}]`
+* `a : { b : ${a} }`
+* `a : [${a}]`
 
 These cases are unbreakable cycles that generate an error.
 
