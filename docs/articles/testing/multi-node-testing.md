@@ -4,7 +4,7 @@ One of the most powerful testing features of Akka.NET is its ability to create a
 
 This is precisely what the Multi-Node TestKit and TestRunner (MNTR) does in Akka.NET.
 
-### MNTR Components
+## MNTR Components
 
 The Akka.NET Multi-Node TestKit consists of the following publicly available NuGet packages:
 
@@ -12,7 +12,7 @@ The Akka.NET Multi-Node TestKit consists of the following publicly available NuG
 * [Akka.Remote.TestKit](https://www.nuget.org/packages/Akka.Remote.TestKit) - the base package used to create multi-node tests; and
 * [Akka.Cluster.TestKit](https://www.nuget.org/packages/Akka.Cluster.TestKit) - a set of test helper methods for [Akka.Cluster](xref:cluster-overview) applications built on top of the Akka.Remote.TestKit.
 
-### How the MNTR Works
+## How the MNTR Works
 
 The MultiNodeTestRunner works via the following process:
 

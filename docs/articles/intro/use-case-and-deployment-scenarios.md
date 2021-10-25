@@ -96,7 +96,7 @@ to build your Windows Services. It radically simplifies hosting Windows Services
 
 The quickest way to get started with TopShelf is by creating a Console Application. Which would look like this:
 
-#### Program.cs
+### Program.cs
 
 ```csharp
 using Akka.Actor;
@@ -161,7 +161,7 @@ The Azure PaaS Worker Role implementation is very similar to the [Windows Servic
 The quickest way to get started with Akka.Net is to create a simple Worker Role which invokes the top-level
 user-actor in the RunAsync() method, as follows:
 
-#### WorkerRole.cs
+### WorkerRole.cs
 
 ```csharp
 using Akka.Actor;
