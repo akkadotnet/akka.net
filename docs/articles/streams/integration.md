@@ -429,11 +429,11 @@ await Source.FromObservable(observable, maxBufferCapacity: 128, overflowStrategy
 
 You may notice two extra parameters here. One of the advantages of Akka.Streams (and reactive streams in general) over Reactive Extensions is notion of backpressure - absent in Rx.NET. This puts a constraint of rate limiting the events incoming form upstream. If an observable will be producing events faster, than downstream is able to consume them, source stage will start to buffer them up to a provided `maxBufferCapacity` limit. Once that limit is reached, an overflow strategy will be applied. There are several different overflow strategies to choose from:
 
-- `OverflowStrategy.DropHead` (default) will drop the oldest element. In this mode source works in circular buffer fashion.
-- `OverflowStrategy.DropTail` will cause a current element to replace a one set previously in a buffer.
-- `OverflowStrategy.DropNew` will cause current event to be dropped. This effectively will cause dropping any new incoming events until a buffer will get some free space.
-- `OverflowStrategy.Fail` will cause a `BufferOverflowException` to be send as an error signal.
-- `OverflowStrategy.DropBuffer` will cause a whole buffer to be cleared once it's limit has been reached.
+* `OverflowStrategy.DropHead` (default) will drop the oldest element. In this mode source works in circular buffer fashion.
+* `OverflowStrategy.DropTail` will cause a current element to replace a one set previously in a buffer.
+* `OverflowStrategy.DropNew` will cause current event to be dropped. This effectively will cause dropping any new incoming events until a buffer will get some free space.
+* `OverflowStrategy.Fail` will cause a `BufferOverflowException` to be send as an error signal.
+* `OverflowStrategy.DropBuffer` will cause a whole buffer to be cleared once it's limit has been reached.
 
 Any other `OverflowStrategy` option is not supported by `Source.FromObservable` stage.
 
@@ -465,7 +465,7 @@ Just like in case of `Source.FromObservable`, `Source.FromEvents` can take optio
 back pressure. It makes it possible to plug together stream libraries that adhere to the standard.
 Akka Streams is one such library.
 
-- Reactive Streams: <http://reactive-streams.org/>
+* Reactive Streams: <http://reactive-streams.org/>
 
 The two most important interfaces in Reactive Streams are the `IPublisher` and `ISubscriber`.
 

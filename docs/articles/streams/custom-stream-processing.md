@@ -99,19 +99,19 @@ var result2Task = mySource.Take(100).RunAggregate(0, (sum, next) => sum + next, 
 
 In order to interact with a port (`Inlet` or `Outlet`) of the stage we need to be able to receive events and generate new events belonging to the port. From the `GraphStageLogic` the following operations are available on an output port:
 
-   * `Push(out,elem)` pushes an element to the output port. Only possible after the port has been pulled by downstream.
-   * `Complete(out)` closes the output port normally.
-   * `Fail(out,exception)` closes the port with a failure signal.
+* `Push(out,elem)` pushes an element to the output port. Only possible after the port has been pulled by downstream.
+* `Complete(out)` closes the output port normally.
+* `Fail(out,exception)` closes the port with a failure signal.
 
 The events corresponding to an *output* port can be received in an `Action` registered to the output port using `SetHandler(out, action)`. This handler has two callbacks:
 
-  * `onPull` is called when the output port is ready to emit the next element, `Push(out, elem)` is now allowed to be called on this port.
-  * `onDownstreamFinish` is called once the downstream has cancelled and no longer allows messages to be pushed to it. No more `onPull` will arrive after this event. If not overridden this will default to stopping the stage.
+* `onPull` is called when the output port is ready to emit the next element, `Push(out, elem)` is now allowed to be called on this port.
+* `onDownstreamFinish` is called once the downstream has cancelled and no longer allows messages to be pushed to it. No more `onPull` will arrive after this event. If not overridden this will default to stopping the stage.
 
 Also, there are two query methods available for output ports:
 
- * `IsAvailable(out)` returns true if the port can be pushed
- * `IsClosed(out)` returns true if the port is closed. At this point the port can not be pushed and will not be pulled anymore.
+* `IsAvailable(out)` returns true if the port can be pushed
+* `IsClosed(out)` returns true if the port is closed. At this point the port can not be pushed and will not be pulled anymore.
 
 The relationship of the above operations, events and queries are summarized in the state machine below. Green shows the initial state while orange indicates the end state. If an operation is not listed for a state, then it is invalid to call it while the port is in that state. If an event is not listed for a state, then that event cannot happen in that state.
 
@@ -119,9 +119,9 @@ The relationship of the above operations, events and queries are summarized in t
 
 The following operations are available for *input* ports:
 
- * `Pull(in)` requests a new element from an input port. This is only possible after the port has been pushed by upstream.
- * `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
- * `Cancel(in)` closes the input port.
+* `Pull(in)` requests a new element from an input port. This is only possible after the port has been pushed by upstream.
+* `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
+* `Cancel(in)` closes the input port.
 
 The events corresponding to an *input* port can be received in an `Action` registered to the input port using `setHandler(in, action)`. This handler has three callbacks:
 

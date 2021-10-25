@@ -10,8 +10,8 @@ When working with an Akka.NET cluster, you must consider how to handle [network 
 
 One of the common problems present in distributed systems are potential hardware failures. Things like garbage collection pauses, machine crashes or network partitions happen all the time. Moreover it is impossible to distinguish between them. Different cause can have different result on our cluster. A careful balance here is highly desired:
 
-- From one side we may want to detect crashed nodes as fast as possible and remove them from the cluster.
-- However, things like network partitions may be only temporary. For this reason it may be more feasible to wait a while for disconnected nodes in hope, that they will be able to reconnect soon.
+* From one side we may want to detect crashed nodes as fast as possible and remove them from the cluster.
+* However, things like network partitions may be only temporary. For this reason it may be more feasible to wait a while for disconnected nodes in hope, that they will be able to reconnect soon.
 
 Networks partitions also bring different problems - the natural result of such event is a risk of splitting a single cluster into two or more independent ones, unaware of each others existence. This comes with certain risks. Even more, some of the Akka.NET cluster features may be unavailable or malfunctioning in such scenario.
 
@@ -277,8 +277,8 @@ Since different nodes may apply their split brain decisions at different points 
 
 If you're going to use a split brain resolver, you can see that the total failover latency is determined by several values. Defaults are:
 
-- failure detection 5 seconds
-- `akka.cluster.split-brain-resolver.stable-after` 20 seconds
-- `akka.cluster.down-removal-margin` 20 seconds
+* failure detection 5 seconds
+* `akka.cluster.split-brain-resolver.stable-after` 20 seconds
+* `akka.cluster.down-removal-margin` 20 seconds
 
 This would result in total failover time of 45 seconds. While this value is good for the cluster of 100 nodes, you may decide to lower those values in case of a smaller one i.e. cluster of 20 nodes could work well with timeouts of 13s, which would reduce total failover time to 31 seconds.

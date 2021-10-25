@@ -294,8 +294,8 @@ encoded in the provided `RunnableGraph`. To be able to interact with the running
 needs to return a different object that provides the necessary interaction capabilities. In other words, the
 `RunnableGraph` can be seen as a factory, which creates:
 
-  * a network of running processing entities, inaccessible from the outside
-  * a materialized value, optionally providing a controlled interaction capability with the network
+* a network of running processing entities, inaccessible from the outside
+* a materialized value, optionally providing a controlled interaction capability with the network
 
 Unlike actors though, each of the processing stages might provide a materialized value, so when we compose multiple
 stages or modules, we need to combine the materialized value as well (there are default rules which make this easier,

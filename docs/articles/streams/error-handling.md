@@ -8,10 +8,10 @@ When a stage in a stream fails this will normally lead to the entire stream bein
 
 In many cases you may want to avoid complete stream failure, this can be done in a few different ways:
 
-- `Recover` to emit a final element then complete the stream normally on upstream failure
-- `RecoverWithRetries` to create a new upstream and start consuming from that on failure
-- Restarting sections of the stream after a backoff
-- Using a supervision strategy for stages that support it
+* `Recover` to emit a final element then complete the stream normally on upstream failure
+* `RecoverWithRetries` to create a new upstream and start consuming from that on failure
+* Restarting sections of the stream after a backoff
+* Using a supervision strategy for stages that support it
 
 In addition to these built in tools for error handling, a common pattern is to wrap the stream inside an actor, and have the actor restart the entire stream on failure.
 
@@ -147,9 +147,9 @@ For stages that do implement supervision, the strategies for how to handle excep
 
 There are three ways to handle exceptions from application code:
 
-- `Stop` - The stream is completed with failure.
-- `Resume` - The element is dropped and the stream continues.
-- `Restart` - The element is dropped and the stream continues after restarting the stage. Restarting a stage means that any accumulated state is cleared. This is typically performed by creating a new instance of the stage.
+* `Stop` - The stream is completed with failure.
+* `Resume` - The element is dropped and the stream continues.
+* `Restart` - The element is dropped and the stream continues after restarting the stage. Restarting a stage means that any accumulated state is cleared. This is typically performed by creating a new instance of the stage.
 
 By default the stopping strategy is used for all exceptions, i.e. the stream will be completed with failure when an exception is thrown.
 

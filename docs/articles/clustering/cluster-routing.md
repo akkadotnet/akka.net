@@ -79,19 +79,19 @@ Here are the essential options you will use to configure cluster-aware routers.
 
 ### All Clustered Routers
 
-- **`enabled`**: this must be set to `on` in order for this to be a clustered router.
-- **`allow-local-routees`**: determines if routee actors are allowed to be located on the same node as router actor, or only on remote nodes. Setting this to `off` means that all the routees for this router will exist on different nodes in the cluster.
-- `nr-of-instances`: this is the maximum number of total routees that this router will route to.
-- **`use-role`**: depends on whether router is a `Pool` or `Group` router
+* **`enabled`**: this must be set to `on` in order for this to be a clustered router.
+* **`allow-local-routees`**: determines if routee actors are allowed to be located on the same node as router actor, or only on remote nodes. Setting this to `off` means that all the routees for this router will exist on different nodes in the cluster.
+* `nr-of-instances`: this is the maximum number of total routees that this router will route to.
+* **`use-role`**: depends on whether router is a `Pool` or `Group` router
 
 ### Clustered `Group` Router Config
 
-- **`nr-of-instances`**: this is the maximum number of total routees that this router will route to.
-- **`max-nr-of-instances-per-node`**: this does not apply to `Group` routers.
-- **`routees.paths`**: the comma-separated path(s) of the routees on each node in the cluster.
-    + This setting can use what's called a *wildcard* path, meaning we don't care about the name of the actor in the `*` position. e.g. [in the Webcrawler sample,](https://github.com/petabridge/akkadotnet-code-samples/blob/master/Cluster.WebCrawler/src/WebCrawler.Service/App.config#L38) as long as the actor being deployed is named `coordinators` and the grandparent is named `api`, then this deployment configuration can be safely reused. You can write [ActorSelections](xref:addressing#summary-actorof-vs-actorselection) using wildcard paths also!
-    + You do *not* need to specify `/user` at the start of each path. It is implied.
-- **`use-role`**: the `Group` router will only route to routees at the specified `paths` on nodes marked with the given role. Can only specify one role here.
+* **`nr-of-instances`**: this is the maximum number of total routees that this router will route to.
+* **`max-nr-of-instances-per-node`**: this does not apply to `Group` routers.
+* **`routees.paths`**: the comma-separated path(s) of the routees on each node in the cluster.
+  * This setting can use what's called a *wildcard* path, meaning we don't care about the name of the actor in the `*` position. e.g. [in the Webcrawler sample,](https://github.com/petabridge/akkadotnet-code-samples/blob/master/Cluster.WebCrawler/src/WebCrawler.Service/App.config#L38) as long as the actor being deployed is named `coordinators` and the grandparent is named `api`, then this deployment configuration can be safely reused. You can write [ActorSelections](xref:addressing#summary-actorof-vs-actorselection) using wildcard paths also!
+  * You do *not* need to specify `/user` at the start of each path. It is implied.
+* **`use-role`**: the `Group` router will only route to routees at the specified `paths` on nodes marked with the given role. Can only specify one role here.
 
 #### HOCON for Clustered `Group` Routers
 
@@ -119,10 +119,10 @@ akka {
 
 ### Clustered `Pool` Router Config
 
-- **`nr-of-instances`**: this is the maximum number of total routees that this router will first deploy, and then route to.
-- **`max-nr-of-instances-per-node`**: the maximum number of routees that the `Pool` router will deploy onto a given cluster node.
-    - Note that `nr-of-instances` defines total number of routees, but number of routees per node will not be exceeded, i.e. if you define `nr-of-instances = 50` and `max-nr-of-instances-per-node = 2`, the router will deploy 2 routees per new node in the cluster, up to 25 nodes.
-- **`use-role`**: router will only deploy routees onto nodes in the cluster marked with the given role. Can only specify one role here.
+* **`nr-of-instances`**: this is the maximum number of total routees that this router will first deploy, and then route to.
+* **`max-nr-of-instances-per-node`**: the maximum number of routees that the `Pool` router will deploy onto a given cluster node.
+  * Note that `nr-of-instances` defines total number of routees, but number of routees per node will not be exceeded, i.e. if you define `nr-of-instances = 50` and `max-nr-of-instances-per-node = 2`, the router will deploy 2 routees per new node in the cluster, up to 25 nodes.
+* **`use-role`**: router will only deploy routees onto nodes in the cluster marked with the given role. Can only specify one role here.
 
 #### HOCON for Clustered `Pool` Routers
 
@@ -150,5 +150,5 @@ akka {
 
 ## Additional Resources
 
-- [Scalable WebCrawler Sample](https://github.com/petabridge/akkadotnet-code-samples/tree/master/Cluster.WebCrawler)
-- [Cluster Routing Config](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Cluster/Routing/ClusterRoutingConfig.cs)
+* [Scalable WebCrawler Sample](https://github.com/petabridge/akkadotnet-code-samples/tree/master/Cluster.WebCrawler)
+* [Cluster Routing Config](https://github.com/akkadotnet/akka.net/blob/dev/src/core/Akka.Cluster/Routing/ClusterRoutingConfig.cs)

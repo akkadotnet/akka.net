@@ -160,8 +160,8 @@ akka.cluster.sharding.distributed-data.durable.keys = []
 
 Possible reasons for disabling remember entity storage are:
 
-- No requirement for remembering entities after a full cluster shutdown
-- Running in an environment without access to disk between restarts e.g. Kubernetes without persistent volumes
+* No requirement for remembering entities after a full cluster shutdown
+* Running in an environment without access to disk between restarts e.g. Kubernetes without persistent volumes
 
 For supporting remembered entities in an environment without disk storage but with access to a database, use persistence mode instead.
 
@@ -214,8 +214,8 @@ To recreate a remembered entity actor after it has been passivated all you have 
 
 You can inspect current sharding stats by using following messages:
 
-- On `GetShardRegionState` shard region will reply with `ShardRegionState` containing data about shards living in the current actor system and what entities are alive on each one of them.
-- On `GetClusterShardingStats` shard region will reply with `ClusterShardingStats` having information about shards living in the whole cluster and how many entities alive in each one of them.
+* On `GetShardRegionState` shard region will reply with `ShardRegionState` containing data about shards living in the current actor system and what entities are alive on each one of them.
+* On `GetClusterShardingStats` shard region will reply with `ClusterShardingStats` having information about shards living in the whole cluster and how many entities alive in each one of them.
 
 ## Integrating Cluster Sharding with Persistent Actors
 

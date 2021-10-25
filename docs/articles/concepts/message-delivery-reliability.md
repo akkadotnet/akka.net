@@ -122,12 +122,12 @@ The guarantee is illustrated in the following:
 
 This means that:
 
-- If ``M1`` is delivered it must be delivered before ``M2`` and ``M3``
-- If ``M2`` is delivered it must be delivered before ``M3``
-- If ``M4`` is delivered it must be delivered before ``M5`` and ``M6``
-- If ``M5`` is delivered it must be delivered before ``M6``
-- ``A2`` can see messages from ``A1`` interleaved with messages from ``A3``
-- Since there is no guaranteed delivery, any of the messages may be dropped, i.e. not arrive at ``A2``
+* If ``M1`` is delivered it must be delivered before ``M2`` and ``M3``
+* If ``M2`` is delivered it must be delivered before ``M3``
+* If ``M4`` is delivered it must be delivered before ``M5`` and ``M6``
+* If ``M5`` is delivered it must be delivered before ``M6``
+* ``A2`` can see messages from ``A1`` interleaved with messages from ``A3``
+* Since there is no guaranteed delivery, any of the messages may be dropped, i.e. not arrive at ``A2``
 
 > [!NOTE]
 > It is important to note that Akka's guarantee applies to the order in which
@@ -190,14 +190,14 @@ actually do apply the best effort to keep our tests stable. A local `Tell`
 operation can however fail for the same reasons as a normal method call can on
 the CLR:
 
-- `StackOverflowException`
-- `OutOfMemoryException`
-- other :`SystemException`
+* `StackOverflowException`
+* `OutOfMemoryException`
+* other :`SystemException`
 
 In addition, local sends can fail in Akka-specific ways:
 
-- if the mailbox does not accept the message (e.g. full `BoundedMailbox`)
-- if the receiving actor fails while processing the message or is already
+* if the mailbox does not accept the message (e.g. full `BoundedMailbox`)
+* if the receiving actor fails while processing the message or is already
   terminated
 
 While the first is clearly a matter of configuration the second deserves some
@@ -214,18 +214,18 @@ will note, these are quite subtle as it stands, and it is even possible that
 future performance optimizations will invalidate this whole paragraph. The
 possibly non-exhaustive list of counter-indications is:
 
-- Before receiving the first reply from a top-level actor, there is a lock
+* Before receiving the first reply from a top-level actor, there is a lock
   which protects an internal interim queue, and this lock is not fair; the
   implication is that enqueue requests from different senders which arrive
   during the actor's construction (figuratively, the details are more involved)
   may be reordered depending on low-level thread scheduling. Since completely
   fair locks do not exist on the CLR this is un-fixable.
 
-- The same mechanism is used during the construction of a Router, more
+* The same mechanism is used during the construction of a Router, more
   precisely the routed ActorRef, hence the same problem exists for actors
   deployed with Routers.
 
-- As mentioned above, the problem occurs anywhere a lock is involved during
+* As mentioned above, the problem occurs anywhere a lock is involved during
   enqueueing, which may also apply to custom mailboxes.
 
 This list has been compiled carefully, but other problematic scenarios may have
@@ -254,10 +254,10 @@ powerful, higher-level abstractions on top it.
 As discussed above a straight-forward answer to the requirement of reliable
 delivery is an explicit ACK–RETRY protocol. In its simplest form this requires
 
-- a way to identify individual messages to correlate message with
+* a way to identify individual messages to correlate message with
   acknowledgement
-- a retry mechanism which will resend messages if not acknowledged in time
-- a way for the receiver to detect and discard duplicates
+* a retry mechanism which will resend messages if not acknowledged in time
+* a way for the receiver to detect and discard duplicates
 
 The third becomes necessary by virtue of the acknowledgements not being guaranteed
 to arrive either. An ACK-RETRY protocol with business-level acknowledgements is

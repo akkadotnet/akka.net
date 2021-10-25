@@ -37,10 +37,10 @@ if (response.IsSuccessful)
 
 In response, you should receive `Replicator.IGetResponse` message. There are several types of possible responses:
 
-- `GetSuccess` when a value for provided key has been received successfully. To get the value, you need to call `response.Get(key)` with the key, you've sent with the request.
-- `NotFound` when no value was found under provided key.
-- `GetFailure` when a replicator failed to retrieve value within specified consistency and timeout constraints.
-- `DataDeleted` when a value for the provided key has been deleted.
+* `GetSuccess` when a value for provided key has been received successfully. To get the value, you need to call `response.Get(key)` with the key, you've sent with the request.
+* `NotFound` when no value was found under provided key.
+* `GetFailure` when a replicator failed to retrieve value within specified consistency and timeout constraints.
+* `DataDeleted` when a value for the provided key has been deleted.
 
 All `Get` requests follows the read-your-own-write rule - if you updated the data, and want to read the state under the same key immediately after, you'll always retrieve modified value, even if the `IGetResponse` message will arrive before `IUpdateResponse`.
 
@@ -48,10 +48,10 @@ All `Get` requests follows the read-your-own-write rule - if you updated the dat
 
 What is a mentioned read consistency? As we said at the beginning, all updates performed within distributed data module will eventually converge. This means, we're not speaking about immediate consistency of a given value across all nodes. Therefore we can precise, what degree of consistency are we expecting:
 
-- `ReadLocal` - we take value based on replica living on a current node.
-- `ReadFrom` - value will be merged from states retrieved from some number of nodes, including local one.
-- `ReadMajority` - value will be merged from more than a half of cluster nodes replicas (or nodes given a configured role).
-- `ReadAll` - before returning, value will be read and merged from all cluster nodes (or the ones with configured role).
+* `ReadLocal` - we take value based on replica living on a current node.
+* `ReadFrom` - value will be merged from states retrieved from some number of nodes, including local one.
+* `ReadMajority` - value will be merged from more than a half of cluster nodes replicas (or nodes given a configured role).
+* `ReadAll` - before returning, value will be read and merged from all cluster nodes (or the ones with configured role).
 
 ### Upserts
 
@@ -74,10 +74,10 @@ var response = await replicator.Ask<Replicator.IUpdateResponse>(Update(key, set,
 
 Just like in case of reads, there are several possible responses:
 
-- `UpdateSuccess` when a value for provided key has been replicated successfully within provided write consistency constraints.
-- `ModifyFailure` when update failed because of an exception within modify function used inside `Update` command.
-- `UpdateTimeout` when a write consistency constraints has not been fulfilled on time. **Warning**: this doesn't mean, that update has been rolled back! Provided value will eventually propagate its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
-- `DataDeleted` when a value under provided key has been deleted.
+* `UpdateSuccess` when a value for provided key has been replicated successfully within provided write consistency constraints.
+* `ModifyFailure` when update failed because of an exception within modify function used inside `Update` command.
+* `UpdateTimeout` when a write consistency constraints has not been fulfilled on time. **Warning**: this doesn't mean, that update has been rolled back! Provided value will eventually propagate its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
+* `DataDeleted` when a value under provided key has been deleted.
 
 You'll always see updates done on local node. When you perform two updates on the same key, second modify function will always see changes done by the first one.
 
@@ -85,10 +85,10 @@ You'll always see updates done on local node. When you perform two updates on th
 
 Just like in case of reads, write consistency allows us to specify level of certainty of our updates before proceeding:
 
-- `WriteLocal` - while value will be disseminated later using gossip, the response will return immediately after local replica update has been acknowledged.
-- `WriteTo` - update will immediately be propagated to a given number of replicas, including local one.
-- `WriteMajority` - update will propagate to more than a half nodes in a cluster (or nodes given a configured role) before response will be emitted.
-- `WriteAll` - update will propagate to all nodes in a cluster (or nodes given a configured role) before response will be emitted.
+* `WriteLocal` - while value will be disseminated later using gossip, the response will return immediately after local replica update has been acknowledged.
+* `WriteTo` - update will immediately be propagated to a given number of replicas, including local one.
+* `WriteMajority` - update will propagate to more than a half nodes in a cluster (or nodes given a configured role) before response will be emitted.
+* `WriteAll` - update will propagate to all nodes in a cluster (or nodes given a configured role) before response will be emitted.
 
 ### Deletes
 
@@ -107,9 +107,9 @@ var response = await replicator.Ask<Replicator.IDeleteResponse>(Delete(key, writ
 
 Delete may return one of the 3 responses:
 
-- `DeleteSuccess` when key deletion succeeded within provided consistency constraints.
-- `DataDeleted` when data has been deleted already. Once deleted, key can no longer be reused and `DataDeleted` response will be send to all subsequent requests (either reads, updates or deletes). This message will also be used as notification for subscribers.
-- `ReplicationDeleteFailure` when operation failed to satisfy specified consistency constraints. **Warning**: this doesn't mean, that delete has been rolled back! Provided operation will eventually propagate its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
+* `DeleteSuccess` when key deletion succeeded within provided consistency constraints.
+* `DataDeleted` when data has been deleted already. Once deleted, key can no longer be reused and `DataDeleted` response will be send to all subsequent requests (either reads, updates or deletes). This message will also be used as notification for subscribers.
+* `ReplicationDeleteFailure` when operation failed to satisfy specified consistency constraints. **Warning**: this doesn't mean, that delete has been rolled back! Provided operation will eventually propagate its replicas across nodes using gossip protocol, causing the altered state to eventually converge across all of them.
 
 Deletes doesn't specify it's own consistency - it uses the same `IWriteConsistency` interface as updates.
 
@@ -147,16 +147,16 @@ All subscribers are removed automatically when terminated. This can be also done
 
 Akka.DistributedData specifies several data types, sharing the same `IReplicatedData` interface. All of them share some common members, such as (default) empty value or `Merge` method used to merge two replicas of the same data with automatic conflict resolution. All of those values are also immutable - this means, that any operations, which are supposed to change their state, produce new instance in result:
 
-- `Flag` is a boolean CRDT flag, which default value is always `false`. When a merging replicas have conflicting state, `true` will always win over `false`.
-- `GCounter` (also known as growing-only counter) allows only for addition/increment of its state. Trying to add a negative value is forbidden here. Total value of the counter is a sum of values across all of the replicas. In case of conflicts during merge operation, a copy of replica with greater value will always win.
-- `PNCounter` allows for both increments and decrements. A total value of the counter is a sum of increments across all replicas decreased by the sum of all decrements.
-- `GSet` is an add-only set, which disallows to remove elements once added to it. Merges of GSets are simple unions of their elements. This data type doesn't produce any garbage.
-- `ORSet` is implementation of an observed remove add-wins set. It allows to both add and remove its elements any number of times. In case of conflicts when merging replicas, added elements always wins over removed ones.
-- `ORDictionary` (also known as OR-Map or Observed Remove Map) has similar semantics to OR-Set, however it allows to merge values (which must be CRDTs themselves) in case of concurrent updates.
-- `ORMultiDictionary` is a multi-map implementation based on `ORDictionary`, where values are represented as OR-Sets. Use `AddItem` or `RemoveItem` to add or remove elements to the bucket under specified keys.
-- `PNCounterDictionary` is a dictionary implementation based on `ORDictionary`, where values are represented as PN-Counters.
-- `LWWRegister` (Last Write Wins Register) is a cell for any data type, that implements CRDT semantics. Each modification updates register's timestamp (timestamp generation can be customized, by default it's using UTC date time ticks). In case of merge conflicts, the value with highest update timestamp always wins.
-- `LWWDictionary` is a dictionary implementation, which internally uses LLW-Registers to allow to store data of any type to be stored in it. Dictionary entry additions/removals are solved with add-wins semantics, while in-place entry value updates are resolved using last write wins semantics.
+* `Flag` is a boolean CRDT flag, which default value is always `false`. When a merging replicas have conflicting state, `true` will always win over `false`.
+* `GCounter` (also known as growing-only counter) allows only for addition/increment of its state. Trying to add a negative value is forbidden here. Total value of the counter is a sum of values across all of the replicas. In case of conflicts during merge operation, a copy of replica with greater value will always win.
+* `PNCounter` allows for both increments and decrements. A total value of the counter is a sum of increments across all replicas decreased by the sum of all decrements.
+* `GSet` is an add-only set, which disallows to remove elements once added to it. Merges of GSets are simple unions of their elements. This data type doesn't produce any garbage.
+* `ORSet` is implementation of an observed remove add-wins set. It allows to both add and remove its elements any number of times. In case of conflicts when merging replicas, added elements always wins over removed ones.
+* `ORDictionary` (also known as OR-Map or Observed Remove Map) has similar semantics to OR-Set, however it allows to merge values (which must be CRDTs themselves) in case of concurrent updates.
+* `ORMultiDictionary` is a multi-map implementation based on `ORDictionary`, where values are represented as OR-Sets. Use `AddItem` or `RemoveItem` to add or remove elements to the bucket under specified keys.
+* `PNCounterDictionary` is a dictionary implementation based on `ORDictionary`, where values are represented as PN-Counters.
+* `LWWRegister` (Last Write Wins Register) is a cell for any data type, that implements CRDT semantics. Each modification updates register's timestamp (timestamp generation can be customized, by default it's using UTC date time ticks). In case of merge conflicts, the value with highest update timestamp always wins.
+* `LWWDictionary` is a dictionary implementation, which internally uses LLW-Registers to allow to store data of any type to be stored in it. Dictionary entry additions/removals are solved with add-wins semantics, while in-place entry value updates are resolved using last write wins semantics.
 
 Keep in mind, that most of the replicated collections add/remove methods require to provide local instance of the cluster in order to correctly track, to which replica update is originally assigned to.
 
@@ -168,12 +168,12 @@ One of the issue of CRDTs, is that they accumulate history of changes (including
 
 There are several different HOCON settings, that can be used to configure distributed data plugin. By default, they all live under `akka.cluster.distributed-data` node:
 
-- `name` of replicator actor. Default: `ddataReplicator`.
-- `role` used to limit expected DistributedData capability to nodes having that role. None by default.
-- `gossip-interval` tells replicator, how often replicas should be gossiped over the cluster. Default: *2 seconds*
-- `notify-subscribers-interval` tells, how often replicator subscribers should be notified with replica state changes. Default: *0.5 second*
-- `max-delta-elements` limits a maximum number of entries (key-value pairs) to be send in a single gossip information. If there are more modified entries waiting to be gossiped, they will be send in the next round. Default: *1000*
-- `use-dispatcher` can be used to specify custom replicator actor message dispatcher. By default it uses an actor system default dispatcher.
-- `pruning-interval` tells, how often replicator will check if pruning should be performed. Default: *30 seconds*
-- `max-pruning-dissemination` informs, what is the worst expected time for the pruning process to inform whole cluster about pruned node data. Default: *60 seconds*
-- `serializer-cache-time-to-live` is used by custom distributed data serializer to determine, for how long serialized replicas should be cached. When sending replica over multiple nodes, it will reuse data already serialized, if it was found in a cache. Default: *10 seconds*.
+* `name` of replicator actor. Default: `ddataReplicator`.
+* `role` used to limit expected DistributedData capability to nodes having that role. None by default.
+* `gossip-interval` tells replicator, how often replicas should be gossiped over the cluster. Default: *2 seconds*
+* `notify-subscribers-interval` tells, how often replicator subscribers should be notified with replica state changes. Default: *0.5 second*
+* `max-delta-elements` limits a maximum number of entries (key-value pairs) to be send in a single gossip information. If there are more modified entries waiting to be gossiped, they will be send in the next round. Default: *1000*
+* `use-dispatcher` can be used to specify custom replicator actor message dispatcher. By default it uses an actor system default dispatcher.
+* `pruning-interval` tells, how often replicator will check if pruning should be performed. Default: *30 seconds*
+* `max-pruning-dissemination` informs, what is the worst expected time for the pruning process to inform whole cluster about pruned node data. Default: *60 seconds*
+* `serializer-cache-time-to-live` is used by custom distributed data serializer to determine, for how long serialized replicas should be cached. When sending replica over multiple nodes, it will reuse data already serialized, if it was found in a cache. Default: *10 seconds*.

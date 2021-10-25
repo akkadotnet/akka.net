@@ -17,17 +17,17 @@ An actor reference is a subtype of `ActorRef`, whose foremost purpose is to supp
 
 There are several different types of actor references that are supported depending on the configuration of the actor system:
 
-- Purely local actor references are used by actor systems which are not configured to support networking functions. These actor references will not function if sent across a network connection to a remote CLR.
-- Local actor references when remoting is enabled are used by actor systems which support networking functions for those references which represent actors within the same CLR. In order to also be reachable when sent to other network nodes, these references include protocol and remote addressing information.
-- There is a subtype of local actor references which is used for routers. Its logical structure is the same as for the aforementioned local references, but sending a message to them dispatches to one of their children directly instead.
-- Remote actor references represent actors which are reachable using remote communication, i.e. sending messages to them will serialize the messages transparently and send them to the remote CLR.
-- There are several special types of actor references which behave like local actor references for all practical purposes:
-  - `PromiseActorRef` is the special representation of a `Task` for the purpose of being completed by the response from an actor. `ICanTell.Ask` creates this actor reference.
-  - `DeadLetterActorRef` is the default implementation of the dead letters service to which Akka routes all messages whose destinations are shut down or non-existent.
-  - `EmptyLocalActorRef` is what Akka returns when looking up a non-existent local actor path: it is equivalent to a `DeadLetterActorRef`, but it retains its path so that Akka can send it over the network and compare it to other existing actor references for that path, some of which might have been obtained before the actor died.
-- And then there are some one-off internal implementations which you should never really see:
-  - There is an actor reference which does not represent an actor but acts only as a pseudo-supervisor for the root guardian, we call it "the one who walks the bubbles of space-time".
-  - The first logging service started before actually firing up actor creation facilities is a fake actor reference which accepts log events and prints them directly to standard output; it is `Logging.StandardOutLogger`.
+* Purely local actor references are used by actor systems which are not configured to support networking functions. These actor references will not function if sent across a network connection to a remote CLR.
+* Local actor references when remoting is enabled are used by actor systems which support networking functions for those references which represent actors within the same CLR. In order to also be reachable when sent to other network nodes, these references include protocol and remote addressing information.
+* There is a subtype of local actor references which is used for routers. Its logical structure is the same as for the aforementioned local references, but sending a message to them dispatches to one of their children directly instead.
+* Remote actor references represent actors which are reachable using remote communication, i.e. sending messages to them will serialize the messages transparently and send them to the remote CLR.
+* There are several special types of actor references which behave like local actor references for all practical purposes:
+  * `PromiseActorRef` is the special representation of a `Task` for the purpose of being completed by the response from an actor. `ICanTell.Ask` creates this actor reference.
+  * `DeadLetterActorRef` is the default implementation of the dead letters service to which Akka routes all messages whose destinations are shut down or non-existent.
+  * `EmptyLocalActorRef` is what Akka returns when looking up a non-existent local actor path: it is equivalent to a `DeadLetterActorRef`, but it retains its path so that Akka can send it over the network and compare it to other existing actor references for that path, some of which might have been obtained before the actor died.
+* And then there are some one-off internal implementations which you should never really see:
+  * There is an actor reference which does not represent an actor but acts only as a pseudo-supervisor for the root guardian, we call it "the one who walks the bubbles of space-time".
+  * The first logging service started before actually firing up actor creation facilities is a fake actor reference which accepts log events and prints them directly to standard output; it is `Logging.StandardOutLogger`.
 
 ## What is an Actor Path?
 

@@ -173,7 +173,7 @@ var a = yourConfig.GetString("a");
 
 Then the internal HOCON engine will match the first HOCON file that contains a definition for key `a`. In this case, that is `f0`, which returns the value "bar".
 
-####  Why wasn't "foo" returned as the value for "a"?
+#### Why wasn't "foo" returned as the value for "a"?
 
 The reason is because HOCON only searches through fallback `Config` objects if a match is NOT found earlier in the `Config` chain. If the top-level `Config` object has a match for `a`, then the fallbacks won't be searched. In this case, a match for `a` was found in `f0` so the `a=foo` in `f3` was never reached.
 

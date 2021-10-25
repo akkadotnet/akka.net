@@ -8,10 +8,10 @@ For some use cases it is convenient and sometimes also mandatory to ensure that 
 
 Some examples:
 
-- single point of responsibility for certain cluster-wide consistent decisions, or coordination of actions across the cluster system
-- single entry point to an external system
-- single master, many workers
-- centralized naming service, or routing logic
+* single point of responsibility for certain cluster-wide consistent decisions, or coordination of actions across the cluster system
+* single entry point to an external system
+* single master, many workers
+* centralized naming service, or routing logic
 
 Using a singleton should not be the first design choice. It has several drawbacks, such as single-point of bottleneck. Single-point of failure is also a relevant concern, but for some cases this feature takes care of that by making sure that another singleton instance will eventually be started.
 
@@ -29,9 +29,9 @@ It's worth noting that messages can always be lost because of the distributed na
 
 This pattern may seem to be very tempting to use at first, but it has several drawbacks, some of them are listed below:
 
-- the cluster singleton may quickly become a performance bottleneck,
-- you can not rely on the cluster singleton to be non-stop available — e.g. when the node on which the singleton has been running dies, it will take a few seconds for this to be noticed and the singleton be migrated to another node,
-- in the case of a network partition appearing in a Cluster that is using Automatic Downing, it may happen that the isolated clusters each decide to spin up their own singleton, meaning that there might be multiple singletons running in the system, yet the Clusters have no way of finding out about them (because of the partition).
+* the cluster singleton may quickly become a performance bottleneck,
+* you can not rely on the cluster singleton to be non-stop available — e.g. when the node on which the singleton has been running dies, it will take a few seconds for this to be noticed and the singleton be migrated to another node,
+* in the case of a network partition appearing in a Cluster that is using Automatic Downing, it may happen that the isolated clusters each decide to spin up their own singleton, meaning that there might be multiple singletons running in the system, yet the Clusters have no way of finding out about them (because of the partition).
 
 Especially the last point is something you should be aware of — in general when using the Cluster Singleton pattern you should take care of downing nodes yourself and not rely on the timing based auto-down feature.
 
