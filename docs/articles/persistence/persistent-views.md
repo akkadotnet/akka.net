@@ -44,7 +44,7 @@ IActorRef view = system.ActorOf<ViewActor>();
 view.Tell(new Update(true));
 ```
 
-If the await parameter is set to true, messages that follow the `Update` request are processed when the incremental message replay, triggered by that update request, completed. If set to false (default), messages following the update request may interleave with the replayed message stream. 
+If the await parameter is set to true, messages that follow the `Update` request are processed when the incremental message replay, triggered by that update request, completed. If set to false (default), messages following the update request may interleave with the replayed message stream.
 
 Automated updates of all persistent views of an actor system can be turned off by configuration:
 

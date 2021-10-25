@@ -5,7 +5,7 @@ title: Configuration
 
 # Akka.NET Configuration
 
-Akka.NET relies on [HOCON](xref:hocon) configuration to configure its various knobs and dials. 
+Akka.NET relies on [HOCON](xref:hocon) configuration to configure its various knobs and dials.
 
 However, as of Akka.NET v1.4 we now support the [`Setup` class](xref:Akka.Actor.Setup.Setup) and the [`BootstrapSetup` constructs](xref:Akka.Actor.BootstrapSetup), which allow developers to configure various parts of Akka.NET using programmatic configuration in addition to HOCON.
 
@@ -33,7 +33,7 @@ From there, we can create our `ActorSystem`:
 
 [!code-csharp[SerializationSetup](../../../src/core/Akka.Docs.Tests/Configuration/SerializationSetupDocSpec.cs?name=Verification)]
 
-## HOCON 
+## HOCON
 
 *Quoted from [Akka.NET Bootcamp: Unit 2, Lesson 1 - "Using HOCON Configuration to Configure Akka.NET"](https://github.com/petabridge/akka-bootcamp/tree/master/src/Unit-2/lesson1 "Using HOCON Configuration to Configure Akka.NET")*
 
