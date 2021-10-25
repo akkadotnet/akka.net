@@ -10,14 +10,14 @@ title: DI Core
 
 **Actor Producer Extension** library is used to create a Dependency Injection Container for the [Akka.NET](https://github.com/akkadotnet/akka.net) framework.
 
-# What is it?
+## What is it?
 
 **Akka.DI.Core** is an **ActorSystem extension** library for the Akka.NET
 framework that provides a simple way to create an Actor Dependency Resolver
 that can be used an alternative to the basic capabilities of [Props](xref:receive-actor-api#props)
 when you have actors with multiple dependencies.
 
-# How do you create an Extension?
+## How do you create an Extension?
 
 * Create a new class library
 * Reference your favorite IoC Container, the Akka.DI.Core, and of course Akka

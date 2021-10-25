@@ -11,11 +11,11 @@ In this chapter we attempt to establish a common terminology to define a solid g
 
 Concurrency and parallelism are related concepts, but there are small differences. Concurrency means that two or more tasks are making progress even though they might not be executing simultaneously. For example, this can be realized with time slicing where parts of tasks are executed sequentially and mixed with parts of other tasks. By contrast, Parallelism arises when the execution can be truly simultaneous.
 
-#### Concurrency
+### Concurrency
 
 ![Concurrency](/images/concurrency.png)
 
-#### Parallelism
+### Parallelism
 
 ![Parallelism](/images/parallelism.png)
 
