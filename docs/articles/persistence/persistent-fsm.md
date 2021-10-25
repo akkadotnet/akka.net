@@ -80,6 +80,6 @@ this means `SaveStateSnapshot()` is called after the sequence number reaches mul
 > `SaveStateSnapshot()` might not be called exactly at sequence numbers being multiple of the `snapshot-after` configuration value.
 This is because `PersistentFSM` works in a sort of "batch" mode when processing and persisting events, and `SaveStateSnapshot()`
 is called only at the end of the "batch". For example, if you set `akka.persistence.fsm.snapshot-after = 1000`,
-it is possible that `SaveStateSnapshot()` is called at `lastSequenceNr = 1005, 2003, ... `
+it is possible that `SaveStateSnapshot()` is called at `lastSequenceNr = 1005, 2003, ...`
 A single batch might persist state transition, also there could be multiple domain events to be persisted
 if you pass them to `Applying`  method in the `PersistentFSM` DSL.

@@ -90,11 +90,11 @@ The attached build script will automatically do the following based on the conve
 
 ### DocFx for Documentation
 
-This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project. 
+This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project.
 
 All of the relevant articles you wish to write should be added to the `/docs/articles/` folder and any API documentation you might need will also appear there.
 
-All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder. 
+All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder.
 
 #### Previewing Documentation
 

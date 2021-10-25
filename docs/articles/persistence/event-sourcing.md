@@ -258,7 +258,7 @@ Message deletion doesn't affect the highest sequence number of the journal, even
 ## Persistence status handling
 
 | Method                    | Success                  |  Failure / Rejection     | After failure handler invoked
-|------                  |------                    |------                    |------      
+|------                  |------                    |------                    |------
 | Persist / PersistAsync | persist handler invoked    | OnPersistFailure      | Actor is stopped.
 |                        |                          | OnPersistRejected     | No automatic actions.
 | Recovery                  | RecoverySuccess           | OnRecoveryFailure     | Actor is stopped.

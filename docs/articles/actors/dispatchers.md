@@ -173,7 +173,7 @@ In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecut
 
 During its initial development and benchmarks, we observed the following:
 
-1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today. 
+1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today.
 2. The `ChannelExecutor` actually beat the `ForkJoinDispatcher` and others on performance even in environments like Docker and bare metal on Windows.
 
 > [!NOTE]
@@ -235,7 +235,7 @@ The following configuration keys are available for any dispatcher configuration:
 
 ## Dispatcher aliases
 
-When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block, 
+When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block,
 the lookup will treat it as an alias, and follow that string to an alternate location for a dispatcher config.
 If the dispatcher config is referenced both through an alias and through the absolute path only one dispatcher will
 be used and shared among the two ids.

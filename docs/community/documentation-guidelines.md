@@ -12,7 +12,7 @@ There is a ton of work that still needs to be done, especially in the API docume
 
 ## Website
 
-This project uses [DocFX](https://dotnet.github.io/docfx/) to generate our website. This tool uses its own version of the [Markdown](http://daringfireball.net/projects/markdown/syntax) language named 
+This project uses [DocFX](https://dotnet.github.io/docfx/) to generate our website. This tool uses its own version of the [Markdown](http://daringfireball.net/projects/markdown/syntax) language named
 [DocFX Flavored Markdown](https://dotnet.github.io/docfx/spec/docfx_flavored_markdown.html) for crafting the documents for the website. Any editor with a valid Markdown plugin based will give you the best preview/edit experience, such as [Atom](https://atom.io/) or [StackEdit](https://stackedit.io/).
 
 To contribute to the website's documentation, fork the main github repository [Akka.Net](https://github.com/akkadotnet/akka.net). The documentation is under the [docs](https://github.com/akkadotnet/akka.net/tree/dev/docs)  directory. Please be sure to read the [Contributing.md](https://github.com/akkadotnet/akka.net/blob/dev/CONTRIBUTING.md) before getting started to get acquainted with the project's workflow.

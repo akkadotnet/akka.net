@@ -168,7 +168,7 @@ In order to actually form an association between the client and the server, *one
 
 In order to form an association with a remote `ActorSystem`, we have to have an [`Address`](http://api.getakka.net/docs/stable/html/58836154.htm) for that `ActorSystem`.
 
-All local Akka.NET actors have an `Address` too, as part of their [`ActorPath`](http://api.getakka.net/docs/stable/html/6DC439AE.htm). 
+All local Akka.NET actors have an `Address` too, as part of their [`ActorPath`](http://api.getakka.net/docs/stable/html/6DC439AE.htm).
 
 **A local `ActorPath`** look like  this:
 

@@ -14,7 +14,7 @@ This part also serves as supplementary material for the main body of documentati
 open while reading the manual and look for examples demonstrating various streaming concepts
 as they appear in the main body of documentation.
 
-If you need a quick reference of the available processing stages used in the recipes see 
+If you need a quick reference of the available processing stages used in the recipes see
 [Overview of built-in stages and their semantics](xref:streams-builtin-stages)
 
 # Working with Flows
@@ -101,7 +101,7 @@ var ignoreOverflow = mySource.Take(MAX_ALLOWED_SIZE).RunWith(Sink.Seq<string>(),
 of the stream.
 
 This recipe uses a `GraphStage` to host a `HashAlgorithm` class (part of the .Net Cryptography
-API). When the stream starts, the ``onPull`` handler of the stage is called, which just bubbles up the ``pull`` event to its upstream. 
+API). When the stream starts, the ``onPull`` handler of the stage is called, which just bubbles up the ``pull`` event to its upstream.
 As a response to this pull, a ByteString chunk will arrive (``onPush``) which we store, then it will pull for the next chunk.
 
 Eventually the stream of ``ByteStrings`` depletes and we get a notification about this event via ``onUpstreamFinish``.
@@ -241,7 +241,7 @@ var counts = words.Via(ReduceByKey(MaximumDistinctWords,
 ```
 
 > [!NOTE]
-> Please note that the reduce-by-key version we discussed above is sequential in reading the overall input stream, 
+> Please note that the reduce-by-key version we discussed above is sequential in reading the overall input stream,
 in other words it is **NOT** a parallelization pattern like MapReduce and similar frameworks.
 
 #### Sorting elements to multiple groups with groupBy

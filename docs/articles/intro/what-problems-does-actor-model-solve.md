@@ -55,7 +55,7 @@ one thread will enter the method at any given time, this is a very costly strate
 
 These realities result in a no-win situation:
 
-* Without sufficient locks, the state gets corrupted.     
+* Without sufficient locks, the state gets corrupted.
 * With many locks in place, performance suffers and very easily leads to deadlocks.
 
 Additionally, locks only really work well locally. When it comes to coordinating across multiple machines,
@@ -174,7 +174,7 @@ The actor model accomplishes all of these goals. The following topics describe h
 
 Instead of calling methods, actors send messages to each other. Sending a message does not transfer the thread
 of execution from the sender to the destination. An actor can send a message and continue without blocking.
-It can, therefore, do more work, send and receive messages.      
+It can, therefore, do more work, send and receive messages.
 
 With objects, when a method returns, it releases control of its executing thread. In this respect, actors behave
 much like objects, they react to messages and return execution when they finish processing the current message.
