@@ -50,9 +50,7 @@ Akka persistence query comes with a number of query interfaces built in and sugg
 > [!NOTE]
 > Refer to the documentation of the ReadJournal plugin you are using for a specific list of supported query types. For example, Journal plugins should document their stream completion strategies.
 
-The predefined queries are:
-
-**AllPersistenceIdsQuery (PersistentIds) and CurrentPersistenceIdsQuery**
+The predefined queries are `AllPersistenceIdsQuery (PersistentIds)` and `CurrentPersistenceIdsQuery`.
 
 `AllPersistenceIds` or `PersistenceIds`, and `CurrentPersistenceIds` in `IPersistenceIdsQuery` is used for retrieving all persistenceIds of all persistent actors.
 
