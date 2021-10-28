@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -31,7 +32,7 @@ namespace Akka.Discovery.Aggregate
     [InternalApi]
     public class AggregateServiceDiscovery : ServiceDiscovery
     {
-        private readonly List<(string, ServiceDiscovery)> _methods;
+        private readonly ImmutableList<(string, ServiceDiscovery)> _methods;
         private readonly ILoggingAdapter _log;
 
         public AggregateServiceDiscovery(ExtendedActorSystem system)
@@ -56,27 +57,24 @@ namespace Akka.Discovery.Aggregate
             }
 
             var serviceDiscovery = Discovery.Get(system);
-            _methods = settings.DiscoveryMethods.Select(method => (method, serviceDiscovery.LoadServiceDiscovery(method))).ToList();
+            _methods = settings.DiscoveryMethods.Select(method => (method, serviceDiscovery.LoadServiceDiscovery(method))).ToImmutableList();
         }
 
         /// <summary>
         /// Each discovery method is given the resolveTimeout rather than reducing it each time between methods.
         /// </summary>
-        public override Task<Resolved> Lookup(Lookup query, TimeSpan resolveTimeout) =>
-            Resolve(_methods, query, resolveTimeout);
-
-        private async Task<Resolved> Resolve(List<(string, ServiceDiscovery)> sds, Lookup query, TimeSpan resolveTimeout)
+        public override async Task<Resolved> Lookup(Lookup query, TimeSpan resolveTimeout)
         {
-            if (sds.Count == 0)
+            if (_methods.Count == 0)
             {
                 _log.Error("Aggregate service discovery failed. Service discovery list is empty.");
                 return new Resolved("");
             }
 
-            var lastIndex = sds.Count - 1;
-            for (var i = 0; i < sds.Count; ++i)
+            var lastIndex = _methods.Count - 1;
+            for (var i = 0; i < _methods.Count; ++i)
             {
-                var (method, next) = sds[i];
+                var (method, next) = _methods[i];
                 _log.Debug("Looking up [{0}] with [{1}]", query, method);
                 try
                 {
