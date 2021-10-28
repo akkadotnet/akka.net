@@ -68,7 +68,7 @@ namespace Akka.Discovery.Aggregate
             if (_methods.Count == 0)
             {
                 _log.Error("Aggregate service discovery failed. Service discovery list is empty.");
-                return new Resolved("");
+                return new Resolved(query.ServiceName);
             }
 
             var lastIndex = _methods.Count - 1;
@@ -91,7 +91,7 @@ namespace Akka.Discovery.Aggregate
             }
             
             _log.Warning("Aggregate service discovery failed. None of the listed service discovery found any services.");
-            return new Resolved("", Array.Empty<ResolvedTarget>());
+            return new Resolved(query.ServiceName);
         }
     }
 }

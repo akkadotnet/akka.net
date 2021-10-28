@@ -49,7 +49,7 @@ namespace Akka.Discovery.Config
                 throw new ArgumentException(
                     "Could not load config based discovery config from path [akka.discovery.config]");
             
-            var servicePath = config.GetString("service-path");
+            var servicePath = config.GetString("services-path");
             if (string.IsNullOrWhiteSpace(servicePath))
             {
                 log.Warning(
