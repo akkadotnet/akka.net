@@ -16,7 +16,7 @@ using Akka.Event;
 namespace Akka.Discovery.Config
 {
     [InternalApi]
-    public class ConfigServicesParser
+    public static class ConfigServicesParser
     {
         public static Dictionary<string, ServiceDiscovery.Resolved> Parse(Configuration.Config config)
         {
@@ -43,10 +43,43 @@ namespace Akka.Discovery.Config
 
         public ConfigServiceDiscovery(ExtendedActorSystem system)
         {
-            _resolvedServices = ConfigServicesParser.Parse(
-                system.Settings.Config.GetConfig(system.Settings.Config.GetString("akka.discovery.config.services-path")));
-
             var log = Logging.GetLogger(system, nameof(ConfigServiceDiscovery));
+            
+            var config = system.Settings.Config.GetConfig("akka.discovery.config") ??
+                throw new ArgumentException(
+                    "Could not load config based discovery config from path [akka.discovery.config]");
+            
+            var servicePath = config.GetString("service-path");
+            if (string.IsNullOrWhiteSpace(servicePath))
+            {
+                log.Warning(
+                    "The config path [akka.discovery.config] must contain field `service-path` that points to a " +
+                    "configuration path that contains an array of node services for Discovery to contact.");
+                _resolvedServices = new Dictionary<string, Resolved>();
+            }
+            else
+            {
+                var services = system.Settings.Config.GetConfig(servicePath);
+                if (services == null)
+                {
+                    log.Warning(
+                        "You are trying to use config based discovery service and the settings path described in\n" +
+                        $"`akka.discovery.config.services-path` does not exists. Make sure that [{servicePath}] path \n" +
+                        "exists and to fill this setting with pre-defined node addresses to make sure that a cluster \n" +
+                        "can be formed");
+                    _resolvedServices = new Dictionary<string, Resolved>();
+                }
+                else
+                {
+                    _resolvedServices = ConfigServicesParser.Parse(services);
+                    if(_resolvedServices.Count == 0)
+                        log.Warning(
+                            $"You are trying to use config based discovery service and the settings path [{servicePath}]\n" +
+                            "described `akka.discovery.config.services-path` is empty. Make sure to fill this setting \n" +
+                            "with pre-defined node addresses to make sure that a cluster can be formed.");
+                }
+            }
+
             log.Debug($"Config discovery serving: {string.Join(", ", _resolvedServices.Values)}");
         }
 

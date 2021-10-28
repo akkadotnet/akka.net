@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Util.Internal;
 
@@ -23,13 +24,7 @@ namespace Akka.Discovery.Aggregate
 
         public AggregateServiceDiscoverySettings(Configuration.Config config)
         {
-            var discoveryMethods = config.GetStringList("discovery-methods");
-            if (!discoveryMethods.Any())
-            {
-                throw new ArgumentOutOfRangeException(nameof(discoveryMethods), "At least one discovery method should be specified");
-            }
-
-            DiscoveryMethods = discoveryMethods.ToList();
+            DiscoveryMethods = config.GetStringList("discovery-methods").ToList();
         }
     }
 
@@ -37,15 +32,31 @@ namespace Akka.Discovery.Aggregate
     public class AggregateServiceDiscovery : ServiceDiscovery
     {
         private readonly List<(string, ServiceDiscovery)> _methods;
-        private readonly ILoggingAdapter log;
+        private readonly ILoggingAdapter _log;
 
         public AggregateServiceDiscovery(ExtendedActorSystem system)
         {
-            var settings = new AggregateServiceDiscoverySettings(system.Settings.Config.GetConfig("akka.discovery.aggregate"));
+            _log = Logging.GetLogger(system, nameof(AggregateServiceDiscovery));
+            var config = system.Settings.Config.GetConfig("akka.discovery.aggregate") ??
+                throw new ArgumentException(
+                    "Could not load aggregate discovery config from path [akka.discovery.aggregate]");
+            
+            if (!config.HasPath("discovery-methods"))
+            {
+                config = ConfigurationFactory.ParseString("akka.discovery.aggregate.discovery-methods=[]")
+                    .WithFallback(config);
+            }
+            
+            var settings = new AggregateServiceDiscoverySettings(config);
+            if (!settings.DiscoveryMethods.Any())
+            {
+                _log.Warning(
+                    "The config path [akka.discovery.aggregate.discovery-methods] is either missing or empty.\n" +
+                    "Please make sure that this path exists and at least one discovery method is specified.");
+            }
+
             var serviceDiscovery = Discovery.Get(system);
             _methods = settings.DiscoveryMethods.Select(method => (method, serviceDiscovery.LoadServiceDiscovery(method))).ToList();
-
-            log = Logging.GetLogger(system, nameof(AggregateServiceDiscovery));
         }
 
         /// <summary>
@@ -54,39 +65,35 @@ namespace Akka.Discovery.Aggregate
         public override Task<Resolved> Lookup(Lookup query, TimeSpan resolveTimeout) =>
             Resolve(_methods, query, resolveTimeout);
 
-        private async Task<Resolved> Resolve(IReadOnlyCollection<(string, ServiceDiscovery)> sds, Lookup query, TimeSpan resolveTimeout)
+        private async Task<Resolved> Resolve(List<(string, ServiceDiscovery)> sds, Lookup query, TimeSpan resolveTimeout)
         {
-            var tail = sds.Skip(1).ToList();
-
-            switch (sds.Head())
+            if (sds.Count == 0)
             {
-                case (string method, ServiceDiscovery next) when tail.Any():
-                {
-                    log.Debug("Looking up [{0}] with [{1}]", query, method);
-                    try
-                    {
-                        var resolved = await next.Lookup(query, resolveTimeout);
-                        if (!resolved.Addresses.IsEmpty)
-                            return resolved;
-                        
-                        log.Debug("Method[{0}] returned no ResolvedTargets, trying next", query);
-                        return await Resolve(tail, query, resolveTimeout);
-                    }
-                    catch (Exception ex)
-                    {
-                        log.Error(ex, "[{0}] Service discovery failed. Trying next discovery method", method);
-                        return await Resolve(tail, query, resolveTimeout);
-                    } 
-                }
-                case (string method, ServiceDiscovery next):
-                {
-                    log.Debug("Looking up [{0}] with [{1}]", query, method);
-                    return await next.Lookup(query, resolveTimeout);
-                }
-                default:
-                    // This is checked in `AggregateServiceDiscoverySettings`, but silence default switch warning
-                    throw new InvalidOperationException("At least one discovery method should be specified");
+                _log.Error("Aggregate service discovery failed. Service discovery list is empty.");
+                return new Resolved("");
             }
+
+            var lastIndex = sds.Count - 1;
+            for (var i = 0; i < sds.Count; ++i)
+            {
+                var (method, next) = sds[i];
+                _log.Debug("Looking up [{0}] with [{1}]", query, method);
+                try
+                {
+                    var resolved = await next.Lookup(query, resolveTimeout);
+                    if (!resolved.Addresses.IsEmpty)
+                        return resolved;
+                        
+                    _log.Debug("Method[{0}] returned no ResolvedTargets{1}", query, i == lastIndex ? "" : ", trying next");
+                }
+                catch (Exception ex)
+                {
+                    _log.Error(ex, "Method[{0}] Service discovery failed.{1}", method, i == lastIndex ? "" : " Trying next discovery method");
+                }
+            }
+            
+            _log.Warning("Aggregate service discovery failed. None of the listed service discovery found any services.");
+            return new Resolved("", Array.Empty<ResolvedTarget>());
         }
     }
 }
