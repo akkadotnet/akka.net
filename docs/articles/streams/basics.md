@@ -7,42 +7,42 @@ title: Basics and working with Flows
 
 ## Core concepts
 
-Akka Streams is a library to process and transfer a sequence of elements using bounded buffer space. 
-This latter property is what we refer to as _boundedness_ and it is the defining feature of Akka Streams. 
-Translated to everyday terms it is possible to express a chain (or as we see later, graphs) 
-of processing entities, each executing independently (and possibly concurrently) from the others while only buffering a limited number of elements at any given time. 
-This property of bounded buffers is one of the differences from the actor model, where each actor usually has an unbounded, or a bounded, but dropping mailbox. 
+Akka Streams is a library to process and transfer a sequence of elements using bounded buffer space.
+This latter property is what we refer to as _boundedness_ and it is the defining feature of Akka Streams.
+Translated to everyday terms it is possible to express a chain (or as we see later, graphs)
+of processing entities, each executing independently (and possibly concurrently) from the others while only buffering a limited number of elements at any given time.
+This property of bounded buffers is one of the differences from the actor model, where each actor usually has an unbounded, or a bounded, but dropping mailbox.
 Akka Stream processing entities have bounded "mailboxes" that do not drop.
 
-Before we move on, let's define some basic terminology which will be used throughout the entire documentation:   
+Before we move on, let's define some basic terminology which will be used throughout the entire documentation:
   
 **Stream**  
 An active process that involves moving and transforming data.
   
 **Element**  
-An element is the processing unit of streams. All operations transform and transfer elements from upstream to downstream. 
+An element is the processing unit of streams. All operations transform and transfer elements from upstream to downstream.
 Buffer sizes are always expressed as number of elements independently from the actual size of the elements.
   
 **Back-pressure**  
-A means of flow-control, a way for consumers of data to notify a producer about their current availability, effectively slowing down the upstream producer to match their consumption speeds. 
+A means of flow-control, a way for consumers of data to notify a producer about their current availability, effectively slowing down the upstream producer to match their consumption speeds.
 In the context of Akka Streams back-pressure is always understood as _non-blocking_ and _asynchronous_.
   
 **Non-Blocking**  
-Means that a certain operation does not hinder the progress of the calling thread, 
-even if it takes long time to finish the requested operation.   
+Means that a certain operation does not hinder the progress of the calling thread,
+even if it takes long time to finish the requested operation.
   
 **Graph**  
-A description of a stream processing topology, defining the pathways through which elements shall flow when the stream is running.   
+A description of a stream processing topology, defining the pathways through which elements shall flow when the stream is running.
   
 **Processing Stage**  
-The common name for all building blocks that build up a `Graph`. 
-Examples of a processing stage would be operations like `Select()`, `Where()`, custom `GraphStage's` and graph junctions like `Merge` or `Broadcast`. 
-For the full list of built-in processing stages see [stages overview](xref:streams-builtin-stages)   
+The common name for all building blocks that build up a `Graph`.
+Examples of a processing stage would be operations like `Select()`, `Where()`, custom `GraphStage's` and graph junctions like `Merge` or `Broadcast`.
+For the full list of built-in processing stages see [stages overview](xref:streams-builtin-stages)
   
-When we talk about _asynchronous, non-blocking backpressure_ we mean that the processing stages available in Akka Streams 
-will not use blocking calls but asynchronous message passing to exchange messages between each other, 
-and they will use asynchronous means to slow down a fast producer, without blocking its thread. 
-This is a thread-pool friendly design, since entities that need to wait (a fast producer waiting on a slow consumer) 
+When we talk about _asynchronous, non-blocking backpressure_ we mean that the processing stages available in Akka Streams
+will not use blocking calls but asynchronous message passing to exchange messages between each other,
+and they will use asynchronous means to slow down a fast producer, without blocking its thread.
+This is a thread-pool friendly design, since entities that need to wait (a fast producer waiting on a slow consumer)
 will not block the thread but can hand it back for further use to an underlying thread-pool.  
 
 ## Defining and running streams  
@@ -70,8 +70,8 @@ different processing stages, no data will flow through it until it is materializ
 allocating all resources needed to run the computation described by a Graph (in Akka Streams this will often involve
 starting up Actors). Thanks to Flows being simply a description of the processing pipeline they are *immutable,
 thread-safe, and freely shareable*, which means that it is for example safe to share and send them between actors, to have
-one actor prepare the work, and then have it be materialized at some completely different place in the code.   
-   
+one actor prepare the work, and then have it be materialized at some completely different place in the code.
+
 ```csharp
 var source = Source.From(Enumerable.Range(1, 10));
 var sink = Sink.Aggregate<int, int>(0, (agg, i) => agg + i);
@@ -95,7 +95,7 @@ but it is quite common to be interested in only the value of the Source or the S
 there is a convenience method called ``RunWith()`` available for ``Sink``, ``Source`` or ``Flow`` requiring, respectively,
 a supplied ``Source`` (in order to run a ``Sink``), a ``Sink`` (in order to run a ``Source``) or
 both a ``Source`` and a ``Sink`` (in order to run a ``Flow``, since it has neither attached yet).  
-   
+
 ```csharp
 var source = Source.From(Enumerable.Range(1, 10));
 var sink = Sink.Aggregate<int, int>(0, (agg, i) => agg + i);
@@ -106,7 +106,7 @@ Task<int> sum = source.RunWith(sink, materializer);
 
 It is worth pointing out that since processing stages are *immutable*, connecting them returns a new processing stage,
 instead of modifying the existing instance, so while constructing long flows, remember to assign the new value to a variable or run it:
-   
+
 ```csharp
 var source = Source.From(Enumerable.Range(1, 10));
 source.Select(_ => 0); // has no effect on source, since it's immutable
@@ -119,7 +119,7 @@ zeroes.RunWith(Sink.Aggregate<int,int>(0, (agg, i) => agg + i), materializer); /
 > [!NOTE]
 > By default Akka Streams elements support **exactly one** downstream processing stage.
 > Making fan-out (supporting multiple downstream processing stages) an explicit opt-in feature allows default stream elements to be less complex and more efficient.
-> Also it allows for greater flexibility on *how exactly* to handle the multicast scenarios, 
+> Also it allows for greater flexibility on *how exactly* to handle the multicast scenarios,
 by providing named fan-out elements such as broadcast (signals all down-stream elements) or balance (signals one of available down-stream elements).  
 
 In the above example we used the ``RunWith`` method, which both materializes the stream and returns the materialized value
@@ -143,7 +143,7 @@ var sum2 = runnable.Run(materializer);
 
 // sum1 and sum2 are different Tasks!
   ```
-    
+
 ### Defining sources, sinks and flows  
 
 The objects `Source` and `Sink` define various ways to create sources and sinks of elements. The following
@@ -201,7 +201,7 @@ var sink = Sink.ForEach<int>(x => Console.WriteLine(x.ToString()))
 var otherSink = Flow.Create<int>().AlsoTo(sink).To(Sink.Ignore<int>());
 Source.From(Enumerable.Range(1, 6)).To(otherSink);
 ```  
-   
+
 ### Illegal stream elements
 
 In accordance to the Reactive Streams specification ([Rule 2.13] (<https://github.com/reactive-streams/reactive-streams-jvm#2.13>))
@@ -259,10 +259,10 @@ the rate at which its upstream would like to emit data elements.
 Since the ``Publisher`` is not allowed to signal more elements than the pending demand signalled by the ``Subscriber``,
 it will have to abide to this back-pressure by applying one of the below strategies:
 
-- not generate elements, if it is able to control their production rate,
-- try buffering the elements in a *bounded* manner until more demand is signalled,
-- drop elements until more demand is signalled,
-- tear down the stream if unable to apply any of the above strategies.
+* not generate elements, if it is able to control their production rate,
+* try buffering the elements in a *bounded* manner until more demand is signalled,
+* drop elements until more demand is signalled,
+* tear down the stream if unable to apply any of the above strategies.
 
 As we can see, this scenario effectively means that the ``Subscriber`` will *pull* the elements from the Publisher –
 this mode of operation is referred to as pull-based back-pressure.
@@ -285,13 +285,13 @@ which will be running on the thread pools they have been configured to run on - 
 
 > [!NOTE]
 > Reusing *instances* of linear computation stages (Source, Sink, Flow) inside composite Graphs is legal, yet will materialize that stage multiple times.  
-   
+
 ### Operator Fusion
 
 By default Akka Streams will fuse the stream operators. This means that the processing steps of a flow or stream graph can be executed within the same Actor and has two consequences:
 
-- passing elements from one processing stage to the next is a lot faster between fused stages due to avoiding the asynchronous messaging overhead
-- fused stream processing stages does not run in parallel to each other, meaning that only up to one CPU core is used for each fused part
+* passing elements from one processing stage to the next is a lot faster between fused stages due to avoiding the asynchronous messaging overhead
+* fused stream processing stages does not run in parallel to each other, meaning that only up to one CPU core is used for each fused part
 
 To allow for parallel processing you will have to insert asynchronous boundaries manually into your flows and graphs by way of adding ``Attributes.AsyncBoundary`` using the method
 ``Async`` on ``Source``, ``Sink`` and ``Flow`` to pieces that shall communicate with the rest of the graph in an

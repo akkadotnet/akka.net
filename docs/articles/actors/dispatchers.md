@@ -11,7 +11,7 @@ Dispatchers are responsible for scheduling all code that run inside the `ActorSy
 
 By default, all actors share a single **Global Dispatcher**. Unless you change the configuration, this dispatcher uses the *.NET Thread Pool* behind the scenes, which is optimized for most common scenarios. **That means the default configuration should be *good enough* for most cases.**
 
-#### Why should I use different dispatchers?
+### Why should I use different dispatchers?
 
 When messages arrive in the [actor's mailbox](xref:mailboxes), the dispatcher schedules the delivery of messages in batches, and tries to deliver the entire batch before releasing the thread to another actor. While the default configuration is *good enough* for most scenarios, you may want to change ([through configuration](#configuring-dispatchers)) how much time the scheduler should spend running each actor.
 
@@ -30,9 +30,9 @@ There are some other common reasons to select a different dispatcher. These reas
 
 Throughout this documentation and most Akka literature available, the term *dispatcher* is used to refer to *dispatcher configurations*, but they are in fact different things.
 
-- **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
+* **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
 
-- **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
+* **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
 
 Therefore, when you read about *"creating a custom dispatcher"* it usually means "*using a custom configuration for one of the built-in dispatchers*".
 
@@ -66,7 +66,7 @@ Or you can also set it up in code:
 system.ActorOf(Props.Create<MyActor>().WithDispatcher("my-dispatcher"), "my-actor");
 ```
 
-#### Built-in Dispatcher Configurations
+### Built-in Dispatcher Configurations
 
 Some dispatcher configurations are available out-of-the-box for convenience. You can use them during actor deployment, [as described above](#configuring-dispatchers).
 
@@ -173,7 +173,7 @@ In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecut
 
 During its initial development and benchmarks, we observed the following:
 
-1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today. 
+1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today.
 2. The `ChannelExecutor` actually beat the `ForkJoinDispatcher` and others on performance even in environments like Docker and bare metal on Windows.
 
 > [!NOTE]
@@ -235,7 +235,7 @@ The following configuration keys are available for any dispatcher configuration:
 
 ## Dispatcher aliases
 
-When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block, 
+When a dispatcher is looked up, and the given setting contains a string rather than a dispatcher config block,
 the lookup will treat it as an alias, and follow that string to an alternate location for a dispatcher config.
 If the dispatcher config is referenced both through an alias and through the absolute path only one dispatcher will
 be used and shared among the two ids.

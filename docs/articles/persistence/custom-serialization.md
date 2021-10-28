@@ -6,8 +6,8 @@ title: Custom serialization
 
 Serialization of snapshots and payloads of Persistent messages is configurable with Akka's Serialization infrastructure. For example, if an application wants to serialize
 
-- payloads of type MyPayload with a custom MyPayloadSerializer and
-- snapshots of type MySnapshot with a custom MySnapshotSerializer
+* payloads of type MyPayload with a custom MyPayloadSerializer and
+* snapshots of type MySnapshot with a custom MySnapshotSerializer
 
 it must add
 

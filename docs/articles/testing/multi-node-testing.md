@@ -1,10 +1,10 @@
 # Multi-Node Testing Distributed Akka.NET Applications
- 
+
 One of the most powerful testing features of Akka.NET is its ability to create and simulate real-world network conditions such as latency, network partitions, process crashes, and more. Given that any of these can happen in a production environment it's important to be able to write tests which validate your application's ability to correctly recover.
 
 This is precisely what the Multi-Node TestKit and TestRunner (MNTR) does in Akka.NET.
 
-### MNTR Components
+## MNTR Components
 
 The Akka.NET Multi-Node TestKit consists of the following publicly available NuGet packages:
 
@@ -12,14 +12,14 @@ The Akka.NET Multi-Node TestKit consists of the following publicly available NuG
 * [Akka.Remote.TestKit](https://www.nuget.org/packages/Akka.Remote.TestKit) - the base package used to create multi-node tests; and
 * [Akka.Cluster.TestKit](https://www.nuget.org/packages/Akka.Cluster.TestKit) - a set of test helper methods for [Akka.Cluster](xref:cluster-overview) applications built on top of the Akka.Remote.TestKit.
 
-### How the MNTR Works
+## How the MNTR Works
 
 The MultiNodeTestRunner works via the following process:
 
 1. Consumes a .DLL that has Akka.Remote.TestKit or Akka.Cluster.TestKit classes contained inside it;
 2. For each detected multi-node test class, read that tests' configuration and build a corresponding network;
 3. Run the test, including assertions, process barriers, and logging;
-4. Provide a PASS/FAIL signal for each node participating in the test; 
+4. Provide a PASS/FAIL signal for each node participating in the test;
 5. If any of the nodes failed, mark the entire test as failed; and
 6. Write all of the output for each test and for each individual node in that test into its own output folder for review.
 
@@ -53,7 +53,7 @@ The `CommonConfig` element of the [`MultiNodeConfig` implementation class](../..
 
 In addition to passing a `CommonConfig` object throughout all nodes in your multi-node test, you can also provide configurations for individual nodes during each test.
 
-For example: if you're taking advantage of the `akka.cluster.roles` property to have some nodes execute different workloads than others, this might be something you'd want to specify for nodes individually. 
+For example: if you're taking advantage of the `akka.cluster.roles` property to have some nodes execute different workloads than others, this might be something you'd want to specify for nodes individually.
 
 The `NodeConfig` method allows you to do just that:
 
@@ -264,7 +264,7 @@ We strongly recommend setting the `-Dmultinode.output-directory={dir path}` dire
 1. An output file for the entire test run of the DLL and
 2. For each individual spec, a subfolder that contains logs pertaining to the original node.
 
-_Hint:_ Each test run will append new log entries to output files. 
+_Hint:_ Each test run will append new log entries to output files.
 If this is not desired, you can pass `-Dmultinode.clear-output=1` option to delete output folder before MNTR will run tests.
 
 If you're lost and need more examples, please explore the Akka.NET source code and take a look at some of the MNTR output produced by our CI system on any open pull request.
@@ -272,10 +272,10 @@ If you're lost and need more examples, please explore the Akka.NET source code a
 ## Debugging Failed Tests
 
 As already mentioned, after each spec is finished, test runner wil emit log files for it to output directory subfolder with the full name of the spec.
-In this folder you will find individual logs for each node (named according to the roles they were assigned), and `aggregated.txt` file, 
+In this folder you will find individual logs for each node (named according to the roles they were assigned), and `aggregated.txt` file,
 which contains all nodes logs aggregated into single timeline.
 
-Also, `FAILED_SPECS_LOGS` subdirectory will be generated. If any of your specs failed, this folder will contain aggregated logs for each spec - 
+Also, `FAILED_SPECS_LOGS` subdirectory will be generated. If any of your specs failed, this folder will contain aggregated logs for each spec -
 basically, the same `aggregated.txt` files but with their spec's names. This is a good place to get a full picture of what has failed and why.
 
 Also, `-Dmultinode.failed-specs-directory={failed spec dir}` option could be used to override `FAILED_SPECS_LOGS` name.

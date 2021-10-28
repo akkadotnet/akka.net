@@ -28,43 +28,43 @@ You can provide your own ActorSystem instance, or Config by overriding the TestK
 
 The above mentioned `ExpectMsg` is not the only method for formulating assertions concerning received messages. Here is the full list:
 
-- `T ExpectMsg<T>(TimeSpan? duration = null, string hint)`
+* `T ExpectMsg<T>(TimeSpan? duration = null, string hint)`
 The given message object must be received within the specified time; the object will be returned.
 
-- `T ExpectMsgAnyOf<T>(params T[] messages)`
+* `T ExpectMsgAnyOf<T>(params T[] messages)`
 An object must be received, and it must be equal to at least one of the passed reference objects; the received object will be returned.
 
-- `IReadOnlyCollection<T> ExpectMsgAllOf<T>(TimeSpan max, params T[] messages)`
+* `IReadOnlyCollection<T> ExpectMsgAllOf<T>(TimeSpan max, params T[] messages)`
 A number of objects matching the size of the supplied object array must be received within the given time, and for each of the given objects there must exist at least one among the received ones which equals it. The full sequence of received objects is returned.
 
-- `void ExpectNoMsg(TimeSpan duration)`
+* `void ExpectNoMsg(TimeSpan duration)`
 No message must be received within the given time. This also fails if a message has been received before calling this method which has not been removed from the queue using one of the other methods.
-
-- `T ExpectMsgFrom<T>(IActorRef sender, TimeSpan? duration = null, string hint = null)`
+* `T ExpectMsgFrom<T>(IActorRef sender, TimeSpan? duration = null, string hint = null)`
 Receive one message of the specified type from the test actor and assert that it equals the message and was sent by the specified sender
 
-- `IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max)`
+* `IReadOnlyCollection<object> ReceiveN(int numberOfMessages, TimeSpan max)`
 `n` messages must be received within the given time; the received messages are returned.
 
-- `object FishForMessage(Predicate<object> isMessage, TimeSpan? max, string)`
+* `object FishForMessage(Predicate<object> isMessage, TimeSpan? max, string)`
 Keep receiving messages as long as the time is not used up and the partial function matches and returns `false`. Returns the message received for which it returned `true` or throws an exception, which will include the provided hint for easier debugging.
 
 In addition to message reception assertions there are also methods which help with messages flows:
 
-- `object ReceiveOne(TimeSpan? max = null)` 
+* `object ReceiveOne(TimeSpan? max = null)`
+
 Receive one message from the internal queue of the TestActor. This method blocks the specified duration or until a message is received. If no message was received, null is returned.
 
-- `IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)` Collect messages as long as
-   - They are matching the provided filter
-   - The given time interval is not used up
-   - The next message is received within the idle timeout
-   - The number of messages has not yet reached the maximum All collected messages are returned. The maximum duration defaults to the time remaining in the innermost enclosing `Within` block and the idle duration defaults to infinity (thereby disabling the idle timeout feature). The number of expected messages defaults to `Int.MaxValue`, which effectively disables this limit.
+* `IReadOnlyList<T> ReceiveWhile<T>(TimeSpan? max, TimeSpan? idle, Func<object, T> filter, int msgs = int.MaxValue)` Collect messages as long as
+  * They are matching the provided filter
+  * The given time interval is not used up
+  * The next message is received within the idle timeout
+  * The number of messages has not yet reached the maximum All collected messages are returned. The maximum duration defaults to the time remaining in the innermost enclosing `Within` block and the idle duration defaults to infinity (thereby disabling the idle timeout feature). The number of expected messages defaults to `Int.MaxValue`, which effectively disables this limit.
 
-- `void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, TimeSpan? interval, string message = null)` Poll the given condition every `interval` until it returns `true` or the `max` duration is used up. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block.
+* `void AwaitCondition(Func<bool> conditionIsFulfilled, TimeSpan? max, TimeSpan? interval, string message = null)` Poll the given condition every `interval` until it returns `true` or the `max` duration is used up. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block.
 
-- `void AwaitAssert(Action assertion, TimeSpan? duration = default(TimeSpan?), TimeSpan? interval = default(TimeSpan?))`Poll the given assert function every `interval` until it does not throw an exception or the `max` duration is used up. If the timeout expires the last exception is thrown. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block.
+* `void AwaitAssert(Action assertion, TimeSpan? duration = default(TimeSpan?), TimeSpan? interval = default(TimeSpan?))`Poll the given assert function every `interval` until it does not throw an exception or the `max` duration is used up. If the timeout expires the last exception is thrown. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block. The interval defaults to 100ms and the maximum defaults to the time remaining in the innermost enclosing `within` block.
 
-- `void IgnoreMessages(Func<object, bool> shouldIgnoreMessage)` The internal `testActor` contains a partial function for ignoring messages: it will only enqueue messages which do not match the function or for which the function returns `false`. This feature is useful e.g. when testing a logging system, where you want to ignore regular messages and are only interesting in your specific ones.
+* `void IgnoreMessages(Func<object, bool> shouldIgnoreMessage)` The internal `testActor` contains a partial function for ignoring messages: it will only enqueue messages which do not match the function or for which the function returns `false`. This feature is useful e.g. when testing a logging system, where you want to ignore regular messages and are only interesting in your specific ones.
 
 ## Expecting Log Messages
 
@@ -247,17 +247,17 @@ The other remaining difficulty is correct handling of suspend and resume: when a
 
 To summarize, these are the features with the `CallingThreadDispatcher` has to offer:
 
-- Deterministic execution of single-threaded tests while retaining nearly full actor semantics
-- Full message processing history leading up to the point of failure in exception stack traces
-- Exclusion of certain classes of dead-lock scenarios
+* Deterministic execution of single-threaded tests while retaining nearly full actor semantics
+* Full message processing history leading up to the point of failure in exception stack traces
+* Exclusion of certain classes of dead-lock scenarios
 
 ## Tracing Actor Invocations
 
 The testing facilities described up to this point were aiming at formulating assertions about a system’s behavior. If a test fails, it is usually your job to find the cause, fix it and verify the test again. This process is supported by debuggers as well as logging, where the Akka.NET offers the following options:
 
-- Logging of exceptions thrown within Actor instances. This is always on; in contrast to the other logging mechanisms, this logs at *ERROR* level.
-- Logging of special messages. Actors handle certain special messages automatically, e.g. `Kill`, `PoisonPill`, etc. Tracing of these message invocations is enabled by the setting `akka.actor.debug.autoreceive`, which enables this on all actors.
-- Logging of the actor lifecycle. Actor creation, start, restart, monitor start, monitor stop and stop may be traced by enabling the setting *akka.actor.debug.lifecycle*; this, too, is enabled uniformly on all actors.
+* Logging of exceptions thrown within Actor instances. This is always on; in contrast to the other logging mechanisms, this logs at *ERROR* level.
+* Logging of special messages. Actors handle certain special messages automatically, e.g. `Kill`, `PoisonPill`, etc. Tracing of these message invocations is enabled by the setting `akka.actor.debug.autoreceive`, which enables this on all actors.
+* Logging of the actor lifecycle. Actor creation, start, restart, monitor start, monitor stop and stop may be traced by enabling the setting *akka.actor.debug.lifecycle*; this, too, is enabled uniformly on all actors.
 
 All these messages are logged at `DEBUG` level. To summarize, you can enable full logging of actor activities using this configuration fragment:
 
@@ -362,7 +362,7 @@ catch (Exception e)
 
 ## EventFilters
 
-EventFilters are a tool use can use to scan and expect for LogEvents generated by your actors. Typically these are generated by custom calls on the `Context.GetLogger()` object, when you log something. 
+EventFilters are a tool use can use to scan and expect for LogEvents generated by your actors. Typically these are generated by custom calls on the `Context.GetLogger()` object, when you log something.
 However DeadLetter messages and Exceptions ultimately also result in a `LogEvent` message being generated.
 
 These are all things that can be intercepted, and asserted upon using the `EventFilter`.

@@ -69,7 +69,7 @@ What's really going on there?
 
 The `Sender`, an `IActorRef`, is actually an `Akka.Remote.RemoteActorRef`! But the fact that this actor reference resides elsewhere on the network is a detail that's transparent to the actor code you wrote!
 
-In essence, minus the initial `ActorSelection` used to start remote communication between the two `ActorSystem`s, any actor in either `ActorSystem` could reply to each other without knowing or caring that they exist elsewhere on the network. That's pretty cool! 
+In essence, minus the initial `ActorSelection` used to start remote communication between the two `ActorSystem`s, any actor in either `ActorSystem` could reply to each other without knowing or caring that they exist elsewhere on the network. That's pretty cool!
 
 ## RemoteActorRef and Location Transparency
 
@@ -78,7 +78,7 @@ What `RemoteActorRef` gives us is a magical property called [Location Transparen
 > [!NOTE]
 > What location transparency means is that whenever you send a message to an actor, you don't need to know where they are within an actor system, which might span hundreds of computers. You just have to know that actors' address.
 
-It's the job of the `RemoteActorRef` to make a remote actor running on in a different process look and feel exactly the same as an `IActorRef` running locally inside the same process as your code. This is what it means to "have a transparent location." 
+It's the job of the `RemoteActorRef` to make a remote actor running on in a different process look and feel exactly the same as an `IActorRef` running locally inside the same process as your code. This is what it means to "have a transparent location."
 
 Regardless of where the actor actually resides, it doesn't affect your code one way or another.
 
@@ -92,11 +92,11 @@ So how does the `RemoteActorRef` class provide location transparency for us?
 
 ![How RemoteActorRef actually works](/images/how-remoteactoref-works.png)
 
-A `RemoteActorRef` is actually a paper-thin `IActorRef` instance that maps back to an actor that actually exists somewhere else on the network. 
+A `RemoteActorRef` is actually a paper-thin `IActorRef` instance that maps back to an actor that actually exists somewhere else on the network.
 
 Every time you `Tell` a message to a `RemoteActorRef` you're actually writing a message to your local `EndpointWriter` for that transport, who will in turn deliver the message over the network to an `EndpointReader` on the other side of the association.
 
-The `EndpointReader` is able to tell, with some help from the `RemoteActorRefProvider`, which local actor this network message was intended for and will deliver that message to the correct local actor. 
+The `EndpointReader` is able to tell, with some help from the `RemoteActorRefProvider`, which local actor this network message was intended for and will deliver that message to the correct local actor.
 
 And, as you might have guessed, it will also create a `RemoteActorRef` that the receiver of the network message can use the reply to the original sender!
 

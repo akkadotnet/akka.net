@@ -13,7 +13,7 @@ The high-level summary of changes:
 
 1. [Akka.Cluster.Sharding](../../articles/clustering/cluster-sharding.md) and [Akka.DistributedData](../../articles/clustering/distributed-data.md) are now out of beta status, have stable wire formats, and all sharding functionality is fully supported using either `akka.cluster.sharding.state-store-mode = "persistence"` or `akka.cluster.sharding.state-store-mode = "ddata"`.
 2. Akka.Remote's performance has significantly increased as a function of our new batching mode ([see the numbers](../../articles/remoting/performance.md#no-io-batching)) - which is tunable via HOCON configuration to best support your needs. [Learn how to performance optimize Akka.Remote here](../../articles/remoting/performance.md).
-3. Added a new module, [Akka.Cluster.Metrics](../../articles/cluster/cluster-metrics.md), which allows clustering users to receive performance data about each of the nodes in their cluster and even create some routers that can direct the flow of messages based on these metrics. 
+3. Added a new module, [Akka.Cluster.Metrics](../../articles/cluster/cluster-metrics.md), which allows clustering users to receive performance data about each of the nodes in their cluster and even create some routers that can direct the flow of messages based on these metrics.
 4. Added ["Stream References" to Akka.Streams](../../articles/streams/streamrefs.md), a feature which allows Akka.Streams graphs to span across the network.
 5. Moved from .NET Standard 1.6 to .NET Standard 2.0 and dropped support for all versions of .NET Framework that aren't supported by .NET Standard 2.0 - this means issues caused by our polyfills (i.e. `SerializableAttribute`) should be fully resolved now.
 6. Moved onto modern C# best practices, such as changing our APIs to support `System.ValueTuple` over regular tuples.
@@ -35,15 +35,15 @@ More details in the next section below.
 
 #### Post Mortem: Stand-alone HOCON
 
-In the previous releases of HOCON, we let the OSS project do its own thing without any real top-down plan for integrating it into Akka.NET and replacing the stand-alone HOCON engine built into the `Akka.Configuration.Config` class. 
+In the previous releases of HOCON, we let the OSS project do its own thing without any real top-down plan for integrating it into Akka.NET and replacing the stand-alone HOCON engine built into the `Akka.Configuration.Config` class.
 
 This was a mistake and led to us having to drop stand-alone HOCON integration as part of the Akka.NET v1.4.1 milestone.
 
 The specific problems we had with stand-alone HOCON were:
 
-1. Mutability - we couldn't guarantee that the object model was immutable following a parse operation, because the same architecture that was used for object construction during parse was also used for reads after parse, a fundamental architectural mistake. In addition to some performance problems, this also lead to 
+1. Mutability - we couldn't guarantee that the object model was immutable following a parse operation, because the same architecture that was used for object construction during parse was also used for reads after parse, a fundamental architectural mistake. In addition to some performance problems, this also lead to
 2. Performance - appending a new fallback to a `HOCON.Config` object kicked off a processes of recursive deep-copying, and this was quickly found to be non-performant.
-3. Inadequacies in the Akka.NET test suite - the Akka.NET test suite is very extensive, but as we discovered during the Akka.NET v1.4.1-RC1 process: our test configurations are not nearly as complex as real-world test cases are. 
+3. Inadequacies in the Akka.NET test suite - the Akka.NET test suite is very extensive, but as we discovered during the Akka.NET v1.4.1-RC1 process: our test configurations are not nearly as complex as real-world test cases are.
 
 #### Stand-alone HOCON Future
 
@@ -57,7 +57,7 @@ In addition to that, we're in the process of [developing automated integration t
 
 ### Performance Tuning Akka.Remote
 
-Akka.Remote's performance has significantly increased as a function of our new batching mode ([see the numbers](../../articles/remoting/performance.md#no-io-batching)) - which is tunable via HOCON configuration to best support your needs. 
+Akka.Remote's performance has significantly increased as a function of our new batching mode ([see the numbers](../../articles/remoting/performance.md#no-io-batching)) - which is tunable via HOCON configuration to best support your needs.
 
 Akka.Remote's batching system _is enabled by default_ as of Akka.NET v1.4.0 and its defaults work well for systems under moderate load (100+ remote messages per second.) If your message volume is lower than that, you will _definitely need to performance tune Akka.Remote before you go into production with Akka.NET v1.4.0_.
 
@@ -69,7 +69,7 @@ In Akka.NET 1.3.3 we introduce the notion of a `WeaklyUp` member status in Akka.
 
 Since its introduction, the `WeaklyUp` membership status has been an opt-in feature - disabled by default.
 
-Beginning in Akka.NET v1.4 `akka.cluster.allow-weakly-up-members` is now set to `on` by default. This will change some of the data you see coming from a tool like [Petabridge.Cmd's `cluster show` output](https://cmd.petabridge.com/articles/commands/cluster-commands.html#cluster-show). 
+Beginning in Akka.NET v1.4 `akka.cluster.allow-weakly-up-members` is now set to `on` by default. This will change some of the data you see coming from a tool like [Petabridge.Cmd's `cluster show` output](https://cmd.petabridge.com/articles/commands/cluster-commands.html#cluster-show).
 
 If you want to disable this feature, you can override the value in your application's HOCON.
 

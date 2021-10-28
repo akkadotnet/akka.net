@@ -13,21 +13,21 @@ A cluster represents a fault-tolerant, elastic, decentralized peer-to-peer netwo
 
 The best way to begin introducing Akka.Cluster is with brief overview of what it does. Akka.Cluster is the [package](https://www.nuget.org/packages/Akka.Cluster/1.0.3.11-beta) that brings clustering support to Akka.NET, and it accomplishes this by adding the following capabilities to Akka.NET:
 
-- Makes it easy to create peer-to-peer networks of Akka.NET applications
-- Allows peers to automatically discover new nodes and removed dead ones automatically with no configuration changes
-- Allows user-defined classes to subscribe to notifications about changes in the availability of nodes in the cluster
-- Introduces the concept of "roles" to distinguish different Akka.NET applications within a cluster
-- Allows you to create clustered routers, which are an extension of the built-in Akka.NET routers, except that clustered routers automatically adjust their routees list based on node availability.
+* Makes it easy to create peer-to-peer networks of Akka.NET applications
+* Allows peers to automatically discover new nodes and removed dead ones automatically with no configuration changes
+* Allows user-defined classes to subscribe to notifications about changes in the availability of nodes in the cluster
+* Introduces the concept of "roles" to distinguish different Akka.NET applications within a cluster
+* Allows you to create clustered routers, which are an extension of the built-in Akka.NET routers, except that clustered routers automatically adjust their routees list based on node availability.
 
 ## Benefits of Akka.Cluster
 
 In short, these are the benefits of a properly designed cluster:
 
-- **Fault tolerant**: clusters recover from failures (especially network partitions) elegantly.
-- **Elastic**: clusters are inherently elastic, and can scale up/down as needed.
-- **Decentralized**: it's possible to have multiple **equal** replicas of a given microservice or piece of application state running simultaneously throughout a cluster
-- **Peer-to-peer**: New nodes can contact existing peers, be notified about other peers, and fully integrate themselves into the network without any configuration changes.
-- **No single point of failure/bottleneck**: multiple nodes are able to service requests, increasing throughput and fault tolerance.
+* **Fault tolerant**: clusters recover from failures (especially network partitions) elegantly.
+* **Elastic**: clusters are inherently elastic, and can scale up/down as needed.
+* **Decentralized**: it's possible to have multiple **equal** replicas of a given microservice or piece of application state running simultaneously throughout a cluster
+* **Peer-to-peer**: New nodes can contact existing peers, be notified about other peers, and fully integrate themselves into the network without any configuration changes.
+* **No single point of failure/bottleneck**: multiple nodes are able to service requests, increasing throughput and fault tolerance.
 
 ## How is Clustering Different From Remoting?
 
@@ -43,11 +43,11 @@ Akka.Cluster lends itself naturally to [high availability](https://en.wikipedia.
 
 To put it bluntly, you should use clustering in any scenario where you have some or all of the following conditions:
 
-- A sizable traffic load
-- A non-trivial task to perform
-- An expectation of fast response times
-- The need for elastic scaling (e.g. bursty workloads)
-- A microservices architecture
+* A sizable traffic load
+* A non-trivial task to perform
+* An expectation of fast response times
+* The need for elastic scaling (e.g. bursty workloads)
+* A microservices architecture
 
 Some of the use cases where Akka.Cluster emerges as a natural fit are in:
 
@@ -64,12 +64,12 @@ Some of the use cases where Akka.Cluster emerges as a natural fit are in:
 
 Akka.Cluster is concept-heavy, so let's clarify a few terms:
 
-- **Node**: a logical member of a cluster.
-- **Cluster**: a set of nodes joined through the membership service. Multiple Akka.NET applications can be a part of a single cluster.
-- **Gossip**: underlying messages powering the cluster itself.
-- **Leader**: single node within the cluster who adds/removes nodes from the cluster.
-- **Role**: a named responsibility or application within the cluster. A cluster can have multiple Akka.NET applications in it, each with its own role. A node may exist in 0+ roles simultaneously.
-- **Convergence**: when a quorum (simple majority) of gossip messages agree on a change in state of a cluster member.
+* **Node**: a logical member of a cluster.
+* **Cluster**: a set of nodes joined through the membership service. Multiple Akka.NET applications can be a part of a single cluster.
+* **Gossip**: underlying messages powering the cluster itself.
+* **Leader**: single node within the cluster who adds/removes nodes from the cluster.
+* **Role**: a named responsibility or application within the cluster. A cluster can have multiple Akka.NET applications in it, each with its own role. A node may exist in 0+ roles simultaneously.
+* **Convergence**: when a quorum (simple majority) of gossip messages agree on a change in state of a cluster member.
 
 ## Enabling Akka.Cluster
 
@@ -88,7 +88,7 @@ Once you've installed Akka.Cluster, we need to update our HOCON configuration to
 > [!NOTE]
 > Akka.Cluster depends on Akka.Remote.
 
-#### Seed Node Configuration
+### Seed Node Configuration
 
 ```xml
 akka {
@@ -236,8 +236,8 @@ A node might also exit the cluster gracefully, preventing it from being marked a
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mUTKvGyxbOA" frameborder="0" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
-- [How to Create Scalable Clustered Akka.NET Apps Using Akka.Cluster](https://petabridge.com/blog/intro-to-akka-cluster/)
-- [Video: Introduction to Akka.Cluster](https://www.youtube.com/watch?v=mUTKvGyxbOA)
-- [Gossip Protocol](https://en.wikipedia.org/wiki/Gossip_protocol)
-- [High-availability scenarios](https://en.wikipedia.org/wiki/High_availability)
-- [Microservices](http://martinfowler.com/articles/microservices.html)
+* [How to Create Scalable Clustered Akka.NET Apps Using Akka.Cluster](https://petabridge.com/blog/intro-to-akka-cluster/)
+* [Video: Introduction to Akka.Cluster](https://www.youtube.com/watch?v=mUTKvGyxbOA)
+* [Gossip Protocol](https://en.wikipedia.org/wiki/Gossip_protocol)
+* [High-availability scenarios](https://en.wikipedia.org/wiki/High_availability)
+* [Microservices](http://martinfowler.com/articles/microservices.html)

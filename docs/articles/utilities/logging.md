@@ -31,25 +31,25 @@ Akka.NET comes with two built in loggers.
 ### StandardOutLogger
 
 `StandardOutLogger` is considered as a minimal logger and implements the `MinimalLogger` abstract
-class. Its job is simply to output all `LogEvent`s emitted by the `EventBus` onto the console. 
-Since it is not an actual actor, ie. it doesn't need the `ActorSystem` to operate, it is also 
-used to log other loggers activity at the very start and very end of the `ActorSystem` life cycle. 
-You can change the minimal logger start and end life cycle behavior by changing the 
+class. Its job is simply to output all `LogEvent`s emitted by the `EventBus` onto the console.
+Since it is not an actual actor, ie. it doesn't need the `ActorSystem` to operate, it is also
+used to log other loggers activity at the very start and very end of the `ActorSystem` life cycle.
+You can change the minimal logger start and end life cycle behavior by changing the
 `akka.stdout-loglevel` HOCON settings to `OFF` if you do not need these feature in your application.
 
 ### Advanced MinimalLogger Setup
 
-You can also replace `StandardOutLogger` by making your own logger class with an empty constructor 
-that inherits/implements the `MinimalLogger` abstract class and passing the fully qualified class 
-name into the `akka.stdout-logger-class` HOCON settings. 
+You can also replace `StandardOutLogger` by making your own logger class with an empty constructor
+that inherits/implements the `MinimalLogger` abstract class and passing the fully qualified class
+name into the `akka.stdout-logger-class` HOCON settings.
 
 > [!WARNING]
-> Be aware that `MinimalLogger` implementations are __NOT__ real actors and will __NOT__ have any 
-> access to the `ActorSystem` and all of its extensions. All logging done inside a `MinimalLogger` 
-> have to be done in as simple as possible manner since it is used to log how other loggers are 
+> Be aware that `MinimalLogger` implementations are __NOT__ real actors and will __NOT__ have any
+> access to the `ActorSystem` and all of its extensions. All logging done inside a `MinimalLogger`
+> have to be done in as simple as possible manner since it is used to log how other loggers are
 > behaving at the very start and very end of the `ActorSystem` life cycle.
-> 
-> Note that `MinimalLogger` are __NOT__ interchangeable with other Akka.NET loggers and there can 
+>
+> Note that `MinimalLogger` are __NOT__ interchangeable with other Akka.NET loggers and there can
 > only be one `MinimalLogger` registered with the `ActorSystem` in the HOCON settings.
 
 ## Contrib Loggers

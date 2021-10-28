@@ -41,7 +41,7 @@ using (var system = ActorSystem.Create("system"))
 using (var materializer = system.Materializer())
 ```
 
-There are other ways to create a materializer, e.g. from an `ActorContext` when using streams from within Actors. The `Materializer` is a factory for stream execution engines, it is the thing that makes streams run --you don't need to worry about any of the details just now apart from that you need one for calling any of the run methods on a `Source`. 
+There are other ways to create a materializer, e.g. from an `ActorContext` when using streams from within Actors. The `Materializer` is a factory for stream execution engines, it is the thing that makes streams run --you don't need to worry about any of the details just now apart from that you need one for calling any of the run methods on a `Source`.
 
 The nice thing about Akka Streams is that the `Source` is just a description of what you want to run, and like an architect's blueprint it can be reused, incorporated into a larger design. We may choose to transform the source of integers and write it to a file instead:
 

@@ -9,15 +9,15 @@ Akka.NET's build system is a modified version of [Petabridge's `dotnet new` temp
 
 ## Supported Commands
 
-This project supports a wide variety of commands, all of which can be listed via:
+This project supports a wide variety of commands.
 
-**Windows**
+To list on Windows:
 
 ```console
 C:\> build.cmd help
 ```
 
-**Linux / OS X**
+To list on Linux / OS X:
 
 ```console
 build.sh help
@@ -56,7 +56,7 @@ This option will work locally on Linux or Windows.
 
 This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](src/common.props).
 
-**RELEASE_NOTES.md**
+#### RELEASE_NOTES.md
 
 ```text
 #### 0.1.0 October 05 2019 ####
@@ -65,7 +65,7 @@ First release
 
 In this instance, the NuGet and assembly version will be `0.1.0` based on what's available at the top of the `RELEASE_NOTES.md` file.
 
-**RELEASE_NOTES.md**
+#### RELEASE_NOTES.md
 
 ```text
 #### 0.1.0-beta1 October 05 2019 ####
@@ -90,11 +90,11 @@ The attached build script will automatically do the following based on the conve
 
 ### DocFx for Documentation
 
-This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project. 
+This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project.
 
 All of the relevant articles you wish to write should be added to the `/docs/articles/` folder and any API documentation you might need will also appear there.
 
-All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder. 
+All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder.
 
 #### Previewing Documentation
 

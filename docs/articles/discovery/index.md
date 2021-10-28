@@ -24,7 +24,7 @@ var system = ActorSystem.Create("example");
 var serviceDiscovery = Discovery.Get(system).Default;
 ```
 
-A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery 
+A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery
 method dependent e.g. DNS does an A/AAAA record query if any of the fields are missing and an SRV query for a full look up:
 
 ```csharp

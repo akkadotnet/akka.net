@@ -8,10 +8,10 @@ When a stage in a stream fails this will normally lead to the entire stream bein
 
 In many cases you may want to avoid complete stream failure, this can be done in a few different ways:
 
-- `Recover` to emit a final element then complete the stream normally on upstream failure
-- `RecoverWithRetries` to create a new upstream and start consuming from that on failure
-- Restarting sections of the stream after a backoff
-- Using a supervision strategy for stages that support it
+* `Recover` to emit a final element then complete the stream normally on upstream failure
+* `RecoverWithRetries` to create a new upstream and start consuming from that on failure
+* Restarting sections of the stream after a backoff
+* Using a supervision strategy for stages that support it
 
 In addition to these built in tools for error handling, a common pattern is to wrap the stream inside an actor, and have the actor restart the entire stream on failure.
 
@@ -96,7 +96,7 @@ supervision strategy*, starting a stage again when it fails or completes, each t
 
 This pattern is useful when the stage fails or completes because some external resource is not available
 and we need to give it some time to start-up again. One of the prime examples when this is useful is
-when a WebSocket connection fails due to the HTTP server it's running on going down, perhaps because it is overloaded. 
+when a WebSocket connection fails due to the HTTP server it's running on going down, perhaps because it is overloaded.
 By using an exponential backoff, we avoid going into a tight reconnect look, which both gives the HTTP server some time
 to recover, and it avoids using needless resources on the client side.
 
@@ -110,8 +110,8 @@ Configurable parameters are:
 * `maxRestarts` caps the total number of restarts
 * `maxRestartsWithin` sets a time-frame during which restarts are counted towards the same total for `maxRestarts`
 
-The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource` 
-which will supervise the given `Source`. The `Source` in this case is a 
+The following snippet shows how to create a backoff supervisor using `Akka.Streams.Dsl.RestartSource`
+which will supervise the given `Source`. The `Source` in this case is a
 `HttpResponseMessage`, produced by `HttpCLient`. If the stream fails or completes at any point, the request will
 be made again, in increasing intervals of 3, 6, 12, 24 and finally 30 seconds (at which point it will remain capped due
 to the `maxBackoff` parameter):
@@ -147,9 +147,9 @@ For stages that do implement supervision, the strategies for how to handle excep
 
 There are three ways to handle exceptions from application code:
 
-- `Stop` - The stream is completed with failure.
-- `Resume` - The element is dropped and the stream continues.
-- `Restart` - The element is dropped and the stream continues after restarting the stage. Restarting a stage means that any accumulated state is cleared. This is typically performed by creating a new instance of the stage.
+* `Stop` - The stream is completed with failure.
+* `Resume` - The element is dropped and the stream continues.
+* `Restart` - The element is dropped and the stream continues after restarting the stage. Restarting a stage means that any accumulated state is cleared. This is typically performed by creating a new instance of the stage.
 
 By default the stopping strategy is used for all exceptions, i.e. the stream will be completed with failure when an exception is thrown.
 

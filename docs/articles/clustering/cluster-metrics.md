@@ -5,10 +5,10 @@ title: Akka.Cluster.Metrics module
 
 # Akka.Cluster.Metrics module
 
-The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes and 
+The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes and
 to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
 
-Cluster metrics information is primarily used for load-balancing routers, 
+Cluster metrics information is primarily used for load-balancing routers,
 and can also be used to implement advanced metrics-based node life cycles, such as “Node Let-it-crash” when CPU steal time becomes excessive.
 
 Cluster members with status `WeaklyUp`, if that feature is enabled, will participate in Cluster Metrics collection and dissemination.
@@ -17,7 +17,7 @@ Cluster members with status `WeaklyUp`, if that feature is enabled, will partici
 
 Metrics collection is delegated to an implementation of `Akka.Cluster.Metrics.IMetricsCollector`.
 
-Different collector implementations may provide different subsets of metrics published to the cluster. 
+Different collector implementations may provide different subsets of metrics published to the cluster.
 Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics` class:
 
 * `MemoryUsed` - total memory allocated to the currently running process
@@ -27,10 +27,10 @@ Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics
 * `CpuProcessUsage` - CPU usage by current process
 * `CpuTotalUsage` - total CPU usage
 
-> Note: currently, due to some .NET Core limitations `CpuTotalUsage` is the same as `CpuProcessUsage` metrics, 
+> Note: currently, due to some .NET Core limitations `CpuTotalUsage` is the same as `CpuProcessUsage` metrics,
 > but this is something to be fixed in near future (see [this issue](https://github.com/akkadotnet/akka.net/issues/4142) for details).
 
-Cluster metrics extension comes with built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector implementation, 
+Cluster metrics extension comes with built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector implementation,
 which collects all metrics defined above.
 
 You can also plug-in your own metrics collector implementation.
@@ -46,7 +46,7 @@ Metrics extension periodically publishes current snapshot of the cluster metrics
 
 The publication interval is controlled by the `akka.cluster.metrics.collector.sample-interval` setting.
 
-The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event will contain latest metrics of the node as well as 
+The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event will contain latest metrics of the node as well as
 other cluster member nodes metrics gossip which was received during the collector sample interval.
 
 You can subscribe your metrics listener actors to these events in order to implement custom node lifecycle:
@@ -57,15 +57,15 @@ ClusterMetrics.Get(Sys).Subscribe(metricsListenerActor);
 
 ## Adaptive Load Balancing
 
-The `AdaptiveLoadBalancingPool` / `AdaptiveLoadBalancingGroup` performs load balancing of messages to cluster nodes based on the cluster metrics data. 
-It uses random selection of routees with probabilities derived from the remaining capacity of the corresponding node. 
+The `AdaptiveLoadBalancingPool` / `AdaptiveLoadBalancingGroup` performs load balancing of messages to cluster nodes based on the cluster metrics data.
+It uses random selection of routees with probabilities derived from the remaining capacity of the corresponding node.
 It can be configured to use a specific `IMetricsSelector` implementation to produce the probabilities, a.k.a. weights:
 
 * `memory` / `MemoryMetricsSelector` - Used and max available memory. Weights based on remaining memory capacity: (max - used) / max
 * `cpu` / `CpuMetricsSelector` - CPU utilization in percentage. Weights based on remaining cpu capacity: 1 - utilization
 * `mix` / `MixMetricsSelector` - Combines memory and cpu. Weights based on mean of remaining capacity of the combined selectors.
 
-The collected metrics values are smoothed with [exponential weighted moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average). 
+The collected metrics values are smoothed with [exponential weighted moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average).
 In the cluster configuration you can adjust how quickly past data is decayed compared to new data.
 
 Let’s take a look at this router in action. What can be more demanding than calculating factorials?

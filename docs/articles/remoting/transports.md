@@ -162,7 +162,7 @@ This configuration allows the `ActorSystem`'s DotNetty TCP transport to listen o
 
 Why is this distinction important? Why do we care about registering an publicly accessible hostname with our `ActorSystem`? Because in the event that other systems need to connect or reconnect to this process, *they need to have a reachable address.*
 
-By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname. 
+By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname.
 
 ## Additional Resources
 

@@ -56,7 +56,7 @@ not be able to operate at full capacity [^foot-note-1].
 
 > [!NOTE]
 > Asynchronous stream processing stages have internal buffers to make communication between them more efficient.
-For more details about the behavior of these and how to add additional buffers refer to 
+For more details about the behavior of these and how to add additional buffers refer to
 [Buffers and working with rate](xref:streams-buffers).
 
 ## Parallel processing
@@ -94,7 +94,7 @@ One drawback of the example code above that it does not preserve the ordering of
 if children like to track their "own" pancakes. In those cases the ``Balance`` and ``Merge`` stages should be replaced
 by strict round-robin balancing and merging stages that put in and take out pancakes in a strict order.
 
-A more detailed example of creating a worker pool can be found in the cookbook: 
+A more detailed example of creating a worker pool can be found in the cookbook:
 [Balancing jobs to a fixed pool of workers](xref:streams-cookbook#balancing-jobs-to-a-fixed-pool-of-workers)
 
 ## Combining pipelining and parallel processing
@@ -130,9 +130,9 @@ in sequence.
 
 It is also possible to organize parallelized stages into pipelines. This would mean employing four chefs:
 
- - the first two chefs prepare half-cooked pancakes from batter, in parallel, then putting those on a large enough
+* the first two chefs prepare half-cooked pancakes from batter, in parallel, then putting those on a large enough
    flat surface.
- - the second two chefs take these and fry their other side in their own pans, then they put the pancakes on a shared
+* the second two chefs take these and fry their other side in their own pans, then they put the pancakes on a shared
    plate.
 
 This is again straightforward to implement with the streams API:

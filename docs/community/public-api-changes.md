@@ -16,7 +16,7 @@ This document outlines how to comply with said procedures.
 The goal of this process is to make conscious decisions about API changes and force the discovery of those changes during the pull request review. Here is how the process works:
 
 * Uses [ApiApprovals](http://jake.ginnivan.net/apiapprover/) and [ApprovalTests](https://github.com/approvals/ApprovalTests.Net) to generate a public API of a given assembly.
-* The public API gets approved by a human into a `*.approved.txt` file. 
+* The public API gets approved by a human into a `*.approved.txt` file.
 * Every time the API approval test runs the API is generated again into a `*.received.txt` file. If the two files don't match the test fails on the CI server or locally. Locally on the dev's machine the predefined Diff viewer pops up (never happens on CI) and the dev has to approve the API changes (therefore making a conscious decision)
 * Each PR making public API changes will contain the `*.approved.txt` file in the DIFF and all reviewers can easily see the breaking changes on the public API.
 

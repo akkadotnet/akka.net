@@ -258,7 +258,7 @@ Message deletion doesn't affect the highest sequence number of the journal, even
 ## Persistence status handling
 
 | Method                    | Success                  |  Failure / Rejection     | After failure handler invoked
-|------                  |------                    |------                    |------      
+|------                  |------                    |------                    |------
 | Persist / PersistAsync | persist handler invoked    | OnPersistFailure      | Actor is stopped.
 |                        |                          | OnPersistRejected     | No automatic actions.
 | Recovery                  | RecoverySuccess           | OnRecoveryFailure     | Actor is stopped.
@@ -292,10 +292,10 @@ There could be cases where event streams are corrupted and multiple writers (i.e
 
 In your configuration, under the `akka.persistence.journal.xxx.replay-filter` section (where xxx is your journal plugin id), you can select the replay filter mode from one of the following values:
 
-- repair-by-discard-old
-- fail
-- warn
-- off
+* repair-by-discard-old
+* fail
+* warn
+* off
 
 For example, if you configure the replay filter for `sqlite` plugin, it looks like this:
 

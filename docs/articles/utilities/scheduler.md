@@ -63,4 +63,4 @@ The actual scheduler implementation is defined by config and loaded upon ActorSy
 Scheduling a task will result in a `ICancellable` or (or throw an `Exception` if attempted after the scheduler's shutdown). This allows you to cancel something that has been scheduled for execution.
 
 > [!WARNING]
-> If the task has already been started, then this does not abort the task's execution. 
+> If the task has already been started, then this does not abort the task's execution.

@@ -18,7 +18,7 @@ That's right - we can *deploy code over the network* with Akka.Remote.
 
 Here's what that concept looks like expressed as Akka.NET code:
 
-**Shared Actor / Message Code**
+### Shared Actor / Message Code
 
 ```csharp
 /*
@@ -52,7 +52,7 @@ public class Hello
 
 ```
 
-**DeployTarget (process that gets deployed onto)**
+### DeployTarget (process that gets deployed onto)
 
 ```csharp
 class Program
@@ -76,7 +76,7 @@ class Program
 }
 ```
 
-**Deployer (process that does deploying)**
+### Deployer (process that does deploying)
 
 ```csharp
 class Program

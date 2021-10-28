@@ -7,9 +7,9 @@ title: Persistence Views
 > [!WARNING]
 > `PersistentView` is deprecated. Use [PersistenceQuery](xref:persistence-query) when it will be ported. The corresponding query type is `EventsByPersistenceId`. There are several alternatives for connecting the `Source` to an actor corresponding to a previous `PersistentView` actor:
 >
-> - `Sink.ActorRef` is simple, but has the disadvantage that there is no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages fast enough the mailbox of the actor will grow
-> - `MapAsync` combined with [Ask: Send-And-Receive-Future](xref:receive-actor-api#ask-send-and-receive-future) is almost as simple with the advantage of back-pressure being propagated all the way
-> - `ActorSubscriber` in case you need more fine grained control
+> * `Sink.ActorRef` is simple, but has the disadvantage that there is no back-pressure signal from the destination actor, i.e. if the actor is not consuming the messages fast enough the mailbox of the actor will grow
+> * `MapAsync` combined with [Ask: Send-And-Receive-Future](xref:receive-actor-api#ask-send-and-receive-future) is almost as simple with the advantage of back-pressure being propagated all the way
+> * `ActorSubscriber` in case you need more fine grained control
 >
 > The consuming actor may be a plain `UntypedActor` or a `UntypedPersistentActor` if it needs to store its own state (e.g. `FromSequenceNr` offset).
 
@@ -17,13 +17,13 @@ While a persistent actor may be used to produce and persist events, views are us
 
 Other members:
 
-- `ViewId` property is a view unique identifier that doesn't change across different actor incarnations. It's useful in cases where there are multiple different views associated with a single persistent actor, but showing its state from a different perspectives.
-- `IsAutoUpdate` property determines if the view will try to automatically update its state in specified time intervals. Without it, the view won't update its state until it receives an explicit `Update` message. This value can be set through configuration with *akka.persistence.view.auto-update* set to either *on* (by default) or *off*.
-- `AutoUpdateInterval` specifies a time interval in which the view will be updating itself - only in cases where the *IsAutoUpdate* flag is on. This value can be set through configuration with *akka.persistence.view.auto-update-interval* key (5 seconds by default).
-- `AutoUpdateReplayMax` property determines the maximum number of events to be replayed during a single *Update* cycle. This value can be set through configuration with *akka.persistence.view.auto-update-replay-max* key (by default it's -1 - no limit).
-- `LoadSnapshot` will send a request to the snapshot store to resend a current view's snapshot.
-- `SaveSnapshot` will send the current view's internal state as a snapshot to be saved by the  configured snapshot store.
-- `DeleteSnapshot` and `DeleteSnapshots` methods may be used to specify snapshots to be removed from the snapshot store in cases where they are no longer needed.
+* `ViewId` property is a view unique identifier that doesn't change across different actor incarnations. It's useful in cases where there are multiple different views associated with a single persistent actor, but showing its state from a different perspectives.
+* `IsAutoUpdate` property determines if the view will try to automatically update its state in specified time intervals. Without it, the view won't update its state until it receives an explicit `Update` message. This value can be set through configuration with *akka.persistence.view.auto-update* set to either *on* (by default) or *off*.
+* `AutoUpdateInterval` specifies a time interval in which the view will be updating itself - only in cases where the *IsAutoUpdate* flag is on. This value can be set through configuration with *akka.persistence.view.auto-update-interval* key (5 seconds by default).
+* `AutoUpdateReplayMax` property determines the maximum number of events to be replayed during a single *Update* cycle. This value can be set through configuration with *akka.persistence.view.auto-update-replay-max* key (by default it's -1 - no limit).
+* `LoadSnapshot` will send a request to the snapshot store to resend a current view's snapshot.
+* `SaveSnapshot` will send the current view's internal state as a snapshot to be saved by the  configured snapshot store.
+* `DeleteSnapshot` and `DeleteSnapshots` methods may be used to specify snapshots to be removed from the snapshot store in cases where they are no longer needed.
 
 The `PersistenceId` identifies the persistent actor from which the view receives journaled messages. It is not necessary that the referenced persistent actor is actually running. Views read messages from a persistent actor's journal directly. When a persistent actor is started later and begins to write new messages, by default the corresponding view is updated automatically.
 
@@ -44,7 +44,7 @@ IActorRef view = system.ActorOf<ViewActor>();
 view.Tell(new Update(true));
 ```
 
-If the await parameter is set to true, messages that follow the `Update` request are processed when the incremental message replay, triggered by that update request, completed. If set to false (default), messages following the update request may interleave with the replayed message stream. 
+If the await parameter is set to true, messages that follow the `Update` request are processed when the incremental message replay, triggered by that update request, completed. If set to false (default), messages following the update request may interleave with the replayed message stream.
 
 Automated updates of all persistent views of an actor system can be turned off by configuration:
 

@@ -3892,14 +3892,15 @@ namespace Akka.IO
     }
     public class UdpSettings
     {
+        [System.ObsoleteAttribute("Please the constructor without directBufferSize and maxDirectBufferPoolSize param" +
+            "eter")]
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int directBufferSize, int maxDirectBufferPoolSize, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
+        public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
         public int BatchReceiveLimit { get; }
         public string BufferPoolConfigPath { get; }
-        public int DirectBufferSize { get; }
         public string FileIODispatcher { get; }
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
-        public int MaxDirectBufferPoolSize { get; }
         public bool TraceLogging { get; }
         public static Akka.IO.UdpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.UdpSettings Create(Akka.Configuration.Config config) { }

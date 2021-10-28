@@ -50,9 +50,7 @@ Akka persistence query comes with a number of query interfaces built in and sugg
 > [!NOTE]
 > Refer to the documentation of the ReadJournal plugin you are using for a specific list of supported query types. For example, Journal plugins should document their stream completion strategies.
 
-The predefined queries are:
-
-**AllPersistenceIdsQuery (PersistentIds) and CurrentPersistenceIdsQuery**
+#### `AllPersistenceIdsQuery (PersistentIds)` and `CurrentPersistenceIdsQuery`.
 
 `AllPersistenceIds` or `PersistenceIds`, and `CurrentPersistenceIds` in `IPersistenceIdsQuery` is used for retrieving all persistenceIds of all persistent actors.
 
@@ -72,7 +70,7 @@ Periodic polling of new `PersistenceIds` are done on the query side by retrievin
 
 The stream is completed with failure if there is a failure in executing the query in the backend journal.
 
-**EventsByPersistenceIdQuery and CurrentEventsByPersistenceIdQuery**
+#### `EventsByPersistenceIdQuery` and `CurrentEventsByPersistenceIdQuery`
 
 `EventsByPersistenceId` is used for retrieving events for a specific `PersistentActor` identified by `PersistenceId`.
 
@@ -95,7 +93,7 @@ The write journal is notifying the query side as soon as events are persisted, b
 
 The stream is completed with failure if there is a failure in executing the query in the backend journal.
 
-**EventsByTag and CurrentEventsByTag**
+#### `EventsByTag` and `CurrentEventsByTag`
 
 `EventsByTag` allows querying events regardless of which `PersistenceId` they are associated with. This query is hard to implement in some journals or may need some additional preparation of the used data store to be executed efficiently. The goal of this query is to allow querying for all events which are "tagged" with a specific tag. That includes the use case to query all domain events of an Aggregate Root type. Please refer to your read journal plugin's documentation to find out if and how it is supported.
 
@@ -160,7 +158,7 @@ As you can see, we can use all the usual stream combinators available from Akka 
 
 If your usage does not require a live stream, you can use the `CurrentEventsByTag` query.
 
-**AllEvents and CurrentAllEvents**
+#### `AllEvents` and `CurrentAllEvents`
 
 `AllEvents` allows replaying and monitoring all events regardless of which `PersistenceId` they are associated with. The goal of this query is to allow replaying and monitoring for all events that are stored inside a journal, regardless of its source.Please refer to your read journal plugin's documentation to find out if and how it is supported.
 

@@ -183,7 +183,7 @@ public class PersistentActorSpec : PersistenceTestKit
 Each method accepts 2 arguments:
 
 1. Behavior selector for operation under test;
-2. Actual code which must be tested when selected behavior is applied. 
+2. Actual code which must be tested when selected behavior is applied.
 
 After the test code block is executed, journal and snapshot store will be switched back to normal mode, when all operations are passed to default in-memory implementation.
 

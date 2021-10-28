@@ -10,14 +10,14 @@ When working with an Akka.NET cluster, you must consider how to handle [network 
 
 One of the common problems present in distributed systems are potential hardware failures. Things like garbage collection pauses, machine crashes or network partitions happen all the time. Moreover it is impossible to distinguish between them. Different cause can have different result on our cluster. A careful balance here is highly desired:
 
-- From one side we may want to detect crashed nodes as fast as possible and remove them from the cluster.
-- However, things like network partitions may be only temporary. For this reason it may be more feasible to wait a while for disconnected nodes in hope, that they will be able to reconnect soon.
+* From one side we may want to detect crashed nodes as fast as possible and remove them from the cluster.
+* However, things like network partitions may be only temporary. For this reason it may be more feasible to wait a while for disconnected nodes in hope, that they will be able to reconnect soon.
 
-Networks partitions also bring different problems - the natural result of such event is a risk of splitting a single cluster into two or more independent ones, unaware of each others existence. This comes with certain risks. Even more, some of the Akka.NET cluster features may be unavailable or malfunctioning in such scenario. 
+Networks partitions also bring different problems - the natural result of such event is a risk of splitting a single cluster into two or more independent ones, unaware of each others existence. This comes with certain risks. Even more, some of the Akka.NET cluster features may be unavailable or malfunctioning in such scenario.
 
 To solve this kind of problems we need to determine a common strategy, in which every node will come to the same deterministic conclusion about which node should live and which one should die, even if it won't be able to communicate with others.
 
-Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrarily define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state. 
+Since Akka.NET cluster is working in peer-to-peer mode, it means that there is no single *global* entity which is able to arbitrarily define one true state of the cluster. Instead each node has so called failure detector, which tracks the responsiveness and checks health of other connected nodes. This allows us to create a *local* node perspective on the overall cluster state.
 
 In the past the only available opt-in strategy was an auto-down, in which each node was automatically downing others after reaching a certain period of unreachability. While this approach was enough to react on machine crashes, it was failing in face of network partitions: if cluster was split into two or more parts due to network connectivity issues, each one of them would simply consider others as down. This would lead to having several independent clusters not knowing about each other. It is especially disastrous in case of Cluster Singleton and Cluster Sharding features, both relying on having only one actor instance living in the cluster at the same time.
 
@@ -58,7 +58,7 @@ This will cause the [`Akka.Cluster.SBR.SplitBrainResolverProvider`](xref:Akka.Cl
 
 The following strategies are supported:
 
-* `static-quorum` 
+* `static-quorum`
 * `keep-majority`
 * `keep-oldest`
 * `down-all`
@@ -99,7 +99,7 @@ akka.cluster.split-brain-resolver {
 
 There is no simple way to decide the value of `stable-after`, as:
 
-* A shorter value will give you the faster reaction time for unreachable nodes at cost of higher risk of false positives, i.e. healthy nodes that are slow to be observed as reachable again prematurely being removed for the cluster due to temporary network issues. 
+* A shorter value will give you the faster reaction time for unreachable nodes at cost of higher risk of false positives, i.e. healthy nodes that are slow to be observed as reachable again prematurely being removed for the cluster due to temporary network issues.
 * A higher value will increase the amount of time it takes to move resources on the truly unreachable side of the partition, i.e. sharded actors, cluster singletons, DData replicas, and so on longer to be re-homed onto reachable nodes in the healthy partition.
 
 > [!NOTE]
@@ -109,7 +109,7 @@ The `down-all-when-unstable` option, which is _enabled by default_, will termina
 
 > [!IMPORTANT]
 > If you are running in an environment where processes are not automatically restarted in the event of an unplanned termination (i.e. Kubernetes), we strongly recommend that you disable this setting by setting `akka.cluster.split-brain-resolver.down-all-when-unstable = off`.
-> If you're running in a self-hosted environment or on infrastructure as a service, TURN THIS SETTING OFF unless you have automatic process supervision in-place (which you should always try to have.) 
+> If you're running in a self-hosted environment or on infrastructure as a service, TURN THIS SETTING OFF unless you have automatic process supervision in-place (which you should always try to have.)
 
 #### Static Quorum
 
@@ -171,14 +171,14 @@ akka.cluster.split-brain-resolver {
 
 #### Keep Oldest
 
-The `keep-oldest` strategy, when a network split has happened, will down a part of the cluster which doesn't contain the oldest node. 
+The `keep-oldest` strategy, when a network split has happened, will down a part of the cluster which doesn't contain the oldest node.
 
 When to use it? This approach is particularly good in combination with Cluster Singleton, which usually is running on the oldest cluster member. It's also useful, when you have a one starter node configured as `akka.cluster.seed-nodes` for others, which will still allow you to add and remove members using its address.
 
 Keep in mind, that:
 
-1. When the oldest node will get partitioned from others, it will be downed itself and the next oldest one will pick up its role. This is possible thanks to `down-if-alone` setting. 
-2. If `down-if-alone` option will be set to `off`, a whole cluster will be dependent on the availability of this single node. 
+1. When the oldest node will get partitioned from others, it will be downed itself and the next oldest one will pick up its role. This is possible thanks to `down-if-alone` setting.
+2. If `down-if-alone` option will be set to `off`, a whole cluster will be dependent on the availability of this single node.
 3. There is a risk, that if partition will split cluster into two unequal parts i.e. 2 nodes with the oldest one present and 20 remaining ones, the majority of the cluster will go down.
 4. Since the oldest node is determined on the latest known state of the cluster, there is a small risk that during partition, two parts of the cluster will both consider themselves having the oldest member on their side. While this is very rare situation, you still may end up having two independent clusters after split occurrence.
 
@@ -277,8 +277,8 @@ Since different nodes may apply their split brain decisions at different points 
 
 If you're going to use a split brain resolver, you can see that the total failover latency is determined by several values. Defaults are:
 
-- failure detection 5 seconds
-- `akka.cluster.split-brain-resolver.stable-after` 20 seconds
-- `akka.cluster.down-removal-margin` 20 seconds
+* failure detection 5 seconds
+* `akka.cluster.split-brain-resolver.stable-after` 20 seconds
+* `akka.cluster.down-removal-margin` 20 seconds
 
 This would result in total failover time of 45 seconds. While this value is good for the cluster of 100 nodes, you may decide to lower those values in case of a smaller one i.e. cluster of 20 nodes could work well with timeouts of 13s, which would reduce total failover time to 31 seconds.

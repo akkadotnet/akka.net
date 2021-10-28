@@ -99,19 +99,19 @@ var result2Task = mySource.Take(100).RunAggregate(0, (sum, next) => sum + next, 
 
 In order to interact with a port (`Inlet` or `Outlet`) of the stage we need to be able to receive events and generate new events belonging to the port. From the `GraphStageLogic` the following operations are available on an output port:
 
-   * `Push(out,elem)` pushes an element to the output port. Only possible after the port has been pulled by downstream.
-   * `Complete(out)` closes the output port normally.
-   * `Fail(out,exception)` closes the port with a failure signal.
+* `Push(out,elem)` pushes an element to the output port. Only possible after the port has been pulled by downstream.
+* `Complete(out)` closes the output port normally.
+* `Fail(out,exception)` closes the port with a failure signal.
 
 The events corresponding to an *output* port can be received in an `Action` registered to the output port using `SetHandler(out, action)`. This handler has two callbacks:
 
-  * `onPull` is called when the output port is ready to emit the next element, `Push(out, elem)` is now allowed to be called on this port.
-  * `onDownstreamFinish` is called once the downstream has cancelled and no longer allows messages to be pushed to it. No more `onPull` will arrive after this event. If not overridden this will default to stopping the stage.
+* `onPull` is called when the output port is ready to emit the next element, `Push(out, elem)` is now allowed to be called on this port.
+* `onDownstreamFinish` is called once the downstream has cancelled and no longer allows messages to be pushed to it. No more `onPull` will arrive after this event. If not overridden this will default to stopping the stage.
 
 Also, there are two query methods available for output ports:
 
- * `IsAvailable(out)` returns true if the port can be pushed
- * `IsClosed(out)` returns true if the port is closed. At this point the port can not be pushed and will not be pulled anymore.
+* `IsAvailable(out)` returns true if the port can be pushed
+* `IsClosed(out)` returns true if the port is closed. At this point the port can not be pushed and will not be pulled anymore.
 
 The relationship of the above operations, events and queries are summarized in the state machine below. Green shows the initial state while orange indicates the end state. If an operation is not listed for a state, then it is invalid to call it while the port is in that state. If an event is not listed for a state, then that event cannot happen in that state.
 
@@ -119,9 +119,9 @@ The relationship of the above operations, events and queries are summarized in t
 
 The following operations are available for *input* ports:
 
- * `Pull(in)` requests a new element from an input port. This is only possible after the port has been pushed by upstream.
- * `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
- * `Cancel(in)` closes the input port.
+* `Pull(in)` requests a new element from an input port. This is only possible after the port has been pushed by upstream.
+* `Grab(in)` acquires the element that has been received during an `onPush` It cannot be called again until the port is pushed again by the upstream.
+* `Cancel(in)` closes the input port.
 
 The events corresponding to an *input* port can be received in an `Action` registered to the input port using `setHandler(in, action)`. This handler has three callbacks:
 
@@ -371,10 +371,10 @@ Stages by default automatically stop once all of their ports (input and output) 
 
 Logging debug or other important information in your stages is often a very good idea, especially when developing
 more advances stages which may need to be debugged at some point.
- 
+
 The `Log` property is provided to enable you to easily obtain a `LoggingAdapter`
 inside of a `GraphStage` as long as the `Materializer` you're using is able to provide you with a logger.
-In that sense, it serves a very similar purpose as `ActorLogging` does for Actors. 
+In that sense, it serves a very similar purpose as `ActorLogging` does for Actors.
 
 > [!NOTE]
 > Please note that you can always simply use a logging library directly inside a Stage.
@@ -434,7 +434,7 @@ public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 ```
 
 > [!NOTE]
-> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing 
+> **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing
 `IMaterializerLoggingProvider` in your `Materializer`.
 
 ### Using timers
@@ -601,7 +601,8 @@ class FirstValue<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<T>>
 
 ## Using attributes to affect the behavior of a stage
 
-**This section is a stub and will be extended in the next release**
+> [!NOTE]
+> This section is a stub and will be extended in the next release.
 
 Stages can access the `Attributes` object created by the materializer. This contains all the applied (inherited) attributes applying to the stage, ordered from least specific (outermost) towards the most specific (innermost) attribute. It is the responsibility of the stage to decide how to reconcile this inheritance chain to a final effective decision.
 
