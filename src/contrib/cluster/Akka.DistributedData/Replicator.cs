@@ -307,6 +307,11 @@ namespace Akka.DistributedData
         /// </summary>
         private ImmutableSortedSet<Address> _joiningNodes = ImmutableSortedSet<Address>.Empty;
 
+        /// <summary>
+        /// cluster exiting nodes, doesn't contain selfAddress
+        /// </summary>
+        private ImmutableSortedSet<Address> _exitingNodes = ImmutableSortedSet<Address>.Empty;
+
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
         private ImmutableDictionary<UniqueAddress, long> _pruningPerformed = ImmutableDictionary<UniqueAddress, long>.Empty;
         private ImmutableHashSet<UniqueAddress> _tombstonedNodes = ImmutableHashSet<UniqueAddress>.Empty;
@@ -423,12 +428,22 @@ namespace Akka.DistributedData
             else Become(NormalReceive);
         }
 
-        private IImmutableList<Address> NodesForReadWrite()
+        private IImmutableList<Address> NodesForReadWrite(bool excludeExiting)
         {
-            if (_settings.PreferOldest)
-                return _membersByAge.Select(i => i.Address).ToImmutableList();
+            if (excludeExiting && !_exitingNodes.IsEmpty)
+            {
+                if (_settings.PreferOldest)
+                    return _membersByAge.Where(i => !_exitingNodes.Contains(i.Address)).Select(i => i.Address).ToImmutableList();
+                else
+                    return _nodes.Except(_exitingNodes).ToImmutableList();
+            }
             else
-                return _nodes.ToImmutableList();
+            {
+                if (_settings.PreferOldest)
+                    return _membersByAge.Select(i => i.Address).ToImmutableList();
+                else
+                    return _nodes.ToImmutableList();
+            }
         }
 
         protected override void PreStart()
@@ -585,6 +600,7 @@ namespace Akka.DistributedData
                 case ClusterEvent.MemberJoined m: ReceiveMemberJoining(m.Member); return true;
                 case ClusterEvent.MemberWeaklyUp m: ReceiveMemberWeaklyUp(m.Member); return true;
                 case ClusterEvent.MemberUp m: ReceiveMemberUp(m.Member); return true;
+                case ClusterEvent.MemberExited m: ReceiveMemberExiting(m.Member); return true;
                 case ClusterEvent.MemberRemoved m: ReceiveMemberRemoved(m.Member); return true;
 
                 case ClusterEvent.IMemberEvent m: ReceiveOtherMemberEvent(m.Member); return true;
@@ -613,8 +629,12 @@ namespace Akka.DistributedData
                 else Sender.Tell(new GetSuccess(key, req, localValue.Data));
             }
             else
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(), _unreachable, !_settings.PreferOldest, localValue, Sender)
+            {
+                var excludeExiting = consistency is ReadMajorityPlus || consistency is ReadAll;
+
+                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, localValue, Sender)
                     .WithDispatcher(Context.Props.Dispatcher));
+            }
         }
 
         private bool IsLocalGet(IReadConsistency consistency)
@@ -727,8 +747,10 @@ namespace Akka.DistributedData
                     // The order is also kept when prefer-oldest is enabled.
                     var shuffle = !(_settings.PreferOldest || (writeDelta?.RequiresCausalDeliveryOfDeltas) == true);
 
+                    var excludeExiting = consistency is WriteMajorityPlus || consistency is WriteAll;
+
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(), _unreachable, shuffle, Sender, durable)
+                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, shuffle, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -851,8 +873,10 @@ namespace Akka.DistributedData
                 }
                 else
                 {
+                    var excludeExiting = consistency is WriteMajorityPlus || consistency is WriteAll;
+
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(), _unreachable, !_settings.PreferOldest, Sender, durable)
+                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, Sender, durable)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -1302,6 +1326,12 @@ namespace Akka.DistributedData
             }
         }
 
+        private void ReceiveMemberExiting(Member m)
+        {
+            if (MatchingRole(m) && m.Address != _selfAddress)
+                _exitingNodes = _exitingNodes.Add(m.Address);
+        }
+
         private void ReceiveMemberRemoved(Member m)
         {
             if (m.Address == _selfAddress) Context.Stop(Self);
@@ -1315,6 +1345,7 @@ namespace Akka.DistributedData
                 _nodes = _nodes.Remove(m.Address);
                 _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
                 _joiningNodes = _joiningNodes.Remove(m.Address);
+                _exitingNodes = _exitingNodes.Remove(m.Address);
 
                 _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
                 _unreachable = _unreachable.Remove(m.Address);

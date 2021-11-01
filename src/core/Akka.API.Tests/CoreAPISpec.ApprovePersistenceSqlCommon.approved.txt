@@ -69,6 +69,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         public int MaxConcurrentOperations { get; }
         public Akka.Persistence.Sql.Common.Journal.QueryConfiguration NamingConventions { get; }
         public Akka.Persistence.Sql.Common.Journal.ReplayFilterSettings ReplayFilterSettings { get; }
+        public string TimestampProviderTypeName { get; }
     }
     public abstract class BatchingSqlJournal<TConnection, TCommand> : Akka.Persistence.Journal.WriteJournalBase
         where TConnection : System.Data.Common.DbConnection
@@ -98,6 +99,7 @@ namespace Akka.Persistence.Sql.Common.Journal
         protected abstract System.Collections.Immutable.ImmutableDictionary<string, string> Initializers { get; }
         protected virtual string InsertEventSql { get; }
         protected Akka.Persistence.Sql.Common.Journal.BatchingSqlJournalSetup Setup { get; }
+        protected Akka.Persistence.Sql.Common.Journal.ITimestampProvider TimestampProvider { get; }
         protected virtual string UpdateSequenceNrSql { get; }
         protected void AddParameter(TCommand command, string paramName, System.Data.DbType dbType, object value) { }
         protected void BatchRequest(Akka.Persistence.IJournalRequest message) { }
@@ -321,6 +323,10 @@ namespace Akka.Persistence.Sql.Common.Journal
     {
         public readonly string Tag;
         public TaggedEventAppended(string tag) { }
+    }
+    public class static TimestampProviderProvider
+    {
+        public static Akka.Persistence.Sql.Common.Journal.ITimestampProvider GetTimestampProvider(string typeName, Akka.Actor.IActorContext context) { }
     }
     public sealed class WriteJournalBatch
     {

@@ -4,11 +4,13 @@ title: Working with streaming IO
 ---
 
 # Working with streaming IO
+
 Akka Streams provides a way of handling File IO and TCP connections with Streams. While the general approach is very similar to the [Actor based TCP handling using Akka IO](xref:akka-io), by using Akka Streams you are freed of having to manually react to back-pressure signals, as the library does it transparently for you.
 
 ## Streaming TCP
 
 ### Accepting connections: Echo Server
+
 In order to implement a simple EchoServer we bind to a given address, which returns a `Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>>`, which will emit an `IncomingConnection` element for each new connection that the Server should handle:
 
 [!code-csharp[StreamTcpDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpDocTests.cs?name=echo-server-simple-bind)]
@@ -21,12 +23,13 @@ Next, we simply handle each incoming connection using a `Flow` which will be use
 
 Notice that while most building blocks in Akka Streams are reusable and freely shareable, this is not the case for the incoming connection Flow, since it directly corresponds to an existing, already accepted connection its handling can only ever be materialized once.
 
-Closing connections is possible by cancelling the incoming connection `Flow` from your server logic (e.g. by connecting its downstream to a `Sink.Cancelled` and its upstream to a `Source.Empty`). It is also possible `to shut down the server’s socket by cancelling the `IncomingConnection` source `connections`.
+Closing connections is possible by cancelling the incoming connection `Flow` from your server logic (e.g. by connecting its downstream to a `Sink.Cancelled` and its upstream to a `Source.Empty`). It is also possible to shut down the server’s socket by cancelling the `IncomingConnection` source `connections`.
 
 [!code-csharp[StreamTcpDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpDocTests.cs?name=close-incoming-connection)]
 
 We can then test the TCP server by sending data to the TCP Socket using `netcat` (on Windows it is possible to use Linux Subsystem for Windows):
-```
+
+```sh
 echo -n "Hello World" | netcat 127.0.0.1 8888
 Hello World!!!
 ```
@@ -44,6 +47,7 @@ The `repl` flow we use to handle the server interaction first prints the servers
 A resilient REPL client would be more sophisticated than this, for example it should split out the input reading into a separate `SelectAsync` step and have a way to let the server write more data than one `ByteString` chunk at any given time, these improvements however are left as exercise for the reader.
 
 ### Avoiding deadlocks and liveness issues in back-pressured cycles
+
 When writing such end-to-end back-pressured systems you may sometimes end up in a situation of a loop, in which either side is waiting for the other one to start the conversation. One does not need to look far to find examples of such back-pressure loops. In the two examples shown previously, we always assumed that the side we are connecting to would start the conversation, which effectively means both sides are back-pressured and can not get the conversation started. There are multiple ways of dealing with this which are explained in depth in [Graph cycles, liveness and deadlocks](xref:streams-working-with-graphs#graph-cycles-liveness-and-deadlocks), however in client-server scenarios it is often the simplest to make either side simply send an initial message.
 
 > [!NOTE]
@@ -58,7 +62,8 @@ To emit the initial message we merge a `Source` with a single element, after the
 In this example both client and server may need to close the stream based on a parsed command - `BYE` in the case of the server, and `q` in the case of the client. This is implemented by taking from the stream until `q` and and concatenating a `Source` with a single `BYE` element which will then be sent after the original source completed.
 
 ### Using framing in your protocol
-Streaming transport protocols like TCP just pass streams of bytes, and does not know what is a logical chunk of bytes from the application's point of view. Often when implementing network protocols you will want to introduce your own framing. This can be done in two ways: An end-of-frame marker, e.g. end line `\n`, can do framing via `Framing.Delimiter`. Or a length-field can be used to build a framing protocol. 
+
+Streaming transport protocols like TCP just pass streams of bytes, and does not know what is a logical chunk of bytes from the application's point of view. Often when implementing network protocols you will want to introduce your own framing. This can be done in two ways: An end-of-frame marker, e.g. end line `\n`, can do framing via `Framing.Delimiter`. Or a length-field can be used to build a framing protocol.
 
 ## Streaming File IO
 
@@ -76,7 +81,7 @@ var result = FileIO.FromFile(file)
 
 Please note that these processing stages are backed by Actors and by default are configured to run on a pre-configured
 threadpool-backed dispatcher dedicated for File IO. This is very important as it isolates the blocking file IO operations from the rest
-of the ActorSystem allowing each dispatcher to be utilised in the most efficient way. If you want to configure a custom
+of the ActorSystem allowing each dispatcher to be utilized in the most efficient way. If you want to configure a custom
 dispatcher for file IO operations globally, you can do so by changing the ``akka.stream.blocking-io-dispatcher``,
 or for a specific stage by specifying a custom Dispatcher in code, like this:
 

@@ -750,6 +750,7 @@ namespace Akka.Actor
     /// <summary>
     /// Collection of failures, used to keep track of how many times a given actor has failed.
     /// </summary>
+    [Obsolete("Use List of Akka.Actor.Status.Failure")]
     public class Failures
     {
         /// <summary>
@@ -769,6 +770,7 @@ namespace Akka.Actor
     /// <summary>
     ///     Represents a single failure.
     /// </summary>
+    [Obsolete("Use Akka.Actor.Status.Failure")]
     public class Failure
     {
         /// <summary>

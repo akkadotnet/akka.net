@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
@@ -132,11 +133,11 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
-                {
-                    created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" });
-                }, _restartSettings)
-                .RunWith(this.SinkProbe<string>(), Materializer);
+                    {
+                        created.IncrementAndGet();
+                        return Source.From(new List<string> { "a", "b" });
+                    }, _restartSettings)
+                    .RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
                 probe.RequestNext("b");
@@ -161,11 +162,11 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
-                {
-                    created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" });
-                }, _restartSettings)
-                .RunWith(this.SinkProbe<string>(), Materializer);
+                    {
+                        created.IncrementAndGet();
+                        return Source.From(new List<string> { "a", "b" });
+                    }, _restartSettings)
+                    .RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
                 probe.RequestNext("b");
@@ -316,11 +317,11 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
-                {
-                    created.IncrementAndGet();
-                    return Source.Single("a");
-                }, _shortRestartSettings.WithMaxRestarts(1, _shortMinBackoff))
-                .RunWith(this.SinkProbe<string>(), Materializer);
+                    {
+                        created.IncrementAndGet();
+                        return Source.Single("a");
+                    }, _shortRestartSettings.WithMaxRestarts(1, _shortMinBackoff))
+                    .RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
                 probe.RequestNext("a");
@@ -339,11 +340,11 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
-                {
-                    created.IncrementAndGet();
-                    return Source.Single("a");
-                }, _restartSettings.WithMaxRestarts(2, _minBackoff))
-                .RunWith(this.SinkProbe<string>(), Materializer);
+                    {
+                        created.IncrementAndGet();
+                        return Source.Single("a");
+                    }, _restartSettings.WithMaxRestarts(2, _minBackoff))
+                    .RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
                 // There should be minBackoff delay
@@ -371,11 +372,11 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var created = new AtomicCounter(0);
                 var probe = RestartSource.WithBackoff(() =>
-                {
-                    created.IncrementAndGet();
-                    return Source.From(new List<string> { "a", "b" }).TakeWhile(c => c != "b");
-                }, _shortRestartSettings.WithMaxRestarts(2, TimeSpan.FromSeconds(1)))
-                .RunWith(this.SinkProbe<string>(), Materializer);
+                    {
+                        created.IncrementAndGet();
+                        return Source.From(new List<string> { "a", "b" }).TakeWhile(c => c != "b");
+                    }, _shortRestartSettings.WithMaxRestarts(2, TimeSpan.FromSeconds(1)))
+                    .RunWith(this.SinkProbe<string>(), Materializer);
 
                 probe.RequestNext("a");
                 probe.RequestNext("a");
@@ -766,6 +767,70 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public void Simplified_restart_flow_restarts_stages_test()
+        {
+            var created = new AtomicCounter(0);
+            var restarts = 4;
+            this.AssertAllStagesStopped(() =>
+            {
+                var flow = RestartFlowFactory<int, int, NotUsed>(() =>
+                    {
+                        created.IncrementAndGet();
+                        return Flow.Create<int>()
+                            .Select(i =>
+                            {
+                                if (i == 6)
+                                {
+                                    throw new ArgumentException($"BOOM");
+                                }
+
+                                return i;
+                            });
+                    }, true,
+                    //defaults to unlimited restarts
+                    RestartSettings.Create(TimeSpan.FromMilliseconds(10), TimeSpan.FromSeconds(30), 0));
+
+                var (source, sink) = this.SourceProbe<int>().Select(x =>
+                    {
+                        Log.Debug($"Processing: {x}");
+                        return x;
+                    })
+                    .Via(flow)
+                    .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                    .Run(Materializer);
+
+                source.SendNext(1);
+                source.SendNext(2);
+                source.SendNext(3);
+                source.SendNext(4);
+                source.SendNext(5);
+                for (int i = 0; i < restarts; i++)
+                {
+                    source.SendNext(6);
+                }
+
+                source.SendNext(7);
+                source.SendNext(8);
+                source.SendNext(9);
+                source.SendNext(10);
+
+                sink.RequestNext(1);
+                sink.RequestNext(2);
+                sink.RequestNext(3);
+                sink.RequestNext(4);
+                sink.RequestNext(5);
+                //6 is never received since RestartFlow's do not retry 
+                sink.RequestNext(7);
+                sink.RequestNext(8);
+                sink.RequestNext(9);
+                sink.RequestNext(10);
+
+                source.SendComplete();
+            }, Materializer);
+            created.Current.Should().Be(restarts + 1);
+        }
+
+        [Fact]
         public void A_restart_with_backoff_flow_should_restart_on_cancellation()
         {
             var (created, source, flowInProbe, flowOutProbe, sink) = SetupFlow(_shortMinBackoff, _shortMaxBackoff);
@@ -1010,7 +1075,7 @@ namespace Akka.Streams.Tests.Dsl
             flowInProbe.RequestNext("c");
             flowOutProbe.SendNext("d");
             sink.RequestNext("d");
-
+            sink.Request(1);
             created.Current.Should().Be(2);
         }
     }

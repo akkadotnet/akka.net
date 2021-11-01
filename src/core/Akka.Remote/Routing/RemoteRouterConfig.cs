@@ -94,13 +94,9 @@ namespace Akka.Remote.Routing
                 .AttachChild(Local.EnrichWithPoolDispatcher(routeeProps, context).WithDeploy(deploy), false, name);
             return new ActorRefRoutee(actorRef);
         }
-
-        // TODO: why internal?
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        internal override RouterActor CreateRouterActor()
+        
+        /// <inheritdoc cref="RouterConfig.CreateRouterActor"/>
+        public override ActorBase CreateRouterActor()
         {
             return Local.CreateRouterActor();
         }

@@ -57,9 +57,9 @@ auto-initialize = on
                 private DoSnapshot() { }
             }
 
-            public RecoverActor(IActorRef reply)
+            public RecoverActor(IActorRef reply, string persistenceId)
             {
-                PersistenceId = Self.Path.Name;
+                PersistenceId = persistenceId;
                 Reply = reply;
             }
 
@@ -120,7 +120,8 @@ auto-initialize = on
         [Fact]
         public void Should_recover_persistentactor_sqlite()
         {
-            var recoveryActor = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), ThreadLocalRandom.Current.Next(0, 100000).ToString());
+            var id = ThreadLocalRandom.Current.Next(0, 100000).ToString();
+            var recoveryActor = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor, id)));
 
             var r1 = ExpectMsg<IEnumerable<string>>();
             r1.Count().Should().Be(0); // empty recovery
@@ -136,14 +137,10 @@ auto-initialize = on
             ExpectTerminated(recoveryActor);
 
             // recreate the actor and recover
+            var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor, id)));
 
-            AwaitAssert(() =>
-            {
-                var recoveryActor2 = Sys.ActorOf(Props.Create(() => new RecoverActor(TestActor)), recoveryActor.Path.Name);
-
-                var r2 = ExpectMsg<IEnumerable<string>>(TimeSpan.FromMilliseconds(100));
-                r2.Should().Contain(new[] { "foo", "bar" });
-            }, interval:TimeSpan.FromMilliseconds(150));
+            var r2 = ExpectMsg<IEnumerable<string>>();
+            r2.Should().Contain(new[] { "foo", "bar" });
         }
 
         [Fact]

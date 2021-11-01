@@ -5,13 +5,13 @@ title: Testing streams
 
 # Testing streams
 
-Verifying behaviour of Akka Stream sources, flows and sinks can be done using
+Verifying behavior of Akka Stream sources, flows and sinks can be done using
 various code patterns and libraries. Here we will discuss testing these
 elements using:
 
-- simple sources, sinks and flows;
-- sources and sinks in combination with `TestProbe` from the `Akka.Testkit` module;
-- sources and sinks specifically crafted for writing tests from the `Akka.Streams.Testkit` module.
+* simple sources, sinks and flows;
+* sources and sinks in combination with `TestProbe` from the `Akka.Testkit` module;
+* sources and sinks specifically crafted for writing tests from the `Akka.Streams.Testkit` module.
 
 It is important to keep your data processing pipeline as separate sources,
 flows and sinks. This makes them easily testable by wiring them up to other
@@ -169,7 +169,7 @@ this.SourceProbe<int>()
     .ExpectCancellation();
 ```
 
-You can also inject exceptions and test sink behaviour on error conditions.
+You can also inject exceptions and test sink behavior on error conditions.
 
 ```csharp
 var sinkUnderTest = Sink.First<int>();
@@ -221,7 +221,7 @@ For testing, it is possible to enable a special stream execution mode that exerc
 more aggressively (at the cost of reduced performance) and therefore helps exposing race conditions in tests. To
 enable this setting add the following line to your configuration:
 
-```
+```hocon
 akka.stream.materializer.debug.fuzzing-mode = on
 ```
 

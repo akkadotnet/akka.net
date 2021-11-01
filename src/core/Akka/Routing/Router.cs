@@ -8,8 +8,10 @@
 using System.Collections.Generic;
 using Akka.Actor;
 using System;
+using System.Collections.Immutable;
 using System.Threading.Tasks;
 using System.Linq;
+using Akka.Annotations;
 using Akka.Util.Internal;
 
 namespace Akka.Routing
@@ -78,40 +80,27 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// TBD
+    /// A <see cref="Routee"/> that resolves to an <see cref="IActorRef"/>
     /// </summary>
     public class ActorRefRoutee : Routee
     {
         /// <summary>
-        /// TBD
+        /// The <see cref="IActorRef"/> this routee sends messages to.
         /// </summary>
-        public IActorRef Actor { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actor">TBD</param>
+        public IActorRef Actor { get; }
+        
         public ActorRefRoutee(IActorRef actor)
         {
-            this.Actor = actor;
+            Actor = actor;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <inheritdoc cref="Routee.Send"/>
         public override void Send(object message, IActorRef sender)
         {
             Actor.Tell(message, sender);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="Routee.Ask"/>
         public override Task<object> Ask(object message, TimeSpan? timeout)
         {
             return Actor.Ask(message, timeout);
@@ -133,46 +122,32 @@ namespace Akka.Routing
         public override int GetHashCode() => Actor?.GetHashCode() ?? 0;
     }
 
+    
     /// <summary>
-    /// TBD
+    /// A <see cref="Routee"/> that resolves to an <see cref="ActorSelection"/>
     /// </summary>
     public class ActorSelectionRoutee : Routee
     {
-        private readonly ActorSelection _actor;
-
         /// <summary>
-        /// TBD
+        /// The <see cref="ActorSelection"/> this routee sends to.
         /// </summary>
-        public ActorSelection Selection { get { return _actor; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="actor">TBD</param>
+        public ActorSelection Selection { get; }
+        
         public ActorSelectionRoutee(ActorSelection actor)
         {
-            _actor = actor;
+            Selection = actor;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <inheritdoc cref="Routee.Send"/>
         public override void Send(object message, IActorRef sender)
         {
-            _actor.Tell(message, sender);
+            Selection.Tell(message, sender);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="timeout">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc cref="Routee.Ask"/>
         public override Task<object> Ask(object message, TimeSpan? timeout)
         {
-            return _actor.Ask(message, timeout);
+            return Selection.Ask(message, timeout);
         }
 
         /// <inheritdoc/>
@@ -185,41 +160,35 @@ namespace Akka.Routing
         }
 
         /// <inheritdoc/>
-        protected bool Equals(ActorSelectionRoutee other) => Equals(_actor, other._actor);
+        protected bool Equals(ActorSelectionRoutee other) => Equals(Selection, other.Selection);
 
         /// <inheritdoc/>
-        public override int GetHashCode() => _actor?.GetHashCode() ?? 0;
+        public override int GetHashCode() => Selection?.GetHashCode() ?? 0;
     }
 
     /// <summary>
-    /// TBD
+    /// Used for some types of messages to separate router management messages
+    /// from the actual content of messages sent to routees.
     /// </summary>
     public class RouterEnvelope
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
         public RouterEnvelope(object message)
         {
             Message = message;
         }
 
         /// <summary>
-        /// TBD
+        /// The management message
         /// </summary>
-        public object Message { get; private set; }
+        public object Message { get; }
     }
 
     /// <summary>
-    /// TBD
+    /// A special <see cref="RouterEnvelope"/> that will broadcast a message from this router
+    /// to all <see cref="Routee"/>s regardless of the <see cref="RoutingLogic"/>.
     /// </summary>
     public class Broadcast : RouterEnvelope
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
         public Broadcast(object message)
             : base(message)
         {
@@ -227,29 +196,21 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API
     /// </summary>
     public class SeveralRoutees : Routee
     {
-        private readonly Routee[] routees;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="routees">TBD</param>
+        private readonly Routee[] _routees;
+        
         public SeveralRoutees(Routee[] routees)
         {
-            this.routees = routees;
+            _routees = routees;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <inheritdoc cref="Routee.Send"/>
         public override void Send(object message, IActorRef sender)
         {
-            foreach (Routee routee in routees)
+            foreach (var routee in _routees)
             {
                 routee.Send(message, sender);
             }
@@ -276,46 +237,53 @@ namespace Akka.Routing
     }
 
     /// <summary>
-    /// TBD
+    /// Implements a router - including:
+    /// 
+    ///  - The <see cref="RoutingLogic"/>
+    ///  - The <see cref="Routees"/>
+    ///
+    /// It's used internally by the routing system
+    /// 
     /// </summary>
     public class Router
     {
-        private readonly RoutingLogic _logic;
         private readonly Routee[] _routees;
 
         //The signature might look funky. Why not just Router(RoutingLogic logic, params ActorRef[] routees) ? 
         //We need one unique constructor to handle this call: new Router(logic). The other constructor will handle that.
         //So in order to not confuse the compiler we demand at least one ActorRef. /@hcanber
         /// <summary>
-        /// TBD
+        /// INTERNAL API
+        ///
+        /// For testing purposes only.
         /// </summary>
         /// <param name="logic">TBD</param>
         /// <param name="routee">TBD</param>
         /// <param name="routees">TBD</param>
+        [InternalApi]
         public Router(RoutingLogic logic, IActorRef routee, params IActorRef[] routees)
         {
             if (routees == null || routees.Length == 0)
             {
-                _routees = new[] { Routee.FromActorRef(routee) };
+                _routees = new []{ Routee.FromActorRef(routee) };
             }
             else
             {
                 var routeesLength = routees.Length;
 
                 //Convert and put routee first in a new array
-                var rts = new Routee[routeesLength + 1];
-                rts[0] = Routee.FromActorRef(routee);
+                _routees = new Routee[routeesLength+1];
+                _routees[0] = Routee.FromActorRef(routee);
 
                 //Convert all routees and put them into the new array
-                for (var i = 0; i < routeesLength; i++)
+                for (var i = 0; i < routees.Length; i++)
                 {
                     var actorRef = routees[i];
                     var r = Routee.FromActorRef(actorRef);
-                    rts[i + 1] = r;
+                    _routees[i + 1] = r;
                 }
-                _routees = rts;
             }
-            _logic = logic;
+            RoutingLogic = logic;
         }
 
 
@@ -326,11 +294,12 @@ namespace Akka.Routing
         /// <param name="routees">TBD</param>
         public Router(RoutingLogic logic, params Routee[] routees)
         {
-            _routees = routees ?? new Routee[0];
-            _logic = logic;
+            _routees = routees ?? Array.Empty<Routee>();
+            RoutingLogic = logic;
         }
+        
         /// <summary>
-        /// TBD
+        /// The set of <see cref="Routees"/> that this router is currently targeting.
         /// </summary>
         public IEnumerable<Routee> Routees
         {
@@ -338,15 +307,11 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// The logic used to determine which <see cref="Routee"/> will process a given message.
         /// </summary>
-        public RoutingLogic RoutingLogic
-        {
-            get { return _logic; }
-        }
+        public RoutingLogic RoutingLogic { get; }
 
-
-        private object UnWrap(object message)
+        protected object UnWrap(object message)
         {
             if (message is RouterEnvelope routerEnvelope)
             {
@@ -357,28 +322,34 @@ namespace Akka.Routing
         }
 
         /// <summary>
-        /// TBD
+        /// Uses the <see cref="RoutingLogic"/> to select an appropriate routee (or routees)
+        /// and then delivers the message to them via <see cref="ICanTell.Tell"/>.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        public void Route(object message, IActorRef sender)
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender of this message - which will be propagated to the routee.</param>
+        public virtual void Route(object message, IActorRef sender)
         {
             if (message is Broadcast)
             {
-                new SeveralRoutees(_routees).Send(UnWrap(message), sender);
+                var unwrapped = UnWrap(message);
+                foreach (var r in _routees)
+                {
+                    r.Send(unwrapped, sender);
+                }
             }
             else
             {
-                Send(_logic.Select(message, _routees), message, sender);
+                Send(RoutingLogic.Select(message, _routees), message, sender);
             }
         }
 
         /// <summary>
-        /// TBD
+        /// Sends the message to the routee from the sender - and unwraps any special <see cref="RouterEnvelope"/>S
+        /// first so the routee only receives the intended message.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="routee">The routee who has been selected by the <see cref="RoutingLogic"/>.</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender of this message - which will be propagated to the routee.</param>
         protected virtual void Send(Routee routee, object message, IActorRef sender)
         {
             routee.Send(UnWrap(message), sender);
@@ -387,21 +358,21 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance with the specified routees and the same <see cref="RoutingLogic"/>.
         /// </summary>
-        /// <param name="routees">TBD</param>
-        /// <returns>TBD</returns>
-        public Router WithRoutees(params Routee[] routees)
+        /// <param name="routees">The routees to add.</param>
+        /// <returns>A new <see cref="Router"/> instance with these routees added.</returns>
+        public virtual Router WithRoutees(params Routee[] routees)
         {
-            return new Router(_logic, routees);
+            return new Router(RoutingLogic, routees);
         }
 
         /// <summary>
         /// Create a new instance with one more routee and the same <see cref="RoutingLogic"/>.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <returns>TBD</returns>
-        public Router AddRoutee(Routee routee)
+        /// <param name="routee">The routee to add.</param>
+        /// <returns>A new <see cref="Router"/> instance with this routee added.</returns>
+        public virtual Router AddRoutee(Routee routee)
         {
-            return new Router(_logic, _routees.Union(new[]{routee}).ToArray());
+            return new Router(RoutingLogic, _routees.Union(new[]{routee}).ToArray());
         }
 
         /// <summary>
@@ -427,19 +398,19 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance without the specified routee.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <returns>TBD</returns>
-        public Router RemoveRoutee(Routee routee)
+        /// <param name="routee">The routee to remove.</param>
+        /// <returns>A new <see cref="Router"/> instance with this same configuration, sans routee.</returns>
+        public virtual Router RemoveRoutee(Routee routee)
         {
             var routees = _routees.Where(r => !r.Equals(routee)).ToArray();
-            return new Router(_logic, routees);
+            return new Router(RoutingLogic, routees);
         }
 
         /// <summary>
         /// Create a new instance without the specified routee.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="routee">The <see cref="IActorRef"/> routee to remove.</param>
+        /// <returns>A new <see cref="Router"/> instance with this same configuration, sans routee.</returns>
         public Router RemoveRoutee(IActorRef routee)
         {
             return RemoveRoutee(new ActorRefRoutee(routee));
@@ -448,8 +419,8 @@ namespace Akka.Routing
         /// <summary>
         /// Create a new instance without the specified routee.
         /// </summary>
-        /// <param name="routee">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="routee">The <see cref="ActorSelection"/> routee to remove.</param>
+        /// <returns>A new <see cref="Router"/> instance with this same configuration, sans routee.</returns>
         public Router RemoveRoutee(ActorSelection routee)
         {
             return RemoveRoutee(new ActorSelectionRoutee(routee));

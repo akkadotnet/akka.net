@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Routing;
@@ -94,6 +96,11 @@ namespace Akka.IO
         {
             private readonly IPAddress _addr;
 
+            public Resolved(string name, Exception ex) : this(name, null, null)
+            {
+                Exception = ex;
+            }
+            
             /// <summary>
             /// TBD
             /// </summary>
@@ -103,24 +110,28 @@ namespace Akka.IO
             public Resolved(string name, IEnumerable<IPAddress> ipv4, IEnumerable<IPAddress> ipv6)
             {
                 Name = name;
-                Ipv4 = ipv4;
-                Ipv6 = ipv6;
+                Ipv4 = ipv4?.ToImmutableList() ?? ImmutableList<IPAddress>.Empty;
+                Ipv6 = ipv6?.ToImmutableList() ?? ImmutableList<IPAddress>.Empty;
 
-                _addr = ipv4.FirstOrDefault() ?? ipv6.FirstOrDefault();
+                _addr = Ipv4.FirstOrDefault() ?? Ipv6.FirstOrDefault();
             }
 
+            public bool IsSuccess => Exception == null;
+            
+            public Exception Exception { get; }
+
             /// <summary>
             /// TBD
             /// </summary>
-            public string Name { get; private set; }
+            public string Name { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<IPAddress> Ipv4 { get; private set; }
+            public IEnumerable<IPAddress> Ipv4 { get; }
             /// <summary>
             /// TBD
             /// </summary>
-            public IEnumerable<IPAddress> Ipv6 { get; private set; }
+            public IEnumerable<IPAddress> Ipv6 { get; }
 
             /// <summary>
             /// TBD
@@ -129,8 +140,11 @@ namespace Akka.IO
             {
                 get
                 {
-                    //TODO: Throw better exception
-                    if (_addr == null) throw new Exception("Unknown host");
+                    if(Exception != null)
+                        ExceptionDispatchInfo.Capture(Exception).Throw();
+                    else
+                        if (_addr == null) throw new Exception("Unknown host");
+                    
                     return _addr;
                 }
             }

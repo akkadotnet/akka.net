@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Serialization;
 using Akka.Util;
 
@@ -29,12 +30,19 @@ namespace Akka.Remote.Serialization
         internal const string Int32ManifestNetFx = "System.Int32, mscorlib";
         internal const string Int64ManifestNetFx = "System.Int64, mscorlib";
 
+        private readonly bool _useLegacyBehavior;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="PrimitiveSerializers" /> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer. </param>
-        public PrimitiveSerializers(ExtendedActorSystem system) : base(system)
+        /// <param name="config">Config object containing the serializer settings</param>
+        public PrimitiveSerializers(ExtendedActorSystem system, Config config) : base(system)
         {
+            if (config == null)
+                throw new ConfigurationException("configuration is null");
+                    
+            _useLegacyBehavior = config.GetBoolean("use-legacy-behavior");
         }
 
         /// <inheritdoc />
@@ -78,6 +86,9 @@ namespace Akka.Remote.Serialization
         /// <inheritdoc />
         public override string Manifest(object obj)
         {
+            if (_useLegacyBehavior)
+                return obj.GetType().TypeQualifiedName();
+            
             switch (obj)
             {
                 case string _:

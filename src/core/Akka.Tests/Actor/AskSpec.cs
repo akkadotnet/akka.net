@@ -8,11 +8,14 @@
 using Akka.TestKit;
 using Xunit;
 using Akka.Actor;
+using Akka.Actor.Dsl;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
+using FluentAssertions;
 using Nito.AsyncEx;
+using Akka.Dispatch.SysMsg;
 
 namespace Akka.Tests.Actor
 {
@@ -34,6 +37,29 @@ namespace Akka.Tests.Actor
                 if (message.Equals("answer"))
                 {
                     Sender.Tell("answer");
+                }
+
+                if (message.Equals("delay"))
+                {
+                    Thread.Sleep(3000);
+                    Sender.Tell("answer");
+                }
+
+                if (message.Equals("many"))
+                {
+                    Sender.Tell("answer1");
+                    Sender.Tell("answer2");
+                    Sender.Tell("answer2");
+                }
+
+                if (message.Equals("invalid"))
+                {
+                    Sender.Tell(123);
+                }
+
+                if (message.Equals("system"))
+                {
+                    Sender.Tell(new DummySystemMessage());
                 }
             }
         }
@@ -81,6 +107,10 @@ namespace Akka.Tests.Actor
             }
         }
 
+        public sealed class DummySystemMessage : ISystemMessage
+        {
+        }
+
         [Fact]
         public async Task Can_Ask_Response_actor()
         {
@@ -110,6 +140,60 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf<SomeActor>();
             await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", TimeSpan.FromSeconds(3)));
+        }
+
+        [Fact]
+        public async Task Ask_should_put_timeout_answer_into_deadletter()
+        {
+            var actor = Sys.ActorOf<SomeActor>();            
+            
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(TimeSpan.FromSeconds(5), async () => 
+            {
+                await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("delay", TimeSpan.FromSeconds(1)));
+            });
+        }
+
+        [Fact]
+        public async Task Ask_should_put_too_many_answers_into_deadletter()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            await EventFilter.DeadLetter<object>().ExpectAsync(2, async () =>
+            {
+                var result = await actor.Ask<string>("many", TimeSpan.FromSeconds(1));
+                result.ShouldBe("answer1");
+            });
+        }
+
+        [Fact]
+        public async Task Ask_should_not_put_canceled_answer_into_deadletter()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            await EventFilter.DeadLetter<object>().ExpectAsync(0, async () =>
+            {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                    await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("delay", Timeout.InfiniteTimeSpan, cts.Token));
+            });
+        }
+
+        [Fact]
+        public async Task Ask_should_put_invalid_answer_into_deadletter()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            await EventFilter.DeadLetter<object>().ExpectOne(async () =>
+            {
+                await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<string>("invalid", TimeSpan.FromSeconds(1)));
+            });
+        }
+
+        [Fact]
+        public async Task Ask_should_fail_on_system_message()
+        {
+            var actor = Sys.ActorOf<SomeActor>();
+
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await actor.Ask<ISystemMessage>("system", TimeSpan.FromSeconds(1)));
         }
 
         [Fact]
@@ -179,6 +263,22 @@ namespace Akka.Tests.Actor
 
             // expect int, but in fact string
             await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<int>("answer"));
+        }
+        
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/5204
+        /// </summary>
+        [Fact]
+        public async Task Bugfix5204_should_allow_null_response_without_error()
+        {
+            var actor = Sys.ActorOf(act => act.ReceiveAny((o, context) =>
+            {
+                context.Sender.Tell(null);
+            }));
+
+            // expect a string, but the answer should be `null`
+            var resp = await actor.Ask<string>(1);
+            resp.Should().BeNullOrEmpty();
         }
 
         [Fact]

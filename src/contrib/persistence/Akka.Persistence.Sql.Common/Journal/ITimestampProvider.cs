@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Akka.Actor;
 
 namespace Akka.Persistence.Sql.Common.Journal
 {
@@ -33,5 +34,22 @@ namespace Akka.Persistence.Sql.Common.Journal
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         public long GenerateTimestamp(IPersistentRepresentation message) => DateTime.UtcNow.Ticks;
+    }
+
+    public static class TimestampProviderProvider 
+    {
+        public static ITimestampProvider GetTimestampProvider(string typeName, IActorContext context)
+        {
+            if (string.IsNullOrEmpty(typeName))
+            {
+                return new DefaultTimestampProvider();
+            }
+
+            var type = Type.GetType(typeName, true);
+            var withSystem = type.GetConstructor(new[] { context.System.GetType() }) != null;
+            return withSystem ?
+                (ITimestampProvider)Activator.CreateInstance(type, context.System) :
+                (ITimestampProvider)Activator.CreateInstance(type);
+        }
     }
 }

@@ -12,8 +12,8 @@ actor with the most common conversational patterns.
 In particular, leaving the components aside for a while, we will implement an actor that represents a device. The
 tasks of this actor will be rather simple:
 
- * Collect temperature measurements
- * Report the last measured temperature if asked
+* Collect temperature measurements
+* Report the last measured temperature if asked
 
 When working with objects we usually design our API as _interfaces_, which are basically a collection of abstract
 methods to be filled out by the actual implementation. In the world of actors, the counterpart of interfaces is
@@ -58,18 +58,18 @@ message could possibly be lost is the safe, pessimistic bet.**
 
 These are the rules in Akka.NET for message sends:
 
- * At-most-once delivery, i.e. no guaranteed delivery.
- * Message ordering is maintained per sender, receiver pair.
+* At-most-once delivery, i.e. no guaranteed delivery.
+* Message ordering is maintained per sender, receiver pair.
 
 ### What Does "at-most-once" Mean?
 
 When it comes to describing the semantics of a delivery mechanism, there are three basic categories:
 
- * **At-most-once delivery** means that for each message handed to the mechanism, that message is delivered zero or
+* **At-most-once delivery** means that for each message handed to the mechanism, that message is delivered zero or
    one time; in more casual terms it means that messages may be lost, but never duplicated.
- * **At-least-once delivery** means that for each message handed to the mechanism potentially multiple attempts are made
+* **At-least-once delivery** means that for each message handed to the mechanism potentially multiple attempts are made
    at delivering it, such that at least one succeeds; again, in more casual terms this means that messages may be duplicated but not lost.
- * **Exactly-once delivery** means that for each message handed to the mechanism exactly one delivery is made to
+* **Exactly-once delivery** means that for each message handed to the mechanism exactly one delivery is made to
    the recipient; the message can neither be lost nor duplicated.
 
 The first one is the cheapest, highest performance, least implementation overhead because it can be done in a
@@ -99,11 +99,11 @@ If we rely on the guarantees of such system it will report success as soon as th
 internal API that has the responsibility to validate it, process it and put it into the database. Unfortunately,
 immediately after the API has been invoked the following may happen:
 
- * The host can immediately crash.
- * Deserialization can fail.
- * Validation can fail.
- * The database might be unavailable.
- * A programming error might occur.
+* The host can immediately crash.
+* Deserialization can fail.
+* Validation can fail.
+* The database might be unavailable.
+* A programming error might occur.
 
 The problem is that the **guarantee of delivery** does not translate to the **domain level guarantee**. We only want to
 report success once the order has been actually fully processed and persisted. **The only entity that can report
@@ -122,23 +122,23 @@ operator directly to the final destination, but not when employing mediators.
 
 If:
 
- * Actor `A1` sends messages `M1`, `M2`, `M3` to `A2`.
- * Actor `A3` sends messages `M4`, `M5`, `M6` to `A2`.
+* Actor `A1` sends messages `M1`, `M2`, `M3` to `A2`.
+* Actor `A3` sends messages `M4`, `M5`, `M6` to `A2`.
 
 This means that:
 
- * If `M1` is delivered it must be delivered before `M2` and `M3`.
- * If `M2` is delivered it must be delivered before `M3`.
- * If `M4` is delivered it must be delivered before `M5` and `M6`.
- * If `M5` is delivered it must be delivered before `M6`.
- * `A2` can see messages from `A1` interleaved with messages from `A3`.
- * Since there is no guaranteed delivery, any of the messages may be dropped, i.e. not arrive at `A2`.
+* If `M1` is delivered it must be delivered before `M2` and `M3`.
+* If `M2` is delivered it must be delivered before `M3`.
+* If `M4` is delivered it must be delivered before `M5` and `M6`.
+* If `M5` is delivered it must be delivered before `M6`.
+* `A2` can see messages from `A1` interleaved with messages from `A3`.
+* Since there is no guaranteed delivery, any of the messages may be dropped, i.e. not arrive at `A2`.
 
 For the full details on delivery guarantees please refer to the [reference page](xref:message-delivery-reliability).
 
 ### Revisiting the Query Protocol
 
-There is nothing wrong with our first query protocol but it limits our flexibility. If we want to implement resends
+There is nothing wrong with our first query protocol but it limits our flexibility. If we want to implement re-sends
 in the actor that queries our device actor (because of timed out requests) or want to query multiple actors it
 can be helpful to put an additional query ID field in the message which helps us correlate requests with responses.
 
@@ -163,7 +163,7 @@ used with the Akka.NET Testkit):
 
 As a first attempt, we could model recording the current temperature in the device actor as a single message:
 
- * When a temperature record request is received, update the `currentTemperature` property.
+* When a temperature record request is received, update the `currentTemperature` property.
 
 Such a message could possibly look like this:
 

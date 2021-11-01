@@ -81,8 +81,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             var driver = SetupIsolatedStage();
             driver.Tell(TestCancelTimer.Instance);
-            Within(TimeSpan.FromMilliseconds(500), () => ExpectMsg<TestCancelTimerAck>());
-            Within(TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(1), () => ExpectMsg(new Tick(1)));
+            Within(TimeSpan.FromMilliseconds(5000), () => ExpectMsg<TestCancelTimerAck>());
+            Within(TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(3000), () => ExpectMsg(new Tick(1)));
             ExpectNoMsg(TimeSpan.FromSeconds(1));
             driver.StopStage();
         }

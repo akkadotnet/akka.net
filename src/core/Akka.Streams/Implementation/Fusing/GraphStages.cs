@@ -394,7 +394,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public FLowMonitorImpl() : base(FlowMonitor.Initialized.Instance)
         {
-            
+
         }
 
         /// <summary>
@@ -405,9 +405,9 @@ namespace Akka.Streams.Implementation.Fusing
             get
             {
                 var value = Value;
-                if(value is T)
+                if (value is T)
                     return new FlowMonitor.Received<T>((T)value);
-                
+
                 return value as FlowMonitor.IStreamState;
             }
         }
@@ -523,7 +523,7 @@ namespace Akka.Streams.Implementation.Fusing
     public sealed class TickSource<T> : GraphStageWithMaterializedValue<SourceShape<T>, ICancelable>
     {
         #region internal classes
-        
+
         [SuppressMessage("ReSharper", "MethodSupportsCancellation")]
         private sealed class Logic : TimerGraphStageLogic, ICancelable
         {
@@ -544,7 +544,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ => CompleteStage());
 
-                if(_cancelled)
+                if (_cancelled)
                     CompleteStage();
                 else
                     ScheduleRepeatedly("TickTimer", _stage._initialDelay, _stage._interval);
@@ -558,7 +558,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void Cancel()
             {
-                if(!_cancelled.GetAndSet(true))
+                if (!_cancelled.GetAndSet(true))
                     _cancelCallback.Value?.Invoke(NotUsed.Instance);
             }
 
@@ -822,6 +822,120 @@ namespace Akka.Streams.Implementation.Fusing
     /// TBD
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="M">TBD</typeparam>
+    public sealed class TaskFlattenSource<T, M> : GraphStageWithMaterializedValue<SourceShape<T>, Task<M>>
+    {
+        #region Internal classes
+
+        private sealed class Logic : InAndOutGraphStageLogic
+        {
+            private readonly TaskFlattenSource<T, M> _stage;
+            private readonly TaskCompletionSource<M> _materialized;
+            private readonly SubSinkInlet<T> _sinkIn;
+
+            public Logic(TaskFlattenSource<T, M> stage, TaskCompletionSource<M> materialized)
+                : base(stage.Shape)
+            {
+                _stage = stage;
+                _materialized = materialized;
+                _sinkIn = new SubSinkInlet<T>(this, "TaskFlattenSource.in");
+
+                // initial handler (until task completes)
+                SetHandler(stage.Outlet, new LambdaOutHandler(
+                    onPull: () => { },
+                    onDownstreamFinish: () =>
+                    {
+                        if (!_materialized.Task.IsCompleted)
+                        {
+                            // we used to try to materialize the "inner" source here just to get
+                            // the materialized value, but that is not safe and may cause the graph shell
+                            // to leak/stay alive after the stage completes
+                            _materialized.TrySetException(new StreamDetachedException("Stream cancelled before Source Task completed"));
+                        }
+                        OnDownstreamFinish();
+                    }));
+            }
+
+            public override void PreStart()
+            {
+                if (_stage._taskSource.IsCompleted)
+                {
+                    OnTaskSourceCompleted(_stage._taskSource);
+                }
+                else
+                {
+                    var cb = GetAsyncCallback<Task<Source<T, M>>>(OnTaskSourceCompleted);
+                    _stage._taskSource.ContinueWith(t => cb(t), TaskContinuationOptions.ExecuteSynchronously);
+                }
+            }
+
+            public override void PostStop()
+            {
+                if (!_sinkIn.IsClosed) _sinkIn.Cancel();
+            }
+
+            public override void OnPull() => _sinkIn.Pull();
+
+            public override void OnPush() => Push(_stage.Outlet, _sinkIn.Grab());
+
+            public override void OnUpstreamFinish() => CompleteStage();
+
+            private void OnTaskSourceCompleted(Task<Source<T, M>> t)
+            {
+                try
+                {
+                    var runnable = Source.FromGraph(t.Result).ToMaterialized(_sinkIn.Sink, Keep.Left);
+                    var materializedValue = Interpreter.SubFusingMaterializer.Materialize(runnable, _stage.InitialAttributes);
+                    _materialized.TrySetResult(materializedValue);
+
+                    SetHandler(_stage.Outlet, this);
+                    _sinkIn.SetHandler(this);
+
+                    if (IsAvailable(_stage.Outlet))
+                        _sinkIn.Pull();
+                }
+                catch (Exception ex)
+                {
+                    _sinkIn.Cancel();
+                    _materialized.TrySetException(ex);
+                    FailStage(ex);
+                }
+            }
+
+            private Exception Flatten(AggregateException exception) =>
+                exception.InnerExceptions.Count == 1 ? exception.InnerExceptions[0] : exception;
+        }
+
+        #endregion
+
+        private readonly Task<Source<T, M>> _taskSource;
+
+        public readonly Outlet<T> Outlet = new Outlet<T>("TaskFlattenSource.out");
+
+        public TaskFlattenSource(Task<Source<T, M>> taskSource)
+        {
+            ReactiveStreamsCompliance.RequireNonNullElement(taskSource);
+            _taskSource = taskSource;
+            Shape = new SourceShape<T>(Outlet);
+        }
+
+        public override SourceShape<T> Shape { get; }
+
+        protected override Attributes InitialAttributes => DefaultAttributes.TaskFlattenSource;
+
+        public override ILogicAndMaterializedValue<Task<M>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
+        {
+            var materialized = new TaskCompletionSource<M>();
+            return new LogicAndMaterializedValue<Task<M>>(new Logic(this, materialized), materialized.Task);
+        }
+
+        public override string ToString() => "TaskFlattenSource";
+    }
+
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <typeparam name="T">TBD</typeparam>
     public sealed class TaskSource<T> : GraphStage<SourceShape<T>>
     {
         #region Internal classes
@@ -832,7 +946,6 @@ namespace Akka.Streams.Implementation.Fusing
             public Logic(TaskSource<T> stage) : base(stage.Shape)
             {
                 _stage = stage;
-
                 SetHandler(stage.Outlet, this);
             }
 
@@ -861,7 +974,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Outlet<T> Outlet = new Outlet<T>("task.out");
+        public readonly Outlet<T> Outlet = new Outlet<T>("TaskSource.out");
 
         /// <summary>
         /// TBD
