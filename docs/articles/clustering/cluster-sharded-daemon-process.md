@@ -8,7 +8,7 @@
 ## Introduction
 
 Sharded Daemon Process provides a way to run `N` actors, each given a numeric id starting from `0` that are then kept alive
-and balanced across the cluster. When a rebalance is needed the actor is stopped and, triggered by a keep alive running on 
+and balanced across the cluster. When a re-balance is needed the actor is stopped and, triggered by a keep alive running on
 all nodes, started on a new node (the keep alive should be seen as an implementation detail and may change in future versions).
 
 The intended use case is for splitting data processing workloads across a set number of workers that each get to work on a subset
@@ -27,5 +27,5 @@ when starting up:
 
 ## Scalability  
 
-This cluster tool is intended for small numbers of consumers and will not scale well to a large set. In large clusters 
+This cluster tool is intended for small numbers of consumers and will not scale well to a large set. In large clusters
 it is recommended to limit the nodes the sharded daemon process will run on using a role.

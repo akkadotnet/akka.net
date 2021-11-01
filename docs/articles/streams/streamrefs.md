@@ -3,6 +3,8 @@ uid: stream-ref
 title: StreamRefs - Reactive Streams over the network
 ---
 
+# StreamRefs - Reactive Streams over the network
+
 Stream references, or “stream refs” for short, allow running Akka Streams across multiple nodes within an Akka Remote boundaries.
 
 Unlike heavier “streaming data processing” frameworks, Akka Streams are not “deployed” nor automatically distributed. Akka stream refs are, as the name implies, references to existing parts of a stream, and can be used to create a distributed processing framework or introduce such capabilities in specific parts of your application.

@@ -22,6 +22,8 @@ using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using System.Runtime.InteropServices;
+using System.Threading;
+using Akka.Event;
 
 namespace Akka.Tests.IO
 {
@@ -468,6 +470,18 @@ namespace Akka.Tests.IO
             // expecting CommandFailed or no reply (within timeout)
             var replies = connectCommander.ReceiveWhile(TimeSpan.FromSeconds(1), x => x as Tcp.Connected);
             replies.Count.ShouldBe(0);
+        }
+
+        [Fact]
+        public void Should_report_Error_only_once_when_connecting_to_unreachable_DnsEndpoint()
+        {
+            var probe = CreateTestProbe();
+            var endpoint = new DnsEndPoint("fake", 1000);
+            Sys.Tcp().Tell(new Tcp.Connect(endpoint), probe.Ref);
+            
+            // expecting CommandFailed or no reply (within timeout)
+            var replies = probe.ReceiveWhile(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed);
+            replies.Count.ShouldBe(1);
         }
 
         [Fact]

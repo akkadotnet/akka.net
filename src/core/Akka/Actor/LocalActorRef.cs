@@ -12,6 +12,7 @@ using Akka.Actor.Internal;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Util.Internal;
+using Akka.Util.Internal.Collections;
 
 namespace Akka.Actor
 {
@@ -52,7 +53,8 @@ namespace Akka.Actor
         /// <param name="mailboxType">TBD</param>
         /// <param name="supervisor">TBD</param>
         /// <param name="path">TBD</param>
-        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, IInternalActorRef supervisor, ActorPath path) 
+        public LocalActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType,
+            IInternalActorRef supervisor, ActorPath path)
         {
             _system = system;
             _props = props;
@@ -61,18 +63,19 @@ namespace Akka.Actor
             _supervisor = supervisor;
             _path = path;
 
-           /*
-            * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
-            * which is called indirectly from ActorCell.init() (if you’re wondering why
-            * this is at all important, remember that under the CLR readonly fields are only
-            * frozen at the _end_ of the constructor, but we are publishing "this" before
-            * that is reached).
-            * This means that the result of NewActorCell needs to be written to the field
-            * _cell before we call init and start, since we can start using "this"
-            * object from another thread as soon as we run init.
-            */
+            /*
+             * Safe publication of this class’s fields is guaranteed by Mailbox.SetActor()
+             * which is called indirectly from ActorCell.init() (if you’re wondering why
+             * this is at all important, remember that under the CLR readonly fields are only
+             * frozen at the _end_ of the constructor, but we are publishing "this" before
+             * that is reached).
+             * This means that the result of NewActorCell needs to be written to the field
+             * _cell before we call init and start, since we can start using "this"
+             * object from another thread as soon as we run init.
+             */
             // ReSharper disable once VirtualMemberCallInConstructor 
-            _cell = NewActorCell(_system, this, _props, _dispatcher, _supervisor); // _cell needs to be assigned before Init is called. 
+            _cell = NewActorCell(_system, this, _props, _dispatcher,
+                _supervisor); // _cell needs to be assigned before Init is called. 
             _cell.Init(true, MailboxType);
         }
 
@@ -206,19 +209,17 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public override IInternalActorRef GetSingleChild(string name)
         {
-            IInternalActorRef child;
-            return _cell.TryGetSingleChild(name, out child) ? child : ActorRefs.Nobody;
+            return _cell.GetSingleChild(name);
         }
 
         /// <inheritdoc/>
-        public override IActorRef GetChild(IEnumerable<string> name)
+        public override IActorRef GetChild(IReadOnlyList<string> name)
         {
-            var current = (IActorRef)this;
+            IActorRef current = this;
             int index = 0;
-            foreach (string element in name)
+            foreach (var element in name)
             {
-                var currentLocalActorRef = current as LocalActorRef;
-                if (currentLocalActorRef != null)
+                if (current is LocalActorRef currentLocalActorRef)
                 {
                     switch (element)
                     {
@@ -232,20 +233,21 @@ namespace Akka.Actor
                             break;
                     }
                 }
-                else
+                else if (current is IInternalActorRef internalActorRef)
                 {
                     //Current is not a LocalActorRef
-                    if (current != null)
-                    {
-                        var rest = name.Skip(index).ToList();
-                        return current.AsInstanceOf<IInternalActorRef>().GetChild(rest);
-                    }
+                    var rest = name.NoCopySlice(index);
+                    return internalActorRef.GetChild(rest);
+                }
+                else // not a LocalActorRef or an IInternalActorRef
+                {
                     throw new NotSupportedException("Bug, we should not get here");
                 }
+
                 index++;
             }
+
             return current;
         }
     }
 }
-

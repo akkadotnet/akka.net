@@ -16,10 +16,7 @@ systems. Instead Akka Streams depend on internal backpressure signals that
 allow to control what should happen in such scenarios.
 
 > [!NOTE]
->  You can find a example implementation [here](https://github.com/Silv3rcircl3/Akka.Net-Streams-reactive-tweets), it's using 
-  [Tweetinvi](https://github.com/linvi/tweetinvi) to call the Twitter STREAM API.
-  Due to the fact that Tweetinvi doesn't implement the Reactive Streams specifications, we push the tweets into the stream
-  via the `IActorRef` that is materialized from the following Source `Source.ActorRef<ITweet>(100, OverflowStrategy.DropHead);`.
+> You can find an example implementation [here](https://github.com/Silv3rcircl3/Akka.Net-Streams-reactive-tweets), using [Tweetinvi](https://github.com/linvi/tweetinvi) to call the Twitter STREAM API. Due to the fact that Tweetinvi doesn't implement the Reactive Streams specifications, we push the tweets into the stream via the `IActorRef` that is materialized from the following Source `Source.ActorRef<ITweet>(100, OverflowStrategy.DropHead);`.
 
 ## Transforming and consuming simple streams
 
@@ -96,6 +93,7 @@ using (var sys = ActorSystem.Create("Reactive-Tweets"))
 ```
 
 ## Flattening sequences in streams
+
 In the previous section we were working on 1:1 relationships of elements which is the most common case, but sometimes
 we might want to map from one element to a number of elements and receive a "flattened" stream, similarly like ``SelectMany``
 works on .Net Collections. In order to get a flattened stream of hashtags from our stream of tweets we can use the ``SelectMany``
@@ -106,6 +104,7 @@ Source<IHashtagEntity, NotUsed> hashTags = tweetSource.SelectMany(tweet => tweet
 ```
 
 ## Broadcasting a stream
+
 Now let's say we want to persist all hashtags, as well as all author names from this one live stream.
 For example we'd like to write all author handles into one file, and all hashtags into another file on disk.
 This means we have to split the source stream into two streams which will handle the writing to these different files.
@@ -248,6 +247,6 @@ var sum = tweetSource.Select(_ => 1).RunWith(sumSink, mat);
 ```
 
 > [!NOTE]
->  ``RunWith()`` is a convenience method that automatically ignores the materialized value of any other stages except
+> ``RunWith()`` is a convenience method that automatically ignores the materialized value of any other stages except
   those appended by the ``RunWith()`` itself. In the above example it translates to using ``Keep.Right`` as the combiner
   for materialized values.

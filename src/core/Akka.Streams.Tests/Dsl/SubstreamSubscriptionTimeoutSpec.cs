@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        [Fact]
+        [Fact(Skip = "Racy")]
         public void GroupBy_and_SplitWhen_must_timeout_and_cancel_substream_publisher_when_no_one_subscribes_to_them_after_some_time()
         {
             this.AssertAllStagesStopped(() =>
@@ -57,6 +57,13 @@ namespace Akka.Streams.Tests.Dsl
                 publisherProbe.SendNext(1);
                 publisherProbe.SendNext(2);
                 publisherProbe.SendNext(3);
+                
+                /*
+                 * Why this spec is skipped: in the event that subscriber.ExpectSubscription() or (subscriber.ExpectNext()
+                 * + s1SubscriberProbe.ExpectSubscription()) exceeds 300ms, the next call to subscriber.ExpectNext will
+                 * fail. This test is too tightly fitted to the timeout duration to be reliable, although somewhat ironically
+                 * it does validate that the underlying cancellation does work! 
+                 */
 
                 var s1 = subscriber.ExpectNext().Item2;
                 // should not break normal usage
