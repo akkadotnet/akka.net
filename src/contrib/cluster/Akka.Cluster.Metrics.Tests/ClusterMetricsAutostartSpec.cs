@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.Metrics.Events;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.Configuration;
 using Akka.TestKit;
@@ -20,31 +21,35 @@ namespace Akka.Cluster.Metrics.Tests
 {
     public class ClusterMetricsAutostartSpec : AkkaSpec
     {
-        private readonly ClusterMetricsView _metricsView;
-        
-        private int MetricsNodeCount => _metricsView.ClusterMetrics.Count;
-
         /// <summary>
         /// This is a single node test.
         /// </summary>
         private const int NodeCount = 1;
-        private static readonly Config Config = ConfigurationFactory.ParseString(@"
-akka.extensions = [""Akka.Management.Cluster.Bootstrap.ClusterBootstrapProvider, Akka.Management.Cluster.Bootstrap""]
-akka.cluster.metrics.collector.enabled = on")
-                .WithFallback(ClusterMetricsTestConfig.ClusterConfiguration);
+        private static readonly Config Config = ConfigurationFactory.ParseString($@"
+akka {{
+    extensions = [""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
+    actor.provider = ""cluster""
+    cluster.metrics.collector {{
+        provider = [""Akka.Cluster.Metrics.Collectors.DefaultCollector, Akka.Cluster.Metrics""]
+        sample-interval = 200ms
+        gossip-interval = 200ms
+    }}
+}}
+");
         
         public ClusterMetricsAutostartSpec(ITestOutputHelper output)
             : base(Config, output)
         {
-            var cluster = Cluster.Get(Sys);
-            _metricsView = new ClusterMetricsView(cluster.System);
         }
 
         [Fact]
         public async Task Metrics_extension_Should_autostart_if_added_to_akka_extensions()
         {
+            var probe = CreateTestProbe();
+            Sys.EventStream.Subscribe(probe.Ref, typeof(IClusterMetricsEvent));
+            Cluster.Get(Sys);
             // Should collect automatically
-            await AwaitAssertAsync(() => MetricsNodeCount.Should().Be(NodeCount), 15.Seconds());
+            probe.ExpectMsg<IClusterMetricsEvent>();
         }
     }
 }
