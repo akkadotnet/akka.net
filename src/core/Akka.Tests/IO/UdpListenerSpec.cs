@@ -15,6 +15,7 @@ using Akka.TestKit;
 using Xunit;
 using Xunit.Abstractions;
 using UdpListener = Akka.IO.UdpListener;
+using FluentAssertions;
 
 namespace Akka.Tests.IO
 {
@@ -30,6 +31,54 @@ namespace Akka.Tests.IO
                     akka.io.udp.direct-buffer-size = 1024", output)
         { }
 
+        [Fact]
+        public void UDP_should_return_IPv4_endpoint_if_bound_using_IPv4_address()
+        {
+            var probe = CreateTestProbe();
+            try
+            {
+                var endpoint = new IPEndPoint(IPAddress.Loopback, 12345);
+                var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
+                Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
+                var bound = probe.ExpectMsg<Udp.Bound>();
+                
+                bound.LocalAddress.Should().BeOfType<IPEndPoint>();
+                var boundEndpoint = (IPEndPoint)bound.LocalAddress;
+                boundEndpoint.AddressFamily.Should().Be(AddressFamily.InterNetwork);
+                boundEndpoint.Address.IsIPv4MappedToIPv6.Should().BeFalse();
+                boundEndpoint.Address.Should().Be(IPAddress.Loopback);
+            }
+            finally
+            {
+                if(probe.LastSender != null && !ReferenceEquals(probe.LastSender, Nobody.Instance))
+                    probe.Reply(Udp.Unbind.Instance);
+            }
+        }
+        
+        [Fact]
+        public void UDP_should_return_IPv6_endpoint_if_bound_using_IPv6_address()
+        {
+            var probe = CreateTestProbe();
+            try
+            {
+                var endpoint = new IPEndPoint(IPAddress.IPv6Loopback, 12345);
+                var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
+                Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
+                var bound = probe.ExpectMsg<Udp.Bound>();
+                
+                bound.LocalAddress.Should().BeOfType<IPEndPoint>();
+                var boundEndpoint = (IPEndPoint)bound.LocalAddress;
+                boundEndpoint.AddressFamily.Should().Be(AddressFamily.InterNetworkV6);
+                boundEndpoint.Address.IsIPv4MappedToIPv6.Should().BeFalse();
+                boundEndpoint.Address.Should().Be(IPAddress.IPv6Loopback);
+            }
+            finally
+            {
+                if(probe.LastSender != null && !ReferenceEquals(probe.LastSender, Nobody.Instance))
+                    probe.Reply(Udp.Unbind.Instance);
+            }
+        }        
+        
         [Fact]
         public void A_UDP_Listener_must_let_the_bind_commander_know_when_binding_is_complete()
         {
@@ -85,6 +134,17 @@ namespace Akka.Tests.IO
             });         
         }
 
+        class MockUdpHandler : ReceiveActor
+        {
+            public MockUdpHandler()
+            {
+                Receive<Udp.Received>(msg =>
+                {
+                    // Empty handler
+                });
+            }
+        }
+        
         class TestSetup
         {
             private readonly TestKitBase _kit;
