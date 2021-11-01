@@ -916,6 +916,7 @@ namespace Akka.Streams
     }
     public class StreamDetachedException : System.Exception
     {
+        public static readonly Akka.Streams.StreamDetachedException Instance;
         public StreamDetachedException() { }
         public StreamDetachedException(string message) { }
     }
