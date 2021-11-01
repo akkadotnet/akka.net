@@ -24,7 +24,6 @@ namespace Akka.Cluster.Metrics.Tests
         /// <summary>
         /// This is a single node test.
         /// </summary>
-        private const int NodeCount = 1;
         private static readonly Config Config = ConfigurationFactory.ParseString($@"
 akka {{
     extensions = [""Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics""]
@@ -43,11 +42,10 @@ akka {{
         }
 
         [Fact]
-        public async Task Metrics_extension_Should_autostart_if_added_to_akka_extensions()
+        public void Metrics_extension_Should_autostart_if_added_to_akka_extensions()
         {
             var probe = CreateTestProbe();
             Sys.EventStream.Subscribe(probe.Ref, typeof(IClusterMetricsEvent));
-            Cluster.Get(Sys);
             // Should collect automatically
             probe.ExpectMsg<IClusterMetricsEvent>();
         }
