@@ -839,6 +839,7 @@ namespace Akka.Streams.Stage
         /// <param name="shape">TBD</param>
         protected GraphStageLogic(Shape shape) : this(shape.Inlets.Count(), shape.Outlets.Count())
         {
+            LogSource = Akka.Event.LogSource.Create(shape.ToString());
         }
 
         /// <summary>
@@ -879,7 +880,7 @@ namespace Akka.Streams.Stage
         /// <summary>
         /// Override to customise reported log source 
         /// </summary>
-        protected object LogSource => this;
+        protected virtual object LogSource { get; }
 
         public ILoggingAdapter Log
         {
