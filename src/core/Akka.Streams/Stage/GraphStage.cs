@@ -839,7 +839,7 @@ namespace Akka.Streams.Stage
         /// <param name="shape">TBD</param>
         protected GraphStageLogic(Shape shape) : this(shape.Inlets.Count(), shape.Outlets.Count())
         {
-            LogSource = Akka.Event.LogSource.Create(shape.ToString());
+            LogSource = Akka.Event.LogSource.Create(shape);
         }
 
         /// <summary>
