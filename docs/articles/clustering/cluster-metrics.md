@@ -128,6 +128,24 @@ Custom metrics collector implementation class must be specified in the `akka.clu
 
 ## Configuration
 
+### Starting Akka.Cluster.Metrics Automatically During ActorSystem Startup
+
+You can automatically startup the Akka.Cluster.Metrics module by providing, at minimum, these settings:
+
+```hocon
+akka {
+    extensions = ["Akka.Cluster.Metrics.ClusterMetricsExtensionProvider, Akka.Cluster.Metrics"]
+    actor.provider = "cluster"
+    cluster.metrics.collector {
+        provider = ["Akka.Cluster.Metrics.Collectors.DefaultCollector, Akka.Cluster.Metrics"]
+    }  
+}
+```
+
+These settings will auto-start Akka.Cluster.Metrics using the default memory and CPU metrics collectors.
+
+### Default Configurations
+
 The Cluster metrics extension can be configured with the following properties:
 
 ```hocon

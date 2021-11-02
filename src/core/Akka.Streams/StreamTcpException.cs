@@ -48,6 +48,11 @@ namespace Akka.Streams
     /// </summary>
     public class StreamDetachedException : Exception
     {
+        /// <summary>
+        /// Initializes a single instance of the <see cref="StreamDetachedException"/> class.
+        /// </summary>
+        public static readonly StreamDetachedException Instance = new StreamDetachedException();
+
         public StreamDetachedException()
             : this("Stream is terminated. Materialized value is detached.")
         {
