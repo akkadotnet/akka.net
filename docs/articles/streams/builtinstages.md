@@ -743,6 +743,20 @@ Each upstream element will either be diverted to the given sink, or the downstre
 
 **completes** when upstream completes and no output is pending
 
+### WireTap
+
+Attaches the given ``Sink`` to this ``Flow`` as a wire tap, meaning that elements that pass through will also be sent to the wire-tap ``Sink``, without the latter affecting the mainline flow.
+
+If the wire-tap ``Sink`` backpressures, elements that would've been sent to it will be dropped instead.
+
+**emits** when element is available and demand exists from the downstream; the element will also be sent to the wire-tap ``Sink`` if there is demand.
+
+**backpressures** when downstream backpressures
+
+**completes** when upstream completes
+
+**cancels** when downstream cancels
+
 ## Asynchronous processing stages
 
 These stages encapsulate an asynchronous computation, properly handling backpressure while taking care of the asynchronous
