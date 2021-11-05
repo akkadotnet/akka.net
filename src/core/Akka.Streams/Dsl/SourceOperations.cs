@@ -1698,6 +1698,61 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// This is a simplified version of <seealso cref="WireTap{T}"/> that takes only a simple procedure.
+        /// Elements will be passed into this "side channel" delegate, and any of its results will be ignored.
+        /// <para>
+        /// If the wire-tap operation is slow (it backpressures), elements that would've been sent to it will be dropped instead.
+        /// </para>
+        /// <para>
+        /// This operation is useful for inspecting the passed through element, usually by means of side-effecting
+        /// operations (such as `Log`, or emitting metrics), for each element without having to modify it.
+        /// </para>
+        /// <para>
+        /// For logging signals (elements, completion, error) consider using the <see cref="Log"/> stage instead,
+        /// along with appropriate <see cref="Attributes.LogLevels"/>.
+        /// </para>
+        /// <para>Emits when upstream emits an element</para>
+        /// <para>Backpressures when downstream backpressures</para>
+        /// <para>Completes when upstream completes</para>
+        /// <para>Cancels when downstream cancels; Note that failures of the <paramref name="action"/> delegate will not cause cancellation</para>
+        /// </summary>
+        /// <typeparam name="TOut">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="flow">TBD</param>
+        /// <param name="action">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<TOut, TMat> WireTap<TOut, TMat>(this Source<TOut, TMat> flow, Action<TOut> action) =>
+            (Source<TOut, TMat>)InternalFlowOperations.WireTap(flow, action);
+
+        /// <summary>
+        /// <para>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/> as a wire tap, meaning that elements that pass
+        /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
+        /// elements that would've been sent to it will be dropped instead.
+        /// </para>
+        /// <para>It is similar to <seealso cref="AlsoTo{TOut,TMat}"/> which does backpressure instead of dropping elements.</para>
+        /// <para>Emits when element is available and demand exists from the downstream; the element will also be sent to the wire-tap Sink if there is demand.</para>
+        /// <para>Backpressures when downstream backpressures</para>
+        /// <para>Completes when upstream completes</para>
+        /// <para>Cancels when downstream cancels</para>
+        /// </summary>
+        public static Source<TOut, TMat> WireTap<TOut, TMat>(this Source<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that) =>
+            (Source<TOut, TMat>)InternalFlowOperations.WireTap(flow, that);
+
+        /// <summary>
+        /// <para>
+        /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, as a wire tap, meaning that elements that pass
+        /// through will also be sent to the wire-tap Sink, without the latter affecting the mainline flow. If the wire-tap Sink backpressures,
+        /// elements that would've been sent to it will be dropped instead..
+        /// </para>
+        /// <para>It is similar to <seealso cref="AlsoToMaterialized{TOut,TMat,TMat2,TMat3}"/> which does backpressure instead of dropping elements.</para>
+        /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
+        /// where appropriate instead of manually writing functions that pass through one of the values.
+        /// </summary>
+        public static Source<TOut, TMat3> WireTapMaterialized<TOut, TMat, TMat2, TMat3>(this Source<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that, Func<TMat, TMat2, TMat3> materializerFunction) => 
+            (Source<TOut, TMat3>)InternalFlowOperations.WireTapMaterialized(flow, that, materializerFunction);
+
+        /// <summary>
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements 
         /// will be sent to the <seealso cref="Sink{TIn,TMat}"/> instead of being passed through if the predicate `when` returns `true`.
         /// 
@@ -2189,7 +2244,6 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, TMat> OrElse<T, TMat>(this Source<T, TMat> flow, IGraph<SourceShape<T>, TMat> secondary)
             => (Source<T, TMat>)InternalFlowOperations.OrElse(flow, secondary);
-
 
 
         /// <summary>
