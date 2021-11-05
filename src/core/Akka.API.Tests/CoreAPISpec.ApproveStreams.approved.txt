@@ -4640,7 +4640,7 @@ namespace Akka.Streams.Stage
         protected GraphStageLogic(Akka.Streams.Shape shape) { }
         public virtual bool KeepGoingAfterAllPortsClosed { get; }
         public Akka.Event.ILoggingAdapter Log { get; }
-        protected object LogSource { get; }
+        protected virtual object LogSource { get; }
         protected Akka.Streams.IMaterializer Materializer { get; }
         public Akka.Streams.Stage.StageActor StageActor { get; }
         [Akka.Annotations.ApiMayChangeAttribute()]
