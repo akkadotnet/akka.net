@@ -223,7 +223,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="action">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, Action<TOut> action) =>
-            //flow.WireTap(Sink.ForEach(action));
+            //flow.WireTap(Sink.ForEach(action)); // should be this, but can't be due to type constraints
             flow.WireTapMaterialized(Sink.ForEach(action), Keep.Left);
 
         /// <summary>
