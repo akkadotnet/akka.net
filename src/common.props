@@ -94,7 +94,7 @@ You can [see the full set of changes introduced in Akka.NET v1.4.27 here](https:
   </PropertyGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.0" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup>
     <!--<PublishRepositoryUrl>true</PublishRepositoryUrl>-->
