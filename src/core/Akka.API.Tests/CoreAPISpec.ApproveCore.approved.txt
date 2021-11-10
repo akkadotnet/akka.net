@@ -93,7 +93,6 @@ namespace Akka.Actor
         public System.Collections.Generic.IEnumerable<Akka.Actor.IInternalActorRef> GetChildren() { }
         public static Akka.Actor.IActorRef GetCurrentSelfOrNoSender() { }
         public static Akka.Actor.IActorRef GetCurrentSenderOrNoSender() { }
-        [System.ObsoleteAttribute("Use TryGetSingleChild [0.7.1]")]
         public Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public void Init(bool sendSupervise, Akka.Dispatch.MailboxType mailboxType) { }
         public Akka.Actor.Internal.ChildRestartStats InitChild(Akka.Actor.IInternalActorRef actor) { }
@@ -127,7 +126,6 @@ namespace Akka.Actor
         public void TerminatedQueuedFor(Akka.Actor.IActorRef subject, Akka.Util.Option<object> customMessage) { }
         public bool TryGetChildStatsByName(string name, out Akka.Actor.Internal.IChildStats child) { }
         protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, out Akka.Actor.Internal.ChildRestartStats child) { }
-        public bool TryGetSingleChild(string name, out Akka.Actor.IInternalActorRef child) { }
         public void UnbecomeStacked() { }
         protected void UnreserveChild(string name) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
@@ -179,18 +177,21 @@ namespace Akka.Actor
         protected ActorPath(Akka.Actor.Address address, string name) { }
         protected ActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
         public Akka.Actor.Address Address { get; }
-        public abstract System.Collections.Generic.IReadOnlyList<string> Elements { get; }
+        public int Depth { get; }
+        public System.Collections.Generic.IReadOnlyList<string> Elements { get; }
         public string Name { get; }
-        public abstract Akka.Actor.ActorPath Parent { get; }
-        public abstract Akka.Actor.ActorPath Root { get; }
+        public Akka.Actor.ActorPath Parent { get; }
+        [Newtonsoft.Json.JsonIgnoreAttribute()]
+        public Akka.Actor.ActorPath Root { get; }
         public long Uid { get; }
         public Akka.Actor.ActorPath Child(string childName) { }
-        public abstract int CompareTo(Akka.Actor.ActorPath other);
+        public int CompareTo(Akka.Actor.ActorPath other) { }
         public bool Equals(Akka.Actor.ActorPath other) { }
         public override bool Equals(object obj) { }
         public static string FormatPathElements(System.Collections.Generic.IEnumerable<string> pathElements) { }
         public override int GetHashCode() { }
         public static bool IsValidPathElement(string s) { }
+        public Akka.Actor.ActorPath ParentOf(int depth) { }
         public static Akka.Actor.ActorPath Parse(string path) { }
         public string ToSerializationFormat() { }
         public string ToSerializationFormatWithAddress(Akka.Actor.Address address) { }
@@ -201,13 +202,17 @@ namespace Akka.Actor
         public string ToStringWithoutAddress() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public static bool TryParse(string path, out Akka.Actor.ActorPath actorPath) { }
+        public static bool TryParse(Akka.Actor.ActorPath basePath, string absoluteUri, out Akka.Actor.ActorPath actorPath) { }
+        public static bool TryParse(Akka.Actor.ActorPath basePath, System.ReadOnlySpan<char> absoluteUri, out Akka.Actor.ActorPath actorPath) { }
         public static bool TryParseAddress(string path, out Akka.Actor.Address address) { }
-        public abstract Akka.Actor.ActorPath WithUid(long uid);
+        public static bool TryParseAddress(string path, out Akka.Actor.Address address, out System.ReadOnlySpan<char> absoluteUri) { }
+        public static bool TryParseParts(System.ReadOnlySpan<char> path, out System.ReadOnlySpan<char> address, out System.ReadOnlySpan<char> absoluteUri) { }
+        public Akka.Actor.ActorPath WithUid(long uid) { }
         public static Akka.Actor.ActorPath /(Akka.Actor.ActorPath path, string name) { }
         public static Akka.Actor.ActorPath /(Akka.Actor.ActorPath path, System.Collections.Generic.IEnumerable<string> name) { }
         public static bool ==(Akka.Actor.ActorPath left, Akka.Actor.ActorPath right) { }
         public static bool !=(Akka.Actor.ActorPath left, Akka.Actor.ActorPath right) { }
-        public class Surrogate : Akka.Util.ISurrogate, System.IEquatable<Akka.Actor.ActorPath.Surrogate>, System.IEquatable<Akka.Actor.ActorPath>
+        public sealed class Surrogate : Akka.Util.ISurrogate, System.IEquatable<Akka.Actor.ActorPath.Surrogate>, System.IEquatable<Akka.Actor.ActorPath>
         {
             public Surrogate(string path) { }
             public string Path { get; }
@@ -410,13 +415,17 @@ namespace Akka.Actor
         public static Akka.Actor.Address Parse(string address) { }
         public override string ToString() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
+        public static bool TryParse(string path, out Akka.Actor.Address address) { }
+        public static bool TryParse(string path, out Akka.Actor.Address address, out string absolutUri) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address, out System.ReadOnlySpan<char> absolutUri) { }
         public Akka.Actor.Address WithHost(string host = null) { }
         public Akka.Actor.Address WithPort(System.Nullable<int> port = null) { }
         public Akka.Actor.Address WithProtocol(string protocol) { }
         public Akka.Actor.Address WithSystem(string system) { }
         public static bool ==(Akka.Actor.Address left, Akka.Actor.Address right) { }
         public static bool !=(Akka.Actor.Address left, Akka.Actor.Address right) { }
-        public class AddressSurrogate : Akka.Util.ISurrogate
+        public sealed class AddressSurrogate : Akka.Util.ISurrogate
         {
             public AddressSurrogate() { }
             public string Host { get; set; }
@@ -499,15 +508,9 @@ namespace Akka.Actor
     {
         public static void CancelIfNotNull(this Akka.Actor.ICancelable cancelable) { }
     }
-    public class ChildActorPath : Akka.Actor.ActorPath
+    public sealed class ChildActorPath : Akka.Actor.ActorPath
     {
         public ChildActorPath(Akka.Actor.ActorPath parentPath, string name, long uid) { }
-        public override System.Collections.Generic.IReadOnlyList<string> Elements { get; }
-        public override Akka.Actor.ActorPath Parent { get; }
-        public override Akka.Actor.ActorPath Root { get; }
-        public override int CompareTo(Akka.Actor.ActorPath other) { }
-        public override int GetHashCode() { }
-        public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
     public sealed class CoordinatedShutdown : Akka.Actor.IExtension
     {
@@ -853,23 +856,24 @@ namespace Akka.Actor
         }
         public delegate void TransitionHandler<TState, TData>(TState initialState, TState nextState);
     }
+    [System.ObsoleteAttribute("Use Akka.Actor.Status.Failure")]
     public class Failure
     {
         public Failure() { }
         public System.Exception Exception { get; set; }
         public System.DateTime Timestamp { get; set; }
     }
+    [System.ObsoleteAttribute("Use List of Akka.Actor.Status.Failure")]
     public class Failures
     {
         public Failures() { }
         public System.Collections.Generic.List<Akka.Actor.Failure> Entries { get; }
     }
-    public class FutureActorRef<T> : Akka.Actor.MinimalActorRef
+    public sealed class FutureActorRef<T> : Akka.Actor.MinimalActorRef
     {
-        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, System.Action<System.Threading.Tasks.Task> unregister, Akka.Actor.ActorPath path) { }
+        public FutureActorRef(System.Threading.Tasks.TaskCompletionSource<T> result, Akka.Actor.ActorPath path, Akka.Actor.IActorRefProvider provider) { }
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
-        public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     public class static Futures
@@ -964,6 +968,8 @@ namespace Akka.Actor
         Akka.Actor.IInternalActorRef TempContainer { get; }
         System.Threading.Tasks.Task TerminationTask { get; }
         Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async);
+        [Akka.Annotations.InternalApiAttribute()]
+        Akka.Actor.FutureActorRef<T> CreateFutureRef<T>(System.Threading.Tasks.TaskCompletionSource<T> tcs);
         Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address);
         void Init(Akka.Actor.Internal.ActorSystemImpl system);
         void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path);
@@ -1081,7 +1087,7 @@ namespace Akka.Actor
         bool IsTerminated { get; }
         Akka.Actor.IInternalActorRef Parent { get; }
         Akka.Actor.IActorRefProvider Provider { get; }
-        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         void Restart(System.Exception cause);
         void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) [1.1.0]")]
@@ -1202,7 +1208,7 @@ namespace Akka.Actor
         public abstract bool IsTerminated { get; }
         public abstract Akka.Actor.IInternalActorRef Parent { get; }
         public abstract Akka.Actor.IActorRefProvider Provider { get; }
-        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name);
+        public abstract Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name);
         public abstract void Restart(System.Exception cause);
         public abstract void Resume(System.Exception causedByFailure = null);
         [System.ObsoleteAttribute("Use SendSystemMessage(message) instead [1.1.0]")]
@@ -1245,7 +1251,7 @@ namespace Akka.Actor
         protected Akka.Actor.IInternalActorRef Supervisor { get; }
         protected Akka.Actor.ActorSystem System { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         protected virtual Akka.Actor.ActorCell NewActorCell(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.IInternalActorRef self, Akka.Actor.Props props, Akka.Dispatch.MessageDispatcher dispatcher, Akka.Actor.IInternalActorRef supervisor) { }
         public override void Restart(System.Exception cause) { }
@@ -1275,6 +1281,7 @@ namespace Akka.Actor
         public Akka.Actor.IInternalActorRef TempContainer { get; }
         public System.Threading.Tasks.Task TerminationTask { get; }
         public Akka.Actor.IInternalActorRef ActorOf(Akka.Actor.Internal.ActorSystemImpl system, Akka.Actor.Props props, Akka.Actor.IInternalActorRef supervisor, Akka.Actor.ActorPath path, bool systemService, Akka.Actor.Deploy deploy, bool lookupDeploy, bool async) { }
+        public Akka.Actor.FutureActorRef<T> CreateFutureRef<T>(System.Threading.Tasks.TaskCompletionSource<T> tcs) { }
         public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }
         public void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
         public void RegisterExtraName(string name, Akka.Actor.IInternalActorRef actor) { }
@@ -1317,7 +1324,7 @@ namespace Akka.Actor
         [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override void Restart(System.Exception cause) { }
         public override void Resume(System.Exception causedByFailure = null) { }
         public override void SendSystemMessage(Akka.Dispatch.SysMsg.ISystemMessage message) { }
@@ -1533,7 +1540,7 @@ namespace Akka.Actor
         public override Akka.Actor.ActorPath Path { get; }
         public override Akka.Actor.IActorRefProvider Provider { get; }
         public override Akka.Actor.ICell Underlying { get; }
-        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IEnumerable<string> name) { }
+        public override Akka.Actor.IActorRef GetChild(System.Collections.Generic.IReadOnlyList<string> name) { }
         public override Akka.Actor.IInternalActorRef GetSingleChild(string name) { }
         public Akka.Actor.RepointableActorRef Initialize(bool async) { }
         protected virtual Akka.Actor.ActorCell NewCell() { }
@@ -1547,15 +1554,9 @@ namespace Akka.Actor
         public void SwapUnderlying(Akka.Actor.ICell cell) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
-    public class RootActorPath : Akka.Actor.ActorPath
+    public sealed class RootActorPath : Akka.Actor.ActorPath
     {
         public RootActorPath(Akka.Actor.Address address, string name = "") { }
-        public override System.Collections.Generic.IReadOnlyList<string> Elements { get; }
-        public override Akka.Actor.ActorPath Parent { get; }
-        [Newtonsoft.Json.JsonIgnoreAttribute()]
-        public override Akka.Actor.ActorPath Root { get; }
-        public override int CompareTo(Akka.Actor.ActorPath other) { }
-        public override Akka.Actor.ActorPath WithUid(long uid) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public class RootGuardianActorRef : Akka.Actor.LocalActorRef
@@ -1699,6 +1700,7 @@ namespace Akka.Actor
         public bool SerializeAllMessages { get; }
         public Akka.Actor.Setup.ActorSystemSetup Setup { get; }
         public string StdoutLogLevel { get; }
+        public Akka.Event.MinimalLogger StdoutLogger { get; }
         public string SupervisorStrategyClass { get; }
         public Akka.Actor.ActorSystem System { get; }
         public System.TimeSpan UnstartedPushTimeout { get; }
@@ -1720,16 +1722,20 @@ namespace Akka.Actor
     public abstract class Status
     {
         protected Status() { }
-        public class Failure : Akka.Actor.Status
+        public sealed class Failure : Akka.Actor.Status
         {
             public readonly System.Exception Cause;
+            public readonly object State;
             public Failure(System.Exception cause) { }
+            public Failure(System.Exception cause, object state) { }
             public override string ToString() { }
         }
-        public class Success : Akka.Actor.Status
+        public sealed class Success : Akka.Actor.Status
         {
+            public static readonly Akka.Actor.Status.Success Instance;
             public readonly object Status;
             public Success(object status) { }
+            public override string ToString() { }
         }
     }
     public class StoppingSupervisorStrategy : Akka.Actor.SupervisorStrategyConfigurator
@@ -3092,7 +3098,7 @@ namespace Akka.Event
         public static string FromType(System.Type t, Akka.Actor.ActorSystem system) { }
         public static System.Type SourceType(object o) { }
     }
-    public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded
+    public class LoggerInitialized : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
     {
         public LoggerInitialized() { }
     }
@@ -3102,7 +3108,6 @@ namespace Akka.Event
     }
     public class static Logging
     {
-        public static readonly Akka.Event.StandardOutLogger StandardOutLogger;
         public static System.Type ClassFor(this Akka.Event.LogLevel logLevel) { }
         public static Akka.Event.ILoggingAdapter GetLogger(this Akka.Actor.IActorContext context, Akka.Event.ILogMessageFormatter logMessageFormatter = null) { }
         public static Akka.Event.ILoggingAdapter GetLogger(Akka.Actor.ActorSystem system, object logSourceObj, Akka.Event.ILogMessageFormatter logMessageFormatter = null) { }
@@ -3155,6 +3160,14 @@ namespace Akka.Event
         public void SetLogLevel(Akka.Event.LogLevel logLevel) { }
         public void StartStdoutLogger(Akka.Actor.Settings config) { }
     }
+    public abstract class MinimalLogger : Akka.Actor.MinimalActorRef
+    {
+        protected MinimalLogger() { }
+        public virtual Akka.Actor.ActorPath Path { get; }
+        public virtual Akka.Actor.IActorRefProvider Provider { get; }
+        protected abstract void Log(object message);
+        protected virtual void TellInternal(object message, Akka.Actor.IActorRef sender) { }
+    }
     public sealed class NoLogger : Akka.Event.ILoggingAdapter
     {
         public static readonly Akka.Event.ILoggingAdapter Instance;
@@ -3175,18 +3188,15 @@ namespace Akka.Event
         public void Warning(string format, params object[] args) { }
         public void Warning(System.Exception cause, string format, params object[] args) { }
     }
-    public class StandardOutLogger : Akka.Actor.MinimalActorRef
+    public class StandardOutLogger : Akka.Event.MinimalLogger
     {
         public StandardOutLogger() { }
         public static System.ConsoleColor DebugColor { get; set; }
         public static System.ConsoleColor ErrorColor { get; set; }
         public static System.ConsoleColor InfoColor { get; set; }
-        public override Akka.Actor.ActorPath Path { get; }
-        public override Akka.Actor.IActorRefProvider Provider { get; }
         public static bool UseColors { get; set; }
         public static System.ConsoleColor WarningColor { get; set; }
-        public static void PrintLogEvent(Akka.Event.LogEvent logEvent) { }
-        protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
+        protected override void Log(object message) { }
     }
     public class Subscription<TSubscriber, TClassifier>
     {
@@ -3297,10 +3307,13 @@ namespace Akka.IO
         }
         public class Resolved : Akka.IO.Dns.Command
         {
+            public Resolved(string name, System.Exception ex) { }
             public Resolved(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv4, System.Collections.Generic.IEnumerable<System.Net.IPAddress> ipv6) { }
             public System.Net.IPAddress Addr { get; }
+            public System.Exception Exception { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv4 { get; }
             public System.Collections.Generic.IEnumerable<System.Net.IPAddress> Ipv6 { get; }
+            public bool IsSuccess { get; }
             public string Name { get; }
             public static Akka.IO.Dns.Resolved Create(string name, System.Collections.Generic.IEnumerable<System.Net.IPAddress> addresses) { }
         }
@@ -3358,7 +3371,10 @@ namespace Akka.IO
         public class DatagramChannelCreator : Akka.IO.Inet.SocketOption
         {
             public DatagramChannelCreator() { }
+            [System.ObsoleteAttribute("Please use the method with AddressFamily parameter. Using this method will always" +
+                " return an IPv6 bound UDP endpoint.")]
             public virtual System.Net.Sockets.Socket Create() { }
+            public virtual System.Net.Sockets.Socket Create(System.Net.Sockets.AddressFamily addressFamily) { }
         }
         public class static SO
         {
@@ -3876,14 +3892,15 @@ namespace Akka.IO
     }
     public class UdpSettings
     {
+        [System.ObsoleteAttribute("Please the constructor without directBufferSize and maxDirectBufferPoolSize param" +
+            "eter")]
         public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int directBufferSize, int maxDirectBufferPoolSize, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
+        public UdpSettings(string bufferPoolConfigPath, bool traceLogging, int initialSocketAsyncEventArgs, int batchReceiveLimit, string managementDispatcher, string fileIoDispatcher) { }
         public int BatchReceiveLimit { get; }
         public string BufferPoolConfigPath { get; }
-        public int DirectBufferSize { get; }
         public string FileIODispatcher { get; }
         public int InitialSocketAsyncEventArgs { get; }
         public string ManagementDispatcher { get; }
-        public int MaxDirectBufferPoolSize { get; }
         public bool TraceLogging { get; }
         public static Akka.IO.UdpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.UdpSettings Create(Akka.Configuration.Config config) { }
@@ -4216,6 +4233,7 @@ namespace Akka.Routing
     {
         protected CustomRouterConfig() { }
         protected CustomRouterConfig(string routerDispatcher) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
     }
     public sealed class Deafen : Akka.Routing.ListenerMessage
     {
@@ -4250,6 +4268,7 @@ namespace Akka.Routing
         public FromConfig(Akka.Routing.Resizer resizer, Akka.Actor.SupervisorStrategy supervisorStrategy, string routerDispatcher) { }
         public static Akka.Routing.FromConfig Instance { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem sys) { }
         public Akka.Actor.Props Props() { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
@@ -4274,6 +4293,7 @@ namespace Akka.Routing
         protected Group(System.Collections.Generic.IEnumerable<string> paths, string routerDispatcher) { }
         [System.ObsoleteAttribute("Deprecated since Akka.NET v1.1. Use Paths(ActorSystem) instead.")]
         public System.Collections.Generic.IEnumerable<string> Paths { get; }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Group other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -4313,6 +4333,7 @@ namespace Akka.Routing
         public static Akka.Routing.NoRouter Instance { get; }
         public override string RouterDispatcher { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public Akka.Actor.Props Props(Akka.Actor.Props routeeProps) { }
         public override Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
         public override Akka.Routing.RouterConfig WithFallback(Akka.Routing.RouterConfig routerConfig) { }
@@ -4331,6 +4352,7 @@ namespace Akka.Routing
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public virtual Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public virtual bool UsePoolDispatcher { get; }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public bool Equals(Akka.Routing.Pool other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
@@ -4464,19 +4486,21 @@ namespace Akka.Routing
     }
     public class Router
     {
+        [Akka.Annotations.InternalApiAttribute()]
         public Router(Akka.Routing.RoutingLogic logic, Akka.Actor.IActorRef routee, params Akka.Actor.IActorRef[] routees) { }
         public Router(Akka.Routing.RoutingLogic logic, params Akka.Routing.Routee[] routees) { }
         public System.Collections.Generic.IEnumerable<Akka.Routing.Routee> Routees { get; }
         public Akka.Routing.RoutingLogic RoutingLogic { get; }
-        public Akka.Routing.Router AddRoutee(Akka.Routing.Routee routee) { }
+        public virtual Akka.Routing.Router AddRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router AddRoutee(Akka.Actor.IActorRef routee) { }
         public Akka.Routing.Router AddRoutee(Akka.Actor.ActorSelection routee) { }
-        public Akka.Routing.Router RemoveRoutee(Akka.Routing.Routee routee) { }
+        public virtual Akka.Routing.Router RemoveRoutee(Akka.Routing.Routee routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.IActorRef routee) { }
         public Akka.Routing.Router RemoveRoutee(Akka.Actor.ActorSelection routee) { }
-        public void Route(object message, Akka.Actor.IActorRef sender) { }
+        public virtual void Route(object message, Akka.Actor.IActorRef sender) { }
         protected virtual void Send(Akka.Routing.Routee routee, object message, Akka.Actor.IActorRef sender) { }
-        public Akka.Routing.Router WithRoutees(params Akka.Routing.Routee[] routees) { }
+        protected object UnWrap(object message) { }
+        public virtual Akka.Routing.Router WithRoutees(params Akka.Routing.Routee[] routees) { }
     }
     public abstract class RouterConfig : Akka.Util.ISurrogated, System.IEquatable<Akka.Routing.RouterConfig>
     {
@@ -4487,6 +4511,8 @@ namespace Akka.Routing
         public virtual string RouterDispatcher { get; }
         public virtual bool StopRouterWhenAllRouteesRemoved { get; }
         public abstract Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system);
+        [Akka.Annotations.InternalApiAttribute()]
+        public abstract Akka.Actor.ActorBase CreateRouterActor();
         public bool Equals(Akka.Routing.RouterConfig other) { }
         public override bool Equals(object obj) { }
         public virtual bool IsManagementMessage(object message) { }

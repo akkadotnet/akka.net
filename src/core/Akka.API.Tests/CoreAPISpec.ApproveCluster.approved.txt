@@ -11,6 +11,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Management.Cluster.Http")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName="")]
@@ -339,6 +340,7 @@ namespace Akka.Cluster.Routing
         public Akka.Cluster.Routing.ClusterRouterGroupSettings Settings { get; }
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -364,6 +366,7 @@ namespace Akka.Cluster.Routing
         public override bool StopRouterWhenAllRouteesRemoved { get; }
         public override Akka.Actor.SupervisorStrategy SupervisorStrategy { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
+        public override Akka.Actor.ActorBase CreateRouterActor() { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override bool IsManagementMessage(object message) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }

@@ -4,6 +4,7 @@ title: Multi-Node TestKit
 ---
 
 # Using the MultiNode TestKit
+
 If you intend to contribute to any of the high availability modules in Akka.NET, such as Akka.Remote and Akka.Cluster, you will need to familiarize yourself with the MultiNode Testkit and the test runner.
 
 The MultiNodeTestkit consists of three binaries within Akka.NET:
@@ -13,6 +14,7 @@ The MultiNodeTestkit consists of three binaries within Akka.NET:
 * [`Akka.Remote.TestKit`](https://github.com/akkadotnet/akka.net/tree/dev/src/core/Akka.Remote.TestKit) - the MultiNode TestKit itself.
 
 ## MultiNode Specs
+
 The multi node specs are different from traditional specs in that they are intended to run across multiple machines in parallel, to simulate multiple logical nodes participating in a network or cluster.
 
 Here's an example of a multi node spec from the Akka.Cluster.Tests project:
@@ -29,7 +31,7 @@ public class JoinInProgressMultiNodeConfig : MultiNodeConfig
         Second = Role("second");
 
         CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
-			.WithFallback(ConfigurationFactory.ParseString(@"
+            .WithFallback(ConfigurationFactory.ParseString(@"
                 akka.stdout-loglevel = DEBUG
                 akka.cluster {
                     # simulate delay in gossip by turning it off
@@ -91,6 +93,7 @@ public class JoinInProgressSpec : MultiNodeClusterSpec
 The `MultiNodeFact` attribute is what's used to distinguish a multi-node spec from a typical spec, so you'll need to decorate your multi-node specs with this attribute.
 
 ### Designing a MultiNode Spec
+
 A multi-node spec gives us the ability to do the following:
 
 1. Launch multiple independent processes each running their own `ActorSystem`;
@@ -103,6 +106,7 @@ A multi-node spec gives us the ability to do the following:
 > Everything that's available in the default `Akka.TestKit` is also available inside the `Akka.Remote.TestKit`, but it's worth bearing in mind that `Akka.Remote.TestKit` only works with the `Akka.MultiNodeTestRunner` and uses Xunit 2.0 internally.
 
 #### Step 1 - Subclass `MultiNodeConfig`
+
 The first thing to do is define a configuration for each node you want to include in the test, so in order to do that we have to create a test-specific implementation of `MultiNodeConfig`.
 
 ```csharp
@@ -146,6 +150,7 @@ In the `JoinInProgressMultiNodeConfig`, we define two `RoleName`s for the two no
 Also we configured each node to represent specific role `[frontend,backend]` in the cluster. You can attach arbitrary config instance(s) to individual node or group of nodes by calling `NodeConfig(IEnumerable<RoleName> roles, IEnumerable<Config> configs)`.
 
 #### Step 2 - Define a Class for Your Spec, Inherit from `MultiNodeSpec`
+
 The next step is to subclass `MultiNodeSpec` and create a class that each of your individual nodes will run.
 
 ```csharp
@@ -182,6 +187,7 @@ private JoinInProgressSpec(JoinInProgressMultiNodeConfig config) : base(config)
 The second constructor overload can be used for allowing individual nodes to run with non-shared configurations.
 
 #### Step 3 - Write the Actual Test Methods
+
 Decorate each of the independent tests with the `MultiNodeFact` attribute - the `MultiNodeTestRunner` will pick these up once it runs.
 
 ```csharp
@@ -271,21 +277,21 @@ public void ConvergenceSpecTests()
 
 This unfortunate design is a byproduct of Xunit and how it recreates the entire test class on each method.
 
-
 ### Running MultiNode Specs
+
 To actually run this specification, we have to execute the `Akka.MultiNodeTestRunner.exe` against the .DLL that contains our specs.
 
 Here's the set of arguments that the MultiNodeTestRunner takes:
 
-    Akka.MultiNodeTestRunner.exe path-to-dll # path to DLL containing tests
-	[-Dmultinode.enable-filesink=(on|off)] # writes test output to disk
-	[-Dmultinode.spec=("fully qualified spec method name)] # execute a specific test method
-															    # instead of all of them
+* `Akka.MultiNodeTestRunner.exe path-to-dll` with path to DLL containing tests
+* `-Dmultinode.enable-filesink=(on|off)` writes test output to disk
+* `-Dmultinode.spec=("fully qualified spec method name)` executes a specific test method instead of all of them
 
-Here's an example of what invoking the test runner might look like if all of our multinodetests were packaged into Akka.MultiNodeTests.dll.
+Here's an example of what invoking the test runner might look like if all of our multi-node tests were packaged into `Akka.MultiNodeTests.dll`.
 
-
-    C:\> Akka.MultiNodeTestRunner.exe "Akka.MultiNodetests.dll" -Dmultinode.enable-filesink=on
+```cmd
+Akka.MultiNodeTestRunner.exe "Akka.MultiNodetests.dll" -Dmultinode.enable-filesink=on
+```
 
 The output of a multi node test run will include the results for each specification for every node participating in the test. Here's a sample of what the final output at the end of a full test run looks like:
 

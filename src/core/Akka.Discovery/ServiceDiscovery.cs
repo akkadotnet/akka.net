@@ -28,6 +28,17 @@ namespace Akka.Discovery
             public ImmutableList<ResolvedTarget> Addresses { get; }
 
             /// <summary>
+            /// Result of a failed resolve request
+            /// </summary>
+            /// <param name="serviceName">TBD</param>
+            /// <param name="addresses">TBD</param>
+            public Resolved(string serviceName)
+            {
+                ServiceName = serviceName;
+                Addresses = ImmutableList<ResolvedTarget>.Empty;
+            }
+            
+            /// <summary>
             /// Result of a successful resolve request
             /// </summary>
             /// <param name="serviceName">TBD</param>
@@ -38,7 +49,7 @@ namespace Akka.Discovery
                 Addresses = addresses != null ? addresses.ToImmutableList() : ImmutableList<ResolvedTarget>.Empty;
             }
 
-            public override string ToString() => $"Resolved({ServiceName},{string.Join(", ", Addresses)})";
+            public override string ToString() => $"Resolved({ServiceName}, {string.Join(", ", Addresses)})";
 
             public bool Equals(Resolved other)
             {
@@ -82,7 +93,7 @@ namespace Akka.Discovery
                 Address = address;
             }
 
-            public override string ToString() => $"ResolvedTarget({Host}{Port}{Address})";
+            public override string ToString() => $"ResolvedTarget({Host}, {Port}, {Address})";
 
             public bool Equals(ResolvedTarget other)
             {
@@ -238,7 +249,7 @@ namespace Akka.Discovery
 
         private static bool IsValidDomainName(string name) => domainNameRegex.IsMatch(name);
 
-        public override string ToString() => $"Lookup({ServiceName}{PortName}{Protocol})";
+        public override string ToString() => $"Lookup({ServiceName}, {PortName}, {Protocol})";
 
         public Lookup Copy(string serviceName = null, string portName = null, string protocol = null) =>
             new Lookup(serviceName ?? ServiceName, portName ?? PortName, protocol ?? Protocol);

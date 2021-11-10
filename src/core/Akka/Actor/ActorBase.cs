@@ -20,8 +20,10 @@ namespace Akka.Actor
         /// <summary>
         /// Indicates the success of some operation which has been performed
         /// </summary>
-        public class Success : Status
+        public sealed class Success : Status
         {
+            public static readonly Success Instance = new Success(null);
+
             /// <summary>
             /// TBD
             /// </summary>
@@ -35,18 +37,26 @@ namespace Akka.Actor
             {
                 Status = status;
             }
+
+            public override string ToString() => Status is null ? "Success" : $"Success: {Status}";
         }
 
         /// <summary>
         /// Indicates the failure of some operation that was requested and includes an
         /// <see cref="Exception"/> describing the underlying cause of the problem.
         /// </summary>
-        public class Failure : Status
+        public sealed class Failure : Status
         {
             /// <summary>
             /// The cause of the failure
             /// </summary>
             public readonly Exception Cause;
+
+            /// <summary>
+            /// The source state of the failure
+            /// It can be used to send the command message back
+            /// </summary>
+            public readonly object State;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="Failure"/> class.
@@ -55,13 +65,23 @@ namespace Akka.Actor
             public Failure(Exception cause)
             {
                 Cause = cause;
+                State = null;
+            }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="Failure"/> class.
+            /// </summary>
+            /// <param name="cause">The cause of the failure</param>
+            /// <param name="state">The source state of the failure</param>
+            public Failure(Exception cause, object state)
+            {
+                Cause = cause;
+                State = state;
             }
 
             /// <inheritdoc/>
             public override string ToString()
-            {
-                return $"Failure: {Cause}";
-            }
+                => State is null ? $"Failure: {Cause}" : $"Failure[{State}]: {Cause}";
         }
     }
 

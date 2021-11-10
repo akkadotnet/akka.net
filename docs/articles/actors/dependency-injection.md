@@ -3,17 +3,19 @@ uid: dependency-injection
 title: Dependency injection
 ---
 # Dependency Injection
+
 As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyInjection library, which integrates directly with Microsoft.Extensions.DependencyInjection and deprecates the previous Akka.DI.Core and Akka.DI.* libraries.
 
 You can install Akka.DependencyInjection via NuGet:
 
-```
+```console
 PS> Install-Package Akka.DependencyInjection
 ```
 
 Akka.DependencyInjection allows users to pass in an [`IServiceProvider`](https://docs.microsoft.com/en-us/dotnet/api/system.iserviceprovider) into the `ActorSystem` before the latter is created, via [a new kind of programmatic configuration `Setup` that was introduced in Akka.NET v1.4](xref:configuration#programmatic-configuration-with-setup)
 
 ## Integrating with Microsoft.Extensions.DependencyInjection
+
 Many .NET applications begin with a `Startup` class that uses the Microsoft.Extensions.DependencyInjection to build an `IServiceCollection` that contains 1 or more service bindings:
 
 [!code-csharp[Startup](../../../src/examples/AspNetCore/Samples.Akka.AspNetCore/Startup.cs?name=DiSetup)]
@@ -36,6 +38,7 @@ From there, we want to call `ServiceProvider.Props` to create a set of `Props` f
 > Akka.DependencyInjection is not going to manage the lifecycle of your dependencies for you. Keep reading.
 
 ### Managing Lifecycle Dependencies with Akka.DependencyInjection
+
 Akka.DependencyInjection allows Akka.NET developers to mix and match injected dependencies along with non-injected dependencies - for instance:
 
 [!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=NonDiArgsActor)]
@@ -50,11 +53,12 @@ Here's how Akka.DependencyInjection is used to instantiate this actor via `Props
 
 [!code-csharp[NonDiActor](../../../src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/ActorServiceProviderPropsWithScopesSpecs.cs?name=CreateNonDiActor)]
 
-The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your depedency injection container.
+The `ServiceProvider.Props` method will accept additional arguments that can be used to instantiate the actor in addition to the arguments that will be provided via your dependency injection container.
 
 Akka.DependencyInjection does not manage the lifecycle of your dependencies automatically - in fact, Akka.NET recommends that you follow [Microsoft's own dependency injection guidelines](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines):
 
 > Use the factory pattern to create an instance outside of the parent scope. In this situation, the app would generally have a Create method that calls the final type's constructor directly. If the final type has other dependencies, the factory can:
+>
 > * Receive an `IServiceProvider` in its constructor.
 > * Use `ActivatorUtilities.CreateInstance` to instantiate the instance outside of the container, while using the container for its dependencies.
 
@@ -92,6 +96,7 @@ var system = ActorSystem.Create("MySystem");
 // Create the dependency resolver for the actor system
 IDependencyResolver resolver = new XyzDependencyResolver(someContainer, system);
 ```
+
 When creating actorRefs straight off your ActorSystem instance, you can use the DI() Extension.
 
 ```csharp
@@ -101,6 +106,7 @@ var worker2Ref = system.ActorOf(system.DI().Props<TypedWorker>(), "Worker2");
 ```
 
 ### Creating Child Actors using DI
+
 When you want to create child actors from within your existing actors using
 Dependency Injection you can use the Actor Content extension just like in
 the following example.
@@ -109,10 +115,10 @@ the following example.
 // For example in the PreStart...
 protected override void PreStart()
 {
-	var actorProps = Context.DI().Props<MyActor>()
-		.WithRouter(/* options here */);
-	
-	var myActorRef = Context.ActorOf(actorProps, "myChildActor");
+    var actorProps = Context.DI().Props<MyActor>()
+        .WithRouter(/* options here */);
+    
+    var myActorRef = Context.ActorOf(actorProps, "myChildActor");
 }
 ```
 
@@ -137,7 +143,7 @@ actors. So any scope which interferes with that is not supported.
 
 This also means that when injecting dependencies into your actor, using a
 Singleton or Transient scope is fine. But having that dependency scoped per
-httpwebrequest for example won't work.
+`HttpWebRequest` for example won't work.
 
 Techniques for dependency injection and integration with dependency injection
 frameworks are described in more depth in the

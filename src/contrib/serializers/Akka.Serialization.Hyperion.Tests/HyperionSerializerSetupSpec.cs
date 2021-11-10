@@ -1,6 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
+using System.Security.Claims;
+using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -36,14 +42,16 @@ akka.actor {
         {
             var setup = HyperionSerializerSetup.Empty
                 .WithPreserveObjectReference(true)
-                .WithKnownTypeProvider<NoKnownTypes>();
+                .WithKnownTypeProvider<NoKnownTypes>()
+                .WithDisallowUnsafeType(false);
             var settings =
                 new HyperionSerializerSettings(
                     false, 
                     false, 
                     typeof(DummyTypesProvider), 
                     new Func<string, string>[] { s => $"{s}.." },
-                    new Surrogate[0]);
+                    new Surrogate[0],
+                    true);
             var appliedSettings = setup.ApplySettings(settings);
 
             appliedSettings.PreserveObjectReferences.Should().BeTrue(); // overriden
@@ -52,6 +60,7 @@ akka.actor {
             appliedSettings.PackageNameOverrides.Count().Should().Be(1); // from settings
             appliedSettings.PackageNameOverrides.First()("a").Should().Be("a..");
             appliedSettings.Surrogates.ToList().Count.Should().Be(0); // from settings
+            appliedSettings.DisallowUnsafeType.ShouldBe(false); // overriden
         }
 
         [Fact]
@@ -114,6 +123,32 @@ akka.actor {
             deserialized.Bar.Should().Be("bar.");
             surrogated.Count.Should().Be(1);
             surrogated[0].Should().BeEquivalentTo(expected);
+        }
+
+        [Theory]
+        [MemberData(nameof(DangerousObjectFactory))]
+        public void Setup_disallow_unsafe_type_should_work(object dangerousObject, Type type)
+        {
+            var serializer = new HyperionSerializer((ExtendedActorSystem)Sys, HyperionSerializerSettings.Default);
+            var serialized = serializer.ToBinary(dangerousObject);
+            serializer.Invoking(s => s.FromBinary(serialized, type)).Should().Throw<SerializationException>();
+        }
+
+        public static IEnumerable<object[]> DangerousObjectFactory()
+        {
+            var isWindow = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            
+            yield return new object[]{ new FileInfo("C:\\Windows\\System32"), typeof(FileInfo) };
+            yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
+            if (isWindow)
+            {
+                yield return new object[]{ WindowsIdentity.GetAnonymous(), typeof(WindowsIdentity) };
+                yield return new object[]{ new WindowsPrincipal(WindowsIdentity.GetAnonymous()), typeof(WindowsPrincipal)};
+            }
+#if NET471
+            yield return new object[]{ new Process(), typeof(Process)};
+#endif
+            yield return new object[]{ new ClaimsIdentity(), typeof(ClaimsIdentity)};
         }
     }
 }

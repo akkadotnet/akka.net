@@ -30,57 +30,65 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            if(message is InitializeLogger)
+            switch (message)
             {
-                var initLogger = (InitializeLogger)message;
-                var bus = initLogger.LoggingBus;
-                var self = Context.Self;
-                bus.Subscribe(self, typeof(Mute));
-                bus.Subscribe(self, typeof(Unmute));
-                bus.Subscribe(self, typeof(DeadLetter));
-                bus.Subscribe(self, typeof(UnhandledMessage));
-                Sender.Tell(new LoggerInitialized());
-            }
-            else if(message is Mute)
-            {
-                var mute = (Mute)message;
-                foreach(var filter in mute.Filters)
+                case InitializeLogger initLogger:
                 {
-                    AddFilter(filter);
+                    base.Receive(message);
+                    var bus = initLogger.LoggingBus;
+                    var self = Context.Self;
+                    bus.Subscribe(self, typeof(Mute));
+                    bus.Subscribe(self, typeof(Unmute));
+                    bus.Subscribe(self, typeof(DeadLetter));
+                    bus.Subscribe(self, typeof(UnhandledMessage));
+                    Sender.Tell(new LoggerInitialized());
+                    break;
                 }
-            }
-            else if(message is Unmute)
-            {
-                var unmute = (Unmute)message;
-                foreach(var filter in unmute.Filters)
+                case Mute mute:
                 {
-                    RemoveFilter(filter);
+                    foreach(var filter in mute.Filters)
+                    {
+                        AddFilter(filter);
+                    }
+
+                    break;
                 }
-            }
-            else if(message is LogEvent)
-            {
-                var logEvent = (LogEvent)message;
-                if(!ShouldFilter(logEvent))
+                case Unmute unmute:
                 {
-                    Print(logEvent);
+                    foreach(var filter in unmute.Filters)
+                    {
+                        RemoveFilter(filter);
+                    }
+
+                    break;
                 }
+                case LogEvent logEvent:
+                {
+                    if(!ShouldFilter(logEvent))
+                    {
+                        Print(logEvent);
+                    }
+
+                    break;
+                }
+                case DeadLetter letter:
+                    HandleDeadLetter(letter);
+                    break;
+                
+                case UnhandledMessage un:
+                {
+                    var rcp = un.Recipient;
+                    var warning = new Warning(rcp.Path.ToString(), rcp.GetType(), "Unhandled message from " + un.Sender + ": " + un.Message);
+                    if(!ShouldFilter(warning))
+                        Print(warning);
+                    break;
+                }
+                
+                default:
+                    Print(new Debug(Context.System.Name,GetType(),message));
+                    break;
             }
-            else if(message is DeadLetter)
-            {
-                HandleDeadLetter((DeadLetter)message);
-            }
-            else if(message is UnhandledMessage)
-            {
-                var un = (UnhandledMessage) message;
-                var rcp = un.Recipient;
-                var warning = new Warning(rcp.Path.ToString(), rcp.GetType(), "Unhandled message from " + un.Sender + ": " + un.Message);
-                if(!ShouldFilter(warning))
-                    Print(warning);
-            }
-            else
-            {
-                Print(new Debug(Context.System.Name,GetType(),message));
-            }
+
             return true;
         }
 

@@ -26,10 +26,10 @@ We will build a simple IoT application with the bare essentials to demonstrate
 designing an Akka.NET-based system. The application will consist of two main
 components:
 
- * **Device data collection:** This component has the responsibility to maintain
+* **Device data collection:** This component has the responsibility to maintain
    a local representation of the otherwise remote devices. The devices will be
    organized into device groups, grouping together sensors belonging to a home.
- * **User dashboards:** This component has the responsibility to periodically
+* **User dashboards:** This component has the responsibility to periodically
    collect data from the devices for a logged in user and present the results as
    a report.
 
@@ -62,7 +62,7 @@ This means that actors are always organized into a tree. In general, creating an
 actor can only happen from inside another actor. This 'creator' actor becomes
 the _parent_ of the newly created _child_ actor. You might ask then, who is the
 parent of the _first_ actor you create? To create a top-level actor one must
-first initialise an _actor system_, let's refer to this as the object `System`.
+first initialize an _actor system_, let's refer to this as the object `System`.
 This is followed by a call to `System.ActorOf()` which returns a reference to
 the newly created actor. This does not create a "freestanding" actor though,
 instead, it injects the corresponding actor as a child into an already existing
@@ -75,16 +75,16 @@ As you see, creating actors from the "top" injects those actors under the path
 the path `/user/myActor`. In fact, there are three already existing actors in
 the system:
 
- - `/` the so-called _root guardian_. This is the parent of all actors in the
+* `/` the so-called _root guardian_. This is the parent of all actors in the
    system, and the last one to stop when the system itself is terminated.
- - `/user` the _user guardian_. **This is the parent actor for all user created
+* `/user` the _user guardian_. **This is the parent actor for all user created
    actors**. The name `user` should not confuse you, it has nothing to do with
    the logged in user, nor user handling in general. This name really means
    _userspace_ as this is the place where actors that do not access Akka.NET
    internals live, i.e. all the actors created by users of the Akka.NET library.
    Every actor you will create will have the constant path `/user/` prepended to
    it.
- - `/system` the _system guardian_.
+* `/system` the _system guardian_.
 
 The names of these built-in actors contain _guardian_ because these are
 _supervising_ every actor living as a child of them, i.e. under their path. We
@@ -118,7 +118,7 @@ counterpart. This is how it looks like in practice:
 
 We see that the following two lines are printed
 
-```
+```text
 First : Actor[akka://testSystem/user/first-actor#1053618476]
 Second: Actor[akka://testSystem/user/first-actor/second-actor#-1544706041]
 ```
@@ -131,9 +131,9 @@ name (if remote communication between multiple systems is enabled this name is
 the hostname of the system so other systems can find it on the network). Our two
 actors, as we have discussed before, live under user, and form a hierarchy:
 
- * `akka://testSystem/user/first-actor` is the first actor we created, which
+* `akka://testSystem/user/first-actor` is the first actor we created, which
    lives directly under the user guardian, `/user`
- * `akka://testSystem/user/first-actor/second-actor` is the second actor we
+* `akka://testSystem/user/first-actor/second-actor` is the second actor we
    created, using `Context.ActorOf`. As we see it lives directly under the first
    actor.
 
@@ -168,9 +168,9 @@ its job.
 The actor API exposes many lifecycle hooks that the actor implementation can
 override. The most commonly used are `PreStart()` and `PostStop()`.
 
- * `PreStart()` is invoked after the actor has started but before it processes
+* `PreStart()` is invoked after the actor has started but before it processes
    its first message.
- * `PostStop()` is invoked just before the actor stops. No messages are
+* `PostStop()` is invoked just before the actor stops. No messages are
    processed after this point.
 
 Again, we can try out all this with a simple experiment:
@@ -180,7 +180,7 @@ Again, we can try out all this with a simple experiment:
 
 After running it, we get the output
 
-```
+```text
 first started
 second started
 second stopped
@@ -211,7 +211,7 @@ the default strategy in this simple experiment:
 
 After running the snippet, we see the following output on the console:
 
-```
+```text
 supervised actor started
 supervised actor fails now
 supervised actor stopped
@@ -250,10 +250,10 @@ to rewrite our architecture diagram that contained nested boxes into a tree:
 
 ![actor tree diagram of the architecture](/images/arch_tree_diagram.png)
 
-In simple terms, every component manages the lifecycle of the subcomponents. No
-subcomponent can outlive the parent component. This is exactly how the actor
+In simple terms, every component manages the lifecycle of the sub-components. No
+sub-component can outlive the parent component. This is exactly how the actor
 hierarchy works. Furthermore, it is desirable that a component handles the
-failure of its subcomponents. Together, these two desirable properties lead to
+failure of its sub-components. Together, these two desirable properties lead to
 the conclusion that the "contained-in" relationship of components should be
 mapped to the "children-of" relationship of actors.
 
@@ -268,7 +268,7 @@ The first actor happens to be rather simple now, as we have not implemented any
 of the components yet. What is new is that we have dropped using
 `Console.WriteLine()` and instead use `ILoggingAdapter` which allows us to use
 the logging facility built into Akka.NET directly. Furthermore, we are using a
-recommended creational pattern for actors; define a static `Props()` method in
+recommended pattern for creating actors; define a static `Props()` method in
 the the actor:
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tutorials/Tutorial1/IotSupervisor.cs?name=iot-supervisor)]

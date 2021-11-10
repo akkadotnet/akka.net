@@ -24,9 +24,8 @@ namespace Akka.Discovery.Config
         public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup lookup, System.TimeSpan resolveTimeout) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public class ConfigServicesParser
+    public class static ConfigServicesParser
     {
-        public ConfigServicesParser() { }
         public static System.Collections.Generic.Dictionary<string, Akka.Discovery.ServiceDiscovery.Resolved> Parse(Akka.Configuration.Config config) { }
     }
 }
@@ -68,6 +67,7 @@ namespace Akka.Discovery
         public System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(string serviceName, System.TimeSpan resolveTimeout) { }
         public class Resolved : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, System.IEquatable<Akka.Discovery.ServiceDiscovery.Resolved>
         {
+            public Resolved(string serviceName) { }
             public Resolved(string serviceName, System.Collections.Generic.IEnumerable<Akka.Discovery.ServiceDiscovery.ResolvedTarget> addresses) { }
             public System.Collections.Immutable.ImmutableList<Akka.Discovery.ServiceDiscovery.ResolvedTarget> Addresses { get; }
             public string ServiceName { get; }
