@@ -1,3 +1,6 @@
+#### 1.4.29 November 10 2021 ####
+**Placeholder for nightlies**
+
 #### 1.4.28 November 10 2021 ####
 **Maintenance Release for Akka.NET 1.4**
 Akka.NET v1.4.28 is a minor release that contains some enhancements for Akka.Streams and some bug fixes.
