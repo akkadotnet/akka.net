@@ -6,10 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -68,8 +70,9 @@ namespace Akka.Tests.Actor
             _task.PipeTo(TestActor, success: x => "Hello " + x);
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
             _taskCompletionSource.SetResult("World");
-            ExpectMsg("Hello");
-            ExpectMsg("Hello World");
+            var pipeTo = ReceiveN(2).Cast<string>().ToList();
+            pipeTo.Should().Contain("Hello");
+            pipeTo.Should().Contain("Hello World");
         }
 
         [Fact]
