@@ -36,6 +36,8 @@ namespace Akka.NodeTestRunner
 
         static int Main(string[] args)
         {
+            CommandLine.Initialize(args);
+            
             var nodeIndex = CommandLine.GetInt32("multinode.index");
             var nodeRole = CommandLine.GetProperty("multinode.role");
             var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");
@@ -64,85 +66,93 @@ namespace Akka.NodeTestRunner
 #endif
 
             Thread.Sleep(TimeSpan.FromSeconds(10));
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))
+            Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, "1");
+            try
             {
-                /* need to pass in just the assembly name to Discovery, not the full path
-                 * i.e. "Akka.Cluster.Tests.MultiNode.dll"
-                 * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
-                 * the Discovery class to actually not find any individual specs to run
-                 */
-                var assemblyName = Path.GetFileName(assemblyFileName);
-                Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);
-                using (var discovery = new Discovery(assemblyName, typeName))
+                using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))
                 {
-                    using (var sink = new Sink(nodeIndex, nodeRole, tcpClient))
+                    /* need to pass in just the assembly name to Discovery, not the full path
+                     * i.e. "Akka.Cluster.Tests.MultiNode.dll"
+                     * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
+                     * the Discovery class to actually not find any individual specs to run
+                     */
+                    var assemblyName = Path.GetFileName(assemblyFileName);
+                    Console.WriteLine("Running specs for {0} [{1}]", assemblyName, assemblyFileName);
+                    using (var discovery = new Discovery(assemblyName, typeName))
                     {
-                        try
+                        using (var sink = new Sink(nodeIndex, nodeRole, tcpClient))
                         {
-                            controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
-                            discovery.Finished.WaitOne();
-                            controller.RunTests(discovery.TestCases, sink, TestFrameworkOptions.ForExecution());
-                        }
-                        catch (AggregateException ex)
-                        {
-                            var specFail = new SpecFail(nodeIndex, nodeRole, displayName);
-                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                            specFail.FailureMessages.Add(ex.Message);
-                            specFail.FailureStackTraces.Add(ex.StackTrace);
-                            foreach (var innerEx in ex.Flatten().InnerExceptions)
+                            try
                             {
-                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
-                                specFail.FailureMessages.Add(innerEx.Message);
-                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                                controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
+                                discovery.Finished.WaitOne();
+                                controller.RunTests(discovery.TestCases, sink, TestFrameworkOptions.ForExecution());
                             }
-                            _logger.Tell(specFail.ToString());
-                            Console.WriteLine(specFail);
-
-                            //make sure message is send over the wire
-                            FlushLogMessages();
-                            Environment.Exit(1); //signal failure
-                            return 1;
-                        }
-                        catch (Exception ex)
-                        {
-                            var specFail = new SpecFail(nodeIndex, nodeRole, displayName);
-                            specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
-                            specFail.FailureMessages.Add(ex.Message);
-                            specFail.FailureStackTraces.Add(ex.StackTrace);
-                            var innerEx = ex.InnerException;
-                            while (innerEx != null)
+                            catch (AggregateException ex)
                             {
-                                specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
-                                specFail.FailureMessages.Add(innerEx.Message);
-                                specFail.FailureStackTraces.Add(innerEx.StackTrace);
-                                innerEx = innerEx.InnerException;
+                                var specFail = new SpecFail(nodeIndex, nodeRole, displayName);
+                                specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                                specFail.FailureMessages.Add(ex.Message);
+                                specFail.FailureStackTraces.Add(ex.StackTrace);
+                                foreach (var innerEx in ex.Flatten().InnerExceptions)
+                                {
+                                    specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
+                                    specFail.FailureMessages.Add(innerEx.Message);
+                                    specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                                }
+                                _logger.Tell(specFail.ToString());
+                                Console.WriteLine(specFail);
+
+                                //make sure message is send over the wire
+                                FlushLogMessages();
+                                Environment.Exit(1); //signal failure
+                                return 1;
                             }
-                            _logger.Tell(specFail.ToString());
-                            Console.WriteLine(specFail);
+                            catch (Exception ex)
+                            {
+                                var specFail = new SpecFail(nodeIndex, nodeRole, displayName);
+                                specFail.FailureExceptionTypes.Add(ex.GetType().ToString());
+                                specFail.FailureMessages.Add(ex.Message);
+                                specFail.FailureStackTraces.Add(ex.StackTrace);
+                                var innerEx = ex.InnerException;
+                                while (innerEx != null)
+                                {
+                                    specFail.FailureExceptionTypes.Add(innerEx.GetType().ToString());
+                                    specFail.FailureMessages.Add(innerEx.Message);
+                                    specFail.FailureStackTraces.Add(innerEx.StackTrace);
+                                    innerEx = innerEx.InnerException;
+                                }
+                                _logger.Tell(specFail.ToString());
+                                Console.WriteLine(specFail);
 
-                            //make sure message is send over the wire
+                                //make sure message is send over the wire
+                                FlushLogMessages();
+                                Environment.Exit(1); //signal failure
+                                return 1;
+                            }
+
+                            var timedOut = false;
+                            if (!sink.Finished.WaitOne(MaxProcessWaitTimeout)) //timed out
+                            {
+                                var line = string.Format("Timed out while waiting for test to complete after {0} ms",
+                                    MaxProcessWaitTimeout);
+                                _logger.Tell(line);
+                                Console.WriteLine(line);
+                                timedOut = true;
+                            }
+
                             FlushLogMessages();
-                            Environment.Exit(1); //signal failure
-                            return 1;
+                            system.Terminate().Wait();
+
+                            Environment.Exit(sink.Passed && !timedOut ? 0 : 1);
+                            return sink.Passed ? 0 : 1;
                         }
-
-                        var timedOut = false;
-                        if (!sink.Finished.WaitOne(MaxProcessWaitTimeout)) //timed out
-                        {
-                            var line = string.Format("Timed out while waiting for test to complete after {0} ms",
-                                MaxProcessWaitTimeout);
-                            _logger.Tell(line);
-                            Console.WriteLine(line);
-                            timedOut = true;
-                        }
-
-                        FlushLogMessages();
-                        system.Terminate().Wait();
-
-                        Environment.Exit(sink.Passed && !timedOut ? 0 : 1);
-                        return sink.Passed ? 0 : 1;
                     }
                 }
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, null);
             }
         }
 

@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -19,11 +20,17 @@ namespace Akka.Discovery.Tests
     public class DiscoveryConfigurationSpec : TestKit.Xunit2.TestKit
     {
         [Fact]
-        public void ServiceDiscovery_should_throw_when_no_default_discovery_configured()
+        public void ServiceDiscovery_should_give_warning_when_no_default_discovery_configured()
         {
-            using var sys = ActorSystem.Create("DiscoveryConfigurationSpec");
-            var ex = Assert.Throws<ArgumentException>(() => _ = Discovery.Get(sys).Default);
-            ex.Message.Should().Contain("No default service discovery implementation configured");
+            using var sys = ActorSystem.Create(nameof(DiscoveryConfigurationSpec), DefaultConfig);
+            var probe = CreateTestProbe(sys);
+            sys.EventStream.Subscribe(probe.Ref, typeof(Warning));
+            var discovery = Discovery.Get(sys).Default;
+            AwaitAssert(() =>
+            {
+                probe.ExpectMsg<Warning>().Message.ToString().Should()
+                    .StartWith("No default service discovery implementation configured in `akka.discovery.method`.");
+            });
         }
 
         [Fact]

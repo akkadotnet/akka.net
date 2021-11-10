@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Akka.Remote.Serialization;
@@ -14,21 +16,54 @@ using Xunit;
 
 namespace Akka.Remote.Tests.Serialization
 {
+    sealed class FastHashTestComparer : IEqualityComparer<string>
+    {
+        private readonly string _hashSeed;
+
+        public FastHashTestComparer(string hashSeed = "")
+        {
+            _hashSeed = hashSeed;
+        }
+
+        public bool Equals(string x, string y)
+        {
+            return StringComparer.Ordinal.Equals(x, y);
+        }
+
+        public int GetHashCode(string k)
+        {
+            return  FastHash.OfStringFast(_hashSeed != string.Empty 
+                        ? _hashSeed + k + _hashSeed : k);
+        }
+    }
+
+    sealed class BrokenTestComparer : IEqualityComparer<string>
+    {
+        public bool Equals(string x, string y)
+        {
+            return StringComparer.Ordinal.Equals(x, y);
+        }
+
+        public int GetHashCode(string k)
+        {
+            return 0;
+        }
+    }
+
     public class LruBoundedCacheSpec
     {
         private class TestCache : LruBoundedCache<string, string> {
-            public TestCache(int capacity, int evictAgeThreshold, string hashSeed = "") : base(capacity, evictAgeThreshold)
+            public TestCache(int capacity, int evictAgeThreshold, IEqualityComparer<string> comparer) 
+                : base(capacity, evictAgeThreshold, comparer)
             {
-                _hashSeed = hashSeed;
             }
 
-            private readonly string _hashSeed;
+            public TestCache(int capacity, int evictAgeThreshold, string hashSeed = "")
+                : base(capacity, evictAgeThreshold, new FastHashTestComparer(hashSeed))
+            {
+            }
+
             private int _cntr = 0;
-
-            protected override int Hash(string k)
-            {
-                return FastHash.OfStringFast(_hashSeed + k + _hashSeed);
-            }
 
             protected override string Compute(string k)
             {
@@ -71,20 +106,17 @@ namespace Akka.Remote.Tests.Serialization
 
         private sealed class BrokenHashFunctionTestCache : TestCache
         {
-            public BrokenHashFunctionTestCache(int capacity, int evictAgeThreshold, string hashSeed = "") : base(capacity, evictAgeThreshold, hashSeed)
+            public BrokenHashFunctionTestCache(int capacity, int evictAgeThreshold) : 
+                base(capacity, evictAgeThreshold, new BrokenTestComparer())
             {
             }
 
-            protected override int Hash(string k)
-            {
-                return 0;
-            }
         }
 
         [Fact]
         public void LruBoundedCache_must_work_in_the_happy_case()
         {
-            var cache = new TestCache(4,4);
+            var cache = new TestCache(4, 4);
 
             cache.ExpectComputed("A", "A:0");
             cache.ExpectComputed("B", "B:1");
@@ -95,6 +127,19 @@ namespace Akka.Remote.Tests.Serialization
             cache.ExpectCached("B", "B:1");
             cache.ExpectCached("C", "C:2");
             cache.ExpectCached("D", "D:3");
+        }
+
+        [Fact]
+        public void LruBoundedCache_must_handle_explict_set()
+        {
+            var cache = new TestCache(4, 4);
+
+            cache.ExpectComputed("A", "A:0");
+            cache.TrySet("A", "A:1").Should().Be(true);
+            cache.Get("A").Should().Be("A:1");
+
+            cache.TrySet("B", "B:X").Should().Be(true);
+            cache.Get("B").Should().Be("B:X");
         }
 
         [Fact]
@@ -237,6 +282,8 @@ namespace Akka.Remote.Tests.Serialization
             cache.ExpectCached("C", "C:6");
             cache.ExpectCached("D", "D:7");
             cache.ExpectCached("E", "E:8");
+
+            cache.TrySet("#X", "#X:13").Should().BeFalse();
         }
 
         [Fact]

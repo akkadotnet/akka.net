@@ -806,7 +806,7 @@ namespace Akka.Streams.Implementation
             }
 
             public override void PostStop() => 
-                StopCallback(promise => promise.SetException(StreamDetachedException.Instance));
+                StopCallback(promise => promise.SetException(new StreamDetachedException()));
 
             private Action<TaskCompletionSource<Option<T>>> Callback()
             {

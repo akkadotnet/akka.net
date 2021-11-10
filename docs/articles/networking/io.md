@@ -7,6 +7,7 @@ title: I/O
 The I/O extension provides an non-blocking, event driven API that matches the underlying transports mechanism.
 
 ## Getting Started
+
 Every I/O Driver has a special actor, called the `manager`, that serves as an entry point for the API.
 The `manager` for a particular driver is accessible through an extension method on `ActorSystem`. The following example shows how to get a reference to the TCP manager.
 

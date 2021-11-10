@@ -167,7 +167,7 @@ namespace Akka.Streams.Implementation
 
             public override void PostStop()
             {
-                var exception = StreamDetachedException.Instance;
+                var exception = new StreamDetachedException();
                 _completion.TrySetException(exception);
                 StopCallback(input =>
                 {

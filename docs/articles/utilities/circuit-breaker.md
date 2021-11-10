@@ -5,6 +5,7 @@ title: Circuit Breaker
 # Circuit Breaker
 
 ## Why are they used?
+
 A circuit breaker is used to provide stability and prevent cascading failures in distributed systems. These should be used in conjunction with judicious timeouts at the interfaces between remote systems to prevent the failure of a single component from bringing down all components.
 
 As an example, we have a web application interacting with a remote third party web service. Let's say the third party has oversold their capacity and their database melts down under load. Assume that the database fails in such a way that it takes a very long time to hand back an error to the third party web service. This in turn makes calls fail after a long period of time. Back to our web application, the users have noticed that their form submissions take much longer seeming to hang. Well the users do what they know to do which is use the refresh button, adding more requests to their already running requests. This eventually causes the failure of the web application due to resource exhaustion. This will affect all users, even those who are not using functionality dependent on this third party web service.
@@ -38,9 +39,10 @@ The Akka.NET library provides an implementation of a circuit breaker called `Akk
 ### Initialization
 
 Here's how a `CircuitBreaker` would be configured for:
-  * 5 maximum failures
-  * a call timeout of 10 seconds
-  * a reset timeout of 1 minute
+
+* 5 maximum failures
+* a call timeout of 10 seconds
+* a reset timeout of 1 minute
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
 
