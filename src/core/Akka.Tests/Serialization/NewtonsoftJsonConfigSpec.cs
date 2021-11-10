@@ -26,9 +26,12 @@ namespace Akka.Tests.Serialization
                 var serializer = (NewtonSoftJsonSerializer)system.Serialization.FindSerializerForType(typeof(object));
                 Assert.Equal(TypeNameHandling.All, serializer.Settings.TypeNameHandling);
                 Assert.Equal(PreserveReferencesHandling.Objects, serializer.Settings.PreserveReferencesHandling);
-                Assert.Equal(2, serializer.Settings.Converters.Count);
+                Assert.Equal(5, serializer.Settings.Converters.Count);
                 Assert.Contains(serializer.Settings.Converters, x => x is DiscriminatedUnionConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.DelegatedObjectConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogateConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogatedConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.PrimitiveNumberConverter);
             }
         }
 
@@ -48,9 +51,12 @@ namespace Akka.Tests.Serialization
                 var serializer = (NewtonSoftJsonSerializer)system.Serialization.FindSerializerForType(typeof(object));
                 Assert.Equal(TypeNameHandling.None, serializer.Settings.TypeNameHandling);
                 Assert.Equal(PreserveReferencesHandling.None, serializer.Settings.PreserveReferencesHandling);
-                Assert.Equal(2, serializer.Settings.Converters.Count);
+                Assert.Equal(5, serializer.Settings.Converters.Count);
                 Assert.Contains(serializer.Settings.Converters, x => x is DiscriminatedUnionConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.DelegatedObjectConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogateConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogatedConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.PrimitiveNumberConverter);
             }
         }
 
@@ -72,9 +78,12 @@ namespace Akka.Tests.Serialization
                 var serializer = (NewtonSoftJsonSerializer)system.Serialization.FindSerializerForType(typeof(object));
                 Assert.Equal(TypeNameHandling.All, serializer.Settings.TypeNameHandling);
                 Assert.Equal(PreserveReferencesHandling.Objects, serializer.Settings.PreserveReferencesHandling);
-                Assert.Equal(4, serializer.Settings.Converters.Count);
+                Assert.Equal(7, serializer.Settings.Converters.Count);
                 Assert.Contains(serializer.Settings.Converters, x => x is DiscriminatedUnionConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.DelegatedObjectConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogateConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.SurrogatedConverter);
+                Assert.Contains(serializer.Settings.Converters, x => x is NewtonSoftJsonSerializer.PrimitiveNumberConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is DummyConverter);
                 Assert.Contains(serializer.Settings.Converters, x => x is DummyConverter2);
             }
@@ -103,7 +112,7 @@ namespace Akka.Tests.Serialization
     {
         public DummyConverter2(ExtendedActorSystem system)
         {
-            if (system == null) 
+            if (system == null)
                 throw new ArgumentNullException(nameof(system));
         }
 
