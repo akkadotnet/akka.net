@@ -167,7 +167,6 @@ You can get the current state of the `Cluster` two times:
 1. On initial subscription
 2. On demand
 
-
 ### Getting Cluster State on Initial Subscription
 
 If you use [this overload of `Cluster.Subscribe`](https://github.com/akkadotnet/akka.net/blob/928ff2b3b23457ea1e4e1d9f0819fca945506a1b/src/core/Akka.Cluster/Cluster.cs#L131), you will get the state of the cluster right after subscribing to the event of your choice. Once you receive the initial state, you will not automatically be sent full state events going forward (see on-demand section below).
@@ -207,4 +206,4 @@ Cluster.SendCurrentClusterState (Self);
 
 ## Additional Resources
 
-- [`SimpleClusterListener` example](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/Cluster/Samples.Cluster.Simple/SimpleClusterListener.cs)
+* [`SimpleClusterListener` example](https://github.com/akkadotnet/akka.net/blob/dev/src/examples/Cluster/Samples.Cluster.Simple/SimpleClusterListener.cs)

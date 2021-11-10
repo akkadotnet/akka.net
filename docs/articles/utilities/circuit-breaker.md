@@ -39,9 +39,10 @@ The Akka.NET library provides an implementation of a circuit breaker called `Akk
 ### Initialization
 
 Here's how a `CircuitBreaker` would be configured for:
-  * 5 maximum failures
-  * a call timeout of 10 seconds
-  * a reset timeout of 1 minute
+
+* 5 maximum failures
+* a call timeout of 10 seconds
+* a reset timeout of 1 minute
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Utilities/CircuitBreakerDocSpec.cs?name=circuit-breaker-usage)]
 

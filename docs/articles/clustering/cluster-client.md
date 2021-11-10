@@ -11,11 +11,13 @@ An actor system that is not part of the cluster can communicate with actors some
 
 Also, note it's necessary to change akka.actor.provider from `Akka.Actor.LocalActorRefProvider` to `Akka.Remote.RemoteActorRefProvider` or `Akka.Cluster.ClusterActorRefProvider` when using the cluster client.
 
-```
+```hocon
   akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
 ```
+
   or this shorthand notation
-```
+
+```hocon
   akka.actor.provider = cluster
 ```
 
@@ -27,17 +29,9 @@ Both the `ClusterClient` and the `ClusterClientReceptionist` emit events that ca
 
 The `ClusterClientReceptionist` sends out notifications in relation to having received contact from a `ClusterClient`. This notification enables the server containing the receptionist to become aware of what clients are connected.
 
-**1. ClusterClient.Send**
-
-The message will be delivered to one recipient with a matching path, if any such exists. If several entries match the path the message will be delivered to one random destination. The `Sender` of the message can specify that local affinity is preferred, i.e. the message is sent to an actor in the same local actor system as the used receptionist actor, if any such exists, otherwise random to any other matching entry.
-
-**2. ClusterClient.SendToAll**
-
-The message will be delivered to all recipients with a matching path.
-
-**3. ClusterClient.Publish**
-
-The message will be delivered to all recipients Actors that have been registered as subscribers to the named topic.
+1. `ClusterClient.Send`: The message will be delivered to one recipient with a matching path, if any such exists. If several entries match the path the message will be delivered to one random destination. The `Sender` of the message can specify that local affinity is preferred, i.e. the message is sent to an actor in the same local actor system as the used receptionist actor, if any such exists, otherwise random to any other matching entry.
+1. `ClusterClient.SendToAll`: The message will be delivered to all recipients with a matching path.
+1. `ClusterClient.Publish`: The message will be delivered to all recipients Actors that have been registered as subscribers to the named topic.
 
 Response messages from the destination actor are tunneled via the receptionist to avoid inbound connections from other cluster nodes to the client, i.e. the `Sender`, as seen by the destination actor, is not the client itself. The `Sender` of the response messages, as seen by the client, is deadLetters since the client should normally send subsequent messages via the `ClusterClient`. It is possible to pass the original sender inside the reply messages if the client is supposed to communicate directly to the actor in the cluster.
 
@@ -80,6 +74,7 @@ RunOn(() =>
     c.Tell(new Client.ClusterClient.SendToAll("/user/serviceB", "hi"));
 }, client);
 ```
+
 The `initialContacts` parameter is a `IEnumerable<ActorPath>`, which can be created like this:
 
 ```csharp
@@ -122,10 +117,7 @@ The `ClusterClientReceptionist` extension (or `ClusterReceptionistSettings`) can
 
 [!code-json[ConfigReference](../../../src/contrib/cluster/Akka.Cluster.Tools/Client/reference.conf)]
 
-
-
 The 'akka.cluster.client' configuration properties are read by the `ClusterClientSettings` when created with a `ActorSystem` parameter. It is also possible to amend the `ClusterClientSettings` or create it from another config section with the same layout in the reference config. `ClusterClientSettings` is a parameter to the `ClusterClient.Props()` factory method, i.e. each client can be configured with different settings if needed.
-
 
 ## Failure handling
 

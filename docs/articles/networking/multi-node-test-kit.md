@@ -31,7 +31,7 @@ public class JoinInProgressMultiNodeConfig : MultiNodeConfig
         Second = Role("second");
 
         CommonConfig = MultiNodeLoggingConfig.LoggingConfig.WithFallback(DebugConfig(true))
-			.WithFallback(ConfigurationFactory.ParseString(@"
+            .WithFallback(ConfigurationFactory.ParseString(@"
                 akka.stdout-loglevel = DEBUG
                 akka.cluster {
                     # simulate delay in gossip by turning it off
@@ -276,7 +276,6 @@ public void ConvergenceSpecTests()
 ```
 
 This unfortunate design is a byproduct of Xunit and how it recreates the entire test class on each method.
-
 
 ### Running MultiNode Specs
 

@@ -7,7 +7,9 @@ title: Supervision
 
 This document outlines the concept behind supervision and what that means for your Akka.NET actors at run-time.
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/CC2XdYlpmvo" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 ## What Supervision Means
 
@@ -85,6 +87,7 @@ Provided as a built-in pattern the `Akka.Pattern.BackoffSupervisor` implements t
 This pattern is useful when the started actor fails because some external resource is not available, and we need to give it some time to start-up again. One of the prime examples when this is useful is when a `UntypedPersistentActor` fails (by stopping) with a persistence failure - which indicates that the database may be down or overloaded, in such situations it makes most sense to give it a little bit of time to recover before the persistent actor is started.
 
 The following C# snippet shows how to create a backoff supervisor which will start the given echo actor after it has stopped because of a failure, in increasing intervals of 3, 6, 12, 24 and finally 30 seconds:
+
 ```csharp
 var childProps = Props.Create<EchoActor>();
 
@@ -104,6 +107,7 @@ Using a `randomFactor` to add a little bit of additional variance to the backoff
 The `Akka.Pattern.BackoffSupervisor` actor can also be configured to restart the actor after a delay when the actor crashes and the supervision strategy decides that it should restart.
 
 The following C# snippet shows how to create a backoff supervisor which will start the given echo actor after it has crashed because of some exception, in increasing intervals of 3, 6, 12, 24 and finally 30 seconds:
+
 ```csharp
 var childProps = Props.Create<EchoActor>();
 

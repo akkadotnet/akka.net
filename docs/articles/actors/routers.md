@@ -19,7 +19,7 @@ Akka.NET comes with several useful routers you can choose right out of the box, 
 
 Routers can be deployed in multiple ways, using code or configuration.
 
-#### Code deployment
+### Code deployment
 
 The example below shows how to deploy 5 workers using a round robin router:
 
@@ -35,7 +35,7 @@ The above code can also be written as:
 var props = new RoundRobinPool(5).Props(Props.Create<Worker>());
 ```
 
-#### Configuration deployment
+### Configuration deployment
 
 The same router may be defined using a [HOCON deployment configuration](xref:configuration).
 
@@ -49,6 +49,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var props = Props.Create<Worker>().WithRouter(FromConfig.Instance);
 var actor = system.ActorOf(props, "workers");
@@ -64,6 +65,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var props = Props.Create<Worker>().WithRouter(FromConfig.Instance);
 var actor = system.ActorOf(props, "workers");
@@ -86,7 +88,7 @@ There are two types of routers:
 > [!NOTE]
 > Most routing strategies listed below are available in both types. Some of them may be available only in one type due to implementation requirements.
 
-#### Supervision
+### Supervision
 
 Routers are implemented as actors, so a router is supervised by it's parent, and they may supervise children.
 
@@ -118,6 +120,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -138,6 +141,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -167,6 +171,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -187,6 +192,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -214,6 +220,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -234,6 +241,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -266,6 +274,7 @@ By using a `ConsistentHash` router we can now process multiple commands in paral
 There are 3 ways to define what data to use for the consistent hash key.
 
 1. You can define a *hash mapping delegate* using the `WithHashMapper` method of the router to map incoming messages to their consistent hash key. This makes the decision transparent for the sender.
+
 ```cs
   new ConsistentHashingPool(5).WithHashMapping(o =>
   {
@@ -276,7 +285,8 @@ There are 3 ways to define what data to use for the consistent hash key.
   });
 ```
 
-2. The messages may implement `IConsistentHashable`. The key is part of the message and it's convenient to define it together with the message definition.
+1. The messages may implement `IConsistentHashable`. The key is part of the message and it's convenient to define it together with the message definition.
+
 ```cs
   public class SomeMessage : IConsistentHashable
   {
@@ -285,7 +295,8 @@ There are 3 ways to define what data to use for the consistent hash key.
   }
 ```
 
-3. The messages can be wrapped in a `ConsistentHashableEnvelope` to define what data to use for the consistent hash key. The sender knows the key to use.
+1. The messages can be wrapped in a `ConsistentHashableEnvelope` to define what data to use for the consistent hash key. The sender knows the key to use.
+
 ```cs
   public class SomeMessage
   {
@@ -311,6 +322,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -332,6 +344,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -344,8 +357,9 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ConsistentHashingGroup(wo
 ```
 
 > [!NOTE]
+>
 > 1. `virtual-nodes-factor` is the number of virtual nodes per routee that is used in the consistent hash node ring - if not defined, the default value is 10 and you shouldn't need to change it unless you understand how the algorithm works and know what you are doing.
-> 2. It is possible to define this value in code using the `WithVirtualFactor(...)` method of the ConsistentHashingPool/Group object.
+> 1. It is possible to define this value in code using the `WithVirtualFactor(...)` method of the ConsistentHashingPool/Group object.
 
 ### TailChopping
 
@@ -369,6 +383,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -393,6 +408,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -407,6 +423,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new TailChoppingGroup(workers
 ```
 
 > [!NOTE]
+>
 > 1. `within` is the time to wait for a reply from any routee before timing out
 > 2. `tail-chopping-router.interval` is the interval between requests to the other routees
 
@@ -431,6 +448,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -453,6 +471,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Empty.WithRouter(FromConfig.Instance), "some-group");
 ```
@@ -466,6 +485,7 @@ var router = system.ActorOf(Props.Empty.WithRouter(new ScatterGatherFirstComplet
 ```
 
 > [!NOTE]
+>
 > 1. `within` is the time to wait for a reply from any routee before timing out
 
 ### SmallestMailbox
@@ -490,6 +510,7 @@ akka.actor.deployment {
   }
 }
 ```
+
 ```cs
 var router = system.ActorOf(Props.Create<Worker>().WithRouter(FromConfig.Instance), "some-pool");
 ```
@@ -524,6 +545,7 @@ You can also set a resizer in code when creating a router.
 ```cs
 new RoundRobinPool(5, new DefaultResizer(1, 10))
 ```
+
 These are settings you usually change in the resizer:
 
 * `enabled` - Turns on or off the resizer. The default is `off`.
@@ -536,9 +558,9 @@ The default resizer works by checking the pool size every X messages, and decidi
 * `rampup-rate` - Percentage to increase the pool size. The default is `0.2`, meaning it will increase the pool size in 20% when resizing.
 * `backoff-rate` - Percentage to decrease the pool size. The default is `0.1`, meaning it will decrease the pool size in 10% when resizing.
 * `pressure-threshold` - A threshold used to decide if the pool should be increased. The default is `1`, meaning it will decide to increase the pool if all routees are busy and have at least 1 message in the mailbox.
-    * `0` - the routee is busy and have no messages in the mailbox
-    * `1` - the routee is busy and have at least 1 message waiting in the mailbox
-    * `N` - the routee is busy and have N messages waiting in the mailbox (where N > 1)
+  * `0` - the routee is busy and have no messages in the mailbox
+  * `1` - the routee is busy and have at least 1 message waiting in the mailbox
+  * `N` - the routee is busy and have N messages waiting in the mailbox (where N > 1)
 * `backoff-threshold` - A threshold used to decide if the pool should be decreased. The default is `0.3`, meaning it will decide to decrease the pool if less than 30% of the routers are busy.
 
 ## Specially Handled Messages
@@ -578,7 +600,7 @@ For a router, which normally passes on messages to routees, the `PoisonPill` mes
 
 However, a `PoisonPill` message sent to a router may still affect its routees, as it will stop the router which in turns stop children the router has created. Each child will process its current message and then stop. This could lead to some messages being unprocessed.
 
-If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message. 
+If you wish to stop a router and its routees, but you would like the routees to first process all the messages in their mailboxes, then you should send a `PoisonPill` message wrapped inside a `Broadcast` message so that each routee will receive the `PoisonPill` message.
 
 > [!NOTE]
 > The above method will stop all routees, even if they are not created by the router. E.g. routees programmatically provided to the router.
@@ -607,14 +629,14 @@ As with the `PoisonPill` message, there is a distinction between killing a route
 
 See [Noisy on Purpose: Kill the Actor](xref:receive-actor-api#killing-an-actor) for more details on how `Kill` message works.
 
-### Management Messages 
+### Management Messages
 
 Sending one of the following messages to a router can be used to manage its routees.
 
-- `Akka.Routing.GetRoutees` The router actor will respond with a `Akka.Routing.Routees` message, which contains a list of currently used routees.
-- `Akka.Routing.AddRoutee` The router actor will add the provided to its collection of routees.
-- `Akka.Routing.RemoveRoutee` The router actor will remove the provided routee to its collection of routees.
-- `Akka.Routing.AdjustPoolSize` The pool router actor will add or remove that number of routees to its collection of routees.
+* `Akka.Routing.GetRoutees` The router actor will respond with a `Akka.Routing.Routees` message, which contains a list of currently used routees.
+* `Akka.Routing.AddRoutee` The router actor will add the provided to its collection of routees.
+* `Akka.Routing.RemoveRoutee` The router actor will remove the provided routee to its collection of routees.
+* `Akka.Routing.AdjustPoolSize` The pool router actor will add or remove that number of routees to its collection of routees.
 
 ## Advanced
 

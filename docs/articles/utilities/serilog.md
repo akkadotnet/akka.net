@@ -10,7 +10,7 @@ title: Serilog
 Install the package __Akka.Logger.Serilog__ via nuget to utilize
 [Serilog](https://serilog.net/), this will also install the required Serilog package dependencies.
 
-```
+```console
 PM> Install-Package Akka.Logger.Serilog
 ```
 
@@ -18,17 +18,18 @@ PM> Install-Package Akka.Logger.Serilog
 
 The following example uses Serilog's __Console__ sink available via nuget, there are wide range of other sinks available depending on your needs, for example a rolling log file sink.  See serilog's documentation for details on these.
 
-```
+```console
 PM> Install-Package Serilog.Sinks.Console
 ```
 
 Next, you'll need to configure the global `Log.Logger` and also specify to use
 the logger in the config when creating the system, for example like this:
+
 ```csharp
 var logger = new LoggerConfiguration()
-	.WriteTo.Console()
-	.MinimumLevel.Information()
-	.CreateLogger();
+    .WriteTo.Console()
+    .MinimumLevel.Information()
+    .CreateLogger();
 
 Serilog.Log.Logger = logger;
 
@@ -39,6 +40,7 @@ var system = ActorSystem.Create("my-test-system", "akka { loglevel=INFO,  logger
 
 To log inside an actor, using the normal `string.Format()` syntax, get the
 logger and log:
+
 ```csharp
 var log = Context.GetLogger();
 ...
@@ -46,6 +48,7 @@ log.Info("The value is {0}", counter);
 ```
 
 Or alternatively
+
 ```csharp
 var log = Context.GetLogger();
 ...
@@ -70,14 +73,14 @@ private void ProcessMessage(string correlationId)
 }
 ```
 
-If the configured output template is, for example, `"[{CorrelationId}] {Message}{NewLine}"`, and the parameter `correlationId` is `"1234"` then the resulting log would contain the line `[1234] Processing message`. 
+If the configured output template is, for example, `"[{CorrelationId}] {Message}{NewLine}"`, and the parameter `correlationId` is `"1234"` then the resulting log would contain the line `[1234] Processing message`.
 
 ```csharp
 // configure sink with an output template
 var logger = new LoggerConfiguration()
-	.WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
-	.MinimumLevel.Information()
-	.CreateLogger();
+    .WriteTo.Console(outputTemplate: "[{CorrelationId}] {Message}{NewLine}")
+    .MinimumLevel.Information()
+    .CreateLogger();
 ```
 
 ## HOCON configuration

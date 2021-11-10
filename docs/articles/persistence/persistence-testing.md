@@ -7,14 +7,12 @@ title: Persistence Testing
 It is hard to make persistence work properly. You can rely on Akka. Persistence does, but its own code can be made reliable only by writing
 tests. For this sake, Akka.Net includes a specialized journal and snapshot store to aid in testing persistent actors.
 
-
 ## How to get started
 
 Go and install an additional NuGet package `Akka.Persistence.TestKit.Xunit2`. That package includes a specialized persistent
 journal named `TestJournal` and a snapshot store named `TestSnpashotStore` which will allow controlling behavior of all persistence
 operations to simulate network failures, serialization problems, and other issues. For convenience, the package includes `PersistenceTestKit`
 class to aid in writing unit tests for Akka.Net actor system. This class has a set of methods to alter different aspects of the journal and snapshot store.
-
 
 ## Persistence testing in action
 
@@ -110,7 +108,6 @@ protected override void OnRecover(object message)
 
 So now we are ready to write some tests.
 
-
 ### Writing tests
 
 The current implementation has one fundamental flaw - actor persist changes in fire-n-forget style, that is no reliable as
@@ -138,12 +135,9 @@ public class CounterActorTests : PersistenceTestKit
 
 When we will launch this test it will fail, because the persistence journal failed when we tried to tell `inc` command to the actor. The actor failed with the journal and `read` was never delivered anb we had not received any answer.
 
-
 ### How to make things better
 
-
 ## Reference
-
 
 `TestJournal`  is based on `MemoryJournal` and initially works like it. To change its behavior an interceptor must be set. Interceptor must implement the following interface:
 
@@ -167,6 +161,7 @@ public interface ISnapshotStoreInterceptor
 
 This is a specialized test kit with a pre-configured persistence plugin that uses `TestJournal` and `TestSnapshotStore` by default. This class provides the following methods to control journal behavior: `WithJournalRecovery` and `WithJournalWrite`; to control snapshot store it provides `WithSnapshotSave`, `WithSnapshotLoad` and `WithSnapshotDelete` methods;
 Usage example:
+
 ``` csharp
 public class PersistentActorSpec : PersistenceTestKit
 {
@@ -186,13 +181,13 @@ public class PersistentActorSpec : PersistenceTestKit
 ```
 
 Each method accepts 2 arguments:
+
 1. Behavior selector for operation under test;
-2. Actual code which must be tested when selected behavior is applied. 
+2. Actual code which must be tested when selected behavior is applied.
 
 After the test code block is executed, journal and snapshot store will be switched back to normal mode, when all operations are passed to default in-memory implementation.
 
 **Important!** All methods are `async`, this means that they **must** be awaited for proper execution.
-
 
 ### Built-in  journal behaviors
 
@@ -211,7 +206,6 @@ Out of the box, the package has the following behaviors:
 All methods have additional overload to add artificial delay - `*WithDelay`, i.e. `FailWithDelay`. This could be helpful to simulate network delay or retry of physical persistence operation within the journal.
 
 When all mentioned above behaviors are not enough, it is always possible to implement custom one by implementing the `IJournalInterceptor` interface. An instance of a custom interceptor can be set using the `SetInterceptorAsync` method.
-
 
 ### Built-in snapshot store behaviors
 

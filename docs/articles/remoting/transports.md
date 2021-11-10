@@ -19,12 +19,14 @@ Transports in Akka.Remote are abstractions on top of actual network transports, 
 > Most of the information below are things you, as an Akka.NET user, do not need to care about 99% of the time. Feel free to skip to the [Akka.Remote's Built-in Transports](#akkaremotes-built-in-transports) section.
 
 Transports **do not need to care** about:
+
 * **Serialization** - that's handled by Akka.NET itself;
 * **Connection-oriented behavior** - the association process inside Akka.Remote ensures this, even over connection-less transports like UDP;
 * **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor`](xref:at-least-once-delivery) class, part of Akka.Persistence;
 * **Handling network failures** - all a transport needs to do is forward that information back up to Akka.Remote.
 
 Transports **do need to care** about:
+
 * **IP addressing and ports** - all Akka.NET endpoints have to be resolved to a reachable IP address and port number;
 * **Message delivery** - getting bytes from point A to point B;
 * **Message framing** - distinguishing individual messages within a network stream;
@@ -160,7 +162,7 @@ This configuration allows the `ActorSystem`'s DotNetty TCP transport to listen o
 
 Why is this distinction important? Why do we care about registering an publicly accessible hostname with our `ActorSystem`? Because in the event that other systems need to connect or reconnect to this process, *they need to have a reachable address.*
 
-By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname. 
+By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname.
 
 ## Additional Resources
 

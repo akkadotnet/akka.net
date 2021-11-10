@@ -23,12 +23,13 @@ Next, we simply handle each incoming connection using a `Flow` which will be use
 
 Notice that while most building blocks in Akka Streams are reusable and freely shareable, this is not the case for the incoming connection Flow, since it directly corresponds to an existing, already accepted connection its handling can only ever be materialized once.
 
-Closing connections is possible by cancelling the incoming connection `Flow` from your server logic (e.g. by connecting its downstream to a `Sink.Cancelled` and its upstream to a `Source.Empty`). It is also possible `to shut down the server’s socket by cancelling the `IncomingConnection` source `connections`.
+Closing connections is possible by cancelling the incoming connection `Flow` from your server logic (e.g. by connecting its downstream to a `Sink.Cancelled` and its upstream to a `Source.Empty`). It is also possible to shut down the server’s socket by cancelling the `IncomingConnection` source `connections`.
 
 [!code-csharp[StreamTcpDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/StreamTcpDocTests.cs?name=close-incoming-connection)]
 
 We can then test the TCP server by sending data to the TCP Socket using `netcat` (on Windows it is possible to use Linux Subsystem for Windows):
-```
+
+```sh
 echo -n "Hello World" | netcat 127.0.0.1 8888
 Hello World!!!
 ```
@@ -62,7 +63,7 @@ In this example both client and server may need to close the stream based on a p
 
 ### Using framing in your protocol
 
-Streaming transport protocols like TCP just pass streams of bytes, and does not know what is a logical chunk of bytes from the application's point of view. Often when implementing network protocols you will want to introduce your own framing. This can be done in two ways: An end-of-frame marker, e.g. end line `\n`, can do framing via `Framing.Delimiter`. Or a length-field can be used to build a framing protocol. 
+Streaming transport protocols like TCP just pass streams of bytes, and does not know what is a logical chunk of bytes from the application's point of view. Often when implementing network protocols you will want to introduce your own framing. This can be done in two ways: An end-of-frame marker, e.g. end line `\n`, can do framing via `Framing.Delimiter`. Or a length-field can be used to build a framing protocol.
 
 ## Streaming File IO
 

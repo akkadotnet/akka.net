@@ -84,7 +84,7 @@ Enabling Akka.Remote in your own applications is simple:
 
 First you need to install the Akka.Remote NuGet package, which you can do like this:
 
-	PS> Install-Package Akka.Remote
+    PS> Install-Package Akka.Remote
 
 Next, you'll need to enable the `RemoteActorRefProvider` inside [HOCON configuration](xref:configuration) and bind your transport to an accessible IP address and port combination. Here's an example:
 
@@ -111,10 +111,10 @@ In the above section we mentioned that you have to bind a *transport* to an IP a
 
 Well, let's take a step back to define some key terms you'll need to be familiar with in order to use Akka.Remote:
 
-- **Transport** - a "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
-- **Address** - this refers to an IP address and port combination, just like any other IP-enabled protocol. You can also use a hostname instead of an IP address, but the hostname must be resolved to an IP address first. 
-- **Endpoint** - an "endpoint" is a specific address binding for a transport. If I open a TCP transport at `localhost:8080` then I've created an *endpoint* for that transport at that address.
-- **Association** - an "association" is a connection between two endpoints, each belonging to a different `ActorSystem`. Must have a valid *outbound* endpoint and a valid *inbound* endpoint in order to create the association.
+* **Transport** - a "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
+* **Address** - this refers to an IP address and port combination, just like any other IP-enabled protocol. You can also use a hostname instead of an IP address, but the hostname must be resolved to an IP address first.
+* **Endpoint** - an "endpoint" is a specific address binding for a transport. If I open a TCP transport at `localhost:8080` then I've created an *endpoint* for that transport at that address.
+* **Association** - an "association" is a connection between two endpoints, each belonging to a different `ActorSystem`. Must have a valid *outbound* endpoint and a valid *inbound* endpoint in order to create the association.
 
 These terms form the basis for all remote interaction between `ActorSystem` instances, so they're critically important to learn and distinguish.
 
@@ -124,7 +124,8 @@ So in the case of our previous example, `localhost:8080` is the inbound (listeni
 
 So imagine we have the following two actor systems configured to both use the `dot-netty.tcp` Akka.Remote transport:
 
-**Client**
+### Client
+
 ```xml
 akka {  
     actor {
@@ -139,7 +140,8 @@ akka {
 }
 ```
 
-**Server**
+### Server
+
 ```xml
 akka {  
     actor {
@@ -166,7 +168,7 @@ In order to actually form an association between the client and the server, *one
 
 In order to form an association with a remote `ActorSystem`, we have to have an [`Address`](http://api.getakka.net/docs/stable/html/58836154.htm) for that `ActorSystem`.
 
-All local Akka.NET actors have an `Address` too, as part of their [`ActorPath`](http://api.getakka.net/docs/stable/html/6DC439AE.htm). 
+All local Akka.NET actors have an `Address` too, as part of their [`ActorPath`](http://api.getakka.net/docs/stable/html/6DC439AE.htm).
 
 **A local `ActorPath`** look like  this:
 
@@ -213,7 +215,9 @@ That's how associations work in a nutshell!
 
 We have a video that illustrates how this process works - this video was really designed for Akka.NET contributors who work on Akka.Remote, but there's a lot of benefit in understanding it as an end-user of Akka.NET too!
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/6c1gVLyYcMM" frameborder="0" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 ## Additional Resources
 

@@ -9,16 +9,18 @@ Akka.NET's build system is a modified version of [Petabridge's `dotnet new` temp
 
 ## Supported Commands
 
-This project supports a wide variety of commands, all of which can be listed via:
+This project supports a wide variety of commands.
 
-**Windows**
-```
-c:\> build.cmd help
+To list on Windows:
+
+```console
+C:\> build.cmd help
 ```
 
-**Linux / OS X**
-```
-c:\> build.sh help
+To list on Linux / OS X:
+
+```console
+build.sh help
 ```
 
 However, please see this readme for full details.
@@ -44,7 +46,7 @@ This build script is powered by [FAKE](https://fake.build/); please see their AP
 
 Akka.NET is a large project, so it's often necessary to run tests incrementally in order to reduce the total end-to-end build time during development. In Akka.NET this is accomplished using [the Incrementalist project](https://github.com/petabridge/Incrementalist) - which can be invoked by adding the `incremental` option to any `build.sh` or `build.cmd` command:
 
-```
+```console
 PS> build.cmd MultiNodeTestsNetCore spec={className} incremental
 ```
 
@@ -54,16 +56,18 @@ This option will work locally on Linux or Windows.
 
 This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](src/common.props).
 
-**RELEASE_NOTES.md**
-```
+#### RELEASE_NOTES.md
+
+```text
 #### 0.1.0 October 05 2019 ####
 First release
 ```
 
 In this instance, the NuGet and assembly version will be `0.1.0` based on what's available at the top of the `RELEASE_NOTES.md` file.
 
-**RELEASE_NOTES.md**
-```
+#### RELEASE_NOTES.md
+
+```text
 #### 0.1.0-beta1 October 05 2019 ####
 First release
 ```
@@ -72,7 +76,7 @@ But in this case the NuGet and assembly version will be `0.1.0-beta1`.
 
 If you add any new projects to the solution created with this template, be sure to add the following line to each one of them in order to ensure that you can take advantage of `common.props` for standardization purposes:
 
-```
+```xml
 <Import Project="..\common.props" />
 ```
 
@@ -86,17 +90,17 @@ The attached build script will automatically do the following based on the conve
 
 ### DocFx for Documentation
 
-This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project. 
+This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project.
 
 All of the relevant articles you wish to write should be added to the `/docs/articles/` folder and any API documentation you might need will also appear there.
 
-All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder. 
+All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder.
 
 #### Previewing Documentation
 
 To preview the documentation for this project, execute the following command at the root of this folder:
 
-```
+```console
 C:\> serve-docs.cmd
 ```
 

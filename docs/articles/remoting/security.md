@@ -7,16 +7,16 @@ title: Network Security
 
 There are 2 ways you may like to achieve network security when using Akka.Remote:
 
-- Transport Layer Security (introduced with Akka.Remote Version 1.2)
-- Virtual Private Networks
+* Transport Layer Security (introduced with Akka.Remote Version 1.2)
+* Virtual Private Networks
 
-### Akka.Remote with TLS (Transport Layer Security)
+## Akka.Remote with TLS (Transport Layer Security)
 
 The release of Akka.NET version 1.2.0 introduces the default [DotNetty](https://github.com/Azure/DotNetty) transport and the ability to configure [TLS](http://en.wikipedia.org/wiki/Transport_Layer_Security) security across Akka.Remote Actor Systems.  In order to use TLS, you must first install a valid SSL certificate on all Akka.Remote hosts that you intend to use TLS.
 
 Once you've installed valid SSL certificates, TLS is enabled via your HOCON configuration by setting `enable-ssl = true` and configuring the `ssl` HOCON configuration section like below:
 
-```
+```hocon
 akka {
   loglevel = DEBUG
   actor {
@@ -45,7 +45,7 @@ akka {
 }
 ```
 
-### Akka.Remote with Virtual Private Networks
+## Akka.Remote with Virtual Private Networks
 
 The absolute best practice for securing remote Akka.NET applications today is to make the network around the applications secure - don't use public, open networks! Instead, use a private network to restrict machines that can contact Akka.Remote processes to ones who have your VPN credentials.
 

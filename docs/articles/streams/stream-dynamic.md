@@ -68,7 +68,7 @@ by the switch. Refer to the below for usage examples.
 
 ### Using `CancellationToken`s as kill switches
 
-Plain old .NET cancellation tokens can also be used as kill switch stages via extension method: `cancellationToken.AsFlow(cancelGracefully: true)`. Their behavior is very similar to what a `SharedKillSwitch` has to offer with one exception - while normal kill switch recognizes difference between closing a stream gracefully (via. `Shutdown()`) and abruptly (via. `Abort(exception)`), .NET cancellation tokens have no such distinction. 
+Plain old .NET cancellation tokens can also be used as kill switch stages via extension method: `cancellationToken.AsFlow(cancelGracefully: true)`. Their behavior is very similar to what a `SharedKillSwitch` has to offer with one exception - while normal kill switch recognizes difference between closing a stream gracefully (via. `Shutdown()`) and abruptly (via. `Abort(exception)`), .NET cancellation tokens have no such distinction.
 
 Therefore you need to explicitly specify at the moment of defining a flow stage, if cancellation token call should cause stream to close with completion or failure, by using `cancelGracefully` parameter. If it's set to `false`, calling cancel on a token's source will cause stream to fail with an `OperationCanceledException`.
 
@@ -112,13 +112,12 @@ The resulting `Flow` now has a type of `Flow<string, string, UniqueKillSwitch>` 
 
 [!code-csharp[HubsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/HubsDocTests.cs?name=pub-sub-4)]
 
-
 ### Using the PartitionHub
 
 **This is a [may change](xref:may-change) feature**
 
 A `PartitionHub` can be used to route elements from a common producer to a dynamic set of consumers.
-The selection of consumer is done with a function. Each element can be routed to only one consumer. 
+The selection of consumer is done with a function. Each element can be routed to only one consumer.
 
 The rate of the producer will be automatically adapted to the slowest consumer. In this case, the hub is a `Sink`
 to which the single producer must be attached first. Consumers can only be attached once the `Sink` has
@@ -127,7 +126,7 @@ been materialized (i.e. the producer has been started). One example of using the
 [!code-csharp[HubsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/HubsDocTests.cs?name=partition-hub)]
 
 The `partitioner` function takes two parameters; the first is the number of active consumers and the second
-is the stream element. The function should return the index of the selected consumer for the given element, 
+is the stream element. The function should return the index of the selected consumer for the given element,
 i.e. `int` greater than or equal to 0 and less than number of consumers.
 
 The resulting `Source` can be materialized any number of times, each materialization effectively attaching
@@ -146,13 +145,12 @@ The above example illustrate a stateless partition function. For more advanced s
 
 [!code-csharp[HubsDocTests.cs](../../../src/core/Akka.Docs.Tests/Streams/HubsDocTests.cs?name=partition-hub-stateful)]
 
-Note that it is a factory of a function to to be able to hold stateful variables that are 
+Note that it is a factory of a function to to be able to hold stateful variables that are
 unique for each materialization.
 
-
-The function takes two parameters; the first is information about active consumers, including an array of 
+The function takes two parameters; the first is information about active consumers, including an array of
 consumer identifiers and the second is the stream element. The function should return the selected consumer
-identifier for the given element. The function will never be called when there are no active consumers, i.e. 
+identifier for the given element. The function will never be called when there are no active consumers, i.e.
 there is always at least one element in the array of identifiers.
 
 Another interesting type of routing is to prefer routing to the fastest consumers. The `IConsumerInfo`

@@ -110,6 +110,7 @@
         "\\<\\[sample:(.*)", // another kind of snippet reference
         "/^\\s*```[\\s\\S]*?^\\s*```/gm", // ignoring multi-line code blocks
         "/^---[\\s\\S]+?---/gm", //front-matter
-        "\\<iframe(.*)iframe\\>" // iframe snippets
+        "\\<iframe(.*)iframe\\>", // iframe snippets
+        "\\<!--[^\\>]*--\\>" // HTML single-line comment
     ]
 }

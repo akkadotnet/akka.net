@@ -26,6 +26,7 @@ else
     // event
 }
 ```
+
 The replayed messages that follow the `SnapshotOffer` message, if any, are younger than the offered snapshot. They finally recover the persistent actor to its current (i.e. latest) state.
 
 In general, a persistent actor is only offered a snapshot if that persistent actor has previously saved one or more snapshots and at least one of these snapshots matches the `SnapshotSelectionCriteria` that can be specified for recovery.
@@ -54,10 +55,10 @@ for the `SnapshotSelectionCriteria`.
 
 Saving or deleting snapshots can either succeed or fail – this information is reported back to the persistent actor via status messages as illustrated in the following table.
 
-|Method	         | Success                |	Failure message
+|Method             | Success                |    Failure message
 |------          |------                  |------
-|SaveSnapshot    | SaveSnapshotSuccess    |	SaveSnapshotFailure
-|DeleteSnapshot  | DeleteSnapshotSuccess  |	DeleteSnapshotFailure
+|SaveSnapshot    | SaveSnapshotSuccess    |    SaveSnapshotFailure
+|DeleteSnapshot  | DeleteSnapshotSuccess  |    DeleteSnapshotFailure
 |DeleteSnapshots | DeleteSnapshotsSuccess | DeleteSnapshotsFailure
 
 If failure messages are left unhandled by the actor, a default warning log message will be logged for each incoming failure message. No default action is performed on the success messages, however you're free to handle them e.g. in order to delete an in memory representation of the snapshot, or in the case of failure to attempt save the snapshot again.

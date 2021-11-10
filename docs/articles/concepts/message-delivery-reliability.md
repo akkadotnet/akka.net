@@ -113,19 +113,21 @@ to gain more performance.
 
 The rule more specifically is that *for a given pair of actors, messages sent from the first to the second will not be received out-of-order. The word directly emphasizes that this guarantee only applies when sending with the tell operator to the final destination, not when employing mediators or other message dissemination features (unless stated otherwise).
 
+#### Example
+
 The guarantee is illustrated in the following:
 
-> Actor ``A1`` sends messages ``M1``, ``M2``, ``M3`` to ``A2``.
+* Actor ``A1`` sends messages ``M1``, ``M2``, ``M3`` to ``A2``.
+* Actor ``A3`` sends messages ``M4``, ``M5``, ``M6`` to ``A2``.
 
-> Actor ``A3`` sends messages ``M4``, ``M5``, ``M6`` to ``A2``.
+This means that:
 
-> This means that:
-> - If ``M1`` is delivered it must be delivered before ``M2`` and ``M3``
-> - If ``M2`` is delivered it must be delivered before ``M3``
-> - If ``M4`` is delivered it must be delivered before ``M5`` and ``M6``
-> - If ``M5`` is delivered it must be delivered before ``M6``
-> - ``A2`` can see messages from ``A1`` interleaved with messages from ``A3``
-> - Since there is no guaranteed delivery, any of the messages may be dropped, i.e. not arrive at ``A2``
+* If ``M1`` is delivered it must be delivered before ``M2`` and ``M3``
+* If ``M2`` is delivered it must be delivered before ``M3``
+* If ``M4`` is delivered it must be delivered before ``M5`` and ``M6``
+* If ``M5`` is delivered it must be delivered before ``M6``
+* ``A2`` can see messages from ``A1`` interleaved with messages from ``A3``
+* Since there is no guaranteed delivery, any of the messages may be dropped, i.e. not arrive at ``A2``
 
 > [!NOTE]
 > It is important to note that Akka's guarantee applies to the order in which
@@ -136,13 +138,10 @@ order.
 
 Please note that this rule is **not transitive**:
 
-> Actor ``A`` sends message ``M1`` to actor ``C``
-
-> Actor ``A`` then sends message ``M2`` to actor ``B``
-
-> Actor ``B`` forwards message ``M2`` to actor ``C``
-
-> Actor ``C`` may receive ``M1`` and ``M2`` in any order
+* Actor ``A`` sends message ``M1`` to actor ``C``
+* Actor ``A`` then sends message ``M2`` to actor ``B``
+* Actor ``B`` forwards message ``M2`` to actor ``C``
+* Actor ``C`` may receive ``M1`` and ``M2`` in any order
 
 Causal transitive ordering would imply that ``M2`` is never received before
 ``M1`` at actor ``C`` (though any of them might be lost). This ordering can be
@@ -165,11 +164,9 @@ Please note, that the ordering guarantees discussed above only hold for user mes
 of an actor is communicated by special system messages that are not ordered relative to ordinary user messages. In
 particular:
 
-> Child actor ``C`` sends message ``M`` to its parent ``P``
-
-> Child actor fails with failure ``F``
-
-> Parent actor ``P`` might receive the two events either in order ``M``, ``F`` or ``F``, ``M``
+* Child actor ``C`` sends message ``M`` to its parent ``P``
+* Child actor fails with failure ``F``
+* Parent actor ``P`` might receive the two events either in order ``M``, ``F`` or ``F``, ``M``
 
 The reason for this is that internal system messages has their own mailboxes therefore the ordering of enqueue calls of
 a user and system message cannot guarantee the ordering of their dequeue times.
@@ -193,14 +190,14 @@ actually do apply the best effort to keep our tests stable. A local `Tell`
 operation can however fail for the same reasons as a normal method call can on
 the CLR:
 
-- `StackOverflowException`
-- `OutOfMemoryException`
-- other :`SystemException`
+* `StackOverflowException`
+* `OutOfMemoryException`
+* other :`SystemException`
 
 In addition, local sends can fail in Akka-specific ways:
 
-- if the mailbox does not accept the message (e.g. full `BoundedMailbox`)
-- if the receiving actor fails while processing the message or is already
+* if the mailbox does not accept the message (e.g. full `BoundedMailbox`)
+* if the receiving actor fails while processing the message or is already
   terminated
 
 While the first is clearly a matter of configuration the second deserves some
@@ -217,18 +214,18 @@ will note, these are quite subtle as it stands, and it is even possible that
 future performance optimizations will invalidate this whole paragraph. The
 possibly non-exhaustive list of counter-indications is:
 
-- Before receiving the first reply from a top-level actor, there is a lock
+* Before receiving the first reply from a top-level actor, there is a lock
   which protects an internal interim queue, and this lock is not fair; the
   implication is that enqueue requests from different senders which arrive
   during the actor's construction (figuratively, the details are more involved)
   may be reordered depending on low-level thread scheduling. Since completely
   fair locks do not exist on the CLR this is un-fixable.
 
-- The same mechanism is used during the construction of a Router, more
+* The same mechanism is used during the construction of a Router, more
   precisely the routed ActorRef, hence the same problem exists for actors
   deployed with Routers.
 
-- As mentioned above, the problem occurs anywhere a lock is involved during
+* As mentioned above, the problem occurs anywhere a lock is involved during
   enqueueing, which may also apply to custom mailboxes.
 
 This list has been compiled carefully, but other problematic scenarios may have
@@ -240,13 +237,10 @@ The rule that for a given pair of actors, messages sent directly from the first 
 
 As explained in the previous section local message sends obey transitive causal ordering under certain conditions. This ordering can be violated due to different message delivery latencies. For example:
 
-> Actor A on node-1 sends message M1 to actor C on node-3
-
-> Actor A on node-1 then sends message M2 to actor B on node-2
-
-> Actor B on node-2 forwards message M2 to actor C on node-3
-
-> Actor C may receive M1 and M2 in any order
+* Actor A on node-1 sends message M1 to actor C on node-3
+* Actor A on node-1 then sends message M2 to actor B on node-2
+* Actor B on node-2 forwards message M2 to actor C on node-3
+* Actor C may receive M1 and M2 in any order
 
 It might take longer time for M1 to "travel" to node-3 than it takes for M2 to "travel" to node-3 via node-2.
 
@@ -260,10 +254,10 @@ powerful, higher-level abstractions on top it.
 As discussed above a straight-forward answer to the requirement of reliable
 delivery is an explicit ACK–RETRY protocol. In its simplest form this requires
 
-- a way to identify individual messages to correlate message with
+* a way to identify individual messages to correlate message with
   acknowledgement
-- a retry mechanism which will resend messages if not acknowledged in time
-- a way for the receiver to detect and discard duplicates
+* a retry mechanism which will resend messages if not acknowledged in time
+* a way for the receiver to detect and discard duplicates
 
 The third becomes necessary by virtue of the acknowledgements not being guaranteed
 to arrive either. An ACK-RETRY protocol with business-level acknowledgements is

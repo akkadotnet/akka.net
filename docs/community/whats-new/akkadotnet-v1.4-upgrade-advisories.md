@@ -18,7 +18,7 @@ The error message would look like this in clusters that are running a combinatio
 
 > `Serializer not defined for message with serializer id [6] and manifest []. Transient association error (association remains live). Cannot find manifest class [S] for serializer with id [17].`
 
-You can see the PR that introduced this regression here: https://github.com/akkadotnet/akka.net/issues/4986
+You can see the PR that introduced this regression here: <https://github.com/akkadotnet/akka.net/issues/4986>
 
 This change was originally introduced to assist with cross-platform wire compatibility between .NET Framework and .NET Core, because Microsoft changed the names of all primitive types between the two runtimes when .NET Core was originally introduced.
 
@@ -36,18 +36,19 @@ To work around this issue, if you're affected by it (most users are not:)
 
 In Akka.NET v1.4.26 we have introduced a new setting:
 
-```
+```hocon
 akka.actor.serialization-settings.primitive.use-legacy-behavior = on
 ```
 
 This setting is set of `on` by default and it resolves the backwards compatibility issue introduced in the "primitives" serializer described in our [v1.4.20 upgrade advisory](#upgrading-to-akkanet-v1420-from-older-versions).
 
 > [!IMPORTANT]
-> If you have: 
+> If you have:
+>
 > * Previously upgraded to Akka.NET v1.4.20+ and you have not run into any issues;
 > * You have not yet upgraded to Akka.NET v1.4.20+; and
 > * You _do not_ plan on running both .NET Framework and .NET Core in the same cluster
-> Then you can safely upgrade to v1.4.26 using your normal deployment process. 
+> Then you can safely upgrade to v1.4.26 using your normal deployment process.
 
 If you are running a mixed .NET Core and .NET Framework cluster, see the process below.
 

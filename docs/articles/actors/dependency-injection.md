@@ -8,7 +8,7 @@ As of Akka.NET v1.4.15 we recommend to Akka.NET users adopt the Akka.DependencyI
 
 You can install Akka.DependencyInjection via NuGet:
 
-```
+```console
 PS> Install-Package Akka.DependencyInjection
 ```
 
@@ -58,6 +58,7 @@ The `ServiceProvider.Props` method will accept additional arguments that can be 
 Akka.DependencyInjection does not manage the lifecycle of your dependencies automatically - in fact, Akka.NET recommends that you follow [Microsoft's own dependency injection guidelines](https://docs.microsoft.com/en-us/dotnet/core/extensions/dependency-injection-guidelines):
 
 > Use the factory pattern to create an instance outside of the parent scope. In this situation, the app would generally have a Create method that calls the final type's constructor directly. If the final type has other dependencies, the factory can:
+>
 > * Receive an `IServiceProvider` in its constructor.
 > * Use `ActivatorUtilities.CreateInstance` to instantiate the instance outside of the container, while using the container for its dependencies.
 
@@ -95,6 +96,7 @@ var system = ActorSystem.Create("MySystem");
 // Create the dependency resolver for the actor system
 IDependencyResolver resolver = new XyzDependencyResolver(someContainer, system);
 ```
+
 When creating actorRefs straight off your ActorSystem instance, you can use the DI() Extension.
 
 ```csharp
@@ -113,10 +115,10 @@ the following example.
 // For example in the PreStart...
 protected override void PreStart()
 {
-	var actorProps = Context.DI().Props<MyActor>()
-		.WithRouter(/* options here */);
-	
-	var myActorRef = Context.ActorOf(actorProps, "myChildActor");
+    var actorProps = Context.DI().Props<MyActor>()
+        .WithRouter(/* options here */);
+    
+    var myActorRef = Context.ActorOf(actorProps, "myChildActor");
 }
 ```
 
