@@ -13,6 +13,7 @@ using Akka.Configuration;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Discovery.Tests.Aggregate
 {
@@ -64,8 +65,8 @@ namespace Akka.Discovery.Tests.Aggregate
 
         private readonly ServiceDiscovery _discovery;
 
-        public AggregateServiceDiscoverySpec()
-            : base(Config, "AggregateDiscoverySpec")
+        public AggregateServiceDiscoverySpec(ITestOutputHelper output)
+            : base(Config, "AggregateDiscoverySpec", output)
         {
             _discovery = Discovery.Get(Sys).Default;
         }

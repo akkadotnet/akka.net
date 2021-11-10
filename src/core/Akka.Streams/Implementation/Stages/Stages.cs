@@ -299,6 +299,10 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes TaskSource = Attributes.CreateName("taskSource");
+                /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes TaskFlattenSource = Attributes.CreateName("taskFlattenSource");
         /// <summary>
         /// TBD
         /// </summary>
@@ -315,6 +319,10 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes MaybeSource = Attributes.CreateName("maybeSource");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes NeverSource = Attributes.CreateName("neverSource");
         /// <summary>
         /// TBD
         /// </summary>
@@ -432,6 +440,10 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes WireTap = Attributes.CreateName("wireTap");
     }
 
     /// <summary>

@@ -1,1 +1,1 @@
-## Akka.NET API Documentation
+# Akka.NET API Documentation

@@ -4,6 +4,7 @@ title: Transports
 ---
 
 # Akka.Remote Transports
+
 In the [Akka.Remote overview](xref:remote-overview) we introduced the concept of "transports" for Akka.Remote.
 
 A "transport" refers to an actual network transport, such as TCP or UDP. By default Akka.Remote uses a [DotNetty](https://github.com/Azure/DotNetty) TCP transport, but you could write your own transport and use that instead of you wish.
@@ -11,18 +12,21 @@ A "transport" refers to an actual network transport, such as TCP or UDP. By defa
 In this section we'll expand a bit more on what transports are and how Akka.Remote can support multiple transports simultaneously.
 
 ## What are Transports?
+
 Transports in Akka.Remote are abstractions on top of actual network transports, such as TCP and UDP sockets, and in truth transports have pretty simple requirements.
 
 > [!NOTE]
 > Most of the information below are things you, as an Akka.NET user, do not need to care about 99% of the time. Feel free to skip to the [Akka.Remote's Built-in Transports](#akkaremotes-built-in-transports) section.
 
 Transports **do not need to care** about:
+
 * **Serialization** - that's handled by Akka.NET itself;
 * **Connection-oriented behavior** - the association process inside Akka.Remote ensures this, even over connection-less transports like UDP;
 * **Reliable delivery** - for system messages this is handled by Akka.Remote and for user-defined messages this is taken care of at the application level through something like the [`AtLeastOnceDeliveryActor`](xref:at-least-once-delivery) class, part of Akka.Persistence;
 * **Handling network failures** - all a transport needs to do is forward that information back up to Akka.Remote.
 
 Transports **do need to care** about:
+
 * **IP addressing and ports** - all Akka.NET endpoints have to be resolved to a reachable IP address and port number;
 * **Message delivery** - getting bytes from point A to point B;
 * **Message framing** - distinguishing individual messages within a network stream;
@@ -33,6 +37,7 @@ Transports **do need to care** about:
 Transports are just plumbing for Akka.Remote - they carry out their tasks and keep things simple and performant.
 
 ## Akka.Remote's Built-in Transports
+
 Out of the box Akka.NET uses a socket-based transport built on top of the [DotNetty](https://github.com/Azure/DotNetty).
 
 > [!NOTE]
@@ -55,6 +60,7 @@ akka {
 ```
 
 ## Using Custom Transports
+
 Akka.Remote supports the ability to load third-party-defined transports at startup time - this is accomplished through defining a transport-specific configuration section within the `akka.remote` section in HOCON.
 
 Let's say, for instance, you found a third party NuGet package that implemented [Google's Quic protocol](http://blog.chromium.org/2013/06/experimenting-with-quic.html) and wanted to use that transport inside your Akka.Remote application. Here's how you'd configure your application to use it.
@@ -89,6 +95,7 @@ A remote address for an actor on this transport will look like:
 So the protocol you use in your remote `ActorSelection`s will need to use the string provided inside the `transport-protocol` block in your HOCON configuration.
 
 ## Running Multiple Transports Simultaneously
+
 One of the most productive features of Akka.Remote is its ability to allow you to support multiple transports simultaneously within a single `ActorSystem`.
 
 Suppose we created support for an http transport - here's what running both the DotNetty TCP transport and our *imaginary* http transport at the same time would look like in HOCON configuration.
@@ -122,12 +129,14 @@ as.Tell("remote message!"); //delivers message to remote system, if they're also
 ```
 
 ## Transport Caveats and Constraints
+
 There are a couple of important caveats to bear in mind with transports in Akka.Remote.
 
 * Each transport must have its own distinct protocol scheme (`transport-protocol` in HOCON) - no two transports can share the same scheme.
 * Only one instance of a given transport can be active at a time, for the reason above.
 
 ### Separating Physical IP Address from Logical Address
+
 One common DevOps issue that comes up often with Akka.Remote is something along the lines of the following:
 
 > "I want to be able to send a message to `machine1.foobar.com` as my `ActorSystem` inbound endpoint, but the socket can't bind to that domain name (it can only bind to an IP.) How do I make it so I can send messages from other remote systems to `machine1.foobar.com`?
@@ -153,7 +162,8 @@ This configuration allows the `ActorSystem`'s DotNetty TCP transport to listen o
 
 Why is this distinction important? Why do we care about registering an publicly accessible hostname with our `ActorSystem`? Because in the event that other systems need to connect or reconnect to this process, *they need to have a reachable address.*
 
-By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname. 
+By default, Akka.Remote assumes that `hostname` is publicly accessible and will use that as the `public-hostname` value. But in the even that it's not AND some of your Akka.NET applications might need to contact this process then you need to set a publicly accessible hostname.
 
 ## Additional Resources
+
 * [Message Framing](http://blog.stephencleary.com/2009/04/message-framing.html) by Stephen Cleary

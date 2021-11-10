@@ -22,7 +22,7 @@ By default, persistence plugins are started on-demand, as they are used. In some
 
 For example, if you want eager initialization for the sqlite journal and snapshot store plugin, your configuration should look like this:  
 
-```
+```hocon
 akka {
   persistence {
     journal {

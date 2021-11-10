@@ -37,7 +37,8 @@ namespace Akka.IO
 
             Context.Watch(bind.Handler);        // sign death pact
 
-            Socket = (bind.Options.OfType<Inet.DatagramChannelCreator>().FirstOrDefault() ?? new Inet.DatagramChannelCreator()).Create();
+            Socket = (bind.Options.OfType<Inet.DatagramChannelCreator>().FirstOrDefault() ??
+                      new Inet.DatagramChannelCreator()).Create(bind.LocalAddress.AddressFamily);
             Socket.Blocking = false;
             
             try
@@ -92,8 +93,7 @@ namespace Akka.IO
                 case ResumeReading _:
                     ReceiveAsync();
                     return true;
-                case SocketReceived _:
-                    var received = (SocketReceived) message;
+                case SocketReceived received:
                     DoReceive(received.EventArgs, _bind.Handler);
                     return true;
                 case Unbind _:

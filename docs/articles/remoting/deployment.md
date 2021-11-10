@@ -4,18 +4,22 @@ title: Remote Deployment
 ---
 
 # Remotely Deploying Actors
+
 Deploying an actor means two things simultaneously:
+
 1. Creating an actor instance with specific, explicitly configured properties and
 2. Getting an `IActorRef` to that actor.
 
 With Akka.Remote we get a new exciting detail: the **network location to which an actor is deployed becomes a configuration detail**.
 
 ## Remote Deployment Example
+
 That's right - we can *deploy code over the network* with Akka.Remote.
 
 Here's what that concept looks like expressed as Akka.NET code:
 
-**Shared Actor / Message Code**
+### Shared Actor / Message Code
+
 ```csharp
 /*
  * Create an actor and a message type that gets shared between Deployer and DeployTarget
@@ -48,7 +52,8 @@ public class Hello
 
 ```
 
-**DeployTarget (process that gets deployed onto)**
+### DeployTarget (process that gets deployed onto)
+
 ```csharp
 class Program
 {
@@ -71,8 +76,8 @@ class Program
 }
 ```
 
+### Deployer (process that does deploying)
 
-**Deployer (process that does deploying)**
 ```csharp
 class Program
 {
@@ -160,8 +165,8 @@ But wait! Wait a minute! We didn't actually create any actors in the DeployTarge
 
 That's because the Deployer created the actors... but it created them INSIDE DeployTarget's process. Over the network.
 
-
 ## Syntax
+
 In the above example, it's this piece of HOCON configuration:
 
 ```xml
@@ -181,6 +186,7 @@ Props.Create(() => new EchoActor()).WithDeploy(Deploy.None.WithScope(new RemoteS
 That actually specify to deploy the configured actor onto the specified remote `Address`, which belongs to the DeployTarget in this case.
 
 ## How Remote Deployment Actually Works
+
 The process of remote deployment feels magical, but it's actually pretty simple.
 
 ![How remote deployment works](/images/how-remote-actor-deployment-works.png)
@@ -198,13 +204,15 @@ However, in the happy event that we can form a remote association with DeployTar
 And once all of that is done, we've successfully deployed an `EchoActor` over the network from Deployer to DeployTarget.
 
 ### Important Things to Know About Remote Actor Deployments
+
 Here are some important things to remember about remote actor deployments:
 
-1. All names for remote actors are determined *by the deploying `ActorSystem`*. 1000 Deployer instances could all deploy an actor named "echoactor" onto the same DeployTarget instance and all 1000 of those operations would be successful. That's because the local actor created on DeployTarget has an `ActorPath` that looks like `akka.tcp://DeployTarget@localhost:8090/remote/akka.tcp/Deploye@localhost:19600/user/echoactor/` - the full `Address` of each Deployer `ActorSystem` is appended to the front of the `ActorPath`, thereby guaranteeing that each remote deployed actor name is unique to the Deployer.
+1. All names for remote actors are determined *by the deploying `ActorSystem`*. 1000 Deployer instances could all deploy an actor named `echoactor` onto the same DeployTarget instance and all 1000 of those operations would be successful. That's because the local actor created on DeployTarget has an `ActorPath` that looks like `akka.tcp://DeployTarget@localhost:8090/remote/akka.tcp/Deploye@localhost:19600/user/echoactor/` - the full `Address` of each Deployer `ActorSystem` is appended to the front of the `ActorPath`, thereby guaranteeing that each remote deployed actor name is unique to the Deployer.
 2. The C# code that defines the `EchoActor` type and the message types it expects must be present on **both the Deployer and the DeployTarget**, or the deployment fails because the `Props` can't be deserialized.
 3. All of the constructor arguments for `EchoActor` and any other remote-deployed actor must be serializable, again, because otherwise it can't be deployed.
 
 ## When to Use Remote Deployment
+
 When would you want to remotely deploy a new actor versus just sending a message to a remote actor that already exists somewhere else on the network?
 
 There are two common scenarios for when you would want to deploy an actor remotely:
@@ -214,7 +222,9 @@ There are two common scenarios for when you would want to deploy an actor remote
 
 ## Additional Resources
 
+<!-- markdownlint-disable MD033 -->
 <iframe width="560" height="315" src="https://www.youtube.com/embed/kOm8lGBkrM8" frameborder="0" allowfullscreen></iframe>
+<!-- markdownlint-enable MD033 -->
 
 * [Akka.Remote: How to Remotely Deploy Actors (Video)](https://www.youtube.com/watch?v=kOm8lGBkrM8)
 * [Akka.NET remote deployment with F#](http://bartoszsypytkowski.com/akka-net-remote-deployment-with-f/)
