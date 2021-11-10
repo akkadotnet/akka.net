@@ -15,6 +15,8 @@ namespace Akka.Streams
     /// </summary>
     public enum OverflowStrategy
     {
+        None = 0,
+
         /// <summary>
         /// If the buffer is full when a new element arrives, drops the oldest element from the buffer to make space for the new element.
         /// </summary>

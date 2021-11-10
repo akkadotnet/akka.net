@@ -30,9 +30,15 @@ namespace Akka.Streams
             /// TBD
             /// </summary>
             public static readonly Enqueued Instance = new Enqueued();
+            public static readonly Enqueued DroppedHeadInstance = new Enqueued(OverflowStrategy.DropHead);
+            public static readonly Enqueued DroppedTailInstance = new Enqueued(OverflowStrategy.DropTail);
+            public static readonly Enqueued DroppedBufferInstance = new Enqueued(OverflowStrategy.DropBuffer);
 
-            private Enqueued()
+            public OverflowStrategy Overflow { get; }
+
+            private Enqueued(OverflowStrategy overflow = OverflowStrategy.None)
             {
+                Overflow = overflow;
             }
         }
 

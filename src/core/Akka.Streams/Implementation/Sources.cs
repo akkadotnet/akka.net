@@ -179,8 +179,13 @@ namespace Akka.Streams.Implementation
 
             private void EnqueueAndSuccess(Offer<TOut> offer)
             {
+                EnqueueAndSuccess(offer, QueueOfferResult.Enqueued.Instance);
+            }
+
+            private void EnqueueAndSuccess(Offer<TOut> offer, QueueOfferResult.Enqueued result)
+            {
                 _buffer.Enqueue(offer.Element);
-                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
+                offer.CompletionSource.NonBlockingTrySetResult(result);
             }
 
             private void BufferElement(Offer<TOut> offer)
@@ -193,15 +198,15 @@ namespace Akka.Streams.Implementation
                     {
                         case OverflowStrategy.DropHead:
                             _buffer.DropHead();
-                            EnqueueAndSuccess(offer);
+                            EnqueueAndSuccess(offer, QueueOfferResult.Enqueued.DroppedHeadInstance);
                             break;
                         case OverflowStrategy.DropTail:
                             _buffer.DropTail();
-                            EnqueueAndSuccess(offer);
+                            EnqueueAndSuccess(offer, QueueOfferResult.Enqueued.DroppedTailInstance);
                             break;
                         case OverflowStrategy.DropBuffer:
                             _buffer.Clear();
-                            EnqueueAndSuccess(offer);
+                            EnqueueAndSuccess(offer, QueueOfferResult.Enqueued.DroppedBufferInstance);
                             break;
                         case OverflowStrategy.DropNew:
                             offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
