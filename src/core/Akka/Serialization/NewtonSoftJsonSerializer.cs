@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Akka.Actor;
@@ -122,7 +123,7 @@ namespace Akka.Serialization
         /// <summary>
         /// TBD
         /// </summary>
-        public object Serializer => _serializer.Value;
+        public object Serializer => GetThreadLocalSerializer();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NewtonSoftJsonSerializer" /> class.
@@ -154,6 +155,8 @@ namespace Akka.Serialization
                 TypeNameHandling = settings.EncodeTypeNames
                     ? TypeNameHandling.All
                     : TypeNameHandling.None,
+                ReferenceResolverProvider = () => new ReferenceResolver(),
+                Formatting = Formatting.None,
             };
 
             if (system != null)
@@ -184,12 +187,22 @@ namespace Akka.Serialization
             Settings.ObjectCreationHandling = ObjectCreationHandling.Replace; //important: if reuse, the serializer will overwrite properties in default references, e.g. Props.DefaultDeploy or Props.noArgs
             Settings.ContractResolver = new AkkaContractResolver();
 
-            _serializer = new ThreadLocal<JsonSerializer>(() =>
-            {
-                var serializer = JsonSerializer.CreateDefault(Settings);
-                serializer.Formatting = Formatting.None;
-                return serializer;
-            });
+            _serializer = new ThreadLocal<JsonSerializer>(() => JsonSerializer.CreateDefault(Settings));
+        }
+
+        /// <summary>
+        /// Gets an initialized instance of the serializer intended for immediate use on the current thread
+        /// </summary>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private JsonSerializer GetThreadLocalSerializer()
+        {
+            var serializer = _serializer.Value;
+
+            // Reinitialize the reference resolver in order to reset cache of observed references
+            serializer.ReferenceResolver = Settings.ReferenceResolverProvider();
+
+            return serializer;
         }
 
         private static JsonConverter CreateConverter(Type converterType, ExtendedActorSystem actorSystem)
@@ -238,8 +251,7 @@ namespace Akka.Serialization
             var writer = new StringWriter(stringBuilder);
             using (var jsonWriter = new JsonTextWriter(writer))
             {
-                jsonWriter.Formatting = _serializer.Value.Formatting;
-                _serializer.Value.Serialize(jsonWriter, obj);
+                GetThreadLocalSerializer().Serialize(jsonWriter, obj);
             }
             return Encoding.UTF8.GetBytes(stringBuilder.ToString());
         }
@@ -255,7 +267,7 @@ namespace Akka.Serialization
             var reader = new StringReader(Encoding.UTF8.GetString(bytes));
             using (var jsonReader = new JsonTextReader(reader))
             {
-                return _serializer.Value.Deserialize(jsonReader, type);
+                return GetThreadLocalSerializer().Deserialize(jsonReader, type);
             }
         }
     }
