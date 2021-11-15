@@ -18,10 +18,6 @@ namespace Akka.Serialization
         internal class PrimitiveNumberConverter : JsonConverter, IObjectConverter
         {
             private const string PropertyName = "$";
-            private const char IntPrefix = 'I';
-            private const char FloatPrefix = 'F';
-            private const char DecimalPrefix = 'M';
-
             public override bool CanConvert(Type objectType)
             {
                 return objectType == typeof(int)
@@ -52,13 +48,13 @@ namespace Akka.Serialization
                     var numberString = encodedNumberString.Substring(1);
                     switch (primitiveType)
                     {
-                        case IntPrefix:
+                        case 'I':
                             convertedValue = int.Parse(numberString, NumberFormatInfo.InvariantInfo);
                             return true;
-                        case FloatPrefix:
+                        case 'F':
                             convertedValue = float.Parse(numberString, NumberFormatInfo.InvariantInfo);
                             return true;
-                        case DecimalPrefix:
+                        case 'M':
                             convertedValue = decimal.Parse(numberString, NumberFormatInfo.InvariantInfo);
                             return true;
                         default:
@@ -76,13 +72,13 @@ namespace Akka.Serialization
                 switch (value)
                 {
                     case int i:
-                        numberString = $"{IntPrefix}{i.ToString(NumberFormatInfo.InvariantInfo)}";
+                        numberString = $"I{i.ToString(NumberFormatInfo.InvariantInfo)}";
                         break;
                     case float f:
-                        numberString = $"{FloatPrefix}{f.ToString(NumberFormatInfo.InvariantInfo)}";
+                        numberString = $"F{f.ToString(NumberFormatInfo.InvariantInfo)}";
                         break;
                     case decimal m:
-                        numberString = $"{DecimalPrefix}{m.ToString(NumberFormatInfo.InvariantInfo)}";
+                        numberString = $"M{m.ToString(NumberFormatInfo.InvariantInfo)}";
                         break;
                     default:
                         throw new NotSupportedException();
