@@ -6,15 +6,15 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace Akka.Serialization
 {
-
     public partial class NewtonSoftJsonSerializer
     {
+        /// <summary>
+        /// Handles converting <see cref="object"/> values using configured <see cref="IObjectConverter"/>s
+        /// </summary>
         internal class DelegatedObjectConverter : JsonConverter
         {
             private readonly IObjectConverter[] objectConverters;
@@ -34,9 +34,19 @@ namespace Akka.Serialization
             public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
             {
                 var deserializedValue = serializer.Deserialize(reader);
+                return Convert(deserializedValue);
+            }
 
-                foreach (var objectConverter in objectConverters)
+            /// <summary>
+            /// Attempt to convert <paramref name="deserializedValue"/> using the configured delegates
+            /// </summary>
+            /// <param name="deserializedValue"></param>
+            /// <returns>Converted object if any delegate applies; otherwise <paramref name="deserializedValue"/></returns>
+            public object Convert(object deserializedValue)
+            {
+                for (var i = 0; i < objectConverters.Length; i++)
                 {
+                    var objectConverter = objectConverters[i];
                     if (objectConverter.TryConvert(deserializedValue, out var convertedValue))
                     {
                         return convertedValue;

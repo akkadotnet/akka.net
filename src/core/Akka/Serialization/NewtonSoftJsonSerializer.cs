@@ -114,6 +114,7 @@ namespace Akka.Serialization
     public partial class NewtonSoftJsonSerializer : Serializer
     {
         private readonly ThreadLocal<JsonSerializer> _serializer;
+        private readonly DelegatedObjectConverter _delegatedObjectConverter;
 
         /// <summary>
         /// TBD
@@ -173,7 +174,8 @@ namespace Akka.Serialization
 
             var primitiveNumberConverter = new PrimitiveNumberConverter();
             var surrogateConverter = new SurrogateConverter(system);
-            converters.Add(new DelegatedObjectConverter(primitiveNumberConverter, surrogateConverter));
+            _delegatedObjectConverter = new DelegatedObjectConverter(primitiveNumberConverter, surrogateConverter);
+            converters.Add(_delegatedObjectConverter);
             converters.Add(primitiveNumberConverter);
             converters.Add(surrogateConverter);
             converters.Add(new SurrogatedConverter(system));
@@ -267,7 +269,8 @@ namespace Akka.Serialization
             var reader = new StringReader(Encoding.UTF8.GetString(bytes));
             using (var jsonReader = new JsonTextReader(reader))
             {
-                return GetThreadLocalSerializer().Deserialize(jsonReader, type);
+                var deserializedValue = GetThreadLocalSerializer().Deserialize(jsonReader, type);
+                return _delegatedObjectConverter.Convert(deserializedValue);
             }
         }
     }

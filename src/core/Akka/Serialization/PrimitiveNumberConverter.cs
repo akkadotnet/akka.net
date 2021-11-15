@@ -17,6 +17,11 @@ namespace Akka.Serialization
     {
         internal class PrimitiveNumberConverter : JsonConverter, IObjectConverter
         {
+            private const string PropertyName = "$";
+            private const char IntPrefix = 'I';
+            private const char FloatPrefix = 'F';
+            private const char DecimalPrefix = 'M';
+
             public override bool CanConvert(Type objectType)
             {
                 return objectType == typeof(int)
@@ -39,7 +44,7 @@ namespace Akka.Serialization
             public bool TryConvert(object deserializedValue, out object convertedValue)
             {
                 if (deserializedValue is JObject jObject
-                    && jObject.TryGetValue("$", out var jToken)
+                    && jObject.TryGetValue(PropertyName, out var jToken)
                     && jToken is JValue jValue
                     && jValue.Value is string encodedNumberString)
                 {
@@ -47,13 +52,13 @@ namespace Akka.Serialization
                     var numberString = encodedNumberString.Substring(1);
                     switch (primitiveType)
                     {
-                        case 'I':
+                        case IntPrefix:
                             convertedValue = int.Parse(numberString, NumberFormatInfo.InvariantInfo);
                             return true;
-                        case 'F':
+                        case FloatPrefix:
                             convertedValue = float.Parse(numberString, NumberFormatInfo.InvariantInfo);
                             return true;
-                        case 'M':
+                        case DecimalPrefix:
                             convertedValue = decimal.Parse(numberString, NumberFormatInfo.InvariantInfo);
                             return true;
                         default:
@@ -71,20 +76,20 @@ namespace Akka.Serialization
                 switch (value)
                 {
                     case int i:
-                        numberString = $"I{i.ToString(NumberFormatInfo.InvariantInfo)}";
+                        numberString = $"{IntPrefix}{i.ToString(NumberFormatInfo.InvariantInfo)}";
                         break;
                     case float f:
-                        numberString = $"F{f.ToString(NumberFormatInfo.InvariantInfo)}";
+                        numberString = $"{FloatPrefix}{f.ToString(NumberFormatInfo.InvariantInfo)}";
                         break;
                     case decimal m:
-                        numberString = $"M{m.ToString(NumberFormatInfo.InvariantInfo)}";
+                        numberString = $"{DecimalPrefix}{m.ToString(NumberFormatInfo.InvariantInfo)}";
                         break;
                     default:
                         throw new NotSupportedException();
                 }
 
                 writer.WriteStartObject();
-                writer.WritePropertyName("$");
+                writer.WritePropertyName(PropertyName);
                 writer.WriteValue(numberString);
                 writer.WriteEndObject();
             }
