@@ -44,7 +44,14 @@ namespace RemotePingPong
         public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
+
+            # disable dedicated threadpool dispatchers
+            akka.actor.internal-dispatcher = akka.actor.default-dispatcher
+            akka.remote.default-remote-dispatcher = akka.actor.default-dispatcher
+            akka.remote.backoff-remote-dispatcher = akka.actor.default-dispatcher
+
             akka {
+            
               actor.provider = remote
               loglevel = ERROR
               suppress-json-serializer-warning = on
