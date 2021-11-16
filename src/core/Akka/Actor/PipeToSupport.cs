@@ -27,28 +27,24 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         /// <param name="success">TBD</param>
         /// <param name="failure">TBD</param>
-        /// <returns>TBD</returns>
-        public static Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null, Func<T, object> success = null, Func<Exception, object> failure = null)
+        /// <returns>A detached task</returns>
+        public static async Task PipeTo<T>(this Task<T> taskToPipe, ICanTell recipient, IActorRef sender = null, Func<T, object> success = null, Func<Exception, object> failure = null)
         {
             sender = sender ?? ActorRefs.NoSender;
-            return taskToPipe.ContinueWith(tresult =>
+            
+            try
             {
-                if (tresult.IsFaulted)
-                    recipient.Tell(failure != null
-                        ? failure(tresult.Exception)
-                        : new Status.Failure(tresult.Exception), sender);
-                else if (tresult.IsCanceled)
-                {
-                    var ex = tresult.Exception ?? new AggregateException(new TaskCanceledException());
-                    recipient.Tell(failure != null
-                        ? failure(ex)
-                        : new Status.Failure(ex), sender);
-                }
-                else if (tresult.IsCompleted)
-                    recipient.Tell(success != null
-                        ? success(tresult.Result)
-                        : tresult.Result, sender);
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                var result = await taskToPipe.ConfigureAwait(false);
+                recipient.Tell(success != null
+                    ? success(result)
+                    : result, sender);
+            }
+            catch (Exception ex)
+            {
+                recipient.Tell(failure != null
+                    ? failure(ex)
+                    : new Status.Failure(ex), sender);
+            }
         }
 
         /// <summary>
@@ -61,25 +57,25 @@ namespace Akka.Actor
         /// <param name="success">TBD</param>
         /// <param name="failure">TBD</param>
         /// <returns>TBD</returns>
-        public static Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null, Func<object> success = null, Func<Exception, object> failure = null)
+        public static async Task PipeTo(this Task taskToPipe, ICanTell recipient, IActorRef sender = null, Func<object> success = null, Func<Exception, object> failure = null)
         {
             sender = sender ?? ActorRefs.NoSender;
-            return taskToPipe.ContinueWith(tresult =>
-            {
-                if (tresult.IsFaulted)
-                    recipient.Tell(failure != null
-                        ? failure(tresult.Exception)
-                        : new Status.Failure(tresult.Exception), sender);
-                else if (tresult.IsCanceled)
+            
+            try
+            { 
+                await taskToPipe.ConfigureAwait(false);
+
+                if (success != null)
                 {
-                    var ex = tresult.Exception ?? new AggregateException(new TaskCanceledException());
-                    recipient.Tell(failure != null
-                        ? failure(ex)
-                        : new Status.Failure(ex), sender);
-                }
-                else if (tresult.IsCompleted && success != null)
                     recipient.Tell(success(), sender);
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                }
+            }
+            catch (Exception ex)
+            {
+                recipient.Tell(failure != null
+                    ? failure(ex)
+                    : new Status.Failure(ex), sender);
+            }
         }
     }
 }
