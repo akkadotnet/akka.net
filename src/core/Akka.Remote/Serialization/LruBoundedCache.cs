@@ -7,7 +7,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Akka.Remote.Serialization
 {
@@ -64,6 +67,10 @@ namespace Akka.Remote.Serialization
         /// </summary>
         /// <param name="s">The input string.</param>
         /// <returns>A 32-bit pseudo-random hash value.</returns>
+        public static int OfStringFastn(string s)
+        {
+            return GetDjb2HashCode(s);
+        }
         public static int OfStringFast(string s)
         {
             var len = s.Length;
@@ -92,6 +99,62 @@ namespace Akka.Remote.Serialization
                     }
                 }
             }
+        }
+
+        [Pure]
+        public static int GetDjb2HashCode(ref char r0, int length)
+        {
+            int hash = 5381;
+            int offset = 0;
+
+            while (length >= 8)
+            {
+                // Doing a left shift by 5 and adding is equivalent to multiplying by 33.
+                // This is preferred for performance reasons, as when working with integer
+                // values most CPUs have higher latency for multiplication operations
+                // compared to a simple shift and add. For more info on this, see the
+                // details for imul, shl, add: https://gmplib.org/~tege/x86-timing.pdf.
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 0).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 1).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 2).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 3).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 4).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 5).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 6).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 7).GetHashCode());
+
+                length -= 8;
+                offset += 8;
+            }
+
+            if (length >= 4)
+            {
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 0).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 1).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 2).GetHashCode());
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset + 3).GetHashCode());
+
+                length -= 4;
+                offset += 4;
+            }
+
+            while (length > 0)
+            {
+                hash = unchecked(((hash << 5) + hash) ^ Unsafe.Add(ref r0, offset).GetHashCode());
+
+                length -= 1;
+                offset += 1;
+            }
+
+            return hash;
+        }
+        [Pure]
+        public static int GetDjb2HashCode(string s)//(ref T r0, nint length)
+            //where T : notnull
+        {
+            int length = s.Length;
+            ref char c0= ref MemoryMarshal.GetReference(s.AsSpan());
+            return GetDjb2HashCode(ref c0, length);
         }
 
 

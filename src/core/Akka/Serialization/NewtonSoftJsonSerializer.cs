@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -159,6 +160,7 @@ namespace Akka.Serialization
 
             if (system != null)
             {
+                _serializer.Deserialize()
                 var settingsSetup = system.Settings.Setup.Get<NewtonSoftJsonSerializerSetup>()
                     .GetOrElse(NewtonSoftJsonSerializerSetup.Create(s => {}));
 

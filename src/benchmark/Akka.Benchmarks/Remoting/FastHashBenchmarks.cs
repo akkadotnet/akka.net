@@ -23,5 +23,11 @@ namespace Akka.Benchmarks.Remoting
         {
             return FastHash.OfStringFast(HashKey1);
         }
+
+        [Benchmark]
+        public int FastHash_Djb2()
+        {
+            return FastHash.GetDjb2HashCode(HashKey1);
+        }
     }
 }

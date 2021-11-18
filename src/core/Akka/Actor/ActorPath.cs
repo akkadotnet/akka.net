@@ -692,8 +692,16 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress()
         {
-            return ToStringWithAddress(_address);
+            if (lazyToStringWithAddress == null)
+            {
+                var addr = ToStringWithAddress(_address);
+                lazyToStringWithAddress = addr;
+            }
+            return lazyToStringWithAddress;
+            //return ToStringWithAddress(_address);
         }
+
+        private string lazyToStringWithAddress;
 
         /// <summary>
         /// TBD
@@ -719,6 +727,16 @@ namespace Akka.Actor
             var withAddress = ToStringWithAddress(address);
             var result = AppendUidFragment(withAddress);
             return result;
+        }
+
+        private string lazyDefaultAddress;
+        public string ToSerializationFormatWithDefaultAddress(Address address)
+        {
+            if (lazyDefaultAddress == null)
+            {
+                lazyDefaultAddress = ToSerializationFormatWithAddress(address);
+            }
+            return lazyDefaultAddress;
         }
 
         private string AppendUidFragment(string withAddress)

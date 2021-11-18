@@ -12,6 +12,7 @@ using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using MessagePack;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Transport
@@ -310,6 +311,356 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// TBD
     /// </summary>
+    internal class AkkaPduMessagePackCodec : AkkaPduCodec
+    {
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="raw">TBD</param>
+        /// <exception cref="PduCodecException">
+        /// This exception is thrown when the Akka PDU in the specified byte string,
+        /// <paramref name="raw" />, meets one of the following conditions:
+        /// <ul>
+        /// <li>The PDU is neither a message or a control message.</li>
+        /// <li>The PDU is a control message with an invalid format. </li>
+        /// </ul>
+        /// </exception>
+        /// <returns>TBD</returns>
+        public override IAkkaPdu DecodePdu(ByteString raw)
+        {
+            try
+            {
+                var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw);
+                if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
+                else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
+                else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+            }
+            catch (InvalidProtocolBufferException ex)
+            {
+                throw new PduCodecException("Decoding PDU failed", ex);
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <returns>TBD</returns>
+        public override ByteString ConstructPayload(ByteString payload)
+        {
+            return new AkkaProtocolMessage() { Payload = payload }.ToByteString();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="info"/> contains an invalid address.
+        /// </exception>
+        /// <returns>TBD</returns>
+        public override ByteString ConstructAssociate(HandshakeInfo info)
+        {
+            var handshakeInfo = new AkkaHandshakeInfo()
+            {
+                Origin = SerializeAddress(info.Origin),
+                Uid = (ulong)info.Uid
+            };
+
+            return ConstructControlMessagePdu(CommandType.Associate, handshakeInfo);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <returns>TBD</returns>
+        public override ByteString ConstructDisassociate(DisassociateInfo reason)
+        {
+            switch (reason)
+            {
+                case DisassociateInfo.Quarantined:
+                    return DISASSOCIATE_QUARANTINED;
+                case DisassociateInfo.Shutdown:
+                    return DISASSOCIATE_SHUTTING_DOWN;
+                case DisassociateInfo.Unknown:
+                default:
+                    return DISASSOCIATE;
+            }
+        }
+
+        /*
+         * Since there's never any ActorSystem-specific information coded directly
+         * into the heartbeat messages themselves (i.e. no handshake info,) there's no harm in caching in the
+         * same heartbeat byte buffer and re-using it.
+         */
+        private static readonly ByteString HeartbeatPdu = ConstructControlMessagePdu(CommandType.Heartbeat);
+
+        /// <summary>
+        /// Creates a new Heartbeat message instance.
+        /// </summary>
+        /// <returns>The Heartbeat message.</returns>
+        public override ByteString ConstructHeartbeat()
+        {
+            return HeartbeatPdu;
+        }
+
+        /// <summary>
+        /// Indicated RemoteEnvelope.Seq is not defined (order is irrelevant)
+        /// </summary>
+        private const ulong SeqUndefined = ulong.MaxValue;
+
+
+        public class MsgPackAckAndEnvelope
+        {
+            public MsgPackAck Ack;
+            public MsgPackEnvelope Envelope;
+        }
+
+        public class MsgPackAck
+        {
+            public ulong CumulativeAck;
+            public ulong[] Nacks;
+        }
+
+        public class MsgPackEnvelope
+        {
+            public ulong Seq;
+            public string Sender;
+            public string Recipient;
+            public MsgPackPayload Payload;
+        }
+
+        public class MsgPackPayload
+        {
+            public ByteString Message { get; set; }
+            public int SerializerId { get; set; }
+            public ByteString MessageManifest { get; set; }
+        }
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="raw">TBD</param>
+        /// <param name="provider">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <returns>TBD</returns>
+        public override AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
+        {
+            var ackAndEnvelope = MessagePackSerializer.Deserialize<MsgPackAckAndEnvelope>(raw.Memory,
+                MessagePackSerializerOptions.Standard);
+            //var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
+
+            Ack ackOption = null;
+
+            if (ackAndEnvelope.Ack != null)
+            {
+                ackOption = new Ack(new SeqNo((long)ackAndEnvelope.Ack.CumulativeAck), ackAndEnvelope.Ack.Nacks.Select(x => new SeqNo((long)x)));
+            }
+
+            Message messageOption = null;
+
+            if (ackAndEnvelope.Envelope != null)
+            {
+                var envelopeContainer = ackAndEnvelope.Envelope;
+                if (envelopeContainer != null)
+                {
+                    var recipient = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Recipient, localAddress, false);
+                    
+                    //todo get parsed address from provider
+                    var recipientAddress = recipient.Path.Address;// ActorPathCache.Cache.GetOrCompute(envelopeContainer.Recipient.Path).Address;
+                    
+                    var serializedMessage = envelopeContainer.Payload;
+                    IActorRef senderOption = null;
+                    if (envelopeContainer.Sender != null)
+                        senderOption = provider.ResolveActorRefWithLocalAddress(envelopeContainer.Sender, localAddress, true);
+                    
+                    SeqNo seqOption = null;
+                    if (envelopeContainer.Seq != SeqUndefined)
+                    {
+                        unchecked
+                        {
+                            seqOption = new SeqNo((long)envelopeContainer.Seq); //proto takes a ulong
+                        }
+                    }
+
+                    messageOption = new Message(recipient, recipientAddress,
+                        new SerializedMessage()
+                        {
+                            Message =
+                                
+                                    serializedMessage.Message,
+                            MessageManifest =serializedMessage
+                                    .MessageManifest,
+                            SerializerId = serializedMessage.SerializerId
+                        }, senderOption, seqOption);
+                }
+            }
+
+
+            return new AckAndMessage(ackOption, messageOption);
+        }
+
+        private MsgPackAck AckBuilder(Ack ack)
+        {
+            var acki = new MsgPackAck();
+            acki.CumulativeAck = (ulong)ack.CumulativeAck.RawValue;
+            acki.Nacks = (from nack in ack.Nacks select (ulong)nack.RawValue).ToArray();
+
+            return acki;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <param name="serializedMessage">TBD</param>
+        /// <param name="senderOption">TBD</param>
+        /// <param name="seqOption">TBD</param>
+        /// <param name="ackOption">TBD</param>
+        /// <param name="refAskCache"></param>
+        /// <returns>TBD</returns>
+        public override ByteString ConstructMessage(Address localAddress,
+            IActorRef recipient, SerializedMessage serializedMessage,
+            IActorRef senderOption = null, SeqNo seqOption = null,
+            Ack ackOption = null,
+            //IRemoteActorRefProvider provider = null
+            IActorRef refAskCache = null
+            )
+        {
+            var ackAndEnvelope = new MsgPackAckAndEnvelope();
+            //var ackAndEnvelope = new AckAndEnvelopeContainer();
+            var envelope = 
+                //new RemoteEnvelope()
+                new MsgPackEnvelope()
+                { Recipient = SerializeActorRef(recipient.Path.Address, recipient).Path };
+            if (senderOption != null && senderOption.Path != null)
+            {
+                envelope.Sender = SerializeActorRef(localAddress, senderOption).Path;
+                if (senderOption is FutureActorRef)
+                {
+                    //provider?.RefAskCacheInst().Set(envelope.Sender.Path, senderOption);
+                    refAskCache.Tell(new CacheAdd(){key = envelope.Sender, value = senderOption});
+                    //AskPathCache.Cache.Set(envelope.Sender.Path, senderOption.Path);
+                }
+            }
+
+            if (seqOption != null) { envelope.Seq = (ulong)seqOption.RawValue; } else envelope.Seq = SeqUndefined;
+            if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
+
+            envelope.Payload = new MsgPackPayload()
+            {
+                Message = serializedMessage.Message,
+                MessageManifest = serializedMessage.MessageManifest,
+                SerializerId = serializedMessage.SerializerId
+            };
+            //envelope.Message = serializedMessage;
+            ackAndEnvelope.Envelope = envelope;
+
+            return UnsafeByteOperations.UnsafeWrap(
+                MessagePackSerializer.Serialize(ackAndEnvelope));
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ack">TBD</param>
+        /// <returns>TBD</returns>
+        public override ByteString ConstructPureAck(Ack ack)
+        {
+            return new AckAndEnvelopeContainer() { Ack = AckBuilder(ack) }.ToByteString();
+        }
+
+#region Internal methods
+        private IAkkaPdu DecodeControlPdu(AkkaControlMessage controlPdu)
+        {
+            switch (controlPdu.CommandType)
+            {
+                case CommandType.Associate:
+                    var handshakeInfo = controlPdu.HandshakeInfo;
+                    if (handshakeInfo != null) // HasHandshakeInfo
+                    {
+                        return new Associate(new HandshakeInfo(DecodeAddress(handshakeInfo.Origin), (int)handshakeInfo.Uid));
+                    }
+                    break;
+                case CommandType.Disassociate:
+                    return new Disassociate(DisassociateInfo.Unknown);
+                case CommandType.DisassociateQuarantined:
+                    return new Disassociate(DisassociateInfo.Quarantined);
+                case CommandType.DisassociateShuttingDown:
+                    return new Disassociate(DisassociateInfo.Shutdown);
+                case CommandType.Heartbeat:
+                    return new Heartbeat();
+            }
+
+            throw new PduCodecException($"Decoding of control PDU failed, invalid format, unexpected {controlPdu}");
+        }
+
+
+
+        private ByteString DISASSOCIATE
+        {
+            get { return ConstructControlMessagePdu(CommandType.Disassociate); }
+        }
+
+        private ByteString DISASSOCIATE_SHUTTING_DOWN
+        {
+            get { return ConstructControlMessagePdu(CommandType.DisassociateShuttingDown); }
+        }
+
+        private ByteString DISASSOCIATE_QUARANTINED
+        {
+            get { return ConstructControlMessagePdu(CommandType.DisassociateQuarantined); }
+        }
+
+        private static ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
+        {
+            var controlMessage = new AkkaControlMessage() { CommandType = code };
+            if (handshakeInfo != null)
+            {
+                controlMessage.HandshakeInfo = handshakeInfo;
+            }
+
+            return new AkkaProtocolMessage() { Instruction = controlMessage }.ToByteString();
+        }
+
+        private static Address DecodeAddress(AddressData origin)
+        {
+            return new Address(origin.Protocol, origin.System, origin.Hostname, (int)origin.Port);
+        }
+
+        private static ActorRefData SerializeActorRef(Address defaultAddress, IActorRef actorRef)
+        {
+            return new ActorRefData()
+            {
+                Path = (!string.IsNullOrEmpty(actorRef.Path.Address.Host))
+                    ? actorRef.Path.ToSerializationFormat()
+                    : actorRef.Path.ToSerializationFormatWithDefaultAddress(defaultAddress)
+            };
+        }
+
+        private static AddressData SerializeAddress(Address address)
+        {
+            if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
+                throw new ArgumentException($"Address {address} could not be serialized: host or port missing");
+            return new AddressData()
+            {
+                Hostname = address.Host,
+                Port = (uint)address.Port.Value,
+                System = address.System,
+                Protocol = address.Protocol
+            };
+        }
+
+#endregion
+
+        public AkkaPduMessagePackCodec(ActorSystem system) : base(system)
+        {
+        }
+    }
+    /// <summary>
+    /// TBD
+    /// </summary>
     internal class AkkaPduProtobuffCodec : AkkaPduCodec
     {
         /// <summary>
@@ -584,7 +935,7 @@ namespace Akka.Remote.Transport
             {
                 Path = (!string.IsNullOrEmpty(actorRef.Path.Address.Host))
                     ? actorRef.Path.ToSerializationFormat()
-                    : actorRef.Path.ToSerializationFormatWithAddress(defaultAddress)
+                    : actorRef.Path.ToSerializationFormatWithDefaultAddress(defaultAddress)
             };
         }
 

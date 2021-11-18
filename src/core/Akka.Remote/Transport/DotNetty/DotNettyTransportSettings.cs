@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Akka.Configuration;
@@ -289,6 +290,9 @@ namespace Akka.Remote.Transport.DotNetty
     internal sealed class SslSettings
     {
         public static readonly SslSettings Empty = new SslSettings();
+        public readonly X509Certificate2 SecondarySSLCert;
+        public readonly bool EnableSecondarySSL;
+
         public static SslSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
@@ -296,9 +300,9 @@ namespace Akka.Remote.Transport.DotNetty
 
             if (config.GetBoolean("certificate.use-thumprint-over-file", false))
             {
-                return new SslSettings(config.GetString("certificate.thumbprint", null),
+                return new SslSettings(new StoreSslSettings(config.GetString("certificate.thumbprint", null),
                     config.GetString("certificate.store-name", null),
-                    ParseStoreLocationName(config.GetString("certificate.store-location", null)),
+                    ParseStoreLocationName(config.GetString("certificate.store-location", null))),
                         config.GetBoolean("suppress-validation", false));
 
             }
@@ -308,9 +312,9 @@ namespace Akka.Remote.Transport.DotNetty
                 var flags = flagsRaw.Aggregate(X509KeyStorageFlags.DefaultKeySet, (flag, str) => flag | ParseKeyStorageFlag(str));
 
                 return new SslSettings(
-                    certificatePath: config.GetString("certificate.path", null),
+                    new FileSslSettings(certificatePath: config.GetString("certificate.path", null),
                     certificatePassword: config.GetString("certificate.password", null),
-                    flags: flags,
+                    flags: flags),
                     suppressValidation: config.GetBoolean("suppress-validation", false));
             }
 
@@ -356,31 +360,68 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = false;
         }
 
-        public SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
+
+        public SslSettings(SSLCertGenerator settings, SSLCertGenerator secondarySettings, bool suppressValidation)
         {
-            using (var store = new X509Store(storeName, storeLocation))
-            {
-                store.Open(OpenFlags.ReadOnly);
-
-                var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
-                if (find.Count == 0)
-                {
-                    throw new ArgumentException(
-                        "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.dot-netty.tcp.ssl.certificate.store-name and akka.remote.dot-netty.tcp.ssl.certificate.store-location)");
-                }
-
-                Certificate = find[0];
-                SuppressValidation = suppressValidation;
-            }
+            Certificate = settings.Generate();
+            SecondarySSLCert = secondarySettings?.Generate();
+            SuppressValidation = suppressValidation;
         }
 
-        public SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
+        public abstract class SSLCertGenerator
         {
-            if (string.IsNullOrEmpty(certificatePath))
-                throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
+            public abstract X509Certificate2 Generate();
+        }
 
-            Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
-            SuppressValidation = suppressValidation;
+        public class StoreSslSettings : SSLCertGenerator
+        {
+            public StoreSslSettings(string certificateThumbprint,
+                string storeName, StoreLocation storeLocation)
+            {
+                this.certificateThumbprint = certificateThumbprint;
+                this.storeName = storeName;
+                this.StoreLocation = storeLocation;
+            }
+            public readonly string certificateThumbprint;
+            public readonly string storeName;
+            public readonly StoreLocation storeLocation;
+
+            public override X509Certificate2 Generate()
+            {
+                using (var store = new X509Store(storeName, storeLocation))
+                {
+                    store.Open(OpenFlags.ReadOnly);
+
+                    var find = store.Certificates.Find(X509FindType.FindByThumbprint, certificateThumbprint, !suppressValidation);
+                    if (find.Count == 0)
+                    {
+                        throw new ArgumentException(
+                            "Could not find Valid certificate for thumbprint (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.thumpbrint`. Also check akka.remote.dot-netty.tcp.ssl.certificate.store-name and akka.remote.dot-netty.tcp.ssl.certificate.store-location)");
+                    }
+
+                    return find[0];
+                }    
+            }
+        }
+        public class FileSslSettings : SSLCertGenerator
+        {
+            public FileSslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags)
+            {
+                CertificatePath = certificatePath;
+                CertificatePassword = certificatePassword;
+                Flags = flags;
+            }
+
+            public override X509Certificate2 Generate()
+            {
+                if (string.IsNullOrEmpty(CertificatePath))
+                    throw new ArgumentNullException(nameof(CertificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
+                return new X509Certificate2(CertificatePath, CertificatePassword, Flags);
+                
+            }
+            public string CertificatePath { get; }
+            public string CertificatePassword { get; }
+            public X509KeyStorageFlags Flags { get; }
         }
     }
 }
