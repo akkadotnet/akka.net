@@ -99,7 +99,7 @@ namespace Helios.Concurrency
     /// <summary>
     /// TaskScheduler for working with a <see cref="DedicatedThreadPool"/> instance
     /// </summary>
-    internal class DedicatedThreadPoolTaskScheduler : TaskScheduler
+    internal class DedicatedThreadPoolTaskScheduler : TaskScheduler, IRunnable
     {
         // Indicates whether the current thread is processing work items.
         [ThreadStatic]
@@ -232,35 +232,68 @@ namespace Helios.Concurrency
         {
             _pool.QueueUserWorkItem((t) =>
             {
-                // this thread is now available for inlining
-                _currentThreadIsRunningTasks = true;
-                try
-                {
-                    // Process all available items in the queue.
-                    while (true)
-                    {
-                        Task item;
-                        lock (_tasks)
-                        {
-                            // done processing
-                            if (_tasks.Count == 0)
-                            {
-                                ReleaseWorker();
-                                break;
-                            }
+                t.Run();
+                //// this thread is now available for inlining
+                //_currentThreadIsRunningTasks = true;
+                //try
+                //{
+                //    // Process all available items in the queue.
+                //    while (true)
+                //    {
+                //        Task item;
+                //        lock (_tasks)
+                //        {
+                //            // done processing
+                //            if (_tasks.Count == 0)
+                //            {
+                //                ReleaseWorker();
+                //                break;
+                //            }
+                //
+                //            // Get the next item from the queue
+                //            item = _tasks.First.Value;
+                //            _tasks.RemoveFirst();
+                //        }
+                //
+                //        // Execute the task we pulled out of the queue
+                //        TryExecuteTask(item);
+                //    }
+                //}
+                //// We're done processing items on the current thread
+                //finally { _currentThreadIsRunningTasks = false; }
+            },this);
+        }
 
-                            // Get the next item from the queue
-                            item = _tasks.First.Value;
-                            _tasks.RemoveFirst();
+        void IRunnable.Run()
+        {
+            // this thread is now available for inlining
+            _currentThreadIsRunningTasks = true;
+            try
+            {
+                // Process all available items in the queue.
+                while (true)
+                {
+                    Task item;
+                    lock (_tasks)
+                    {
+                        // done processing
+                        if (_tasks.Count == 0)
+                        {
+                            ReleaseWorker();
+                            break;
                         }
 
-                        // Execute the task we pulled out of the queue
-                        TryExecuteTask(item);
+                        // Get the next item from the queue
+                        item = _tasks.First.Value;
+                        _tasks.RemoveFirst();
                     }
+
+                    // Execute the task we pulled out of the queue
+                    TryExecuteTask(item);
                 }
-                // We're done processing items on the current thread
-                finally { _currentThreadIsRunningTasks = false; }
-            },null);
+            }
+            // We're done processing items on the current thread
+            finally { _currentThreadIsRunningTasks = false; }
         }
     }
 
@@ -767,6 +800,9 @@ namespace Helios.Concurrency
                 private const byte WaiterCountShift = 32;
                 private const byte CountForWaiterCountShift = 48;
                 
+                //Ugh. So, Older versions of .NET,
+                //for whatever reason, don't have
+                //Interlocked compareexchange for ULong.
                 public long _data;
 
                 private SemaphoreStateV2(ulong data)
@@ -872,12 +908,10 @@ namespace Helios.Concurrency
 
 
                 //how many threads are blocked in the OS waiting for this semaphore?
-                
                 public ushort Waiters
                 {
                     get { return GetUInt16Value(WaiterCountShift); }
                     //set{SetUInt16Value(value,WaiterCountShift);}
-
                 }
                 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -903,7 +937,6 @@ namespace Helios.Concurrency
                 public ushort CountForWaiters
                 {
                     get { return GetUInt16Value(CountForWaiterCountShift); }
-                    //set{SetUInt16Value(value,CountForWaiterCountShift);}
                 }
                 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1050,17 +1083,18 @@ namespace Helios.Concurrency
                     SemaphoreStateV2 currentState = GetCurrentState();
                     SemaphoreStateV2 newState = currentState;
 
-                    short remainingCount = count;
+                    ushort remainingCount = (ushort)count;
 
                     // First, prefer to release existing spinners,
                     // because a) they're hot, and b) we don't need a kernel
                     // transition to release them.
-                    short spinnersToRelease = Math.Max((short)0, Math.Min(remainingCount, (short)(currentState.Spinners - currentState.CountForSpinners)));
+                    
+                    ushort spinnersToRelease = (ushort)Math.Max((short)0, Math.Min(remainingCount, (short)(currentState.Spinners - currentState.CountForSpinners)));
                     newState.IncrementCountForSpinners((ushort)spinnersToRelease);// .CountForSpinners = (ushort)(newState.CountForSpinners + spinnersToRelease);
                     remainingCount -= spinnersToRelease;
 
                     // Next, prefer to release existing waiters
-                    short waitersToRelease = Math.Max((short)0, Math.Min(remainingCount, (short)(currentState.Waiters - currentState.CountForWaiters)));
+                    ushort waitersToRelease = (ushort)Math.Max((short)0, Math.Min(remainingCount, (short)(currentState.Waiters - currentState.CountForWaiters)));
                     newState.IncrCountForWaiters((ushort)waitersToRelease);// .CountForWaiters = (ushort)(newState.CountForWaiters+ waitersToRelease);
                     remainingCount -= waitersToRelease;
 
