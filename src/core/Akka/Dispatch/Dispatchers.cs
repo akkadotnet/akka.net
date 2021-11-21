@@ -262,7 +262,7 @@ namespace Akka.Dispatch
         {
             if (Volatile.Read(ref _shuttingDown) == 1)
                 throw new RejectedExecutionException("ForkJoinExecutor is shutting down");
-            _dedicatedThreadPool.QueueUserWorkItem(r=>r.Run(), run);
+            _dedicatedThreadPool.QueueUserWorkItem(run);
         }
 
         /// <summary>

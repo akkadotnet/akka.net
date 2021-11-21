@@ -230,38 +230,7 @@ namespace Helios.Concurrency
 
         private void RequestWorker()
         {
-            _pool.QueueUserWorkItem((t) =>
-            {
-                t.Run();
-                //// this thread is now available for inlining
-                //_currentThreadIsRunningTasks = true;
-                //try
-                //{
-                //    // Process all available items in the queue.
-                //    while (true)
-                //    {
-                //        Task item;
-                //        lock (_tasks)
-                //        {
-                //            // done processing
-                //            if (_tasks.Count == 0)
-                //            {
-                //                ReleaseWorker();
-                //                break;
-                //            }
-                //
-                //            // Get the next item from the queue
-                //            item = _tasks.First.Value;
-                //            _tasks.RemoveFirst();
-                //        }
-                //
-                //        // Execute the task we pulled out of the queue
-                //        TryExecuteTask(item);
-                //    }
-                //}
-                //// We're done processing items on the current thread
-                //finally { _currentThreadIsRunningTasks = false; }
-            },this);
+            _pool.QueueUserWorkItem(this);
         }
 
         void IRunnable.Run()
@@ -335,17 +304,17 @@ namespace Helios.Concurrency
         /// This exception is thrown if the given <paramref name="work"/> item is undefined.
         /// </exception>
         /// <returns>TBD</returns>
-        public bool QueueUserWorkItem(Action<IRunnable> work, IRunnable state)
+        public bool QueueUserWorkItem(IRunnable state)
         {
-            if (work == null)
-                ThrowNullWorkHelper(work);
+            if (state == null)
+                ThrowNullWorkHelper(state);
 
-            return _workQueue.TryAdd(work,state);
+            return _workQueue.TryAdd(state);
         }
 
-        private static void ThrowNullWorkHelper(Action<IRunnable> work)
+        private static void ThrowNullWorkHelper(IRunnable state)
         {
-            throw new ArgumentNullException(nameof(work), "Work item cannot be null.");
+            throw new ArgumentNullException(nameof(state), "Work item cannot be null.");
         }
 
         /// <summary>
@@ -406,11 +375,11 @@ namespace Helios.Concurrency
             {
                 try
                 {
-                    foreach (var (action,state) in _pool._workQueue.GetConsumingEnumerable())
+                    foreach (var state in _pool._workQueue.GetConsumingEnumerable())
                     {
                         try
                         {
-                            action(state);
+                            state.Run();
                         }
                         catch (Exception ex)
                         {
@@ -434,8 +403,8 @@ namespace Helios.Concurrency
             private static readonly int ProcessorCount = Environment.ProcessorCount;
             private const int CompletedState = 1;
 
-            private readonly ConcurrentQueue<(Action<IRunnable> act, IRunnable state)>
-                _queue = new ConcurrentQueue<(Action<IRunnable> act, IRunnable state)>();
+            private readonly ConcurrentQueue<IRunnable>
+                _queue = new ConcurrentQueue<IRunnable >();
             //private readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
             //private readonly UnfairSemaphore _semaphore = new UnfairSemaphore();
             private readonly UnfairSemaphoreV2 _semaphore = new UnfairSemaphoreV2();
@@ -448,7 +417,7 @@ namespace Helios.Concurrency
             }
 
             //public bool TryAdd(Action work)
-            public bool TryAdd(Action<IRunnable> work, IRunnable state)
+            public bool TryAdd(IRunnable state)
             {
                 // If TryAdd returns true, it's guaranteed the work item will be executed.
                 // If it returns false, it's also guaranteed the work item won't be executed.
@@ -456,17 +425,17 @@ namespace Helios.Concurrency
                 if (IsAddingCompleted)
                     return false;
 
-                _queue.Enqueue((work,state));
+                _queue.Enqueue(state);
                 EnsureThreadRequested();
 
                 return true;
             }
 
-            public IEnumerable<(Action<IRunnable> action, IRunnable state)> GetConsumingEnumerable()
+            public IEnumerable<IRunnable> GetConsumingEnumerable()
             {
                 while (true)
                 {
-                    (Action<IRunnable>action,IRunnable state) work;
+                    IRunnable work;
                     if (_queue.TryDequeue(out work))
                     {
                         yield return work;
