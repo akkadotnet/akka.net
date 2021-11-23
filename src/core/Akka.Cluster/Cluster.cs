@@ -140,11 +140,15 @@ namespace Akka.Cluster
             _readView = new ClusterReadView(this);
 
             // force the underlying system to start
-            _clusterCore = GetClusterCoreRef().Result;
+            _clusterCoreTask = GetClusterCoreRef();
+            _ = _clusterCoreTask.ContinueWith(t =>
+            {
+                _clusterCore = t.Result;
 
-            system.RegisterOnTermination(Shutdown);
+                system.RegisterOnTermination(Shutdown);
 
-            LogInfo("Started up successfully");
+                LogInfo("Started up successfully");
+            });            
         }
 
         private async Task<IActorRef> GetClusterCoreRef()
@@ -563,6 +567,7 @@ namespace Akka.Cluster
 
         private readonly IActorRef _clusterDaemons;
         private IActorRef _clusterCore;
+        private Task<IActorRef> _clusterCoreTask;
 
         /// <summary>
         /// TBD
@@ -571,9 +576,10 @@ namespace Akka.Cluster
         {
             get
             {
-                if (_clusterCore == null)
+                if (_clusterCore is null)
                 {
-                    _clusterCore = GetClusterCoreRef().Result;
+                    _clusterCore = (_clusterCoreTask ?? throw new InvalidOperationException())
+                        .GetAwaiter().GetResult();
                 }
                 return _clusterCore;
             }
