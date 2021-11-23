@@ -579,7 +579,7 @@ namespace Akka.Cluster
                 if (_clusterCore is null)
                 {
                     _clusterCore = (_clusterCoreTask ?? throw new InvalidOperationException())
-                        .GetAwaiter().GetResult();
+                        .Result;
                 }
                 return _clusterCore;
             }
