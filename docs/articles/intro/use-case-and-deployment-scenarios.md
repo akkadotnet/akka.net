@@ -43,7 +43,7 @@ namespace Foo.Bar
 
 ### Creating the Akka.NET resources
 
-Hosting inside an ASP.NET application is easy. The Global.asax would be the designated place to start.
+Hosting inside an ASP.NET application is easy. The `Global.asax` would be the designated place to start.
 
 ```csharp
 public class MvcApplication : System.Web.HttpApplication
@@ -54,7 +54,7 @@ public class MvcApplication : System.Web.HttpApplication
 
     protected void Application_Start()
     {
-        //your mvc config. Does not really matter if you initialise
+        //your mvc config. Does not really matter if you initialize
         //your actor system before or after
 
         ActorSystem = ActorSystem.Create("app");
@@ -64,7 +64,7 @@ public class MvcApplication : System.Web.HttpApplication
 }
 ```
 
-As you can see the main point here is keeping a static reference to your `ActorSystem` . This ensures it won't be accidentally garbage collected and gets disposed and created with the start and stop events of your web application. 
+As you can see the main point here is keeping a static reference to your `ActorSystem` . This ensures it won't be accidentally garbage collected and gets disposed and created with the start and stop events of your web application.
 
 > [!WARNING]
 > When you are hosting inside of `IIS`, the application pool your app lives in could be stopped and started at the whim of `IIS`. This means your `ActorSystem` could be stopped at any given time.
@@ -72,7 +72,9 @@ As you can see the main point here is keeping a static reference to your `ActorS
 Typically you use a very lightweight `ActorSystem` inside ASP.NET applications, and offload heavy-duty work to a separate Windows Service via Akka.Remote / Akka.Cluster.
 
 ### Interaction between Controllers and Akka.NET
+
 In the sample below, we use an Web API Controller:
+
 ```csharp
 public class SomeController  : ApiController
 {
@@ -94,7 +96,8 @@ to build your Windows Services. It radically simplifies hosting Windows Services
 
 The quickest way to get started with TopShelf is by creating a Console Application. Which would look like this:
 
-#### Program.cs
+### Program.cs
+
 ```csharp
 using Akka.Actor;
 using Topshelf;
@@ -149,16 +152,17 @@ For all the options and settings check out their [docs](http://topshelf.readthed
 ## Azure PaaS Worker Role
 
 The following sample assumes that you have created a new Azure PaaS Cloud Service that contains a single
-empty Worker Role. The Cloud Service project templates are added to Visual Studio by installing the 
+empty Worker Role. The Cloud Service project templates are added to Visual Studio by installing the
 [Azure .Net SDK](http://azure.microsoft.com/en-gb/downloads/).
 
 The Worker Role implementation can be tested locally using the Azure Compute Emulator before deploying to the cloud. The MSDN Azure article ["Using Emulator Express to Run and Debug a Cloud Service Locally"](https://msdn.microsoft.com/en-us/library/azure/dn339018.aspx) describes this in more detail.
 
-The Azure PaaS Worker Role implementation is very similar to the [Windows Service](#windows-service). 
+The Azure PaaS Worker Role implementation is very similar to the [Windows Service](#windows-service).
 The quickest way to get started with Akka.Net is to create a simple Worker Role which invokes the top-level
 user-actor in the RunAsync() method, as follows:
 
-#### WorkerRole.cs
+### WorkerRole.cs
+
 ```csharp
 using Akka.Actor;
 

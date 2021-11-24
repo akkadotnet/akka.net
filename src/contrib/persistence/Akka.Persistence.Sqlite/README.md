@@ -47,23 +47,23 @@ Remember that connection string must be provided separately to Journal and Snaps
 
 Both journal and snapshot store share the same configuration keys (however they resides in separate scopes, so they are definied distinctly for either journal or snapshot store):
 
-- `class` (string with fully qualified type name) - determines class to be used as a persistent journal. Default: *Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite* (for journal) and *Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite* (for snapshot store).
-- `plugin-dispatcher` (string with configuration path) - describes a message dispatcher for persistent journal. Default: *akka.actor.default-dispatcher*
-- `connection-string` - connection string used to access SQLite database. Default: *none*.
-- `connection-timeout` - timespan determining default connection timeouts on database-related operations. Default: *30s*
-- `table-name` - name of the table used by either journal or snapshot store. Default: *event_journal* (for journal) or *snapshot_store* (for snapshot store)
-- `auto-initialize` - flag determining if journal or snapshot store related tables should by automatically created when they have not been found in connected database. Default: *false*
+* `class` (string with fully qualified type name) - determines class to be used as a persistent journal. Default: *Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite* (for journal) and *Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite* (for snapshot store).
+* `plugin-dispatcher` (string with configuration path) - describes a message dispatcher for persistent journal. Default: *akka.actor.default-dispatcher*
+* `connection-string` - connection string used to access SQLite database. Default: *none*.
+* `connection-timeout` - timespan determining default connection timeouts on database-related operations. Default: *30s*
+* `table-name` - name of the table used by either journal or snapshot store. Default: *event_journal* (for journal) or *snapshot_store* (for snapshot store)
+* `auto-initialize` - flag determining if journal or snapshot store related tables should by automatically created when they have not been found in connected database. Default: *false*
 
 In addition, journal configuration specifies additional field:
 
-- `timestamp-provider` - fully qualified type name (with assembly) of the class responsible for generating timestamp values based on persisted message type. By default this points to *Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common*, which returns current UTC DateTime value.
+* `timestamp-provider` - fully qualified type name (with assembly) of the class responsible for generating timestamp values based on persisted message type. By default this points to *Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common*, which returns current UTC DateTime value.
 
 ### In-memory databases
 
 Akka.Persistence.Sqlite plugin allows to use in-memory databases, however requires to use them in shared mode in order to work correctly. Example connection strings for such configurations are described below:
 
-- `Datasource=file;Mode=Memory` for anonymous in-memory database instances.
-- `Datasource=file;Mode=Memory;Cache=Shared` for named in-memory database instances. This way you can provide many separate databases residing in memory.
+* `Datasource=file;Mode=Memory` for anonymous in-memory database instances.
+* `Datasource=file;Mode=Memory;Cache=Shared` for named in-memory database instances. This way you can provide many separate databases residing in memory.
 
 ### Custom SQL data queries
 

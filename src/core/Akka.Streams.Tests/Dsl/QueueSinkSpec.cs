@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 sub.SendError(TestException());
                 ExpectMsg<Status.Failure>(
-                    f => f.Cause is AggregateException && f.Cause.InnerException.Equals(TestException()));
+                    f => f.Cause.Equals(TestException()));
             }, _materializer);
         }
 

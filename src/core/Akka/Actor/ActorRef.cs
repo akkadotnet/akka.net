@@ -69,51 +69,34 @@ namespace Akka.Actor
     ///
     /// ActorRef implementation used for one-off tasks.
     /// </summary>
-    public class FutureActorRef<T> : MinimalActorRef
+    public sealed class FutureActorRef<T> : MinimalActorRef
     {
         private readonly TaskCompletionSource<T> _result;
         private readonly ActorPath _path;
+        private readonly IActorRefProvider _provider;
 
         /// <summary>
         /// INTERNAL API
         /// </summary>
         /// <param name="result">TBD</param>
-        /// <param name="unregister">TBD</param>
         /// <param name="path">TBD</param>
-        public FutureActorRef(TaskCompletionSource<T> result, Action<Task> unregister, ActorPath path)
+        /// <param name="provider">TBD</param>
+        public FutureActorRef(TaskCompletionSource<T> result, ActorPath path, IActorRefProvider provider)
         {
-            if (ActorCell.Current != null)
-            {
-                _actorAwaitingResultSender = ActorCell.Current.Sender;
-            }
             _result = result;
             _path = path;
-
-            _result.Task.ContinueWith(unregister);
+            _provider = provider;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override ActorPath Path
-        {
-            get { return _path; }
-        }
+        public override ActorPath Path => _path;
 
         /// <summary>
         /// TBD
         /// </summary>
-        /// <exception cref="System.NotImplementedException">TBD</exception>
-        public override IActorRefProvider Provider
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-
-        private const int INITIATED = 0;
-        private const int COMPLETED = 1;
-        private int status = INITIATED;
-        private readonly IActorRef _actorAwaitingResultSender;
+        public override IActorRefProvider Provider => _provider;
 
         /// <summary>
         /// TBD
@@ -122,43 +105,36 @@ namespace Akka.Actor
         /// <param name="sender">TBD</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
+            var handled = false;
 
-            if (message is ISystemMessage sysM) //we have special handling for system messages
+            switch (message)
             {
-                SendSystemMessage(sysM);
+                case ISystemMessage msg:
+                    handled = _result.TrySetException(new InvalidOperationException($"system message of type '{msg.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
+                    break;
+                case T t:
+                    handled = _result.TrySetResult(t);
+                    break;
+                case null:
+                    handled = _result.TrySetResult(default);
+                    break;
+                case Status.Failure f:
+                    handled = _result.TrySetException(f.Cause
+                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    break;
+                case Failure f:
+                    handled = _result.TrySetException(f.Exception
+                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    break;
+                default:
+                    _ = _result.TrySetException(new ArgumentException(
+                        $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
+                    break;
             }
-            else
-            {
-                if (Interlocked.Exchange(ref status, COMPLETED) == INITIATED)
-                {
-                    if (message is T t)
-                    {
-                        _result.TrySetResult(t);
-                    }
-                    else if (message == null) //special case: https://github.com/akkadotnet/akka.net/issues/5204
-                    {
-                        _result.TrySetResult(default);
-                    }
-                    else if (message is Failure f)
-                    {
-                        _result.TrySetException(f.Exception ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
-                    }
-                    else
-                    {
-                        _result.TrySetException(new ArgumentException(
-                            $"Received message of type [{message.GetType()}] - Ask expected message of type [{typeof(T)}]"));
-                    }
-                }
-            }
-        }
-        
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        public override void SendSystemMessage(ISystemMessage message)
-        {
-            base.SendSystemMessage(message);
+
+            //ignore canceled ask and put unhandled answers into deadletter
+            if (!handled && !_result.Task.IsCanceled)
+                _provider.DeadLetters.Tell(message ?? default(T), this);            
         }
     }
 
@@ -727,16 +703,16 @@ namespace Akka.Actor
         private IEnumerable<IActorRef> SelfAndChildren()
         {
             yield return this;
-            foreach(var child in Children.SelectMany(x =>
-            {
-                switch(x)
-                {
-                    case ActorRefWithCell cell:
-                        return cell.SelfAndChildren();
-                    default:
-                        return new[] { x };
-                }
-            }))
+            foreach (var child in Children.SelectMany(x =>
+             {
+                 switch (x)
+                 {
+                     case ActorRefWithCell cell:
+                         return cell.SelfAndChildren();
+                     default:
+                         return new[] { x };
+                 }
+             }))
             {
                 yield return child;
             }
