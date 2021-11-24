@@ -233,7 +233,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 queue.OfferAsync(6).PipeTo(TestActor);
                 queue.OfferAsync(7).PipeTo(TestActor);
-                ExpectMsg<Status.Failure>().Cause.InnerException.Should().BeOfType<IllegalStateException>();
+                ExpectMsg<Status.Failure>().Cause.Should().BeOfType<IllegalStateException>();
                 probe.RequestNext(1);
                 ExpectMsg(Enqueued.Instance);
                 queue.Complete();

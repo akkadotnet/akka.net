@@ -19,24 +19,23 @@ streams, such that the second one is consumed after the first one has completed)
 ## Constructing Graphs
 
 Graphs are built from simple Flows which serve as the linear connections within the graphs as well as junctions
-which serve as fan-in and fan-out points for Flows. Thanks to the junctions having meaningful types based on their behaviour
+which serve as fan-in and fan-out points for Flows. Thanks to the junctions having meaningful types based on their behavior
 and making them explicit elements these elements should be rather straightforward to use.
 
 Akka Streams currently provide these junctions (for a detailed list see [Overview of built-in stages and their semantics](xref:streams-builtin-stages)):
 
-- **Fan-out**
- - ``Broadcast<T>`` – *(1 input, N outputs)* given an input element emits to each output
- - ``Balance<T>`` – *(1 input, N outputs)* given an input element emits to one of its output ports
- - ``UnzipWith<In,A,B,...>`` – *(1 input, N outputs)* takes a function of 1 input that given a value for each input emits N output elements (where N <= 20)
- - ``UnZip<A,B>`` – *(1 input, 2 outputs)* splits a stream of ``(A,B)`` tuples into two streams, one of type ``A`` and one of type ``B``   
-    
-- **Fan-in**
- - ``Merge<In>`` – *(N inputs , 1 output)* picks randomly from inputs pushing them one by one to its output
- - ``MergePreferred<In>`` – like `Merge` but if elements are available on ``preferred`` port, it picks from it, otherwise randomly from ``others``
-  - `MergePrioritized<In>` – like `Merge` but if elements are available on all input ports, it picks from them randomly based on their `priority`
-  - ``ZipWith<A,B,...,Out>`` – *(N inputs, 1 output)* which takes a function of N inputs that given a value for each input emits 1 output element
- - ``Zip<A,B>`` – *(2 inputs, 1 output)* is a `ZipWith` specialised to zipping input streams of ``A`` and ``B`` into an ``(A,B)`` tuple stream
- - ``Concat<A>`` – *(2 inputs, 1 output)* concatenates two streams (first consume one, then the second one)
+* **Fan-out**
+  * ``Broadcast<T>`` – *(1 input, N outputs)* given an input element emits to each output
+  * ``Balance<T>`` – *(1 input, N outputs)* given an input element emits to one of its output ports
+  * ``UnzipWith<In,A,B,...>`` – *(1 input, N outputs)* takes a function of 1 input that given a value for each input emits N output elements (where N <= 20)
+  * ``UnZip<A,B>`` – *(1 input, 2 outputs)* splits a stream of ``(A,B)`` tuples into two streams, one of type ``A`` and one of type ``B``
+* **Fan-in**
+  * ``Merge<In>`` – *(N inputs , 1 output)* picks randomly from inputs pushing them one by one to its output
+  * ``MergePreferred<In>`` – like `Merge` but if elements are available on ``preferred`` port, it picks from it, otherwise randomly from ``others``
+  * `MergePrioritized<In>` – like `Merge` but if elements are available on all input ports, it picks from them randomly based on their `priority`
+  * ``ZipWith<A,B,...,Out>`` – *(N inputs, 1 output)* which takes a function of N inputs that given a value for each input emits 1 output element
+  * ``Zip<A,B>`` – *(2 inputs, 1 output)* is a `ZipWith` specialized to zipping input streams of ``A`` and ``B`` into an ``(A,B)`` tuple stream
+  * ``Concat<A>`` – *(2 inputs, 1 output)* concatenates two streams (first consume one, then the second one)
 
 One of the goals of the GraphDSL DSL is to look similar to how one would draw a graph on a whiteboard, so that it is
 simple to translate a design from whiteboard to code and be able to relate those two. Let's illustrate this by translating
@@ -51,21 +50,21 @@ or ending a `Flow`. Junctions must always be created with defined type parameter
 ```csharp
 var g = RunnableGraph.FromGraph(GraphDsl.Create(builder =>
 {
-	var source = Source.From(Enumerable.Range(1, 10));
-	var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
+    var source = Source.From(Enumerable.Range(1, 10));
+    var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
 
-	var broadcast = builder.Add(new Broadcast<int>(2));
-	var merge = builder.Add(new Merge<int>(2));
+    var broadcast = builder.Add(new Broadcast<int>(2));
+    var merge = builder.Add(new Merge<int>(2));
 
-	var f1 = Flow.Create<int>().Select(x => x + 10);
-	var f2 = Flow.Create<int>().Select(x => x + 10);
-	var f3 = Flow.Create<int>().Select(x => x + 10);
-	var f4 = Flow.Create<int>().Select(x => x + 10);
+    var f1 = Flow.Create<int>().Select(x => x + 10);
+    var f2 = Flow.Create<int>().Select(x => x + 10);
+    var f3 = Flow.Create<int>().Select(x => x + 10);
+    var f4 = Flow.Create<int>().Select(x => x + 10);
 
-	builder.From(source).Via(f1).Via(broadcast).Via(f2).Via(merge).Via(f3).To(sink);
-	builder.From(broadcast).Via(f4).To(merge);
+    builder.From(source).Via(f1).Via(broadcast).Via(f2).Via(merge).Via(f3).To(sink);
+    builder.From(broadcast).Via(f4).To(merge);
 
-	return ClosedShape.Instance;
+    return ClosedShape.Instance;
 }));
 ```
 
@@ -97,18 +96,18 @@ var bottomHeadSink = Sink.First<int>();
 var sharedDoubler = Flow.Create<int>().Select(x => x*2);
 
 RunnableGraph.FromGraph(GraphDsl.Create(topHeadSink, bottomHeadSink, Keep.Both,
-	(builder, topHs, bottomHs) =>
-	{
-		var broadcast = builder.Add(new Broadcast<int>(2));
-		var source = Source.Single(1).MapMaterializedValue<Tuple<Task<int>, Task<int>>>(_ => null);
+    (builder, topHs, bottomHs) =>
+    {
+        var broadcast = builder.Add(new Broadcast<int>(2));
+        var source = Source.Single(1).MapMaterializedValue<Tuple<Task<int>, Task<int>>>(_ => null);
 
-		builder.From(source).To(broadcast.In);
+        builder.From(source).To(broadcast.In);
 
-		builder.From(broadcast.Out(0)).Via(sharedDoubler).To(topHs.Inlet);
-		builder.From(broadcast.Out(1)).Via(sharedDoubler).To(bottomHs.Inlet);
+        builder.From(broadcast.Out(0)).Via(sharedDoubler).To(topHs.Inlet);
+        builder.From(broadcast.Out(1)).Via(sharedDoubler).To(bottomHs.Inlet);
 
-		return ClosedShape.Instance;
-	}));
+        return ClosedShape.Instance;
+    }));
 ```
 
 ## Constructing and combining Partial Graphs
@@ -129,30 +128,30 @@ the greatest int value of each zipped triple. We'll want to expose 3 input ports
 ```csharp
 var pickMaxOfThree = GraphDsl.Create(b =>
 {
-	var zip1 = b.Add(ZipWith.Apply<int, int, int>(Math.Max));
-	var zip2 = b.Add(ZipWith.Apply<int, int, int>(Math.Max));
-	b.From(zip1.Out).To(zip2.In0);
+    var zip1 = b.Add(ZipWith.Apply<int, int, int>(Math.Max));
+    var zip2 = b.Add(ZipWith.Apply<int, int, int>(Math.Max));
+    b.From(zip1.Out).To(zip2.In0);
 
-	return new UniformFanInShape<int, int>(zip2.Out, zip1.In0, zip1.In1, zip2.In1);
+    return new UniformFanInShape<int, int>(zip2.Out, zip1.In0, zip1.In1, zip2.In1);
 });
 
 var resultSink = Sink.First<int>();
 
 var g = RunnableGraph.FromGraph(GraphDsl.Create(resultSink, (b, sink) =>
 {
-	// importing the partial graph will return its shape (inlets & outlets)
-	var pm3 = b.Add(pickMaxOfThree);
-	var s1 = Source.Single(1).MapMaterializedValue<Task<int>>(_ => null);
-	var s2 = Source.Single(2).MapMaterializedValue<Task<int>>(_ => null);
-	var s3 = Source.Single(3).MapMaterializedValue<Task<int>>(_ => null);
+    // importing the partial graph will return its shape (inlets & outlets)
+    var pm3 = b.Add(pickMaxOfThree);
+    var s1 = Source.Single(1).MapMaterializedValue<Task<int>>(_ => null);
+    var s2 = Source.Single(2).MapMaterializedValue<Task<int>>(_ => null);
+    var s3 = Source.Single(3).MapMaterializedValue<Task<int>>(_ => null);
 
-	b.From(s1).To(pm3.In(0));
-	b.From(s2).To(pm3.In(1));
-	b.From(s3).To(pm3.In(2));
+    b.From(s1).To(pm3.In(0));
+    b.From(s2).To(pm3.In(1));
+    b.From(s3).To(pm3.In(2));
 
-	b.From(pm3.Out).To(sink.Inlet);
+    b.From(pm3.Out).To(sink.Inlet);
 
-	return ClosedShape.Instance;
+    return ClosedShape.Instance;
 }));
 
 var max = g.Run(materializer);
@@ -166,7 +165,6 @@ Then we import it (all of its nodes and connections) explicitly into the closed 
 
 > [!WARNING]
 > Please note that `GraphDSL` is not able to provide compile time type-safety about whether or not all elements have been properly connected—this validation is performed as a runtime check during the graph's instantiation. A partial graph also verifies that all ports are either connected or part of the returned `Shape`.
-
 
 ## Constructing Sources, Sinks and Flows from Partial Graphs
 
@@ -192,18 +190,18 @@ construction in action:
 ```csharp
 var pairs = Source.FromGraph(GraphDsl.Create(b =>
 {
-	// prepare graph elements
-	var zip = b.Add(new Zip<int, int>());
-	Func<Source<int, Task<Tuple<int, int>>>> ints = () =>
-		Source.From(Enumerable.Range(1, int.MaxValue))
-			.MapMaterializedValue<Task<Tuple<int, int>>>(_ => null);
+    // prepare graph elements
+    var zip = b.Add(new Zip<int, int>());
+    Func<Source<int, Task<Tuple<int, int>>>> ints = () =>
+        Source.From(Enumerable.Range(1, int.MaxValue))
+            .MapMaterializedValue<Task<Tuple<int, int>>>(_ => null);
 
-	// connect the graph
-	b.From(ints().Where(x => x%2 != 0)).To(zip.In0);
-	b.From(ints().Where(x => x % 2 == 0)).To(zip.In1);
+    // connect the graph
+    b.From(ints().Where(x => x%2 != 0)).To(zip.In0);
+    b.From(ints().Where(x => x % 2 == 0)).To(zip.In1);
 
-	// expose port
-	return new SourceShape<Tuple<int, int>>(zip.Out);
+    // expose port
+    return new SourceShape<Tuple<int, int>>(zip.Out);
 }));
 
 var firstPair = pairs.RunWith(Sink.First<Tuple<int, int>>(), materializer);
@@ -214,24 +212,25 @@ must be an ``Inlet<T>``. For defining a ``Flow<T>`` we need to expose both an in
 
 ```csharp
 var pairUpWithToString = Flow.FromGraph(
-	GraphDsl.Create(b =>
-	{
-		// prepare graph elements
-		var broadcast = b.Add(new Broadcast<int>(2));
-		var zip = b.Add(new Zip<int, string>());
+    GraphDsl.Create(b =>
+    {
+        // prepare graph elements
+        var broadcast = b.Add(new Broadcast<int>(2));
+        var zip = b.Add(new Zip<int, string>());
 
-		// connect the graph
-		b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(x => x)).To(zip.In0);
-		b.From(broadcast.Out(1)).Via(Flow.Create<int>().Select(x => x.ToString())).To(zip.In1);
+        // connect the graph
+        b.From(broadcast.Out(0)).Via(Flow.Create<int>().Select(x => x)).To(zip.In0);
+        b.From(broadcast.Out(1)).Via(Flow.Create<int>().Select(x => x.ToString())).To(zip.In1);
 
-		// expose ports
-		return new FlowShape<int, Tuple<int, string>>(broadcast.In, zip.Out);
-	}));
+        // expose ports
+        return new FlowShape<int, Tuple<int, string>>(broadcast.In, zip.Out);
+    }));
 
 pairUpWithToString.RunWith(Source.From(new[] {1}), Sink.First<Tuple<int, string>>(), materializer);
 ```
 
 ## Combining Sources and Sinks with simplified API
+
 There is a simplified API you can use to combine sources and sinks with junctions like: ``Broadcast<T>``, ``Balance<T>``,  ``Merge<In>`` and ``Concat<A>`` without the need for using the Graph DSL. The combine method takes care of constructing the necessary graph underneath. In following example we combine two sources into one (fan-in):
 
 ```csharp
@@ -247,7 +246,7 @@ The same can be done for a ``Sink<T>`` but in this case it will be fan-out:
 ```csharp
 var sendRemotely = Sink.ActorRef<int>(actorRef, "Done");
 var localProcessing = Sink.ForEach<int>(_ => { /* do something usefull */ })
-	.MapMaterializedValue(_=> NotUsed.Instance);
+    .MapMaterializedValue(_=> NotUsed.Instance);
 
 var sink = Sink.Combine(i => new Broadcast<int>(i), sendRemotely, localProcessing);
 
@@ -255,6 +254,7 @@ Source.From(new[] {0, 1, 2}).RunWith(sink, materializer);
 ```
 
 ## Building reusable Graph components
+
 It is possible to build reusable, encapsulated components of arbitrary input and output ports using the graph DSL.
 
 As an example, we will build a graph junction that represents a pool of workers, where a worker is expressed
@@ -267,75 +267,76 @@ Altogether, our junction will have two input ports of type ``I`` (for the normal
 ```csharp
 public class PriorityWorkerPoolShape<TIn, TOut> : Shape
 {
-	public PriorityWorkerPoolShape(Inlet<TIn> jobsIn, Inlet<TIn> priorityJobsIn, Outlet<TOut> resultsOut)
-	{
-		JobsIn = jobsIn;
-		PriorityJobsIn = priorityJobsIn;
-		ResultsOut = resultsOut;
+    public PriorityWorkerPoolShape(Inlet<TIn> jobsIn, Inlet<TIn> priorityJobsIn, Outlet<TOut> resultsOut)
+    {
+        JobsIn = jobsIn;
+        PriorityJobsIn = priorityJobsIn;
+        ResultsOut = resultsOut;
 
-		Inlets = ImmutableArray.Create<Inlet>(jobsIn, priorityJobsIn);
-		Outlets = ImmutableArray.Create<Outlet>(resultsOut);
-	}
+        Inlets = ImmutableArray.Create<Inlet>(jobsIn, priorityJobsIn);
+        Outlets = ImmutableArray.Create<Outlet>(resultsOut);
+    }
 
-	public override ImmutableArray<Inlet> Inlets { get; }
+    public override ImmutableArray<Inlet> Inlets { get; }
 
-	public override ImmutableArray<Outlet> Outlets { get; }
+    public override ImmutableArray<Outlet> Outlets { get; }
 
-	public Inlet<TIn> JobsIn { get; }
+    public Inlet<TIn> JobsIn { get; }
 
-	public Inlet<TIn> PriorityJobsIn { get; }
+    public Inlet<TIn> PriorityJobsIn { get; }
 
-	public Outlet<TOut> ResultsOut { get; }
+    public Outlet<TOut> ResultsOut { get; }
 
-	public override Shape DeepCopy()
-	{
-		return new PriorityWorkerPoolShape<TIn, TOut>((Inlet<TIn>)JobsIn.CarbonCopy(),
-			(Inlet<TIn>)PriorityJobsIn.CarbonCopy(), (Outlet<TOut>)ResultsOut.CarbonCopy());
-	}
+    public override Shape DeepCopy()
+    {
+        return new PriorityWorkerPoolShape<TIn, TOut>((Inlet<TIn>)JobsIn.CarbonCopy(),
+            (Inlet<TIn>)PriorityJobsIn.CarbonCopy(), (Outlet<TOut>)ResultsOut.CarbonCopy());
+    }
 
-	public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
-	{
-		if (inlets.Length != Inlets.Length)
-			throw new ArgumentException(
-				$"Inlets have the wrong length, expected {Inlets.Length} found {inlets.Length}", nameof(inlets));
-		if (outlets.Length != Outlets.Length)
-			throw new ArgumentException(
-				$"Outlets have the wrong length, expected {Outlets.Length} found {outlets.Length}", nameof(outlets));
+    public override Shape CopyFromPorts(ImmutableArray<Inlet> inlets, ImmutableArray<Outlet> outlets)
+    {
+        if (inlets.Length != Inlets.Length)
+            throw new ArgumentException(
+                $"Inlets have the wrong length, expected {Inlets.Length} found {inlets.Length}", nameof(inlets));
+        if (outlets.Length != Outlets.Length)
+            throw new ArgumentException(
+                $"Outlets have the wrong length, expected {Outlets.Length} found {outlets.Length}", nameof(outlets));
 
-		// This is why order matters when overriding inlets and outlets.
-		return new PriorityWorkerPoolShape<TIn, TOut>((Inlet<TIn>)inlets[0], (Inlet<TIn>)inlets[1],
-			(Outlet<TOut>)outlets[0]);
-	}
+        // This is why order matters when overriding inlets and outlets.
+        return new PriorityWorkerPoolShape<TIn, TOut>((Inlet<TIn>)inlets[0], (Inlet<TIn>)inlets[1],
+            (Outlet<TOut>)outlets[0]);
+    }
 }
 ```
 
 ## Predefined shapes
+
 In general a custom `Shape` needs to be able to provide all its input and output ports, be able to copy itself, and also be
 able to create a new instance from given ports. There are some predefined shapes provided to avoid unnecessary
 boilerplate:
 
- * `SourceShape`, `SinkShape`, `FlowShape` for simpler shapes,
- * `UniformFanInShape` and `UniformFanOutShape` for junctions with multiple input (or output) ports of the same type,
- * `FanInShape1`, `FanInShape2`, ..., `FanOutShape1`, `FanOutShape2`, ... for junctions with multiple input (or output) ports of different types.
+* `SourceShape`, `SinkShape`, `FlowShape` for simpler shapes,
+* `UniformFanInShape` and `UniformFanOutShape` for junctions with multiple input (or output) ports of the same type,
+* `FanInShape1`, `FanInShape2`, ..., `FanOutShape1`, `FanOutShape2`, ... for junctions with multiple input (or output) ports of different types.
 
 Since our shape has two input ports and one output port, we can just use the `FanInShape` DSL to define our custom shape:
 
 ```csharp
 public class PriorityWorkerPoolShape2<TIn, TOut> : FanInShape<TOut>
 {
-	public PriorityWorkerPoolShape2(IInit init = null)
-		: base(init ?? new InitName("PriorityWorkerPool"))
-	{
-	}
+    public PriorityWorkerPoolShape2(IInit init = null)
+        : base(init ?? new InitName("PriorityWorkerPool"))
+    {
+    }
 
-	protected override FanInShape<TOut> Construct(IInit init)
-		=> new PriorityWorkerPoolShape2<TIn, TOut>(init);
+    protected override FanInShape<TOut> Construct(IInit init)
+        => new PriorityWorkerPoolShape2<TIn, TOut>(init);
 
-	public Inlet<TIn> JobsIn { get; } =  new Inlet<TIn>("JobsIn");
+    public Inlet<TIn> JobsIn { get; } =  new Inlet<TIn>("JobsIn");
 
-	public Inlet<TIn> PriorityJobsIn { get; } = new Inlet<TIn>("priorityJobsIn");
+    public Inlet<TIn> PriorityJobsIn { get; } = new Inlet<TIn>("priorityJobsIn");
 
-	// Outlet[Out] with name "out" is automatically created
+    // Outlet[Out] with name "out" is automatically created
 }
 ```
 
@@ -344,30 +345,30 @@ Now that we have a `Shape` we can wire up a Graph that represents our worker poo
 ```csharp
 public static class PriorityWorkerPool
 {
-	public static IGraph<PriorityWorkerPoolShape<TIn, TOut>, NotUsed> Create<TIn, TOut>(
-		Flow<TIn, TOut, NotUsed> worker, int workerCount)
-	{
-		return GraphDsl.Create(b =>
-		{
-			var priorityMerge = b.Add(new MergePreferred<TIn>(1));
-			var balance = b.Add(new Balance<TIn>(workerCount));
-			var resultsMerge = b.Add(new Merge<TOut>(workerCount));
+    public static IGraph<PriorityWorkerPoolShape<TIn, TOut>, NotUsed> Create<TIn, TOut>(
+        Flow<TIn, TOut, NotUsed> worker, int workerCount)
+    {
+        return GraphDsl.Create(b =>
+        {
+            var priorityMerge = b.Add(new MergePreferred<TIn>(1));
+            var balance = b.Add(new Balance<TIn>(workerCount));
+            var resultsMerge = b.Add(new Merge<TOut>(workerCount));
 
-			// After merging priority and ordinary jobs, we feed them to the balancer
-			b.From(priorityMerge).To(balance);
+            // After merging priority and ordinary jobs, we feed them to the balancer
+            b.From(priorityMerge).To(balance);
 
-			// Wire up each of the outputs of the balancer to a worker flow
-			// then merge them back
-			for (var i = 0; i < workerCount; i++)
-				b.From(balance.Out(i)).Via(worker).To(resultsMerge.In(i));
+            // Wire up each of the outputs of the balancer to a worker flow
+            // then merge them back
+            for (var i = 0; i < workerCount; i++)
+                b.From(balance.Out(i)).Via(worker).To(resultsMerge.In(i));
 
-			// We now expose the input ports of the priorityMerge and the output
-			// of the resultsMerge as our PriorityWorkerPool ports
-			// -- all neatly wrapped in our domain specific Shape
-			return new PriorityWorkerPoolShape<TIn, TOut>(jobsIn: priorityMerge.In(0),
-				priorityJobsIn: priorityMerge.Preferred, resultsOut: resultsMerge.Out);
-		});
-	}
+            // We now expose the input ports of the priorityMerge and the output
+            // of the resultsMerge as our PriorityWorkerPool ports
+            // -- all neatly wrapped in our domain specific Shape
+            return new PriorityWorkerPoolShape<TIn, TOut>(jobsIn: priorityMerge.In(0),
+                priorityJobsIn: priorityMerge.Preferred, resultsOut: resultsMerge.Out);
+        });
+    }
 }
 ```
 
@@ -381,26 +382,27 @@ var worker2 = Flow.Create<string>().Select(s => "step 2 " + s);
 
 RunnableGraph.FromGraph(GraphDsl.Create(b =>
 {
-	Func<string, Source<string, NotUsed>> createSource = desc =>
-		Source.From(Enumerable.Range(1, 100))
-			.Select(s => desc + s);
+    Func<string, Source<string, NotUsed>> createSource = desc =>
+        Source.From(Enumerable.Range(1, 100))
+            .Select(s => desc + s);
 
-	var priorityPool1 = b.Add(PriorityWorkerPool.Create(worker1, 4));
-	var priorityPool2 = b.Add(PriorityWorkerPool.Create(worker2, 2));
+    var priorityPool1 = b.Add(PriorityWorkerPool.Create(worker1, 4));
+    var priorityPool2 = b.Add(PriorityWorkerPool.Create(worker2, 2));
 
-	b.From(createSource("job: ")).To(priorityPool1.JobsIn);
-	b.From(createSource("priority job: ")).To(priorityPool1.PriorityJobsIn);
+    b.From(createSource("job: ")).To(priorityPool1.JobsIn);
+    b.From(createSource("priority job: ")).To(priorityPool1.PriorityJobsIn);
 
-	b.From(priorityPool1.ResultsOut).To(priorityPool2.JobsIn);
-	b.From(createSource("one-step, priority : ")).To(priorityPool2.PriorityJobsIn);
+    b.From(priorityPool1.ResultsOut).To(priorityPool2.JobsIn);
+    b.From(createSource("one-step, priority : ")).To(priorityPool2.PriorityJobsIn);
 
-	var sink = Sink.ForEach<string>(Console.WriteLine).MapMaterializedValue(_ => NotUsed.Instance);
-	b.From(priorityPool2.ResultsOut).To(sink);
-	return ClosedShape.Instance;
+    var sink = Sink.ForEach<string>(Console.WriteLine).MapMaterializedValue(_ => NotUsed.Instance);
+    b.From(priorityPool2.ResultsOut).To(sink);
+    return ClosedShape.Instance;
 })).Run(materializer);
 ```
 
 ## Bidirectional Flows
+
 A graph topology that is often useful is that of two flows going in opposite directions. Take for example a codec stage that serializes outgoing messages and deserializes incoming octet streams. Another such stage could add a framing protocol that attaches a length header to outgoing data and parses incoming frames back into the original octet stream chunks. These two stages are meant to be composed, applying one atop the other as part of a protocol stack. For this purpose exists the special type `BidiFlow` which is a graph that has exactly two open inlets and two open outlets. The corresponding shape is called `BidiShape` and is defined like this:
 
 ```csharp
@@ -663,6 +665,7 @@ result.Result.ShouldAllBeEquivalentTo(Enumerable.Range(0, 10));
 This example demonstrates how `BidiFlow` subgraphs can be hooked together and also turned around with the ``.Reversed`` method. The test simulates both parties of a network communication protocol without actually having to open a network connection—the flows can just be connected directly.
 
 ## Accessing the materialized value inside the Graph
+
 In certain cases it might be necessary to feed back the materialized value of a Graph (partial, closed or backing a
 Source, Sink, Flow or BidiFlow). This is possible by using ``builder.MaterializedValue`` which gives an ``Outlet`` that
 can be used in the graph as an ordinary source or outlet, and which will eventually emit the materialized value.
@@ -698,6 +701,7 @@ var cyclicAggregate = Source.FromGraph(GraphDsl.Create(Sink.Aggregate<int, int>(
 ```
 
 ## Graph cycles, liveness and deadlocks
+
 Cycles in bounded stream topologies need special considerations to avoid potential deadlocks and other liveness issues. This section shows several examples of problems that can arise from the presence of feedback arcs in stream processing graphs.
 
 The first example demonstrates a graph that contains a naïve cycle. The graph takes elements from the source, prints them, then broadcasts those elements to a consumer (we just used ``Sink.Ignore`` for now) and to a feedback arc that is merged back into the main stream via a ``Merge`` junction.
@@ -717,7 +721,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
         return s;
     });
 
-	var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
+    var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
     b.From(source).Via(merge).Via(print).Via(broadcast).To(sink);
     b.To(merge).From(broadcast);
 
@@ -753,7 +757,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
         return s;
     });
 
-	var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
+    var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
     b.From(source).Via(merge).Via(print).Via(broadcast).To(sink);
     b.To(merge.Preferred).From(broadcast);
 
@@ -781,7 +785,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
     });
     var buffer = Flow.Create<int>().Buffer(10, OverflowStrategy.DropHead);
     
-	var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
+    var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
     b.From(source).Via(merge).Via(print).Via(broadcast).To(sink);
     b.To(merge).Via(buffer).From(broadcast);
 
@@ -817,10 +821,10 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
         Console.WriteLine(s);
         return s;
     });
-	
-	var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
     
-	b.From(source).To(zip.In0);
+    var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
+    
+    b.From(source).To(zip.In0);
     b.From(zip.Out).Via(print).Via(broadcast).To(sink);
     b.To(zip.In1).From(broadcast);
 
@@ -840,6 +844,7 @@ arc that injects a single element using ``Source.Single``.
 
 > [!WARNING]
 > We have to add an Async call after creating the instance of Concat. Otherwise Concat will wait upstream to be empty and that will never happen in this case.
+
 ```csharp
 RunnableGraph.FromGraph(GraphDsl.Create(b =>
 {
@@ -852,7 +857,7 @@ RunnableGraph.FromGraph(GraphDsl.Create(b =>
         Console.WriteLine(s);
         return s;
     });
-	var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
+    var sink = Sink.Ignore<int>().MapMaterializedValue(_ => NotUsed.Instance);
 
     b.From(source).To(zip.In0);
     b.From(zip.Out).Via(print).Via(broadcast).To(sink);

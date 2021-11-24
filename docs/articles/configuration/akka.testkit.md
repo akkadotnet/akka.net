@@ -1,4 +1,5 @@
-## Akka.TestKit Configuration
+# Akka.TestKit Configuration
+
 Below is the default HOCON configuration for the base `Akka.TestKit` package.
 
 [!code[Akka.TestKit.dll HOCON Configuration](../../../src/core/Akka.TestKit/Internal/Reference.conf)]

@@ -12,7 +12,7 @@ namespace Akka.Event
     /// <summary>
     /// This class represents a message used to notify subscribers that a logger has been initialized.
     /// </summary>
-    public class LoggerInitialized : INoSerializationVerificationNeeded
+    public class LoggerInitialized : INoSerializationVerificationNeeded, IDeadLetterSuppression
     {
     }
 }

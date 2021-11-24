@@ -256,6 +256,12 @@ namespace Akka.Tests.IO
                 OpenCalled += 1;
                 return base.Create();
             }
+
+            public override Socket Create(AddressFamily addressFamily)
+            {
+                OpenCalled += 1;
+                return base.Create(addressFamily);
+            }
         }
     }
 }
