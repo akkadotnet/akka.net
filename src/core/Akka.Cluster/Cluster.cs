@@ -591,7 +591,7 @@ namespace Akka.Cluster
         internal void TellCoreSafe(object message)
         {
             if (_clusterCore is null)
-                _ = _clusterCoreTask.ContinueWith(t => t.Result.Tell(message));
+                _ = _clusterCoreTask.ContinueWith((t, m) => t.Result.Tell(m), message);
             else 
                 _clusterCore.Tell(message);
         }
