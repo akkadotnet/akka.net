@@ -47,8 +47,6 @@ namespace Akka.Cluster.SBR
         {
             get
             {
-                var cluster = Cluster.Get(system);
-
                 DowningStrategy strategy;
                 switch (settings.DowningStrategy)
                 {
@@ -68,7 +66,7 @@ namespace Akka.Cluster.SBR
                         break;
                     case SplitBrainResolverSettings.LeaseMajorityName:
                         var lms = settings.LeaseMajoritySettings;
-                        var leaseOwnerName = cluster.SelfUniqueAddress.Address.HostPort();
+                        var leaseOwnerName = Cluster.Get(system).SelfUniqueAddress.Address.HostPort();
 
                         var leaseName = lms.SafeLeaseName(system.Name);
                         var lease = LeaseProvider.Get(system).GetLease(leaseName, lms.LeaseImplementation, leaseOwnerName);
