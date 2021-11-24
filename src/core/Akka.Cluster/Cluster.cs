@@ -151,7 +151,7 @@ namespace Akka.Cluster
                     clusterCoreTaskSource.SetResult(_clusterCore);
 
                     system.RegisterOnTermination(Shutdown);
-                    _log.Info("Started up successfully");
+                    LogInfo("Started up successfully");
                 }
                 catch (Exception ex)
                 {
@@ -586,7 +586,9 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
+        /// 
+        /// We have to wait for cluster core to startup before we can use it
         /// </summary>
         internal void TellCoreSafe(object message)
         {
