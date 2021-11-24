@@ -42,6 +42,8 @@ namespace Akka.Tests.Configuration
             settings.LoggerStartTimeout.Seconds.ShouldBe(5);
             settings.LogLevel.ShouldBe("INFO");
             settings.StdoutLogLevel.ShouldBe("WARNING");
+            settings.StdoutLogger.Should().NotBeNull();
+            settings.StdoutLogger.Should().BeOfType<StandardOutLogger>();
             settings.LogConfigOnStart.ShouldBeFalse();
             settings.LogDeadLetters.ShouldBe(10);
             settings.LogDeadLettersDuringShutdown.ShouldBeFalse();

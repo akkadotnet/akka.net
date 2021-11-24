@@ -1566,8 +1566,9 @@ namespace Akka.Cluster
         /// Received `Join` message and replies with `Welcome` message, containing
         /// current gossip state, including the new joining member.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="roles">TBD</param>
+        /// <param name="node">The unique address of the joining node.</param>
+        /// <param name="roles">The roles, if any, of the joining node.</param>
+        /// <param name="appVersion">The software version of the joining node.</param>
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;

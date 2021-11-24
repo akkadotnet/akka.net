@@ -4,6 +4,7 @@ title: Making Public API Changes
 ---
 
 # Making Public API Changes
+
 Akka.NET follows the [semantic versioning methodology](http://semver.org/), and as such the most important convention we have to be mindful of is accurately communicating to our users whether or not Akka.NET is compatible with previous versions of the API.
 
 As such, we have automated procedures designed to ensure that accidental breaking / incompatible changes to the Akka.NET public API can't sail through the pull request process without some human acknowledgement first.
@@ -11,11 +12,12 @@ As such, we have automated procedures designed to ensure that accidental breakin
 This document outlines how to comply with said procedures.
 
 ## API Approvals
+
 The goal of this process is to make conscious decisions about API changes and force the discovery of those changes during the pull request review. Here is how the process works:
 
 * Uses [ApiApprovals](http://jake.ginnivan.net/apiapprover/) and [ApprovalTests](https://github.com/approvals/ApprovalTests.Net) to generate a public API of a given assembly.
-* The public API gets approved by a human into a `*.approved.txt` file. 
-* Every time the API approval test runs the API is generated again into a `*.received.txt` file. If the two files don't match the test fails on the CI server or locally. Locally on the devs machine the predefined Diff viewer pops up (never happens on CI) and the dev has to approve the API changes (therefore making a conscious decision)
+* The public API gets approved by a human into a `*.approved.txt` file.
+* Every time the API approval test runs the API is generated again into a `*.received.txt` file. If the two files don't match the test fails on the CI server or locally. Locally on the dev's machine the predefined Diff viewer pops up (never happens on CI) and the dev has to approve the API changes (therefore making a conscious decision)
 * Each PR making public API changes will contain the `*.approved.txt` file in the DIFF and all reviewers can easily see the breaking changes on the public API.
 
 In Akka.NET, the API approval tests can be found in the following test assembly:
@@ -27,6 +29,7 @@ The approval file is located at:
     src/core/Akka.API.Tests/CoreAPISpec.ApproveCore.approved.txt
 
 ### Approving a New Change
+
 After modifying some code in Akka.NET that results in a public API change - this can be any change, such as adding an overload to a public method or adding a new public class, you will immediately see an API change when you attempt to run the `Akka.API.Tests` unit tests:
 
 ![Failed API approval test](../images/api-diff-fail.png)
@@ -44,6 +47,7 @@ And then once you've merged in those changes, added them to a Git commit, and se
 ![approved.txt differences as reported by Git](../images/diff-results.png)
 
 ## Unacceptable API Changes
+
 The following types of API changes will generally not be approved:
 
 1. Any modification to a commonly used public interface;

@@ -135,8 +135,8 @@ namespace Akka.MultiNodeTestRunner
         /// </summary>
         static void Main(string[] args)
         {
-            // Force load the args
-            CommandLine.GetPropertyOrDefault("force load", null);
+            CommandLine.Initialize(args);
+            
             if (CommandLine.ShowHelp)
             {
                 PrintHelp();
@@ -242,216 +242,226 @@ namespace Akka.MultiNodeTestRunner
             }
 #endif
 
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyPath))
+            Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, "1");
+            try
             {
-                using (var discovery = new Discovery())
+                using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyPath))
                 {
-                    controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
-                    discovery.Finished.WaitOne();
-
-                    if (discovery.WasSuccessful)
+                    using (var discovery = new Discovery())
                     {
-                        foreach (var test in discovery.Tests.Reverse())
-                        {
-                            var node = test.Value.First();
-                            if (!string.IsNullOrEmpty(node.SkipReason))
-                            {
-                                PublishRunnerMessage($"Skipping test {node.MethodName}. Reason - {node.SkipReason}");
-                                continue;
-                            }
+                        controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
+                        discovery.Finished.WaitOne();
 
-                            if (!string.IsNullOrWhiteSpace(specName) &&
+                        if (discovery.WasSuccessful)
+                        {
+                            foreach (var test in discovery.Tests.Reverse())
+                            {
+                                var node = test.Value.First();
+                                if (!string.IsNullOrEmpty(node.SkipReason))
+                                {
+                                    PublishRunnerMessage($"Skipping test {node.MethodName}. Reason - {node.SkipReason}");
+                                    continue;
+                                }
+
+                                if (!string.IsNullOrWhiteSpace(specName) &&
                                 CultureInfo.InvariantCulture.CompareInfo.IndexOf(node.TestName,
                                     specName,
                                     CompareOptions.IgnoreCase) < 0)
-                            {
-                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Filtering)");
-                                continue;
-                            }
-
-                            // include filter
-                            if (!include.IsMatch(node.MethodName))
-                            {
-                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Include filter)");
-                                continue;
-                            }
-
-                            if (exclude.IsMatch(node.MethodName))
-                            {
-                                PublishRunnerMessage($"Skipping [{node.MethodName}] (Exclude filter)");
-                                continue;
-                            }
-
-                            var processes = new List<Process>();
-
-                            PublishRunnerMessage($"Starting test {node.MethodName}");
-                            Console.Out.WriteLine($"Starting test {node.MethodName}");
-
-                            StartNewSpec(test.Value);
-#if CORECLR
-                            var ntrNetPath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.exe");
-                            var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
-                            var alternateIndex = 0;
-#endif
-                            var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
-                            string testOutputDir = null;
-                            string runningSpecName = null;
-                            
-                            foreach (var nodeTest in test.Value)
-                            {
-                                //Loop through each test, work out number of nodes to run on and kick off process
-                                var sbArguments = new StringBuilder()
-                                    //.Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
-                                    .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
-                                    .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
-                                    .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
-                                    .Append($@"-Dmultinode.server-host=""{"localhost"}"" ")
-                                    .Append($@"-Dmultinode.host=""{"localhost"}"" ")
-                                    .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
-                                    .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
-                                    .Append($@"-Dmultinode.listen-address={listenAddress} ")
-                                    .Append($@"-Dmultinode.listen-port={listenPort} ");
-
-#if CORECLR
-                                string fileName = null;
-                                switch (platform)
                                 {
-                                    case "net":
-                                        fileName = ntrNetPath;
-                                        sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
-                                        break;
-                                    case "netcore":
-                                    case "net5":
-                                        fileName = "dotnet";
-                                        sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
-                                        sbArguments.Insert(0, ntrNetCorePath);
-                                        break;
+                                    PublishRunnerMessage($"Skipping [{node.MethodName}] (Filtering)");
+                                    continue;
                                 }
-                                var process = new Process
-                                {
-                                    StartInfo = new ProcessStartInfo
-                                    {
-                                        FileName = fileName,
-                                        UseShellExecute = false,
-                                        RedirectStandardOutput = true,
-                                        Arguments = sbArguments.ToString(),
-                                        WorkingDirectory = Path.GetDirectoryName(assemblyPath)
-                                    }
-                                };
-#else
-                                sbArguments.Insert(0, $@"-Dmultinode.test-assembly=""{assemblyPath}"" ");
-                                var process = new Process
-                                {
-                                    StartInfo = new ProcessStartInfo
-                                    {
-                                        FileName = "Akka.NodeTestRunner.exe",
-                                        UseShellExecute = false,
-                                        RedirectStandardOutput = true,
-                                        Arguments = sbArguments.ToString()
-                                    }
-                                };
-#endif
 
-                                processes.Add(process);
-                                var nodeIndex = nodeTest.Node;
-                                var nodeRole = nodeTest.Role;
+                                // include filter
+                                if (!include.IsMatch(node.MethodName))
+                                {
+                                    PublishRunnerMessage($"Skipping [{node.MethodName}] (Include filter)");
+                                    continue;
+                                }
+
+                                if (exclude.IsMatch(node.MethodName))
+                                {
+                                    PublishRunnerMessage($"Skipping [{node.MethodName}] (Exclude filter)");
+                                    continue;
+                                }
+
+                                var processes = new List<Process>();
+
+                                PublishRunnerMessage($"Starting test {node.MethodName}");
+                                Console.Out.WriteLine($"Starting test {node.MethodName}");
+
+                                StartNewSpec(test.Value);
+#if CORECLR
+                                var ntrNetPath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.exe");
+                                var ntrNetCorePath = Path.Combine(AppContext.BaseDirectory, "Akka.NodeTestRunner.dll");
+                                var alternateIndex = 0;
+#endif
+                                var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor()));
+                                string testOutputDir = null;
+                                string runningSpecName = null;
+                            
+                                foreach (var nodeTest in test.Value)
+                                {
+                                    //Loop through each test, work out number of nodes to run on and kick off process
+                                    var sbArguments = new StringBuilder()
+                                        //.Append($@"-Dmultinode.test-assembly=""{assemblyPath}"" ")
+                                        .Append($@"-Dmultinode.test-class=""{nodeTest.TypeName}"" ")
+                                        .Append($@"-Dmultinode.test-method=""{nodeTest.MethodName}"" ")
+                                        .Append($@"-Dmultinode.max-nodes={test.Value.Count} ")
+                                        .Append($@"-Dmultinode.server-host=""{"localhost"}"" ")
+                                        .Append($@"-Dmultinode.host=""{"localhost"}"" ")
+                                        .Append($@"-Dmultinode.index={nodeTest.Node - 1} ")
+                                        .Append($@"-Dmultinode.role=""{nodeTest.Role}"" ")
+                                        .Append($@"-Dmultinode.listen-address={listenAddress} ")
+                                        .Append($@"-Dmultinode.listen-port={listenPort} ")
+                                        .Append("-Dmultinode.test-runner=\"multinode\"");
 
 #if CORECLR
-                            if (platform == "netcore" || platform == "net5")
-                            {
-                                process.StartInfo.FileName = "dotnet";
-                                process.StartInfo.Arguments = ntrNetCorePath + " " + process.StartInfo.Arguments;
-                                process.StartInfo.WorkingDirectory = Path.GetDirectoryName(assemblyPath);
-                            }
-#endif
-
-                                //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
-                                var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
-                                testOutputDir = testOutputDir ?? folder.FullName;
-                                var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
-                                runningSpecName = nodeTest.TestName;
-                                var nodeInfo = new TimelineLogCollectorActor.NodeInfo(nodeIndex, nodeRole, platform, nodeTest.TestName);
-                                var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
-                                process.OutputDataReceived += (sender, eventArgs) =>
-                                {
-                                    if (eventArgs?.Data != null)
+                                    string fileName = null;
+                                    switch (platform)
                                     {
-                                        fileActor.Tell(eventArgs.Data);
-                                        timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, eventArgs.Data));
-                                        if (TeamCityFormattingOn)
+                                        case "net":
+                                            fileName = ntrNetPath;
+                                            sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
+                                            break;
+                                        case "netcore":
+                                        case "net5":
+                                            fileName = "dotnet";
+                                            sbArguments.Insert(0, $@" -Dmultinode.test-assembly=""{assemblyPath}"" ");
+                                            sbArguments.Insert(0, ntrNetCorePath);
+                                            break;
+                                    }
+                                    var process = new Process
+                                    {
+                                        StartInfo = new ProcessStartInfo
                                         {
-                                            // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
+                                            FileName = fileName,
+                                            UseShellExecute = false,
+                                            RedirectStandardOutput = true,
+                                            Arguments = sbArguments.ToString(),
+                                            WorkingDirectory = Path.GetDirectoryName(assemblyPath)
                                         }
-                                    }
-                                };
-                                var closureTest = nodeTest;
-                                process.Exited += (sender, eventArgs) =>
-                                {
-                                    if (process.ExitCode == 0)
+                                    };
+#else
+                                    sbArguments.Insert(0, $@"-Dmultinode.test-assembly=""{assemblyPath}"" ");
+                                    var process = new Process
                                     {
-                                        ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
+                                        StartInfo = new ProcessStartInfo
+                                        {
+                                            FileName = "Akka.NodeTestRunner.exe",
+                                            UseShellExecute = false,
+                                            RedirectStandardOutput = true,
+                                            Arguments = sbArguments.ToString()
+                                        }
+                                    };
+#endif
+
+                                    processes.Add(process);
+                                    var nodeIndex = nodeTest.Node;
+                                    var nodeRole = nodeTest.Role;
+
+#if CORECLR
+                                    if (platform == "netcore" || platform == "net5")
+                                    {
+                                        process.StartInfo.FileName = "dotnet";
+                                        process.StartInfo.Arguments = ntrNetCorePath + " " + process.StartInfo.Arguments;
+                                        process.StartInfo.WorkingDirectory = Path.GetDirectoryName(assemblyPath);
                                     }
-                                };
+#endif
 
-                                process.Start();
-                                process.BeginOutputReadLine();
-                                PublishRunnerMessage($"Started node {nodeIndex} : {nodeRole} on pid {process.Id}");
-                            }
+                                    //TODO: might need to do some validation here to avoid the 260 character max path error on Windows
+                                    var folder = Directory.CreateDirectory(Path.Combine(OutputDirectory, nodeTest.TestName));
+                                    testOutputDir = testOutputDir ?? folder.FullName;
+                                    var logFilePath = Path.Combine(folder.FullName, $"node{nodeIndex}__{nodeRole}__{platform}.txt");
+                                    runningSpecName = nodeTest.TestName;
+                                    var nodeInfo = new TimelineLogCollectorActor.NodeInfo(nodeIndex, nodeRole, platform, nodeTest.TestName);
+                                    var fileActor = TestRunSystem.ActorOf(Props.Create(() => new FileSystemAppenderActor(logFilePath)));
+                                    process.OutputDataReceived += (sender, eventArgs) =>
+                                    {
+                                        if (eventArgs?.Data != null)
+                                        {
+                                            fileActor.Tell(eventArgs.Data);
+                                            timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, eventArgs.Data));
+                                            if (TeamCityFormattingOn)
+                                            {
+                                                // teamCityTest.WriteStdOutput(eventArgs.Data); TODO: open flood gates
+                                            }
+                                        }
+                                    };
+                                    var closureTest = nodeTest;
+                                    process.Exited += (sender, eventArgs) =>
+                                    {
+                                        if (process.ExitCode == 0)
+                                        {
+                                            ReportSpecPassFromExitCode(nodeIndex, nodeRole, closureTest.TestName);
+                                        }
+                                    };
 
-                            var specFailed = false;
-                            foreach (var process in processes)
-                            {
-                                process.WaitForExit();
-                                specFailed = specFailed || process.ExitCode > 0;
-                                process.Dispose();
-                            }
-
-                            PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
-                            Thread.Sleep(TimeSpan.FromSeconds(3));
-                            
-                            if (testOutputDir != null)
-                            {
-                                var dumpTasks = new List<Task>()
-                                {
-                                    // Dump aggregated timeline to file for this test
-                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
-                                    // Print aggregated timeline into the console
-                                    timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole(logLevel))
-                                };
-
-                                if (specFailed)
-                                {
-                                    var dumpFailureArtifactTask = timelineCollector.Ask<Done>(
-                                        new TimelineLogCollectorActor.DumpToFile(Path.Combine(Path.GetFullPath(OutputDirectory), FailedSpecsDirectory, $"{runningSpecName}.txt")));
-                                    dumpTasks.Add(dumpFailureArtifactTask);
+                                    process.Start();
+                                    process.BeginOutputReadLine();
+                                    PublishRunnerMessage($"Started node {nodeIndex} : {nodeRole} on pid {process.Id}");
                                 }
-                                Task.WaitAll(dumpTasks.ToArray());
-                            }
+
+                                var specFailed = false;
+                                foreach (var process in processes)
+                                {
+                                    process.WaitForExit();
+                                    specFailed = specFailed || process.ExitCode > 0;
+                                    process.Dispose();
+                                }
+
+                                PublishRunnerMessage("Waiting 3 seconds for all messages from all processes to be collected.");
+                                Thread.Sleep(TimeSpan.FromSeconds(3));
                             
-                            FinishSpec(test.Value, timelineCollector);
-                        }
-                        Console.WriteLine("Complete");
-                        PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
-                        Thread.Sleep(TimeSpan.FromSeconds(5));
-                    }
-                    else
-                    {
-                        var sb = new StringBuilder();
-                        sb.AppendLine("One or more exception was thrown while discovering test cases. Test Aborted.");
-                        foreach (var err in discovery.Errors)
-                        {
-                            for (int i = 0; i < err.ExceptionTypes.Length; ++i)
-                            {
-                                sb.AppendLine();
-                                sb.Append($"{err.ExceptionTypes[i]}: {err.Messages[i]}");
-                                sb.Append(err.StackTraces[i]);
+                                if (testOutputDir != null)
+                                {
+                                    var dumpTasks = new List<Task>()
+                                    {
+                                        // Dump aggregated timeline to file for this test
+                                        timelineCollector.Ask<Done>(new TimelineLogCollectorActor.DumpToFile(Path.Combine(testOutputDir, "aggregated.txt"))),
+                                        // Print aggregated timeline into the console
+                                        timelineCollector.Ask<Done>(new TimelineLogCollectorActor.PrintToConsole(logLevel))
+                                    };
+
+                                    if (specFailed)
+                                    {
+                                        var dumpFailureArtifactTask = timelineCollector.Ask<Done>(
+                                        new TimelineLogCollectorActor.DumpToFile(Path.Combine(Path.GetFullPath(OutputDirectory), FailedSpecsDirectory, $"{runningSpecName}.txt")));
+                                        dumpTasks.Add(dumpFailureArtifactTask);
+                                    }
+                                    Task.WaitAll(dumpTasks.ToArray());
+                                }
+                            
+                                FinishSpec(test.Value, timelineCollector);
                             }
+                            Console.WriteLine("Complete");
+                            PublishRunnerMessage("Waiting 5 seconds for all messages from all processes to be collected.");
+                            Thread.Sleep(TimeSpan.FromSeconds(5));
                         }
-                        PublishRunnerMessage(sb.ToString());
-                        Console.Out.WriteLine(sb.ToString());
+                        else
+                        {
+                            var sb = new StringBuilder();
+                            sb.AppendLine("One or more exception was thrown while discovering test cases. Test Aborted.");
+                            foreach (var err in discovery.Errors)
+                            {
+                                for (int i = 0; i < err.ExceptionTypes.Length; ++i)
+                                {
+                                    sb.AppendLine();
+                                    sb.Append($"{err.ExceptionTypes[i]}: {err.Messages[i]}");
+                                    sb.Append(err.StackTraces[i]);
+                                }
+                            }
+                            PublishRunnerMessage(sb.ToString());
+                            Console.Out.WriteLine(sb.ToString());
+                        }
                     }
                 }
             }
+            finally
+            {
+                Environment.SetEnvironmentVariable(MultiNodeFactAttribute.MultiNodeTestEnvironmentName, null);
+            }
+            
             
             AbortTcpLoggingServer(tcpLogger);
             CloseAllSinks();

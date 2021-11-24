@@ -24,7 +24,7 @@ var system = ActorSystem.Create("example");
 var serviceDiscovery = Discovery.Get(system).Default;
 ```
 
-A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery 
+A `Lookup` contains a mandatory `serviceName` and an optional `portName` and `protocol`. How these are interpreted is discovery
 method dependent e.g. DNS does an A/AAAA record query if any of the fields are missing and an SRV query for a full look up:
 
 ```csharp
@@ -51,7 +51,7 @@ For simple use cases configuration can be used for service discovery. The advant
 
 Configure it to be used as discovery method in your `application.conf`
 
-```
+```hocon
 akka {
   discovery.method = config
 }
@@ -59,7 +59,7 @@ akka {
 
 By default the services discoverable are defined in `akka.discovery.config.services` and have the following format:
 
-```
+```hocon
 akka.discovery.config.services = {
   service1 = {
     endpoints = [
@@ -85,7 +85,7 @@ want to aggregate.
 
 Configure `aggregate` as `akka.discovery.method` and which discovery methods are tried and in which order.
 
-```
+```hocon
 akka {
   discovery {
     method = aggregate

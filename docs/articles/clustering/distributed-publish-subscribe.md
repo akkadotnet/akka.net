@@ -19,6 +19,7 @@ You can send messages via the mediator on any node to registered actors on any o
 There a two different modes of message delivery, explained in the sections `Publish` and `Send` below.
 
 ## Publish
+
 This is the true pub/sub mode. A typical usage of this mode is a chat room in an instant messaging application.
 
 Actors are registered to a named topic. This enables many subscribers on each node. The message will be delivered to all subscribers of the topic.
@@ -110,6 +111,7 @@ RunOn(() =>
 ```
 
 ### Topic Groups
+
 Actors may also be subscribed to a named topic with a group id. If subscribing with a group id, each message published to a topic with the `SendOneMessageToEachGroup` flag set to true is delivered via the supplied `RoutingLogic` (default random) to one actor within each subscribing group.
 
 If all the subscribed actors have the same group id, then this works just like `Send` and each message is only delivered to one subscriber.
@@ -120,6 +122,7 @@ If all the subscribed actors have different group names, then this works like no
 > Note that if the group id is used it is part of the topic identifier. Messages published with `SendOneMessageToEachGroup=false` will not be delivered to subscribers that subscribed with a group id. Messages published with `SendOneMessageToEachGroup=true` will not be delivered to subscribers that subscribed without a group id.
 
 ## Send
+
 This is a point-to-point mode where each message is delivered to one destination, but you still do not have to know where the destination is located. A typical usage of this mode is private chat to one other user in an instant messaging application. It can also be used for distributing tasks to registered workers, like a cluster aware router where the routees dynamically can register themselves.
 
 The message will be delivered to one recipient with a matching path, if any such exists in the registry. If several entries match the path because it has been registered on several nodes the message will be sent via the supplied `RoutingLogic` (default random) to one destination. The sender() of the message can specify that local affinity is preferred, i.e. the message is sent to an actor in the same local actor system as the used mediator actor, if any such exists, otherwise route to any other matching entry.
@@ -185,7 +188,9 @@ public class Sender : ReceiveActor
     }
 }
 ```
+
 It can send messages to the path from anywhere in the cluster:
+
 ```csharp
 RunOn(() =>
 {
@@ -201,6 +206,7 @@ It is also possible to broadcast messages to the actors that have been registere
 Typical usage of this mode is to broadcast messages to all replicas with the same path, e.g. 3 actors on different nodes that all perform the same actions, for redundancy. You can also optionally specify a property (`AllButSelf`) deciding if the message should be sent to a matching path on the self node or not.
 
 ## DistributedPubSub Extension
+
 In the example above the mediator is started and accessed with the `Akka.Cluster.Tools.PublishSubscribe.DistributedPubSub` extension. That is convenient and perfectly fine in most cases, but it can be good to know that it is possible to start the mediator actor as an ordinary actor and you can have several different mediators at the same time to be able to divide a large number of actors/topics to different mediators. For example you might want to use different cluster roles for different mediators.
 
 The `DistributedPubSub` extension can be configured with the following properties:

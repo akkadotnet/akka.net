@@ -8,6 +8,8 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 
@@ -43,28 +45,33 @@ namespace Akka.IO
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            var resolve = message as Dns.Resolve;
-            if (resolve != null)
+            if (message is Dns.Resolve resolve)
             {
+                var replyTo = Sender;
                 var answer = _cache.Cached(resolve.Name);
-                if (answer == null)
+                if (answer != null)
                 {
-                    try
-                    {
-                        //TODO: IP6
-                        answer = Dns.Resolved.Create(resolve.Name, System.Net.Dns.GetHostEntryAsync(resolve.Name).Result.AddressList.Where(x => 
-                                x.AddressFamily == AddressFamily.InterNetwork 
-                                || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
-                        _cache.Put(answer, _positiveTtl);
-                    }
-                    catch (SocketException ex)
-                    {
-                        if (ex.SocketErrorCode != SocketError.HostNotFound) throw;
-                         answer = new Dns.Resolved(resolve.Name, Enumerable.Empty<IPAddress>(), Enumerable.Empty<IPAddress>());
-                        _cache.Put(answer, _negativeTtl);
-                    }
+                    replyTo.Tell(answer);
+                    return true;
                 }
-                Sender.Tell(answer);
+                
+                System.Net.Dns.GetHostEntryAsync(resolve.Name).ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                    {
+                        var flattened = t.Exception.Flatten().InnerExceptions;
+                        return flattened.Count == 1 
+                            ? new Dns.Resolved(resolve.Name, flattened[0]) 
+                            : new Dns.Resolved(resolve.Name, t.Exception);
+                    }
+                    
+                    answer = Dns.Resolved.Create(resolve.Name, t.Result.AddressList.Where(x => 
+                        x.AddressFamily == AddressFamily.InterNetwork 
+                        || _useIpv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
+                    _cache.Put(answer, _positiveTtl);
+                    return answer;
+
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(replyTo);
                 return true;
             }
             return false;

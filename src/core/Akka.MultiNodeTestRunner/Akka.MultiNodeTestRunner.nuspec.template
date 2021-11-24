@@ -17,6 +17,6 @@
   <files>
     <file src="bin\Release\net471\win10-x64\publish\*.*" target="lib\net471\" />
     <file src="bin\Release\netcoreapp3.1\win10-x64\publish\*.*" target="lib\netcoreapp3.1\" />
-    <file src="bin\Release\net5.0\win10-x64\publish\*.*" target="lib\net5.0\" />
+    <file src="bin\Release\net6.0\win10-x64\publish\*.*" target="lib\net6.0\" />
   </files>
 </package>
