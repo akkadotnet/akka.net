@@ -440,6 +440,10 @@ namespace Akka.Streams.Implementation.Stages
         /// TBD
         /// </summary>
         public static readonly Attributes SeqSink = Attributes.CreateName("seqSink");
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public static readonly Attributes WireTap = Attributes.CreateName("wireTap");
     }
 
     /// <summary>

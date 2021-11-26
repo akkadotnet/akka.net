@@ -63,9 +63,9 @@ jobs:
         submodules: recursive # set to 'true' for a single level of submodules or 'recursive' to get submodules of submodules
         persistCredentials: true
       - task: UseDotNet@2
-        displayName: "Use .NET 5 SDK 5.0.101"
+        displayName: "Use .NET 6 SDK 6.0.100"
         inputs:
-          version: 5.0.101
+          version: 6.0.100
       - task: UseDotNet@2
         displayName: "Use .NET Core Runtime 3.1.10"
         inputs:
