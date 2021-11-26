@@ -8,7 +8,7 @@ Before we delve further into writing our first actors, we should stop for a mome
 that come out-of-the-box. This will help you identify which modules and libraries provide the functionality you
 want to use in your system.
 
-### Actors (`Akka` Library, the Core)
+## Actors (`Akka` Library, the Core)
 
 The use of actors across Akka.NET libraries provides a consistent, integrated model that relieves you from individually
 solving the challenges that arise in concurrent or distributed system design. From a birds-eye view,
@@ -27,7 +27,7 @@ Challenges that actors solve include:
 * How to handle errors in a multi-threaded environment.
 * How to protect my project from the pitfalls of concurrency.
 
-### Remoting
+## Remoting
 
 Remoting enables actors that are remote, living on different computers, to seamlessly exchange messages.
 Remoting can be enabled mostly with configuration; it has only a few APIs. Thanks to the actor model,
@@ -44,7 +44,7 @@ Some of the challenges Remoting solves are:
   all transparently.
 * How to multiplex communications from an unrelated set of actors on the same network connection, all transparently.
 
-### Cluster
+## Cluster
 
 If you have a set of actor systems that cooperate to solve some business problem, then you likely want to manage these set of
 systems in a disciplined way. While Remoting solves the problem of addressing and communicating with components of
@@ -61,7 +61,7 @@ The challenges the Cluster module solves, among others, are:
 * How to distribute computations among the current set of members.
 * How to designate members of the cluster to a certain role; in other words, to provide certain services and not others.
 
-### Cluster Sharding
+## Cluster Sharding
 
 Sharding helps to solve the problem of distributing a set of actors among members of an Akka.NET cluster.
 Sharding is a pattern that is mostly used together with Persistence to balance a large set of persistent entities
@@ -74,7 +74,7 @@ The challenge space that Sharding targets:
 * How to migrate entities from a crashed system without losing their state.
 * How to ensure that an entity does not exist on multiple systems at the same time and is hence kept consistent.
 
-### Cluster Singleton
+## Cluster Singleton
 
 A common (in fact, a bit too common) use case in distributed systems is to have a single entity responsible
 for a given task which is shared among other members of the cluster and migrated if the host system fails.
@@ -89,7 +89,7 @@ The Singleton module can be used to solve these challenges:
 * How to ensure that the service is up even if the system hosting it currently crashes or shut down during the process of scaling down.
 * How to reach this instance from any member of the cluster assuming that it can migrate to other systems over time.
 
-### Cluster Publish-Subscribe
+## Cluster Publish-Subscribe
 
 For coordination among systems, it is often necessary to distribute messages to all, or one system of a set of
 interested systems in a cluster. This pattern is usually called publish-subscribe and this module solves this exact
@@ -101,7 +101,7 @@ Cluster Publish-Subscribe is intended to solve the following challenges:
 * How to send a message to a member from an interested set of parties in a cluster.
 * How to subscribe and unsubscribe for events of a certain topic in the cluster.
 
-### Persistence
+## Persistence
 
 Just like objects in OOP, actors keep their state in volatile memory. Once the system is shut down, gracefully or
 because of a crash, all data that was in memory is lost. Persistence provides patterns to enable actors to persist
@@ -117,7 +117,7 @@ Persistence tackles the following challenges:
 * How to introspect domain events that have lead an entity to its current state.
 * How to leverage [Event Sourcing](https://martinfowler.com/eaaDev/EventSourcing.html) in my application to support long-running processes while the project continues to evolve.
 
-### Distributed Data
+## Distributed Data
 
 In situations where eventual consistency is acceptable, it is possible to share data between nodes in
 an Akka.NET Cluster and accept both reads and writes even in the face of cluster partitions. This can be
@@ -130,7 +130,7 @@ Distributed Data is intended to solve the following challenges:
 * How to accept writes even in the face of cluster partitions.
 * How to share data while at the same time ensuring low-latency local read and write access.
 
-### Streams
+## Streams
 
 Actors are a fundamental model for concurrency, but there are common patterns where their use requires the user
 to implement the same pattern over and over. Very common is the scenario where a chain, or graph, of actors, need to

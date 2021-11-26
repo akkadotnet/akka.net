@@ -101,7 +101,7 @@ namespace RemotePingPong
             Console.WriteLine();
 
             //Print tables
-            Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms]");
+            Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads");
 
             _firstRun = false;
         }
@@ -188,6 +188,8 @@ namespace RemotePingPong
                 PrintSysInfo();
             }
 
+            var startThreads = Process.GetCurrentProcess().Threads.Count;
+
             var sw = Stopwatch.StartNew();
             receivers.ForEach(c =>
             {
@@ -197,6 +199,8 @@ namespace RemotePingPong
             var waiting = Task.WhenAll(tasks);
             await Task.WhenAll(waiting);
             sw.Stop();
+            
+            var endThreads = Process.GetCurrentProcess().Threads.Count;
 
             // force clean termination
             await Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() });
@@ -217,7 +221,7 @@ namespace RemotePingPong
             }
 
             Console.ForegroundColor = foregroundColor;
-            Console.WriteLine("{0,10},{1,8},{2,10},{3,11}", numberOfClients, totalMessagesReceived, throughput, sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture));
+            Console.WriteLine("{0,10},{1,8},{2,10},{3,11}, {4,13}, {5,15}", numberOfClients, totalMessagesReceived, throughput, sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), startThreads, endThreads);
             return (redCount <= 3, bestThroughput, redCount);
         }
 

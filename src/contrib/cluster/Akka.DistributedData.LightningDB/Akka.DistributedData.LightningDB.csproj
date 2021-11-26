@@ -4,7 +4,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.LightningDB</AssemblyTitle>
     <Description>Replicated data using CRDT structures</Description>
-    <TargetFrameworks>$(NetStandardLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication;lightningdb;lmdb</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="LightningDB.Vendored.Akka" Version="0.14.0" />
+    <PackageReference Include="LightningDB" Version="0.14.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">

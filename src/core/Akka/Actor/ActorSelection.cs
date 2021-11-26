@@ -63,7 +63,7 @@ namespace Akka.Actor
         /// <param name="anchor">The anchor.</param>
         /// <param name="path">The path.</param>
         public ActorSelection(IActorRef anchor, string path)
-            : this(anchor, path == "" ? new string[] { } : path.Split('/'))
+            : this(anchor, path == "" ? Array.Empty<string>() : path.Split('/'))
         {
         }
 
@@ -77,8 +77,8 @@ namespace Akka.Actor
             Anchor = anchor;
 
             var list = new List<SelectionPathElement>();
-            var count = elements.Count(); // shouldn't have a multiple enumeration issue\
-            var i = 0;
+            var hasDoubleWildcard = false;
+
             foreach (var s in elements)
             {
                 switch (s)
@@ -86,10 +86,9 @@ namespace Akka.Actor
                     case null:
                     case "":
                         break;
-                    case "**":
-                        if (i < count-1)
-                            throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
+                    case "**":                        
                         list.Add(SelectChildRecursive.Instance);
+                        hasDoubleWildcard = true;
                         break;
                     case string e when e.Contains("?") || e.Contains("*"):
                         list.Add(new SelectChildPattern(e));
@@ -101,9 +100,10 @@ namespace Akka.Actor
                         list.Add(new SelectChildName(s));
                         break;
                 }
-
-                i++;
             }
+
+            if(hasDoubleWildcard && list[list.Count-1] != SelectChildRecursive.Instance)
+                throw new IllegalActorNameException("Double wildcard can only appear at the last path entry");
 
             Path = list.ToArray();
         }
@@ -164,10 +164,7 @@ namespace Akka.Actor
             try
             {
                 var identity = await this.Ask<ActorIdentity>(new Identify(null), timeout, ct).ConfigureAwait(false);
-                if (identity.Subject == null)
-                    throw new ActorNotFoundException("subject was null");
-
-                return identity.Subject;
+                return identity.Subject ?? throw new ActorNotFoundException("subject was null");
             }
             catch (Exception ex)
             {

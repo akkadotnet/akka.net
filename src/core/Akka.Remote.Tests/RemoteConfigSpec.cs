@@ -182,7 +182,7 @@ namespace Akka.Remote.Tests
         {
             var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.actor.serialization-settings.primitive");
             c.Should().NotBeNull();
-            c.GetBoolean("use-neutral-primitives").Should().BeFalse();
+            c.GetBoolean("use-legacy-behavior").Should().BeTrue();
         }
    }
 }

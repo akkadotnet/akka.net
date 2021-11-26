@@ -30,18 +30,19 @@ namespace Akka.Remote.Serialization
         internal const string Int32ManifestNetFx = "System.Int32, mscorlib";
         internal const string Int64ManifestNetFx = "System.Int64, mscorlib";
 
-        private readonly bool _useNeutralPrimitives;
+        private readonly bool _useLegacyBehavior;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PrimitiveSerializers" /> class.
         /// </summary>
         /// <param name="system">The actor system to associate with this serializer. </param>
+        /// <param name="config">Config object containing the serializer settings</param>
         public PrimitiveSerializers(ExtendedActorSystem system, Config config) : base(system)
         {
             if (config == null)
                 throw new ConfigurationException("configuration is null");
                     
-            _useNeutralPrimitives = config.GetBoolean("use-neutral-primitives");
+            _useLegacyBehavior = config.GetBoolean("use-legacy-behavior");
         }
 
         /// <inheritdoc />
@@ -85,7 +86,7 @@ namespace Akka.Remote.Serialization
         /// <inheritdoc />
         public override string Manifest(object obj)
         {
-            if (_useNeutralPrimitives)
+            if (_useLegacyBehavior)
                 return obj.GetType().TypeQualifiedName();
             
             switch (obj)

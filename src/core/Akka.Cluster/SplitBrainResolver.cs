@@ -17,11 +17,11 @@ namespace Akka.Cluster
 {
     public sealed class SplitBrainResolver : IDowningProvider
     {
-        private readonly ClusterSettings _clusterSettings;
+        private readonly ActorSystem _system;
 
         public SplitBrainResolver(ActorSystem system)
         {
-            _clusterSettings = Cluster.Get(system).Settings;
+            _system = system;
             var config = system.Settings.Config.GetConfig("akka.cluster.split-brain-resolver");
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<SplitBrainResolver>("akka.cluster.split-brain-resolver");
@@ -30,7 +30,7 @@ namespace Akka.Cluster
             Strategy = ResolveSplitBrainStrategy(config);
         }
 
-        public TimeSpan DownRemovalMargin => _clusterSettings.DownRemovalMargin;
+        public TimeSpan DownRemovalMargin => Cluster.Get(_system).Settings.DownRemovalMargin;
         public TimeSpan StableAfter { get; }
         public Props DowningActorProps => SplitBrainDecider.Props(StableAfter, Strategy);
 
