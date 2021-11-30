@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Net.Sockets;
 
 namespace Akka.IO
@@ -75,9 +76,15 @@ namespace Akka.IO
         /// </summary>
         public class DatagramChannelCreator : SocketOption
         {
+            [Obsolete(message:"Please use the method with AddressFamily parameter. Using this method will always return an IPv6 bound UDP endpoint.")]
             public virtual Socket Create()
             {
                 return new Socket(SocketType.Dgram, ProtocolType.Udp);
+            }
+            
+            public virtual Socket Create(AddressFamily addressFamily)
+            {
+                return new Socket(addressFamily, SocketType.Dgram, ProtocolType.Udp);
             }
         }
 

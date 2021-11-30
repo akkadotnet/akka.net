@@ -92,6 +92,18 @@ namespace Akka.Actor
         void UnregisterTempActor(ActorPath path);
 
         /// <summary>
+        /// Automatically generates a <see cref="FutureActorRef{T}"/> with a temporary path.
+        /// </summary>
+        /// <remarks>
+        /// Does not call <see cref="RegisterTempActor"/> or <see cref="UnregisterTempActor"/>.
+        /// </remarks>
+        /// <param name="tcs">A typed <see cref="TaskCompletionSource{T}"/></param>
+        /// <typeparam name="T">The type of output this <see cref="FutureActorRef{T}"/> expects.</typeparam>
+        /// <returns>A new, single-use <see cref="FutureActorRef{T}"/> instance.</returns>
+        [InternalApi]
+        FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs);
+
+        /// <summary>
         /// Actor factory with create-only semantics: will create an actor as
         /// described by <paramref name="props"/> with the given <paramref name="supervisor"/> and <paramref name="path"/> (may be different
         /// in case of remote supervision). If <paramref name="systemService"/> is true, deployment is
@@ -386,6 +398,16 @@ namespace Akka.Actor
             _tempContainer.RemoveChild(path.Name);
         }
 
+        /// <inheritdoc cref="IActorRefProvider.CreateFutureRef{T}"/>
+        public FutureActorRef<T> CreateFutureRef<T>(TaskCompletionSource<T> tcs)
+        {
+            //create a new tempcontainer path
+            var path = TempPath();
+
+            var future = new FutureActorRef<T>(tcs, path, this);
+            return future;
+        }
+
         /// <summary>
         /// Initializes the ActorRefProvider
         /// </summary>
@@ -417,9 +439,9 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public IActorRef ResolveActorRef(string path)
         {
-            ActorPath actorPath;
-            if (ActorPath.TryParse(path, out actorPath) && actorPath.Address == _rootPath.Address)
+            if (ActorPath.TryParse(path, out var actorPath) && actorPath.Address == _rootPath.Address)
                 return ResolveActorRef(_rootGuardian, actorPath.Elements);
+
             _log.Debug("Resolve of unknown path [{0}] failed. Invalid format.", path);
             return _deadLetters;
         }
@@ -462,7 +484,7 @@ namespace Akka.Actor
         /// <param name="actorRef">TBD</param>
         /// <param name="pathElements">TBD</param>
         /// <returns>TBD</returns>
-        internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyCollection<string> pathElements)
+        internal IInternalActorRef ResolveActorRef(IInternalActorRef actorRef, IReadOnlyList<string> pathElements)
         {
             if (pathElements.Count == 0)
             {

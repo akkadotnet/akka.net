@@ -234,7 +234,8 @@ namespace Akka.DistributedData
 
     /// <summary>
     /// <see cref="ReadMajority"/> but with the given number of <see cref="Additional"/> nodes added to the majority count. At most
-    /// all nodes.
+    /// all nodes. Exiting nodes are excluded using `ReadMajorityPlus` because those are typically
+    /// about to be removed and will not be able to respond.
     /// </summary>
     public sealed class ReadMajorityPlus : IReadConsistency, IEquatable<ReadMajorityPlus>
     {

@@ -816,6 +816,8 @@ namespace Akka.Cluster
     /// </summary>
     internal sealed class ClusterDaemon : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        private Cluster _cluster;
+
         private IActorRef _coreSupervisor;
         private readonly ClusterSettings _settings;
         private readonly ILoggingAdapter _log = Context.GetLogger();
@@ -841,21 +843,21 @@ namespace Akka.Cluster
             Receive<InternalClusterAction.GetClusterCoreRef>(msg =>
             {
                 if (_coreSupervisor == null)
-                    CreateChildren();
+                    CreateChildren(msg.Cluster);
                 _coreSupervisor.Forward(msg);
             });
 
             Receive<InternalClusterAction.AddOnMemberUpListener>(msg =>
             {
                 Context.ActorOf(
-                    Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Up))
+                    Props.Create(() => new OnMemberStatusChangedListener(_cluster, msg.Callback, MemberStatus.Up))
                         .WithDeploy(Deploy.Local));
             });
 
             Receive<InternalClusterAction.AddOnMemberRemovedListener>(msg =>
             {
                 Context.ActorOf(
-                    Props.Create(() => new OnMemberStatusChangedListener(msg.Callback, MemberStatus.Removed))
+                    Props.Create(() => new OnMemberStatusChangedListener(_cluster, msg.Callback, MemberStatus.Removed))
                         .WithDeploy(Deploy.Local));
             });
 
@@ -874,7 +876,7 @@ namespace Akka.Cluster
             var self = Self;
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterLeave, "leave", () =>
             {
-                if (Cluster.Get(sys).IsTerminated || Cluster.Get(sys).SelfMember.Status == MemberStatus.Down)
+                if (_cluster is null || _cluster.IsTerminated || _cluster.SelfMember.Status == MemberStatus.Down)
                 {
                     return Task.FromResult(Done.Instance);
                 }
@@ -888,11 +890,12 @@ namespace Akka.Cluster
             _coordShutdown.AddTask(CoordinatedShutdown.PhaseClusterShutdown, "wait-shutdown", () => _clusterPromise.Task);
         }
 
-        private void CreateChildren()
+        private void CreateChildren(Cluster cluster)
         {
+            _cluster = cluster;
             _coreSupervisor = Context.ActorOf(Props.Create<ClusterCoreSupervisor>(), "core");
 
-            Context.ActorOf(ClusterHeartbeatReceiver.Props(() => Cluster.Get(Context.System)), "heartbeatReceiver");
+            Context.ActorOf(ClusterHeartbeatReceiver.Props(() => _cluster), "heartbeatReceiver");
         }
 
         protected override void PostStop()
@@ -1483,11 +1486,13 @@ namespace Akka.Cluster
                     _seedNodeProcessCounter += 1;
                     if (newSeedNodes.Head().Equals(_cluster.SelfAddress))
                     {
-                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new FirstSeedNodeProcess(newSeedNodes)).WithDispatcher(_cluster.Settings.UseDispatcher), "firstSeedNodeProcess-" + _seedNodeProcessCounter);
+                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new FirstSeedNodeProcess(_cluster, newSeedNodes))
+                            .WithDispatcher(_cluster.Settings.UseDispatcher), "firstSeedNodeProcess-" + _seedNodeProcessCounter);
                     }
                     else
                     {
-                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new JoinSeedNodeProcess(newSeedNodes)).WithDispatcher(_cluster.Settings.UseDispatcher), "joinSeedNodeProcess-" + _seedNodeProcessCounter);
+                        _seedNodeProcess = Context.ActorOf(Props.Create(() => new JoinSeedNodeProcess(_cluster, newSeedNodes))
+                            .WithDispatcher(_cluster.Settings.UseDispatcher), "joinSeedNodeProcess-" + _seedNodeProcessCounter);
                     }
                 }
             }
@@ -1561,8 +1566,9 @@ namespace Akka.Cluster
         /// Received `Join` message and replies with `Welcome` message, containing
         /// current gossip state, including the new joining member.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <param name="roles">TBD</param>
+        /// <param name="node">The unique address of the joining node.</param>
+        /// <param name="roles">The roles, if any, of the joining node.</param>
+        /// <param name="appVersion">The software version of the joining node.</param>
         public void Joining(UniqueAddress node, ImmutableHashSet<string> roles, AppVersion appVersion)
         {
             var selfStatus = LatestGossip.GetMember(SelfUniqueAddress).Status;
@@ -2694,19 +2700,20 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="cluster">TBD</param>
         /// <param name="seeds">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the list of specified <paramref name="seeds"/> is empty
         /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
-        public JoinSeedNodeProcess(ImmutableList<Address> seeds)
+        public JoinSeedNodeProcess(Cluster cluster, ImmutableList<Address> seeds)
         {
-            _selfAddress = Cluster.Get(Context.System).SelfAddress;
+            _selfAddress = cluster.SelfAddress;
             _seeds = seeds;
             _otherSeeds = _seeds.Remove(_selfAddress);
             if (seeds.IsEmpty || seeds.Head() == _selfAddress)
                 throw new ArgumentException("Join seed node should not be done");
-            Context.SetReceiveTimeout(Cluster.Get(Context.System).Settings.SeedNodeTimeout);
+            Context.SetReceiveTimeout(cluster.Settings.SeedNodeTimeout);
         }
 
         /// <summary>
@@ -2799,14 +2806,15 @@ namespace Akka.Cluster
         /// <summary>
         /// Launches a new instance of the "first seed node" joining process.
         /// </summary>
+        /// <param name="cluster">TBD</param>
         /// <param name="seeds">The set of seed nodes to join.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the number of specified <paramref name="seeds"/> is less than or equal to 1
         /// or the first listed seed is a reference to the <see cref="IActorContext.System">IUntypedActorContext.System</see>'s address.
         /// </exception>
-        public FirstSeedNodeProcess(ImmutableList<Address> seeds)
+        public FirstSeedNodeProcess(Cluster cluster, ImmutableList<Address> seeds)
         {
-            _cluster = Cluster.Get(Context.System);
+            _cluster = cluster;
             _selfAddress = _cluster.SelfAddress;
 
             if (seeds.Count <= 1 || seeds.Head() != _selfAddress)
@@ -3042,17 +3050,18 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="cluster">TBD</param>
         /// <param name="callback">TBD</param>
         /// <param name="targetStatus">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="targetStatus"/> is invalid.
         /// Acceptable values are: <see cref="MemberStatus.Up"/> | <see cref="MemberStatus.Down"/>.
         /// </exception>
-        public OnMemberStatusChangedListener(Action callback, MemberStatus targetStatus)
+        public OnMemberStatusChangedListener(Cluster cluster, Action callback, MemberStatus targetStatus)
         {
+            _cluster = cluster;
             _callback = callback;
             _status = targetStatus;
-            _cluster = Cluster.Get(Context.System);
 
             Receive<ClusterEvent.CurrentClusterState>(state =>
             {

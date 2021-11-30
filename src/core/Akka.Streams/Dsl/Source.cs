@@ -555,7 +555,27 @@ namespace Akka.Streams.Dsl
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="task">TBD</param>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));
+        public static Source<T, NotUsed> FromTask<T>(Task<T> task) => FromGraph(new TaskSource<T>(task));        
+
+        /// <summary>
+        /// Never emits any elements, never completes and never fails.
+        /// This stream could be useful in tests.
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <returns>TBD</returns>
+        public static Source<T, NotUsed> Never<T>() => FromTask(new TaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
+
+        /// <summary>
+        /// Streams the elements of the given future source once it successfully completes.
+        /// If the <see cref="Task{T}"/> fails the stream is failed with the exception from the future. If downstream cancels before the
+        /// stream completes the materialized <see cref="Task{M}"/> will be failed with a <see cref="StreamDetachedException"/>
+        /// </summary>
+        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="M">TBD</typeparam>
+        /// <param name="task">TBD</param>
+        /// <returns>TBD</returns>
+        public static Source<T, Task<M>> FromTaskSource<T, M>(Task<Source<T, M>> task) =>
+            FromGraph(new TaskFlattenSource<T, M>(task));
 
         /// <summary>
         /// Elements are emitted periodically with the specified interval.

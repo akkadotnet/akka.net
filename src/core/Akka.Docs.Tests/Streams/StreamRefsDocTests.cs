@@ -101,7 +101,7 @@ namespace DocsExamples.Streams
                     StreamRefs.SinkRef<string>()
                         .To(sink)
                         .Run(Context.System.Materializer())
-                        .PipeTo(Sender, success: sinkRef => sinkRef);
+                        .PipeTo(Sender, success: sinkRef => new MeasurementsSinkReady(prepare.Id, sinkRef));
                 });
             }
 
@@ -135,12 +135,12 @@ namespace DocsExamples.Streams
             #region sink-ref-materialization
             var receiver = Sys.ActorOf(Props.Create<DataReceiver>(), "receiver");
 
-            var ready = await receiver.Ask<ISinkRef<string>>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
+            var ready = await receiver.Ask<MeasurementsSinkReady>(new PrepareUpload("id"), timeout: TimeSpan.FromSeconds(30));
 
             // stream local metrics to Sink's origin:
             Source.From(Enumerable.Range(1, 100))
                 .Select(i => i.ToString())
-                .RunWith(ready.Sink, Materializer);
+                .RunWith(ready.SinkRef.Sink, Materializer);
             #endregion
         }
     }

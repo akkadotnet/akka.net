@@ -122,12 +122,12 @@ namespace Akka.Cluster.Tests.MultiNode
 
         private void LeaderActions()
         {
-            Cluster.ClusterCore.Tell(InternalClusterAction.LeaderActionsTick.Instance);
+            Cluster.TellCoreSafe(InternalClusterAction.LeaderActionsTick.Instance);
         }
 
         private void ReapUnreachable()
         {
-            Cluster.ClusterCore.Tell(InternalClusterAction.ReapUnreachableTick.Instance);
+            Cluster.TellCoreSafe(InternalClusterAction.ReapUnreachableTick.Instance);
         }
 
         private int _gossipBarrierCounter = 0;
@@ -148,7 +148,7 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 EnterBarrier("before-gossip-" + _gossipBarrierCounter);
                 // send gossip
-                Cluster.ClusterCore.Tell(new InternalClusterAction.SendGossipTo(GetAddress(toRole)));
+                Cluster.TellCoreSafe(new InternalClusterAction.SendGossipTo(GetAddress(toRole)));
                 // gossip chat will synchronize the views
                 AwaitCondition(() => ImmutableHashSet.Create(fromRole, toRole).Except(SeenLatestGossip()).IsEmpty);
                 EnterBarrier("after-gossip-" + _gossipBarrierCounter);
@@ -286,7 +286,7 @@ namespace Akka.Cluster.Tests.MultiNode
             RunOn(() =>
             {
                 // send gossip
-                Cluster.ClusterCore.Tell(new InternalClusterAction.SendGossipTo(GetAddress(other2)));
+                Cluster.TellCoreSafe(new InternalClusterAction.SendGossipTo(GetAddress(other2)));
             }, other1);
 
             RunOn(() =>
