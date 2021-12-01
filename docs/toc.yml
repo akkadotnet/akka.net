@@ -3,7 +3,7 @@
   homepage: articles/intro/what-is-akka.md
 - name: API Reference
   href: api/
-  homepage: api/index.md
+  homepage: api/Akka.Actor.yml
 - name: Community
   href: community/
   homepage: community/building-akka-net.md
