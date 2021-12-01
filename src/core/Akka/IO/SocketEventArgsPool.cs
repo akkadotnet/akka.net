@@ -30,44 +30,22 @@ namespace Akka.IO
     {
         private readonly IBufferPool _bufferPool;
         private readonly EventHandler<SocketAsyncEventArgs> _onComplete;
-        private readonly ConcurrentQueue<SocketAsyncEventArgs> _pool = new ConcurrentQueue<SocketAsyncEventArgs>();
 
         
         public PreallocatedSocketEventAgrsPool(int initSize, IBufferPool bufferPool, EventHandler<SocketAsyncEventArgs> onComplete)
         {
             _bufferPool = bufferPool;
             _onComplete = onComplete;
-            for (var i = 0; i < initSize; i++)
-            {
-                var e = new SocketAsyncEventArgs { UserToken = null };
-                e.Completed += _onComplete;
-                _pool.Enqueue(e);
-            }
         }
 
         public SocketAsyncEventArgs Acquire(IActorRef actor)
         {
             var buffer = _bufferPool.Rent();
-            var acquired = false;
-            SocketAsyncEventArgs e = null;
-            while (!acquired)
-            {
-                try
-                {
-                    if (!_pool.TryDequeue(out e))
-                        e = new SocketAsyncEventArgs();
+            var e = new SocketAsyncEventArgs();
 
-                    e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
-                    e.UserToken = actor;
-                    e.Completed += _onComplete;
-                    acquired = true;
-                }
-                catch (InvalidOperationException)
-                {
-                    // it can be that for some reason socket is in use and haven't closed yet. Dispose anyway to avoid leaks.
-                    e?.Dispose();
-                }
-            }
+            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            e.UserToken = actor;
+            e.Completed += _onComplete;
             return e;
         }
 
@@ -84,30 +62,7 @@ namespace Akka.IO
                     _bufferPool.Release(segment);
                 }
             }
-
-            try
-            {
-                e.SetBuffer(null, 0, 0);
-                e.BufferList = null;
-
-                e.UserToken = null;
-                e.AcceptSocket = null;
-                e.RemoteEndPoint = null;
-
-                if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
-                {
-                    _pool.Enqueue(e);
-                }
-                else
-                {
-                    e.Dispose();
-                }
-            }
-            catch (InvalidOperationException)
-            {
-                // it can be that for some reason socket is in use and haven't closed yet. Dispose anyway to avoid leaks.
-                e.Dispose();
-            }
+            e.Dispose();
         }
 
         public BufferPoolInfo BufferPoolInfo => _bufferPool.Diagnostics();
