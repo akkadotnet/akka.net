@@ -40,11 +40,6 @@ namespace Akka.IO
             return FromBytes(cached);
         }
 
-        internal static ByteString FromArraySegments(IList<ArraySegment<byte>> segments)
-            => FromBytes(segments
-                .Where(s => s.Array != null)
-                .Select(s => new ByteBuffer(s.Array, s.Offset, s.Count)));
-
         /// <summary>
         /// Creates a new <see cref="ByteString"/> by copying a provided byte array.
         /// </summary>

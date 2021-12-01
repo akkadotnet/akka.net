@@ -225,13 +225,14 @@ namespace Akka.Actor
         protected override void TellInternal(object message, IActorRef sender)
         {
             if (message == null) throw new InvalidMessageException("Message is null");
-            if (message is Identify i)
+            var i = message as Identify;
+            if (i != null)
             {
                 sender.Tell(new ActorIdentity(i.MessageId, ActorRefs.Nobody));
                 return;
             }
-
-            if (message is DeadLetter d)
+            var d = message as DeadLetter;
+            if (d != null)
             {
                 if (!SpecialHandle(d.Message, d.Sender)) { _eventStream.Publish(d); }
                 return;
@@ -247,7 +248,8 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected override bool SpecialHandle(object message, IActorRef sender)
         {
-            if (message is Watch w)
+            var w = message as Watch;
+            if (w != null)
             {
                 if (!w.Watchee.Equals(this) && !w.Watcher.Equals(this))
                 {

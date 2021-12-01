@@ -84,52 +84,51 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         protected virtual bool SpecialHandle(object message, IActorRef sender)
         {
-            switch (message)
+            if (message is Watch watch)
             {
-                case Watch watch:
+                if (watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
                 {
-                    if (watch.Watchee.Equals(this) && !watch.Watcher.Equals(this))
-                    {
-                        watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: false, addressTerminated: false));
-                    }
-                    return true;
+                    watch.Watcher.SendSystemMessage(new DeathWatchNotification(watch.Watchee, existenceConfirmed: false, addressTerminated: false));
                 }
-                
-                case Unwatch _:
-                    return true;    //Just ignore
-                
-                case Identify identify:
-                    sender.Tell(new ActorIdentity(identify.MessageId, null));
-                    return true;
-                
-                case ActorSelectionMessage actorSelectionMessage:
-                {
-                    switch (actorSelectionMessage.Message)
-                    {
-                        case Identify selectionIdentify:
-                        {
-                            if (!actorSelectionMessage.WildCardFanOut)
-                                sender.Tell(new ActorIdentity(selectionIdentify.MessageId, null));
-                            break;
-                        }
-                        case IDeadLetterSuppression selectionDeadLetterSuppression:
-                            PublishSupressedDeadLetter(selectionDeadLetterSuppression, sender);
-                            break;
-                        default:
-                            _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
-                            break;
-                    }
-
-                    return true;
-                }
-                
-                case IDeadLetterSuppression deadLetterSuppression:
-                    PublishSupressedDeadLetter(deadLetterSuppression, sender);
-                    return true;
-                
-                default:
-                    return false;
+                return true;
             }
+            if (message is Unwatch)
+                return true;    //Just ignore
+
+            if (message is Identify identify)
+            {
+                sender.Tell(new ActorIdentity(identify.MessageId, null));
+                return true;
+            }
+
+            if (message is ActorSelectionMessage actorSelectionMessage)
+            {
+                if (actorSelectionMessage.Message is Identify selectionIdentify)
+                {
+                    if (!actorSelectionMessage.WildCardFanOut)
+                        sender.Tell(new ActorIdentity(selectionIdentify.MessageId, null));
+                }
+                else
+                {
+                    if (actorSelectionMessage.Message is IDeadLetterSuppression selectionDeadLetterSuppression)
+                    {
+                        PublishSupressedDeadLetter(selectionDeadLetterSuppression, sender);
+                    }
+                    else
+                    {
+                        _eventStream.Publish(new DeadLetter(actorSelectionMessage.Message, sender.IsNobody() ? _provider.DeadLetters : sender, this));
+                    }
+                }
+                return true;
+            }
+
+            if (message is IDeadLetterSuppression deadLetterSuppression)
+            {
+                PublishSupressedDeadLetter(deadLetterSuppression, sender);
+                return true;
+            }
+
+            return false;
         }
 
         private void PublishSupressedDeadLetter(IDeadLetterSuppression msg, IActorRef sender)
