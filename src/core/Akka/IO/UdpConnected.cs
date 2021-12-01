@@ -34,6 +34,17 @@ namespace Akka.IO
     {
         #region internal connection messages
 
+        // SocketAsyncEventArgs data are copied into these response messages instead of being referenced/embedded
+        // inside the message. This is done because it is very dangerous to embed SocketAsyncEventArgs in an actor
+        // message.
+        //
+        // SocketAsyncEventArgs might held a reference to a buffer who are managed by DirectBufferPool and
+        // an actor message might end up being sent to the DeadLetters mailbox, resulting in memory leak since the
+        // buffer would never get returned properly to the buffer pool.
+        // 
+        // SocketAsyncEventArgs should never leave the ReceiveAsync() method and the OnComplete callback. It should
+        // be returned immediately to PreallocatedSocketEventAgrsPool so that the buffer can be safely pooled back.
+        
         internal abstract class SocketCompleted : INoSerializationVerificationNeeded
         {
             public ByteString Data { get; }

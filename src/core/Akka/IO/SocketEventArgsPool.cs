@@ -26,18 +26,30 @@ namespace Akka.IO
         BufferPoolInfo BufferPoolInfo { get; }
     }
 
+    // This class __does not__ pool and reuse SocketAsyncEventArgs anymore. Reusing SocketAsyncEventArgs with
+    // multiple Socket instances is dangerous because SocketAsyncEventArgs is not a simple struct or POCO,
+    // it actually held internal states that can wreak havoc if being used in another socket instance.
+    // It is impossible to clear a SocketAsyncEventArgs object and the hassle of trying to handle every single
+    // edge case outweigh the speed and memory gain of pooling the instances.
     internal class PreallocatedSocketEventAgrsPool : ISocketEventArgsPool
     {
+        // Byte buffer pool is moved here to reduce the chance that a memory segment got mis-managed
+        // and not released properly. We only need to worry about acquiring and releasing SocketAsyncEventArgs
+        // and not worry about having to check to see if we need to rent or release any buffer.
+        //
+        // There is no reason why users or developers would need to touch memory management code because it is
+        // very specific for providing byte buffers for SocketAsyncEventArgs
         private readonly IBufferPool _bufferPool;
+        
         private readonly EventHandler<SocketAsyncEventArgs> _onComplete;
 
-        
         public PreallocatedSocketEventAgrsPool(int initSize, IBufferPool bufferPool, EventHandler<SocketAsyncEventArgs> onComplete)
         {
             _bufferPool = bufferPool;
             _onComplete = onComplete;
         }
 
+        
         public SocketAsyncEventArgs Acquire(IActorRef actor)
         {
             var buffer = _bufferPool.Rent();
