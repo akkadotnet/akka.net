@@ -570,15 +570,6 @@ namespace Akka.IO
                 case SocketAsyncOperation.Receive:
                 case SocketAsyncOperation.ReceiveFrom:
                     return new Udp.SocketReceived(e);
-                /*
-                case SocketAsyncOperation.Send:
-                case SocketAsyncOperation.SendTo:
-                    return new Udp.SocketSent(e);
-                case SocketAsyncOperation.Accept:
-                    return new Udp.SocketAccepted(e);
-                case SocketAsyncOperation.Connect:
-                    return new Udp.SocketConnected(e);
-                */
                 default:
                     throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
             }
