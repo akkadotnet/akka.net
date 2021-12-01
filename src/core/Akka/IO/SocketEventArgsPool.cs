@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using Akka.Annotations;
 using Akka.IO.Buffers;
 using Akka.Util;
 
@@ -21,48 +22,81 @@ namespace Akka.IO
     {
         SocketAsyncEventArgs Acquire(IActorRef actor);
         void Release(SocketAsyncEventArgs e);
+        
+        BufferPoolInfo BufferPoolInfo { get; }
     }
 
     internal class PreallocatedSocketEventAgrsPool : ISocketEventArgsPool
     {
+        private readonly IBufferPool _bufferPool;
         private readonly EventHandler<SocketAsyncEventArgs> _onComplete;
-        private readonly ConcurrentStack<SocketAsyncEventArgs> _pool = new ConcurrentStack<SocketAsyncEventArgs>();
+        private readonly ConcurrentQueue<SocketAsyncEventArgs> _pool = new ConcurrentQueue<SocketAsyncEventArgs>();
 
-        public PreallocatedSocketEventAgrsPool(int initSize, EventHandler<SocketAsyncEventArgs> onComplete)
+        
+        public PreallocatedSocketEventAgrsPool(int initSize, IBufferPool bufferPool, EventHandler<SocketAsyncEventArgs> onComplete)
         {
+            _bufferPool = bufferPool;
             _onComplete = onComplete;
             for (var i = 0; i < initSize; i++)
             {
-                var e = CreateSocketAsyncEventArgs();
-                _pool.Push(e);
+                var e = new SocketAsyncEventArgs { UserToken = null };
+                e.Completed += _onComplete;
+                _pool.Enqueue(e);
             }
         }
 
         public SocketAsyncEventArgs Acquire(IActorRef actor)
         {
-            if (!_pool.TryPop(out var e))
-                e = CreateSocketAsyncEventArgs();
+            var buffer = _bufferPool.Rent();
+            var acquired = false;
+            SocketAsyncEventArgs e = null;
+            while (!acquired)
+            {
+                try
+                {
+                    if (!_pool.TryDequeue(out e))
+                        e = new SocketAsyncEventArgs();
 
-            e.UserToken = actor;
+                    e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+                    e.UserToken = actor;
+                    e.Completed += _onComplete;
+                    acquired = true;
+                }
+                catch (InvalidOperationException)
+                {
+                    // it can be that for some reason socket is in use and haven't closed yet. Dispose anyway to avoid leaks.
+                    e?.Dispose();
+                }
+            }
             return e;
         }
 
         public void Release(SocketAsyncEventArgs e)
         {
-            e.UserToken = null;
-            e.AcceptSocket = null;
+            if (e.Buffer != null)
+            {
+                _bufferPool.Release(new ArraySegment<byte>(e.Buffer, e.Offset, e.Count));
+            }
+            if (e.BufferList != null)
+            {
+                foreach (var segment in e.BufferList)
+                {
+                    _bufferPool.Release(segment);
+                }
+            }
 
             try
             {
                 e.SetBuffer(null, 0, 0);
-                if (e.BufferList != null)
-                {
-                    e.BufferList = null;
-                }
-                
+                e.BufferList = null;
+
+                e.UserToken = null;
+                e.AcceptSocket = null;
+                e.RemoteEndPoint = null;
+
                 if (_pool.Count < 2048) // arbitrary taken max amount of free SAEA stored
                 {
-                    _pool.Push(e);
+                    _pool.Enqueue(e);
                 }
                 else
                 {
@@ -76,12 +110,7 @@ namespace Akka.IO
             }
         }
 
-        private SocketAsyncEventArgs CreateSocketAsyncEventArgs()
-        {
-            var e = new SocketAsyncEventArgs { UserToken = null };
-            e.Completed += _onComplete;
-            return e;
-        }
+        public BufferPoolInfo BufferPoolInfo => _bufferPool.Diagnostics();
     }
 
     internal static class SocketAsyncEventArgsExtensions

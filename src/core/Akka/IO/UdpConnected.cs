@@ -36,18 +36,20 @@ namespace Akka.IO
 
         internal abstract class SocketCompleted : INoSerializationVerificationNeeded
         {
-            public readonly SocketAsyncEventArgs EventArgs;
+            public ByteString Data { get; }
 
             protected SocketCompleted(SocketAsyncEventArgs eventArgs)
             {
-                EventArgs = eventArgs;
+                Data = ByteString.CopyFrom(eventArgs.Buffer, eventArgs.Offset, eventArgs.BytesTransferred);
             }
         }
 
         internal sealed class SocketSent : SocketCompleted
         {
+            public int BytesTransferred { get; }
             public SocketSent(SocketAsyncEventArgs eventArgs) : base(eventArgs)
             {
+                BytesTransferred = eventArgs.BytesTransferred;
             }
         }
 
@@ -387,8 +389,10 @@ namespace Akka.IO
                 throw new ConfigurationException($"Cannot retrieve UDP buffer pool configuration: {settings.BufferPoolConfigPath} configuration node not found");
 
             Settings = settings;
-            BufferPool = CreateBufferPool(system, bufferPoolConfig);
-            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(Settings.InitialSocketAsyncEventArgs, OnComplete);
+            SocketEventArgsPool = new PreallocatedSocketEventAgrsPool(
+                Settings.InitialSocketAsyncEventArgs,
+                CreateBufferPool(system, bufferPoolConfig),
+                OnComplete);
             Manager = system.SystemActorOf(
                 props: Props.Create(() => new UdpConnectedManager(this)).WithDeploy(Deploy.Local),
                 name: "IO-UDP-CONN");
@@ -399,15 +403,11 @@ namespace Akka.IO
         /// </summary>
         public override IActorRef Manager { get; }
 
-        /// <summary>
-        /// A buffer pool used by current plugin.
-        /// </summary>
-        public IBufferPool BufferPool { get; }
-
         internal ISocketEventArgsPool SocketEventArgsPool { get; }
         internal UdpSettings Settings { get; }
 
-        private IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IBufferPool CreateBufferPool(ExtendedActorSystem system, Config config)
         {
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<IBufferPool>();
@@ -433,16 +433,18 @@ namespace Akka.IO
         {
             var actorRef = e.UserToken as IActorRef;
             actorRef?.Tell(ResolveMessage(e));
+            SocketEventArgsPool.Release(e);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private UdpConnected.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
+        private static UdpConnected.SocketCompleted ResolveMessage(SocketAsyncEventArgs e)
         {
             switch (e.LastOperation)
             {
                 case SocketAsyncOperation.Receive:
                 case SocketAsyncOperation.ReceiveFrom:
                     return new UdpConnected.SocketReceived(e);
+                /*
                 case SocketAsyncOperation.Send:
                 case SocketAsyncOperation.SendTo:
                     return new UdpConnected.SocketSent(e);
@@ -450,6 +452,7 @@ namespace Akka.IO
                     return new UdpConnected.SocketAccepted(e);
                 case SocketAsyncOperation.Connect:
                     return new UdpConnected.SocketConnected(e);
+                */
                 default:
                     throw new NotSupportedException($"Socket operation {e.LastOperation} is not supported");
             }

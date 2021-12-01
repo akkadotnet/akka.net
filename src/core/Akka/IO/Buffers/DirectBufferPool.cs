@@ -33,6 +33,22 @@ namespace Akka.IO.Buffers
         }
     }
 
+    public class BufferPoolInfo
+    {
+        public BufferPoolInfo(Type type, long totalSize, long free, long used)
+        {
+            Type = type;
+            TotalSize = totalSize;
+            Free = free;
+            Used = used;
+        }
+
+        public Type Type { get; }
+        public long TotalSize { get; }
+        public long Free { get; }
+        public long Used { get; }
+    }
+    
     /// <summary>
     /// An interface used to acquire/release recyclable chunks of 
     /// bytes to be reused without need to triggering GC.
@@ -70,6 +86,8 @@ namespace Akka.IO.Buffers
         /// </summary>
         /// <param name="buf"></param>
         void Release(IEnumerable<ByteBuffer> buf);
+
+        BufferPoolInfo Diagnostics();
     }
 
     /// <summary>
@@ -131,6 +149,17 @@ namespace Akka.IO.Buffers
             }
         }
 
+        public BufferPoolInfo Diagnostics()
+            => new BufferPoolInfo(
+                type: typeof(DirectBufferPool),
+                totalSize: _segments.Count * _segmentSize,
+                free: _buffers.Count * _bufferSize,
+                used: (_segments.Count * _segmentSize) - (_buffers.Count * _bufferSize));
+        
+        public override string ToString()
+            => $"_bufferSize: [{_buffers}], _bufferPerSegment: [{_buffersPerSegment}], _segmentSize: [{_segmentSize}], " +
+               $"_segments.Count: [{_segments.Count}], _buffers.Count: [{_buffers.Count}]";
+        
         private void AllocateSegment()
         {
             lock (_syncRoot)
@@ -183,7 +212,7 @@ namespace Akka.IO.Buffers
                     AllocateSegment();
                 }
 
-                throw new BufferPoolAllocationException($"Couldn't allocate enough byte buffer to fill the tolal requested size of {minimumSize} bytes");
+                throw new BufferPoolAllocationException($"Couldn't allocate enough byte buffer to fill the total requested size of {minimumSize} bytes");
             }
             catch 
             {
@@ -195,8 +224,10 @@ namespace Akka.IO.Buffers
         public void Release(ByteBuffer buf)
         {
             // only release buffers that have actually been taken from one of the segments
-            if (buf.Count == _bufferSize && _segments.Contains(buf.Array))
-                _buffers.Push(buf);
+            if (buf.Count != _bufferSize || !_segments.Contains(buf.Array))
+                throw new Exception("Wrong ArraySegment<byte> was released to DirectBufferPool");
+            
+            _buffers.Push(buf);
         }
 
         public void Release(IEnumerable<ByteBuffer> buffers)
