@@ -155,7 +155,8 @@ namespace Akka.Tests.IO
         [Fact]
         public void The_UDP_connection_oriented_implementation_must_not_leak_memory()
         {
-            const int batchSize = 5000;
+            const int batchCount = 2000;
+            const int batchSize = 100;
             
             var serverAddress = _addresses[0];
             var clientAddress = _addresses[1];
@@ -179,14 +180,15 @@ namespace Akka.Tests.IO
             var data = ByteString.FromString("Fly little packet!");
 
             // send a lot of packets through, the byte buffer pool should not leak anything
-            for (var j = 0; j < batchSize; ++j)
+            for (var n = 0; n < batchCount; ++n)
             {
-                serverEp.Tell(UdpConnected.Send.Create(data));
-            }
+                for (var j = 0; j < batchSize; ++j)
+                    serverEp.Tell(UdpConnected.Send.Create(data));
 
-            var msgs = client.ReceiveN(batchSize, TimeSpan.FromSeconds(10));
-            var cast = msgs.Cast<UdpConnected.Received>();
-            cast.Sum(m => m.Data.Count).Should().Be(data.Count * batchSize);
+                var msgs = client.ReceiveN(batchSize, TimeSpan.FromSeconds(10));
+                var cast = msgs.Cast<UdpConnected.Received>();
+                cast.Sum(m => m.Data.Count).Should().Be(data.Count * batchSize);
+            }
 
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
             serverEp.Tell(UdpConnected.Disconnect.Instance, server);
@@ -201,21 +203,6 @@ namespace Akka.Tests.IO
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
             poolInfo.Free.Should().Be(poolInfo.TotalSize);
             poolInfo.Used.Should().Be(0);
-        }
-        
-        internal class UdpClientHandler: ReceiveActor
-        {
-            public int ReceivedMessages;
-            public int TotalData;
-            public UdpClientHandler()
-            {
-                Receive<UdpConnected.Received>(rcv =>
-                {
-                    ReceivedMessages++;
-                    TotalData += rcv.Data.Count;
-                });
-                ReceiveAny(obj => throw new Exception("Invalid message"));
-            }
         }
     }
 }
