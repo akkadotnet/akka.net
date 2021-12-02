@@ -56,7 +56,7 @@ namespace Akka.IO
             }
         }
 
-        private Tuple<Send, IActorRef> _pendingSend = null;
+        private (Send send, IActorRef sender)? _pendingSend = null;
         private bool WritePending => _pendingSend != null;
 
         private Receive Resolving(DnsEndPoint remoteAddress) => message =>
@@ -116,7 +116,12 @@ namespace Akka.IO
                         }
                         return true;
                     }
-                case SocketReceived socketReceived: DoRead(socketReceived, _connect.Handler); return true;
+                
+                case SocketReceived socketReceived:
+                    _pendingReceive = null;
+                    DoRead(socketReceived, _connect.Handler); 
+                    return true;
+                
                 case Disconnect _:
                     {
                         Log.Debug("Closing UDP connection to [{0}]", _connect.RemoteAddress);
@@ -139,7 +144,7 @@ namespace Akka.IO
                         {
                             if (!send.Payload.IsEmpty)
                             {
-                                _pendingSend = Tuple.Create(send, Sender);
+                                _pendingSend = (send, Sender);
                                 DoWrite();
                             }
                             else
@@ -151,26 +156,25 @@ namespace Akka.IO
                         return true;
                     }
                 case SocketSent sent:
-                    {
-                        if (_pendingSend.Item1.WantsAck)
-                            _pendingSend.Item2.Tell(_pendingSend.Item1.Ack);
-                        if (Udp.Settings.TraceLogging)
-                            Log.Debug("Wrote [{0}] bytes to socket", sent.EventArgs.BytesTransferred);
-                        _pendingSend = null;
-                        Udp.SocketEventArgsPool.Release(sent.EventArgs);
-                        return true;
-                    }
+                {
+                    if (_pendingSend == null)
+                        throw new Exception("There are no pending sent");
+                    
+                    var (send, sender) = _pendingSend.Value;
+                    if (send.WantsAck)
+                        sender.Tell(send.Ack);
+                    if (Udp.Settings.TraceLogging)
+                        Log.Debug("Wrote [{0}] bytes to socket", sent.BytesTransferred);
+                    _pendingSend = null;
+                    return true;
+                }
                 default: return false;
             }
         }
 
         private void DoRead(SocketReceived received, IActorRef handler)
         {
-            var e = received.EventArgs;
-            var buffer = new ByteBuffer(e.Buffer, e.Offset, e.BytesTransferred);
-            var data = new Received(ByteString.CopyFrom(buffer));
-            Udp.BufferPool.Release(buffer);
-            Udp.SocketEventArgsPool.Release(e);
+            var data = new Received(received.Data);
 
             if (!_readingSuspended)
             {
@@ -184,8 +188,7 @@ namespace Akka.IO
         {
             try
             {
-                var send = _pendingSend.Item1;
-                var sender = _pendingSend.Item2;
+                var (send, sender) = _pendingSend.Value;
                 var data = send.Payload;
 
                 var bytesWritten = _socket.Send(data.Buffers);
@@ -233,19 +236,20 @@ namespace Akka.IO
             }
         }
 
+        private SocketAsyncEventArgs _pendingReceive;
+        
         private void ReceiveAsync()
         {
+            if (_pendingReceive != null)
+                return;
+            
             var e = Udp.SocketEventArgsPool.Acquire(Self);
-            var buffer = Udp.BufferPool.Rent();
-            e.SetBuffer(buffer.Array, buffer.Offset, buffer.Count);
+            _pendingReceive = e;
             if (!_socket.ReceiveAsync(e))
+            {
                 Self.Tell(new SocketReceived(e));
-        }
-
-        private void SendAsync(SocketAsyncEventArgs e)
-        {
-            if (!_socket.SendToAsync(e))
-                Self.Tell(new SocketSent(e));
+                Udp.SocketEventArgsPool.Release(e);
+            }
         }
     }
 }
