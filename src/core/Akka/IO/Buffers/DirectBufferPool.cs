@@ -112,7 +112,6 @@ namespace Akka.IO.Buffers
         private const int Retries = 30;
         private readonly object _syncRoot = new object();
 
-        private readonly ILoggingAdapter _log;
         private readonly int _bufferSize;
         private readonly int _buffersPerSegment;
         private readonly int _segmentSize;
@@ -130,20 +129,17 @@ namespace Akka.IO.Buffers
                   bufferSize: config.GetInt("buffer-size", 256),
                   buffersPerSegment: config.GetInt("buffers-per-segment", 250),
                   initialSegments: config.GetInt("initial-segments", 1),
-                  maxSegments: config.GetInt("buffer-pool-limit", 1000),
-                  system)
+                  maxSegments: config.GetInt("buffer-pool-limit", 1000))
         {
         }
 
-        public DirectBufferPool(int bufferSize, int buffersPerSegment, int initialSegments, int maxSegments, ActorSystem system)
+        public DirectBufferPool(int bufferSize, int buffersPerSegment, int initialSegments, int maxSegments)
         {
             if (bufferSize <= 0) throw new ArgumentException("Buffer size must be positive number", nameof(bufferSize));
             if (buffersPerSegment <= 0) throw new ArgumentException("Number of buffers per segment must be positive", nameof(buffersPerSegment));
             if (initialSegments <= 0) throw new ArgumentException("Number of initial segments must be positivie", nameof(initialSegments));
             if (maxSegments < initialSegments) throw new ArgumentException("Maximum number of segments must not be less than the initial one", nameof(maxSegments));
 
-            _log = Logging.GetLogger(system, GetType());
-            
             _bufferSize = bufferSize;
             _buffersPerSegment = buffersPerSegment;
             _segmentSize = bufferSize * buffersPerSegment;
