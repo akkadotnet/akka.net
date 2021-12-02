@@ -227,12 +227,11 @@ namespace Akka.IO.Buffers
         public void Release(ByteBuffer buf)
         {
             // only release buffers that have actually been taken from one of the segments
-            Debug.Assert(
-                buf.Count != _bufferSize || !_segments.Contains(buf.Array),
-                "Wrong ArraySegment<byte> was returned to the pool. WARNING: This can lead to memory leak.");
-
             if (buf.Count != _bufferSize || !_segments.Contains(buf.Array))
+            {
+                Debug.Assert(false, "Wrong ArraySegment<byte> was returned to the pool. WARNING: This can lead to memory leak.");
                 return;
+            }
             
             _buffers.Push(buf);
         }
