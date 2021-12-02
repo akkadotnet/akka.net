@@ -50,7 +50,10 @@ namespace Akka.IO.Buffers
                 Release(buf);
             }
         }
-        
+
+        public BufferPoolInfo Diagnostics()
+            => new BufferPoolInfo(typeof(DisabledBufferPool), 0, 0, 0);
+
         private ByteBuffer RentOfSize(int size)
         {
             var bytes = new byte[size];

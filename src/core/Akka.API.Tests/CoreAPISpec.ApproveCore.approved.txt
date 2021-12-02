@@ -3260,8 +3260,17 @@ namespace Akka.IO.Buffers
         public BufferPoolAllocationException(string message) { }
         protected BufferPoolAllocationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
+    public class BufferPoolInfo
+    {
+        public BufferPoolInfo(System.Type type, long totalSize, long free, long used) { }
+        public long Free { get; }
+        public long TotalSize { get; }
+        public System.Type Type { get; }
+        public long Used { get; }
+    }
     public interface IBufferPool
     {
+        Akka.IO.Buffers.BufferPoolInfo Diagnostics();
         void Release(System.ArraySegment<byte> buf);
         void Release(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buf);
         System.ArraySegment<byte> Rent();
@@ -3382,6 +3391,7 @@ namespace Akka.IO
     }
     public interface ISocketEventArgsPool
     {
+        Akka.IO.Buffers.BufferPoolInfo BufferPoolInfo { get; }
         System.Net.Sockets.SocketAsyncEventArgs Acquire(Akka.Actor.IActorRef actor);
         void Release(System.Net.Sockets.SocketAsyncEventArgs e);
     }
@@ -3904,14 +3914,12 @@ namespace Akka.IO
     {
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system) { }
         public UdpConnectedExt(Akka.Actor.ExtendedActorSystem system, Akka.IO.UdpSettings settings) { }
-        public Akka.IO.Buffers.IBufferPool BufferPool { get; }
         public override Akka.Actor.IActorRef Manager { get; }
     }
     public class UdpExt : Akka.IO.IOExtension
     {
         public UdpExt(Akka.Actor.ExtendedActorSystem system) { }
         public UdpExt(Akka.Actor.ExtendedActorSystem system, Akka.IO.UdpSettings settings) { }
-        public Akka.IO.Buffers.IBufferPool BufferPool { get; }
         public override Akka.Actor.IActorRef Manager { get; }
     }
     public class static UdpExtensions
