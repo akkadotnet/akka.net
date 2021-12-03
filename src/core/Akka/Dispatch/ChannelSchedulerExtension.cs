@@ -1,11 +1,9 @@
-﻿using Akka.Actor;
-using Akka.Configuration;
-using Akka.Event;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Akka.Actor;
 
 namespace Akka.Dispatch
 {
@@ -17,21 +15,33 @@ namespace Akka.Dispatch
         }
     }
 
+    /// <summary>
+    /// The Taskscheduler holds multiple TaskSchdulers with different priorities
+    /// All scheduled work is executed over the regular ThreadPool 
+    /// and the execution sequence is depenedened on the priority of the TaskSchduler
+    /// 
+    /// Priority TaskSchedulers:
+    /// High => All queued work is processed before any other priority
+    /// Normal => Normal work load, processed until max-work count 
+    /// Low => Only processed after normal work load
+    /// Idle => only processed when no other work is queued
+    /// </summary>
     public sealed class ChannelTaskScheduler : IExtension, IDisposable
     {
         [ThreadStatic]
         private static TaskSchedulerPriority _threadPriority = TaskSchedulerPriority.None;
 
-        private readonly Task _controlTask;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly Timer _timer;
-        private readonly Task[] _coworkers;
-        private readonly int _maximumConcurrencyLevel;
-        private readonly int _maxWork = 3; //max work items to execute at one priority
+        private readonly Task _controlTask; //the main worker
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource(); //main cancellation token
+        private readonly Timer _timer; //timer to schedule coworkers
+        private readonly Task[] _coworkers; //the coworkers
+        private readonly int _maximumConcurrencyLevel; //max count of workers
+        private readonly int _maxWork = 10; //max executed work items in sequence until priority loop
 
-        private readonly int _workInterval = 500;
-        private readonly int _workStep = 2;
+        private readonly int _workInterval = 500; //time target of executed work items in ms
+        private readonly int _workStep = 2; //target work item count in interval / burst
 
+        //priority task schedulers
         private readonly PriorityTaskScheduler _highScheduler;
         private readonly PriorityTaskScheduler _normalScheduler;
         private readonly PriorityTaskScheduler _lowScheduler;
@@ -49,18 +59,19 @@ namespace Akka.Dispatch
 
         public ChannelTaskScheduler(ExtendedActorSystem system)
         {
-            //todo own channel-task-scheduler config section
+            //config channel-scheduler
             var config = system.Settings.Config.GetConfig("akka.channel-scheduler");
             _maximumConcurrencyLevel = ThreadPoolConfig.ScaledPoolSize(
                         config.GetInt("parallelism-min"),
                         config.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
                         config.GetInt("parallelism-max"));
             _maximumConcurrencyLevel = Math.Max(_maximumConcurrencyLevel, 1);
-            _maxWork = Math.Max(config.GetInt("work-max", _maxWork), 3);
+            _maxWork = Math.Max(config.GetInt("work-max", _maxWork), 3); //min 3 normal work in work-loop
 
             _workInterval = config.GetInt("work-interval", _workInterval);
             _workStep = config.GetInt("work-step", _workStep);
 
+            //create task schedulers
             var channelOptions = new UnboundedChannelOptions()
             {
                 AllowSynchronousContinuations = true,
@@ -73,17 +84,26 @@ namespace Akka.Dispatch
             _lowScheduler = new PriorityTaskScheduler(Channel.CreateUnbounded<Task>(channelOptions), TaskSchedulerPriority.Low);
             _idleScheduler = new PriorityTaskScheduler(Channel.CreateUnbounded<Task>(channelOptions), TaskSchedulerPriority.Idle);
 
+            //prefill coworker array
             _coworkers = new Task[_maximumConcurrencyLevel - 1];
             for (var i = 0; i < _coworkers.Length; i++)
                 _coworkers[i] = Task.CompletedTask;
 
+            //init paused timer
             _timer = new Timer(ScheduleCoWorkers, "timer", Timeout.Infinite, Timeout.Infinite);
 
+            //start main worker
             _controlTask = Task.Factory.StartNew(ControlAsync, _cts.Token,
                 TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
                 TaskScheduler.Default).Unwrap();
         }
 
+        /// <summary>
+        /// Get highest possible TaskSchdeduler of requested priority  
+        /// </summary>
+        /// <param name="priority">requested priority</param>
+        /// <returns>TaskSchdeduler with highest possible priority</returns>
+        /// <exception cref="ArgumentException">priority not supported</exception>
         public TaskScheduler GetScheduler(TaskSchedulerPriority priority)
         {
             switch (priority)
@@ -98,13 +118,17 @@ namespace Akka.Dispatch
                 case TaskSchedulerPriority.Low:
                     return _lowScheduler;
                 case TaskSchedulerPriority.Background:
-                //case TaskSchedulerPriority.Idle:
+                    //case TaskSchedulerPriority.Idle:
                     return _idleScheduler;
                 default:
                     throw new ArgumentException(nameof(priority));
             }
         }
 
+        /// <summary>
+        /// The main worker waits for work and schedule coworkers 
+        /// </summary>
+        /// <returns>main worker</returns>
         private async Task ControlAsync()
         {
             var highReader = _highScheduler.Channel.Reader;
@@ -129,7 +153,7 @@ namespace Akka.Dispatch
                 //main worker
                 DoWork(0);
 
-                //wait on coworker exit
+                //wait on all coworkers exit
                 await Task.WhenAll(_coworkers).ConfigureAwait(false);
 
                 //stop timer
@@ -146,43 +170,52 @@ namespace Akka.Dispatch
                 if (readTasks[3].IsCompleted)
                     readTasks[3] = idleReader.WaitToReadAsync().AsTask();
 
+                //wait on new work)
                 readTask = await Task.WhenAny(readTasks).ConfigureAwait(false);
             }
             while (readTask.Result && !_cts.IsCancellationRequested);
         }
 
+        /// <summary>
+        /// Scheduling new coworkers based on queued work count 
+        /// and starting the timer to reschedule coworkers periodically 
+        /// </summary>
+        /// <param name="state">indication if the call is from main worker or the timer</param>
         private void ScheduleCoWorkers(object state)
         {
-            var name = (string)state;
+            var name = (string)state; //control or timer
+            int i;
 
+            //total count of queued work items
             var queuedWorkItems = _highScheduler.Channel.Reader.Count
                 + _normalScheduler.Channel.Reader.Count
                 + _lowScheduler.Channel.Reader.Count
                 + _idleScheduler.Channel.Reader.Count;
 
+            //required worker count
             var reqWorkerCount = queuedWorkItems;
 
-            //limit req workers
+            //limit required workers to max
             reqWorkerCount = Math.Min(reqWorkerCount, _maximumConcurrencyLevel);
 
             //count running workers
             var controlWorkerCount = name == "control" ? 1 : 0;
             var coworkerCount = 0;
-            for (int i = 0; i < _coworkers.Length; i++)
+            for (i = 0; i < _coworkers.Length; i++)
             {
                 if (!_coworkers[i].IsCompleted)
                     coworkerCount++;
             }
 
-            //limit new workers
+            //limit new worker count
             var newWorkerToStart = Math.Min(Math.Max(reqWorkerCount - controlWorkerCount - coworkerCount, 0), _workStep);
-            if (newWorkerToStart == 0 && reqWorkerCount > controlWorkerCount && (controlWorkerCount+coworkerCount) < _maximumConcurrencyLevel)
+            if (newWorkerToStart == 0 && reqWorkerCount > controlWorkerCount && (controlWorkerCount + coworkerCount) < _maximumConcurrencyLevel)
                 newWorkerToStart = 1;
 
             if (newWorkerToStart > 0)
             {
                 //start new workers
-                for (var i = 0; newWorkerToStart > 0 && i < _coworkers.Length; i++)
+                for (i = 0; newWorkerToStart > 0 && i < _coworkers.Length; i++)
                 {
                     if (_coworkers[i].IsCompleted)
                     {
@@ -193,9 +226,17 @@ namespace Akka.Dispatch
                 }
             }
 
-            //reschedule
+            //reschedule on timer
             if (!_cts.IsCancellationRequested)
             {
+                /*
+                calculate interval slot
+                1) if work-interval is 500ms and work-step is 2 then try to schedule new worker after 250ms
+                   this allows a single worker (main worker) to process everything in its work-slot
+                   without the need of any coworkers. this is in the field the main case
+                2) if the call is from the timer and all workers could be scheduled then 
+                   assume that all workers are busy for the set work-slot and reschedule much later 
+                */
                 var interval = controlWorkerCount > 0 || (reqWorkerCount - newWorkerToStart) > 0
                     ? _workInterval / _workStep
                     : _workInterval * _workStep;
@@ -203,48 +244,64 @@ namespace Akka.Dispatch
             }
         }
 
+        /// <summary>
+        /// Task action to run worker
+        /// </summary>
+        /// <param name="state">workerId</param>
         private void Worker(object state)
         {
             DoWork((int)state);
         }
 
+        /// <summary>
+        /// work loop
+        /// </summary>
+        /// <param name="workerId">the worker id</param>
+        /// <returns></returns>
         private int DoWork(int workerId)
         {
-            var highCount = 0;
-            var normalCount = 0;
-            var lowCount = 0;
-            var idleCount = 0;
+            var highCount = 0; //executed work items in priority high 
+            var normalCount = 0; //executed work items in priority normal
+            var lowCount = 0; //executed work items in priority low
+            var idleCount = 0; //executed work items in priority idle
 
             int c;
-            int rounds = 0;
-            int roundWork;
-            int roundClean = 0;
+            int rounds = 0; //loop count
+            int roundWork; //work count in the current loop
+            int roundClean = 0; //clean loop count
 
             //maybe implement max work count and/or a deadline
 
+
+            //the work loop
             _threadPriority = TaskSchedulerPriority.Idle;
             try
-            {
+            {   
                 do
                 {
                     rounds++;
                     roundWork = 0;
 
+                    //execute all high priority work
                     c = _highScheduler.ExecuteAll();
                     highCount += c;
                     roundWork += c;
 
+                    //execute normal priority work until max work count
                     c = _normalScheduler.ExecuteMany(_maxWork);
                     normalCount += c;
                     roundWork += c;
 
+                    //only when all other priority queues where empty
+                    //then execute multiple low priority work
                     c = roundWork > 0
                         ? _lowScheduler.ExecuteSingle()
                         : _lowScheduler.ExecuteMany(_maxWork);
                     lowCount += c;
                     roundWork += c;
 
-                    //if there was no work then only execute background tasks 
+                    //only execute background tasks
+                    //when the current loop executed no work items
                     if (c == 0)
                     {
                         c = _idleScheduler.ExecuteSingle();
@@ -252,6 +309,7 @@ namespace Akka.Dispatch
                         roundWork += c;
                     }
 
+                    //count clean loops
                     roundClean = roundWork == 0 ? roundClean + 1 : 0;
                 }
                 while (roundClean < 2 && !_cts.IsCancellationRequested);
@@ -270,6 +328,7 @@ namespace Akka.Dispatch
             var total = highCount + normalCount + lowCount + idleCount;
 
             //todo push to metrics: workerId, total, highCount, normalCount, lowCount, idleCount
+            //maybe add StopWatch
 
             return total;
         }
@@ -285,6 +344,11 @@ namespace Akka.Dispatch
             _timer.Dispose();
         }
 
+        /// <summary>
+        /// TaskScheduler to queue work items to the priority-channel from user space
+        /// and to help execute queued works internaly. 
+        /// It supports task-inlining only for task equal or above the own priority
+        /// </summary>
         sealed class PriorityTaskScheduler : TaskScheduler, IDisposable
         {
             readonly Channel<Task> _channel;
@@ -319,12 +383,15 @@ namespace Akka.Dispatch
             protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
             {
                 // If this thread isn't already processing a task
-                // and the thread priority is higher,
-                // we don't support inlining
-                return (_threadPriority > TaskSchedulerPriority.None && _threadPriority <= _priority) 
+                // and the thread priority is higher, then we don't support inlining 
+                return (_threadPriority > TaskSchedulerPriority.None && _threadPriority <= _priority)
                     && TryExecuteTask(task);
             }
 
+            /// <summary>
+            /// execute work until unsuccessfull
+            /// </summary>
+            /// <returns>dequeued work count</returns>
             public int ExecuteAll()
             {
                 _threadPriority = _priority;
@@ -341,6 +408,11 @@ namespace Akka.Dispatch
                 return count;
             }
 
+            /// <summary>
+            /// execute work until unsuccessfull or max count
+            /// </summary>
+            /// <param name="maxTasks">max work to execute</param>
+            /// <returns>dequeued work count</returns>
             public int ExecuteMany(int maxTasks)
             {
                 _threadPriority = _priority;
@@ -355,6 +427,10 @@ namespace Akka.Dispatch
                 return c;
             }
 
+            /// <summary>
+            /// execute single work item
+            /// </summary>
+            /// <returns>dequeued work count</returns>
             public int ExecuteSingle()
             {
                 _threadPriority = _priority;
@@ -374,6 +450,9 @@ namespace Akka.Dispatch
         }
     }
 
+    /// <summary>
+    /// Windows API related Process and Thread Priorities
+    /// </summary>
     public enum TaskSchedulerPriority
     {
         None = 0,
