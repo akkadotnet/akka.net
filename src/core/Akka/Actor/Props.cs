@@ -12,7 +12,6 @@ using System.Linq.Expressions;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;
-using Akka.Util.Internal;
 using Akka.Util.Reflection;
 using Newtonsoft.Json;
 
@@ -145,10 +144,9 @@ namespace Akka.Actor
         public Props(Deploy deploy, Type type, params object[] args)
         {
             Deploy = deploy;
-            Type = type;
-            Arguments = args?.Length > 0 ? args : NoArgs;
             // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
-            _producer = CreateProducer(type, args); 
+            (_producer, Type, Arguments) = CreateProducer(type, args);
+            Arguments = Arguments?.Length > 0 ? Arguments : NoArgs;
         }
 
         /// <summary>
@@ -546,16 +544,23 @@ namespace Akka.Actor
         }
 
         [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference instead.")]
-        private static IIndirectActorProducer CreateProducer(Type type, object[] args)
+        private static (IIndirectActorProducer, Type, object[] args) CreateProducer(Type type, object[] args)
         {
             if (type is null)
-                return DefaultProducer.Instance;
+                return (InvalidProducer.Default, typeof(EmptyActor), NoArgs);
 
             if (typeof(IIndirectActorProducer).IsAssignableFrom(type))
-                return Activator.CreateInstance(type, args).AsInstanceOf<IIndirectActorProducer>();
+            {
+                var producer = (IIndirectActorProducer)Activator.CreateInstance(type, args);
+                if (producer is IIndirectActorProducerWithActorType p)
+                    return (producer, p.ActorType, NoArgs);
+
+                //maybe throw new ArgumentException($"Unsupported legacy actor producer [{type.FullName}]", nameof(type));
+                return (producer, typeof(ActorBase), NoArgs);
+            }
 
             if (typeof(ActorBase).IsAssignableFrom(type))
-                return ActivatorProducer.Instance;
+                return (ActivatorProducer.Instance, type, args);
 
             throw new ArgumentException($"Unknown actor producer [{type.FullName}]", nameof(type));
         }
@@ -614,23 +619,6 @@ namespace Akka.Actor
             /// <param name="message">The message past to the actor.</param>
             protected override void OnReceive(object message)
             {
-            }
-        }
-
-        private sealed class DefaultProducer : IIndirectActorProducer
-        {
-            private DefaultProducer() { }
-
-            public static readonly DefaultProducer Instance = new DefaultProducer();
-
-            public ActorBase Produce(Props props)
-            {
-                throw new InvalidOperationException();
-            }
-
-            public void Release(ActorBase actor)
-            {
-                //noop
             }
         }
 
@@ -722,5 +710,14 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="actor">The actor to release</param>
         void Release(ActorBase actor);
+    }
+
+    /// <summary>
+    /// Interface for legacy Akka.DI.Core support
+    /// </summary>
+    [Obsolete("Do not use this interface")]
+    public interface IIndirectActorProducerWithActorType : IIndirectActorProducer
+    {
+        Type ActorType { get; }
     }
 }

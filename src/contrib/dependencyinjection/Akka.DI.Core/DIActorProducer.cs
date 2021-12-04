@@ -13,11 +13,13 @@ namespace Akka.DI.Core
     /// <summary>
     /// This class represents an actor creation strategy that uses dependency injection (DI) to resolve and instantiate actors based on their type.
     /// </summary>
-    public sealed class DIActorProducer : IIndirectActorProducer
+    public sealed class DIActorProducer : IIndirectActorProducerWithActorType
     {
         private readonly IDependencyResolver _dependencyResolver;
         private readonly Type _actorType;
         private readonly Func<ActorBase> _actorFactory;
+
+        public Type ActorType => _actorType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DIActorProducer"/> class.
