@@ -244,8 +244,11 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return CompareDeploy(other) && CompareSupervisorStrategy(other) && CompareArguments(other) &&
-                   CompareInputType(other);
+            return Type == other.Type
+                && _producer.GetType() == other._producer.GetType()
+                && Deploy.Equals(other.Deploy)
+                && CompareSupervisorStrategy(other)
+                && CompareArguments(other);
         }
 
         /// <summary>
@@ -256,16 +259,6 @@ namespace Akka.Actor
         public ISurrogate ToSurrogate(ActorSystem system)
         {
             return new PropsSurrogate { Arguments = Arguments, Type = Type, Deploy = Deploy };
-        }
-
-        private bool CompareInputType(Props other)
-        {
-            return Type == other.Type;
-        }
-
-        private bool CompareDeploy(Props other)
-        {
-            return Deploy.Equals(other.Deploy);
         }
 
 #pragma warning disable CS0162 // Disabled because it's marked as a TODO
@@ -302,7 +295,6 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
             return Equals((Props)obj);
         }
 
