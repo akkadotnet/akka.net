@@ -295,7 +295,7 @@ namespace Akka.Actor
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            return Equals((Props)obj);
+            return Equals(obj as Props);
         }
 
         /// <inheritdoc />
