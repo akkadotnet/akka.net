@@ -398,11 +398,12 @@ namespace Akka.TestKit.Internal
             if (!expectedOccurrences.HasValue) 
                 return true;
 
+            var expected = expectedOccurrences.Value;
+
             // if expecting no events to arrive - assert that given condition will never match
-            if (expectedOccurrences.Value == 0)
+            if (expected == 0)
                 return !_testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount > 0, timeout);
 
-            var expected = expectedOccurrences.Value;
             _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
 
             //wait for late tail messages to arrive
@@ -417,22 +418,21 @@ namespace Akka.TestKit.Internal
         /// </summary>
         protected async Task<bool> AwaitDoneAsync(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
-            if(expectedOccurrences.HasValue)
-            {
-                var expected = expectedOccurrences.GetValueOrDefault();
-                if (expected > 0)
-                {
-                    await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
-                    return matchedEventHandler.ReceivedCount == expected;
-                }
-                else
-                {
-                    // if expecting no events to arrive - assert that given condition will never match
-                    var foundEvent = await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount > 0, timeout);
-                    return foundEvent == false;
-                }
-            }
-            return true;
+            if (!expectedOccurrences.HasValue)
+                return true;
+
+            var expected = expectedOccurrences.GetValueOrDefault();
+
+            if (expected == 0)
+                return !(await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount > 0, timeout));
+
+            await _testkit.AwaitConditionNoThrowAsync(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+
+            //wait for late tail messages to arrive
+            if (matchedEventHandler.ReceivedCount == expected)
+                await Task.Delay(100);
+
+            return matchedEventHandler.ReceivedCount == expected;
         }
 
         /// <summary>
