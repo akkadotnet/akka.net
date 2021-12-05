@@ -105,17 +105,11 @@ namespace Akka.Event
 
         public static string FromActorRef(IActorRef a, ActorSystem system)
         {
-            var extendedSystem = system as ExtendedActorSystem
-                ?? throw new ArgumentException("instance of ExtendedActorSystem required", nameof(system));
-
-            try
-            {
+            if (system is ExtendedActorSystem extendedSystem && !(extendedSystem.Provider is null))
                 return a.Path.ToStringWithAddress(extendedSystem.Provider.DefaultAddress);
-            }
-            catch // can fail if the ActorSystem (remoting) is not completely started yet
-            {
-                return a.Path.ToString();
-            }
+
+            // the ActorSystem (remoting) is not completely started yet
+            return a.Path.ToString();
         }
     }
 
