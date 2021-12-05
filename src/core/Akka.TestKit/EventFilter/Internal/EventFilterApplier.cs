@@ -395,22 +395,25 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected bool AwaitDone(TimeSpan timeout, int? expectedOccurrences, MatchedEventHandler matchedEventHandler)
         {
-            if (expectedOccurrences.HasValue)
+            if (!expectedOccurrences.HasValue) return true;
+            
+            var expected = expectedOccurrences ?? 0;
+            if (expected > 0)
             {
-                var expected = expectedOccurrences.GetValueOrDefault();
-                if (expected > 0)
-                {
-                    _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
-                    return matchedEventHandler.ReceivedCount == expected;
-                }
-                else
-                {
-                    // if expecting no events to arrive - assert that given condition will never match
-                    var foundEvent = _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount > 0, timeout);
-                    return foundEvent == false;
-                }
+                _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount >= expected, timeout);
+                    
+                //wait for late tail messages to arrive
+                if (matchedEventHandler.ReceivedCount == expected)
+                    TimeSpan.FromMilliseconds(100);
+
+                return matchedEventHandler.ReceivedCount == expected;
             }
-            return true;
+            else
+            {
+                // if expecting no events to arrive - assert that given condition will never match
+                var foundEvent = _testkit.AwaitConditionNoThrow(() => matchedEventHandler.ReceivedCount > 0, timeout);
+                return foundEvent == false;
+            }
         }
         
         /// <summary>
