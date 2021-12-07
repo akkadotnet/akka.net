@@ -1,3 +1,8 @@
+---
+uid: serializer-codes
+title: Serializer ID Code Table
+---
+<!-- markdownlint-disable MD033 -->
 # Akka Serializer ID Code Table
 
 Serializers with ID range 1-100 are reserved for internal Akka.NET serializers. This table maps which
