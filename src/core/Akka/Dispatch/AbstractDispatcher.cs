@@ -120,19 +120,18 @@ namespace Akka.Dispatch
     {
         public ChannelExecutorConfigurator(Config config, IDispatcherPrerequisites prerequisites) : base(config, prerequisites)
         {
-            var fje = config.GetConfig("fork-join-executor");
-            MaxParallelism = ThreadPoolConfig.ScaledPoolSize(
-                        fje.GetInt("parallelism-min"), 
-                        fje.GetDouble("parallelism-factor", 1.0D), // the scalar-based factor to scale the threadpool size to 
-                        fje.GetInt("parallelism-max"));
+            var cfg = config.GetConfig("channel-executor");
+            Priority = (TaskSchedulerPriority)Enum.Parse(typeof(TaskSchedulerPriority), cfg.GetString("priority", "normal"), true);
         }
 
-        public int MaxParallelism {get;}
+        public TaskSchedulerPriority Priority { get; }
 
         public override ExecutorService Produce(string id)
         {
-            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[id]", typeof(FixedConcurrencyTaskScheduler), $"Launched Dispatcher [{id}] with MaxParallelism=[{MaxParallelism}]"));
-            return new TaskSchedulerExecutor(id, new FixedConcurrencyTaskScheduler(MaxParallelism));
+            Prerequisites.EventStream.Publish(new Debug($"ChannelExecutor-[{id}]", typeof(TaskSchedulerExecutor), $"Launched Dispatcher [{id}] with Priority[{Priority}]"));
+
+            var scheduler = ChannelTaskScheduler.Get(Prerequisites.Settings.System).GetScheduler(Priority);
+            return new TaskSchedulerExecutor(id, scheduler);
         }
     }
 

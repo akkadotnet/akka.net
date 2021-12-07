@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -14,6 +13,7 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.IO.Buffers;
 
 namespace Akka.IO
@@ -45,7 +45,7 @@ namespace Akka.IO
         // SocketAsyncEventArgs should never leave the ReceiveAsync() method and the OnComplete callback. It should
         // be returned immediately to PreallocatedSocketEventAgrsPool so that the buffer can be safely pooled back.
         
-        internal abstract class SocketCompleted : INoSerializationVerificationNeeded
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public ByteString Data { get; }
 
