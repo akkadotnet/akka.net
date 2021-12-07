@@ -2509,6 +2509,22 @@ namespace Akka.Dispatch
         public System.TimeSpan PushTimeout { get; }
         public override Akka.Dispatch.MessageQueues.IMessageQueue Create(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
     }
+    public sealed class ChannelTaskScheduler : Akka.Actor.IExtension, System.IDisposable
+    {
+        public ChannelTaskScheduler(Akka.Actor.ExtendedActorSystem system) { }
+        public System.Threading.Tasks.TaskScheduler High { get; }
+        public System.Threading.Tasks.TaskScheduler Idle { get; }
+        public System.Threading.Tasks.TaskScheduler Low { get; }
+        public System.Threading.Tasks.TaskScheduler Normal { get; }
+        public void Dispose() { }
+        public static Akka.Dispatch.ChannelTaskScheduler Get(Akka.Actor.ActorSystem system) { }
+        public System.Threading.Tasks.TaskScheduler GetScheduler(Akka.Dispatch.TaskSchedulerPriority priority) { }
+    }
+    public sealed class ChannelTaskSchedulerProvider : Akka.Actor.ExtensionIdProvider<Akka.Dispatch.ChannelTaskScheduler>
+    {
+        public ChannelTaskSchedulerProvider() { }
+        public override Akka.Dispatch.ChannelTaskScheduler CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
+    }
     public sealed class CurrentSynchronizationContextDispatcher : Akka.Dispatch.Dispatcher
     {
         public CurrentSynchronizationContextDispatcher(Akka.Dispatch.MessageDispatcherConfigurator configurator, string id, int throughput, System.Nullable<long> throughputDeadlineTime, Akka.Dispatch.ExecutorServiceFactory executorServiceFactory, System.TimeSpan shutdownTimeout) { }
@@ -2676,6 +2692,18 @@ namespace Akka.Dispatch
     {
         public RejectedExecutionException(string message = null, System.Exception inner = null) { }
         protected RejectedExecutionException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public enum TaskSchedulerPriority
+    {
+        None = 0,
+        Idle = 4,
+        Background = 4,
+        Low = 5,
+        BelowNormal = 6,
+        Normal = 8,
+        AboveNormal = 10,
+        High = 13,
+        Realtime = 24,
     }
     public class ThreadPoolConfig
     {
