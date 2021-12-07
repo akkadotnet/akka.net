@@ -132,7 +132,8 @@ namespace Akka.Streams.Implementation
         /// <exception cref="NotSupportedException">TBD</exception>
         /// <returns>TBD</returns>
         public SubFlowImpl<TIn, TOut, TMat, TClosed> WithAttributes(Attributes attributes)
-            => new SubFlowImpl<TIn, TOut, TMat, TClosed>(Flow.WithAttributes(attributes), _mergeBackFunction, _finishFunction);
-        
+        {
+            throw new NotSupportedException();
+        }
     }
 }
