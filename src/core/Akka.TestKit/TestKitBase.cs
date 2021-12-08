@@ -186,13 +186,7 @@ namespace Akka.TestKit
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
 
-            _testState.TestActor = testActor;
-
-            //HACK: await one log message
-            {
-                var msg = $"testprope-{Guid.NewGuid()}";
-                EventFilter.Warning(contains: msg).ExpectOne(TimeSpan.FromSeconds(3), () => system.Log.Warning(msg));
-            }
+            _testState.TestActor = testActor;            
         }
 
         /// <summary>
