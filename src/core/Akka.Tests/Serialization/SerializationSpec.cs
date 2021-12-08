@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.Configuration;
@@ -577,6 +578,34 @@ namespace Akka.Tests.Serialization
 
             TypeCache.GetType(legacyTypeManifest).ShouldBeSame(TypeCache.GetType(newTypeManifest));
             Type.GetType(legacyTypeManifest).ShouldBeSame(Type.GetType(newTypeManifest));
+        }
+
+        [Fact]
+        public void Missing_known_internal_serializer_id_should_append_help_message()
+        {
+            var serializer = Sys.Serialization;
+            serializer.Invoking(s => s.Deserialize(null, 13, typeof(object))).Should()
+                .Throw<SerializationException>()
+                .Where(ex => ex.Message.Contains(SerializerErrorCode.ErrorCodes[13].ToString()));
+        }
+
+        [Fact]
+        public void Missing_unknown_internal_serializer_id_should_append_help_message()
+        {
+            var serializer = Sys.Serialization;
+            // no such thing as serializer with id 18
+            serializer.Invoking(s => s.Deserialize(null, 18, typeof(object))).Should()
+                .Throw<SerializationException>()
+                .Where(ex => ex.Message.Contains("Could not find any internal Akka.NET serializer with Id [18]."));
+        }
+
+        [Fact]
+        public void Missing_custom_serializer_id_should_append_help_message()
+        {
+            var serializer = Sys.Serialization;
+            serializer.Invoking(s => s.Deserialize(null, 101, typeof(object))).Should()
+                .Throw<SerializationException>()
+                .Where(ex => ex.Message.Contains("Serializer Id [101] is not one of the internal Akka.NET serializer."));
         }
 
         public SerializationSpec():base(GetConfig())
