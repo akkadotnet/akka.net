@@ -380,7 +380,8 @@ namespace Akka.Serialization
                 if (!_serializersById.TryGetValue(serializerId, out var serializer))
                     throw new SerializationException(
                         $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
-                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                        $" {Serializer.GetErrorForSerializerId(serializerId)}");
 
                 return serializer.FromBinary(bytes, type);
             });
@@ -402,7 +403,8 @@ namespace Akka.Serialization
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
                     $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
-                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems.");
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                    $" {Serializer.GetErrorForSerializerId(serializerId)}");
 
             // not using `withTransportInformation { () =>` because deserializeByteBuffer is supposed to be the
             // possibility for allocation free serialization

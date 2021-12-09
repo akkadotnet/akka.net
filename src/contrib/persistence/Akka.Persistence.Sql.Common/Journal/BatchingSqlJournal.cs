@@ -622,9 +622,9 @@ namespace Akka.Persistence.Sql.Common.Journal
             HighestSequenceNrSql = $@"
                 SELECT MAX(u.SeqNr) as SequenceNr 
                 FROM (
-                    SELECT e.{conventions.SequenceNrColumnName} as SeqNr FROM {conventions.FullJournalTableName} e WHERE e.{conventions.PersistenceIdColumnName} = @PersistenceId
+                    SELECT MAX(e.{conventions.SequenceNrColumnName}) as SeqNr FROM {conventions.FullJournalTableName} e WHERE e.{conventions.PersistenceIdColumnName} = @PersistenceId
                     UNION
-                    SELECT m.{conventions.SequenceNrColumnName} as SeqNr FROM {conventions.FullMetaTableName} m WHERE m.{conventions.PersistenceIdColumnName} = @PersistenceId) as u";
+                    SELECT MAX(m.{conventions.SequenceNrColumnName}) as SeqNr FROM {conventions.FullMetaTableName} m WHERE m.{conventions.PersistenceIdColumnName} = @PersistenceId) as u";
 
             DeleteBatchSql = $@"
                 DELETE FROM {conventions.FullJournalTableName}

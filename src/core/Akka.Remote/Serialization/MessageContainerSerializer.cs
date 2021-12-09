@@ -100,7 +100,9 @@ namespace Akka.Remote.Serialization
                     : string.Empty;
                 
                 throw new SerializationException(
-                    $"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} with payload [SerializerId={payload.SerializerId}, Manifest={manifest}] addressed to [{string.Join(",", elements.Select(e => e.ToString()))}]", ex);
+                    $"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} with " +
+                    $"payload [SerializerId={payload.SerializerId}, Manifest={manifest}] addressed to [" +
+                    $"{string.Join(",", elements.Select(e => e.ToString()))}]. {GetErrorForSerializerId(payload.SerializerId)}", ex);
             }
 
             return new ActorSelectionMessage(message, elements);
