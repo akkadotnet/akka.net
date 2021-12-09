@@ -257,3 +257,188 @@ In the normal operation of an Akka.NET cluster, the sharding system automaticall
 However, in the event that an `ActorSystem` is aborted as a result of a process / hardware failure it's possible that when using `akka.cluster.sharding.state-store-mode=persistence` leftover sharding data can still be present inside the Akka.Persistence journal and snapshot store - which will prevent the Akka.Cluster.Sharding system from recovering and starting up correctly the next time it's launched.
 
 This is a _rare_, but not impossible occurrence. In the event that this happens you'll need to purge the old Akka.Cluster.Sharding data before restarting the sharding system. You can purge this data automatically by [using the Akka.Cluster.Sharding.RepairTool](https://github.com/petabridge/Akka.Cluster.Sharding.RepairTool) produced by [Petabridge](https://petabridge.com/).
+
+# Tutorial
+
+In this tutorial, we will be making a very simple non-persisted shopping cart implementation using cluster sharding.
+All the code used in this tutorial can be found in the [GitHub repository](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ShoppingCart)
+
+For a sample of a distributed data backed persistent example, please see [this example project](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ClusterSharding.Node)
+instead.
+
+### Setting Up the Roles
+
+In a sharded cluster, it is common for the shards to be assigned their own specialized role inside the
+cluster to distribute their actors in. In this tutorial we will have a single frontend node that will
+feed three backend nodes with purchasing data. Usually, these nodes will be separated into different
+specialized projects but in this example, we will roll them into a single project and control their
+roles using an environment variable.
+
+```c#
+using Akka.Actor;
+using Akka.Bootstrap.Docker;
+using Akka.Configuration;
+
+var role = Environment.GetEnvironmentVariable("IS_FRONTEND") == "true" ? FrontEndRole : BackEndRole;
+
+var config = ConfigurationFactory.ParseString(@$"
+        akka.actor.provider = cluster
+        akka.cluster.roles=[{role}]
+        akka.cluster.min-nr-of-members = 4")
+    .BootstrapFromDocker();
+
+var system = ActorSystem.Create("shopping-cart", config);    
+```
+
+### Starting Up Cluster Sharding
+
+Cluster sharding can be added by using the `Akka.Cluster.Sharding` NuGet package, it already contains
+references to the other required packages. Note that the `ClusterSharding.Get()` call is very important
+as it contains all the initialization code needed by cluster sharding to start. Note that all nodes that
+participates or interacts with the sharded cluster will need to initialize ClusterSharding.
+
+```c#
+using Akka.Cluster.Sharding;
+
+var sharding = ClusterSharding.Get(system);
+```
+
+### Starting the Sharding Coordinator Actors
+
+There are two types of sharding coordinator actors; a normal coordinator coordinates messages and 
+instantiates sharded actors in their correct shard, and a proxy coordinator which only coordinates 
+messages to the proper sharded actors. We will use the proxy coordinator for the front end and the 
+normal coordinator on the backend nodes.
+
+```c#
+switch (role)
+{
+    case FrontEndRole:
+        var shardRegionProxy = await sharding.StartProxyAsync(
+            typeName: "customer",
+            role: BackEndRole,
+            messageExtractor: new MessageExtractor(10));
+    
+        // Register a callback for the "cluster is up" event
+        var cluster = Cluster.Get(system);
+        cluster.RegisterOnMemberUp(() =>
+        {
+            ProduceMessages(system, shardRegionProxy);
+        });
+        break;
+    
+    case BackEndRole:
+        await sharding.StartAsync(
+            typeName: "customer",
+            entityPropsFactory: e => Props.Create(() => new Customer(e)),
+            settings: ClusterShardingSettings.Create(system).WithRole(BackEndRole), 
+            messageExtractor: new MessageExtractor(10));
+        break;
+}
+```
+
+### Sending Messages To the Sharded Actors 
+
+Finally we can start sending messages to the sharded actors through the proxy coordinator actor.
+
+```c#
+private static void ProduceMessages(ActorSystem system, IActorRef shardRegionProxy)
+{
+    var customers = new[] { "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia"};
+    var items = new[] { "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher"};
+
+    system.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>
+    {
+        var customer = PickRandom(customers);
+        var item = PickRandom(items);
+        
+        var message = new ShardEnvelope(customer, new Customer.PurchaseItem(item));
+        shardRegionProxy.Tell(message);
+    });
+}
+```
+
+Note that the message need to be wrapped inside an envelope so that cluster sharding will know where
+to send said message to the correct shard and actor.
+
+### Sharded Actor
+
+Sharded actors are usually persisted using `Akka.Persistence` so that it can be restored after it is
+terminated, but a regular `ReceiveActor` would also work. In this example, we will be using a regular
+`ReceiveActor` for brevity. For a distributed data backed cluster sharding example, please see 
+[this example](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ClusterSharding.Node) 
+in the GitHub repository.
+
+```c#
+public class Customer : ReceiveActor
+{
+    public sealed class PurchaseItem
+    {
+        public readonly string ItemName;
+
+        public PurchaseItem(string itemName)
+        {
+            ItemName = itemName;
+        }
+    }
+    
+    private readonly List<string> _purchasedItems = new List<string>();
+
+    public Customer(string persistenceId)
+    {
+        Receive<PurchaseItem>(purchase =>
+        {
+            _purchasedItems.Add(purchase.ItemName);
+            var name = Uri.UnescapeDataString(Self.Path.Name);
+            Console.WriteLine(
+                $"'{name}' purchased '{purchase.ItemName}'.\nAll items: [{string.Join(", ", _purchasedItems)}]\n--------------------------");
+        });
+    }
+}
+```
+
+### Message Envelope and Message Extractor
+
+The shard coordinator would need to know which shard and entity it needs to send the messages to, 
+we do that by embedding the entity and shard id information in the envelope we send the message in.
+The shard coordinator will then use the message extractor to extract the shard and entity id from the
+envelope.
+
+To be recognized as a message extractor, the class needs to implement the `IMessageExtractor` interface.
+In this example, we will use the built-in `HashCodeMessageExtractor`; this extractor will derive the
+shard id by applying murmur hash algorithm on the entity id so we don't need to create our own.
+
+```c#
+public sealed class ShardEnvelope
+{
+    public string EntityId { get; }
+    public object Payload { get; }
+
+    public ShardEnvelope(string entityId, object payload)
+    {
+        EntityId = entityId;
+        Payload = payload;
+    }
+}
+
+public sealed class MessageExtractor : HashCodeMessageExtractor
+{
+    public MessageExtractor(int maxNumberOfShards) : base(maxNumberOfShards)
+    { }
+
+    public override string EntityId(object message)
+        => message switch
+        {
+            ShardRegion.StartEntity start => start.EntityId,
+            ShardEnvelope e => e.EntityId,
+            _ => null
+        };
+
+    public override object EntityMessage(object message)
+        => message switch
+        {
+            ShardEnvelope e => e.Payload,
+            _ => message
+        };
+}
+```
