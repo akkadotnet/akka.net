@@ -258,7 +258,7 @@ However, in the event that an `ActorSystem` is aborted as a result of a process 
 
 This is a _rare_, but not impossible occurrence. In the event that this happens you'll need to purge the old Akka.Cluster.Sharding data before restarting the sharding system. You can purge this data automatically by [using the Akka.Cluster.Sharding.RepairTool](https://github.com/petabridge/Akka.Cluster.Sharding.RepairTool) produced by [Petabridge](https://petabridge.com/).
 
-# Tutorial
+## Tutorial
 
 In this tutorial, we will be making a very simple non-persisted shopping cart implementation using cluster sharding.
 All the code used in this tutorial can be found in the [GitHub repository](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ShoppingCart)
@@ -305,9 +305,9 @@ var sharding = ClusterSharding.Get(system);
 
 ### Starting the Sharding Coordinator Actors
 
-There are two types of sharding coordinator actors; a normal coordinator coordinates messages and 
-instantiates sharded actors in their correct shard, and a proxy coordinator which only coordinates 
-messages to the proper sharded actors. We will use the proxy coordinator for the front end and the 
+There are two types of sharding coordinator actors; a normal coordinator coordinates messages and
+instantiates sharded actors in their correct shard, and a proxy coordinator which only coordinates
+messages to the proper sharded actors. We will use the proxy coordinator for the front end and the
 normal coordinator on the backend nodes.
 
 ```c#
@@ -337,7 +337,7 @@ switch (role)
 }
 ```
 
-### Sending Messages To the Sharded Actors 
+### Sending Messages To the Sharded Actors
 
 Finally we can start sending messages to the sharded actors through the proxy coordinator actor.
 
@@ -365,8 +365,8 @@ to send said message to the correct shard and actor.
 
 Sharded actors are usually persisted using `Akka.Persistence` so that it can be restored after it is
 terminated, but a regular `ReceiveActor` would also work. In this example, we will be using a regular
-`ReceiveActor` for brevity. For a distributed data backed cluster sharding example, please see 
-[this example](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ClusterSharding.Node) 
+`ReceiveActor` for brevity. For a distributed data backed cluster sharding example, please see
+[this example](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ClusterSharding.Node)
 in the GitHub repository.
 
 ```c#
@@ -399,7 +399,7 @@ public class Customer : ReceiveActor
 
 ### Message Envelope and Message Extractor
 
-The shard coordinator would need to know which shard and entity it needs to send the messages to, 
+The shard coordinator would need to know which shard and entity it needs to send the messages to,
 we do that by embedding the entity and shard id information in the envelope we send the message in.
 The shard coordinator will then use the message extractor to extract the shard and entity id from the
 envelope.
