@@ -1987,10 +1987,11 @@ namespace Akka.Remote
             var sm = msg.SerializedMessage;
             _log.Warning(error,
               "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
-                "Transient association error (association remains live). {2}",
+                "Transient association error (association remains live). {2}. {3}",
               sm.SerializerId,
               sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
-              error.Message);
+              error.Message,
+              Serializer.GetErrorForSerializerId(sm.SerializerId));
         }
 
         private void NotReading()
