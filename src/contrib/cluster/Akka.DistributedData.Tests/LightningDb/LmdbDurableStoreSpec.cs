@@ -6,41 +6,47 @@
 // //-----------------------------------------------------------------------
 
 using System.IO;
-using System.Threading;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.DistributedData.LightningDB;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Akka.DistributedData.Tests
+namespace Akka.DistributedData.Tests.LightningDb
 {
-    public class LmdbSpec: TestKit.Xunit2.TestKit
+    public class LmdbDurableStoreSpec: TestKit.Xunit2.TestKit
     {
-        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
-            akka.actor {
+        private const string DDataDir = "thisdir";
+        
+        private static readonly Config BaseConfig = ConfigurationFactory.ParseString($@"
+            akka.actor {{
                 provider=""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
-            }
+            }}
             akka.remote.dot-netty.tcp.port = 0
-            akka.cluster.distributed-data.durable.lmdb {
-                dir = thisdir
+            akka.cluster.distributed-data.durable.lmdb {{
+                dir = {DDataDir}
                 map-size = 100 MiB
                 write-behind-interval = off
+            }}").WithFallback(DistributedData.DefaultConfig());
 
-            }").WithFallback(DistributedData.DefaultConfig());
-
-        public LmdbSpec(ITestOutputHelper output) : base(BaseConfig, nameof(LmdbSpec), output: output)
+        public LmdbDurableStoreSpec(ITestOutputHelper output) : base(BaseConfig, nameof(LmdbDurableStoreSpec), output: output)
         {
         }
 
         [Fact]
-        public void Lmdb_opening_existing_directory_should_work()
+        public void Lmdb_should_not_throw_when_opening_existing_directory()
         {
             var probe = CreateTestProbe();
 
-            Directory.CreateDirectory("./thisdir");
-            
+            var databaseFileName = Path.Combine(DDataDir, "data.mdb");
+            if(Directory.Exists(DDataDir))
+            {
+                if (File.Exists(databaseFileName))
+                    File.Delete(databaseFileName);
+            }
+            else
+                Directory.CreateDirectory(DDataDir);
+
             var config = Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
             var lmdb = Sys.ActorOf(LmdbDurableStore.Props(config));
             lmdb.Tell(LoadAll.Instance, probe.Ref);
