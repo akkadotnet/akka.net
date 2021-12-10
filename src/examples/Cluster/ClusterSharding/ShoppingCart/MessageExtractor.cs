@@ -9,6 +9,7 @@ using Akka.Cluster.Sharding;
 
 namespace ShoppingCart
 {
+    #region ExtractorClass
     public sealed class ShardEnvelope
     {
         public string EntityId { get; }
@@ -42,4 +43,5 @@ namespace ShoppingCart
                 _ => message
             };
     }
+    #endregion
 }

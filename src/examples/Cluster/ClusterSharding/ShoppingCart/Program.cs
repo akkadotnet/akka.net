@@ -42,7 +42,10 @@ namespace ShoppingCart
             // We will create a single node with the role "frontend" and three nodes with the role "backend"
             // using docker containers and docker-compose
             // Frontend will periodically send a purchase order to the backend nodes
-            var role = Environment.GetEnvironmentVariable("IS_FRONTEND") == "true" ? FrontEndRole : BackEndRole;
+
+            #region RoleSetup
+            var role = Environment.GetEnvironmentVariable("IS_FRONTEND") == "true" 
+                ? FrontEndRole : BackEndRole;
             
             var config = ConfigurationFactory.ParseString(@$"
                     # We need to tell Akka to provide us cluster enabled actors
@@ -57,9 +60,14 @@ namespace ShoppingCart
                 .BootstrapFromDocker();
 
             var system = ActorSystem.Create("shopping-cart", config);
+            #endregion
             
+            #region StartSharding
             // Starts and initialize cluster sharding
             var sharding = ClusterSharding.Get(system);
+            #endregion
+
+            #region StartShardRegion
             switch (role)
             {
                 case FrontEndRole:
@@ -82,36 +90,49 @@ namespace ShoppingCart
                     await sharding.StartAsync(
                         typeName: "customer",
                         entityPropsFactory: e => Props.Create(() => new Customer(e)),
-                        // .WithRole is important because we're dedicating a specific node role for the actors to be
-                        // instantiated in; in this case, we're instantiating only in the "backend" roled nodes.
+                        // .WithRole is important because we're dedicating a specific node role for
+                        // the actors to be instantiated in; in this case, we're instantiating only
+                        // in the "backend" roled nodes.
                         settings: ClusterShardingSettings.Create(system).WithRole(BackEndRole), 
                         messageExtractor: new MessageExtractor(10));
                     break;
             }
+            #endregion
 
             exitEvent.WaitOne();
             await system.Terminate();
             return 0;
         }
 
+        #region StartSendingMessage
         private static void ProduceMessages(ActorSystem system, IActorRef shardRegionProxy)
         {
-            var customers = new[] { "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca", "Jabba" };
-            var items = new[] { "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", "Candies", "Cigars", "Chicken nuggets", "French fries" };
+            var customers = new[]
+            {
+                "Yoda", "Obi-Wan", "Darth Vader", "Princess Leia", 
+                "Luke Skywalker", "R2D2", "Han Solo", "Chewbacca", "Jabba"
+            };
+            var items = new[]
+            {
+                "Yoghurt", "Fruits", "Lightsaber", "Fluffy toy", "Dreamcatcher", 
+                "Candies", "Cigars", "Chicken nuggets", "French fries"
+            };
 
             // Start a timer that periodically sends messages to the shard
-            system.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>
-            {
-                var customer = PickRandom(customers);
-                var item = PickRandom(items);
+            system.Scheduler.Advanced
+                .ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(3), () =>
+                {
+                    var customer = PickRandom(customers);
+                    var item = PickRandom(items);
                 
-                // A shard message needs to be wrapped inside an envelope so the system knows which shard and actor
-                // it should route the message to.
-                var message = new ShardEnvelope(customer, new Customer.PurchaseItem(item));
+                    // A shard message needs to be wrapped inside an envelope so the system knows which
+                    // shard and actor it should route the message to.
+                    var message = new ShardEnvelope(customer, new Customer.PurchaseItem(item));
 
-                shardRegionProxy.Tell(message);
-            });
+                    shardRegionProxy.Tell(message);
+                });
         }
+        #endregion
 
         private static T PickRandom<T>(T[] items) => items[ThreadLocalRandom.Current.Next(items.Length)];
     }

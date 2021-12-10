@@ -13,6 +13,7 @@ using Akka.Persistence;
 
 namespace ShoppingCart
 {
+    #region ActorClass
     public class Customer : ReceiveActor
     {
         public sealed class PurchaseItem
@@ -34,8 +35,11 @@ namespace ShoppingCart
                 _purchasedItems.Add(purchase.ItemName);
                 var name = Uri.UnescapeDataString(Self.Path.Name);
                 Console.WriteLine(
-                    $"'{name}' purchased '{purchase.ItemName}'.\nAll items: [{string.Join(", ", _purchasedItems)}]\n--------------------------");
+@$"'{name}' purchased '{purchase.ItemName}'.
+All items: [{string.Join(", ", _purchasedItems)}]
+--------------------------");
             });
         }
     }
+    #endregion
 }
