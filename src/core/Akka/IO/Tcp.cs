@@ -6,13 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -53,7 +50,8 @@ namespace Akka.IO
 
         #region internal connection messages
         
-        internal abstract class SocketCompleted : INoSerializationVerificationNeeded { }
+        internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression 
+        { }
 
         internal sealed class SocketSent : SocketCompleted
         {
