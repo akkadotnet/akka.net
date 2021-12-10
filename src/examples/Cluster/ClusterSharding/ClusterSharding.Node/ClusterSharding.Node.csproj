@@ -12,4 +12,14 @@
     <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="app.conf">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Akka.Bootstrap.Docker" Version="0.5.3" />
+  </ItemGroup>
+
 </Project>

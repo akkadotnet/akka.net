@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -37,6 +38,8 @@ namespace Akka.Serialization
     /// </summary>
     public abstract class Serializer
     {
+        internal static string GetErrorForSerializerId(int id) => SerializerErrorCode.GetErrorForSerializerId(id);
+        
         /// <summary>
         /// The actor system to associate with this serializer.
         /// </summary>
