@@ -289,8 +289,8 @@ participates or interacts with the sharded cluster will need to initialize Clust
 
 There are two types of sharding coordinator actors:
 
-- **Regular coordinator**: coordinates messages and instantiates sharded actors in their correct shard.
-- **Proxy coordinator**: only coordinates messages to the proper sharded actors. This coordinator actor is
+* **Regular coordinator**: coordinates messages and instantiates sharded actors in their correct shard.
+* **Proxy coordinator**: only coordinates messages to the proper sharded actors. This coordinator actor is
   used on nodes that needs to talk to the shard region but does not host any of the sharded actors.
 
 Note that you only need one of these coordinator actors to be able to communicate with the actors
@@ -301,12 +301,12 @@ We will use the proxy coordinator for the front end and the normal coordinator o
 
 ### Sending Messages To the Sharded Actors
 
-Finally we can start sending messages from the front end node to the sharded actors in the back end 
+Finally we can start sending messages from the front end node to the sharded actors in the back end
 through the proxy coordinator actor.
 
 [!code-csharp[Program.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartSendingMessage "Start sending messages")]
 
-Note that the message need to contain the entity and shard id information so that cluster sharding 
+Note that the message need to contain the entity and shard id information so that cluster sharding
 will know where to send the message to the correct shard and actor. You can do this by directly
 embedding the ids inside all of your shard messages, or you can wrap them inside an envelope.
 Cluster sharding will extract the information it needs by using a message extractor. We will discuss
@@ -326,7 +326,7 @@ in the GitHub repository.
 
 The shard coordinator would need to know which shard and entity it needs to send the messages to,
 we do that by embedding the entity and shard id information in the message itself, or inside the
-envelope we send the message in. The shard coordinator will then use the message extractor to extract 
+envelope we send the message in. The shard coordinator will then use the message extractor to extract
 the shard and entity id from the envelope.
 
 To be recognized as a message extractor, the class needs to implement the `IMessageExtractor` interface.
