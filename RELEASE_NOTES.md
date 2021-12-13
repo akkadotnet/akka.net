@@ -1,4 +1,4 @@
-#### 1.4.29 December 14 2021 ####
+#### 1.4.29 December 13 2021 ####
 **Maintenance Release for Akka.NET 1.4**
 Akka.NET v1.4.28 is a minor release that contains some enhancements for Akka.Streams and some bug fixes.
 
