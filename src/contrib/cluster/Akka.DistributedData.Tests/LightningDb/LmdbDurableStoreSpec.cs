@@ -6,6 +6,7 @@
 // //-----------------------------------------------------------------------
 
 using System.IO;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.DistributedData.Durable;
 using Akka.DistributedData.LightningDB;
@@ -14,9 +15,10 @@ using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests.LightningDb
 {
-    public class LmdbDurableStoreSpec: TestKit.Xunit2.TestKit
+    public class LmdbDurableStoreSpec
     {
         private const string DDataDir = "thisdir";
+        private readonly ITestOutputHelper _output;
         
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString($@"
             akka.actor {{
@@ -27,17 +29,17 @@ namespace Akka.DistributedData.Tests.LightningDb
                 dir = {DDataDir}
                 map-size = 100 MiB
                 write-behind-interval = off
-            }}").WithFallback(DistributedData.DefaultConfig());
+            }}").WithFallback(DistributedData.DefaultConfig())
+            .WithFallback(TestKit.Xunit2.TestKit.DefaultConfig);
 
-        public LmdbDurableStoreSpec(ITestOutputHelper output) : base(BaseConfig, nameof(LmdbDurableStoreSpec), output: output)
+        public LmdbDurableStoreSpec(ITestOutputHelper output)
         {
+            _output = output;
         }
 
         [Fact]
         public void Lmdb_should_not_throw_when_opening_existing_directory()
         {
-            var probe = CreateTestProbe();
-
             if(Directory.Exists(DDataDir))
             {
                 var di = new DirectoryInfo(DDataDir);
@@ -45,8 +47,11 @@ namespace Akka.DistributedData.Tests.LightningDb
             }
             Directory.CreateDirectory(DDataDir);
 
-            var config = Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
-            var lmdb = Sys.ActorOf(LmdbDurableStore.Props(config));
+            var testKit = new TestKit.Xunit2.TestKit(BaseConfig, nameof(LmdbDurableStoreSpec), _output);
+            var probe = testKit.CreateTestProbe();
+
+            var config = testKit.Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
+            var lmdb = testKit.Sys.ActorOf(LmdbDurableStore.Props(config));
             lmdb.Tell(LoadAll.Instance, probe.Ref);
 
             probe.ExpectMsg<LoadAllCompleted>();
