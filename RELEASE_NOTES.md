@@ -1,5 +1,30 @@
-#### 1.4.29 November 10 2021 ####
-**Placeholder for nightlies**
+#### 1.4.29 December 14 2021 ####
+**Maintenance Release for Akka.NET 1.4**
+Akka.NET v1.4.28 is a minor release that contains some enhancements for Akka.Streams and some bug fixes.
+
+New features:
+* [Akka: Added a channel based task scheduler](https://github.com/akkadotnet/akka.net/pull/5403)
+* [Akka.Discovery: Moved Akka.Discovery out of beta](https://github.com/akkadotnet/akka.net/pull/5380)
+
+Documentation:
+* [Akka: Added a serializer ID troubleshooting table](https://github.com/akkadotnet/akka.net/pull/5418)
+* [Akka.Cluster.Sharding: Added a tutorial section](https://github.com/akkadotnet/akka.net/pull/5421)
+
+Bug fixes:
+* [Akka.Cluster: Changed Akka.Cluster startup sequence](https://github.com/akkadotnet/akka.net/pull/5398)
+* [Akka.DistributedData: Fix LightningDB throws MDB_NOTFOUND when data directory already exist](https://github.com/akkadotnet/akka.net/pull/5424)
+* [Akka.IO: Fix memory leak on UDP connector](https://github.com/akkadotnet/akka.net/pull/5404)
+* [Akka.Persistence.Sql: Fix performance issue with highest sequence number query](https://github.com/akkadotnet/akka.net/pull/5420)
+
+If you want to see the [full set of changes made in Akka.NET v1.4.29, click here](https://github.com/akkadotnet/akka.net/milestone/60).
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 7 | 82 | 51 | Aaron Stannard |
+| 6 | 1381 | 483 | Gregorius Soedharmo |
+| 4 | 618 | 85 | Andreas Dirnberger |
+| 1 | 4 | 4 | Luca V |
+| 1 | 1 | 1 | dependabot[bot] |
 
 #### 1.4.28 November 10 2021 ####
 **Maintenance Release for Akka.NET 1.4**
