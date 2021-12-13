@@ -5,6 +5,7 @@
   <PropertyGroup>
     <AssemblyTitle>Akka.DistributedData.Tests</AssemblyTitle>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);$(NetCoreTestVersion)</TargetFrameworks>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
  
   <ItemGroup>
