@@ -38,14 +38,12 @@ namespace Akka.DistributedData.Tests.LightningDb
         {
             var probe = CreateTestProbe();
 
-            var databaseFileName = Path.Combine(DDataDir, "data.mdb");
             if(Directory.Exists(DDataDir))
             {
-                if (File.Exists(databaseFileName))
-                    File.Delete(databaseFileName);
+                var di = new DirectoryInfo(DDataDir);
+                di.Delete(true);
             }
-            else
-                Directory.CreateDirectory(DDataDir);
+            Directory.CreateDirectory(DDataDir);
 
             var config = Sys.Settings.Config.GetConfig("akka.cluster.distributed-data.durable");
             var lmdb = Sys.ActorOf(LmdbDurableStore.Props(config));
