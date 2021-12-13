@@ -1,0 +1,43 @@
+version: '3.7'
+
+services:
+  frontend:
+    image: shopping-cart:latest
+    network_mode: host
+    ports:
+      - '5055:5055'
+    environment:
+      IS_FRONTEND: "true"
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 5055
+      CLUSTER_SEEDS: "akka.tcp://shopping-cart@localhost:5055"
+  
+  backend-1:
+    image: shopping-cart:latest
+    network_mode: host
+    ports:
+      - '6055:6055'
+    environment:
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 6055
+      CLUSTER_SEEDS: "akka.tcp://shopping-cart@localhost:5055"
+
+  backend-2:
+    image: shopping-cart:latest
+    network_mode: host
+    ports:
+      - '6056:6056'
+    environment:
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 6056
+      CLUSTER_SEEDS: "akka.tcp://shopping-cart@localhost:5055"
+
+  backend-3:
+    image: shopping-cart:latest
+    network_mode: host
+    ports:
+      - '6057:6057'
+    environment:
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 6057
+      CLUSTER_SEEDS: "akka.tcp://shopping-cart@localhost:5055"

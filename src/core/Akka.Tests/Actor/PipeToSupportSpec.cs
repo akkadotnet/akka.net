@@ -6,10 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Tests.Actor
@@ -26,6 +28,14 @@ namespace Akka.Tests.Actor
             _task = _taskCompletionSource.Task;
             _taskWithoutResult = _taskCompletionSource.Task;
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
+        }
+        
+        [Fact]
+        public void Should_immediately_PipeTo_completed_Task()
+        {
+            var task = Task.FromResult("foo");
+            task.PipeTo(TestActor);
+            ExpectMsg("foo");
         }
 
         [Fact]
@@ -50,8 +60,8 @@ namespace Akka.Tests.Actor
             _task.PipeTo(TestActor);
             _taskWithoutResult.PipeTo(TestActor);
             _taskCompletionSource.SetException(new Exception("Boom"));
-            ExpectMsg<Status.Failure>(x => x.Cause.InnerException.Message == "Boom");
-            ExpectMsg<Status.Failure>(x => x.Cause.InnerException.Message == "Boom");
+            ExpectMsg<Status.Failure>(x => x.Cause.Message == "Boom");
+            ExpectMsg<Status.Failure>(x => x.Cause.Message == "Boom");
         }
 
         [Fact]
@@ -60,15 +70,16 @@ namespace Akka.Tests.Actor
             _task.PipeTo(TestActor, success: x => "Hello " + x);
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
             _taskCompletionSource.SetResult("World");
-            ExpectMsg("Hello World");
-            ExpectMsg("Hello");
+            var pipeTo = ReceiveN(2).Cast<string>().ToList();
+            pipeTo.Should().Contain("Hello");
+            pipeTo.Should().Contain("Hello World");
         }
 
         [Fact]
         public void Should_use_failure_handling_to_transform_task_exception()
         {
-            _task.PipeTo(TestActor, failure: e => "Such a " + e.InnerException.Message);
-            _taskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.InnerException.Message);
+            _task.PipeTo(TestActor, failure: e => "Such a " + e.Message);
+            _taskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.Message);
             _taskCompletionSource.SetException(new Exception("failure..."));
             ExpectMsg("Such a failure...");
             ExpectMsg("Such a failure...");

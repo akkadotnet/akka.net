@@ -57,7 +57,6 @@ namespace Akka.DistributedData.LightningDB
 
         private readonly TimeSpan _writeBehindInterval;
         private readonly string _dir;
-        private bool _dirExists;
 
         private readonly Dictionary<string, DurableDataEnvelope> _pending = new Dictionary<string, DurableDataEnvelope>();
         private readonly ILoggingAdapter _log;
@@ -89,8 +88,11 @@ namespace Akka.DistributedData.LightningDB
                 ? Path.GetFullPath($"{path}-{Context.System.Name}-{Self.Path.Parent.Name}-{Cluster.Cluster.Get(Context.System).SelfAddress.Port}")
                 : Path.GetFullPath(path);
 
-            _dirExists = Directory.Exists(_dir);
-
+            if (!Directory.Exists(_dir))
+            {
+                Directory.CreateDirectory(_dir);
+            }
+            
             _log.Info($"Using durable data in LMDB directory [{_dir}]");
             Init();
         }
@@ -110,40 +112,23 @@ namespace Akka.DistributedData.LightningDB
 
         private LightningEnvironment GetLightningEnvironment()
         {
-            LightningEnvironment env;
-
-            if (!_dirExists)
+            var t0 = Stopwatch.StartNew();
+            var env = new LightningEnvironment(_dir)
             {
-                var t0 = Stopwatch.StartNew();
-                Directory.CreateDirectory(_dir);
-                _dirExists = true;
+                MapSize = _mapSize,
+                MaxDatabases = 1
+            };
+            env.Open(EnvironmentOpenFlags.NoLock);
 
-                env = new LightningEnvironment(_dir)
-                {
-                    MapSize = _mapSize,
-                    MaxDatabases = 1
-                };
-                env.Open(EnvironmentOpenFlags.NoLock);
-
-                using (var tx = env.BeginTransaction())
-                using (tx.OpenDatabase(DatabaseName, new DatabaseConfiguration { Flags = DatabaseOpenFlags.Create }))
-                {
-                    tx.Commit();
-                }
-
-                t0.Stop();
-                if (_log.IsDebugEnabled)
-                    _log.Debug($"Init of LMDB in directory [{_dir}] took [{t0.ElapsedMilliseconds} ms]");
-            }
-            else
+            using (var tx = env.BeginTransaction())
+            using (tx.OpenDatabase(DatabaseName, new DatabaseConfiguration { Flags = DatabaseOpenFlags.Create }))
             {
-                env = new LightningEnvironment(_dir)
-                {
-                    MapSize = _mapSize,
-                    MaxDatabases = 1
-                };
-                env.Open(EnvironmentOpenFlags.NoLock);
+                tx.Commit();
             }
+
+            t0.Stop();
+            if (_log.IsDebugEnabled)
+                _log.Debug($"Init of LMDB in directory [{_dir}] took [{t0.ElapsedMilliseconds} ms]");
 
             return env;
         }
@@ -207,12 +192,13 @@ namespace Akka.DistributedData.LightningDB
                 }
 
                 var t0 = Stopwatch.StartNew();
-                using (var env = GetLightningEnvironment())
-                using (var tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly))
-                using(var db = tx.OpenDatabase(DatabaseName))
-                using(var cursor = tx.CreateCursor(db))
+                
+                try
                 {
-                    try
+                    using (var env = GetLightningEnvironment())
+                    using (var tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly))
+                    using(var db = tx.OpenDatabase(DatabaseName))
+                    using(var cursor = tx.CreateCursor(db))
                     {
                         var data = cursor.AsEnumerable().Select((x, i)
                             => {
@@ -236,11 +222,11 @@ namespace Akka.DistributedData.LightningDB
 
                         Become(Active);
                     }
-                    catch (Exception e)
-                    {
-                        if (t0.IsRunning) t0.Stop();
-                        throw new LoadFailedException("failed to load durable distributed-data", e);
-                    }
+                }
+                catch (Exception e)
+                {
+                    if (t0.IsRunning) t0.Stop();
+                    throw new LoadFailedException("failed to load durable distributed-data", e);
                 }
             });
         }
@@ -251,23 +237,25 @@ namespace Akka.DistributedData.LightningDB
             {
                 var t0 = Stopwatch.StartNew();
                 using (var env = GetLightningEnvironment())
-                using(var tx = env.BeginTransaction())
-                using (var db = tx.OpenDatabase(DatabaseName))
+                using (var tx = env.BeginTransaction())
                 {
                     try
                     {
-                        foreach (var entry in _pending)
+                        using (var db = tx.OpenDatabase(DatabaseName))
                         {
-                            var byteKey = Encoding.UTF8.GetBytes(entry.Key);
-                            var byteValue = _serializer.ToBinary(entry.Value);
-                            tx.Put(db, byteKey, byteValue);
-                        }
-                        tx.Commit();
+                            foreach (var entry in _pending)
+                            {
+                                var byteKey = Encoding.UTF8.GetBytes(entry.Key);
+                                var byteValue = _serializer.ToBinary(entry.Value);
+                                tx.Put(db, byteKey, byteValue);
+                            }
+                            tx.Commit();
 
-                        t0.Stop();
-                        if (_log.IsDebugEnabled)
-                        {
-                            _log.Debug($"store and commit of [{_pending.Count}] entries took {t0.ElapsedMilliseconds} ms");
+                            t0.Stop();
+                            if (_log.IsDebugEnabled)
+                            {
+                                _log.Debug($"store and commit of [{_pending.Count}] entries took {t0.ElapsedMilliseconds} ms");
+                            }
                         }
                     }
                     catch (Exception cause)
