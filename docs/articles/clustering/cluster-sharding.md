@@ -257,3 +257,80 @@ In the normal operation of an Akka.NET cluster, the sharding system automaticall
 However, in the event that an `ActorSystem` is aborted as a result of a process / hardware failure it's possible that when using `akka.cluster.sharding.state-store-mode=persistence` leftover sharding data can still be present inside the Akka.Persistence journal and snapshot store - which will prevent the Akka.Cluster.Sharding system from recovering and starting up correctly the next time it's launched.
 
 This is a _rare_, but not impossible occurrence. In the event that this happens you'll need to purge the old Akka.Cluster.Sharding data before restarting the sharding system. You can purge this data automatically by [using the Akka.Cluster.Sharding.RepairTool](https://github.com/petabridge/Akka.Cluster.Sharding.RepairTool) produced by [Petabridge](https://petabridge.com/).
+
+## Tutorial
+
+In this tutorial, we will be making a very simple non-persisted shopping cart implementation using cluster sharding.
+All the code used in this tutorial can be found in the [GitHub repository](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ShoppingCart)
+
+For a distributed data backed persistent example, please see [this example project](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ClusterSharding.Node)
+instead.
+
+### Setting Up the Roles
+
+In a sharded cluster, it is common for the shards to be assigned their own specialized role inside the
+cluster to distribute their actors in. In this tutorial we will have a single frontend node that will
+feed three backend nodes with purchasing data. Usually, these nodes will be separated into different
+specialized projects but in this example, we will roll them into a single project and control their
+roles using an environment variable.
+
+[!code-csharp[Program.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=RoleSetup "Setting up node roles")]
+
+### Starting Up Cluster Sharding
+
+Cluster sharding can be added by using the `Akka.Cluster.Sharding` NuGet package, it already contains
+references to the other required packages. Note that the `ClusterSharding.Get()` call is very important
+as it contains all the initialization code needed by cluster sharding to start. Note that all nodes that
+participates or interacts with the sharded cluster will need to initialize ClusterSharding.
+
+[!code-csharp[Program.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartSharding "Start Akka.Cluster.Sharding")]
+
+### Starting the Sharding Coordinator Actors
+
+There are two types of sharding coordinator actors:
+
+* **Regular coordinator**: coordinates messages and instantiates sharded actors in their correct shard.
+* **Proxy coordinator**: only coordinates messages to the proper sharded actors. This coordinator actor is
+  used on nodes that needs to talk to the shard region but does not host any of the sharded actors.
+
+Note that you only need one of these coordinator actors to be able to communicate with the actors
+inside the shard region, you don't need a proxy if you already created a regular coordinator.
+We will use the proxy coordinator for the front end and the normal coordinator on the backend nodes.
+
+[!code-csharp[Program.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartShardRegion "Start sharding region")]
+
+### Sending Messages To the Sharded Actors
+
+Finally we can start sending messages from the front end node to the sharded actors in the back end
+through the proxy coordinator actor.
+
+[!code-csharp[Program.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartSendingMessage "Start sending messages")]
+
+Note that the message need to contain the entity and shard id information so that cluster sharding
+will know where to send the message to the correct shard and actor. You can do this by directly
+embedding the ids inside all of your shard messages, or you can wrap them inside an envelope.
+Cluster sharding will extract the information it needs by using a message extractor. We will discuss
+this later in the tutorial.
+
+### Sharded Actor
+
+Sharded actors are usually persisted using `Akka.Persistence` so that it can be restored after it is
+terminated, but a regular `ReceiveActor` would also work. In this example, we will be using a regular
+`ReceiveActor` for brevity. For a distributed data backed cluster sharding example, please see
+[this example](https://github.com/akkadotnet/akka.net/tree/dev/src/examples/Cluster/ClusterSharding/ClusterSharding.Node)
+in the GitHub repository.
+
+[!code-csharp[Customers.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Customers.cs?name=ActorClass "Actor class")]
+
+### Message Envelope and Message Extractor
+
+The shard coordinator would need to know which shard and entity it needs to send the messages to,
+we do that by embedding the entity and shard id information in the message itself, or inside the
+envelope we send the message in. The shard coordinator will then use the message extractor to extract
+the shard and entity id from the envelope.
+
+To be recognized as a message extractor, the class needs to implement the `IMessageExtractor` interface.
+In this example, we will use the built-in `HashCodeMessageExtractor`; this extractor will derive the
+shard id by applying murmur hash algorithm on the entity id so we don't need to create our own.
+
+[!code-csharp[MessageExtractor.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/MessageExtractor.cs?name=ExtractorClass "Message envelope and extractor class")]

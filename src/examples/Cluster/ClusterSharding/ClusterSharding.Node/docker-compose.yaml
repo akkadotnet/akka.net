@@ -1,0 +1,32 @@
+version: '3.7'
+
+services:
+  node-1:
+    image: cluster-sharding:latest
+    network_mode: host
+    ports:
+      - '6055:6055'
+    environment:
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 6055
+      CLUSTER_SEEDS: "akka.tcp://sharded-cluster-system@localhost:6055"
+
+  node-2:
+    image: cluster-sharding:latest
+    network_mode: host
+    ports:
+      - '6056:6056'
+    environment:
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 6056
+      CLUSTER_SEEDS: "akka.tcp://sharded-cluster-system@localhost:6055"
+
+  node-3:
+    image: cluster-sharding:latest
+    network_mode: host
+    ports:
+      - '6057:6057'
+    environment:
+      CLUSTER_IP: "localhost"
+      CLUSTER_PORT: 6057
+      CLUSTER_SEEDS: "akka.tcp://sharded-cluster-system@localhost:6055"
