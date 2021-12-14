@@ -4754,10 +4754,13 @@ namespace Akka.Serialization
     public sealed class NewtonSoftJsonSerializerSettings
     {
         public static readonly Akka.Serialization.NewtonSoftJsonSerializerSettings Default;
-        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters) { }
+        public NewtonSoftJsonSerializerSettings(bool encodeTypeNames, bool preserveObjectReferences, System.Collections.Generic.IEnumerable<System.Type> converters, bool usePooledStringBuilder, int stringBuilderMinSize, int stringBuilderMaxSize) { }
         public System.Collections.Generic.IEnumerable<System.Type> Converters { get; }
         public bool EncodeTypeNames { get; }
         public bool PreserveObjectReferences { get; }
+        public int StringBuilderMaxSize { get; }
+        public int StringBuilderMinSize { get; }
+        public bool UsePooledStringBuilder { get; }
         public static Akka.Serialization.NewtonSoftJsonSerializerSettings Create(Akka.Configuration.Config config) { }
     }
     public sealed class NewtonSoftJsonSerializerSetup : Akka.Actor.Setup.Setup
