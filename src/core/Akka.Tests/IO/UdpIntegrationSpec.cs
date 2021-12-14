@@ -9,8 +9,10 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using Akka.Actor;
 using Akka.IO;
+using Akka.IO.Buffers;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
@@ -31,8 +33,15 @@ namespace Akka.Tests.IO
                     akka.actor.serialize-messages = on
                     akka.io.udp.max-channels = unlimited
                     akka.io.udp.nr-of-selectors = 1
-                    akka.io.udp.direct-buffer-pool-limit = 100
-                    akka.io.udp.direct-buffer-size = 1024", output)
+
+                    akka.io.udp.buffer-pool = ""akka.io.udp.direct-buffer-pool""
+                    akka.io.udp.nr-of-selectors = 1
+                    # This comes out to be about 1.6 Mib maximum total buffer size
+                    akka.io.udp.direct-buffer-pool.buffer-size = 512
+                    akka.io.udp.direct-buffer-pool.buffers-per-segment = 32
+                    akka.io.udp.direct-buffer-pool.buffer-pool-limit = 100
+                    # akka.io.udp.trace-logging = true
+                    akka.loglevel = DEBUG", output)
         {
             _addresses = TestUtils.TemporaryServerAddresses(6, udp: true).ToArray();
         }
@@ -112,27 +121,28 @@ namespace Akka.Tests.IO
         {
             var serverAddress = _addresses[0];
             var clientAddress = _addresses[1];
-            var server = BindUdp(serverAddress, TestActor);
-            var client = BindUdp(clientAddress, TestActor);
-            var data = ByteString.FromString("Fly little packet!");
+            var serverProbe = CreateTestProbe();
+            var clientProbe = CreateTestProbe();
+            var server = BindUdp(serverAddress, serverProbe);
+            var client = BindUdp(clientAddress, clientProbe);
 
             void CheckSendingToClient(int iteration)
             {
-                server.Tell(Udp.Send.Create(data, clientAddress));
-                ExpectMsg<Udp.Received>(x =>
+                server.Tell(Udp.Send.Create(ByteString.FromString(iteration.ToString()), clientAddress));
+                clientProbe.ExpectMsg<Udp.Received>(x =>
                 {
-                    x.Data.ShouldBe(data);
-                    x.Sender.Is(serverAddress).ShouldBeTrue($"{x.Sender} was expected to be {serverAddress}");
+                    x.Data.ToString().ShouldBe(iteration.ToString());
+                    x.Sender.Is(serverAddress).ShouldBeTrue($"Client sender {x.Sender} was expected to be {serverAddress}");
                 }, hint: $"sending to client failed in {iteration} iteration");
             }
 
             void CheckSendingToServer(int iteration)
             {
-                client.Tell(Udp.Send.Create(data, serverAddress));
-                ExpectMsg<Udp.Received>(x =>
+                client.Tell(Udp.Send.Create(ByteString.FromString(iteration.ToString()), serverAddress));
+                serverProbe.ExpectMsg<Udp.Received>(x =>
                 {
-                    x.Data.ShouldBe(data);
-                    Assert.True(x.Sender.Is(clientAddress));
+                    x.Data.ToString().ShouldBe(iteration.ToString());
+                    x.Sender.Is(clientAddress).ShouldBeTrue($"Server sender {x.Sender} was expected to be {clientAddress}");
                 }, hint: $"sending to client failed in {iteration} iteration");
             }
 
@@ -194,6 +204,97 @@ namespace Akka.Tests.IO
             for (int i = 0; i < iterations; i++) CheckSendingToClient(data[i]);
         }
 
+        [Fact]
+        public void The_UDP_Fire_and_Forget_implementation_must_not_leak_memory()
+        {
+            const int batchCount = 2000;
+            const int batchSize = 100;
+            
+            var serverAddress = _addresses[0];
+            var clientAddress = _addresses[1];
+
+            var udp = Udp.Instance.Apply(Sys);
+            var poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
+            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
+            poolInfo.Free.Should().Be(poolInfo.TotalSize);
+            poolInfo.Used.Should().Be(0);
+            
+            var serverProbe = CreateTestProbe();
+            var server = BindUdp(serverAddress, serverProbe);
+            var clientProbe = CreateTestProbe();
+            var client = BindUdp(clientAddress, clientProbe);
+            
+            var data = ByteString.FromString("Fly little packet!");
+
+            // send a lot of packets through, the byte buffer pool should not leak anything
+            for (var n = 0; n < batchCount; ++n)
+            {
+                for (var i = 0; i < batchSize; i++) 
+                    server.Tell(Udp.Send.Create(data, clientAddress));
+
+                var msgs = clientProbe.ReceiveN(batchSize);
+                var receives = msgs.Cast<Udp.Received>();
+                receives.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
+            }
+            
+            // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
+            server.Tell(Udp.Unbind.Instance, serverProbe);
+            serverProbe.ExpectMsg<Udp.Unbound>();
+            client.Tell(Udp.Unbind.Instance, clientProbe);
+            clientProbe.ExpectMsg<Udp.Unbound>();
+            
+            // wait for all SocketAsyncEventArgs to be released
+            Thread.Sleep(1000);
+            
+            poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
+            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
+            poolInfo.Free.Should().Be(poolInfo.TotalSize);
+            poolInfo.Used.Should().Be(0);
+        }
+        
+        [Fact]
+        public void The_UDP_Fire_and_Forget_SimpleSender_implementation_must_not_leak_memory()
+        {
+            const int batchCount = 2000;
+            const int batchSize = 100;
+            
+            var udp = Udp.Instance.Apply(Sys);
+            var poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
+            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
+            poolInfo.Free.Should().Be(poolInfo.TotalSize);
+            poolInfo.Used.Should().Be(0);
+            
+            var serverAddress = _addresses[0];
+            var serverProbe = CreateTestProbe();
+            var server = BindUdp(serverAddress, serverProbe);
+            var sender = SimpleSender();
+            
+            var data = ByteString.FromString("Fly little packet!");
+
+            // send a lot of packets through, the byte buffer pool should not leak anything
+            for (var n = 0; n < batchCount; ++n)
+            {
+                for (int i = 0; i < batchSize; i++) 
+                    sender.Tell(Udp.Send.Create(data, serverAddress));
+
+                var msgs = serverProbe.ReceiveN(batchSize);
+                var receives = msgs.Cast<Udp.Received>();
+                receives.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
+            }
+            
+            // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
+            server.Tell(Udp.Unbind.Instance, serverProbe);
+            serverProbe.ExpectMsg<Udp.Unbound>();
+            
+            // wait for all SocketAsyncEventArgs to be released
+            Thread.Sleep(1000);
+            
+            poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
+            poolInfo.Type.Should().Be(typeof(DirectBufferPool));
+            poolInfo.Free.Should().Be(poolInfo.TotalSize);
+            poolInfo.Used.Should().Be(0);
+        }
+        
         [Fact]
         public void The_UDP_Fire_and_Forget_implementation_must_call_SocketOption_beforeBind_method_before_bind()
         {

@@ -155,10 +155,10 @@ namespace Akka.Actor
         /// <param name="name"> The name. </param>
         protected ActorPath(Address address, string name)
         {
-            _address = address;
+            _address = address ?? throw new ArgumentNullException(nameof(address));
             _parent = null;
             _depth = 0;
-            _name = name;
+            _name = name ?? string.Empty;
             _uid = ActorCell.UndefinedUid;
         }
 
@@ -170,11 +170,13 @@ namespace Akka.Actor
         /// <param name="uid"> The uid. </param>
         protected ActorPath(ActorPath parentPath, string name, long uid)
         {
-            _parent = parentPath;
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentNullException(nameof(name));
+            _parent = parentPath ?? throw new ArgumentNullException(nameof(parentPath));            
             _address = parentPath._address;
             _depth = parentPath._depth + 1;
             _name = name;
-            _uid = uid;
+            _uid = uid; //maybe test for positive number
         }
 
         /// <summary>
@@ -727,6 +729,8 @@ namespace Akka.Actor
         /// <returns> System.String. </returns>
         public string ToStringWithAddress(Address address)
         {
+            if (address is null)
+                throw new ArgumentNullException(nameof(address));
             if (IgnoreActorRef.IsIgnoreRefPath(this))
             {
                 // we never change address for IgnoreActorRef

@@ -17,9 +17,6 @@
         }],
         "dest": "api",
         "filter": "filterConfig.yml",
-        "properties": {
-            "TargetFramework": "net45"
-        }
     }],
     "build": {
         "content": [{

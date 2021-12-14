@@ -36,7 +36,7 @@ namespace Akka.Tests.Actor
         {
             TestLatch latchProducer = new TestLatch();
             TestLatch latchActor = new TestLatch();
-            var props = Props.CreateBy(new TestProducer(latchProducer, latchActor));
+            var props = Props.CreateBy(new TestProducer(latchProducer, latchActor), typeof(PropsTestActor));
             IActorRef actor = Sys.ActorOf(props);
             latchActor.Ready(TimeSpan.FromSeconds(1));
         }
@@ -87,7 +87,7 @@ namespace Akka.Tests.Actor
                 lp.CountDown();
             }
 
-            public ActorBase Produce()
+            public ActorBase Produce(Props props)
             {
                 latchActor.CountDown();
                 return new PropsTestActor();

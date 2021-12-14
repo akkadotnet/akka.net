@@ -126,6 +126,9 @@ namespace Akka.Cluster
 
             LogInfo("Starting up...");
 
+            var clusterCoreTaskSource = new TaskCompletionSource<IActorRef>();
+            _clusterCoreTask = clusterCoreTaskSource.Task;
+
             FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
                 system));
 
@@ -140,27 +143,26 @@ namespace Akka.Cluster
             _readView = new ClusterReadView(this);
 
             // force the underlying system to start
-            _clusterCore = GetClusterCoreRef().Result;
-
-            system.RegisterOnTermination(Shutdown);
-
-            LogInfo("Started up successfully");
-        }
-
-        private async Task<IActorRef> GetClusterCoreRef()
-        {
-            var timeout = System.Settings.CreationTimeout;
-            try
+            _ = Task.Run(async () =>
             {
-                return await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), timeout).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
-                Shutdown();
-                System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
-                return System.DeadLetters;
-            }
+                try
+                {
+                    _clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), System.Settings.CreationTimeout).ConfigureAwait(false);
+                    clusterCoreTaskSource.SetResult(_clusterCore);
+
+                    system.RegisterOnTermination(Shutdown);
+                    LogInfo("Started up successfully");
+                }
+                catch (Exception ex)
+                {
+                    _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
+                    Shutdown();
+                    System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
+
+                    _clusterCore = System.DeadLetters;
+                    clusterCoreTaskSource.SetResult(_clusterCore);
+                }
+            });
         }
 
         /// <summary>
@@ -197,7 +199,7 @@ namespace Akka.Cluster
             if (!to.All(t => typeof(ClusterEvent.IClusterDomainEvent).IsAssignableFrom(t)))
                 throw new ArgumentException($"Subscribe to `IClusterDomainEvent` or subclasses, was [{string.Join(", ", to.Select(c => c.Name))}]", nameof(to));
 
-            ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
+            TellCoreSafe(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
         }
 
         /// <summary>
@@ -216,7 +218,7 @@ namespace Akka.Cluster
         /// <param name="to">The event type that the actor no longer receives.</param>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
-            ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
+            TellCoreSafe(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
 
         /// <summary>
@@ -227,7 +229,7 @@ namespace Akka.Cluster
         /// <param name="receiver">The actor that receives the current cluster state.</param>
         public void SendCurrentClusterState(IActorRef receiver)
         {
-            ClusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
+            TellCoreSafe(new InternalClusterAction.SendCurrentClusterState(receiver));
         }
 
         /// <summary>
@@ -241,7 +243,7 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node we want to join.</param>
         public void Join(Address address)
         {
-            ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
+            TellCoreSafe(new ClusterUserAction.JoinTo(FillLocal(address)));
         }
 
         /// <summary>
@@ -299,8 +301,7 @@ namespace Akka.Cluster
         /// <param name="seedNodes">TBD</param>
         public void JoinSeedNodes(IEnumerable<Address> seedNodes)
         {
-            ClusterCore.Tell(
-                new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
+            TellCoreSafe(new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
         }
 
         /// <summary>
@@ -353,7 +354,7 @@ namespace Akka.Cluster
                 LeaveSelf();
             }
             else
-                ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
+                TellCoreSafe(new ClusterUserAction.Leave(FillLocal(address)));
         }
 
         /// <summary>
@@ -400,7 +401,7 @@ namespace Akka.Cluster
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(null)));
 
             // Send leave message
-            ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
+            TellCoreSafe(new ClusterUserAction.Leave(SelfAddress));
 
             return tcs.Task;
         }
@@ -416,7 +417,7 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node we're going to mark as <see cref="MemberStatus.Down"/></param>
         public void Down(Address address)
         {
-            ClusterCore.Tell(new ClusterUserAction.Down(FillLocal(address)));
+            TellCoreSafe(new ClusterUserAction.Down(FillLocal(address)));
         }
 
         /// <summary>
@@ -563,20 +564,38 @@ namespace Akka.Cluster
 
         private readonly IActorRef _clusterDaemons;
         private IActorRef _clusterCore;
+        private Task<IActorRef> _clusterCoreTask;
 
         /// <summary>
         /// TBD
         /// </summary>
+        [Obsolete("use TellCoreSafe()")]
         internal IActorRef ClusterCore
         {
             get
             {
-                if (_clusterCore == null)
+                if (_clusterCore is null)
                 {
-                    _clusterCore = GetClusterCoreRef().Result;
+                    if (_clusterCoreTask is null)
+                        throw new InvalidOperationException();
+
+                    _clusterCore = _clusterCoreTask.Result;
                 }
                 return _clusterCore;
             }
+        }
+
+        /// <summary>
+        /// INTERNAL API.
+        /// 
+        /// We have to wait for cluster core to startup before we can use it
+        /// </summary>
+        internal void TellCoreSafe(object message)
+        {
+            if (_clusterCore is null)
+                _ = _clusterCoreTask.ContinueWith((t, m) => t.Result.Tell(m), message);
+            else 
+                _clusterCore.Tell(message);
         }
 
         /// <summary>
