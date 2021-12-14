@@ -45,14 +45,14 @@ namespace Akka.Tests.Serialization
 
         public static readonly ActorSystemSetup ActorSystemSettings = ActorSystemSetup.Create(SerializationSettings, Bootstrap);
 
-        public NewtonSoftJsonSerializerSetupSpec(ITestOutputHelper output) 
+        public NewtonSoftJsonSerializerSetupSpec(ITestOutputHelper output)
             : base(ActorSystem.Create("SerializationSettingsSpec", ActorSystemSettings), output) { }
 
 
         [Fact]
         public void Setup_should_be_used_inside_Json_serializer()
         {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = (NewtonSoftJsonSerializer)Sys.Serialization.FindSerializerForType(typeof(object));
             var settings = serializer.Settings;
             settings.ReferenceLoopHandling.Should().Be(ReferenceLoopHandling.Error);
             settings.MissingMemberHandling.Should().Be(MissingMemberHandling.Error);
@@ -63,11 +63,12 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Setup_should_not_change_mandatory_settings()
         {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = (NewtonSoftJsonSerializer)Sys.Serialization.FindSerializerForType(typeof(object));
             var settings = serializer.Settings;
             settings.ContractResolver.Should().BeOfType<NewtonSoftJsonSerializer.AkkaContractResolver>();
             settings.ObjectCreationHandling.Should().Be(ObjectCreationHandling.Replace);
-            settings.Converters.Any(c => c is NewtonSoftJsonSerializer.SurrogateConverter).Should().Be(true);
+            settings.Converters.Any(c => c is NewtonSoftJsonSerializer.PrimitiveNumberConverter).Should().Be(true);
+            settings.Converters.Any(c => c is NewtonSoftJsonSerializer.SurrogatedConverter).Should().Be(true);
             settings.Converters.Any(c => c is DiscriminatedUnionConverter).Should().Be(true);
         }
     }
