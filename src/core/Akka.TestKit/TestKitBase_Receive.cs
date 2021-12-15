@@ -71,7 +71,7 @@ namespace Akka.TestKit
         {
             await Task.Run(() =>
             {
-                ReceiveWhile<object>(max: max, shouldIgnore: x =>
+                ReceiveWhile<object>(max: max, shouldContinue: x =>
                 {
                     x.Should().NotBeOfType<T>();
                     return true; // we are not returning anything
@@ -288,7 +288,7 @@ namespace Akka.TestKit
 
         /// <summary>
         /// Receive a series of messages.
-        /// It will continue to receive messages until the <paramref name="shouldIgnore"/> predicate returns <c>false</c> or the idle 
+        /// It will continue to receive messages until the <paramref name="shouldContinue"/> predicate returns <c>false</c> or the idle 
         /// timeout is met (disabled by default) or the overall
         /// maximum duration is elapsed or expected messages count is reached.
         /// If a message that isn't of type <typeparamref name="T"/> the parameter <paramref name="shouldIgnoreOtherMessageTypes"/> 
@@ -299,13 +299,13 @@ namespace Akka.TestKit
         /// The max duration is scaled by <see cref="Dilated(TimeSpan)"/>
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name="shouldIgnore">TBD</param>
+        /// <param name="shouldContinue">TBD</param>
         /// <param name="max">TBD</param>
         /// <param name="idle">TBD</param>
         /// <param name="msgs">TBD</param>
         /// <param name="shouldIgnoreOtherMessageTypes">TBD</param>
         /// <returns>TBD</returns>
-        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldIgnore, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
+        public IReadOnlyList<T> ReceiveWhile<T>(Predicate<T> shouldContinue, TimeSpan? max = null, TimeSpan? idle = null, int msgs = int.MaxValue, bool shouldIgnoreOtherMessageTypes = true) where T : class
         {
             var start = Now;
             var maxValue = RemainingOrDilated(max);
@@ -329,7 +329,7 @@ namespace Akka.TestKit
                 var shouldStop = false;
                 if (typedMessage != null)
                 {
-                    if (shouldIgnore(typedMessage))
+                    if (shouldContinue(typedMessage))
                     {
                         acc.Add(typedMessage);
                         count++;
