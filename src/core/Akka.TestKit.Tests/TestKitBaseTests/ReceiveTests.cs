@@ -8,7 +8,9 @@
 using System;
 using Akka.Actor;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Akka.Testkit.Tests.TestKitBaseTests
 {
@@ -62,6 +64,32 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("1");
             TestActor.Tell("2");
             Intercept(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(100)));
+        }
+
+        [Fact]
+        public void InverseFishForMessage_should_succeed_with_good_input()
+        {
+            var probe = CreateTestProbe("probe");
+            probe.Ref.Tell(1d, TestActor);
+            InverseFishForMessage<int>(probe, max: TimeSpan.FromMilliseconds(10)).Wait();
+        }
+
+
+        [Fact]
+        public void InverseFishForMessage_should_fail_with_bad_input()
+        {
+            var probe = CreateTestProbe("probe");
+            probe.Ref.Tell(3, TestActor);
+            try
+            {
+                /// based on: https://getakka.net/articles/actors/testing-actor-systems.html#the-way-in-between-expecting-exceptions
+                InverseFishForMessage<int>(probe, max: TimeSpan.FromMilliseconds(10)).Wait();
+                Assert.True(false); // we should never get here
+            }
+            catch (AggregateException ex)
+            {
+                ex.InnerExceptions[0].Should().BeOfType<XunitException>();
+            }
         }
 
         [Fact]
