@@ -38,7 +38,7 @@ namespace Akka.DI.Core
         /// <returns>A <see cref="Akka.Actor.Props"/> configuration object for the given actor type.</returns>
         public Props Props(Type actorType)
         {
-            return new Props(typeof(DIActorProducer), new object[] { dependencyResolver, actorType });
+            return Akka.Actor.Props.CreateBy(new DIActorProducer(dependencyResolver, actorType), actorType);
         }
     }
 }

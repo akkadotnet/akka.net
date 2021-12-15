@@ -193,7 +193,6 @@ namespace Akka.Tests.Actor
             (root / "user").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user");
             (root / "user" / "foo").ToStringWithAddress(c).ShouldBe("akka.tcp://mysys@cccc:2552/user/foo");
 
-
             root.ToStringWithAddress(d).ShouldBe("akka.tcp://mysys@192.168.107.1:2552/");
             (root / "user").ToStringWithAddress(d).ShouldBe("akka.tcp://mysys@192.168.107.1:2552/user");
             (root / "user" / "foo").ToStringWithAddress(d).ShouldBe("akka.tcp://mysys@192.168.107.1:2552/user/foo");
@@ -202,7 +201,19 @@ namespace Akka.Tests.Actor
             rootA.ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/");
             (rootA / "user").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user");
             (rootA / "user" / "foo").ToStringWithAddress(b).ShouldBe("akka.tcp://mysys@aaa:2552/user/foo");
+        }
 
+        [Fact]
+        public void Should_throw_on_null_parts()
+        {
+            var local = new Address("akka.tcp", "mysys");
+            var root = new RootActorPath(local);
+            var user = root / "user";
+
+            Assert.Throws<ArgumentNullException>(() => new RootActorPath(null));
+            Assert.Throws<ArgumentNullException>(() => new ChildActorPath(null, "user", 0));
+            Assert.Throws<ArgumentNullException>(() => new ChildActorPath(root, null, 0));
+            Assert.Throws<ArgumentNullException>(() => user.ToStringWithAddress(null));
         }
 
         /// <summary>

@@ -226,15 +226,12 @@ namespace Akka.Pattern
         /// <param name="body">TBD</param>
         public void WithSyncCircuitBreaker(Action body)
         {
-            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
-            if (!cbTask.Wait(CallTimeout))
-            {
-                //throw new TimeoutException( string.Format( "Execution did not complete within the time allotted {0} ms", CallTimeout.TotalMilliseconds ) );
-            }
-            if (cbTask.Exception != null)
-            {
-                ExceptionDispatchInfo.Capture(cbTask.Exception).Throw();
-            }
+            var cts = new CancellationTokenSource(CallTimeout);
+            var task = new Task(body, cts.Token);
+            var cbTask = WithCircuitBreaker(() => task);
+            task.RunSynchronously();
+            if (!task.IsCanceled)
+                cbTask.GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -253,8 +250,11 @@ namespace Akka.Pattern
         /// <returns><typeparamref name="T"/> or default(<typeparamref name="T"/>)</returns>
         public T WithSyncCircuitBreaker<T>(Func<T> body)
         {
-            var cbTask = WithCircuitBreaker(() => Task.Factory.StartNew(body));
-            return cbTask.Wait(CallTimeout) ? cbTask.Result : default(T);
+            var cts = new CancellationTokenSource(CallTimeout);
+            var task = new Task<T>(body, cts.Token);
+            var cbTask = WithCircuitBreaker(() => task);
+            task.RunSynchronously();
+            return !task.IsCanceled ? cbTask.GetAwaiter().GetResult() : default;
         }
 
         /// <summary>

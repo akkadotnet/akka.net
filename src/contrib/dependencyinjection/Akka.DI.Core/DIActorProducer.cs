@@ -13,12 +13,13 @@ namespace Akka.DI.Core
     /// <summary>
     /// This class represents an actor creation strategy that uses dependency injection (DI) to resolve and instantiate actors based on their type.
     /// </summary>
-    public class DIActorProducer : IIndirectActorProducer
+    public sealed class DIActorProducer : IIndirectActorProducerWithActorType
     {
-        private IDependencyResolver dependencyResolver;
-        private Type actorType;
+        private readonly IDependencyResolver _dependencyResolver;
+        private readonly Type _actorType;
+        private readonly Func<ActorBase> _actorFactory;
 
-        readonly Func<ActorBase> actorFactory;
+        public Type ActorType => _actorType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DIActorProducer"/> class.
@@ -33,26 +34,20 @@ namespace Akka.DI.Core
             if (dependencyResolver == null) throw new ArgumentNullException(nameof(dependencyResolver), $"DIActorProducer requires {nameof(dependencyResolver)} to be provided");
             if (actorType == null) throw new ArgumentNullException(nameof(actorType), $"DIActorProducer requires {nameof(actorType)} to be provided");
 
-            this.dependencyResolver = dependencyResolver;
-            this.actorType = actorType;
-            this.actorFactory = dependencyResolver.CreateActorFactory(actorType);
+            _dependencyResolver = dependencyResolver;
+            _actorType = actorType;
+            _actorFactory = dependencyResolver.CreateActorFactory(actorType);
         }
-
-        /// <summary>
-        /// Retrieves the type of the actor to produce.
-        /// </summary>
-        public Type ActorType
-        {
-            get { return this.actorType; }
-        }
-
+        
         /// <summary>
         /// Creates an actor based on the container's implementation specific actor factory.
         /// </summary>
         /// <returns>An actor created by the container.</returns>
-        public ActorBase Produce()
+        public ActorBase Produce(Props props)
         {
-            return actorFactory();
+            if (props.Type != _actorType)
+                throw new InvalidOperationException($"invalid actor type {props.Type}");
+            return _actorFactory();
         }
 
         /// <summary>
@@ -61,7 +56,7 @@ namespace Akka.DI.Core
         /// <param name="actor">The actor to remove from the container.</param>
         public void Release(ActorBase actor)
         {
-            dependencyResolver.Release(actor);
+            _dependencyResolver.Release(actor);
         }
     }
 }
