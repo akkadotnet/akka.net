@@ -73,7 +73,9 @@ namespace Akka.IO
         {
             ReportConnectFailure(() =>
             {
-                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
+                _socket = (_connect.Options.OfType<Inet.DatagramChannelCreator>().FirstOrDefault() ??
+                           new Inet.DatagramChannelCreator()).Create(address.AddressFamily);
+                _socket.Blocking = false;
 
                 foreach (var option in _connect.Options)
                 {
@@ -81,7 +83,7 @@ namespace Akka.IO
                 }
 
                 if (_connect.LocalAddress != null)
-                    _socket.Bind(_connect.LocalAddress);
+                    _socket.Bind(address);
 
                 _socket.Connect(_connect.RemoteAddress);
 
