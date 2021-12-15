@@ -74,7 +74,7 @@ namespace Akka.TestKit
                 ReceiveWhile<object>(max: max, shouldIgnore: x =>
                 {
                     x.Should().NotBeOfType<T>();
-                    return false; // we are not returning anything
+                    return true; // we are not returning anything
                 });
             });
         }
