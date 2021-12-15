@@ -152,19 +152,12 @@ namespace Akka.Tests.IO
             private readonly TestProbe _handler;
             private readonly TestProbe _bindCommander;
             private readonly TestProbe _parent;
-            private readonly IPEndPoint _localEndpoint;
             private readonly TestActorRef<ListenerParent> _parentRef;
-
-            public TestSetup(TestKitBase kit) :
-                this(kit, TestUtils.TemporaryServerAddress())
-            {
-
-            }
-
-            public TestSetup(TestKitBase kit, IPEndPoint localEndpoint)
+            private Socket _socket;
+            
+            public TestSetup(TestKitBase kit)
             {
                 _kit = kit;
-                _localEndpoint = localEndpoint;
                 _handler = kit.CreateTestProbe();
                 _bindCommander = kit.CreateTestProbe();
                 _parent = kit.CreateTestProbe();
@@ -183,23 +176,18 @@ namespace Akka.Tests.IO
 
             public IPEndPoint SendDataToLocal(byte[] buffer)
             {
-                return SendDataToEndpoint(buffer, _localEndpoint);
+                return SendDataToEndpoint(buffer, LocalEndPoint);
             }
 
             public IPEndPoint SendDataToEndpoint(byte[] buffer, IPEndPoint receiverEndpoint)
             {
-                var tempEndpoint = TestUtils.TemporaryServerAddress();
-                return SendDataToEndpoint(buffer, receiverEndpoint, tempEndpoint);
-            }
-
-            public IPEndPoint SendDataToEndpoint(byte[] buffer, IPEndPoint receiverEndpoint, IPEndPoint senderEndpoint)
-            {
-                using (var udpClient = new UdpClient(senderEndpoint.Port))
+                using (var udpClient = new UdpClient(0))
                 {
                     udpClient.Connect(receiverEndpoint);
                     udpClient.Send(buffer, buffer.Length);
+
+                    return (IPEndPoint)udpClient.Client.LocalEndPoint;
                 }
-                return senderEndpoint;
             }
             
             public IActorRef Listener { get { return _parentRef.UnderlyingActor.Listener; } }
@@ -207,8 +195,13 @@ namespace Akka.Tests.IO
             public TestProbe BindCommander { get { return _bindCommander; } }
 
             public TestProbe Handler { get { return _handler; } }
-            
-            public IPEndPoint LocalLocalEndPoint { get { return _localEndpoint; }  }
+
+            public IPEndPoint LocalEndPoint => (IPEndPoint)_socket?.LocalEndPoint ?? throw new Exception("Socket not bound");
+
+            internal void AfterBind(Socket socket)
+            {
+                _socket = socket;
+            }
 
             class ListenerParent : ActorBase
             {
@@ -222,8 +215,12 @@ namespace Akka.Tests.IO
                         new UdpListener(
                             Udp.Instance.Apply(Context.System),
                             test._bindCommander.Ref,
-                            new Udp.Bind(_test._handler.Ref, test._localEndpoint, new Inet.SocketOption[]{})))
-                                                              .WithDeploy(Deploy.Local));
+                            new Udp.Bind(
+                                _test._handler.Ref, 
+                                new IPEndPoint(IPAddress.Loopback, 0), 
+                                new Inet.SocketOption[]{ new TestSocketOption(socket => _test.AfterBind(socket)) })))
+                        .WithDeploy(Deploy.Local));
+                    
                     _test._parent.Watch(_listener);
                 }
 
