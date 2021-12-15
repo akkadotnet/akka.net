@@ -73,7 +73,7 @@ namespace Akka.IO
         {
             ReportConnectFailure(() =>
             {
-                _socket = new Socket(SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
+                _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp) { Blocking = false };
 
                 foreach (var option in _connect.Options)
                 {
