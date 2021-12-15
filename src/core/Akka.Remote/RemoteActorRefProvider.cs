@@ -189,7 +189,7 @@ namespace Akka.Remote
         public Deployer Deployer { get; protected set; }
 
         /// <inheritdoc/>
-        public Address DefaultAddress { get { return Transport.DefaultAddress; } }
+        public Address DefaultAddress { get { return Transport?.DefaultAddress; } }
 
         private Information _serializationInformationCache;
 

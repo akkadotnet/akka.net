@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.Util;
 
 // ReSharper disable NotResolvedInText
 
@@ -32,7 +31,7 @@ namespace Akka.Actor
     /// Further reading: http://www.cs.columbia.edu/~nahum/w6998/papers/sosp87-timing-wheels.pdf
     /// Presentation: http://www.cse.wustl.edu/~cdgill/courses/cs6874/TimingWheels.ppt
     /// </summary>
-    public class HashedWheelTimerScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
+    public sealed class HashedWheelTimerScheduler : SchedulerBase, IDateTimeOffsetNowTimeProvider, IDisposable
     {
         private readonly TimeSpan _shutdownTimeout;
         private readonly long _tickDuration; // a timespan expressed as ticks
@@ -82,7 +81,7 @@ namespace Akka.Actor
         /// <summary>
         /// 0 - init, 1 - started, 2 - shutdown
         /// </summary>
-        private volatile int _workerState = WORKER_STATE_INIT;
+        private int _workerState = WORKER_STATE_INIT;
 
         private static Bucket[] CreateWheel(int ticksPerWheel, ILoggingAdapter log)
         {
@@ -121,16 +120,14 @@ namespace Akka.Actor
             if (_workerState == WORKER_STATE_STARTED) { } // do nothing
             else if (_workerState == WORKER_STATE_INIT)
             {
-                _worker = new Thread(Run) { IsBackground = true };
-#pragma warning disable 420
-                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) ==
-#pragma warning restore 420
-                    WORKER_STATE_INIT)
+                if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_STARTED, WORKER_STATE_INIT) == WORKER_STATE_INIT)
                 {
+                    _worker = new Thread(Run) { IsBackground = true };
                     _worker.Start();
+                    if (_startTime == 0)
+                        _workerInitialized.Wait(TimeSpan.FromSeconds(3));
                 }
             }
-
             else if (_workerState == WORKER_STATE_SHUTDOWN)
             {
                 throw new SchedulerException("cannot enqueue after timer shutdown");
@@ -138,11 +135,6 @@ namespace Akka.Actor
             else
             {
                 throw new InvalidOperationException($"Worker in invalid state: {_workerState}");
-            }
-
-            while (_startTime == 0)
-            {
-                _workerInitialized.Wait();
             }
         }
 
@@ -152,12 +144,8 @@ namespace Akka.Actor
         private void Run()
         {
             // Initialize the clock
-            _startTime = HighResMonotonicClock.Ticks;
-            if (_startTime == 0)
-            {
-                // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
-                _startTime = 1;
-            }
+            // 0 means it's an uninitialized value, so bump to 1 to indicate it's started
+            Volatile.Write(ref _startTime, Math.Max(1, HighResMonotonicClock.Ticks));
 
             _workerInitialized.Signal();
 
@@ -189,7 +177,7 @@ namespace Akka.Actor
             }
 
             // return the list of unprocessedRegistrations and signal that we're finished
-            _stopped.Value.TrySetResult(_unprocessedRegistrations);
+            _stopped.TrySetResult(_unprocessedRegistrations);
         }
 
         private void ProcessReschedule()
@@ -208,7 +196,7 @@ namespace Akka.Actor
             var deadline = _tickDuration * (_tick + 1);
             unchecked // just to avoid trouble with long-running applications
             {
-                for (;;)
+                for (; ; )
                 {
                     long currentTime = HighResMonotonicClock.Ticks - _startTime;
                     var sleepMs = ((deadline - currentTime + TimeSpan.TicksPerMillisecond - 1) / TimeSpan.TicksPerMillisecond);
@@ -351,22 +339,19 @@ namespace Akka.Actor
             InternalSchedule(initialDelay, interval, action, cancelable);
         }
 
-        private AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>> _stopped = new AtomicReference<TaskCompletionSource<IEnumerable<SchedulerRegistration>>>();
+        private TaskCompletionSource<IEnumerable<SchedulerRegistration>> _stopped = null;
 
         private static readonly Task<IEnumerable<SchedulerRegistration>> Completed = Task.FromResult((IEnumerable<SchedulerRegistration>)new List<SchedulerRegistration>());
 
         private Task<IEnumerable<SchedulerRegistration>> Stop()
         {
-            var p = new TaskCompletionSource<IEnumerable<SchedulerRegistration>>();
+            if (_stopped is null)
+                _stopped = new TaskCompletionSource<IEnumerable<SchedulerRegistration>>();
 
-            if (_stopped.CompareAndSet(null, p)
-#pragma warning disable 420
-                && Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) == WORKER_STATE_STARTED)
-#pragma warning restore 420
-            {
+            if (Interlocked.CompareExchange(ref _workerState, WORKER_STATE_SHUTDOWN, WORKER_STATE_STARTED) == WORKER_STATE_STARTED)
                 // Let remaining work that is already being processed finished. The termination task will complete afterwards
-                return p.Task;
-            }
+                return _stopped.Task;
+
             return Completed;
         }
 
@@ -432,7 +417,7 @@ namespace Akka.Actor
             }
         }
 
-        private class SchedulerRegistration
+        private sealed class SchedulerRegistration
         {
             /// <summary>
             /// The cancellation handle, if any
@@ -565,7 +550,7 @@ namespace Akka.Actor
             /// <param name="registrations">A set of registrations to populate.</param>
             public void ClearRegistrations(HashSet<SchedulerRegistration> registrations)
             {
-                for (;;)
+                for (; ; )
                 {
                     var reg = Poll();
                     if (reg == null)
@@ -582,7 +567,7 @@ namespace Akka.Actor
             /// <param name="registrations">A set of registrations to populate.</param>
             public void ClearReschedule(HashSet<SchedulerRegistration> registrations)
             {
-                for (;;)
+                for (; ; )
                 {
                     var reg = PollReschedule();
                     if (reg == null)
