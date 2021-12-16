@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
@@ -56,23 +58,10 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         /// <param name="system">TBD</param>
-        public override void Init(ActorSystemImpl system)
-        {
-            //Complete the usual RemoteActorRefProvider initializations - need access to transports and RemoteWatcher before clustering can work
-            base.Init(system);
-
-            // initialize/load the Cluster extension
-            Cluster.Get(system);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
         /// <returns>TBD</returns>
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
-            // make sure Cluster extension is initialized/loaded from init thread
+            //HACK: make sure Cluster extension is initialized/loaded from init thread
             Cluster.Get(system);
 
             var failureDetector = CreateRemoteWatcherFailureDetector(system);

@@ -9,17 +9,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.Configuration;
 
 namespace Akka.Cluster
 {
@@ -51,7 +50,7 @@ namespace Akka.Cluster
     /// followed by <see cref="Akka.Cluster.MemberStatus.Up"/>.
     /// </para>
     /// </summary>
-    public class Cluster : IExtension
+    public class Cluster : IExtension, IInitializable
     {
         /// <summary>
         /// Retrieves the extension from the specified actor system.
@@ -141,13 +140,12 @@ namespace Akka.Cluster
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
-
-            // force the underlying system to start
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    _clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), System.Settings.CreationTimeout).ConfigureAwait(false);
+                    var clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), System.Settings.CreationTimeout).ConfigureAwait(false);
+                    Volatile.Write(ref _clusterCore, clusterCore);
                     clusterCoreTaskSource.SetResult(_clusterCore);
 
                     system.RegisterOnTermination(Shutdown);
@@ -159,10 +157,20 @@ namespace Akka.Cluster
                     Shutdown();
                     System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
 
-                    _clusterCore = System.DeadLetters;
+                    Volatile.Write(ref _clusterCore, System.DeadLetters);
                     clusterCoreTaskSource.SetResult(_clusterCore);
                 }
             });
+        }
+
+        /// <summary>
+        /// // force the underlying system to start
+        /// </summary>
+        /// <param name="cancellationToken">TBD</param>
+        /// <returns>TBD</returns>
+        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.Run(() => _clusterCoreTask, cancellationToken);
         }
 
         /// <summary>
@@ -594,7 +602,7 @@ namespace Akka.Cluster
         {
             if (_clusterCore is null)
                 _ = _clusterCoreTask.ContinueWith((t, m) => t.Result.Tell(m), message);
-            else 
+            else
                 _clusterCore.Tell(message);
         }
 
@@ -643,7 +651,7 @@ namespace Akka.Cluster
             /// <param name="message">The message being logged.</param>
             internal void LogInfo(string message)
             {
-                if(_settings.LogInfo)
+                if (_settings.LogInfo)
                     _log.Info("Cluster Node [{0}] - {1}", _selfAddress, message);
             }
 

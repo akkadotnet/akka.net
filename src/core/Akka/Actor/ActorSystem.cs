@@ -232,7 +232,7 @@ namespace Akka.Actor
         /// <returns>A newly created actor system with the given name and configuration.</returns>
         public static ActorSystem Create(string name, Config config)
         {
-            return CreateAndStartSystem(name, config, ActorSystemSetup.Empty);
+            return CreateAndStartSystemAsync(name, config, ActorSystemSetup.Empty).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -249,6 +249,18 @@ namespace Akka.Actor
         }
 
         /// <summary>
+        /// Creates a new <see cref="ActorSystem"/> with the specified name.
+        /// </summary>
+        /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+        /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
+        /// </param>
+        /// <returns>A newly created actor system with the given name.</returns>
+        public static ActorSystem Create(string name)
+        {
+            return Create(name, ActorSystemSetup.Empty);
+        }
+
+        /// <summary>
         /// Shortcut for creating a new actor system with the specified name and settings.
         /// </summary>
         /// <param name="name">The name of the actor system to create. The name must be uri friendly.
@@ -261,25 +273,30 @@ namespace Akka.Actor
             var bootstrapSetup = setup.Get<BootstrapSetup>();
             var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
 
-            return CreateAndStartSystem(name, appConfig, setup);
+            return CreateAndStartSystemAsync(name, appConfig, setup).GetAwaiter().GetResult();
         }
 
         /// <summary>
-        /// Creates a new <see cref="ActorSystem"/> with the specified name.
+        /// Shortcut for creating a new actor system with the specified name and settings.
         /// </summary>
-        /// <param name="name">The name of the actor system to create. The name must be uri friendly.
+        /// <param name="name">The name of the actor system to create. The name must be uri friendly.        
         /// <remarks>Must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-'</remarks>
         /// </param>
-        /// <returns>A newly created actor system with the given name.</returns>
-        public static ActorSystem Create(string name)
+        /// <param name="setup">The bootstrap setup used to help programmatically initialize the <see cref="ActorSystem"/>.</param>
+        /// <param name="cancellationToken">startup cancellation token</param>
+        /// <returns>A newly created actor system with the given name and configuration.</returns>
+        public static async Task<ActorSystem> CreateAsync(string name, ActorSystemSetup setup, CancellationToken cancellationToken = default)
         {
-            return Create(name, ActorSystemSetup.Empty);
+            var bootstrapSetup = setup.Get<BootstrapSetup>();
+            var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
+
+            return await CreateAndStartSystemAsync(name, appConfig, setup, cancellationToken);
         }
 
-        private static ActorSystem CreateAndStartSystem(string name, Config withFallback, ActorSystemSetup setup)
+        private static async Task<ActorSystem> CreateAndStartSystemAsync(string name, Config withFallback, ActorSystemSetup setup, CancellationToken cancellationToken = default)
         {
             var system = new ActorSystemImpl(name, withFallback, setup, Option<Props>.None);
-            system.Start();
+            await system.StartAsync(cancellationToken);
             return system;
         }
 

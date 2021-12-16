@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
@@ -76,7 +77,7 @@ namespace Akka.Remote
         /// <summary>
         /// Start up the transport, i.e. enable incoming connections
         /// </summary>
-        public abstract void Start();
+        public abstract Task StartAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Shuts down the remoting

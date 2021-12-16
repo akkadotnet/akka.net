@@ -368,8 +368,9 @@ namespace Akka.Actor
         public abstract Akka.Actor.ActorSelection ActorSelection(string actorPath);
         public static Akka.Actor.ActorSystem Create(string name, Akka.Configuration.Config config) { }
         public static Akka.Actor.ActorSystem Create(string name, Akka.Actor.BootstrapSetup setup) { }
-        public static Akka.Actor.ActorSystem Create(string name, Akka.Actor.Setup.ActorSystemSetup setup) { }
         public static Akka.Actor.ActorSystem Create(string name) { }
+        public static Akka.Actor.ActorSystem Create(string name, Akka.Actor.Setup.ActorSystemSetup setup) { }
+        public static System.Threading.Tasks.Task<Akka.Actor.ActorSystem> CreateAsync(string name, Akka.Actor.Setup.ActorSystemSetup setup, System.Threading.CancellationToken cancellationToken = null) { }
         public void Dispose() { }
         public abstract object GetExtension(Akka.Actor.IExtensionId extensionId);
         public abstract T GetExtension<T>()
@@ -1079,6 +1080,10 @@ namespace Akka.Actor
     public interface IIndirectActorProducerWithActorType : Akka.Actor.IIndirectActorProducer
     {
         System.Type ActorType { get; }
+    }
+    public interface IInitializable
+    {
+        System.Threading.Tasks.Task InitializeAsync(System.Threading.CancellationToken cancellationToken = null);
     }
     public interface IInternalActor
     {
@@ -1907,7 +1912,7 @@ namespace Akka.Actor.Internal
         public void UnstashAll() { }
         public void UnstashAll(System.Func<Akka.Actor.Envelope, bool> predicate) { }
     }
-    public class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
+    public sealed class ActorSystemImpl : Akka.Actor.ExtendedActorSystem
     {
         public ActorSystemImpl(string name) { }
         public ActorSystemImpl(string name, Akka.Configuration.Config config, Akka.Actor.Setup.ActorSystemSetup setup, System.Nullable<Akka.Util.Option<Akka.Actor.Props>> guardianProps = null) { }
@@ -1941,6 +1946,7 @@ namespace Akka.Actor.Internal
         public override object RegisterExtension(Akka.Actor.IExtensionId extension) { }
         public override void RegisterOnTermination(System.Action code) { }
         public void Start() { }
+        public System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken cancellationToken = null) { }
         public override void Stop(Akka.Actor.IActorRef actor) { }
         public override Akka.Actor.IActorRef SystemActorOf(Akka.Actor.Props props, string name = null) { }
         public override Akka.Actor.IActorRef SystemActorOf<TActor>(string name = null)

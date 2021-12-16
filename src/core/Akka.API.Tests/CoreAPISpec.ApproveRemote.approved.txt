@@ -182,7 +182,7 @@ namespace Akka.Remote
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public class RemoteActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider
+    public class RemoteActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Actor.IInitializable, Akka.Remote.IRemoteActorRefProvider
     {
         public RemoteActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
         public Akka.Actor.IActorRef DeadLetters { get; }
@@ -211,6 +211,7 @@ namespace Akka.Remote
         public Akka.Actor.Address GetExternalAddressFor(Akka.Actor.Address address) { }
         public bool HasAddress(Akka.Actor.Address address) { }
         public virtual void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
+        public virtual System.Threading.Tasks.Task InitializeAsync(System.Threading.CancellationToken cancellationToken) { }
         public Akka.Actor.IActorRef InternalResolveActorRef(string path) { }
         public Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p) { }
         public void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid) { }
@@ -282,7 +283,7 @@ namespace Akka.Remote
         public abstract void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid);
         public abstract void Send(object message, Akka.Actor.IActorRef sender, Akka.Remote.RemoteActorRef recipient);
         public abstract System.Threading.Tasks.Task Shutdown();
-        public abstract void Start();
+        public abstract System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken cancellationToken = null);
     }
     public class RemoteTransportException : Akka.Actor.AkkaException
     {

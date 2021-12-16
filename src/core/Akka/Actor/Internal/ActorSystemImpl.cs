@@ -20,6 +20,7 @@ using Akka.Actor.Setup;
 using Akka.Serialization;
 using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
+using System.Linq;
 
 namespace Akka.Actor.Internal
 {
@@ -32,7 +33,7 @@ namespace Akka.Actor.Internal
     /// INTERNAL API
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
-    public class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
+    public sealed class ActorSystemImpl : ExtendedActorSystem, ISupportSerializationConfigReload
     {
         private IActorRef _logDeadLetterListener;
         private readonly ConcurrentDictionary<Type, Lazy<object>> _extensions = new ConcurrentDictionary<Type, Lazy<object>>();
@@ -205,14 +206,32 @@ namespace Akka.Actor.Internal
         /// <summary>Starts this system</summary>
         public void Start()
         {
+            StartAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>Starts this system</summary>
+        public async Task StartAsync(CancellationToken cancellationToken = default)
+        {
             try
             {
                 // Force TermInfoDriver to initialize in order to protect us from the issue seen in #2432
                 typeof(Console).GetProperty("BackgroundColor").GetValue(null); // HACK: Only needed for MONO
 
                 RegisterOnTermination(StopScheduler);
-                _provider.Init(this);
-                LoadExtensions();
+                
+                //init provider
+                {
+                    _provider.Init(this);
+                    if (_provider is IInitializable init)
+                        await init.InitializeAsync(cancellationToken);
+                }
+
+                //load and init extensions
+                {
+                    var extensions = LoadExtensions();
+                    foreach(var init in extensions.OfType<IInitializable>())
+                        await init.InitializeAsync(cancellationToken);
+                }
 
                 if (_settings.LogDeadLetters > 0)
                     _logDeadLetterListener = SystemActorOf<DeadLetterListener>("deadLetterListener");
@@ -231,7 +250,7 @@ namespace Akka.Actor.Internal
                     if (_provider.DefaultAddress is null)
                         Thread.Yield();
                     var i = 1;
-                    while(i < 10 && _provider.DefaultAddress is null)
+                    while (i < 10 && _provider.DefaultAddress is null)
                         Thread.Sleep(i++ * 16);
                     if (i == 10 && _provider.DefaultAddress is null)
                         throw new TimeoutException($"Provider '{_provider.GetType()}' startup timeout");
@@ -245,7 +264,7 @@ namespace Akka.Actor.Internal
                 }
                 catch (Exception)
                 {
-                    try { StopScheduler();}
+                    try { StopScheduler(); }
                     catch
                     {
                         // ignored
@@ -293,7 +312,8 @@ namespace Akka.Actor.Internal
         private void ConfigureScheduler()
         {
             var schedulerType = Type.GetType(_settings.SchedulerClass, true);
-            _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, _settings.Config, Log);
+            var scheduler = (IScheduler) Activator.CreateInstance(schedulerType, _settings.Config, Log);
+            Volatile.Write(ref _scheduler, scheduler);
         }
 
         private void StopScheduler()
@@ -302,7 +322,7 @@ namespace Akka.Actor.Internal
             sched?.Dispose();
         }
 
-        private void LoadExtensions()
+        private List<object> LoadExtensions()
         {
             var extensions = new List<IExtensionId>();
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
@@ -326,15 +346,18 @@ namespace Akka.Actor.Internal
 
             }
 
-            ConfigureExtensions(extensions);
+            return ConfigureExtensions(extensions);
         }
 
-        private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
+        private List<object> ConfigureExtensions(List<IExtensionId> extensionIdProviders)
         {
+            var extensions = new List<object>(extensionIdProviders.Count);
             foreach(var extensionId in extensionIdProviders)
             {
-                RegisterExtension(extensionId);
+                var exten = RegisterExtension(extensionId);
+                extensions.Add(exten);
             }
+            return extensions;
         }
 
         /// <summary>
@@ -426,18 +449,18 @@ namespace Akka.Actor.Internal
         private void ConfigureSettings(Config config, ActorSystemSetup setup)
         {
             // TODO: on this line, in scala, the config is validated with `Dispatchers.InternalDispatcherId` path removed.
-            _settings = new Settings(this, config, setup);
+            Volatile.Write(ref _settings, new Settings(this, config, setup));
         }
 
         private void ConfigureEventStream()
         {
-            _eventStream = new EventStream(_settings.DebugEventStream);
+            Volatile.Write(ref _eventStream, new EventStream(_settings.DebugEventStream));
             _eventStream.StartStdoutLogger(_settings);
         }
 
         private void ConfigureSerialization()
         {
-            _serialization = new Serialization.Serialization(this);
+            Volatile.Write(ref _serialization, new Serialization.Serialization(this));
         }
 
         void ISupportSerializationConfigReload.ReloadSerialization() {
@@ -447,7 +470,7 @@ namespace Akka.Actor.Internal
 
         private void ConfigureMailboxes()
         {
-            _mailboxes = new Mailboxes(this);
+            Volatile.Write(ref _mailboxes, new Mailboxes(this));
         }
 
         private void ConfigureProvider()
@@ -458,7 +481,7 @@ namespace Akka.Actor.Internal
                 global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
                 var provider =
                     (IActorRefProvider) Activator.CreateInstance(providerType, _name, _settings, _eventStream);
-                _provider = provider;
+                Volatile.Write(ref _provider, provider);
             }
             catch (Exception)
             {
@@ -473,12 +496,13 @@ namespace Akka.Actor.Internal
 
         private void ConfigureLoggers()
         {
-            _log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
+            var log = new BusLogging(_eventStream, "ActorSystem(" + _name + ")", GetType(), new DefaultLogMessageFormatter());
+            Volatile.Write(ref _log, log);
         }
 
         private void ConfigureDispatchers()
         {
-            _dispatchers = new Dispatchers(
+            var dispatchers = new Dispatchers(
                 this,
                 new DefaultDispatcherPrerequisites(
                     EventStream,
@@ -486,6 +510,7 @@ namespace Akka.Actor.Internal
                     Settings,
                     Mailboxes),
                 _log);
+            Volatile.Write(ref _dispatchers, dispatchers);
         }
 
         private void ConfigureActorProducerPipeline()

@@ -21,6 +21,7 @@ using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util.Internal;
 using Akka.Configuration;
+using System.Threading;
 
 namespace Akka.Remote
 {
@@ -105,7 +106,7 @@ namespace Akka.Remote
     /// INTERNAL API
     /// </summary>
     [InternalApi]
-    public class RemoteActorRefProvider : IRemoteActorRefProvider
+    public class RemoteActorRefProvider : IRemoteActorRefProvider, IInitializable
     {
         private readonly ILoggingAdapter _log;
 
@@ -268,13 +269,19 @@ namespace Akka.Remote
                     RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
                     "remoting-terminator");
 
-            _internals = CreateInternals();                              
+            Volatile.Write(ref _internals, CreateInternals());                              
 
             _remotingTerminator.Tell(RemoteInternals);
+        }
 
-            Transport.Start();
-            _remoteWatcher = CreateRemoteWatcher(system);
-            _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
+        public virtual async Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            using (var cts = new CancellationTokenSource(RemoteSettings.StartupTimeout))
+            using (var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken))
+                await Transport.StartAsync(cts.Token);
+
+            _remoteWatcher = CreateRemoteWatcher(_system);
+            _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(_system);
         }
 
         /// <summary>

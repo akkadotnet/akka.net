@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Actor
 {
@@ -13,6 +15,14 @@ namespace Akka.Actor
     /// This interface is used to mark an object as an <see cref="ActorSystem"/> extension.
     /// </summary>
     public interface IExtension { }
+
+    /// <summary>
+    /// This interface is used to mark an <see cref="ActorSystem"/> component as initilaizeable.
+    /// </summary>
+    public interface IInitializable 
+    {
+        Task InitializeAsync(CancellationToken cancellationToken = default);
+    }
 
     /// <summary>
     /// This interface is used to distinguish unique <see cref="ActorSystem"/> extensions.
@@ -207,4 +217,5 @@ namespace Akka.Actor
             return typeof (T).GetHashCode();
         }
     }
+
 }

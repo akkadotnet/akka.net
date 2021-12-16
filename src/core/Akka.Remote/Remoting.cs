@@ -114,18 +114,18 @@ namespace Akka.Remote
     internal sealed class Remoting : RemoteTransport
     {
         private readonly ILoggingAdapter _log;
-        private volatile IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
-        private volatile IActorRef _endpointManager;
+        private IDictionary<string, HashSet<ProtocolTransportAddressPair>> _transportMapping;
+        private IActorRef _endpointManager;
 
         // This is effectively a write-once variable similar to a lazy val. The reason for not using a lazy val is exception
         // handling.
-        private volatile HashSet<Address> _addresses;
+        private HashSet<Address> _addresses;
 
         // This variable has the same semantics as the addresses variable, in the sense it is written once, and emulates
         // a lazy val
-        private volatile Address _defaultAddress;
+        private Address _defaultAddress;
 
-        private IActorRef _transportSupervisor;
+        private readonly IActorRef _transportSupervisor;
         private readonly EventPublisher _eventPublisher;
 
         /// <summary>
@@ -174,45 +174,46 @@ namespace Akka.Remote
         /// <exception cref="Exception">
         /// This exception is thrown when a general error occurs during startup.
         /// </exception>
-        public override void Start()
+        public override async Task StartAsync(CancellationToken cancellationToken = default)
         {
             if (_endpointManager == null)
             {
                 _log.Info("Starting remoting");
-                _endpointManager =
-                System.SystemActorOf(RARP.For(System).ConfigureDispatcher(
+                var endpointManager = System.SystemActorOf(RARP.For(System).ConfigureDispatcher(
                     Props.Create(() => new EndpointManager(System.Settings.Config, _log)).WithDeploy(Deploy.Local)),
                     EndpointManagerName);
+                Volatile.Write(ref _endpointManager, endpointManager);                
 
                 try
                 {
                     var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>();
+                    
 
                     // tells the EndpointManager to start all transports and bind them to listenable addresses, and then set the results
                     // of this promise to include them.
-                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise)); 
+                    endpointManager.Tell(new EndpointManager.Listen(addressPromise));
 
-                    addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
-                    var akkaProtocolTransports = addressPromise.Task.Result;
+                    IList<ProtocolTransportAddressPair> akkaProtocolTransports;
+                    using (var cancelReg = cancellationToken.Register(() => addressPromise.TrySetCanceled()))
+                        akkaProtocolTransports = await addressPromise.Task;
+
                     if(akkaProtocolTransports.Count==0)
                         throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
 
-                    IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
-                        akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
-                    _transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
-                    foreach (var g in tmp)
+                    var transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
+                    foreach (var g in akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier))
                     {
                         var set = new HashSet<ProtocolTransportAddressPair>(g);
-                        _transportMapping.Add(g.Key, set);
+                        transportMapping.Add(g.Key, set);
                     }
+                    Volatile.Write(ref _transportMapping, transportMapping);
 
-                    _defaultAddress = akkaProtocolTransports.Head().Address;
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
+                    Volatile.Write(ref _defaultAddress, akkaProtocolTransports.Head().Address);
+                    Volatile.Write(ref _addresses, new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address)));
 
                     _log.Info("Remoting started; listening on addresses : [{0}]", string.Join(",", _addresses.Select(x => x.ToString())));
 
-                    _endpointManager.Tell(new EndpointManager.StartupFinished());
+                    endpointManager.Tell(new EndpointManager.StartupFinished());
                     _eventPublisher.NotifyListeners(new RemotingListenEvent(_addresses.ToList()));
 
                 }
@@ -256,7 +257,7 @@ namespace Akka.Remote
                 void Action()
                 {
                     _eventPublisher.NotifyListeners(new RemotingShutdownEvent());
-                    _endpointManager = null;
+                    Volatile.Write(ref _endpointManager, null);
                 }
 
                 return _endpointManager.Ask<bool>(new EndpointManager.ShutdownAndFlush(), timeout).ContinueWith(result =>
@@ -288,12 +289,8 @@ namespace Akka.Remote
         /// <exception cref="RemoteTransportException">TBD</exception>
         public override void Send(object message, IActorRef sender, RemoteActorRef recipient)
         {
-            if (_endpointManager == null)
-            {
-                throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.", null);
-            }
-
-            _endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender ?? ActorRefs.NoSender);
+            var endpointManager = _endpointManager ?? throw new RemoteTransportException("Attempted to send remote message but Remoting is not running.", null);
+            endpointManager.Tell(new EndpointManager.Send(message, recipient, sender), sender ?? ActorRefs.NoSender);
         }
 
         /// <summary>
@@ -304,13 +301,9 @@ namespace Akka.Remote
         /// <returns>TBD</returns>
         public override Task<bool> ManagementCommand(object cmd)
         {
-            if (_endpointManager == null)
-            {
-                throw new RemoteTransportException("Attempted to send management command but Remoting is not running.", null);
-            }
-
-            return
-                _endpointManager.Ask<EndpointManager.ManagementCommandAck>(new EndpointManager.ManagementCommand(cmd),
+            var endpointManager = _endpointManager ?? throw new RemoteTransportException("Attempted to send management command but Remoting is not running.", null);
+            
+            return endpointManager.Ask<EndpointManager.ManagementCommandAck>(new EndpointManager.ManagementCommand(cmd),
                     Provider.RemoteSettings.CommandAckTimeout)
                     .ContinueWith(result =>
                     {
@@ -341,12 +334,8 @@ namespace Akka.Remote
         /// </exception>
         public override void Quarantine(Address address, int? uid)
         {
-            if (_endpointManager == null)
-            {
-                throw new RemoteTransportException($"Attempted to quarantine address {address} with uid {uid} but Remoting is not running");
-            }
-
-            _endpointManager.Tell(new EndpointManager.Quarantine(address, uid));
+            var endpointManager = _endpointManager ?? throw new RemoteTransportException($"Attempted to quarantine address {address} with uid {uid} but Remoting is not running");
+            endpointManager.Tell(new EndpointManager.Quarantine(address, uid));
         }
 
         #endregion
