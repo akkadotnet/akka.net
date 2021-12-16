@@ -190,7 +190,7 @@ namespace Akka.Actor.Internal
         /// <summary>
         /// If <c>true</c>, then the <see cref="ActorSystem"/> is attempting to abort.
         /// </summary>
-        internal volatile bool Aborting = false;
+        internal bool Aborting = false;
 
         /// <summary>
         /// Shuts down the <see cref="ActorSystem"/> without all of the usual guarantees,
@@ -199,7 +199,7 @@ namespace Akka.Actor.Internal
         /// </summary>
         public override void Abort()
         {
-            Aborting = true;
+            Volatile.Write(ref Aborting, true);
             Terminate();
         }
 
@@ -248,8 +248,8 @@ namespace Akka.Actor.Internal
             }
             catch (Exception ex)
             {
-                Log.Debug(ex, "System startup failed");
-
+                Log.Error(ex, "System startup failed");
+                
                 try
                 {
                     _ = Terminate();
@@ -554,7 +554,8 @@ namespace Akka.Actor.Internal
             if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
                 CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
-            } else
+            } 
+            else
             {
                 FinalTerminate();
             }
