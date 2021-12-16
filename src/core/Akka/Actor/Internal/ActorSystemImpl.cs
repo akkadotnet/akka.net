@@ -206,7 +206,8 @@ namespace Akka.Actor.Internal
         /// <summary>Starts this system</summary>
         public void Start()
         {
-            StartAsync().GetAwaiter().GetResult();
+            using (var cts = new CancellationTokenSource(Settings.CreationTimeout))
+                StartAsync(cts.Token).GetAwaiter().GetResult();
         }
 
         /// <summary>Starts this system</summary>
@@ -246,15 +247,15 @@ namespace Akka.Actor.Internal
                 }
 
                 //HACK: ensure provider started
-                {
-                    if (_provider.DefaultAddress is null)
-                        Thread.Yield();
-                    var i = 1;
-                    while (i < 10 && _provider.DefaultAddress is null)
-                        Thread.Sleep(i++ * 16);
-                    if (i == 10 && _provider.DefaultAddress is null)
-                        throw new TimeoutException($"Provider '{_provider.GetType()}' startup timeout");
-                }
+                //{
+                //    if (_provider.DefaultAddress is null)
+                //        Thread.Yield();
+                //    var i = 1;
+                //    while (i < 10 && _provider.DefaultAddress is null)
+                //        Thread.Sleep(i++ * 16);
+                //    if (i == 10 && _provider.DefaultAddress is null)
+                //        throw new TimeoutException($"Provider '{_provider.GetType()}' startup timeout");
+                //}
             }
             catch (Exception)
             {

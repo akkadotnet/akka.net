@@ -296,7 +296,11 @@ namespace Akka.Actor
         private static async Task<ActorSystem> CreateAndStartSystemAsync(string name, Config withFallback, ActorSystemSetup setup, CancellationToken cancellationToken = default)
         {
             var system = new ActorSystemImpl(name, withFallback, setup, Option<Props>.None);
-            await system.StartAsync(cancellationToken);
+
+            using(var cts1 = new CancellationTokenSource(system.Settings.CreationTimeout))
+            using(var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts1.Token, cancellationToken))
+                await system.StartAsync(cts2.Token);
+
             return system;
         }
 
