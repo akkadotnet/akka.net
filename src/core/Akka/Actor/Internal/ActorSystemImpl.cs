@@ -245,23 +245,14 @@ namespace Akka.Actor.Internal
                 {
                     _log.Info(Settings.ToString());
                 }
-
-                //HACK: ensure provider started
-                //{
-                //    if (_provider.DefaultAddress is null)
-                //        Thread.Yield();
-                //    var i = 1;
-                //    while (i < 10 && _provider.DefaultAddress is null)
-                //        Thread.Sleep(i++ * 16);
-                //    if (i == 10 && _provider.DefaultAddress is null)
-                //        throw new TimeoutException($"Provider '{_provider.GetType()}' startup timeout");
-                //}
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log.Debug(ex, "System startup failed");
+
                 try
                 {
-                    Terminate();
+                    _ = Terminate();
                 }
                 catch (Exception)
                 {
