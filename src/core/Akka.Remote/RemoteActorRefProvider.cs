@@ -132,29 +132,15 @@ namespace Akka.Remote
         private Internals _internals;
         private ActorSystemImpl _system;
 
-        private Internals RemoteInternals
-        {
-            get { return _internals; }
-        }
-
-        private Internals CreateInternals()
-        {
-            var internals =
-                new Internals(new Remoting(_system, this), _system.Serialization,
-                    new RemoteSystemDaemon(_system, RootPath / "remote", RootGuardian, _remotingTerminator, _log));
-            _local.RegisterExtraName("remote", internals.RemoteDaemon);
-            return internals;
-        }
-
         /// <summary>
         /// Remoting system daemon responsible for powering remote deployment capabilities.
         /// </summary>
-        public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
+        public IInternalActorRef RemoteDaemon { get { return _internals.RemoteDaemon; } }
 
         /// <summary>
         /// The remote transport. Wraps all of the underlying physical network transports.
         /// </summary>
-        public RemoteTransport Transport { get { return RemoteInternals.Transport; } }
+        public RemoteTransport Transport { get { return _internals.Transport; } }
 
         /// <summary>
         /// The remoting settings
@@ -269,16 +255,24 @@ namespace Akka.Remote
                     RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
                     "remoting-terminator");
 
-            Volatile.Write(ref _internals, CreateInternals());                              
+            //create internals
+            {
+                var remoting = new Remoting(_system, this);
+                var remoteDaemon = new RemoteSystemDaemon(_system, RootPath / "remote", RootGuardian, _remotingTerminator, _log);
 
-            _remotingTerminator.Tell(RemoteInternals);
+                var internals = new Internals(remoting, _system.Serialization, remoteDaemon);
+                Volatile.Write(ref _internals, internals);
+                _local.RegisterExtraName("remote", internals.RemoteDaemon);
+            }
+
+            _remotingTerminator.Tell(_internals);
         }
 
         public virtual async Task InitializeAsync(CancellationToken cancellationToken)
         {
-            using (var cts = new CancellationTokenSource(RemoteSettings.StartupTimeout))
-            using (var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken))
-                await Transport.StartAsync(cts.Token);
+            using (var cts1 = new CancellationTokenSource(RemoteSettings.StartupTimeout))
+            using (var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts1.Token, cancellationToken))
+                await Transport.StartAsync(cts2.Token);
 
             _remoteWatcher = CreateRemoteWatcher(_system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(_system);
@@ -722,14 +716,11 @@ namespace Akka.Remote
         private class RemotingTerminator : FSM<TerminatorState, Internals>, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
         {
             private readonly IActorRef _systemGuardian;
-            private readonly ILoggingAdapter _log;
+            private ILoggingAdapter _log;
 
             public RemotingTerminator(IActorRef systemGuardian)
             {
-                _systemGuardian = systemGuardian;
-
-                // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
-                _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
+                _systemGuardian = systemGuardian;                                
                 InitFSM();
             }
 
@@ -739,6 +730,9 @@ namespace Akka.Remote
                 {
                     if (@event.FsmEvent is Internals internals)
                     {
+                        // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
+                        _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
+
                         _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);
                     }
@@ -762,7 +756,7 @@ namespace Akka.Remote
                     if (@event.StateData != null && @event.FsmEvent is TerminationHookDone)
                     {
                         _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
-                        @event.StateData.Transport.Shutdown()
+                        _ = @event.StateData.Transport.Shutdown()
                             .ContinueWith(t => TransportShutdown.Instance,
                                 TaskContinuationOptions.ExecuteSynchronously)
                             .PipeTo(Self);
