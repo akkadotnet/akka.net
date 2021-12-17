@@ -120,7 +120,7 @@ namespace Akka.Cluster
             if (provider.Transport.DefaultAddress is null)
                 throw new InvalidOperationException("transport not started");
 
-            _clusterCoreTCS = new TaskCompletionSource<IActorRef>();
+            _clusterCoreTCS = new TaskCompletionSource<IActorRef>(TaskContinuationOptions.RunContinuationsAsynchronously);
 
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
@@ -160,6 +160,8 @@ namespace Akka.Cluster
                     System.Settings.CreationTimeout, cancellationToken).ConfigureAwait(false);
                 Volatile.Write(ref _clusterCore, clusterCore);
                 _clusterCoreTCS.SetResult(_clusterCore);
+
+                _readView.Connect();
 
                 System.RegisterOnTermination(Shutdown);
                 LogInfo("Started up successfully");
@@ -600,8 +602,7 @@ namespace Akka.Cluster
         internal void TellCoreSafe(object message)
         {
             if (_clusterCore is null)
-                _ = _clusterCoreTCS.Task.ContinueWith((t, m) => t.Result.Tell(m), message, 
-                    TaskContinuationOptions.ExecuteSynchronously);
+                _ = _clusterCoreTCS.Task.ContinueWith((t, m) => t.Result.Tell(m), message);
             else
                 _clusterCore.Tell(message);
         }
