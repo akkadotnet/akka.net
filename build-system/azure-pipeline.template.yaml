@@ -10,8 +10,8 @@ parameters:
   timeoutInMinutes: 120
 
 variables:
-  -name: COMPlus_ThreadPool_UsePortableThreadPool
-   value: 0
+  - name: COMPlus_ThreadPool_UsePortableThreadPool
+    value: 0
 
 jobs:
   - job: ${{ parameters.name }}
