@@ -186,16 +186,15 @@ namespace Akka.Remote
 
                 try
                 {
-                    var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>();
+                    var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>(TaskCreationOptions.RunContinuationsAsynchronously);
                     
-
                     // tells the EndpointManager to start all transports and bind them to listenable addresses, and then set the results
                     // of this promise to include them.
                     endpointManager.Tell(new EndpointManager.Listen(addressPromise));
 
                     IList<ProtocolTransportAddressPair> akkaProtocolTransports;
                     using (var cancelReg = cancellationToken.Register(() => addressPromise.TrySetCanceled()))
-                        akkaProtocolTransports = await addressPromise.Task;
+                        akkaProtocolTransports = await addressPromise.Task.ConfigureAwait(false);
 
                     if(akkaProtocolTransports.Count==0)
                         throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");

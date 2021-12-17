@@ -644,7 +644,7 @@ namespace Akka.Remote
             * */
             Receive<Listen>(listen =>
             {
-                Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
+                _ = Listens.ContinueWith<INoSerializationVerificationNeeded>(listens =>
                 {
                     if (listens.IsFaulted)
                     {
