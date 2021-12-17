@@ -339,7 +339,7 @@ namespace Akka.Remote.Transport
         {
             LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
-            ReadHandlerSource = new TaskCompletionSource<IHandleEventListener>();
+            ReadHandlerSource = new TaskCompletionSource<IHandleEventListener>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         /// <summary>

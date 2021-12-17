@@ -142,7 +142,7 @@ namespace Akka.Remote.Transport.DotNetty
             _serverEventLoopGroup = new MultithreadEventLoopGroup(Settings.ServerSocketWorkerPoolSize);
             _clientEventLoopGroup = new MultithreadEventLoopGroup(Settings.ClientSocketWorkerPoolSize);
             ConnectionGroup = new ConcurrentSet<IChannel>();
-            AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
+            AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
         }
@@ -205,11 +205,8 @@ namespace Akka.Remote.Transport.DotNetty
 
                 LocalAddress = addr;
                 // resume accepting incoming connections
-#pragma warning disable 4014 // we WANT this task to run without waiting
-                AssociationListenerPromise.Task.ContinueWith(result => newServerChannel.Configuration.AutoRead = true,
+                _ = AssociationListenerPromise.Task.ContinueWith(result => newServerChannel.Configuration.AutoRead = true,
                     TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
-#pragma warning restore 4014
-
 
                 return (addr, AssociationListenerPromise);
             }

@@ -141,7 +141,7 @@ namespace Akka.Remote
         /// <summary>
         /// The remote transport. Wraps all of the underlying physical network transports.
         /// </summary>
-        public RemoteTransport Transport { get { return _internals.Transport; } }
+        public RemoteTransport Transport { get { return _internals?.Transport; } }
 
         /// <summary>
         /// The remoting settings

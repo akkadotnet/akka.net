@@ -268,7 +268,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public override Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
-            var upstreamListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
+            var upstreamListenerPromise = new TaskCompletionSource<IAssociationEventListener>(TaskCreationOptions.RunContinuationsAsynchronously);
             return WrappedTransport.Listen().ContinueWith(async listenerTask =>
             {
                 var listenAddress = listenerTask.Result.Item1;

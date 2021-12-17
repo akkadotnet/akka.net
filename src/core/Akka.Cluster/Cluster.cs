@@ -137,16 +137,6 @@ namespace Akka.Cluster
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
-
-            //tmp only for debug 
-            _ = GetClusterCoreRef().Result;
-        }
-
-        private async Task<IActorRef> GetClusterCoreRef()
-        {
-            //debug 
-            await InitializeAsync();
-            return _clusterCore ?? System.DeadLetters;
         }
 
         /// <summary>
@@ -288,7 +278,7 @@ namespace Akka.Cluster
         /// <returns>Task which completes, once current cluster node reaches <see cref="MemberStatus.Up"/> state.</returns>
         public Task JoinAsync(Address address, CancellationToken token = default(CancellationToken))
         {
-            var completion = new TaskCompletionSource<NotUsed>();
+            var completion = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             this.RegisterOnMemberUp(() => completion.TrySetResult(NotUsed.Instance));
             this.RegisterOnMemberRemoved(() => completion.TrySetException(
                 new ClusterJoinFailedException($"Node has not managed to join the cluster using provided address: {address}")));
@@ -411,7 +401,7 @@ namespace Akka.Cluster
 
         private Task LeaveSelf()
         {
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             var leaveTask = Interlocked.CompareExchange(ref _leaveTask, tcs.Task, null);
 
             // It's assumed here that once the member left the cluster, it won't get back again.

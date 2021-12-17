@@ -44,7 +44,7 @@ namespace Akka.Pattern
                 }
             }
 
-            var tcs = new TaskCompletionSource<T>();
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             scheduler.Advanced.ScheduleOnce(duration, () =>
             {
                 try
