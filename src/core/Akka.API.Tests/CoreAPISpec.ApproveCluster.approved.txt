@@ -67,10 +67,19 @@ namespace Akka.Cluster
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsEvents;
         public static readonly Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode InitialStateAsSnapshot;
         public ClusterEvent() { }
+        public sealed class ClusterAborted : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
+        {
+            public ClusterAborted(System.Exception reason) { }
+            public System.Exception Reason { get; }
+        }
         public sealed class ClusterShuttingDown : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
         {
             public static readonly Akka.Cluster.ClusterEvent.IClusterDomainEvent Instance;
             public override string ToString() { }
+        }
+        public sealed class ClusterStarted : Akka.Cluster.ClusterEvent.IClusterDomainEvent, Akka.Event.IDeadLetterSuppression
+        {
+            public ClusterStarted() { }
         }
         public sealed class CurrentClusterState : Akka.Actor.INoSerializationVerificationNeeded
         {
