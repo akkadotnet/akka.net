@@ -50,13 +50,13 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell(2);
             TestActor.Tell(10);
             TestActor.Tell(20);
-            FishForMessage<int>(i => i>=10).ShouldBe(10);
+            FishForMessage<int>(i => i >= 10).ShouldBe(10);
         }
 
         [Fact]
         public void FishForMessage_should_timeout_if_no_messages()
         {
-            Intercept(() => FishForMessage(_=>false, TimeSpan.FromMilliseconds(10)));
+            Intercept(() => FishForMessage(_ => false, TimeSpan.FromMilliseconds(10)));
         }
 
         [Fact]
@@ -77,21 +77,15 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
 
 
         [Fact]
-        public void InverseFishForMessage_should_fail_with_bad_input()
+        public async Task InverseFishForMessage_should_fail_with_bad_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(3, TestActor);
-            
-            try
-            {
-                // based on: https://getakka.net/articles/actors/testing-actor-systems.html#the-way-in-between-expecting-exceptions
-                probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10)).Wait();
-                Assert.True(false); // we should never get here
-            }
-            catch (AggregateException ex)
-            {
-                ex.InnerExceptions[0].Should().BeOfType<XunitException>();
-            }
+
+
+            // based on: https://getakka.net/articles/actors/testing-actor-systems.html#the-way-in-between-expecting-exceptions
+            Func<Task> func = () => probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10));
+            await func.Should().ThrowAsync<Exception>();
         }
 
         [Fact]
@@ -137,25 +131,31 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
             TestActor.Tell("4");
             ReceiveWhile<string>(s => s.Length == 1).ShouldOnlyContainInOrder("1", "2", "3");
         }
+
         [Fact]
-        public void ReceiveWhile_Predicate_should_break_when_type_is_wrong_and_we_dont_ignore_those_and_return_correct_messages()
+        public void
+            ReceiveWhile_Predicate_should_break_when_type_is_wrong_and_we_dont_ignore_those_and_return_correct_messages()
         {
             TestActor.Tell("1");
             TestActor.Tell("2");
             TestActor.Tell("3");
             TestActor.Tell(4);
             TestActor.Tell("5");
-            ReceiveWhile<string>(s => s.Length == 1, shouldIgnoreOtherMessageTypes: false).ShouldOnlyContainInOrder("1", "2", "3");
+            ReceiveWhile<string>(s => s.Length == 1, shouldIgnoreOtherMessageTypes: false)
+                .ShouldOnlyContainInOrder("1", "2", "3");
         }
+
         [Fact]
-        public void ReceiveWhile_Predicate_should_continue_when_type_is_other_but_we_ignore_other_types_and_return_correct_messages()
+        public void
+            ReceiveWhile_Predicate_should_continue_when_type_is_other_but_we_ignore_other_types_and_return_correct_messages()
         {
             TestActor.Tell("1");
             TestActor.Tell("2");
             TestActor.Tell("3");
             TestActor.Tell(4);
             TestActor.Tell("5");
-            ReceiveWhile<string>(s => s.Length == 1, shouldIgnoreOtherMessageTypes: true).ShouldOnlyContainInOrder("1", "2", "3","5");
+            ReceiveWhile<string>(s => s.Length == 1, shouldIgnoreOtherMessageTypes: true)
+                .ShouldOnlyContainInOrder("1", "2", "3", "5");
         }
 
         [Fact]
@@ -181,7 +181,5 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
 
             ExpectMsg(6);
         }
-
     }
 }
-
