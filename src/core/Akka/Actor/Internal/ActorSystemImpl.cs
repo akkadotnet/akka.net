@@ -8,19 +8,19 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using System.Reflection;
-using Akka.Actor.Setup;
 using Akka.Serialization;
 using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
-using System.Linq;
 
 namespace Akka.Actor.Internal
 {
@@ -80,12 +80,12 @@ namespace Akka.Actor.Internal
             ActorSystemSetup setup,
             Option<Props>? guardianProps = null)
         {
-            if(!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
+            if (!Regex.Match(name, "^[a-zA-Z0-9][a-zA-Z0-9-]*$").Success)
                 throw new ArgumentException(
                     $"Invalid ActorSystem name [{name}], must contain only word characters (i.e. [a-zA-Z0-9] plus non-leading '-')", nameof(name));
 
             // Not checking for empty Config here, default values will be substituted in Settings class constructor (called in ConfigureSettings)
-            if(config is null)
+            if (config is null)
                 throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
 
             _name = name;
@@ -219,7 +219,7 @@ namespace Akka.Actor.Internal
                 typeof(Console).GetProperty("BackgroundColor").GetValue(null); // HACK: Only needed for MONO
 
                 RegisterOnTermination(StopScheduler);
-                
+
                 //init provider
                 {
                     _provider.Init(this);
@@ -230,8 +230,31 @@ namespace Akka.Actor.Internal
                 //load and init extensions
                 {
                     var extensions = LoadExtensions();
-                    foreach(var init in extensions.OfType<IInitializable>())
+                    foreach (var init in extensions.OfType<IInitializable>())
                         await init.InitializeAsync(cancellationToken);
+
+                    foreach (var init in _extensions.Values
+                        .Where(n => n.IsValueCreated).Select(n => n.Value)
+                        .OfType<IInitializable>().Where(n => !extensions.Contains(n)))
+                    {
+                        await init.InitializeAsync(cancellationToken);
+                        extensions.Add(init);
+                    }
+
+                    //HACK: await and init lazy extensions
+                    bool dirty;
+                    do
+                    {
+                        dirty = false;
+                        foreach (var init in _extensions.Values
+                            .Select(n => n.Value)
+                            .OfType<IInitializable>().Where(n => !extensions.Contains(n)))
+                        {
+                            await init.InitializeAsync(cancellationToken);
+                            extensions.Add(init);
+                            dirty = true;
+                        }
+                    } while (dirty);
                 }
 
                 if (_settings.LogDeadLetters > 0)
@@ -249,7 +272,7 @@ namespace Akka.Actor.Internal
             catch (Exception ex)
             {
                 Log.Error(ex, "System startup failed");
-                
+
                 try
                 {
                     _ = Terminate();
@@ -272,7 +295,7 @@ namespace Akka.Actor.Internal
             var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath, false);
 
             if (showSerializerWarning &&
-                Serialization.FindSerializerForType(typeof (object)) is NewtonSoftJsonSerializer)
+                Serialization.FindSerializerForType(typeof(object)) is NewtonSoftJsonSerializer)
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
                             $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +
@@ -284,7 +307,7 @@ namespace Akka.Actor.Internal
         /// <inheritdoc/>
         public override IActorRef ActorOf(Props props, string name = null)
         {
-            if(GuardianProps.IsEmpty)
+            if (GuardianProps.IsEmpty)
                 return _provider.Guardian.Cell.AttachChild(props, false, name);
             throw new InvalidOperationException($"cannot create top-level actor { (string.IsNullOrEmpty(name) ? "" : $"[{name} ]")}from the outside on ActorSystem with custom user guardian");
         }
@@ -304,7 +327,7 @@ namespace Akka.Actor.Internal
         private void ConfigureScheduler()
         {
             var schedulerType = Type.GetType(_settings.SchedulerClass, true);
-            var scheduler = (IScheduler) Activator.CreateInstance(schedulerType, _settings.Config, Log);
+            var scheduler = (IScheduler)Activator.CreateInstance(schedulerType, _settings.Config, Log);
             Volatile.Write(ref _scheduler, scheduler);
         }
 
@@ -317,10 +340,10 @@ namespace Akka.Actor.Internal
         private List<object> LoadExtensions()
         {
             var extensions = new List<IExtensionId>();
-            foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
+            foreach (var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {
                 var extensionType = Type.GetType(extensionFqn);
-                if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
+                if (extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.GetTypeInfo().IsAbstract || !extensionType.GetTypeInfo().IsClass)
                 {
                     _log.Error("[{0}] is not an 'ExtensionId', skipping...", extensionFqn);
                     continue;
@@ -331,7 +354,7 @@ namespace Akka.Actor.Internal
                     var extension = (IExtensionId)Activator.CreateInstance(extensionType);
                     extensions.Add(extension);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     _log.Error(ex, "While trying to load extension [{0}], skipping...", extensionFqn);
                 }
@@ -344,7 +367,7 @@ namespace Akka.Actor.Internal
         private List<object> ConfigureExtensions(List<IExtensionId> extensionIdProviders)
         {
             var extensions = new List<object>(extensionIdProviders.Count);
-            foreach(var extensionId in extensionIdProviders)
+            foreach (var extensionId in extensionIdProviders)
             {
                 var exten = RegisterExtension(extensionId);
                 extensions.Add(exten);
@@ -455,8 +478,9 @@ namespace Akka.Actor.Internal
             Volatile.Write(ref _serialization, new Serialization.Serialization(this));
         }
 
-        void ISupportSerializationConfigReload.ReloadSerialization() {
-            if(_serialization != null)
+        void ISupportSerializationConfigReload.ReloadSerialization()
+        {
+            if (_serialization != null)
                 ConfigureSerialization();
         }
 
@@ -472,7 +496,7 @@ namespace Akka.Actor.Internal
                 Type providerType = Type.GetType(_settings.ProviderClass);
                 global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
                 var provider =
-                    (IActorRefProvider) Activator.CreateInstance(providerType, _name, _settings, _eventStream);
+                    (IActorRefProvider)Activator.CreateInstance(providerType, _name, _settings, _eventStream);
                 Volatile.Write(ref _provider, provider);
             }
             catch (Exception)
@@ -551,10 +575,10 @@ namespace Akka.Actor.Internal
         /// </returns>
         public override Task Terminate()
         {
-            if(Settings.CoordinatedShutdownRunByActorSystemTerminate)
+            if (Settings.CoordinatedShutdownRunByActorSystemTerminate)
             {
                 CoordinatedShutdown.Get(this).Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
-            } 
+            }
             else
             {
                 FinalTerminate();

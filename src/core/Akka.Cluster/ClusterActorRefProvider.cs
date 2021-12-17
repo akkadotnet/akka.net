@@ -61,9 +61,6 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         protected override IActorRef CreateRemoteWatcher(ActorSystemImpl system)
         {
-            //HACK: make sure Cluster extension is initialized/loaded from init thread
-            Cluster.Get(system);
-
             var failureDetector = CreateRemoteWatcherFailureDetector(system);
             return system.SystemActorOf(ClusterRemoteWatcher.Props(
                 failureDetector,
