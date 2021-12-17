@@ -279,9 +279,9 @@ namespace Akka.Remote
         {
             using (var cts1 = new CancellationTokenSource(RemoteSettings.StartupTimeout))
             using (var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts1.Token, cancellationToken))
-                await Transport.StartAsync(cts2.Token);
+                await Transport.StartAsync(cts2.Token).ConfigureAwait(false);
 
-            await OnInitializeAsync(cancellationToken);
+            await OnInitializeAsync(cancellationToken).ConfigureAwait(false);
 
             _remoteWatcher = CreateRemoteWatcher(_system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(_system);

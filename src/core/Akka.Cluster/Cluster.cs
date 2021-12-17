@@ -137,6 +137,16 @@ namespace Akka.Cluster
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
+
+            //tmp only for debug 
+            _ = GetClusterCoreRef().Result;
+        }
+
+        private async Task<IActorRef> GetClusterCoreRef()
+        {
+            //debug 
+            await InitializeAsync();
+            return _clusterCore ?? System.DeadLetters;
         }
 
         /// <summary>
@@ -229,7 +239,7 @@ namespace Akka.Cluster
         /// <param name="to">The event type that the actor no longer receives.</param>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
-            ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
+            _clusterCore?.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
 
         /// <summary>
