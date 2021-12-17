@@ -117,6 +117,11 @@ namespace Akka.Cluster
             if (!(system.Provider is IClusterActorRefProvider provider))
                 throw new ConfigurationException(
                     $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
+            if (provider.Transport.DefaultAddress is null)
+                throw new InvalidOperationException("transport not started");
+
+            _clusterCoreTCS = new TaskCompletionSource<IActorRef>();
+
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
@@ -124,9 +129,6 @@ namespace Akka.Cluster
             CurrentInfoLogger = new InfoLogger(_log, Settings, SelfAddress);
 
             LogInfo("Starting up...");
-
-            var clusterCoreTaskSource = new TaskCompletionSource<IActorRef>();
-            _clusterCoreTask = clusterCoreTaskSource.Task;
 
             FailureDetector = new DefaultFailureDetectorRegistry<Address>(() => FailureDetectorLoader.Load(Settings.FailureDetectorImplementationClass, Settings.FailureDetectorConfig,
                 system));
@@ -140,37 +142,37 @@ namespace Akka.Cluster
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), System.Settings.CreationTimeout).ConfigureAwait(false);
-                    Volatile.Write(ref _clusterCore, clusterCore);
-                    clusterCoreTaskSource.SetResult(_clusterCore);
-
-                    system.RegisterOnTermination(Shutdown);
-                    LogInfo("Started up successfully");
-                }
-                catch (Exception ex)
-                {
-                    _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
-                    Shutdown();
-                    System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
-
-                    Volatile.Write(ref _clusterCore, System.DeadLetters);
-                    clusterCoreTaskSource.SetResult(_clusterCore);
-                }
-            });
         }
 
         /// <summary>
-        /// // force the underlying system to start
+        /// force the underlying system to start
         /// </summary>
         /// <param name="cancellationToken">TBD</param>
         /// <returns>TBD</returns>
-        public Task InitializeAsync(CancellationToken cancellationToken = default)
+        public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
-            return Task.Run(() => _clusterCoreTask, cancellationToken);
+            if (_clusterCoreTCS.Task.IsCompleted)
+                return; //until refactor of AkkaSystemImpl._extensions
+
+            try
+            {
+                var clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), 
+                    System.Settings.CreationTimeout, cancellationToken).ConfigureAwait(false);
+                Volatile.Write(ref _clusterCore, clusterCore);
+                _clusterCoreTCS.SetResult(_clusterCore);
+
+                System.RegisterOnTermination(Shutdown);
+                LogInfo("Started up successfully");
+            }
+            catch (Exception ex)
+            {
+                _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
+                Shutdown();
+                System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
+
+                Volatile.Write(ref _clusterCore, System.DeadLetters);
+                _clusterCoreTCS.SetResult(_clusterCore);
+            }
         }
 
         /// <summary>
@@ -288,7 +290,7 @@ namespace Akka.Cluster
         private Address FillLocal(Address address)
         {
             // local address might be used if grabbed from IActorRef.Path.Address
-            if (address.HasLocalScope && address.System == SelfAddress.System)
+            if (address is object && address.HasLocalScope && address.System == SelfAddress.System)
             {
                 return SelfAddress;
             }
@@ -572,7 +574,7 @@ namespace Akka.Cluster
 
         private readonly IActorRef _clusterDaemons;
         private IActorRef _clusterCore;
-        private Task<IActorRef> _clusterCoreTask;
+        private TaskCompletionSource<IActorRef> _clusterCoreTCS;
 
         /// <summary>
         /// TBD
@@ -584,10 +586,7 @@ namespace Akka.Cluster
             {
                 if (_clusterCore is null)
                 {
-                    if (_clusterCoreTask is null)
-                        throw new InvalidOperationException();
-
-                    _clusterCore = _clusterCoreTask.Result;
+                    _clusterCore = _clusterCoreTCS.Task.Result;
                 }
                 return _clusterCore;
             }
@@ -601,7 +600,8 @@ namespace Akka.Cluster
         internal void TellCoreSafe(object message)
         {
             if (_clusterCore is null)
-                _ = _clusterCoreTask.ContinueWith((t, m) => t.Result.Tell(m), message);
+                _ = _clusterCoreTCS.Task.ContinueWith((t, m) => t.Result.Tell(m), message, 
+                    TaskContinuationOptions.ExecuteSynchronously);
             else
                 _clusterCore.Tell(message);
         }

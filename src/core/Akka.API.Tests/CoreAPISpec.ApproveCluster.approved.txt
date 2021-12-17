@@ -56,10 +56,11 @@ namespace Akka.Cluster
         public void Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type to) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public class ClusterActorRefProvider : Akka.Remote.RemoteActorRefProvider, Akka.Actor.IActorRefProvider, Akka.Cluster.IClusterActorRefProvider, Akka.Remote.IRemoteActorRefProvider
+    public sealed class ClusterActorRefProvider : Akka.Remote.RemoteActorRefProvider, Akka.Actor.IActorRefProvider, Akka.Cluster.IClusterActorRefProvider, Akka.Remote.IRemoteActorRefProvider
     {
         public ClusterActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
         protected override Akka.Actor.IActorRef CreateRemoteWatcher(Akka.Actor.Internal.ActorSystemImpl system) { }
+        protected override System.Threading.Tasks.Task OnInitializeAsync(System.Threading.CancellationToken cancellationToken) { }
     }
     public class ClusterEvent
     {

@@ -38,7 +38,7 @@ namespace Akka.Cluster
     /// the `ClusterActorRefProvider` is used.
     /// </summary>
     [InternalApi]
-    public class ClusterActorRefProvider : RemoteActorRefProvider, IClusterActorRefProvider
+    public sealed class ClusterActorRefProvider : RemoteActorRefProvider, IClusterActorRefProvider
     {
         /// <summary>
         /// TBD
@@ -69,13 +69,9 @@ namespace Akka.Cluster
                 RemoteSettings.WatchHeartbeatExpectedResponseAfter), "remote-watcher");
         }
 
-        public override async Task InitializeAsync(CancellationToken cancellationToken)
+        protected override Task OnInitializeAsync(CancellationToken cancellationToken)
         {
-            var cluster = Cluster.Get(Settings.System);
-
-            await base.InitializeAsync(cancellationToken);
-
-            await cluster.InitializeAsync(cancellationToken);
+            return Cluster.Get(Settings.System).InitializeAsync(cancellationToken);
         }
     }
 

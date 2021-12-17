@@ -32,7 +32,7 @@ namespace Akka.Cluster.Metrics.Serialization
         /// <param name="metrics">The set of sampled <see cref="Types.Metric"/></param>
         public NodeMetrics(Actor.Address address, long timestamp, IEnumerable<Types.Metric> metrics)
         {
-            Address = address;
+            Address = address ?? throw new ArgumentNullException(nameof(address));
             timestamp_ = timestamp;
             metrics_ = new RepeatedField<Types.Metric>();
             metrics_.AddRange(metrics);

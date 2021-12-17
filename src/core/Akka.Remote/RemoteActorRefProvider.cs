@@ -268,14 +268,21 @@ namespace Akka.Remote
             _remotingTerminator.Tell(_internals);
         }
 
-        public virtual async Task InitializeAsync(CancellationToken cancellationToken)
+        public async Task InitializeAsync(CancellationToken cancellationToken)
         {
             using (var cts1 = new CancellationTokenSource(RemoteSettings.StartupTimeout))
             using (var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cts1.Token, cancellationToken))
                 await Transport.StartAsync(cts2.Token);
 
+            await OnInitializeAsync(cancellationToken);
+
             _remoteWatcher = CreateRemoteWatcher(_system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(_system);
+        }
+
+        protected virtual Task OnInitializeAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
         }
 
         /// <summary>
