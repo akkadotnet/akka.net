@@ -61,7 +61,7 @@ namespace Akka.Cluster.Tests
 
         internal void LeaderActions()
         {
-            _cluster.TellCoreSafe(InternalClusterAction.LeaderActionsTick.Instance);
+            _cluster.ClusterCore.Tell(InternalClusterAction.LeaderActionsTick.Instance);
         }
 
         [Fact]
