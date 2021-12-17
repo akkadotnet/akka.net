@@ -560,6 +560,26 @@ namespace Akka.Cluster
         /// <summary>
         /// Indicates that the <see cref="Cluster"/> plugin is shutting down.
         /// </summary>
+        public sealed class ClusterStarted : IClusterDomainEvent
+        {
+        }
+
+        /// <summary>
+        /// Indicates that the <see cref="Cluster"/> plugin is shutting down.
+        /// </summary>
+        public sealed class ClusterAborted : IClusterDomainEvent
+        {
+            public ClusterAborted(Exception reason)
+            {
+                Reason = reason;
+            }
+
+            public Exception Reason { get; }
+        }
+
+        /// <summary>
+        /// Indicates that the <see cref="Cluster"/> plugin is shutting down.
+        /// </summary>
         public sealed class ClusterShuttingDown : IClusterDomainEvent, IDeadLetterSuppression
         {
             private ClusterShuttingDown()

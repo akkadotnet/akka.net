@@ -120,8 +120,6 @@ namespace Akka.Cluster
             if (provider.Transport.DefaultAddress is null)
                 throw new InvalidOperationException("transport not started");
 
-            _clusterCoreTCS = new TaskCompletionSource<IActorRef>(TaskContinuationOptions.RunContinuationsAsynchronously);
-
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
@@ -148,7 +146,7 @@ namespace Akka.Cluster
         /// <returns>TBD</returns>
         public async Task InitializeAsync(CancellationToken cancellationToken = default)
         {
-            if (_clusterCoreTCS.Task.IsCompleted)
+            if (_clusterCore != null)
                 return; //until refactor of AkkaSystemImpl._extensions
 
             try
@@ -159,21 +157,22 @@ namespace Akka.Cluster
                 var clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), 
                     System.Settings.CreationTimeout, cancellationToken).ConfigureAwait(false);
                 Volatile.Write(ref _clusterCore, clusterCore);
-                _clusterCoreTCS.SetResult(_clusterCore);
 
                 _readView.Connect();
 
                 System.RegisterOnTermination(Shutdown);
                 LogInfo("Started up successfully");
+
+                System.EventStream.Publish(new ClusterEvent.ClusterStarted());
             }
             catch (Exception ex)
             {
                 _log.Error(ex, "Failed to startup Cluster. You can try to increase 'akka.actor.creation-timeout'.");
                 Shutdown();
-                System.DeadLetters.Tell(ex); //don't re-throw the error. Just log it.
 
                 Volatile.Write(ref _clusterCore, System.DeadLetters);
-                _clusterCoreTCS.SetResult(_clusterCore);
+
+                System.EventStream.Publish(new ClusterEvent.ClusterAborted(ex));
             }
         }
 
@@ -577,35 +576,11 @@ namespace Akka.Cluster
 
         private readonly IActorRef _clusterDaemons;
         private IActorRef _clusterCore;
-        private TaskCompletionSource<IActorRef> _clusterCoreTCS;
 
         /// <summary>
         /// TBD
         /// </summary>
-        internal IActorRef ClusterCore
-        {
-            get
-            {
-                if (_clusterCore == null)
-                {
-                    _clusterCore = _clusterCoreTCS.Task.Result;
-                }
-                return _clusterCore;
-            }
-        }
-
-        /// <summary>
-        /// INTERNAL API.
-        /// 
-        /// We have to wait for cluster core to startup before we can use it
-        /// </summary>
-        internal void TellCoreSafe(object message)
-        {
-            if (_clusterCore is null)
-                _ = _clusterCoreTCS.Task.ContinueWith((t, m) => t.Result.Tell(m), message);
-            else
-                _clusterCore.Tell(message);
-        }
+        internal IActorRef ClusterCore => _clusterCore ?? throw new InvalidOperationException("cluster uninitialized");
 
         /// <summary>
         /// INTERNAL API.
