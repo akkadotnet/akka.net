@@ -71,6 +71,9 @@ namespace Akka.Cluster
 
         protected override Task OnInitializeAsync(CancellationToken cancellationToken)
         {
+            //preinit coordinated-shutdown
+            _ = CoordinatedShutdown.Get(Settings.System);
+
             return Cluster.Get(Settings.System).InitializeAsync(cancellationToken);
         }
     }

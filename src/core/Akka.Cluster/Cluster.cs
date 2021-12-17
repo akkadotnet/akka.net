@@ -135,9 +135,6 @@ namespace Akka.Cluster
 
             Scheduler = CreateScheduler(system);
 
-            // it has to be lazy - otherwise if downing provider will init a cluster itself, it will deadlock
-            _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system), LazyThreadSafetyMode.ExecutionAndPublication);
-
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
@@ -156,6 +153,9 @@ namespace Akka.Cluster
 
             try
             {
+                var downingProvider = Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, System);
+                Volatile.Write(ref _downingProvider, downingProvider);
+
                 var clusterCore = await _clusterDaemons.Ask<IActorRef>(new InternalClusterAction.GetClusterCoreRef(this), 
                     System.Settings.CreationTimeout, cancellationToken).ConfigureAwait(false);
                 Volatile.Write(ref _clusterCore, clusterCore);
@@ -519,7 +519,7 @@ namespace Akka.Cluster
         /// </summary>
         public ExtendedActorSystem System { get; }
 
-        private readonly Lazy<IDowningProvider> _downingProvider;
+        private IDowningProvider _downingProvider;
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
 
@@ -536,7 +536,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public IDowningProvider DowningProvider => _downingProvider.Value;
+        public IDowningProvider DowningProvider => _downingProvider ?? throw new InvalidOperationException("cluster uninitialized");
 
         // ========================================================
         // ===================== WORK DAEMONS =====================
