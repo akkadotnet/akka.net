@@ -136,6 +136,7 @@ namespace Akka.Tests.Pattern
         private Props SupervisorProps(IActorRef probeRef)
         {
             var options = Backoff.OnFailure(TestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
+                .WithManualReset()
                 .WithSupervisorStrategy(new OneForOneStrategy(4, TimeSpan.FromSeconds(30), ex => ex is StoppingException 
                     ? Directive.Stop 
                     : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));
@@ -270,7 +271,7 @@ namespace Akka.Tests.Pattern
             EventFilter.Exception<TestException>().Expect(5, () =>
             {
                 probe.Watch(supervisor);
-                for (int i = 1; i <= 5; i++)
+                for (var i = 1; i <= 5; i++)
                 {
                     supervisor.Tell("THROW");
                     if (i < 5)
