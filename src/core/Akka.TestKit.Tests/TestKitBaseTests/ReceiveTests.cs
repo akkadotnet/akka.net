@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
@@ -67,11 +68,11 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public void InverseFishForMessage_should_succeed_with_good_input()
+        public async Task InverseFishForMessage_should_succeed_with_good_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(1d, TestActor);
-            InverseFishForMessage<int>(probe, max: TimeSpan.FromMilliseconds(10)).Wait();
+            await probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10));
         }
 
 
@@ -80,10 +81,11 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(3, TestActor);
+            
             try
             {
-                /// based on: https://getakka.net/articles/actors/testing-actor-systems.html#the-way-in-between-expecting-exceptions
-                InverseFishForMessage<int>(probe, max: TimeSpan.FromMilliseconds(10)).Wait();
+                // based on: https://getakka.net/articles/actors/testing-actor-systems.html#the-way-in-between-expecting-exceptions
+                probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10)).Wait();
                 Assert.True(false); // we should never get here
             }
             catch (AggregateException ex)

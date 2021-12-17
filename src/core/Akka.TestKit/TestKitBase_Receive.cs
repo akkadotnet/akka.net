@@ -73,7 +73,7 @@ namespace Akka.TestKit
             {
                 ReceiveWhile<object>(max: max, shouldContinue: x =>
                 {
-                    x.Should().NotBeOfType<T>();
+                    _assertions.AssertFalse(x is T, "did not expect a message of type {0}", typeof(T));
                     return true; // we are not returning anything
                 });
             });
