@@ -71,9 +71,9 @@ namespace Akka.Cluster
 
         public override async Task InitializeAsync(CancellationToken cancellationToken)
         {
-            await base.InitializeAsync(cancellationToken);
-
             var cluster = Cluster.Get(Settings.System);
+
+            await base.InitializeAsync(cancellationToken);
 
             await cluster.InitializeAsync(cancellationToken);
         }
