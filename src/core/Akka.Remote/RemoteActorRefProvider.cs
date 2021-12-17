@@ -22,6 +22,7 @@ using Akka.Serialization;
 using Akka.Util.Internal;
 using Akka.Configuration;
 using System.Threading;
+using Akka.Remote.Transport;
 
 namespace Akka.Remote
 {
@@ -267,6 +268,9 @@ namespace Akka.Remote
                 Volatile.Write(ref _internals, internals);
                 _local.RegisterExtraName("remote", internals.RemoteDaemon);
             }
+
+            //preload transport adapter extension
+            _ = TransportAdaptersExtension.For(system);
 
             _remotingTerminator.Tell(_internals);
         }
