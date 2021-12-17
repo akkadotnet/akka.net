@@ -248,6 +248,9 @@ namespace Akka.Remote
             _actorRefResolveThreadLocalCache = ActorRefResolveThreadLocalCache.For(system);
             _actorPathThreadLocalCache = ActorPathThreadLocalCache.For(system);
 
+            //preload uid extension
+            _ = AddressUidExtension.Uid(system);
+
             _local.Init(system);
 
             _remotingTerminator =
