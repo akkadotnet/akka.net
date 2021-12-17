@@ -211,7 +211,7 @@ namespace Akka.Cluster
             if (!to.All(t => typeof(ClusterEvent.IClusterDomainEvent).IsAssignableFrom(t)))
                 throw new ArgumentException($"Subscribe to `IClusterDomainEvent` or subclasses, was [{string.Join(", ", to.Select(c => c.Name))}]", nameof(to));
 
-            TellCoreSafe(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
+            ClusterCore.Tell(new InternalClusterAction.Subscribe(subscriber, initialStateMode, ImmutableHashSet.Create(to)));
         }
 
         /// <summary>
@@ -230,7 +230,7 @@ namespace Akka.Cluster
         /// <param name="to">The event type that the actor no longer receives.</param>
         public void Unsubscribe(IActorRef subscriber, Type to)
         {
-            TellCoreSafe(new InternalClusterAction.Unsubscribe(subscriber, to));
+            ClusterCore.Tell(new InternalClusterAction.Unsubscribe(subscriber, to));
         }
 
         /// <summary>
@@ -241,7 +241,7 @@ namespace Akka.Cluster
         /// <param name="receiver">The actor that receives the current cluster state.</param>
         public void SendCurrentClusterState(IActorRef receiver)
         {
-            TellCoreSafe(new InternalClusterAction.SendCurrentClusterState(receiver));
+            ClusterCore.Tell(new InternalClusterAction.SendCurrentClusterState(receiver));
         }
 
         /// <summary>
@@ -255,7 +255,7 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node we want to join.</param>
         public void Join(Address address)
         {
-            TellCoreSafe(new ClusterUserAction.JoinTo(FillLocal(address)));
+            ClusterCore.Tell(new ClusterUserAction.JoinTo(FillLocal(address)));
         }
 
         /// <summary>
@@ -313,7 +313,8 @@ namespace Akka.Cluster
         /// <param name="seedNodes">TBD</param>
         public void JoinSeedNodes(IEnumerable<Address> seedNodes)
         {
-            TellCoreSafe(new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
+            ClusterCore.Tell(
+                new InternalClusterAction.JoinSeedNodes(seedNodes.Select(FillLocal).ToImmutableList()));
         }
 
         /// <summary>
@@ -366,7 +367,7 @@ namespace Akka.Cluster
                 LeaveSelf();
             }
             else
-                TellCoreSafe(new ClusterUserAction.Leave(FillLocal(address)));
+                ClusterCore.Tell(new ClusterUserAction.Leave(FillLocal(address)));
         }
 
         /// <summary>
@@ -413,7 +414,7 @@ namespace Akka.Cluster
             _clusterDaemons.Tell(new InternalClusterAction.AddOnMemberRemovedListener(() => tcs.TrySetResult(null)));
 
             // Send leave message
-            TellCoreSafe(new ClusterUserAction.Leave(SelfAddress));
+            ClusterCore.Tell(new ClusterUserAction.Leave(SelfAddress));
 
             return tcs.Task;
         }
@@ -429,7 +430,7 @@ namespace Akka.Cluster
         /// <param name="address">The address of the node we're going to mark as <see cref="MemberStatus.Down"/></param>
         public void Down(Address address)
         {
-            TellCoreSafe(new ClusterUserAction.Down(FillLocal(address)));
+            ClusterCore.Tell(new ClusterUserAction.Down(FillLocal(address)));
         }
 
         /// <summary>
@@ -581,12 +582,11 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        [Obsolete("use TellCoreSafe()")]
         internal IActorRef ClusterCore
         {
             get
             {
-                if (_clusterCore is null)
+                if (_clusterCore == null)
                 {
                     _clusterCore = _clusterCoreTCS.Task.Result;
                 }
