@@ -11,7 +11,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Configs\TestScheduler.conf;Internal\Reference.conf" />
-    <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <ProjectReference Include="..\Akka\Akka.csproj" />
   </ItemGroup>
 
