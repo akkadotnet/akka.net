@@ -68,6 +68,15 @@ namespace Akka.Cluster
                 RemoteSettings.WatchUnreachableReaperInterval,
                 RemoteSettings.WatchHeartbeatExpectedResponseAfter), "remote-watcher");
         }
+
+        public override async Task InitializeAsync(CancellationToken cancellationToken)
+        {
+            await base.InitializeAsync(cancellationToken);
+
+            var cluster = Cluster.Get(Settings.System);
+
+            await cluster.InitializeAsync(cancellationToken);
+        }
     }
 
     /// <summary>

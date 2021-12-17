@@ -233,28 +233,21 @@ namespace Akka.Actor.Internal
                     foreach (var init in extensions.OfType<IInitializable>())
                         await init.InitializeAsync(cancellationToken);
 
-                    foreach (var init in _extensions.Values
-                        .Where(n => n.IsValueCreated).Select(n => n.Value)
-                        .OfType<IInitializable>().Where(n => !extensions.Contains(n)))
+                    //HACK ensure async init extension until _extensions refactor
+                    var loadingExtensions = new List<string>();
+                    foreach (var entry in _extensions)
                     {
-                        await init.InitializeAsync(cancellationToken);
-                        extensions.Add(init);
-                    }
-
-                    //HACK: await and init lazy extensions
-                    bool dirty;
-                    do
-                    {
-                        dirty = false;
-                        foreach (var init in _extensions.Values
-                            .Select(n => n.Value)
-                            .OfType<IInitializable>().Where(n => !extensions.Contains(n)))
+                        if(!entry.Value.IsValueCreated)
+                        {
+                            loadingExtensions.Add(entry.Key.FullName);                               
+                        } 
+                        else if(entry.Value.Value is IInitializable init)
                         {
                             await init.InitializeAsync(cancellationToken);
-                            extensions.Add(init);
-                            dirty = true;
                         }
-                    } while (dirty);
+                    }
+                    if (loadingExtensions.Count > 0)
+                        Log.Warning($"loading extensions detected: {string.Join(", ", loadingExtensions)}");
                 }
 
                 if (_settings.LogDeadLetters > 0)
