@@ -820,7 +820,6 @@ namespace Akka.Cluster
 
         private IActorRef _coreSupervisor;
         private readonly ClusterSettings _settings;
-        private readonly ILoggingAdapter _log = Context.GetLogger();
 
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _clusterPromise = new TaskCompletionSource<Done>();

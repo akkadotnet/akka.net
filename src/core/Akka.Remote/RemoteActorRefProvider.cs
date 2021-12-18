@@ -9,10 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Annotations;
+using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
@@ -20,7 +22,6 @@ using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
 using Akka.Util.Internal;
-using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -131,11 +132,6 @@ namespace Akka.Remote
         private Internals _internals;
         private ActorSystemImpl _system;
 
-        private Internals RemoteInternals
-        {
-            get { return _internals; }
-        }
-
         private Internals CreateInternals()
         {
             var internals =
@@ -148,12 +144,12 @@ namespace Akka.Remote
         /// <summary>
         /// Remoting system daemon responsible for powering remote deployment capabilities.
         /// </summary>
-        public IInternalActorRef RemoteDaemon { get { return RemoteInternals.RemoteDaemon; } }
+        public IInternalActorRef RemoteDaemon { get { return _internals?.RemoteDaemon; } }
 
         /// <summary>
         /// The remote transport. Wraps all of the underlying physical network transports.
         /// </summary>
-        public RemoteTransport Transport { get { return RemoteInternals.Transport; } }
+        public RemoteTransport Transport { get { return _internals?.Transport; } }
 
         /// <summary>
         /// The remoting settings
@@ -241,7 +237,7 @@ namespace Akka.Remote
             return _local.CreateFutureRef(tcs);
         }
 
-        private IActorRef _remotingTerminator;        
+        private IActorRef _remotingTerminator;
         private IActorRef _remoteWatcher;
 
         private ActorRefResolveThreadLocalCache _actorRefResolveThreadLocalCache;
@@ -268,11 +264,12 @@ namespace Akka.Remote
                     RemoteSettings.ConfigureDispatcher(Props.Create(() => new RemotingTerminator(_local.SystemGuardian))),
                     "remoting-terminator");
 
-            _internals = CreateInternals();                              
+            Volatile.Write(ref _internals, CreateInternals());
 
-            _remotingTerminator.Tell(RemoteInternals);
+            _remotingTerminator.Tell(_internals);
 
             Transport.Start();
+
             _remoteWatcher = CreateRemoteWatcher(system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
         }
@@ -513,7 +510,7 @@ namespace Akka.Remote
         {
             return new RemoteActorRef(Transport, localAddress, actorPath, ActorRefs.Nobody, Props.None, Deploy.None);
         }
-        
+
         /// <summary>
         /// Used to create <see cref="RemoteActorRef"/> instances upon remote deployment to another <see cref="ActorSystem"/>.
         /// </summary>
@@ -543,7 +540,7 @@ namespace Akka.Remote
             if (_actorRefResolveThreadLocalCache == null)
             {
                 // cache not initialized yet, should never happen
-                return InternalResolveActorRef(path); 
+                return InternalResolveActorRef(path);
             }
             return _actorRefResolveThreadLocalCache.Cache.GetOrCompute(path);
         }
@@ -596,7 +593,7 @@ namespace Akka.Remote
         /// <returns>The remote Address, if applicable. If not applicable <c>null</c> may be returned.</returns>
         public Address GetExternalAddressFor(Address address)
         {
-            if (HasAddress(address)) 
+            if (HasAddress(address))
                 return _local.RootPath.Address;
 
             if (string.IsNullOrEmpty(address.Host) || !address.Port.HasValue)
@@ -715,14 +712,11 @@ namespace Akka.Remote
         private class RemotingTerminator : FSM<TerminatorState, Internals>, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
         {
             private readonly IActorRef _systemGuardian;
-            private readonly ILoggingAdapter _log;
+            private ILoggingAdapter _log;
 
             public RemotingTerminator(IActorRef systemGuardian)
             {
                 _systemGuardian = systemGuardian;
-
-                // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
-                _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
                 InitFSM();
             }
 
@@ -732,6 +726,9 @@ namespace Akka.Remote
                 {
                     if (@event.FsmEvent is Internals internals)
                     {
+                        // can't use normal Logger.GetLogger(this IActorContext) here due to https://github.com/akkadotnet/akka.net/issues/4530
+                        _log = Logging.GetLogger(Context.System.EventStream, "remoting-terminator");
+
                         _systemGuardian.Tell(RegisterTerminationHook.Instance);
                         return GoTo(TerminatorState.Idle).Using(internals);
                     }
@@ -755,7 +752,7 @@ namespace Akka.Remote
                     if (@event.StateData != null && @event.FsmEvent is TerminationHookDone)
                     {
                         _log.Info("Remote daemon shut down; proceeding with flushing remote transports.");
-                        @event.StateData.Transport.Shutdown()
+                        _ = @event.StateData.Transport.Shutdown()
                             .ContinueWith(t => TransportShutdown.Instance,
                                 TaskContinuationOptions.ExecuteSynchronously)
                             .PipeTo(Self);

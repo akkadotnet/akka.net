@@ -12,10 +12,10 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
-using Akka.Configuration;
 
 namespace Akka.Remote
 {
@@ -42,7 +42,7 @@ namespace Akka.Remote
     /// (used for forcing all /system level remoting actors onto a dedicated dispatcher)
     /// </summary>
 // ReSharper disable once InconsistentNaming
-    internal sealed class RARP : ExtensionIdProvider<RARP>,  IExtension
+    internal sealed class RARP : ExtensionIdProvider<RARP>, IExtension
     {
         //this is why this extension is called "RARP"
         private readonly IRemoteActorRefProvider _provider;
@@ -186,15 +186,15 @@ namespace Akka.Remote
 
                 try
                 {
-                    var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>();
+                    var addressPromise = new TaskCompletionSource<IList<ProtocolTransportAddressPair>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
                     // tells the EndpointManager to start all transports and bind them to listenable addresses, and then set the results
                     // of this promise to include them.
-                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise)); 
+                    _endpointManager.Tell(new EndpointManager.Listen(addressPromise));
 
                     addressPromise.Task.Wait(Provider.RemoteSettings.StartupTimeout);
                     var akkaProtocolTransports = addressPromise.Task.Result;
-                    if(akkaProtocolTransports.Count==0)
+                    if (akkaProtocolTransports.Count == 0)
                         throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
 

@@ -9,17 +9,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote;
 using Akka.Util;
 using Akka.Util.Internal;
-using Akka.Configuration;
 
 namespace Akka.Cluster
 {
@@ -53,6 +52,8 @@ namespace Akka.Cluster
     /// </summary>
     public class Cluster : IExtension
     {
+        const string ClusterUninitializedMessage = "cluster uninitialized";
+
         /// <summary>
         /// Retrieves the extension from the specified actor system.
         /// </summary>
@@ -131,16 +132,17 @@ namespace Akka.Cluster
 
             Scheduler = CreateScheduler(system);
 
-            // it has to be lazy - otherwise if downing provider will init a cluster itself, it will deadlock
-            _downingProvider = new Lazy<IDowningProvider>(() => Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, system), LazyThreadSafetyMode.ExecutionAndPublication);
-
             //create supervisor for daemons under path "/system/cluster"
             _clusterDaemons = system.SystemActorOf(Props.Create(() => new ClusterDaemon(Settings)).WithDeploy(Deploy.Local), "cluster");
 
             _readView = new ClusterReadView(this);
 
+            _downingProvider = Akka.Cluster.DowningProvider.Load(Settings.DowningProviderType, System);
+
             // force the underlying system to start
             _clusterCore = GetClusterCoreRef().Result;
+
+            _readView.Connect();
 
             system.RegisterOnTermination(Shutdown);
 
@@ -505,7 +507,7 @@ namespace Akka.Cluster
         /// </summary>
         public ExtendedActorSystem System { get; }
 
-        private readonly Lazy<IDowningProvider> _downingProvider;
+        private readonly IDowningProvider _downingProvider;
         private readonly ILoggingAdapter _log;
         private readonly ClusterReadView _readView;
 
@@ -522,7 +524,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        public IDowningProvider DowningProvider => _downingProvider.Value;
+        public IDowningProvider DowningProvider => _downingProvider ?? throw new InvalidOperationException(ClusterUninitializedMessage);
 
         // ========================================================
         // ===================== WORK DAEMONS =====================
@@ -567,17 +569,7 @@ namespace Akka.Cluster
         /// <summary>
         /// TBD
         /// </summary>
-        internal IActorRef ClusterCore
-        {
-            get
-            {
-                if (_clusterCore == null)
-                {
-                    _clusterCore = GetClusterCoreRef().Result;
-                }
-                return _clusterCore;
-            }
-        }
+        internal IActorRef ClusterCore => _clusterCore ?? throw new InvalidOperationException(ClusterUninitializedMessage);
 
         /// <summary>
         /// INTERNAL API.
@@ -624,7 +616,7 @@ namespace Akka.Cluster
             /// <param name="message">The message being logged.</param>
             internal void LogInfo(string message)
             {
-                if(_settings.LogInfo)
+                if (_settings.LogInfo)
                     _log.Info("Cluster Node [{0}] - {1}", _selfAddress, message);
             }
 
