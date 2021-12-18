@@ -213,6 +213,7 @@ namespace Akka.Remote
         public virtual void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
         public Akka.Actor.IActorRef InternalResolveActorRef(string path) { }
         public Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p) { }
+        protected virtual void OnInitialize() { }
         public void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid) { }
         public void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path) { }
         public Akka.Actor.IActorRef ResolveActorRef(string path) { }
