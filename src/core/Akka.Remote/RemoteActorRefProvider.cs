@@ -270,8 +270,14 @@ namespace Akka.Remote
 
             Transport.Start();
 
+            OnInitialize();
+
             _remoteWatcher = CreateRemoteWatcher(system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
+        }
+
+        protected virtual void OnInitialize()
+        {
         }
 
         /// <summary>

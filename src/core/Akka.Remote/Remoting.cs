@@ -196,17 +196,12 @@ namespace Akka.Remote
                     var akkaProtocolTransports = addressPromise.Task.Result;
                     if (akkaProtocolTransports.Count == 0)
                         throw new ConfigurationException(@"No transports enabled under ""akka.remote.enabled-transports""");
-                    _addresses = new HashSet<Address>(akkaProtocolTransports.Select(a => a.Address));
 
-                    IEnumerable<IGrouping<string, ProtocolTransportAddressPair>> tmp =
-                        akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier);
-                    _transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
-                    foreach (var g in tmp)
-                    {
-                        var set = new HashSet<ProtocolTransportAddressPair>(g);
-                        _transportMapping.Add(g.Key, set);
-                    }
+                    var transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
+                    foreach (var g in akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier))
+                        _transportMapping.Add(g.Key, new HashSet<ProtocolTransportAddressPair>(g));
 
+                    _transportMapping = transportMapping;
                     _defaultAddress = akkaProtocolTransports.Head().Address;
                     _addresses = new HashSet<Address>(akkaProtocolTransports.Select(x => x.Address));
 
@@ -214,7 +209,6 @@ namespace Akka.Remote
 
                     _endpointManager.Tell(new EndpointManager.StartupFinished());
                     _eventPublisher.NotifyListeners(new RemotingListenEvent(_addresses.ToList()));
-
                 }
                 catch (TaskCanceledException ex)
                 {

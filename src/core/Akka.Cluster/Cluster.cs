@@ -119,6 +119,10 @@ namespace Akka.Cluster
             if (!(system.Provider is IClusterActorRefProvider provider))
                 throw new ConfigurationException(
                     $"ActorSystem {system} needs to have a 'IClusterActorRefProvider' enabled in the configuration, currently uses {system.Provider.GetType().FullName}");
+            
+            if (provider.Transport.DefaultAddress is null)
+                throw new InvalidOperationException("transport not started");
+            
             SelfUniqueAddress = new UniqueAddress(provider.Transport.DefaultAddress, AddressUidExtension.Uid(system));
 
             _log = Logging.GetLogger(system, "Cluster");
@@ -564,7 +568,7 @@ namespace Akka.Cluster
         }
 
         private readonly IActorRef _clusterDaemons;
-        private IActorRef _clusterCore;
+        private readonly IActorRef _clusterCore;
 
         /// <summary>
         /// TBD
