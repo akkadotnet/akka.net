@@ -199,7 +199,7 @@ namespace Akka.Remote
 
                     var transportMapping = new Dictionary<string, HashSet<ProtocolTransportAddressPair>>();
                     foreach (var g in akkaProtocolTransports.GroupBy(t => t.ProtocolTransport.SchemeIdentifier))
-                        _transportMapping.Add(g.Key, new HashSet<ProtocolTransportAddressPair>(g));
+                        transportMapping.Add(g.Key, new HashSet<ProtocolTransportAddressPair>(g));
 
                     _transportMapping = transportMapping;
                     _defaultAddress = akkaProtocolTransports.Head().Address;
