@@ -240,12 +240,20 @@ namespace Akka.Streams.Tests.Dsl
 
         private static readonly List<int> FieldOffsets = new List<int> {0, 1, 2, 3, 15, 16, 31, 32, 44, 107};
 
-        private static ByteString Encode(ByteString payload, int fieldOffset, int fieldLength, ByteOrder byteOrder)
+        private static ByteString Encode(ByteString payload, int fieldOffset, int fieldLength, ByteOrder byteOrder) =>
+            EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(new byte[fieldOffset]), ByteString.Empty);
+
+        private static ByteString EncodeComplexFrame(
+            ByteString payload, 
+            int fieldLength, 
+            ByteOrder byteOrder, 
+            ByteString offset, 
+            ByteString tail)
         {
             var h = ByteString.FromBytes(new byte[4].PutInt(payload.Count, order: byteOrder));
             var header = byteOrder == ByteOrder.LittleEndian ? h.Slice(0, fieldLength) : h.Slice(4 - fieldLength);
 
-            return ByteString.FromBytes(new byte[fieldOffset]) + header + payload;
+            return offset + header + payload + tail;
         }
 
         [Fact]
@@ -276,6 +284,46 @@ namespace Akka.Streams.Tests.Dsl
                         _helper.WriteLine($"{counter++} from 80 passed");
                     }
                 }
+            }
+        }        
+        
+        [Fact]
+        public void Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets_using_ComputeFrameSize()
+        {
+            foreach (var byteOrder in ByteOrders)
+            foreach (var fieldOffset in FieldOffsets)
+            foreach (var fieldLength in FieldLengths)
+            {
+                int ComputeFrameSize(IReadOnlyList<byte> offset, int length)
+                {
+                    var sizeWithoutTail = offset.Count + fieldLength + length;
+                    return offset.Count > 0 ? offset[0] + sizeWithoutTail : sizeWithoutTail;
+                }
+
+                var random= new Random();
+                byte[] Offset()
+                {
+                    var arr = new byte[fieldOffset];
+                    if (arr.Length > 0) arr[0] = Convert.ToByte(random.Next(128));
+                    return arr;
+                }
+                
+                var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
+                {
+                    var payload = ReferenceChunk.Slice(0, length);
+                    var offsetBytes = Offset();
+                    var tailBytes = offsetBytes.Length > 0 ? new byte[offsetBytes[0]] : Array.Empty<byte>();
+                    return EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(offsetBytes), ByteString.FromBytes(tailBytes));
+                }).ToList();
+
+                var task = Source.From(encodedFrames)
+                    .Via(Rechunk)
+                    .Via(Framing.LengthField(fieldLength, fieldOffset, int.MaxValue, byteOrder, ComputeFrameSize))
+                    .Grouped(10000)
+                    .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
+
+                task.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
+                task.Result.Should().BeEquivalentTo(encodedFrames);
             }
         }
 
@@ -383,6 +431,39 @@ namespace Akka.Streams.Tests.Dsl
             result.Invoking(t => t.AwaitResult())
                 .Should().Throw<Framing.FramingException>()
                 .WithMessage("Decoded frame header reported negative size -4");
+        }
+        
+        [Fact]
+        public void Length_field_based_framing_must_ignore_length_field_value_when_provided_computeFrameSize()
+        {
+            int ComputeFrameSize(IReadOnlyList<byte> offset, int length) => 8;
+
+            var tempArray = new byte[4].PutInt(unchecked((int)0xFF010203), order: ByteOrder.LittleEndian);
+            Array.Resize(ref tempArray, 8);
+            var bs = ByteString.FromBytes(tempArray.PutInt(checked(0x04050607), order: ByteOrder.LittleEndian));
+
+            var result = Source.Single(bs)
+                .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
+                .RunWith(Sink.Seq<ByteString>(), Materializer);
+
+            result.AwaitResult().Should().BeEquivalentTo(ImmutableArray.Create(bs));
+        }
+        
+        [Fact]
+        public void Length_field_based_framing_must_fail_the_stage_on_computeFrameSize_values_less_than_minimum_chunk_size()
+        {
+            int ComputeFrameSize(IReadOnlyList<byte> offset, int length) => 3;
+
+            // A 4-byte message containing only an Int specifying the length of the payload
+            var bytes = ByteString.FromBytes(BitConverter.GetBytes(4));
+            
+            var result = Source.Single(bytes)
+                .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
+                .RunWith(Sink.Seq<ByteString>(), Materializer);
+
+            result.Invoking(t => t.AwaitResult())
+                .Should().Throw<Framing.FramingException>()
+                .WithMessage("Computed frame size 3 is less than minimum chunk size 4");
         }
 
         [Fact]
