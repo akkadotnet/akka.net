@@ -9,7 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text; 
+using System.Text;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Fusing;
@@ -259,72 +260,79 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets()
         {
-            var counter = 1;
-            foreach (var byteOrder in ByteOrders)
+            IEnumerable<Task<(IEnumerable<ByteString>, List<ByteString>, (ByteOrder, int, int))>> GetFutureResults()
             {
+                foreach (var byteOrder in ByteOrders)
                 foreach (var fieldOffset in FieldOffsets)
+                foreach (var fieldLength in FieldLengths)
                 {
-                    foreach (var fieldLength in FieldLengths)
+                    var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
                     {
-                        var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
-                          {
-                              var payload = ReferenceChunk.Slice(0, length);
-                              return Encode(payload, fieldOffset, fieldLength, byteOrder);
-                          }).ToList();
+                        var payload = ReferenceChunk.Slice(0, length);
+                        return Encode(payload, fieldOffset, fieldLength, byteOrder);
+                    }).ToList();
 
-                        var task = Source.From(encodedFrames)
-                            .Via(Rechunk)
-                            .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
-                            .Grouped(10000)
-                            .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
-
-                        task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                        task.Result.Should().BeEquivalentTo(encodedFrames);
-
-                        _helper.WriteLine($"{counter++} from 80 passed");
-                    }
+                    yield return Source.From(encodedFrames)
+                        .Via(Rechunk)
+                        .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
+                        .Grouped(10000)
+                        .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer)
+                        .ContinueWith(t => (t.Result, encodedFrames, (byteOrder, fieldOffset, fieldLength)));
                 }
             }
-        }        
-        
+
+            Parallel.ForEach(GetFutureResults(), async futureResult => 
+            { 
+                var (result, encodedFrames, (byteOrder, fieldOffset, fieldLength)) = await futureResult;
+                result.ShouldBeSame(encodedFrames, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
+            });
+        }
+
         [Fact]
         public void Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets_using_ComputeFrameSize()
         {
-            foreach (var byteOrder in ByteOrders)
-            foreach (var fieldOffset in FieldOffsets)
-            foreach (var fieldLength in FieldLengths)
+            IEnumerable<Task<(IEnumerable<ByteString>, List<ByteString>, (ByteOrder, int, int))>> GetFutureResults()
             {
-                int ComputeFrameSize(IReadOnlyList<byte> offset, int length)
+                foreach (var byteOrder in ByteOrders)
+                foreach (var fieldOffset in FieldOffsets)
+                foreach (var fieldLength in FieldLengths)
                 {
-                    var sizeWithoutTail = offset.Count + fieldLength + length;
-                    return offset.Count > 0 ? offset[0] + sizeWithoutTail : sizeWithoutTail;
+                    int ComputeFrameSize(IReadOnlyList<byte> offset, int length)
+                    {
+                        var sizeWithoutTail = offset.Count + fieldLength + length;
+                        return offset.Count > 0 ? offset[0] + sizeWithoutTail : sizeWithoutTail;
+                    }
+
+                    var random = new Random();
+                    byte[] Offset()
+                    {
+                        var arr = new byte[fieldOffset];
+                        if (arr.Length > 0) arr[0] = Convert.ToByte(random.Next(128));
+                        return arr;
+                    }
+
+                    var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
+                    {
+                        var payload = ReferenceChunk.Slice(0, length);
+                        var offsetBytes = Offset();
+                        var tailBytes = offsetBytes.Length > 0 ? new byte[offsetBytes[0]] : Array.Empty<byte>();
+                        return EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(offsetBytes), ByteString.FromBytes(tailBytes));
+                    }).ToList();
+
+                    yield return Source.From(encodedFrames)
+                        .Via(Rechunk)
+                        .Via(Framing.LengthField(fieldLength, fieldOffset, int.MaxValue, byteOrder, ComputeFrameSize))
+                        .Grouped(10000)
+                        .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer)
+                        .ContinueWith(t => (t.Result, encodedFrames, (byteOrder, fieldOffset, fieldLength)));
                 }
-
-                var random= new Random();
-                byte[] Offset()
-                {
-                    var arr = new byte[fieldOffset];
-                    if (arr.Length > 0) arr[0] = Convert.ToByte(random.Next(128));
-                    return arr;
-                }
-                
-                var encodedFrames = FrameLengths.Where(x => x < 1L << (fieldLength * 8)).Select(length =>
-                {
-                    var payload = ReferenceChunk.Slice(0, length);
-                    var offsetBytes = Offset();
-                    var tailBytes = offsetBytes.Length > 0 ? new byte[offsetBytes[0]] : Array.Empty<byte>();
-                    return EncodeComplexFrame(payload, fieldLength, byteOrder, ByteString.FromBytes(offsetBytes), ByteString.FromBytes(tailBytes));
-                }).ToList();
-
-                var task = Source.From(encodedFrames)
-                    .Via(Rechunk)
-                    .Via(Framing.LengthField(fieldLength, fieldOffset, int.MaxValue, byteOrder, ComputeFrameSize))
-                    .Grouped(10000)
-                    .RunWith(Sink.First<IEnumerable<ByteString>>(), Materializer);
-
-                task.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(encodedFrames);
             }
+
+            Parallel.ForEach(GetFutureResults(), async futureResult => 
+            { 
+                var (result, encodedFrames, (byteOrder, fieldOffset, fieldLength)) = await futureResult;
+                result.ShouldBeSame(encodedFrames, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
+            });
         }
 
         [Fact]
