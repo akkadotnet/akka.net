@@ -1488,6 +1488,7 @@ namespace Akka.Streams.Dsl
     {
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> Delimiter(Akka.IO.ByteString delimiter, int maximumFrameLength, bool allowTruncation = False) { }
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> LengthField(int fieldLength, int maximumFramelength, int fieldOffset = 0, Akka.IO.ByteOrder byteOrder = 1) { }
+        public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> LengthField(int fieldLength, int fieldOffset, int maximumFrameLength, Akka.IO.ByteOrder byteOrder, System.Func<System.Collections.Generic.IReadOnlyList<byte>, int, int> computeFrameSize) { }
         public static Akka.Streams.Dsl.BidiFlow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> SimpleFramingProtocol(int maximumMessageLength) { }
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength) { }
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength) { }
