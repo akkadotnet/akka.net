@@ -7,6 +7,7 @@
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -54,13 +55,17 @@ namespace Akka.Streams.Implementation.IO
 
         private readonly FileInfo _f;
         private readonly TaskCompletionSource<IOResult> _completionPromise;
+        private readonly CancellationTokenSource _cts;
         private readonly long _startPosition;
         private readonly FileMode _fileMode;
         private readonly ILoggingAdapter _log;
-        private readonly WatermarkRequestStrategy _requestStrategy;
+        private readonly FileStreamRequestStrategy _requestStrategy;
         private readonly bool _autoFlush;
         private FileStream _chan;
         private long _bytesWritten;
+        private readonly int _fileBufferSize;
+
+        private const int DefaultFileBufferSize = 4 * 1024; //regular file buffer size
 
         /// <summary>
         /// TBD
@@ -81,13 +86,15 @@ namespace Akka.Streams.Implementation.IO
             bool autoFlush,
             FlushSignaler flushSignaler)
         {
+            _cts = new CancellationTokenSource();
             _f = f;
             _completionPromise = completionPromise;
             _startPosition = startPosition;
             _fileMode = fileMode;
             _autoFlush = autoFlush;
             _log = Context.GetLogger();
-            _requestStrategy = new WatermarkRequestStrategy(highWatermark: bufferSize);
+            _requestStrategy = new FileStreamRequestStrategy(bufferSize);
+            _fileBufferSize = DefaultFileBufferSize; //todo make configurable
 
             if (flushSignaler != null)
                 flushSignaler.FileSubscriber = Self;
@@ -105,10 +112,11 @@ namespace Akka.Streams.Implementation.IO
         {
             try
             {
-                _chan = _f.Open(_fileMode, FileAccess.Write, FileShare.ReadWrite);
+                _chan = new FileStream(_f.ToString(), _fileMode, FileAccess.Write, FileShare.ReadWrite, _fileBufferSize, true);
                 if (_startPosition > 0)
                     _chan.Position = _startPosition;
-                base.PreStart();
+
+                BecomeProcessing();
             }
             catch (Exception ex)
             {
@@ -120,62 +128,120 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
         protected override bool Receive(object message)
         {
-            switch (message)
-            {
-                case OnNext next:
-                    try
-                    {
-                        var byteString = (ByteString)next.Element;
-                        var bytes = byteString.ToArray();
-                        _chan.Write(bytes, 0, bytes.Length);
-                        _bytesWritten += bytes.Length;
-                        if (_autoFlush)
-                            _chan.Flush(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
-                        Cancel();
-                    }
-                    return true;
-
-                case OnError error:
-                    _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
-                    CloseAndComplete(new Try<IOResult>(new AbruptIOTerminationException(IOResult.Success(_bytesWritten), error.Cause)));
-                    Context.Stop(Self);
-                    return true;
-
-                case OnComplete _:
-                    try
-                    {
-                        _chan.Flush(true);
-                    }
-                    catch (Exception ex)
-                    {
-                        CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
-                    }
-                    Context.Stop(Self);
-                    return true;
-
-                case FlushSignal _:
-                    try
-                    {
-                        _chan.Flush();
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error(ex, "Tearing down FileSink({0}). File flush failed.", _f.FullName);
-                        CloseAndComplete(IOResult.Failed(_bytesWritten, ex));
-                        Context.Stop(Self);
-                    }
-                    return true;
-            }
-
             return false;
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        private void BecomeProcessing()
+        {
+            var streamTask = Task.CompletedTask;
+            var bufferedByteString = ByteString.Empty;
+            var requests = 0;
+
+            bool Processing(object message)
+            {
+                switch (message)
+                {
+                    case OnNext next when streamTask.IsCompleted:
+                        {
+                            var bytes = (ByteString)next.Element;
+                            if (bufferedByteString.Count > 0)
+                            {
+                                bytes = bufferedByteString.Concat(bytes);
+                                bufferedByteString = ByteString.Empty;
+                                _requestStrategy.FileBufferCount = 0;
+                            }
+                            streamTask = WriteAsync(bytes, _autoFlush)
+                                .PipeTo(Self, null,
+                                () => new Status.Success(bytes),
+                                ex => new Status.Failure(ex, "write_failed"));
+                            requests++;
+                        }
+                        return true;
+                    case OnNext next:
+                        //stream is busy
+                        bufferedByteString = bufferedByteString.Concat((ByteString)next.Element);
+                        _requestStrategy.FileBufferCount = bufferedByteString.Count / _fileBufferSize;
+                        return true;
+                    case Status.Success msg: //write completed
+                        {
+                            var bytes = (ByteString)msg.Status;
+                            _bytesWritten += bytes.Count;
+                            requests--;
+
+                            if (bufferedByteString.Count > 0)
+                            {
+                                var success = new Status.Success(bufferedByteString);
+                                streamTask = WriteAsync(bufferedByteString, IsCanceled || _autoFlush)
+                                    .PipeTo(Self, null,
+                                    () => success,
+                                    ex => new Status.Failure(ex, "write_failed"));
+                                bufferedByteString = ByteString.Empty;
+                                requests++;
+                            }
+                            else if (IsCanceled && bytes.Count > 0)
+                            {
+                                streamTask = WriteAsync(ByteString.Empty, true)
+                                    .PipeTo(Self, null,
+                                    () => new Status.Success(ByteString.Empty),
+                                    ex => new Status.Failure(ex, "write_failed"));
+                                requests++;
+                            }
+                            else if (IsCanceled && requests == 0)
+                                Context.Stop(Self);
+                        }
+                        return true;
+                    case Status.Failure msg:
+                        CloseAndComplete(IOResult.Failed(_bytesWritten, msg.Cause));
+                        Cancel();
+                        return true;
+                    case OnError error:
+                        _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
+                        CloseAndComplete(new Try<IOResult>(new AbruptIOTerminationException(IOResult.Success(_bytesWritten), error.Cause)));
+                        Context.Stop(Self);
+                        return true;
+                    case OnComplete _:
+                        if (streamTask.IsCompleted)
+                        {
+                            var success = new Status.Success(bufferedByteString);
+                            streamTask = WriteAsync(bufferedByteString, true)
+                                .PipeTo(Self, null,
+                                () => success,
+                                ex => new Status.Failure(ex, "write_failed"));
+                            bufferedByteString = ByteString.Empty;
+                            requests++;
+                        }
+                        return true;
+                    case FlushSignal msg:
+                        if (!streamTask.IsCompleted)
+                            _ = streamTask.PipeTo(Self, null, () => msg);
+                        else
+                        {
+                            streamTask = WriteAsync(ByteString.Empty, true)
+                                .PipeTo(Self, null,
+                                () => new Status.Success(ByteString.Empty),
+                                ex => new Status.Failure(ex, "write_failed"));
+                            requests++;
+                        }
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+            Become(Processing);
+
+            async Task WriteAsync(ByteString byteString, bool flush)
+            {
+                if (byteString.Count > 0)
+                    await byteString.WriteToAsync(_chan, _cts.Token).ConfigureAwait(false);
+
+                if (flush)
+                    await _chan.FlushAsync(_cts.Token).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
@@ -183,12 +249,15 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         protected override void PostStop()
         {
+            _cts.Cancel();
+
             CloseAndComplete(IOResult.Success(_bytesWritten));
-            base.PostStop();
         }
 
         private void CloseAndComplete(Try<IOResult> result)
         {
+            _cts.Cancel();
+
             try
             {
                 // close the channel/file before completing the promise, allowing the
@@ -196,9 +265,9 @@ namespace Akka.Streams.Implementation.IO
                 // file is still open for writing
                 _chan?.Dispose();
 
-                if (result.IsSuccess) 
+                if (result.IsSuccess)
                     _completionPromise.SetResult(result.Success.Value);
-                else 
+                else
                     _completionPromise.SetException(result.Failure.Value);
             }
             catch (Exception ex)
@@ -211,6 +280,20 @@ namespace Akka.Streams.Implementation.IO
         {
             public static readonly FlushSignal Instance = new FlushSignal();
             private FlushSignal() { }
+        }
+
+        sealed class FileStreamRequestStrategy : MaxInFlightRequestStrategy
+        {
+            public FileStreamRequestStrategy(int max) : base(max)
+            {
+            }
+
+            /// <summary>
+            /// How many complete file stream buffers are queued
+            /// </summary>
+            public int FileBufferCount { get; set; }
+
+            public override int InFlight => FileBufferCount;
         }
     }
 

@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.IO
@@ -529,6 +530,22 @@ namespace Akka.IO
             foreach (var buffer in _buffers)
             {
                 await stream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count);
+            }
+        }
+
+        /// <summary>
+        /// Asynchronously copies content of the current <see cref="ByteString"/> 
+        /// to a provided writeable <paramref name="stream"/>.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="cancellationToken"></param>
+        public async Task WriteToAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            foreach (var buffer in _buffers)
+            {
+                await stream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, cancellationToken);
             }
         }
 
