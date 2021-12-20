@@ -1,9 +1,23 @@
-#### 1.4.30 December 13 2021 ####
+#### 1.4.31 December 20 2021 ####
+Akka.NET v1.4.30 is a minor release that contains some bug fixes.
+
+Akka.NET v1.4.30 contained a breaking change that broke binary compatibility with all Akka.DI plugins.
+Even though those plugins are deprecated that change is not compatible with our SemVer standards 
+and needed to be reverted. We regret the error.
+
+Bug fixes:
+* [Akka: Reverted Props code refactor](https://github.com/akkadotnet/akka.net/pull/5454)
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 9 | 2 | Gregorius Soedharmo |
+
+#### 1.4.30 December 20 2021 ####
 Akka.NET v1.4.30 is a minor release that contains some enhancements for Akka.Streams and some bug fixes.
 
 New features:
 * [Akka: Added StringBuilder pooling in NewtonsoftJsonSerializer](https://github.com/akkadotnet/akka.net/pull/4929)
-* [Akka.TestKint: Added InverseFishForMessage](https://github.com/akkadotnet/akka.net/pull/5430)
+* [Akka.TestKit: Added InverseFishForMessage](https://github.com/akkadotnet/akka.net/pull/5430)
 * [Akka.Streams: Added custom frame sized Flow to Framing](https://github.com/akkadotnet/akka.net/pull/5444)
 * [Akka.Streams: Allow Stream to be consumed as IAsyncEnumerable](https://github.com/akkadotnet/akka.net/pull/4742) 
 
