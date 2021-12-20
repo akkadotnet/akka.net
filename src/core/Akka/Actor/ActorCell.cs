@@ -154,7 +154,11 @@ namespace Akka.Actor
         /// TBD
         /// </summary>
         internal bool ActorHasBeenCleared { get { return _actorHasBeenCleared; } }
-        
+        /// <summary>
+        /// TBD
+        /// </summary>
+        internal static Props TerminatedProps { get; } = new TerminatedProps();
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -422,7 +426,7 @@ namespace Akka.Actor
         protected void ClearActorCell()
         {
             UnstashAll();
-            _props = Props.Terminated;
+            _props = TerminatedProps;
         }
 
         /// <summary>

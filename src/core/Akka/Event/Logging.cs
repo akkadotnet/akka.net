@@ -105,12 +105,14 @@ namespace Akka.Event
 
         public static string FromActorRef(IActorRef a, ActorSystem system)
         {
-            Address address = null;
-            if (system is ExtendedActorSystem extendedSystem && !(extendedSystem.Provider is null))
-                address = extendedSystem.Provider.DefaultAddress;
-
-            // maybe the ActorSystem (remoting) is not completely started yet
-            return address is null ? a.Path.ToString() : a.Path.ToStringWithAddress(address);
+            try
+            {
+                return a.Path.ToStringWithAddress(system.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress);
+            }
+            catch // can fail if the ActorSystem (remoting) is not completely started yet
+            {
+                return a.Path.ToString();
+            }
         }
     }
 
