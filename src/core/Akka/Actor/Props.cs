@@ -328,8 +328,7 @@ namespace Akka.Actor
             var newExpression = factory.Body as NewExpression
                 ?? throw new ArgumentException("The create function must be a 'new T (args)' expression");
 
-            var args = newExpression.GetArguments();
-            args = args.Length > 0 ? args : NoArgs;
+            var args = newExpression.Arguments.Count > 0 ? newExpression.GetArguments() : NoArgs;
 
             return new Props(ActivatorProducer.Instance, DefaultDeploy, typeof(TActor), args) { SupervisorStrategy = supervisorStrategy };
         }
