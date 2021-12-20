@@ -562,29 +562,38 @@ namespace Akka.Dispatch
 
             public void Run()
             {
-                var sched = _dispatcher.ShutdownSchedule;
-                if (sched == Scheduled)
+                var spin = new SpinWait();
+
+                while (true)
                 {
-                    try
+                    var sched = _dispatcher.ShutdownSchedule;
+                    if (sched == Scheduled)
                     {
-                        if (_dispatcher.Inhabitants == 0) _dispatcher.Shutdown(); // Warning, racy
-                    }
-                    finally
-                    {
-                        if (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled))
+                        try
                         {
-                            var spin = new SpinWait();
+                            if (_dispatcher.Inhabitants == 0)
+                                _dispatcher.Shutdown(); // Warning, racy
+                        }
+                        finally
+                        {
                             while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled))
-                            {
                                 spin.SpinOnce();
-                            }
+                        }
+                        return;
+                    }
+                    else if (sched == Rescheduled)
+                    {
+                        if (_dispatcher.UpdateShutdownSchedule(Rescheduled, Scheduled))
+                        {
+                            _dispatcher.ScheduleShutdownAction();
+                            return;
                         }
                     }
-                }
-                else if (sched == Rescheduled)
-                {
-                    if (_dispatcher.UpdateShutdownSchedule(Rescheduled, Scheduled)) _dispatcher.ScheduleShutdownAction();
-                    else Run();
+                    else
+                    {
+                        return;
+                    }
+                    spin.SpinOnce();
                 }
             }
         }
