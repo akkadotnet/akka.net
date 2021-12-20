@@ -20,12 +20,14 @@ namespace Akka.Tests.Actor.Scheduler
     public class DefaultScheduler_ActionScheduler_Schedule_Tests : AkkaSpec
     {
         [Theory]
-        [InlineData(10, 1000)]
+        [InlineData(16, 1000)]
         public void ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
         {
             // Prepare, set up actions to be fired
             IActionScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);
-
+            scheduler.ScheduleOnce(16, () => TestActor.Tell("started"));
+            ExpectMsg("started", TimeSpan.FromSeconds(1));
+            
             try
             {
                 var cancelable = new Cancelable(Sys.Scheduler);
@@ -37,7 +39,7 @@ namespace Akka.Tests.Actor.Scheduler
                     dsl.Receive<string>((s, context) =>
                     {
                         messages.Add(context.System.Scheduler.Now);
-                        if (messages.Count == 3)
+                        if (messages.Count == 4)
                         {
                             TestActor.Tell(messages);
                             cancelable.Cancel();
@@ -45,25 +47,27 @@ namespace Akka.Tests.Actor.Scheduler
                         }
                     });
                 });
+                receiver.Tell("");
                 scheduler.ScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(""), cancelable);
 
                 //Expect to get a list from receiver after it has received three messages
                 var dateTimeOffsets = ExpectMsg<List<DateTimeOffset>>();
-                dateTimeOffsets.ShouldHaveCount(3);
-                Action<int, int> validate = (a, b) =>
+                dateTimeOffsets.ShouldHaveCount(4);
+                Action<int, int, int, double> validate = (a, b, i, d) =>
                 {
                     var valA = dateTimeOffsets[a];
                     var valB = dateTimeOffsets[b];
                     var diffBetweenMessages = Math.Abs((valB - valA).TotalMilliseconds);
-                    var diffInMs = Math.Abs(diffBetweenMessages - interval);
-                    var deviate = (diffInMs/interval);
-                    deviate.Should(val => val < 0.1,
+                    var diffInMs = Math.Abs(diffBetweenMessages - i);
+                    var deviate = (diffInMs/i);
+                    deviate.Should(val => val < d,
                         string.Format(
                             "Expected the interval between message {1} and {2} to deviate maximum 10% from {0}. It was {3} ms between the messages. It deviated {4}%",
-                            interval, a + 1, b + 1, diffBetweenMessages, deviate*100));
+                            i, a + 1, b + 1, diffBetweenMessages, deviate*100));
                 };
-                validate(0, 1);
-                validate(1, 2);
+                validate(0, 1, initialDelay, 1.0);
+                validate(1, 2, interval, 0.1);
+                validate(2, 3, interval, 0.1);
             }
             finally
             {
