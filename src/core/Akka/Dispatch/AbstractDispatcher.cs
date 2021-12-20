@@ -448,7 +448,7 @@ namespace Akka.Dispatch
         /// <summary>
         /// The number of actors attached to this <see cref="MessageDispatcher"/>
         /// </summary>
-        protected long Inhabitants => Volatile.Read(ref _inhabitantsDoNotCallMeDirectly);
+        protected long Inhabitants => _inhabitantsDoNotCallMeDirectly;
 
         private long AddInhabitants(long add)
         {
@@ -465,7 +465,7 @@ namespace Akka.Dispatch
             return ret;
         }
 
-        private int ShutdownSchedule => Volatile.Read(ref _shutdownScheduleDoNotCallMeDirectly);
+        private int ShutdownSchedule => _shutdownScheduleDoNotCallMeDirectly;
 
         private bool UpdateShutdownSchedule(int expected, int update)
         {
@@ -572,7 +572,14 @@ namespace Akka.Dispatch
                     }
                     finally
                     {
-                        while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled)) { }
+                        if(!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled))
+                        {
+                            var spin = new SpinWait();
+                            while (!_dispatcher.UpdateShutdownSchedule(_dispatcher.ShutdownSchedule, Unscheduled))
+                            {
+                                spin.SpinOnce();
+                            }
+                        }
                     }
                 }
                 else if (sched == Rescheduled)
