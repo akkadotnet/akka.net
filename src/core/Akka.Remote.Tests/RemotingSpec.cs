@@ -412,7 +412,7 @@ namespace Akka.Remote.Tests
         {
             try
             {
-                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>(), typeof(Echo2)), "echo");
+                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
             }
             finally
@@ -426,7 +426,7 @@ namespace Akka.Remote.Tests
         {
             try
             {
-                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>(), typeof(Echo2)), "echo");
+                var r = Sys.ActorOf(Props.CreateBy(new TestResolver<Echo2>()), "echo");
                 Assert.Equal("akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo", r.Path.ToString());
                 r.Tell("ping", TestActor);
                 ExpectMsg(("pong", TestActor), TimeSpan.FromSeconds(1.5));
@@ -911,11 +911,8 @@ namespace Akka.Remote.Tests
                 _args = args;
             }
 
-            public ActorBase Produce(Props props)
+            public ActorBase Produce()
             {
-                if (props.Type != ActorType)
-                    throw new InvalidOperationException("invalid actor type");
-
                 return (ActorBase)Activator.CreateInstance(ActorType, _args);
             }
 
