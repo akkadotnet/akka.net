@@ -249,23 +249,22 @@ namespace Akka.Streams.Implementation.IO
                 }
             }
             Become(Processing);
-
-            async Task WriteAsync(IActorRef self, ByteString byteString, bool flush)
+        }
+        private async Task WriteAsync(IActorRef self, ByteString byteString, bool flush)
+        {
+            try
             {
-                try
-                {
-                    if (byteString.Count > 0)
-                        await byteString.WriteToAsync(_chan, _cts.Token).ConfigureAwait(false);
+                if (byteString.Count > 0)
+                    await byteString.WriteToAsync(_chan, _cts.Token).ConfigureAwait(false);
 
-                    if (flush)
-                        await _chan.FlushAsync(_cts.Token).ConfigureAwait(false);
+                if (flush)
+                    await _chan.FlushAsync(_cts.Token).ConfigureAwait(false);
 
-                    self.Tell(new Status.Success(byteString));
-                } 
-                catch(Exception ex)
-                {
-                    self.Tell(new Status.Failure(ex, "write_failed"));
-                }
+                self.Tell(new Status.Success(byteString));
+            }
+            catch (Exception ex)
+            {
+                self.Tell(new Status.Failure(ex, "write_failed"));
             }
         }
 
