@@ -131,14 +131,16 @@ namespace Akka.Streams.Tests.Dsl
             var probe = this.CreatePublisherProbe<int>();
             var task = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
             materializer.Shutdown();
-            Func<Task> a = async () =>
+
+            async Task ShouldThrow()
             {
                 await foreach (var a in task)
                 {
                     
                 }
-            };
-            a.ShouldThrow<IllegalStateException>();
+            }
+            
+            await Assert.ThrowsAsync<IllegalStateException>(ShouldThrow);
         }
         
         
