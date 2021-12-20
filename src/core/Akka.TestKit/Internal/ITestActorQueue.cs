@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Akka.TestKit.Internal
@@ -37,5 +38,11 @@ namespace Akka.TestKit.Internal
         /// </summary>
         /// <returns>TBD</returns>
         IEnumerable<T> GetAll();
+
+        /// <summary>
+        /// TestPrope should terminate
+        /// </summary>
+        /// <param name="reason"></param>
+        void Terminate(Exception reason);
     }
 }

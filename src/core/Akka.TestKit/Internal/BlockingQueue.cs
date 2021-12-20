@@ -121,7 +121,6 @@ namespace Akka.TestKit.Internal
             return positionArray.Select(positioned => positioned.Value).ToList();
         }
 
-
         private class Positioned
         {
             private readonly T _value;

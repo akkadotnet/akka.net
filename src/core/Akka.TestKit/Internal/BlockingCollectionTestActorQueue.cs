@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 
 namespace Akka.TestKit.Internal
@@ -15,17 +16,19 @@ namespace Akka.TestKit.Internal
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
     /// <typeparam name="T">The type of item to store.</typeparam>
-    public class BlockingCollectionTestActorQueue<T> : ITestActorQueue<T>
+    public sealed class BlockingCollectionTestActorQueue<T> : ITestActorQueue<T>
     {
         private readonly BlockingQueue<T> _queue;
+        private readonly Action<Exception> _terminate;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockingCollectionTestActorQueue{T}"/> class.
         /// </summary>
         /// <param name="queue">The queue to use as the backing store.</param>
-        public BlockingCollectionTestActorQueue(BlockingQueue<T> queue)
+        public BlockingCollectionTestActorQueue(BlockingQueue<T> queue, Action<Exception> terminate)
         {
             _queue = queue;
+            _terminate = terminate;
         }
 
         /// <summary>
@@ -62,6 +65,11 @@ namespace Akka.TestKit.Internal
             {
                 yield return item;
             }
+        }
+
+        public void Terminate(Exception reason)
+        {
+            _terminate?.Invoke(reason);
         }
     }
 }

@@ -114,5 +114,12 @@ namespace Akka.TestKit.Internal
                 Context.System.DeadLetters.Tell(new DeadLetter(message, messageSender, self), messageSender);
             }
         }
+
+        protected override void PreRestart(Exception reason, object message)
+        {
+            _queue.Terminate(reason);
+
+            base.PreRestart(reason, message);
+        }
     }
 }
