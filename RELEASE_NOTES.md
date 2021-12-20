@@ -1,6 +1,10 @@
 #### 1.4.31 December 20 2021 ####
 Akka.NET v1.4.30 is a minor release that contains some bug fixes.
 
+Akka.NET v1.4.30 contained a breaking change that broke binary compatibility with all Akka.DI plugins.
+Even though those plugins are deprecated that change is not compatible with our SemVer standards 
+and needed to be reverted. We regret the error.
+
 Bug fixes:
 * [Akka: Reverted Props code refactor](https://github.com/akkadotnet/akka.net/pull/5454)
 
