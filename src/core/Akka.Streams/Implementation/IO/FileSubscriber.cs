@@ -61,10 +61,14 @@ namespace Akka.Streams.Implementation.IO
         private readonly ILoggingAdapter _log;
         private readonly FileStreamRequestStrategy _requestStrategy;
         private readonly bool _autoFlush;
-        private FileStream _chan;
-        private long _bytesWritten;
         private readonly int _fileBufferSize;
+        private FileStream _chan;
+        private long _bytesWritten;        
         private Exception _upstreamError;
+        private Task _streamTask = Task.CompletedTask;
+        private ByteString _bufferedByteString = ByteString.Empty;
+        private int _fileRequests = 0;
+        private bool _flushRequested = false;
 
         private const int DefaultFileBufferSize = 4 * 1024; //regular file buffer size
 
@@ -116,8 +120,6 @@ namespace Akka.Streams.Implementation.IO
                 _chan = new FileStream(_f.ToString(), _fileMode, FileAccess.Write, FileShare.ReadWrite, _fileBufferSize, true);
                 if (_startPosition > 0)
                     _chan.Position = _startPosition;
-
-                BecomeProcessing();
             }
             catch (Exception ex)
             {
@@ -131,125 +133,95 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         protected override bool Receive(object message)
         {
-            return false;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        private void BecomeProcessing()
-        {
-            var streamTask = Task.CompletedTask;
-            var bufferedByteString = ByteString.Empty;
-            var requests = 0;
-            var flushRequested = false;
-
-            bool Processing(object message)
+            switch (message)
             {
-                switch (message)
-                {
-                    case OnNext next when requests == 0:
+                case OnNext next when _fileRequests == 0:
+                    {
+                        var bytes = (ByteString)next.Element;
+                        if (_bufferedByteString.Count > 0)
                         {
-                            var bytes = (ByteString)next.Element;
-                            if (bufferedByteString.Count > 0)
-                            {
-                                bytes = bufferedByteString.Concat(bytes);
-                                bufferedByteString = ByteString.Empty;
-                                _requestStrategy.FileBufferCount = 0;
-                            }
-                            streamTask = WriteAsync(Self, bytes, _autoFlush);
-                            requests++;
+                            bytes = _bufferedByteString.Concat(bytes);
+                            _bufferedByteString = ByteString.Empty;
+                            _requestStrategy.FileBufferCount = 0;
                         }
-                        return true;
-                    case OnNext next:
-                        //stream is busy
-                        bufferedByteString = bufferedByteString.Concat((ByteString)next.Element);
-                        _requestStrategy.FileBufferCount = bufferedByteString.Count / _fileBufferSize;
-                        return true;
-                    case Status.Success msg: //write completed
-                        {
-                            var bytes = (ByteString)msg.Status;
-                            _bytesWritten += bytes.Count;
-                            requests--;
-                            System.Diagnostics.Debug.Assert(requests == 0);
+                        _streamTask = WriteAsync(Self, bytes, _autoFlush);
+                        _fileRequests++;
+                    }
+                    return true;
+                case OnNext next:
+                    //stream is busy
+                    _bufferedByteString = _bufferedByteString.Concat((ByteString)next.Element);
+                    _requestStrategy.FileBufferCount = _bufferedByteString.Count / _fileBufferSize;
+                    return true;
+                case Status.Success msg: //write completed
+                    {
+                        var bytes = (ByteString)msg.Status;
+                        _bytesWritten += bytes.Count;
+                        _fileRequests--;
+                        //System.Diagnostics.Debug.Assert(_fileRequests == 0);
 
-                            if (bufferedByteString.Count > 0 || flushRequested)
-                            {
-                                streamTask = WriteAsync(Self, bufferedByteString, _autoFlush || flushRequested || IsCanceled);
-                                bufferedByteString = ByteString.Empty;
-                                requests++;
-                                flushRequested = false;
-                            }
-                            else if (IsCanceled && bytes.Count > 0)
-                            {
-                                streamTask = WriteAsync(Self, ByteString.Empty, true);
-                                requests++;
-                            }
-                            else if (IsCanceled && requests == 0)
-                            {
-                                // close the channel/ file before completing the promise, allowing the
-                                // file to be deleted, which would not work (on some systems) if the
-                                // file is still open for writing
-                                _chan?.Dispose();
+                        if (_bufferedByteString.Count > 0 || _flushRequested)
+                        {
+                            _streamTask = WriteAsync(Self, _bufferedByteString, _autoFlush || _flushRequested || IsCanceled);
+                            _bufferedByteString = ByteString.Empty;
+                            _requestStrategy.FileBufferCount = 0;
+                            _flushRequested = false;
+                            _fileRequests++;                            
+                        }
+                        else if (IsCanceled && _fileRequests == 0)
+                        {
+                            // close the channel/ file before completing the promise, allowing the
+                            // file to be deleted, which would not work (on some systems) if the
+                            // file is still open for writing
+                            _chan?.Dispose();
 
-                                var result = IOResult.Success(_bytesWritten);
-                                if (_upstreamError is null)
-                                    _completionPromise.SetResult(result);
-                                else
-                                    _completionPromise.SetException(new AbruptIOTerminationException(result, _upstreamError));
+                            var result = IOResult.Success(_bytesWritten);
+                            if (_upstreamError is null)
+                                _completionPromise.SetResult(result);
+                            else
+                                _completionPromise.SetException(new AbruptIOTerminationException(result, _upstreamError));
 
-                                Context.Stop(Self);
-                            }
+                            Context.Stop(Self);
                         }
-                        return true;
-                    case Status.Failure msg:
-                        requests--;
-                        // close the channel/ file before completing the promise, allowing the
-                        // file to be deleted, which would not work (on some systems) if the
-                        // file is still open for writing
-                        _chan?.Dispose();
-                        _completionPromise.SetResult(IOResult.Failed(_bytesWritten, msg.Cause));
-                        Cancel();
-                        return true;
-                    case OnError error:
-                        _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
-                        _upstreamError = error.Cause;
-                        if (requests == 0)
-                        {
-                            streamTask = WriteAsync(Self, bufferedByteString, true);
-                            bufferedByteString = ByteString.Empty;
-                            requests++;
-                        }
-                        return true;
-                    case OnComplete _:
-                        if (requests == 0)
-                        {
-                            streamTask = WriteAsync(Self, bufferedByteString, true);
-                            bufferedByteString = ByteString.Empty;
-                            requests++;
-                        }
-                        return true;
-                    case FlushSignal msg:
-                        if (_autoFlush) 
-                            return true;
-
-                        if (requests == 0)
-                        {
-                            streamTask = WriteAsync(Self, bufferedByteString, true);
-                            bufferedByteString = ByteString.Empty;
-                            requests++;
-                        } 
-                        else
-                        {
-                            flushRequested = true;
-                        }
-                        return true;
-                    default:
-                        return false;
-                }
+                    }
+                    return true;
+                case Status.Failure msg:
+                    _fileRequests--;
+                    // close the channel/ file before completing the promise, allowing the
+                    // file to be deleted, which would not work (on some systems) if the
+                    // file is still open for writing
+                    _chan?.Dispose();
+                    _completionPromise.SetResult(IOResult.Failed(_bytesWritten, msg.Cause));
+                    Cancel();
+                    return true;
+                case OnError error:
+                    _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
+                    _upstreamError = error.Cause;
+                    RequestFlush();
+                    return true;
+                case OnComplete _:
+                    _flushRequested = true;
+                    RequestFlush();
+                    return true;
+                case FlushSignal _:
+                    if (!_autoFlush)
+                        RequestFlush();
+                    return true;
+                default:
+                    return false;
             }
-            Become(Processing);
         }
+
+        private void RequestFlush()
+        {
+            _flushRequested = true;
+            if (_fileRequests == 0)
+            {
+                Self.Tell(new Status.Success(ByteString.Empty));
+                _fileRequests++;
+            }
+        }
+
         private async Task WriteAsync(IActorRef self, ByteString byteString, bool flush)
         {
             try
