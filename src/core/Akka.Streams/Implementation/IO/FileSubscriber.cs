@@ -142,12 +142,13 @@ namespace Akka.Streams.Implementation.IO
             var streamTask = Task.CompletedTask;
             var bufferedByteString = ByteString.Empty;
             var requests = 0;
+            var flushRequested = false;
 
             bool Processing(object message)
             {
                 switch (message)
                 {
-                    case OnNext next when requests == 0 && streamTask.IsCompleted:
+                    case OnNext next when requests == 0:
                         {
                             var bytes = (ByteString)next.Element;
                             if (bufferedByteString.Count > 0)
@@ -156,10 +157,7 @@ namespace Akka.Streams.Implementation.IO
                                 bufferedByteString = ByteString.Empty;
                                 _requestStrategy.FileBufferCount = 0;
                             }
-                            streamTask = WriteAsync(bytes, _autoFlush)
-                                .PipeTo(Self, null,
-                                () => new Status.Success(bytes),
-                                ex => new Status.Failure(ex, "write_failed"));
+                            streamTask = WriteAsync(Self, bytes, _autoFlush);
                             requests++;
                         }
                         return true;
@@ -173,23 +171,18 @@ namespace Akka.Streams.Implementation.IO
                             var bytes = (ByteString)msg.Status;
                             _bytesWritten += bytes.Count;
                             requests--;
+                            System.Diagnostics.Debug.Assert(requests == 0);
 
-                            if (bufferedByteString.Count > 0)
+                            if (bufferedByteString.Count > 0 || flushRequested)
                             {
-                                var success = new Status.Success(bufferedByteString);
-                                streamTask = WriteAsync(bufferedByteString, IsCanceled || _autoFlush)
-                                    .PipeTo(Self, null,
-                                    () => success,
-                                    ex => new Status.Failure(ex, "write_failed"));
+                                streamTask = WriteAsync(Self, bufferedByteString, _autoFlush || flushRequested || IsCanceled);
                                 bufferedByteString = ByteString.Empty;
                                 requests++;
+                                flushRequested = false;
                             }
                             else if (IsCanceled && bytes.Count > 0)
                             {
-                                streamTask = WriteAsync(ByteString.Empty, true)
-                                    .PipeTo(Self, null,
-                                    () => new Status.Success(ByteString.Empty),
-                                    ex => new Status.Failure(ex, "write_failed"));
+                                streamTask = WriteAsync(Self, ByteString.Empty, true);
                                 requests++;
                             }
                             else if (IsCanceled && requests == 0)
@@ -221,39 +214,34 @@ namespace Akka.Streams.Implementation.IO
                     case OnError error:
                         _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
                         _upstreamError = error.Cause;
-                        if (streamTask.IsCompleted)
+                        if (requests == 0)
                         {
-                            var success = new Status.Success(bufferedByteString);
-                            streamTask = WriteAsync(bufferedByteString, true)
-                                .PipeTo(Self, null,
-                                () => success,
-                                ex => new Status.Failure(ex, "write_failed"));
+                            streamTask = WriteAsync(Self, bufferedByteString, true);
                             bufferedByteString = ByteString.Empty;
                             requests++;
                         }
                         return true;
                     case OnComplete _:
-                        if (streamTask.IsCompleted)
+                        if (requests == 0)
                         {
-                            var success = new Status.Success(bufferedByteString);
-                            streamTask = WriteAsync(bufferedByteString, true)
-                                .PipeTo(Self, null,
-                                () => success,
-                                ex => new Status.Failure(ex, "write_failed"));
+                            streamTask = WriteAsync(Self, bufferedByteString, true);
                             bufferedByteString = ByteString.Empty;
                             requests++;
                         }
                         return true;
                     case FlushSignal msg:
-                        if (!streamTask.IsCompleted)
-                            _ = streamTask.PipeTo(Self, null, () => msg);
+                        if (_autoFlush) 
+                            return true;
+
+                        if (requests == 0)
+                        {
+                            streamTask = WriteAsync(Self, bufferedByteString, true);
+                            bufferedByteString = ByteString.Empty;
+                            requests++;
+                        } 
                         else
                         {
-                            streamTask = WriteAsync(ByteString.Empty, true)
-                                .PipeTo(Self, null,
-                                () => new Status.Success(ByteString.Empty),
-                                ex => new Status.Failure(ex, "write_failed"));
-                            requests++;
+                            flushRequested = true;
                         }
                         return true;
                     default:
@@ -262,13 +250,22 @@ namespace Akka.Streams.Implementation.IO
             }
             Become(Processing);
 
-            async Task WriteAsync(ByteString byteString, bool flush)
+            async Task WriteAsync(IActorRef self, ByteString byteString, bool flush)
             {
-                if (byteString.Count > 0)
-                    await byteString.WriteToAsync(_chan, _cts.Token).ConfigureAwait(false);
+                try
+                {
+                    if (byteString.Count > 0)
+                        await byteString.WriteToAsync(_chan, _cts.Token).ConfigureAwait(false);
 
-                if (flush)
-                    await _chan.FlushAsync(_cts.Token).ConfigureAwait(false);
+                    if (flush)
+                        await _chan.FlushAsync(_cts.Token).ConfigureAwait(false);
+
+                    self.Tell(new Status.Success(byteString));
+                } 
+                catch(Exception ex)
+                {
+                    self.Tell(new Status.Failure(ex, "write_failed"));
+                }
             }
         }
 
@@ -279,7 +276,6 @@ namespace Akka.Streams.Implementation.IO
         {
             _cts.Cancel();
             _chan?.Dispose();
-
             _completionPromise.TrySetCanceled();
         }
 

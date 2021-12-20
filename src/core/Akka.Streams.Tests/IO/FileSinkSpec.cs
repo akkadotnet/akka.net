@@ -230,6 +230,7 @@ namespace Akka.Streams.Tests.IO
                     var completion2 = Write(testLinesPart2, startPosition);
                     var result2 = completion2.AwaitResult(Remaining);
 
+                    f.Refresh();
                     f.Length.ShouldBe(startPosition + result2.Count);
 
                     AwaitAssert(
