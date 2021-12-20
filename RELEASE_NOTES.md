@@ -4,6 +4,9 @@ Akka.NET v1.4.30 is a minor release that contains some bug fixes.
 Bug fixes:
 * [Akka: Reverted Props code refactor](https://github.com/akkadotnet/akka.net/pull/5454)
 
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 9 | 2 | Gregorius Soedharmo |
 
 #### 1.4.30 December 20 2021 ####
 Akka.NET v1.4.30 is a minor release that contains some enhancements for Akka.Streams and some bug fixes.
