@@ -64,6 +64,7 @@ namespace Akka.Streams.Implementation.IO
         private FileStream _chan;
         private long _bytesWritten;
         private readonly int _fileBufferSize;
+        private Exception _upstreamError;
 
         private const int DefaultFileBufferSize = 4 * 1024; //regular file buffer size
 
@@ -120,7 +121,7 @@ namespace Akka.Streams.Implementation.IO
             }
             catch (Exception ex)
             {
-                CloseAndComplete(new Try<IOResult>(ex));
+                _completionPromise.SetException(ex);
                 Cancel();
             }
         }
@@ -146,7 +147,7 @@ namespace Akka.Streams.Implementation.IO
             {
                 switch (message)
                 {
-                    case OnNext next when streamTask.IsCompleted:
+                    case OnNext next when requests == 0 && streamTask.IsCompleted:
                         {
                             var bytes = (ByteString)next.Element;
                             if (bufferedByteString.Count > 0)
@@ -192,17 +193,44 @@ namespace Akka.Streams.Implementation.IO
                                 requests++;
                             }
                             else if (IsCanceled && requests == 0)
+                            {
+                                // close the channel/ file before completing the promise, allowing the
+                                // file to be deleted, which would not work (on some systems) if the
+                                // file is still open for writing
+                                _chan?.Dispose();
+
+                                var result = IOResult.Success(_bytesWritten);
+                                if (_upstreamError is null)
+                                    _completionPromise.SetResult(result);
+                                else
+                                    _completionPromise.SetException(new AbruptIOTerminationException(result, _upstreamError));
+
                                 Context.Stop(Self);
+                            }
                         }
                         return true;
                     case Status.Failure msg:
-                        CloseAndComplete(IOResult.Failed(_bytesWritten, msg.Cause));
+                        requests--;
+                        // close the channel/ file before completing the promise, allowing the
+                        // file to be deleted, which would not work (on some systems) if the
+                        // file is still open for writing
+                        _chan?.Dispose();
+                        _completionPromise.SetResult(IOResult.Failed(_bytesWritten, msg.Cause));
                         Cancel();
                         return true;
                     case OnError error:
                         _log.Error(error.Cause, "Tearing down FileSink({0}) due to upstream error", _f.FullName);
-                        CloseAndComplete(new Try<IOResult>(new AbruptIOTerminationException(IOResult.Success(_bytesWritten), error.Cause)));
-                        Context.Stop(Self);
+                        _upstreamError = error.Cause;
+                        if (streamTask.IsCompleted)
+                        {
+                            var success = new Status.Success(bufferedByteString);
+                            streamTask = WriteAsync(bufferedByteString, true)
+                                .PipeTo(Self, null,
+                                () => success,
+                                ex => new Status.Failure(ex, "write_failed"));
+                            bufferedByteString = ByteString.Empty;
+                            requests++;
+                        }
                         return true;
                     case OnComplete _:
                         if (streamTask.IsCompleted)
@@ -250,30 +278,9 @@ namespace Akka.Streams.Implementation.IO
         protected override void PostStop()
         {
             _cts.Cancel();
+            _chan?.Dispose();
 
-            CloseAndComplete(IOResult.Success(_bytesWritten));
-        }
-
-        private void CloseAndComplete(Try<IOResult> result)
-        {
-            _cts.Cancel();
-
-            try
-            {
-                // close the channel/file before completing the promise, allowing the
-                // file to be deleted, which would not work (on some systems) if the
-                // file is still open for writing
-                _chan?.Dispose();
-
-                if (result.IsSuccess)
-                    _completionPromise.SetResult(result.Success.Value);
-                else
-                    _completionPromise.SetException(result.Failure.Value);
-            }
-            catch (Exception ex)
-            {
-                _completionPromise.TrySetException(ex);
-            }
+            _completionPromise.TrySetCanceled();
         }
 
         internal class FlushSignal

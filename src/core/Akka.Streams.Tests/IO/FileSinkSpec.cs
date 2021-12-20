@@ -473,6 +473,8 @@ namespace Akka.Streams.Tests.IO
 
         private static void CheckFileContent(FileInfo f, string contents)
         {
+            f.Refresh();
+            f.Length.Should().Be(contents.Length);
             using (var s = f.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 using(var reader = new StreamReader(s))

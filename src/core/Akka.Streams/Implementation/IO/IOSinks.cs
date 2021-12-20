@@ -89,7 +89,7 @@ namespace Akka.Streams.Implementation.IO
             var mat = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = mat.EffectiveSettings(context.EffectiveAttributes);
 
-            var ioResultPromise = new TaskCompletionSource<IOResult>();
+            var ioResultPromise = new TaskCompletionSource<IOResult>(TaskCreationOptions.RunContinuationsAsynchronously);
             var props = FileSubscriber.Props(_f, ioResultPromise, settings.MaxInputBufferSize, _startPosition, _fileMode, _autoFlush, _flushSignaler);
 
             var actorRef = mat.ActorOf(
