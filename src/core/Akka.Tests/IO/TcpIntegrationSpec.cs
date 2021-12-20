@@ -16,14 +16,11 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
-using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
 using Xunit.Abstractions;
 using FluentAssertions;
 using System.Runtime.InteropServices;
-using System.Threading;
-using Akka.Event;
 
 namespace Akka.Tests.IO
 {
@@ -490,15 +487,16 @@ namespace Akka.Tests.IO
             new TestSetup(this, shouldBindServer:false).Run(x =>
             {
                 var serverSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-                serverSocket.Bind(x.Endpoint);
+                serverSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
                 serverSocket.Listen(100);
+                var endpoint = (IPEndPoint) serverSocket.LocalEndPoint;
 
                 var connectCommander = CreateTestProbe();
-                connectCommander.Send(Sys.Tcp(), new Tcp.Connect(x.Endpoint));
+                connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
 
                 var accept = serverSocket.Accept();
                 var connected = connectCommander.ExpectMsg<Tcp.Connected>();
-                connected.RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(x.Endpoint.Port);
+                connected.RemoteAddress.AsInstanceOf<IPEndPoint>().Port.ShouldBe(endpoint.Port);
                 var connectionActor = connectCommander.LastSender;
                 connectCommander.Send(connectionActor, PoisonPill.Instance);
 
@@ -536,7 +534,7 @@ namespace Akka.Tests.IO
             private readonly AkkaSpec _spec;
             private readonly bool _shouldBindServer;
             private readonly TestProbe _bindHandler;
-            private readonly IPEndPoint _endpoint;
+            private IPEndPoint _endpoint;
 
             public TestSetup(AkkaSpec spec, bool shouldBindServer = true)
             {
@@ -545,14 +543,13 @@ namespace Akka.Tests.IO
                 _spec = spec;
                 _shouldBindServer = shouldBindServer;
                 _bindHandler = _spec.CreateTestProbe("bind-handler-probe");
-                _endpoint = TestUtils.TemporaryServerAddress();
             }
 
             public void BindServer()
             {
                 var bindCommander = _spec.CreateTestProbe();
-                bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, _endpoint, options: BindOptions));
-                bindCommander.ExpectMsg<Tcp.Bound>(); //TODO: check endpoint
+                bindCommander.Send(_spec.Sys.Tcp(), new Tcp.Bind(_bindHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0), options: BindOptions));
+                bindCommander.ExpectMsg<Tcp.Bound>(bound => _endpoint = (IPEndPoint) bound.LocalAddress);
             }
 
             public ConnectionDetail EstablishNewClientConnection(bool registerClientHandler = true)

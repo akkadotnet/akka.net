@@ -1488,6 +1488,7 @@ namespace Akka.Streams.Dsl
     {
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> Delimiter(Akka.IO.ByteString delimiter, int maximumFrameLength, bool allowTruncation = False) { }
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> LengthField(int fieldLength, int maximumFramelength, int fieldOffset = 0, Akka.IO.ByteOrder byteOrder = 1) { }
+        public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> LengthField(int fieldLength, int fieldOffset, int maximumFrameLength, Akka.IO.ByteOrder byteOrder, System.Func<System.Collections.Generic.IReadOnlyList<byte>, int, int> computeFrameSize) { }
         public static Akka.Streams.Dsl.BidiFlow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> SimpleFramingProtocol(int maximumMessageLength) { }
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength) { }
         public static Akka.Streams.Dsl.Flow<Akka.IO.ByteString, Akka.IO.ByteString, Akka.NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength) { }
@@ -1918,6 +1919,15 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> Sum<TIn>(System.Func<TIn, TIn, TIn> reduce) { }
         public static Akka.Streams.Dsl.Sink<TIn, TMat> Wrap<TIn, TMat>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat> graph) { }
     }
+    public sealed class SinkQueueAsyncEnumerator<T> : System.Collections.Generic.IAsyncEnumerator<T>, System.IAsyncDisposable
+    {
+        public SinkQueueAsyncEnumerator([System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+                "killSwitch",
+                "sinkQueue"})] System.ValueTuple<Akka.Streams.UniqueKillSwitch, Akka.Streams.ISinkQueue<T>> queueAndSwitch, System.Threading.CancellationToken token) { }
+        public T Current { get; }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask<bool> MoveNextAsync() { }
+    }
     public sealed class Sink<TIn, TMat> : Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>>, Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat>
     {
         public Sink(Akka.Streams.Implementation.IModule module) { }
@@ -2107,6 +2117,8 @@ namespace Akka.Streams.Dsl
         public System.ValueTuple<TMat, Akka.Streams.Dsl.Source<TOut, Akka.NotUsed>> PreMaterialize(Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregate<TOut2>(TOut2 zero, System.Func<TOut2, TOut, TOut2> aggregate, Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut2> RunAggregateAsync<TOut2>(TOut2 zero, System.Func<TOut2, TOut, System.Threading.Tasks.Task<TOut2>> aggregate, Akka.Streams.IMaterializer materializer) { }
+        public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerable(Akka.Streams.IMaterializer materializer) { }
+        public System.Collections.Generic.IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(Akka.Streams.IMaterializer materializer, int minBuffer = 4, int maxBuffer = 16) { }
         public System.Threading.Tasks.Task RunForeach(System.Action<TOut> action, Akka.Streams.IMaterializer materializer) { }
         public System.Threading.Tasks.Task<TOut> RunSum(System.Func<TOut, TOut, TOut> reduce, Akka.Streams.IMaterializer materializer) { }
         public TMat2 RunWith<TMat2>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> sink, Akka.Streams.IMaterializer materializer) { }
@@ -2148,6 +2160,12 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<T, System.Threading.Tasks.Task<Akka.Streams.ISinkRef<T>>> SinkRef<T>() { }
         [Akka.Annotations.ApiMayChangeAttribute()]
         public static Akka.Streams.Dsl.Sink<T, System.Threading.Tasks.Task<Akka.Streams.ISourceRef<T>>> SourceRef<T>() { }
+    }
+    public sealed class StreamsAsyncEnumerableRerunnable<T, TMat> : System.Collections.Generic.IAsyncEnumerable<T>
+    {
+        public StreamsAsyncEnumerableRerunnable(Akka.Streams.Dsl.Source<T, TMat> source, Akka.Streams.IMaterializer materializer) { }
+        public StreamsAsyncEnumerableRerunnable(Akka.Streams.Dsl.Source<T, TMat> source, Akka.Streams.IMaterializer materializer, int minBuf, int maxBuf) { }
+        public System.Collections.Generic.IAsyncEnumerator<T> GetAsyncEnumerator(System.Threading.CancellationToken cancellationToken) { }
     }
     public class static SubFlowOperations
     {

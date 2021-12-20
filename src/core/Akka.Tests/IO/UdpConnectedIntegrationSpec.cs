@@ -22,8 +22,6 @@ namespace Akka.Tests.IO
 {
     public class UdpConnectedIntegrationSpec : AkkaSpec
     {
-        private readonly IPEndPoint[] _addresses;
-
         public UdpConnectedIntegrationSpec(ITestOutputHelper output)
             : base(@"
                     akka.actor.serialize-creators = on
@@ -45,40 +43,62 @@ namespace Akka.Tests.IO
                     akka.io.udp.trace-logging = true
                     akka.loglevel = DEBUG", output)
         {
-            _addresses = TestUtils.TemporaryServerAddresses(3, udp: true).ToArray();
         }
 
-        private IActorRef BindUdp(IPEndPoint address, IActorRef handler)
+        private (IActorRef, IPEndPoint) BindUdp(IActorRef handler)
         {
             var commander = CreateTestProbe();
-            commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, address));
-            commander.ExpectMsg<Udp.Bound>(x => x.LocalAddress.Is(address)); 
-            return commander.Sender;
+            commander.Send(Udp.Instance.Apply(Sys).Manager, new Udp.Bind(handler, new IPEndPoint(IPAddress.Loopback, 0)));
+            IPEndPoint localAddress = null; 
+            commander.ExpectMsg<Udp.Bound>(x => localAddress = (IPEndPoint)x.LocalAddress); 
+            return (commander.Sender, localAddress);
         }
 
-        private IActorRef ConnectUdp(IPEndPoint localAddress, IPEndPoint remoteAddress, IActorRef handler)
+        private (IActorRef, IPEndPoint) ConnectUdp(IPEndPoint localAddress, IPEndPoint remoteAddress, IActorRef handler)
         {
             var commander = CreateTestProbe();
-            commander.Send(UdpConnected.Instance.Apply(Sys).Manager, new UdpConnected.Connect(handler, remoteAddress, localAddress));
+            IPEndPoint realLocalAddress = null; 
+            commander.Send(
+                UdpConnected.Instance.Apply(Sys).Manager, 
+                new UdpConnected.Connect(handler, remoteAddress, localAddress, new []
+                {
+                    new TestSocketOption(socket => realLocalAddress = (IPEndPoint)socket.LocalEndPoint)
+                }));
             commander.ExpectMsg<UdpConnected.Connected>();
-            return commander.Sender;
+            return (commander.Sender, realLocalAddress);
+        }
+
+        private (IActorRef, IPEndPoint) ConnectUdp(IPEndPoint remoteAddress, IActorRef handler)
+        {
+            var commander = CreateTestProbe();
+            IPEndPoint clientEndpoint = null; 
+            commander.Send(
+                UdpConnected.Instance.Apply(Sys).Manager, 
+                new UdpConnected.Connect(handler, remoteAddress, options:new []
+                {
+                    new TestSocketOption(socket => 
+                        clientEndpoint = (IPEndPoint)socket.LocalEndPoint)
+                }));
+            commander.ExpectMsg<UdpConnected.Connected>();
+            return (commander.Sender, clientEndpoint);
         }
 
         [Fact]
         public void The_UDP_connection_oriented_implementation_must_be_able_to_send_and_receive_without_binding()
         {
-            var serverAddress = _addresses[0];
-            var server = BindUdp(serverAddress, TestActor);
+            var (server, serverLocalEndpoint) = BindUdp(TestActor);
             var data1 = ByteString.FromString("To infinity and beyond!");
             var data2 = ByteString.FromString("All your datagram belong to us");
 
-            ConnectUdp(null, serverAddress, TestActor).Tell(UdpConnected.Send.Create(data1));
+            var (client, clientLocalEndpoint) = ConnectUdp(null, serverLocalEndpoint, TestActor);
+            client.Tell(UdpConnected.Send.Create(data1));
 
             var clientAddress = ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
             {
                 if (msg is Udp.Received received)
                 {
                     received.Data.ShouldBe(data1);
+                    received.Sender.ShouldBe(clientLocalEndpoint);
                     return received.Sender;
                 }
                 throw new Exception();
@@ -92,64 +112,57 @@ namespace Akka.Tests.IO
         [Fact]
         public void The_UDP_connection_oriented_implementation_must_be_able_to_send_and_receive_with_binding()
         {
-            var serverAddress = _addresses[0];
-            var clientAddress = _addresses[1];
-            var server = BindUdp(serverAddress, TestActor);
+            var serverProbe = CreateTestProbe();
+            var (server, serverLocalEndpoint) = BindUdp(serverProbe);
             var data1 = ByteString.FromString("To infinity") + ByteString.FromString(" and beyond!");
             var data2 = ByteString.FromString("All your datagram belong to us");
-            ConnectUdp(clientAddress, serverAddress, TestActor).Tell(UdpConnected.Send.Create(data1));
+            var clientProbe = CreateTestProbe();
+            var (client, clientLocalEndpoint) = ConnectUdp(serverLocalEndpoint, clientProbe);
+            client.Tell(UdpConnected.Send.Create(data1));
 
-            ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
+            ExpectMsgPf(TimeSpan.FromSeconds(3), "", serverProbe, msg =>
             {
                 if (msg is Udp.Received received)
                 {
                     received.Data.ShouldBe(data1);
-                    Assert.True(received.Sender.Is(clientAddress));
                     return received.Sender;
                 }
                 throw new Exception();
             });
 
-            server.Tell(Udp.Send.Create(data2, clientAddress));
+            server.Tell(Udp.Send.Create(data2, clientLocalEndpoint));
 
-            ExpectMsg<UdpConnected.Received>(x => x.Data.ShouldBe(data2));
+            clientProbe.ExpectMsg<UdpConnected.Received>(x => x.Data.ShouldBe(data2));
         }
 
         [Fact]
         public void The_UDP_connection_oriented_implementation_must_to_send_batch_writes_and_reads()
         {
-            var serverAddress = _addresses[0];
-            var clientAddress = _addresses[1];
-            var udpConnection = UdpConnected.Instance.Apply(Sys);
-            var server = CreateTestProbe();
-            udpConnection.Manager.Tell(new UdpConnected.Connect(server, clientAddress, serverAddress), server);
-            server.ExpectMsg<UdpConnected.Connected>();
-            var serverEp = server.LastSender;
-
-            var client = CreateTestProbe();
-            udpConnection.Manager.Tell(new UdpConnected.Connect(client, serverAddress, clientAddress), client);
-            client.ExpectMsg<UdpConnected.Connected>();
-            var clientEp = client.LastSender;
+            var serverProbe = CreateTestProbe();
+            var (server, serverEndPoint) = BindUdp(serverProbe);
+            var clientProbe = CreateTestProbe();
+            var (client, clientEndPoint) = ConnectUdp(serverEndPoint, clientProbe);
+            
             var data = ByteString.FromString("Fly little packet!");
 
             // queue 3 writes
-            clientEp.Tell(UdpConnected.Send.Create(data));
-            clientEp.Tell(UdpConnected.Send.Create(data));
-            clientEp.Tell(UdpConnected.Send.Create(data));
+            client.Tell(UdpConnected.Send.Create(data));
+            client.Tell(UdpConnected.Send.Create(data));
+            client.Tell(UdpConnected.Send.Create(data));
 
-            var raw = server.ReceiveN(3);
-            var msgs = raw.Cast<UdpConnected.Received>();
-            msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
-            server.ExpectNoMsg(100.Milliseconds());
+            var raw = serverProbe.ReceiveN(3);
+            var serverMsgs = raw.Cast<Udp.Received>();
+            serverMsgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
+            serverProbe.ExpectNoMsg(100.Milliseconds());
 
             // repeat in the other direction
-            serverEp.Tell(UdpConnected.Send.Create(data));
-            serverEp.Tell(UdpConnected.Send.Create(data));
-            serverEp.Tell(UdpConnected.Send.Create(data));
+            server.Tell(Udp.Send.Create(data, clientEndPoint));
+            server.Tell(Udp.Send.Create(data, clientEndPoint));
+            server.Tell(Udp.Send.Create(data, clientEndPoint));
 
-            raw = client.ReceiveN(3);
-            msgs = raw.Cast<UdpConnected.Received>();
-            msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
+            raw = clientProbe.ReceiveN(3);
+            var clientMsgs = raw.Cast<UdpConnected.Received>();
+            clientMsgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }
         
         [Fact]
@@ -158,24 +171,17 @@ namespace Akka.Tests.IO
             const int batchCount = 2000;
             const int batchSize = 100;
             
-            var serverAddress = _addresses[0];
-            var clientAddress = _addresses[1];
             var udpConnection = UdpConnected.Instance.Apply(Sys);
-            
             var poolInfo = udpConnection.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
             poolInfo.Free.Should().Be(poolInfo.TotalSize);
             poolInfo.Used.Should().Be(0);
             
-            var server = CreateTestProbe();
-            udpConnection.Manager.Tell(new UdpConnected.Connect(server, clientAddress, serverAddress), server);
-            server.ExpectMsg<UdpConnected.Connected>();
-            var serverEp = server.LastSender;
+            var serverProbe = CreateTestProbe();
+            var (server, serverEndPoint) = BindUdp(serverProbe);
 
-            var client = CreateTestProbe();
-            udpConnection.Manager.Tell(new UdpConnected.Connect(client, serverAddress, clientAddress), client);
-            client.ExpectMsg<UdpConnected.Connected>();
-            var clientEp = client.LastSender;
+            var clientProbe = CreateTestProbe();
+            var (client, clientEndPoint) = ConnectUdp(serverEndPoint, clientProbe);
             
             var data = ByteString.FromString("Fly little packet!");
 
@@ -183,18 +189,18 @@ namespace Akka.Tests.IO
             for (var n = 0; n < batchCount; ++n)
             {
                 for (var j = 0; j < batchSize; ++j)
-                    serverEp.Tell(UdpConnected.Send.Create(data));
+                    client.Tell(UdpConnected.Send.Create(data));
 
-                var msgs = client.ReceiveN(batchSize, TimeSpan.FromSeconds(10));
-                var cast = msgs.Cast<UdpConnected.Received>();
+                var msgs = serverProbe.ReceiveN(batchSize, TimeSpan.FromSeconds(10));
+                var cast = msgs.Cast<Udp.Received>();
                 cast.Sum(m => m.Data.Count).Should().Be(data.Count * batchSize);
             }
 
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
-            serverEp.Tell(UdpConnected.Disconnect.Instance, server);
-            server.ExpectMsg<UdpConnected.Disconnected>();
-            clientEp.Tell(UdpConnected.Disconnect.Instance, client);
-            client.ExpectMsg<UdpConnected.Disconnected>();
+            server.Tell(Udp.Unbind.Instance, serverProbe);
+            serverProbe.ExpectMsg<Udp.Unbound>();
+            client.Tell(UdpConnected.Disconnect.Instance, clientProbe);
+            clientProbe.ExpectMsg<UdpConnected.Disconnected>();
             
             // wait for all SocketAsyncEventArgs to be released
             Thread.Sleep(1000);

@@ -63,7 +63,7 @@ namespace Akka.DependencyInjection
         /// <returns>A new <see cref="Akka.Actor.Props"/> instance which uses DI internally.</returns>
         public Props Props<T>(params object[] args) where T : ActorBase
         {
-            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(Provider, args));
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(Provider), typeof(T), args);
         }
     }
 
@@ -93,43 +93,23 @@ namespace Akka.DependencyInjection
     ///
     /// Used to create actors via the <see cref="ActivatorUtilities"/>.
     /// </summary>
-    internal class ServiceProviderActorProducer : IIndirectActorProducer
+    internal sealed class ServiceProviderActorProducer : IIndirectActorProducer
     {
         private readonly IServiceProvider _provider;
-        private readonly object[] _args;
-
-        public ServiceProviderActorProducer(IServiceProvider provider, Type actorType, object[] args)
+        
+        public ServiceProviderActorProducer(IServiceProvider provider)
         {
             _provider = provider;
-            _args = args;
-            ActorType = actorType;
         }
 
-        public ActorBase Produce()
+        public ActorBase Produce(Props props)
         {
-            return (ActorBase)ActivatorUtilities.CreateInstance(_provider, ActorType, _args);
+            return (ActorBase)ActivatorUtilities.CreateInstance(_provider, props.Type, props.Arguments);
         }
-
-        public Type ActorType { get; }
 
         public void Release(ActorBase actor)
         {
             // no-op
-        }
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Used to create actors via the <see cref="ActivatorUtilities"/>.
-    /// </summary>
-    /// <typeparam name="TActor">the actor type</typeparam>
-    internal class ServiceProviderActorProducer<TActor> : ServiceProviderActorProducer where TActor:ActorBase
-    {
-
-        public ServiceProviderActorProducer(IServiceProvider provider, object[] args)
-             : base(provider, typeof(TActor), args)
-        {
         }
     }
 }

@@ -33,7 +33,7 @@ namespace Akka.Util
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public abstract ActorBase Produce();
+        public abstract ActorBase Produce(Props props);
         /// <summary>
         /// TBD
         /// </summary>
@@ -85,7 +85,7 @@ namespace Akka.Util
         /// This exception is thrown if the current <see cref="Resolve.Resolver"/> is undefined.
         /// </exception>
         /// <returns>TBD</returns>
-        public override ActorBase Produce()
+        public override ActorBase Produce(Props props)
         {
             if (Resolver == null)
             {

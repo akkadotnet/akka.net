@@ -120,7 +120,7 @@ let ``cannot spawn actor with simple expr args from expression`` () =
     let system = Configuration.load() |> System.create "test"
     // this formulation is supported in FsApi's expression evaluator, however the checks in Props.Create
     // do not support this, so we test that we can evaluate this but not actually run it, as a proof of concept
-    Assert.Throws<InvalidCastException>(fun () ->
+    Assert.Throws<ArgumentException>(fun () ->
         let actor = spawnObj system "test-actor" <@ fun () ->
             let arg1 = 1
             let arg2 = true

@@ -363,6 +363,35 @@ namespace Akka.Streams.Dsl
             => RunWith(Sink.ForEach(action), materializer);
 
         /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements based on configured stream defaults.
+        /// For custom buffers Please use <see cref="RunAsAsyncEnumerableBuffer"/>
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerable(
+            IMaterializer materializer) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(this, materializer);
+
+        /// <summary>
+        /// Shortcut for running this <see cref="Source{TOut,TMat}"/> as an <see cref="IAsyncEnumerable{TOut}"/>.
+        /// The given enumerable is re-runnable but will cause a re-materialization of the stream each time.
+        /// This is implemented using a SourceQueue and will buffer elements and/or backpressure,
+        /// based on the buffer values provided.
+        /// </summary>
+        /// <param name="materializer">The materializer to use for each enumeration</param>
+        /// <param name="minBuffer">The minimum input buffer size</param>
+        /// <param name="maxBuffer">The Max input buffer size.</param>
+        /// <returns>A lazy <see cref="IAsyncEnumerable{T}"/> that will run each time it is enumerated.</returns>
+        public IAsyncEnumerable<TOut> RunAsAsyncEnumerableBuffer(
+            IMaterializer materializer, int minBuffer = 4,
+            int maxBuffer = 16) =>
+            new StreamsAsyncEnumerableRerunnable<TOut,TMat>(
+                this, materializer,minBuffer,maxBuffer);
+        
+
+        /// <summary>
         /// Combines several sources with fun-in strategy like <see cref="Merge{TIn,TOut}"/> or <see cref="Concat{TIn,TOut}"/> and returns <see cref="Source{TOut,TMat}"/>.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
