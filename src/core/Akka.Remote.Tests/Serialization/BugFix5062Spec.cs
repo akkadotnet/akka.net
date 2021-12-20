@@ -51,7 +51,7 @@ namespace Akka.Remote.Tests.Serialization
             var o = new object();
             o.Invoking(s => MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized)).Should()
                 .Throw<SerializationException>()
-                .WithMessage($"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} with payload [SerializerId=13, Manifest=SM] addressed to [{childName}]")
+                .WithMessage($"Failed to deserialize payload object when deserializing {nameof(ActorSelectionMessage)} with payload [SerializerId=13, Manifest=SM] addressed to [{childName}]. {Serializer.GetErrorForSerializerId(13)}")
                 .WithInnerExceptionExactly<NotImplementedException>();
         }
 

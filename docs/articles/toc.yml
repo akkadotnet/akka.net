@@ -202,3 +202,5 @@
     href: utilities/circuit-breaker.md
 - name: Configurations
   href: configuration/toc.yml
+- name: Serialization
+  href: serialization/toc.yml
