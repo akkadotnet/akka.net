@@ -56,7 +56,7 @@ namespace Akka.Actor
             _tickDuration = tickDuration.Ticks;
 
             // Normalize ticks per wheel to power of two and create the wheel
-            _wheel = CreateWheel(ticksPerWheel, log);
+            _wheel = CreateWheel(ticksPerWheel, this);
             _mask = _wheel.Length - 1;
 
             // prevent overflow
@@ -83,7 +83,7 @@ namespace Akka.Actor
         /// </summary>
         private int _workerState = WORKER_STATE_INIT;
 
-        private static Bucket[] CreateWheel(int ticksPerWheel, ILoggingAdapter log)
+        private static Bucket[] CreateWheel(int ticksPerWheel, HashedWheelTimerScheduler scheduler)
         {
             if (ticksPerWheel <= 0)
                 throw new ArgumentOutOfRangeException(nameof(ticksPerWheel), ticksPerWheel, "Must be greater than 0.");
@@ -93,7 +93,7 @@ namespace Akka.Actor
             ticksPerWheel = NormalizeTicksPerWheel(ticksPerWheel);
             var wheel = new Bucket[ticksPerWheel];
             for (var i = 0; i < wheel.Length; i++)
-                wheel[i] = new Bucket(log);
+                wheel[i] = new Bucket(scheduler);
             return wheel;
         }
 
@@ -486,11 +486,20 @@ namespace Akka.Actor
                 return
                     $"ScheduledWork(Deadline={Deadline}, RepeatEvery={Offset}, Cancelled={Cancelled}, Work={Action})";
             }
+
+            public bool CancelledOn(long deadline)
+            {
+                //cancelable support
+                if (Cancellation is Cancelable cancel)
+                    return cancel.Deadline < deadline || cancel.IsCancellationRequested;
+                
+                return Cancellation?.IsCancellationRequested ?? false;
+            }
         }
 
         private sealed class Bucket
         {
-            private readonly ILoggingAdapter _log;
+            private readonly HashedWheelTimerScheduler _scheduler;
 
             /*
              * Endpoints of our doubly linked list
@@ -501,9 +510,9 @@ namespace Akka.Actor
             private SchedulerRegistration _rescheduleHead;
             private SchedulerRegistration _rescheduleTail;
 
-            public Bucket(ILoggingAdapter log)
+            public Bucket(HashedWheelTimerScheduler scheduler)
             {
-                _log = log;
+                _scheduler = scheduler;
             }
 
             /// <summary>
@@ -592,7 +601,7 @@ namespace Akka.Actor
                 while (current != null)
                 {
                     bool remove = false;
-                    if (current.Cancelled) // check for cancellation first
+                    if (current.CancelledOn(deadline + _scheduler._startTime)) // check for cancellation first
                     {
                         remove = true;
                     }
@@ -609,7 +618,7 @@ namespace Akka.Actor
                             {
                                 try
                                 {
-                                    _log.Error(ex, "Error while executing scheduled task {0}", current);
+                                    _scheduler.Log.Error(ex, "Error while executing scheduled task {0}", current);
                                     var nextErrored = current.Next;
                                     Remove(current);
                                     current = nextErrored;

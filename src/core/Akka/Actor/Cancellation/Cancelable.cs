@@ -15,10 +15,11 @@ namespace Akka.Actor
     /// A <see cref="ICancelable"/> that wraps a <see cref="CancellationTokenSource"/>. 
     /// When canceling this instance the underlying <see cref="CancellationTokenSource"/> is canceled as well.
     /// </summary>
-    public class Cancelable : ICancelable, IDisposable
+    public sealed class Cancelable : ICancelable, IDisposable
     {
         private readonly IActionScheduler _scheduler;
         private readonly CancellationTokenSource _source;
+        private long _deadline = long.MaxValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Cancelable"/> class that will be cancelled after 
@@ -90,6 +91,10 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public CancellationToken Token => _source.Token;
 
+        /// <summary>
+        /// Deadline of cancellation in scheduler time
+        /// </summary>
+        public long Deadline => _deadline;
 
         /// <inheritdoc/>
         public void Cancel()
@@ -100,14 +105,13 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public void Cancel(bool throwOnFirstException)
         {
-            ThrowIfDisposed();
             _source.Cancel(throwOnFirstException);
         }
 
         /// <inheritdoc/>
         public void CancelAfter(TimeSpan delay)
         {
-            if(delay < TimeSpan.Zero)
+            if (delay < TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(delay), $"The delay must be >0, it was {delay}");
             InternalCancelAfter(delay);
         }
@@ -115,23 +119,23 @@ namespace Akka.Actor
         /// <inheritdoc/>
         public void CancelAfter(int millisecondsDelay)
         {
-            if(millisecondsDelay < 0)
+            if (millisecondsDelay < 0)
                 throw new ArgumentOutOfRangeException(nameof(millisecondsDelay), $"The delay must be >0, it was {millisecondsDelay}");
             InternalCancelAfter(TimeSpan.FromMilliseconds(millisecondsDelay));
         }
 
         private void InternalCancelAfter(TimeSpan delay)
         {
-            ThrowIfDisposed();
-            if(_source.IsCancellationRequested)
+            if (_source.IsCancellationRequested)
                 return;
 
             //If the scheduler is using the system time, we can optimize for that
-            if(_scheduler is IDateTimeOffsetNowTimeProvider)
+            if (_scheduler is IDateTimeOffsetNowTimeProvider time)
             {
                 //Use the built in functionality on CancellationTokenSource which is
                 //likely more lightweight than using the scheduler
                 _source.CancelAfter(delay);
+                _deadline = time.HighResMonotonicClock.Ticks + delay.Ticks;
             }
             else
             {
@@ -175,60 +179,10 @@ namespace Akka.Actor
             return new Cancelable(scheduler, cts);
         }
 
-
-
-        private void ThrowIfDisposed()
-        {
-            if(_isDisposed)
-                throw new ObjectDisposedException(null, "The cancelable has been disposed");
-        }
-
-        //  Dispose ---------------------------------------------------------------
-        private bool _isDisposed; //Automatically initialized to false;
-
-
         /// <inheritdoc/>
         public void Dispose()
         {
-            Dispose(true);
-            //Take this object off the finalization queue and prevent finalization code for this object
-            //from executing a second time.
-            GC.SuppressFinalize(this);
-        }
-
-
-        /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-        /// <param name="disposing">if set to <c>true</c> the method has been called directly or indirectly by a 
-        /// user's code. Managed and unmanaged resources will be disposed.<br />
-        /// if set to <c>false</c> the method has been called by the runtime from inside the finalizer and only 
-        /// unmanaged resources can be disposed.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            // If disposing equals false, the method has been called by the
-            // runtime from inside the finalizer and you should not reference
-            // other objects. Only unmanaged resources can be disposed.
-
-            try
-            {
-                //Make sure Dispose does not get called more than once, by checking the disposed field
-                if(!_isDisposed)
-                {
-                    if(disposing)
-                    {
-                        //Clean up managed resources
-                        if(_source != null)
-                        {
-                            _source.Dispose();
-                        }
-                    }
-                    //Clean up unmanaged resources
-                }
-                _isDisposed = true;
-            }
-            finally
-            {
-                // base.dispose(disposing);
-            }
+            _source?.Dispose();
         }
     }
 }
