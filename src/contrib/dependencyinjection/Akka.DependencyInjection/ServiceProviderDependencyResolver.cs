@@ -18,14 +18,11 @@ namespace Akka.DependencyInjection
     /// </summary>
     public class ServiceProviderDependencyResolver : IDependencyResolver
     {
-        private readonly ServiceProviderActorProducer _producer;
-
         public IServiceProvider ServiceProvider { get; }
 
         public ServiceProviderDependencyResolver(IServiceProvider serviceProvider)
         {
             ServiceProvider = serviceProvider;
-            _producer = new ServiceProviderActorProducer(ServiceProvider);
         }
 
         public IResolverScope CreateScope()
@@ -46,7 +43,7 @@ namespace Akka.DependencyInjection
         public Props Props(Type type, params object[] args)
         {
             if(typeof(ActorBase).IsAssignableFrom(type))
-                return Akka.Actor.Props.CreateBy(_producer, type, args);
+                return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer(ServiceProvider, type, args));
             throw new ArgumentException(nameof(type), $"[{type}] does not implement Akka.Actor.ActorBase.");
         }
         
@@ -57,7 +54,7 @@ namespace Akka.DependencyInjection
 
         public Props Props<T>(params object[] args) where T : ActorBase
         {
-            return Akka.Actor.Props.CreateBy(_producer, typeof(T), args);
+            return Akka.Actor.Props.CreateBy(new ServiceProviderActorProducer<T>(ServiceProvider, args));
         }
     }
 
