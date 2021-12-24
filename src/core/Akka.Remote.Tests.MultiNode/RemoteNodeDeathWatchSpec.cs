@@ -14,6 +14,7 @@ using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using static Akka.Remote.Tests.MultiNode.RemoteNodeDeathWatchMultiNetSpec;
+using MultiNodeFactAttribute = Akka.MultiNode.TestAdapter.MultiNodeFactAttribute; 
 
 namespace Akka.Remote.Tests.MultiNode
 {
