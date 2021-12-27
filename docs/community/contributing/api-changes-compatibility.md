@@ -14,9 +14,9 @@ Here is what that entails:
 As such, we have automated procedures designed to ensure that accidental breaking / incompatible changes to the Akka.NET public API can't sail through the pull request process without some human acknowledgement first.
 
 ## Akka.NET API Versioning Policy
-We do our best to follow "practial semantic versioning" - here is what that means in practice for Akka.NET and its plugins:
+We do our best to follow "practical semantic versioning" - here is what that means in practice for Akka.NET and its plugins:
 
-1. **No suprise breaking changes under any circumstances** - we don't let things happen to Akka.NET users by accident. This means observing the lesson of [Chesterton's Fence](https://fs.blog/chestertons-fence/): unless an API is explicitly marked as `InternalApi` or is included inside an `.Internal` namespace assume that it's actively used by downstream plugins or applications and therefore can't be broken on a moments' notice. Users _have_ to be given a heads-up that this is going to happen so they can plan accordingly. This is true for revision, minor versions, and major versions. Therefore, [socialize your proposals for changing public APIs](https://petabridge.com/blog/use-github-professionally/) on Github long before you ever submit a pull request so the Akka.NET team can help plan your changes into a future release.
+1. **No surprise breaking changes under any circumstances** - we don't let things happen to Akka.NET users by accident. This means observing the lesson of [Chesterton's Fence](https://fs.blog/chestertons-fence/): unless an API is explicitly marked as `InternalApi` or is included inside an `.Internal` namespace assume that it's actively used by downstream plugins or applications and therefore can't be broken on a moments' notice. Users _have_ to be given a heads-up that this is going to happen so they can plan accordingly. This is true for revision, minor versions, and major versions. Therefore, [socialize your proposals for changing public APIs](https://petabridge.com/blog/use-github-professionally/) on Github long before you ever submit a pull request so the Akka.NET team can help plan your changes into a future release.
 2. **New or extended public APIs can be introduced during any release** - we try to observe extend-only design as best we can throughout Akka.NET's API and wire formats, which means in essence never removing or changing the meaning of an existing API but always being free to add new ones. This can always be done throughout major, minor, or revision releases.
 3. **`Obsolete` APIs can be removed between minor or major versions** - if you want to remove an `Obsolete` API it needs to be done between major / minor versions and explicitly documented in the release notes.
 4. **Removing deprecated binaries only happens between minor or major versions** - in the Akka.NET v1.4 lifecycle we deprecated the `Akka.DI.*` plugins and replaced them with a consolidated `Akka.DependencyInjection` implementation. We stopped shipping updates to `Akka.DI.Autofac` as part of this effort. However, we had to ensure that all `Akka.DI.*` plugins still worked over the course of the v1.4 lifespan since we hadn't announced a planned change to users yet. Upgrade cycles happen gradually and we need to give users time to adapt to changes in the ecosystem. We can't pull the rug out from under users all at once. Thus, we still ship updates to those core `Akka.DI.*` libraries up until Akka.NET v1.5.
@@ -39,6 +39,15 @@ In Akka.NET, the API approval tests can be found in the following test assembly:
 The approval file is located at:
 
     src/core/Akka.API.Tests/CoreAPISpec.ApproveCore.approved.txt
+
+To generate a new approval file:
+
+```
+PS> cd src/core/Akka.API.Tests
+PS> dotnet test -c Release --framework net6.0
+```
+
+You'll need to make sure you have an appropriate mergetool installed in order to update the `.approved.txt` files. We recommend [WinMerge](https://winmerge.org/) or [TortoiseMerge](https://tortoisesvn.net/TortoiseMerge.html).
 
 ### Approving a New Change
 
