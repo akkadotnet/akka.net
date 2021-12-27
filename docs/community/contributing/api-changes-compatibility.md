@@ -76,7 +76,23 @@ The following types of API changes will generally not be approved:
 3. Renaming public classes or members; and
 4. Changing an access modifier from public to private / internal / protected on any member that is or is meant to be used.
 
-## How to Safely Introduce Public API Changes
+## How to Safely Introduce Public API Changes: Extend-Only Design
 So if we need to expose a new member and / or deprecate an existing member inside the public API, how can this be done safely?
 
-At the center of it all is extend-only design
+At the center of it all is [extend-only design](https://aaronstannard.com/extend-only-design/):
+
+1. **Previous functionality, schema, or behavior is immutable** and not open for modification. Anything you made available as a public release lives on with its current behavior, API, and definitions and isn't able to be changed.
+2. **New functionality, schema, or behavior can be introduced through new constructs only** and ideally those should be opt-in.
+3. **Old functionality can only be removed after a long period of time** and that's measured in years.
+
+How do these resolve some of the frustrating problems around versioning?
+
+1. Old behavior, schema, and APIs are always available and supported even in newer versions of the software;
+2. New behavior is introduced as opt-in extensions that may or may not be used by the code; and
+3. Both new and old code pathways are supported concurrently.
+
+What does this look like in practice?
+
+1. Old, no-longer-recommended methods still function but are marked with an `Obsolete` attribute;
+2. New methods are made opt-in if their behavior differs significantly from previous implementations; and
+3. We add new overloads when we need to pass in new values or parameters, rather than change existing method signatures.
