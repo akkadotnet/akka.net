@@ -52,7 +52,7 @@ public class Hello
 
 ```
 
-### DeployTarget (process that gets deployed onto)
+### DeployTarget (Process that Gets Deployed Onto)
 
 ```csharp
 class Program
@@ -76,7 +76,7 @@ class Program
 }
 ```
 
-### Deployer (process that does deploying)
+### Deployer (Process that Does Deploying)
 
 ```csharp
 class Program
