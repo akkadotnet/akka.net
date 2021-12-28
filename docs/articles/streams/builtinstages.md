@@ -3,9 +3,9 @@ uid: streams-builtin-stages
 title: Overview of built-in stages and their semantics
 ---
 
-# Overview of built-in stages and their semantics
+# Overview of Built-In Stages and Their Semantics
 
-## Source stages
+## Source Stages
 
 These built-in sources are available from ``akka.stream.scaladsl.Source``:
 
@@ -231,7 +231,7 @@ Combine the elements of multiple streams into a stream of sequences using a comb
 
 **completes** when any upstream completes
 
-## Sink stages
+## Sink Stages
 
 These built-in sinks are available from ``Akka.Stream.DSL.Sink``:
 
@@ -399,7 +399,7 @@ Integration with Reactive Streams, materializes into a ``Reactive.Streams.IPubli
 
 Integration with Reactive Streams, wraps a ``Reactive.Streams.ISubscriber`` as a sink
 
-## Additional Sink and Source converters
+## Additional Sink and Source Converters
 
 Sources and sinks for integrating with ``System.IO.Stream`` can be found on
 ``StreamConverters``. As they are blocking APIs the implementations of these stages are run on a separate
@@ -462,7 +462,7 @@ a ``IOResult`` upon reaching the end of the file or if there is a failure.
 
 Create a sink which will write incoming ``ByteString`` s to a given file.
 
-## Flow stages
+## Flow Stages
 
 All flows by default backpressure if the computation they encapsulate is not fast enough to keep up with the rate of
 incoming elements from the preceding stage. There are differences though how the different stages handle when some of
@@ -475,7 +475,7 @@ For in-band error handling of normal errors (dropping elements if a map fails fo
 supervision support, or explicitly wrap your element types in a proper container that can express error or success
 states (for example ``try`` in C#).
 
-## Simple processing stages
+## Simple Processing Stages
 
 These stages can transform the rate of incoming elements since there are stages that emit multiple elements for a
 single input (e.g. `ConcatMany`) or consume multiple elements before emitting one output (e.g. ``Where``).
@@ -757,7 +757,7 @@ If the wire-tap ``Sink`` backpressures, elements that would've been sent to it w
 
 **cancels** when downstream cancels
 
-## Asynchronous processing stages
+## Asynchronous Processing Stages
 
 These stages encapsulate an asynchronous computation, properly handling backpressure while taking care of the asynchronous
 operation at the same time (usually handling the completion of a Task).
@@ -789,7 +789,7 @@ If a Task fails, the stream also fails (unless a different supervision strategy 
 
 **completes** upstream completes and all tasks has been completed  and all elements has been emitted
 
-## Timer driven stages
+## Timer Driven Stages
 
 These stages process elements using timers, delaying, dropping or grouping elements for certain time durations.
 
@@ -844,7 +844,7 @@ Delay every element passed through with a specific duration.
 
 **completes** when upstream completes and buffered elements has been drained
 
-## Backpressure aware stages
+## Backpressure Aware Stages
 
 These stages are aware of the backpressure provided by their downstreams and able to adapt their behavior to that signal.
 
@@ -954,7 +954,7 @@ the flow with a ``BufferOverflowException``.
 
 **completes** when upstream completes and buffered elements has been drained
 
-## Nesting and flattening stages
+## Nesting and Flattening Stages
 
 These stages either take a stream and turn it into a stream of streams (nesting) or they take a stream that contains
 nested streams and turn them into a stream of elements instead (flattening).
@@ -1021,7 +1021,7 @@ merging. The maximum number of merged sources has to be specified.
 
 **completes** when upstream completes and all consumed substreams complete
 
-## Time aware stages
+## Time Aware Stages
 
 Those stages operate taking time into consideration.
 
@@ -1103,7 +1103,7 @@ Delays the initial element by the specified duration.
 
 **cancels** when downstream cancels
 
-## Fan-in stages
+## Fan-In Stages
 
 These stages take multiple streams as their input and provide a single output combining the elements from all of
 the inputs in different ways.
@@ -1232,7 +1232,7 @@ source completes the rest of the other stream will be emitted.
 
 **completes** when both upstreams have completed
 
-## Fan-out stages
+## Fan-Out Stages
 
 These have one input and multiple outputs. They might route the elements between different outputs, or emit elements on
 multiple outputs at the same time.
@@ -1257,7 +1257,7 @@ Splits each element of input into multiple downstreams using a function
 
 **completes** when upstream completes
 
-### broadcast
+### Broadcast
 
 Emit each incoming element each of ``n`` outputs.
 
@@ -1290,7 +1290,7 @@ to the partitioner function applied to the element
 
 **cancels** when when all downstreams cancel
 
-## Watching status stages
+## Watching Status Stages
 
 ### WatchTermination
 
