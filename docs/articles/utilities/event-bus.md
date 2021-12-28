@@ -4,7 +4,7 @@ title: Event Bus
 ---
 # EventBus
 
-## Subscribing to Dead letter messages
+## Subscribing to Dead Letter Messages
 
 The following example demonstrates the capturing of dead letter messages generated from a stopped actor.  The dedicated actor will output the message, sender and recipient of the captured dead letter to the console.
 
@@ -58,7 +58,7 @@ sample capture
 DeadLetter captured: another message, sender: [akka://MySystem/deadLetters], recipient: [akka://MySystem/user/ExpendableActor#1469246785]
 ```
 
-## Subscribing to Messages of Type "string"
+## Subscribing to Messages of Type `string`
 
 ```csharp
 var system = ActorSystem.Create("MySystem");
