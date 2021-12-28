@@ -108,7 +108,7 @@ protected override void OnRecover(object message)
 
 So now we are ready to write some tests.
 
-### Writing tests
+### Writing Tests
 
 The current implementation has one fundamental flaw - actor persist changes in fire-n-forget style, that is no reliable as
 underlying persistence can fail due to hundreds of reasons. We can verify that by writing a test which simulates network
@@ -135,7 +135,7 @@ public class CounterActorTests : PersistenceTestKit
 
 When we will launch this test it will fail, because the persistence journal failed when we tried to tell `inc` command to the actor. The actor failed with the journal and `read` was never delivered anb we had not received any answer.
 
-### How to make things better
+### How to Make Things Better
 
 ## Reference
 
@@ -189,7 +189,7 @@ After the test code block is executed, journal and snapshot store will be switch
 
 **Important!** All methods are `async`, this means that they **must** be awaited for proper execution.
 
-### Built-in  journal behaviors
+### Built-in Journal Behaviors
 
 Out of the box, the package has the following behaviors:
 
@@ -207,7 +207,7 @@ All methods have additional overload to add artificial delay - `*WithDelay`, i.e
 
 When all mentioned above behaviors are not enough, it is always possible to implement custom one by implementing the `IJournalInterceptor` interface. An instance of a custom interceptor can be set using the `SetInterceptorAsync` method.
 
-### Built-in snapshot store behaviors
+### Built-in Snapshot Store Behaviors
 
 Snapshot store behaviors are following the same naming pattern as journal behaviors:
 
