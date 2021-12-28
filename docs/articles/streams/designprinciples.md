@@ -3,14 +3,14 @@ uid: streams-design-principles
 title: Design Principles behind Akka Streams
 ---
 
-# Design Principles behind Akka Streams
+# Design Principles Behind Akka Streams
 
 It took quite a while until we were reasonably happy with the look and feel of the API and the architecture of the implementation, and while being guided by intuition the design phase was very much exploratory research. This section details the findings and codifies them into a set of principles that have emerged during the process.
 
 > [!NOTE]
 > As detailed in the introduction keep in mind that the Akka Streams API is completely decoupled from the Reactive Streams interfaces which are just an implementation detail for how to pass stream data between individual processing stages.
 
-## What shall users of Akka Streams expect?
+## What Shall Users of Akka Streams Expect?
 
 Akka.NET is built upon a conscious decision to offer APIs that are minimal and consistent --as opposed to easy or intuitive. The credo is that we favour explicitness over magic, and if we provide a feature then it must work always, no exceptions. Another way to say this is that we minimize the number of rules a user has to learn instead of trying to keep the rules close to what we think users might expect.
 
@@ -22,7 +22,7 @@ From this follows that the principles implemented by Akka Streams are:
 
 This means that we provide all the tools necessary to express any stream processing topology, that we model all the essential aspects of this domain (back-pressure, buffering, transformations, failure recovery, etc.) and that whatever the user builds is reusable in a larger context.
 
-### Akka Streams does not send dropped stream elements to the dead letter office
+### Akka Streams Does Not Send Dropped Stream Elements to the Dead Letter Office
 
 One important consequence of offering only features that can be relied upon is the restriction that Akka Streams cannot ensure that all objects sent through a processing topology will be processed. Elements can be dropped for a number of reason:
 
@@ -33,13 +33,13 @@ One important consequence of offering only features that can be relied upon is t
 
 This means that sending CLR objects into a stream that needs to be cleaned up will require the user to ensure that this happens outside of the Akka Streams facilities (e.g. by cleaning them up after a time-out or when their results are observed on the stream output, or by other means like finalizers etc.)
 
-### Resulting implementation Constraints
+### Resulting Implementation Constraints
 
 Compositionality entails re-usability of partial stream topologies, which led us to the lifted approach of describing data flows as (partial) graphs that can act as composite sources, flows (a.k.a. pipes) and sinks of data. These building blocks shall then be freely shareable, with the ability to combine them freely to form larger graphs. The representation of these pieces must therefore be an immutable blueprint that is materialized in an explicit step in order to start the stream processing. The resulting stream processing engine is then also immutable in the sense of having a fixed topology that is prescribed by the blueprint. Dynamic networks need to be modelled by explicitly using the Reactive Streams interfaces for plugging different engines together.
 
 The process of materialization will often create specific objects that are useful to interact with the processing engine once it is running, for example for shutting it down or for extracting metrics. This means that the materialization function produces a result termed the *materialized value of a graph*.
 
-## Inter-operation with other Reactive Streams implementations
+## Inter-Operation with Other Reactive Streams Implementations
 
 Akka Streams fully implement the `Reactive Streams` specification and interoperate with all other conformant implementations. We chose to completely separate the Reactive Streams interfaces from the user-level API because we regard them to be an SPI that is not targeted at end users. In order to obtain a `Publisher` or `Subscriber` from an Akka Stream topology, a corresponding `Sink.AsPublisher` or `Source.AsSubscriber` element must be used.
 
@@ -47,7 +47,7 @@ All stream Processors produced by the default materialization of Akka Streams ar
 
 This means that `Sink.AsPublisher<T>(true)` (for enabling fan-out support) must be used where broadcast behavior is needed for inter-operation with other Reactive Streams implementations.
 
-## What shall users of streaming libraries expect?
+## What Shall Users of Streaming Libraries Expect?
 
 We expect libraries to be built on top of Akka Streams. In order to allow users to profit from the principles that are described for Akka Streams above, the following rules are established:
 
@@ -75,7 +75,7 @@ Akka Streams must enable a library to express any stream processing utility in t
 > [!NOTE]
 > A source that emits a stream of streams is still just a normal Source, the kind of elements that are produced does not play a role in the static stream topology that is being expressed.
 
-## The difference between Error and Failure
+## The Difference Between Error and Failure
 
 The starting point for this discussion is the definition given by the [Reactive Manifesto](http://www.reactivemanifesto.org/glossary#Failure). Translated to streams this means that an error is accessible within the stream as a normal data element, while a failure means that the stream itself has failed and is collapsing. In concrete terms, on the Reactive Streams interface level data elements (including errors) are signalled via `OnNext` while failures raise the `OnError` signal.
 
