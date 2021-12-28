@@ -11,7 +11,7 @@ title: Resources
 
 [**Start Bootcamp here.**](http://learnakka.net/)
 
-## Blog posts
+## Blog Posts
 
 ### Petabridge
 

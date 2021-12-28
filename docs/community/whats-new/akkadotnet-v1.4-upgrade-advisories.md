@@ -7,7 +7,7 @@ title: Akka.NET v1.4 Upgrade Advisories
 
 This document contains specific upgrade suggestions, warnings, and notices that you will want to pay attention to when upgrading between versions within the Akka.NET v1.4 roadmap.
 
-## Upgrading to Akka.NET v1.4.20 from Older Versions
+## Upgrading to Akka.NET v1.4.20 From Older Versions
 
 > [!NOTE]
 > This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `long`, `string`) directly over Akka.Remote or Akka.Persistence.

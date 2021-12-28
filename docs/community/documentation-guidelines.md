@@ -2,7 +2,7 @@
 uid: documentation-guidelines
 title: Documentation guidelines
 ---
-# Documentation guidelines
+# Documentation Guidelines
 
 When developers or users have problems with software the usual forum quip is to read the manual. Sometimes in nice tones and others not so nice. It's great when the documentation is succinct and easy to read and comprehend. All too often, though, there are huge swathes of missing, incomplete, or downright wrong bits that leave people more confused than they were before they read the documentation.
 
