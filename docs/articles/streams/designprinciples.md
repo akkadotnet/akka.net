@@ -86,7 +86,7 @@ There is only limited support for treating `OnError` in Akka Streams compared to
 
 The ability for failures to propagate faster than data elements is essential for tearing down streams that are back-pressured --especially since back-pressure can be the failure mode (e.g. by tripping upstream buffers which then abort because they cannot do anything else; or if a dead-lock occurred).
 
-## The semantics of stream recovery
+## The Semantics of Stream Recovery
 
 A recovery element (i.e. any transformation that absorbs an `OnError` signal and turns that into possibly more data elements followed normal stream completion) acts as a bulkhead that confines a stream collapse to a given region of the stream topology. Within the collapsed region buffered elements may be lost, but the outside is not affected by the failure.
 
