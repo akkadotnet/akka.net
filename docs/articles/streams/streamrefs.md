@@ -65,7 +65,7 @@ The process of preparing and running a `ISinkRef<>` powered distributed stream i
 
 ## Configuration
 
-### Stream reference subscription timeouts
+### Stream Reference Subscription Timeouts
 
 All stream references have a subscription timeout, which is intended to prevent resource leaks in situations in which a remote node would requests the allocation of many streams yet never actually run them. In order to prevent this, each stream reference has a default timeout (of 30 seconds), after which the origin will abort the stream offer if the target has not materialized the stream ref in time. After the timeout has triggered, materialization of the target side will fail pointing out that the origin is missing.
 
