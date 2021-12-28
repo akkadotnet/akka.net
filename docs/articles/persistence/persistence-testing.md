@@ -7,14 +7,14 @@ title: Persistence Testing
 It is hard to make persistence work properly. You can rely on Akka. Persistence does, but its own code can be made reliable only by writing
 tests. For this sake, Akka.Net includes a specialized journal and snapshot store to aid in testing persistent actors.
 
-## How to get started
+## How to Get Started
 
 Go and install an additional NuGet package `Akka.Persistence.TestKit.Xunit2`. That package includes a specialized persistent
 journal named `TestJournal` and a snapshot store named `TestSnpashotStore` which will allow controlling behavior of all persistence
 operations to simulate network failures, serialization problems, and other issues. For convenience, the package includes `PersistenceTestKit`
 class to aid in writing unit tests for Akka.Net actor system. This class has a set of methods to alter different aspects of the journal and snapshot store.
 
-## Persistence testing in action
+## Persistence Testing in Action
 
 We need a persistent actor that we will test. Our actor will do simple counting, upon request it will increase, decrease or
 return currently stored value.
