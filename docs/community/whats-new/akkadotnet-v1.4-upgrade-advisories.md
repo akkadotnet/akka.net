@@ -29,7 +29,7 @@ To work around this issue, if you're affected by it (most users are not:)
 * Upgrade all of the nodes to v1.4.20 or later at once;
 * Or upgrade directly to Akka.NET v1.4.26 or later, which resolves this issue and prevents the regression from occurring.
 
-## Upgrading to Akka.NET v1.4.26 from Older Versions
+## Upgrading to Akka.NET v1.4.26 From Older Versions
 
 > [!NOTE]
 > This is an edge-case issue that only affects users who are sending primitive data types (i.e. `int`, `long`, `string`) directly over Akka.Remote or Akka.Persistence.
