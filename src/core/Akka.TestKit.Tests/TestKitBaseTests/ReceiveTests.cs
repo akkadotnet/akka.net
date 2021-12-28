@@ -68,7 +68,7 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
         }
 
         [Fact]
-        public async Task InverseFishForMessage_should_succeed_with_good_input()
+        public async Task FishUntilMessage_should_succeed_with_good_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(1d, TestActor);
@@ -77,13 +77,10 @@ namespace Akka.Testkit.Tests.TestKitBaseTests
 
 
         [Fact]
-        public async Task InverseFishForMessage_should_fail_with_bad_input()
+        public async Task FishUntilMessage_should_fail_with_bad_input()
         {
             var probe = CreateTestProbe("probe");
             probe.Ref.Tell(3, TestActor);
-
-
-            // based on: https://getakka.net/articles/actors/testing-actor-systems.html#the-way-in-between-expecting-exceptions
             Func<Task> func = () => probe.FishUntilMessage<int>(max: TimeSpan.FromMilliseconds(10));
             await func.Should().ThrowAsync<Exception>();
         }
