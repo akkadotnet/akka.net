@@ -2,20 +2,78 @@
 uid: documentation-guidelines
 title: Documentation guidelines
 ---
-# Documentation guidelines
+# Documentation Guidelines
 
-When developers or users have problems with software the usual forum quip is to read the manual. Sometimes in nice tones and others not so nice. It's great when the documentation is succinct and easy to read and comprehend. All too often, though, there are huge swathes of missing, incomplete, or downright wrong bits that leave people more confused than they were before they read the documentation.
-
-So the call goes out for people to help build up the documentation. Which is great until you have a lot of people with their own ideas how everything should be laid out trying to contribute. To alleviate the confusion, guidelines are setup. This document illustrates the documentation guidelines for this project.
-
-There is a ton of work that still needs to be done, especially in the API documentation department. Please don't hesitate to join and contribute to the project. We welcome everyone and could use your help.
+Contributions don't need to be limited just to source code - contributions to documentation are also extremely helpful and assist users in understanding the Akka.NET project.
 
 ## Website
 
 This project uses [DocFX](https://dotnet.github.io/docfx/) to generate our website. This tool uses its own version of the [Markdown](http://daringfireball.net/projects/markdown/syntax) language named 
 [DocFX Flavored Markdown](https://dotnet.github.io/docfx/spec/docfx_flavored_markdown.html) for crafting the documents for the website. Any editor with a valid Markdown plugin based will give you the best preview/edit experience, such as [Atom](https://atom.io/) or [StackEdit](https://stackedit.io/).
 
-To contribute to the website's documentation, fork the main github repository [Akka.Net](https://github.com/akkadotnet/akka.net). The documentation is under the [docs](https://github.com/akkadotnet/akka.net/tree/dev/docs)  directory. Please be sure to read the [Contributing.md](https://github.com/akkadotnet/akka.net/blob/dev/CONTRIBUTING.md) before getting started to get acquainted with the project's workflow.
+To contribute to the website's documentation, fork the main GitHub repository [Akka.NET](https://github.com/akkadotnet/akka.net). The documentation is under the [docs](https://github.com/akkadotnet/akka.net/tree/dev/docs)  directory. Please be sure to read the [`CONTRIBUTING.md`](https://github.com/akkadotnet/akka.net/blob/dev/CONTRIBUTING.md) before getting started to get acquainted with the project's workflow.
+
+### Organization of Documentation
+In order to keep the documentation discoverable for users who are unfamiliar with the Akka.NET project, we have to enforce a degree of top-down organization to achieve this.
+
+Our general sitemap looks like this:
+
+![Akka.NET Documentation sitemap](/images/community/contribution-standards/akkadotnet-2022-sitemap.png)
+
+If you want to contribute a new page or documentation area, this should help you generally figure out where to categorize it. If you aren't sure where you should add a new piece of documentation, ask in [project chat](https://gitter.im/akkadotnet/akka.net) or [Akka.NET GitHub Discussions](https://github.com/akkadotnet/akka.net/discussions).
+
+#### Moving Documentation
+One thing we absolutely don't tolerate is breaking existing links in our documentation as lots of external resources depend upon it. Thus, there's a procedure for moving a page from one directory to another that helps us preserve prior links.
+
+**Step 1 - Remove the old page from `toc.yml`**.
+We need to do this in order to prevent the old page from showing up in the navigation under its previous location - we'll add the new destination page back to the `toc.yml` of the appropriate directory.
+
+**Step 2 - Move the `{filename}.md` file to its new location**.
+Move the content to where it's going to live going forward.
+
+**Step 3 - Add the moved `{filename}.md` file to the `toc.yml` of the new folder location**.
+This will update the internal navigation and search to discover the new document.
+
+**Step 4 - Add a `{filename}.html` in the old location of the previous `{filename}.md` file**.
+This file is going to contain content that looks like this:
+
+[!code[Building Akka.NET old documentation location](../building-akka-net.html)]
+
+The HTML file uses a `meta http-equiv = "refresh"` tag to send the user, via an HTTP 301 redirect, to the new file location where the content has been moved. Yes, this is a pain but this is done in order to make sure that third party content and search engines can still find what they're looking for even after the content has been moved.
+
+> [!NOTE]
+> In the future this won't be necessary. Once DocFx3 ships native support for folder and file-level redirects will be supported: https://github.com/dotnet/docfx/issues/3686
+
+### Building Documentation Locally
+Akka.NET's DocFx documentation can be built locally via a clone of the main [Akka.NET GitHub repository](https://github.com/akkadotnet/akka.net)
+
+To preview the documentation for this project, execute the following commands at the root of your local clone of the repository:
+
+**Windows**
+```console
+build.cmd docfx
+```
+
+**Linux / OS X**
+```console
+build.sh docfx
+```
+
+This will generate all of the static HTML / CSS / JS files needed to render the website into the `~/docs/_site` folder in your local repository.
+
+In order for all of the JavaScript components to work correctly in your browser, you'll need to serve the documents via a local webserver rather than the file system. You can launch DocFx's build in server via the following script in the root of this repository:
+
+```console
+serve-docs.cmd
+```
+
+This will use the built-in `docfx.console` binary that is installed as part of the NuGet restore process from executing any of the usual `build.cmd` or `build.sh` steps to preview the fully-rendered documentation. 
+
+### Markdown Linting
+[Akka.NET's build system](xref:building-and-distributing) leverages 
+
+### DocFx Hygeniene
+
 
 ## Code
 
