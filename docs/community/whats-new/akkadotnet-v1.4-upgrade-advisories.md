@@ -52,7 +52,7 @@ This setting is set of `on` by default and it resolves the backwards compatibili
 
 If you are running a mixed .NET Core and .NET Framework cluster, see the process below.
 
-### Deploying v1.4.26 into Mixed .NET Core and .NET Framework Environments
+### Deploying v1.4.26 Into Mixed .NET Core and .NET Framework Environments
 
 *However*, if you are attempting to run a mixed-mode cluster - i.e. some services running on .NET Framework and some running on .NET Core, you will eventually want to turn this setting to `off` in order to facilitate smooth operation between both platforms.
 
