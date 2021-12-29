@@ -67,7 +67,9 @@ For each release of Akka.NET or any of its plugins we include the following in t
 
 This data will be embedded into the `<ReleaseNotes>` NuGet metadata tag (via `common.props` or `Directory.Build.props`) and also in the GitHub Release artifacts listed on the repository.
 
+<!-- markdownlint-disable titlecase-rule -->
 ## Update `dev` and `master` Branches
+<!-- markdownlint-enable titlecase-rule -->
 
 The `dev` branch contains the most recent "unshipped" changes - the `master` branch contains the most recent "shipped" changes. To do a new release we need to:
 
