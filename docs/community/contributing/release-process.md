@@ -61,9 +61,10 @@ For each release of Akka.NET or any of its plugins we include the following in t
 1. The new version number;
 2. The publication date;
 3. A human-written explanation for the changes;
-4. A link to each of the major changes introduced in the release; 
+4. A link to each of the major changes introduced in the release;
 5. If necessary, a link to the GitHub Issue Milestone for this release; and
 6. For the Akka.NET main project only, we run the `/tools/contributors.sh` script to generate the list of contributions by username.
+
 This data will be embedded into the `<ReleaseNotes>` NuGet metadata tag (via `common.props` or `Directory.Build.props`) and also in the GitHub Release artifacts listed on the repository.
 
 <!-- markdownlint-disable titlecase-rule -->
