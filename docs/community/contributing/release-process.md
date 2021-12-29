@@ -80,7 +80,7 @@ The `dev` branch contains the most recent "unshipped" changes - the `master` bra
 
 Next we need to add an appropriate version tag to the repository:
 
-	git tag -a {version} -m "{project} {version}"
-	git push upstream --tags
+    git tag -a {version} -m "{project} {version}"
+    git push upstream --tags
 
 Once this tag is pushed to the central repository it will kick off an Azure DevOps job that will run the [build system](xref:building-and-distributing)'s `build.cmd NuGet` command with the appropriate keys and publish destinations.

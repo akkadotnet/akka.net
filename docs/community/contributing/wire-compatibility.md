@@ -8,6 +8,7 @@ title: Making Wire Format Changes to Akka.NET
 Sometimes it's necessary to introduce new elements to the wire format of Akka.Remote, Akka.Cluster, or Akka.Persistence. This document explains how we try to do that safely in a manner that supports rolling upgrades with no downtime inside production Akka.NET clusters.
 
 ## Wire Compatibility
+
 [Wire compatibility is a distinct problem from API / binary compatibility](https://aaronstannard.com/oss-compatibility-standards/) - and the big problem with wire compatibility is that it runs in two directions:
 
 1. **Backward compatibility**: old versions of the software must be able to successfully send messages to new versions of the software;
@@ -17,6 +18,7 @@ Sometimes it's necessary to introduce new elements to the wire format of Akka.Re
 This can be difficult to do correctly especially the forward compatibility requirement.
 
 ### Akka.NET's Wire Compatibility Requirements
+
 Here are the requirements that Akka.NET introduces to its wire compatibility:
 
 1. All messages written using a previous stable release of Akka.NET should always be able to be read in the future; this is true across even major version upgrades_.
@@ -27,6 +29,7 @@ Here are the requirements that Akka.NET introduces to its wire compatibility:
 Again, we [apply the principles of extend-only design](https://aaronstannard.com/extend-only-design/) here. Once you incorporate a change into the wire format it's there for good.
 
 #### Safely Enhancing Existing Wire Types and Introducing New Ones
+
 Akka.NET largely relies on Google Protocol Buffers for all of its internal messaging, and although we support polymorphic serialization by default for user-objects we strongly encourage those users to adopt schema-based serialization as well.
 
 One of the reasons why schema-based serialization is a preferred choice over polymorphic serialization is its inherent support for sane, manageable versioning. [Google's advice on how to update existing message types](https://developers.google.com/protocol-buffers/docs/proto3#updating) is excellent on this subject.
