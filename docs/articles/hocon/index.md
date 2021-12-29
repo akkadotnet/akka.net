@@ -26,7 +26,7 @@ You can play around with HOCON syntax in real-time by going to [hocon-playground
 
 Much of this is defined with reference to JSON; you can find the JSON spec at <http://json.org/>.
 
-### Unchanged from JSON
+### Unchanged From JSON
 
 * files must be valid UTF-8
 * quoted strings are in the same format as JSON strings
@@ -37,7 +37,7 @@ Much of this is defined with reference to JSON; you can find the JSON spec at <h
 
 Anything between `//` or `#` and the next newline is considered a comment and ignored, unless the `//` or `#` is inside a quoted string.
 
-### Omit root braces
+### Omit Root Braces
 
 JSON documents must have an array or object at the root. Empty
 files are invalid documents, as are files containing only a
@@ -50,7 +50,7 @@ braces.
 A HOCON file is invalid if it omits the opening `{` but still has
 a closing `}`; the curly braces must be balanced.
 
-### Key-value separator
+### Key-Value Separator
 
 You can use the `=` character instead of the standard JSON `:` separator.
 
@@ -72,7 +72,7 @@ Examples:
 * `[,1,2,3]` is invalid because it has an initial comma.
 * `[1,,2,3]` is invalid because it has two commas in a row.
 
-### Duplicate keys and object merging
+### Duplicate Keys and Object Merging
 
 Duplicate keys that are declared later in the string have different behaviors:
 
@@ -111,7 +111,7 @@ the declaration of `"foo" : null` blocks the merge, so that the final result is:
         "foo" : { "b" : 43 }
     }
 
-#### Array and object concatenation
+#### Array and Object Concatenation
 
 Arrays can be concatenated with arrays, and objects with objects, but it is an error if they are mixed.
 
@@ -154,7 +154,7 @@ A common use of array concatenation is to add to paths:
     path = [ /bin ]
     path = ${path} [ /usr/bin ]
 
-#### Note: Arrays without commas or newlines
+#### Note: Arrays without Commas or Newlines
 
 Arrays allow you to use newlines instead of commas, but not whitespace instead of commas. Non-newline whitespace will produce concatenation rather than separate elements.
 
@@ -177,7 +177,7 @@ If this gets confusing, just use commas. The concatenation behavior is useful ra
     [ This is an unquoted string my name is ${name}, Hello ${world} ]
     [ ${a} ${b}, ${x} ${y} ]
 
-### Path expressions
+### Path Expressions
 
 Path expressions are used to write out a path through the object graph. They appear in two places; in substitutions, like `${foo.bar}`, and as the keys in objects like `{ foo.bar : 42 }`.
 
@@ -185,7 +185,7 @@ Path expressions are syntactically identical to a value concatenation, except th
 
 When concatenating the path expression, any `.` characters outside quoted strings are understood as path separators, while inside quoted strings `.` has no special meaning. So `foo.bar."hello.world"` would be a path with three elements, looking up key `foo`, key `bar`, then key `hello.world`.
 
-### Paths as keys
+### Paths as Keys
 
 If a key is a path expression with multiple elements, it is expanded to create an object for each path element other than the last. The last path element, combined with the value, becomes a field in the most-nested object.
 
@@ -275,7 +275,7 @@ Examples:
 [!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=ArraySubstitutionSample)]
 [!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=ObjectMergeSubstitutionSample)]
 
-#### Using substitution to access environment variables
+#### Using Substitution to Access Environment Variables
 
 For substitutions which are not found in the configuration tree, it will be resolved by looking at system environment variables.
 
@@ -294,7 +294,7 @@ Environment variables are interpreted as follows:
 * Encoding is handled by C# (`Environment.GetEnvironmentVariable()` already returns a Unicode string)
 * Environment variables always become a string value, though if an app asks for another type automatic type conversion would kick in
 
-##### Note on Windows and case sensitivity of environment variables
+##### Note on Windows and Case Sensitivity of Environment Variables
 
 HOCON's lookup of environment variable values is always case sensitive, but Linux and Windows differ in their handling of case.
 
@@ -354,7 +354,7 @@ Examples:
 
 [!code-csharp[ConfigurationSample](../../../src/core/Akka.Docs.Tests/Configuration/ConfigurationSample.cs?name=CircularReferenceSubstitutionError)]
 
-#### The `+=` field separator
+#### The `+=` Field Separator
 
 Fields may have `+=` as a separator rather than `:` or `=`. A field with `+=` transforms into a self-referential array
 concatenation, like this:

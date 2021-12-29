@@ -10,7 +10,7 @@ Any system that has the need for high-throughput and low latency is a good candi
 
 ## Akka.NET Users
 
-### Transaction processing (Online Gaming, Finance/Banking, Trading, Statistics, Betting, Social Media, Telecom)
+### Transaction Processing (Online Gaming, Finance/Banking, Trading, Statistics, Betting, Social Media, Telecom)
 
 * [CellularSales](https://youtu.be/G3ZafPNI-hk?t=31m6s)
 
