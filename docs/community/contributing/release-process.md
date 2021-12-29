@@ -10,6 +10,7 @@ The process for creating new NuGet releases of Akka.NET or any of its projects i
 ![Akka.NET NuGet package release process](/images/community/build-instructions/release-process.png)
 
 ## Update `RELEASE_NOTES.md`
+
 If the current `RELEASE_NOTES.md` file looks like this:
 
 ```yml
@@ -67,12 +68,14 @@ For each release of Akka.NET or any of its plugins we include the following in t
 This data will be embedded into the `<ReleaseNotes>` NuGet metadata tag (via `common.props` or `Directory.Build.props`) and also in the GitHub Release artifacts listed on the repository.
 
 ## Update `dev` and `master` Branches
+
 The `dev` branch contains the most recent "unshipped" changes - the `master` branch contains the most recent "shipped" changes. To do a new release we need to:
 
 1. Merge the updated `RELEASE_NOTES.md` into `dev` via a "squash and merge" pull request and
 2. Merge the entire `dev` branch into `master` via a "merge commit" pull request.
 
 ## Add a Version-Specific Tag
+
 Next we need to add an appropriate version tag to the repository:
 
 	git tag -a {version} -m "{project} {version}"
