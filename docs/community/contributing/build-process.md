@@ -17,7 +17,7 @@ This project supports a wide variety of commands.
 To list on Windows:
 
 ```console
-C:\> build.cmd help
+build.cmd help
 ```
 
 To list on Linux / OS X:
