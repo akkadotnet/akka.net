@@ -5,7 +5,7 @@ title: Akka.Cluster Overview
 
 # Akka.Cluster Overview
 
-## What is a "Cluster"?
+## What Is a "Cluster"?
 
 A cluster represents a fault-tolerant, elastic, decentralized peer-to-peer network of Akka.NET applications with no single point of failure or bottleneck. Akka.Cluster is the module that gives you the ability to create these applications.
 
@@ -29,7 +29,7 @@ In short, these are the benefits of a properly designed cluster:
 * **Peer-to-peer**: New nodes can contact existing peers, be notified about other peers, and fully integrate themselves into the network without any configuration changes.
 * **No single point of failure/bottleneck**: multiple nodes are able to service requests, increasing throughput and fault tolerance.
 
-## How is Clustering Different From Remoting?
+## How Is Clustering Different From Remoting?
 
 Akka.Cluster is a layer of abstraction on top of Akka.Remote, that puts Remoting to use for a specific structure: clusters of applications. Under the hood, Akka.Remote powers Akka.Cluster, so anything you could do with Akka.Remote is also supported by Akka.Cluster.
 
