@@ -91,10 +91,9 @@ The attached build script will automatically do the following based on the conve
 * Any project name ending with `.Tests.Performance` will automatically be treated as a [NBench](https://github.com/petabridge/NBench) project and will be included during the test stages of this build script; and
 * Any project meeting neither of these conventions will be treated as a NuGet packaging target and its `.nupkg` file will automatically be placed in the `bin\nuget` folder upon running the `build.[cmd|sh] all` command.
 
-
 ## Triggering Builds and Updates on Akka.NET Github Repositories
 
-### Routine Updates and Pull Requests
+## Routine Updates and Pull Requests
 
 Akka.NET uses Azure DevOps to run its builds and the conventions it uses are rather sample:
 
@@ -104,5 +103,3 @@ Akka.NET uses Azure DevOps to run its builds and the conventions it uses are rat
 4. Always `squash` any merges into the `dev` branch in order to preserve a clean commit history.
 
 Please read "[How to Use Github Professionally](https://petabridge.com/blog/use-github-professionally/)" for some more general ideas on how to work with a project like Akka.NET on Github.
-
-

@@ -4,6 +4,7 @@ title: Making Public API Changes
 ---
 
 # Making Public API Changes
+
 Akka.NET follows the [practical semantic versioning methodology](https://aaronstannard.com/oss-semver/), and as such the most important convention we have to be mindful of is accurately communicating to our users whether or not Akka.NET is compatible with previous versions of the API.
 
 Here is what that entails:
@@ -14,6 +15,7 @@ Here is what that entails:
 As such, we have automated procedures designed to ensure that accidental breaking / incompatible changes to the Akka.NET public API can't sail through the pull request process without some human acknowledgement first.
 
 ## Akka.NET API Versioning Policy
+
 We do our best to follow "practical semantic versioning" - here is what that means in practice for Akka.NET and its plugins:
 
 1. **No surprise breaking changes under any circumstances** - we don't let things happen to Akka.NET users by accident. This means observing the lesson of [Chesterton's Fence](https://fs.blog/chestertons-fence/): unless an API is explicitly marked as `InternalApi` or is included inside an `.Internal` namespace assume that it's actively used by downstream plugins or applications and therefore can't be broken on a moments' notice. Users _have_ to be given a heads-up that this is going to happen so they can plan accordingly. This is true for revision, minor versions, and major versions. Therefore, [socialize your proposals for changing public APIs](https://petabridge.com/blog/use-github-professionally/) on Github long before you ever submit a pull request so the Akka.NET team can help plan your changes into a future release.
@@ -23,7 +25,7 @@ We do our best to follow "practical semantic versioning" - here is what that mea
 
 This document outlines how to comply with said procedures.
 
-# API Change Procedures
+## API Change Procedures
 
 The goal of this process is to make conscious decisions about API changes and force the discovery of those changes during the pull request review. Here is how the process works:
 
@@ -42,7 +44,7 @@ The approval file is located at:
 
 To generate a new approval file:
 
-```
+```shell
 PS> cd src/core/Akka.API.Tests
 PS> dotnet test -c Release --framework net6.0
 ```
@@ -77,6 +79,7 @@ The following types of API changes will generally not be approved:
 4. Changing an access modifier from public to private / internal / protected on any member that is or is meant to be used.
 
 ## How to Safely Introduce Public API Changes: Extend-Only Design
+
 So if we need to expose a new member and / or deprecate an existing member inside the public API, how can this be done safely?
 
 At the center of it all is [extend-only design](https://aaronstannard.com/extend-only-design/):
