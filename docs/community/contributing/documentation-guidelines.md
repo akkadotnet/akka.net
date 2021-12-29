@@ -45,9 +45,9 @@ The HTML file uses a `meta http-equiv = "refresh"` tag to send the user, via an 
 > [!NOTE]
 > In the future this won't be necessary. Once DocFx3 ships native support for folder and file-level redirects will be supported: [https://github.com/dotnet/docfx/issues/3686](https://github.com/dotnet/docfx/issues/3686)
 
-### DocFx Hygeniene
+### DocFx Hygiene
 
-This section of the documentation explains the DocFx Hygeniene the Akka.NET project employs in order to ensure that:
+This section of the documentation explains the DocFx hygiene the Akka.NET project employs in order to ensure that:
 
 1. It's easy to correctly link between documents;
 2. To reference code samples directly from the source code of the project, so those code samples are updated automatically when they're modified in-source; and
@@ -121,7 +121,7 @@ public class ClientListener : UntypedActor
 #endregion
 ```
 
-In this case we're telling DocFx to include all of the code between the `#region` and `#endregion` tags for a region named `ClusterClient` witin the `ClientListener.cs` file in this directory.
+In this case we're telling DocFx to include all of the code between the `#region` and `#endregion` tags for a region named `ClusterClient` within the `ClientListener.cs` file in this directory.
 
 This is preferable to referencing entire files or using specific line numbers because it's concise and can still be refactored in the future without having to update the documentation.
 
