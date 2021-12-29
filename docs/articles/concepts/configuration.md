@@ -39,21 +39,21 @@ From there, we can create our `ActorSystem`:
 
 Akka.NET leverages a configuration format, called HOCON, to allow you to configure your Akka.NET applications with whatever level of granularity you want.
 
-### What is HOCON?
+### What Is HOCON?
 
 HOCON (Human-Optimized Config Object Notation) is a flexible and extensible configuration format.
 It allows you to configure everything from Akka.NET's `IActorRefProvider` implementation: logging, network transports, and (more commonly) how individual actors are deployed.
 
 Values returned by HOCON are strongly typed, which means you can fetch out an `int`, a `Timespan`, etc.
 
-### What can I do with HOCON?
+### What Can I Do with HOCON?
 
 HOCON allows you to embed easy-to-read configuration inside of the otherwise hard-to-read XML in App.config and Web.config.
 HOCON also lets you query configs by their section paths, and those sections are exposed strongly typed and parsed values you can use inside your applications.
 
 HOCON also lets you nest and/or chain sections of configuration, creating layers of granularity and providing you a semantically namespaced config.
 
-### What is HOCON usually used for?
+### What Is HOCON Usually Used For?
 
 HOCON is commonly used for tuning logging settings, enabling special modules (such as `Akka.Remote`), or configuring deployments such as the `Dispatcher` or `Router` used for a particular actor.
 
@@ -73,7 +73,7 @@ var system = ActorSystem.Create("MyActorSystem", config);
 
 As you can see in that example, a HOCON `Config` object can be parsed from a `string` using the `ConfigurationFactory.ParseString` method. Once you have a `Config` object, you can then pass this to your `ActorSystem` inside the `ActorSystem.Create` method.
 
-### "Deployment"? What's that?
+### "Deployment"? What's That?
 
 Deployment is a vague concept, but it's closely tied to HOCON. An actor is "deployed" when it is instantiated and put into service within the `ActorSystem` somewhere.
 
@@ -87,7 +87,7 @@ We haven't gone over what all these options mean, but **the key thing to know fo
 
 Flexible config FTW!
 
-#### HOCON can be used inside `App.config` and `Web.config`
+#### HOCON Can Be Used Inside `App.config` and `Web.config`
 
 Parsing HOCON from a `string` is handy for small configuration sections, but what if you want to be able to take advantage of [Configuration Transforms for `App.config` and `Web.config`](https://msdn.microsoft.com/en-us/library/dd465326.aspx) and all of the other nice tools we have in the `System.Configuration` namespace?
 
@@ -173,11 +173,11 @@ var a = yourConfig.GetString("a");
 
 Then the internal HOCON engine will match the first HOCON file that contains a definition for key `a`. In this case, that is `f0`, which returns the value "bar".
 
-#### Why wasn't "foo" returned as the value for "a"?
+#### Why Wasn't "Foo" Returned as the Value for "A"?
 
 The reason is because HOCON only searches through fallback `Config` objects if a match is NOT found earlier in the `Config` chain. If the top-level `Config` object has a match for `a`, then the fallbacks won't be searched. In this case, a match for `a` was found in `f0` so the `a=foo` in `f3` was never reached.
 
-#### What happens when there is a HOCON key miss?
+#### What Happens When There Is a HOCON Key Miss?
 
 What happens if we run the following code, given that `c` isn't defined in `f0` or `f1`?
 
