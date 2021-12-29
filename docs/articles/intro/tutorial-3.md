@@ -196,7 +196,7 @@ the device group actor, with the only difference that it creates device group ac
 We leave tests of the device manager as an exercise as it is very similar to the tests we have written for the group
 actor.
 
-## What is Next?
+## What Is Next?
 
 We have now a hierarchical component for registering and tracking devices and recording measurements. We have seen
 some conversation patterns like:
