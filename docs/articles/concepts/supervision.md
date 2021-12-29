@@ -80,7 +80,7 @@ Monitoring is particularly useful if a supervisor cannot simply restart its chil
 
 Another common use case is that an actor needs to fail in the absence of an external resource, which may also be one of its own children. If a third party terminates a child by way of the `system.Stop(child)` method or sending a `PoisonPill`, the supervisor might well be affected.
 
-### Delayed restarts with the BackoffSupervisor pattern
+### Delayed Restarts with the BackoffSupervisor Pattern
 
 Provided as a built-in pattern the `Akka.Pattern.BackoffSupervisor` implements the so-called exponential backoff supervision strategy, starting a child actor again when it fails, each time with a growing time delay between restarts.
 
