@@ -105,7 +105,7 @@ var worker1Ref = system.ActorOf(system.DI().Props<TypedWorker>(), "Worker1");
 var worker2Ref = system.ActorOf(system.DI().Props<TypedWorker>(), "Worker2");
 ```
 
-### Creating Child Actors using DI
+### Creating Child Actors Using DI
 
 When you want to create child actors from within your existing actors using
 Dependency Injection you can use the Actor Content extension just like in
@@ -203,7 +203,7 @@ var system = ActorSystem.Create("MySystem");
 var propsResolver = new NinjectDependencyResolver(container,system);
 ```
 
-#### Other frameworks
+#### Other Frameworks
 
 Support for additional dependency injection frameworks may be added in the
 future, but you can easily implement your own by implementing an

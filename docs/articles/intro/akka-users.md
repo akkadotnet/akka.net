@@ -10,17 +10,17 @@ Any system that has the need for high-throughput and low latency is a good candi
 
 ## Akka.NET Users
 
-### Transaction processing (Online Gaming, Finance/Banking, Trading, Statistics, Betting, Social Media, Telecom)
+### Transaction Processing (Online Gaming, Finance/Banking, Trading, Statistics, Betting, Social Media, Telecom)
 
 * [CellularSales](https://youtu.be/G3ZafPNI-hk?t=31m6s)
 
-### Service backend (any industry, any app)
+### Service Backend (Any Industry, Any App)
 
 [IVC Business Systems](http://ivcbusinesssystems.com/):
 
 > Sam Covington, IVC Business Systems: We had an in-house "Actor" system that we replaced with Akka.Net, which allowed us to innovate and be productive elsewhere, and not reinvent the wheel(not to mention test it to death). This back end of Microservices forms the basis of all of our products and services. We're using it in our Enterprise Social Product, and our new Livescan Office product for Livescan fingerprinting customers.
 
-### Concurrency/parallelism (any app)
+### Concurrency/Parallelism (Any App)
 
 Share of an article by Joel Mueller, Software Architect, SNL Financial
 
@@ -30,19 +30,19 @@ Share of an article by Joel Mueller, Software Architect, SNL Financial
 
 Master/Worker, Compute Grid, MapReduce etc.
 
-### Batch processing (any industry)
+### Batch Processing (Any Industry)
 
 Camel integration to hook up with batch data sources Actors divide and conquer the batch workloads
 
-### Communications Hub (Telecom, Web media, Mobile media)
+### Communications Hub (Telecom, Web Media, Mobile Media)
 
 * [EventDay: real-time conference and event management at scale with Akka.NET](https://youtu.be/G3ZafPNI-hk?t=6m16s)
 
-### Gaming and Betting (MOM, online gaming, betting)
+### Gaming and Betting (MOM, Online Gaming, Betting)
 
 Scale up, scale out, fault-tolerance / HA
 
-### Business Intelligence/Data Mining/general purpose crunching
+### Business Intelligence/Data Mining/General Purpose Crunching
 
 Tweet from Philip Laureano with links.
 

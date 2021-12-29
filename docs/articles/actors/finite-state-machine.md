@@ -52,7 +52,7 @@ To verify that this buncher actually works, it is quite easy to write a test usi
 
 ## Reference
 
-### The FSM class
+### The FSM Class
 
 The FSM class inherits directly from `ActorBase`, when you extend `FSM` you must be aware that an actor is actually created:
 
@@ -221,7 +221,7 @@ IsTimerActive(name);
 
 These named timers complement state timeouts because they are not affected by intervening reception of other messages.
 
-### Termination from Inside
+### Termination From Inside
 
 The `FSM` is stopped by specifying the result state as
 
@@ -268,7 +268,7 @@ OnTermination(termination =>
 
 As for the `WhenUnhandled` case, this handler is not stacked, so each invocation of `OnTermination` replaces the previously installed handler.
 
-### Termination from Outside
+### Termination From Outside
 
 When an `IActorRef` associated to a `FSM` is stopped using the stop method, its `PostStop` hook will be executed. The default implementation by the `FSM` class is to execute the onTermination handler if that is prepared to handle a `StopEvent(Shutdown, ...)`.
 
