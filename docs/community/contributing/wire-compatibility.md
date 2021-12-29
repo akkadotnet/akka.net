@@ -40,8 +40,7 @@ Consider the `Heartbeat` message in Akka.Cluster:
 
 [!code-csharp[Heartbeat](../../../src/core/Akka.Cluster/ClusterHeartbeat.cs?name=Heartbeat)]
 
-Prior to Akka.NET 1.4.19, we represented `Heartbeat` messages over the wire simply by piggy-backing off of the `
-Address` data type:
+Prior to Akka.NET 1.4.19, we represented `Heartbeat` messages over the wire simply by piggy-backing off of the `Address` data type:
 
 <!-- not using a `code-protobuf` block here because tags aren't supported for `.proto` files -->
 ```proto
