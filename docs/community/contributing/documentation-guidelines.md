@@ -65,7 +65,7 @@ Thus [DocFx Flavored Markdown](https://dotnet.github.io/docfx/spec/docfx_flavore
 
 These allow us to embed code directly from Akka.NET's own source code, tests, and example projects into documentation articles. This is extremely useful as it helps us ensure that when the underlying code sample gets updated the documentation articles that reference that code are subsequently updated as well.
 
-##### Targeting Referenced Code With `#region`s
+##### Targeting Referenced Code With `#region`
 
 So what does a real-world example of this look like? From the [`Akka.Cluster.Tools.ClusterClient` documentation](xref:cluster-client):
 
@@ -125,7 +125,7 @@ In this case we're telling DocFx to include all of the code between the `#region
 
 This is preferable to referencing entire files or using specific line numbers because it's concise and can still be refactored in the future without having to update the documentation.
 
-##### Targeting Referenced Code With `//<{name}>`s
+##### Targeting Referenced Code With `//<{name}>`
 
 If you don't want to use `#region`s to target referenced code inside Akka.NET's documentation, we can also use DocFx's tag syntax to accomplish the same objective:
 
