@@ -17,7 +17,7 @@ Members:
 * `MaxUnconfirmedMessages` is a virtual property which determines the maximum number of unconfirmed deliveries to hold in memory. After this threshold is exceeded, any `Deliver` method will raise `MaxUnconfirmedMessagesExceededException`. It may be overridden or configured inside HOCON configuration under *akka.persistence.at-least-once-delivery.max-unconfirmed-messages* path (100 000 by default).
 * `UnconfirmedCount` property shows the number of unconfirmed messages.
 
-## Relationship between Deliver and ConfirmDelivery
+## Relationship Between Deliver and ConfirmDelivery
 
 To send messages to the destination path, use the `Deliver` method after you have persisted the intent to send the message.
 
