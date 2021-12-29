@@ -13,7 +13,7 @@ Sometimes it's necessary to introduce new elements to the wire format of Akka.Re
 
 1. **Backward compatibility**: old versions of the software must be able to successfully send messages to new versions of the software;
 2. **Backward compatibility**: new versions of the software must be able to process previous versions of the wire format; and
-3. **Foward compatibility**: old versions of the software must be able to process messages from _new versions of the software_ during the upgrade.
+3. **Forward compatibility**: old versions of the software must be able to process messages from _new versions of the software_ during the upgrade.
 
 This can be difficult to do correctly especially the forward compatibility requirement.
 
@@ -22,7 +22,7 @@ This can be difficult to do correctly especially the forward compatibility requi
 Here are the requirements that Akka.NET introduces to its wire compatibility:
 
 1. All messages written using a previous stable release of Akka.NET should always be able to be read in the future; this is true across even major version upgrades_.
-2. New changes to the wire format can be introduced on the read-side at any time, but the write-side must always be opt-in (disabled by default). This is designed to give the Akka.NET userbase some time to gradually absorb the functioning, but mostly dormant read-side code into their applications so future rolling upgrades can be safely executed in the future.
+2. New changes to the wire format can be introduced on the read-side at any time, but the write-side must always be opt-in (disabled by default). This is designed to give the Akka.NET install base some time to gradually absorb the functioning, but mostly dormant read-side code into their applications so future rolling upgrades can be safely executed in the future.
 3. Wire format changes can be made opt-out only after the release of the next minor version of Akka.NET, after which users have had a significant number of versions where the read-side code.
 4. Under no circumstances are new wire types to be introduced using any type of polymorphic serialization. Schema-based serialization via Google Protocol Buffers only.
 
