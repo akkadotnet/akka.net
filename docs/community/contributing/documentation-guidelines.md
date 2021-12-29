@@ -52,7 +52,161 @@ This section of the documentation explains the DocFx Hygeniene the Akka.NET proj
 2. To reference code samples directly from the source code of the project, so those code samples are updated automatically when they're modified in-source; and
 3. To make it easier to extend the documentation over a long period of time.
 
+#### Code Samples Must Use `!code` References
+One of the biggest sources of byte rot, when it comes to documentation, is that the samples embedded in it are gradually deprecated within the code it documents and are subsequently never updated. As a result of this end-users end up newly adopted already-obsolete practices, anti-patterns, and have a bad experience trying to adopt Akka.NET or any other software library.
 
+Thus [DocFx Flavored Markdown](https://dotnet.github.io/docfx/spec/docfx_flavored_markdown.html) has a great solution for us: [`!code` snippets](https://dotnet.github.io/docfx/spec/docfx_flavored_markdown.html#code-snippet).
+
+```
+[!code-<language>[<name>](<codepath><queryoption><queryoptionvalue> "<title>")]
+```
+
+These allow us to embed code directly from Akka.NET's own source code, tests, and example projects into documentation articles. This is extremely useful as it helps us ensure that when the underlying code sample gets updated the documentation articles that reference that code are subsequently updated as well.
+
+##### Targeting Referenced Code with `#region`s
+So what does a real-world example of this look like? From the [`Akka.Cluster.Tools.ClusterClient` documentation](xref:cluster-client):
+
+```
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/ClusterClient/ClientListener.cs?name=ClusterClient)]
+```
+
+This references the following code in the `Akka.Docs.Tests` project:
+
+```csharp
+#region ClusterClient
+public class ClientListener : UntypedActor
+{
+    private readonly IActorRef _targetClient;
+
+    public ClientListener(IActorRef targetClient)
+    {
+        _targetClient = targetClient;
+    }
+
+    protected override void OnReceive(object message)
+    {
+        Context.Become(ReceiveWithContactPoints(ImmutableHashSet<ActorPath>.Empty));
+    }
+
+    protected override void PreStart()
+    {
+        _targetClient.Tell(SubscribeContactPoints.Instance);
+    }
+
+    public UntypedReceive ReceiveWithContactPoints(IImmutableSet<ActorPath> contactPoints)
+    {
+        return (message) =>
+        {
+            switch (message)
+            {
+                // Now do something with the up-to-date "cps"
+                case ContactPoints cp:
+                    Context.Become(ReceiveWithContactPoints(cp.ContactPointsList));
+                    break;
+                // Now do something with an up-to-date "contactPoints + cp"
+                case ContactPointAdded cpa:
+                    Context.Become(ReceiveWithContactPoints(contactPoints.Add(cpa.ContactPoint)));
+                    break;
+                // Now do something with an up-to-date "contactPoints - cp"
+                case ContactPointRemoved cpr:
+                    Context.Become(ReceiveWithContactPoints(contactPoints.Remove(cpr.ContactPoint)));
+                    break;
+            }
+        };
+    }
+}
+#endregion
+```
+
+In this case we're telling DocFx to include all of the code between the `#region` and `#endregion` tags for a region named `ClusterClient` witin the `ClientListener.cs` file in this directory.
+
+This is preferable to referencing entire files or using specific line numbers because it's concise and can still be refactored in the future without having to update the documentation.
+
+##### Targeting Referenced Code with `//<{name}>`s
+If you don't want to use `#region`s to target referenced code inside Akka.NET's documentation, we can also use DocFx's tag syntax to accomplish the same objective:
+
+```
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/ClusterClient/ClientListener.cs?name=ClusterClient)]
+```
+
+Would also work if we used [DocFx's "tag" syntax](https://dotnet.github.io/docfx/spec/docfx_flavored_markdown.html#tag-name-representation-in-code-snippet-source-file):
+
+```csharp
+// <ClusterClient>
+public class ClientListener : UntypedActor
+{
+    private readonly IActorRef _targetClient;
+
+    public ClientListener(IActorRef targetClient)
+    {
+        _targetClient = targetClient;
+    }
+
+    protected override void OnReceive(object message)
+    {
+        Context.Become(ReceiveWithContactPoints(ImmutableHashSet<ActorPath>.Empty));
+    }
+
+    protected override void PreStart()
+    {
+        _targetClient.Tell(SubscribeContactPoints.Instance);
+    }
+
+    public UntypedReceive ReceiveWithContactPoints(IImmutableSet<ActorPath> contactPoints)
+    {
+        return (message) =>
+        {
+            switch (message)
+            {
+                // Now do something with the up-to-date "cps"
+                case ContactPoints cp:
+                    Context.Become(ReceiveWithContactPoints(cp.ContactPointsList));
+                    break;
+                // Now do something with an up-to-date "contactPoints + cp"
+                case ContactPointAdded cpa:
+                    Context.Become(ReceiveWithContactPoints(contactPoints.Add(cpa.ContactPoint)));
+                    break;
+                // Now do something with an up-to-date "contactPoints - cp"
+                case ContactPointRemoved cpr:
+                    Context.Become(ReceiveWithContactPoints(contactPoints.Remove(cpr.ContactPoint)));
+                    break;
+            }
+        };
+    }
+}
+// <ClusterClient>
+```
+
+This would accomplish the exact same result as using `#region` and `#endregion`.
+
+##### Finding Appropriate Code Samples
+You are free to reference samples from any part of the Akka.NET code inside the documentation, but it's often best to have a dedicated code sample for each concept we want demonstrated in the documentation.
+
+In that case it might be best to do one of the following:
+
+1. Contribute a new code sample to the `Akka.Docs.Tests` project - these are all unit tests that are referenced somewhere in our DocFx documentation but those tests must still pass or fail or
+2. Add a dedicated code sample to the `src/samples` directory, in the event that it's sufficiently complex.
+
+#### All Pages Must Have a `uid` Defined
+If you look closely at the header of each DocFx article in this repository you'll notice the following at the top of each page:
+
+```
+---
+uid: documentation-guidelines
+title: Documentation Contribution Guidelines
+---
+```
+
+The `title` defines the page's `<title>` tag, but the `uid` is the canonical unique identity of a given DocFx document. It allows us to build linking systems within DocFx that don't rely on fixed directory structures.
+
+#### All Links Between Documents Must Use `xref`
+So per the previous point above about all pages needing to have their own `uid`s defined, all links between documents within the Akka.NET documentation should all be done using the `xref` format:
+
+```
+[`Akka.Cluster.Tools.ClusterClient` documentation](xref:cluster-client)
+```
+
+This allows us to link to a document regardless of where it is in our file structure, which means that in the event that documentation content is refactored or re-organized the links will still work. 
 
 ### Building Documentation Locally
 Akka.NET's DocFx documentation can be built locally via a clone of the main [Akka.NET GitHub repository](https://github.com/akkadotnet/akka.net)
@@ -102,7 +256,7 @@ If there are any linting errors the exact filename, line number, and rule infrac
 
 ## Code
 
-When documenting code, please use the standard .NET convention of [XML documentation comments](https://msdn.microsoft.com/en-us/library/vstudio/b2s063f7). This allows the project to use tools like Sandcastle to generate the API documentation for the project. The latest stable API documentation can be found [here](https://getakka.net/api/index.html).
+When documenting code, please use the standard .NET convention of [XML triple-slash documentation comments](https://msdn.microsoft.com/en-us/library/vstudio/b2s063f7). This allows the project to use tools like Sandcastle to generate the API documentation for the project. The latest stable API documentation can be found [here](https://getakka.net/api/index.html).
 
 Please be mindful to including *useful* comments when documenting a class or method. *Useful* comments means including full English sentences when summarizing the code and not relying on pre-generated comments from a tool like GhostDoc. Tools like these are great in what they do *if* supplemented with well-reasoned grammar.
 
