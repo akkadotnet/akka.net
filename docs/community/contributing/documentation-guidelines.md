@@ -178,10 +178,10 @@ public class ClientListener : UntypedActor
         };
     }
 }
-// <ClusterClient>
+// </ClusterClient>
 ```
 
-This would accomplish the exact same result as using `#region` and `#endregion`.
+These `// <ClusterClient>` and `// </ClusterClient>` tags would accomplish the exact same result as using `#region` and `#endregion`.
 
 ##### Finding Appropriate Code Samples
 

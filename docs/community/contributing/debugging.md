@@ -33,3 +33,15 @@ Thus, we can get into trouble if we aren't careful about how we write our tests.
 An example of a buggy test:
 
 [!code-csharp[BuggySysMsgSpec](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoorSysMsgOrdering)]
+
+Because system messages jump the line there is no guarantee that this actor will ever successfully process their system message - it depends on the whims on the `ThreadPool` and how long it takes this actor to get activated, hence why it's racy.
+
+There are various ways to rewrite this test to function correctly without any raciness, but the easiest way to do this is to re-arrange the assertions:
+
+[!code-csharp[CorrectSysMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=CorrectSysMsgOrdering)]
+
+In the case of `Context.Watch` and `ExpectTerminated`, there's a second way we can rewrite this test which doesn't require us to alter the fundamental structure of the original buggy test:
+
+[!code-csharp[PoisonPillSysMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoisonPillSysMsgOrdering)]
+
+The bottom line in this case is that specs can be racy because system messages don't follow the ordering guarantees of the other 99.99999% of user messages. This particular issue is most likely to occur when you're writing specs that look for `Terminated` messages or ones that test supervision strategies, both of which necessitate system messages behind the scenes.
