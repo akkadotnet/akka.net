@@ -45,7 +45,7 @@ Akka.NET treats performance as a feature of the framework and therefore we're al
 2. Message processing latency over `Ask<T>`, Akka.Remote, Akka.Persistence, and Akka.Streams;
 3. New actor allocation overhead;
 4. Actor memory footprint; and
-5. Idle CPU consumption in Akka.Cluster. 
+5. Idle CPU consumption in Akka.Cluster.
 
 You can find various open performance issues that have been reported by Akka.NET users and contributors by looking for the "[perf](https://github.com/akkadotnet/akka.net/labels/perf)" label.
 
@@ -59,7 +59,37 @@ We welcome any and all help in working to improve these performance issues so lo
 
 We welcome porting additional features from the [original Akka project](https://akka.io/) or proposing entirely new features, but this is a larger project and you should read the rest of this document before attempting it.
 
-## Creating Contributions That Will be Merged
+### Review Someone Else's Pull Request
+
+Reviewing pull requests takes a lot of time, especially larger ones that touch multiple areas of the Akka.NET code. Anyone can jump in and review anyone else's pull request on Akka.NET's GitHub repositories, not just the core developers and maintainers - thus you can be of great help to the project by reviewing someone else's pull request.
+
+### What Makes For an Effective Pull Request Review?
+
+An effective PR review is design to look for _substantial reasons not to merge a pull request_.
+
+Good reasons not to merge a pull request are:
+
+1. The code included in the PR doesn't actually work or is currently failing its tests;
+2. The code might not be secure;
+3. The code might be caused a related set of tests to fail;
+4. The code isn't sufficiently covered by tests to check against future regressions;
+5. The code really needs to have documentation to go along with it;
+6. The PR doesn't comport with our standards for the project;
+7. The PR takes a dependency on a third party library that we don't really want to include with Akka.NET; or
+8. The code implements a feature or a change that really isn't aligned with the project's goals.
+
+Those are good reasons not to merge a pull request, but the goal of the reviewer is to explain that to the original author and to _help the author resolve those objections_ through constructive, helpful feedback.
+
+During the course of your review, you should comment on the individual changes in the file and provide the following types of feedback to the developer:
+
+* Ask clarifying questions - "why did you choose to do this this way?"
+* Request additional comments in the code or documentation - "you need to add an XML-DOC comment for this;" "you need to add some comments explaining why you chose this;" or "you should add some documentation for this to the website."
+* Explicitly link to areas in our guidelines this pull request violated - i.e. "[you haven't completed the API approval check](xref:making-public-api-changes#approving-a-new-change) for this pull request."
+* Suggest ways in which this code could be better written to comport with best practices or Akka.NET idioms - i.e. "you should really use the `ReceiveActor` API instead of using `PatternMatch`."
+* Look for areas that aren't sufficiently well-tested and help the contributor understand what's needed to properly check against regressions.
+* Point contributors to our "[Debugging Akka.NET](xref:debugging-akkadotnet-core)" documentation if they run into trouble with getting their tests to pass.
+
+## Creating Contributions That Will Be Merged
 
 First, we strongly recommend reading the following two blog posts prior to contributing to Akka.NET - these generally explain how we use GitHub and the workflow we've used for years to manage the project:
 
