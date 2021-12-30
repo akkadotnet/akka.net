@@ -14,9 +14,9 @@ Akka.NET's test suite is quite large and periodically experiences intermittent "
 
 You can view [the test flip rate report for Akka.NET on Azure DevOps here](https://dev.azure.com/dotnet/Akka.NET/_test/analytics?definitionId=84&contextType=build).
 
-What are some common reasons that test flip and how can we debug or fix them?
+What are some common reasons that test flip? How can we debug or fix them?
 
-### Cause 1: Expecting Messages in Fixed Orders
+### Expecting Messages in Fixed Orders
 
 One common reason for tests to experience high flip rates is that they expect events to happen in a fixed order, whereas due to arbitrary scheduling that's not always the case.
 
@@ -32,9 +32,11 @@ How do we fix this? Two possible ways.
 
 The simplest way in this case is to just change the assertion to an `ExpectMsgAllOf` call, which expects an array of messages back _but doesn't care about the order in which they arrive_. This approach may not work in all cases, so the second approach we recommend to fixing these types of buggy tests will usually do the trick.
 
+[!code-csharp[SplitMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=SplitMsgOrdering)]
 
+In this approach we split the assertions up across multiple `TestProbe` instances - that way we're not coupling each input activity to the same output mailbox. This is a more generalized approach for solving these ordering problems.
 
-### Cause 2: Not Accounting for System Message Processing Order
+### Not Accounting for System Message Processing Order
 
 An important caveat when working with Akka.NET actors: system messages always get processed ahead of user-defined messages. `Context.Watch` or `Context.Stop` are examples of methods frequently called from user code which produce system messages.
 
@@ -55,3 +57,17 @@ In the case of `Context.Watch` and `ExpectTerminated`, there's a second way we c
 [!code-csharp[PoisonPillSysMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoisonPillSysMsgOrdering)]
 
 The bottom line in this case is that specs can be racy because system messages don't follow the ordering guarantees of the other 99.99999% of user messages. This particular issue is most likely to occur when you're writing specs that look for `Terminated` messages or ones that test supervision strategies, both of which necessitate system messages behind the scenes.
+
+### Overfitting Timed Assertions
+
+Time-delimited assertions are the biggest source of racy unit tests generally, not just inside the Akka.NET project. These types of issues tend to come up most often inside our Akka.Streams.Tests project with tests that look like this:
+
+[!code-csharp[TooTightTimingSpec](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=TooTightTimingSpec)]
+
+This spec is a real test from Akka.Streams.Tests at the time this document was written. It designed to test the backpressure mechanics of the `GroupedWithin` stage, hence the usage of the `Throttle` flow. Unfortunately this stage depends on the scheduler running behind the scenes at a fixed interval and sometimes, especially on a busy Azure DevOps agent, that scheduler will not be able to hit its intervals precisely. Thus, this test will fail periodically.
+
+Thus there are a few ways we can fix this spec:
+
+1. Use `await` instead of `Task.Wait` - generally we should be doing this everywhere when possible;
+2. Relax the timing constraints either by increasing the wait period or by wrapping the assertion block inside an `AwaitAssert`; or
+3. Use the `TestScheduler` and manually advance the clock. That might cause other problems but it takes the non-determinism of the business of the CPU out of the picture.

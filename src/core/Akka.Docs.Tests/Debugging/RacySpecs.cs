@@ -5,13 +5,21 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.Streams;
+using Akka.Streams.Dsl;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
+using ThrottleMode = Akka.Remote.Transport.ThrottleMode;
 
 namespace DocsExamples.Debugging
 {
@@ -211,5 +219,18 @@ namespace DocsExamples.Debugging
             ExpectTerminated(myActor); // works as expected
         }
         // </PoisonPillSysMsgOrdering>
+        
+        // <TooTightTimedSpec>
+        [Fact(Skip = "Racy by design")]
+        public void TooTightTimingSpec()
+        {
+            Task<IImmutableList<IEnumerable<int>>> t = Source.From(Enumerable.Range(1, 10))
+                .GroupedWithin(1, TimeSpan.FromDays(1))
+                .Throttle(1, TimeSpan.FromMilliseconds(110), 0, Akka.Streams.ThrottleMode.Shaping)
+                .RunWith(Sink.Seq<IEnumerable<int>>(), Sys.Materializer());
+            t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
+        }
+        // </TooTightTimedSpec>
     }
 }
