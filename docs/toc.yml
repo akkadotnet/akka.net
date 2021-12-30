@@ -6,7 +6,7 @@
   homepage: api/index.md
 - name: Community
   href: community/
-  homepage: community/building-akka-net.md
+  homepage: community/online-resources.md
 - name: Project Chat
   href: https://gitter.im/akkadotnet/akka.net
 - name: Source Code

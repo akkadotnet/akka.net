@@ -1,11 +1,14 @@
 ---
 uid: building-and-distributing
-title: Building and Distributing Akka.NET
+title: Building Akka.NET Repositories
 ---
 
-# Building and Distributing Akka.NET
+# Building Akka.NET Repositories
 
 Akka.NET's build system is a modified version of [Petabridge's `dotnet new` template](https://github.com/petabridge/petabridge-dotnet-new), in particular [the Petabridge.Library template](https://github.com/petabridge/Petabridge.Library/) - we typically keep our build system in sync with the documentation you can find there.
+
+> [!TIP]
+> All repositories in the [Akka.NET Github organization](https://github.com/akkadotnet) use a nearly identical build process. Type `build.cmd help` or `build.sh help` in the root of any repository to see a full list of supported build instructions.
 
 ## Supported Commands
 
@@ -14,7 +17,7 @@ This project supports a wide variety of commands.
 To list on Windows:
 
 ```console
-C:\> build.cmd help
+build.cmd help
 ```
 
 To list on Linux / OS X:
@@ -88,27 +91,9 @@ The attached build script will automatically do the following based on the conve
 * Any project name ending with `.Tests.Performance` will automatically be treated as a [NBench](https://github.com/petabridge/NBench) project and will be included during the test stages of this build script; and
 * Any project meeting neither of these conventions will be treated as a NuGet packaging target and its `.nupkg` file will automatically be placed in the `bin\nuget` folder upon running the `build.[cmd|sh] all` command.
 
-### DocFx for Documentation
-
-This solution also supports [DocFx](http://dotnet.github.io/docfx/) for generating both API documentation and articles to describe the behavior, output, and usages of your project.
-
-All of the relevant articles you wish to write should be added to the `/docs/articles/` folder and any API documentation you might need will also appear there.
-
-All of the documentation will be statically generated and the output will be placed in the `/docs/_site/` folder.
-
-#### Previewing Documentation
-
-To preview the documentation for this project, execute the following command at the root of this folder:
-
-```console
-C:\> serve-docs.cmd
-```
-
-This will use the built-in `docfx.console` binary that is installed as part of the NuGet restore process from executing any of the usual `build.cmd` or `build.sh` steps to preview the fully-rendered documentation. For best results, do this immediately after calling `build.cmd buildRelease`.
-
 ## Triggering Builds and Updates on Akka.NET Github Repositories
 
-### Routine Updates and Pull Requests
+## Routine Updates and Pull Requests
 
 Akka.NET uses Azure DevOps to run its builds and the conventions it uses are rather sample:
 
@@ -118,14 +103,3 @@ Akka.NET uses Azure DevOps to run its builds and the conventions it uses are rat
 4. Always `squash` any merges into the `dev` branch in order to preserve a clean commit history.
 
 Please read "[How to Use Github Professionally](https://petabridge.com/blog/use-github-professionally/)" for some more general ideas on how to work with a project like Akka.NET on Github.
-
-### Creating New Akka.NET Releases
-
-The process for creating new NuGet releases of Akka.NET or any of its projects is standardized:
-
-1. Update the `RELEASE_NOTES.md` file to include a summary of all relevant changes and the new updated version number;
-2. Merge the `dev` branch into the `master` branch _by creating a merge commit_ to the history in `master` matches `dev`;
-3. Create a `git tag` that matches the version number in the `RELEASE_NOTES.md` file; and
-4. Push the `tag` to the main Github repository.
-
-This will trigger a new NuGet release to be created, with the release notes from the `RELEASE_NOTES.md` file copied into the body of the NuGet package description.
