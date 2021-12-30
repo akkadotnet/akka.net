@@ -4023,6 +4023,7 @@ namespace Akka.Pattern
     {
         public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
         public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout, System.TimeSpan maxResetTimeout, double exponentialBackoffFactor) { }
+        public CircuitBreaker(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout, System.TimeSpan maxResetTimeout, double exponentialBackoffFactor, double randomFactor) { }
         public System.TimeSpan CallTimeout { get; }
         public long CurrentFailureCount { get; }
         public double ExponentialBackoffFactor { get; }
@@ -4032,6 +4033,7 @@ namespace Akka.Pattern
         public System.Exception LastCaughtException { get; }
         public int MaxFailures { get; }
         public System.TimeSpan MaxResetTimeout { get; }
+        public double RandomFactor { get; }
         public System.TimeSpan ResetTimeout { get; }
         public Akka.Actor.IScheduler Scheduler { get; }
         public static Akka.Pattern.CircuitBreaker Create(Akka.Actor.IScheduler scheduler, int maxFailures, System.TimeSpan callTimeout, System.TimeSpan resetTimeout) { }
@@ -4043,6 +4045,7 @@ namespace Akka.Pattern
         public System.Threading.Tasks.Task<T> WithCircuitBreaker<T>(System.Func<System.Threading.Tasks.Task<T>> body) { }
         public System.Threading.Tasks.Task WithCircuitBreaker(System.Func<System.Threading.Tasks.Task> body) { }
         public Akka.Pattern.CircuitBreaker WithExponentialBackoff(System.TimeSpan maxResetTimeout) { }
+        public Akka.Pattern.CircuitBreaker WithRandomFactor(double randomFactor) { }
         public void WithSyncCircuitBreaker(System.Action body) { }
         public T WithSyncCircuitBreaker<T>(System.Func<T> body) { }
     }
