@@ -100,10 +100,10 @@ Odds are, someone who is not you is going to end up maintaining the code or docu
 
 Therefore, you have to convince those long-term maintainers to:
 
-* Decide that your proposed changes are worth the perpetual maintainence effort;
+* Decide that your proposed changes are worth the perpetual maintenance effort;
 * Spend hours carefully reviewing your propose changes;
 * Spend even more time quality-controlling and testing overhead of your changes; and
-* Fleshing out the documentation, examples, and tutorials to accomodate your changes.
+* Fleshing out the documentation, examples, and tutorials to accommodate your changes.
 
 This isn't being mean - it's what is necessary to maintain Akka.NET's professional standards and to conserve the scarce amount of time maintainers and core developers have to produce new releases that satisfy those standards.
 
@@ -111,7 +111,7 @@ The rest of this guide will provide you with some suggestions on how to create c
 
 ### File a GitHub Issue Before You Code
 
-**This is especiallyimportant if you want to contribute a new feature to Akka.NET**. 
+**This is especially important if you want to contribute a new feature to Akka.NET**.
 
 The pull requests that will almost certainly never be merged into the Akka.NET repository are for "drive-by" features that were never socialized, discussed, or proposed to maintainers in writing prior to being written. Why would we take the time to carefully review something that no one asked for?
 
@@ -120,13 +120,13 @@ Save yourself and everyone else a lot of time and trouble by proposing it in the
 The issue templates will force you to:
 
 * Spell out why you think this change would be valuable;
-* What problems not having this change causes; 
-* What the current alternatives and work-arounds are in Akka.NET; and
+* What problems not having this change causes;
+* What the current alternatives or work-arounds are in Akka.NET; and
 * Any other reasons why solving this issue is important, urgent, or otherwise useful.
 
 Maintainers of Akka.NET _want_ to make Akka.NET as valuable for as many users as possible, so it's in our interest to consider these. Having _other users_ of Akka.NET jump in and support your issue ([which you can socialize in our chatroom](https://gitter.im/akkadotnet/akka.net)) further adds to this "usefulness" or "urgency" signal that maintainers seek.
 
-But most importantly, starting your work by filing an issue first gives maintainers a chance to give you useful feedback on it. For instance, maybe we've already tried something like this in the past and abandoned it for reasons you're unaware of. Sharing knowledge, experience, and creativity in both directions creates an outcome that is stronger than the sum of the parts - so give that process a chance to happen _first_ before the code exists. 
+But most importantly, starting your work by filing an issue first gives maintainers a chance to give you useful feedback on it. For instance, maybe we've already tried something like this in the past and abandoned it for reasons you're unaware of. Sharing knowledge, experience, and creativity in both directions creates an outcome that is stronger than the sum of the parts - so give that process a chance to happen _first_ before the code exists.
 
 It's much more difficult to have that creative conversation around a piece of code that's already set in stone, more or less. Increase your odds of success by engaging the other project members first - even for bugs and other small changes.
 
