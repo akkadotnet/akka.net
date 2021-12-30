@@ -16,13 +16,23 @@ You can view [the test flip rate report for Akka.NET on Azure DevOps here](https
 
 What are some common reasons that test flip and how can we debug or fix them?
 
-### Cause 1: Expecting Messages in Fixed Order
+### Cause 1: Expecting Messages in Fixed Orders
 
 One common reason for tests to experience high flip rates is that they expect events to happen in a fixed order, whereas due to arbitrary scheduling that's not always the case.
 
 For example:
 
-![]
+[!code-csharp[PoorOrderingSpec](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoorOrderingSpec)]
+
+The fundamental misake this spec author made was using simple ordering assumptions: messages are processed in the order in which they're called. This is true *per actor*, not true for *all actors* in the given process. Once we split the traffic between more than one actor's mailbox all of our ordering assumptions go out the window.
+
+How do we fix this? Two possible ways.
+
+[!code-csharp[FixedMsgOrdering](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=FixedMsgOrdering)]
+
+The simplest way in this case is to just change the assertion to an `ExpectMsgAllOf` call, which expects an array of messages back _but doesn't care about the order in which they arrive_. This approach may not work in all cases, so the second approach we recommend to fixing these types of buggy tests will usually do the trick.
+
+
 
 ### Cause 2: Not Accounting for System Message Processing Order
 

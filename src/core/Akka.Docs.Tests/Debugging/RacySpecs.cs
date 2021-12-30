@@ -8,6 +8,7 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
+using Akka.TestKit;
 using Akka.TestKit.Xunit2;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,9 +26,119 @@ namespace DocsExamples.Debugging
         // <PoorMsgOrdering>
         public void PoorOrderingSpec()
         {
+            IActorRef CreateForwarder(IActorRef actorRef)
+            {
+                return Sys.ActorOf(act =>
+                {
+                    act.ReceiveAny((o, context) =>
+                    {
+                        actorRef.Forward(o);
+                    });
+                });
+            }
+
+            // arrange
+            IActorRef a1 = Sys.ActorOf(act => 
+                act.Receive<string>((str, context) =>
+                {
+                    context.Sender.Tell(str + "a1");
+                }), "a1");
             
+            IActorRef a2 = CreateForwarder(a1);
+            IActorRef a3 = CreateForwarder(a1);
+            
+            // act
+            a2.Tell("hit1");
+            a3.Tell("hit2");
+
+            // assert
+            
+            /*
+             * RACY: no guarantee that a2 gets scheduled ahead of a3.
+             * That depends entirely upon the ThreadPool and the dispatcher.
+             */
+            
+            ExpectMsg("hit1a1");
+            ExpectMsg("hit2a1");
         }
         // </PoorMsgOrdering>
+        
+        [Fact]
+        // <FixedMsgOrdering>
+        public void FixedOrderingSpec()
+        {
+            IActorRef CreateForwarder(IActorRef actorRef)
+            {
+                return Sys.ActorOf(act =>
+                {
+                    act.ReceiveAny((o, context) =>
+                    {
+                        actorRef.Forward(o);
+                    });
+                });
+            }
+
+            // arrange
+            IActorRef a1 = Sys.ActorOf(act => 
+                act.Receive<string>((str, context) =>
+                {
+                    context.Sender.Tell(str + "a1");
+                }), "a1");
+            
+            IActorRef a2 = CreateForwarder(a1);
+            IActorRef a3 = CreateForwarder(a1);
+            
+            // act
+            a2.Tell("hit1");
+            a3.Tell("hit2");
+
+            // assert
+
+            // no raciness - ExpectMsgAllOf doesn't care about order
+            ExpectMsgAllOf("hit1a1", "hit2a1");
+        }
+        // </FixedMsgOrdering>
+        
+        [Fact]
+        // <SplitMsgOrdering>
+        public void SplitOrderingSpec()
+        {
+            IActorRef CreateForwarder(IActorRef actorRef)
+            {
+                return Sys.ActorOf(act =>
+                {
+                    act.ReceiveAny((o, context) =>
+                    {
+                        actorRef.Forward(o);
+                    });
+                });
+            }
+
+            // arrange
+            IActorRef a1 = Sys.ActorOf(act => 
+                act.Receive<string>((str, context) =>
+                {
+                    context.Sender.Tell(str + "a1");
+                }), "a1");
+
+            TestProbe p2 = CreateTestProbe();
+            IActorRef a2 = CreateForwarder(a1);
+            TestProbe p3 = CreateTestProbe();
+            IActorRef a3 = CreateForwarder(a1);
+            
+            // act
+            
+            // manually set the sender - one to each TestProbe
+            a2.Tell("hit1", p2);
+            a3.Tell("hit2", p3);
+
+            // assert
+
+            // no raciness - both probes can process their own messages in parallel
+            p2.ExpectMsg("hit1a1");
+            p3.ExpectMsg("hit2a1");
+        }
+        // </SplitMsgOrdering>
 
         [Fact(Skip = "Buggy by design")]
         // <PoorSysMsgOrdering>
