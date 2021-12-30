@@ -12,6 +12,7 @@ on:
 jobs:
   build-and-publish:
     runs-on: windows-latest
+    if: github.repository == 'akkadotnet/akka.net'
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET 5
