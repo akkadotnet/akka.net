@@ -1,3 +1,5 @@
+- name: Contributing to Akka.NET
+  href: index.md
 - name: Build Process
   href: build-process.md
 - name: Release Process
