@@ -19,7 +19,6 @@ using Akka.TestKit.Xunit2;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
-using ThrottleMode = Akka.Remote.Transport.ThrottleMode;
 
 namespace DocsExamples.Debugging
 {
@@ -220,7 +219,7 @@ namespace DocsExamples.Debugging
         }
         // </PoisonPillSysMsgOrdering>
         
-        // <TooTightTimedSpec>
+        // <TooTightTimingSpec>
         [Fact(Skip = "Racy by design")]
         public void TooTightTimingSpec()
         {
@@ -231,6 +230,6 @@ namespace DocsExamples.Debugging
             t.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             t.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10).Select(i => new List<int> {i}));
         }
-        // </TooTightTimedSpec>
+        // </TooTightTimingSpec>
     }
 }

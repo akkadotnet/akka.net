@@ -22,7 +22,7 @@ One common reason for tests to experience high flip rates is that they expect ev
 
 For example:
 
-[!code-csharp[PoorOrderingSpec](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoorOrderingSpec)]
+[!code-csharp[PoorOrderingSpec](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoorMsgOrdering)]
 
 The fundamental mistake this spec author made was using simple ordering assumptions: messages are processed in the order in which they're called. This is true *per actor*, not true for *all actors* in the given process. Once we split the traffic between more than one actor's mailbox all of our ordering assumptions go out the window.
 
