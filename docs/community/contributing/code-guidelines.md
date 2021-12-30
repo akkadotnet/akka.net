@@ -1,8 +1,8 @@
 ---
 uid: contributor-guidelines
-title: Contributor guidelines
+title: Code Guidelines
 ---
-# Contributor Guidelines
+# Code Guidelines
 
 ## To Be Considered While Porting Akka to Akka.NET
 

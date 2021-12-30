@@ -138,7 +138,7 @@ namespace Akka.Cluster.Serialization
                     throw new ArgumentException($"Unknown manifest [{manifest}] in [{nameof(ClusterMessageSerializer)}]");
             }
         }
-        // <MsgRead>
+        // </MsgRead>
 
         public override string Manifest(object o)
         {

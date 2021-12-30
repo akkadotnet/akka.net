@@ -10,3 +10,5 @@
   href: code-guidelines.md
 - name: Documentation Guidelines
   href: documentation-guidelines.md
+- name: Debugging Akka.NET
+  href: debugging.md

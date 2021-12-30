@@ -319,7 +319,7 @@ namespace Akka.Cluster
                 }
             }
         }
-        // <Heartbeat>
+        // </Heartbeat>
 
         /// <summary>
         /// Sends replies to <see cref="Heartbeat"/> messages
