@@ -43,7 +43,7 @@ However, please see this readme for full details.
 * `build.[cmd|sh] nuget nugetpublishurl=$(nugetUrl) nugetkey=$(nugetKey)` - compiles the solution in `Release` modem creates Nuget packages from any project that does not have `<IsPackable>false</IsPackable>` set using the version number from `RELEASE_NOTES.md`and then publishes those packages to the `$(nugetUrl)` using NuGet key `$(nugetKey)`.
 * `build.[cmd|sh] DocFx` - compiles the solution in `Release` mode and then uses [DocFx](http://dotnet.github.io/docfx/) to generate website documentation inside the `./docs/_site` folder. Use the `./serve-docs.cmd` on Windows to preview the documentation.
 
-This build script is powered by [FAKE](https://fake.build/); please see their API documentation should you need to make any changes to the [`build.fsx`](build.fsx) file.
+This build script is powered by [FAKE](https://fake.build/); please see their API documentation should you need to make any changes to the [`build.fsx`](../../../build.fsx) file.
 
 ### Incremental Builds
 
@@ -57,7 +57,7 @@ This option will work locally on Linux or Windows.
 
 ### Release Notes, Version Numbers, Etc
 
-This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](src/common.props).
+This project will automatically populate its release notes in all of its modules via the entries written inside [`RELEASE_NOTES.md`](../../../RELEASE_NOTES.md) and will automatically update the versions of all assemblies and NuGet packages via the metadata included inside [`common.props`](../../../src/common.props).
 
 #### RELEASE_NOTES.md
 
