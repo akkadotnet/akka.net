@@ -218,9 +218,9 @@ namespace DocsExamples.Debugging
             ExpectTerminated(myActor); // works as expected
         }
         // </PoisonPillSysMsgOrdering>
-        
-        // <TooTightTimingSpec>
+
         [Fact(Skip = "Racy by design")]
+        // <TooTightTimingSpec>
         public void TooTightTimingSpec()
         {
             Task<IImmutableList<IEnumerable<int>>> t = Source.From(Enumerable.Range(1, 10))
