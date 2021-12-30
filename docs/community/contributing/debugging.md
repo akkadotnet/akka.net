@@ -24,7 +24,7 @@ For example:
 
 [!code-csharp[PoorOrderingSpec](../../../src/core/Akka.Docs.Tests/Debugging/RacySpecs.cs?name=PoorOrderingSpec)]
 
-The fundamental misake this spec author made was using simple ordering assumptions: messages are processed in the order in which they're called. This is true *per actor*, not true for *all actors* in the given process. Once we split the traffic between more than one actor's mailbox all of our ordering assumptions go out the window.
+The fundamental mistake this spec author made was using simple ordering assumptions: messages are processed in the order in which they're called. This is true *per actor*, not true for *all actors* in the given process. Once we split the traffic between more than one actor's mailbox all of our ordering assumptions go out the window.
 
 How do we fix this? Two possible ways.
 
@@ -58,7 +58,7 @@ In the case of `Context.Watch` and `ExpectTerminated`, there's a second way we c
 
 The bottom line in this case is that specs can be racy because system messages don't follow the ordering guarantees of the other 99.99999% of user messages. This particular issue is most likely to occur when you're writing specs that look for `Terminated` messages or ones that test supervision strategies, both of which necessitate system messages behind the scenes.
 
-### Overfitting Timed Assertions
+### Timed Assertions
 
 Time-delimited assertions are the biggest source of racy unit tests generally, not just inside the Akka.NET project. These types of issues tend to come up most often inside our Akka.Streams.Tests project with tests that look like this:
 
