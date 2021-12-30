@@ -27,7 +27,9 @@
         }, {
             "files": [
                 "articles/**.md",
+                "articles/**.html",
                 "articles/**/toc.yml",
+                "community/**.html",
                 "community/**.md",
                 "community/**/toc.yml",
                 "toc.yml",
