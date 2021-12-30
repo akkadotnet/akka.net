@@ -65,3 +65,60 @@ First, we strongly recommend reading the following two blog posts prior to contr
 
 1. "[How to Use Github Professionally](https://petabridge.com/blog/use-github-professionally/)"
 2. "[Learning the Github Workflow](https://petabridge.com/blog/github-workflow/)"
+
+Odds are, someone who is not you is going to end up maintaining the code or documentation you contribute.
+
+Therefore, you have to convince those long-term maintainers to:
+
+* Decide that your proposed changes are worth the perpetual maintainence effort;
+* Spend hours carefully reviewing your propose changes;
+* Spend even more time quality-controlling and testing overhead of your changes; and
+* Fleshing out the documentation, examples, and tutorials to accomodate your changes.
+
+This isn't being mean - it's what is necessary to maintain Akka.NET's professional standards and to conserve the scarce amount of time maintainers and core developers have to produce new releases that satisfy those standards.
+
+The rest of this guide will provide you with some suggestions on how to create contributions that will be successfully merged.
+
+### File a GitHub Issue Before You Code
+
+**This is especiallyimportant if you want to contribute a new feature to Akka.NET**. 
+
+The pull requests that will almost certainly never be merged into the Akka.NET repository are for "drive-by" features that were never socialized, discussed, or proposed to maintainers in writing prior to being written. Why would we take the time to carefully review something that no one asked for?
+
+Save yourself and everyone else a lot of time and trouble by proposing it in the form [a new GitHub issue](https://github.com/akkadotnet/akka.net/issues/new/choose) first.
+
+The issue templates will force you to:
+
+* Spell out why you think this change would be valuable;
+* What problems not having this change causes; 
+* What the current alternatives and work-arounds are in Akka.NET; and
+* Any other reasons why solving this issue is important, urgent, or otherwise useful.
+
+Maintainers of Akka.NET _want_ to make Akka.NET as valuable for as many users as possible, so it's in our interest to consider these. Having _other users_ of Akka.NET jump in and support your issue ([which you can socialize in our chatroom](https://gitter.im/akkadotnet/akka.net)) further adds to this "usefulness" or "urgency" signal that maintainers seek.
+
+But most importantly, starting your work by filing an issue first gives maintainers a chance to give you useful feedback on it. For instance, maybe we've already tried something like this in the past and abandoned it for reasons you're unaware of. Sharing knowledge, experience, and creativity in both directions creates an outcome that is stronger than the sum of the parts - so give that process a chance to happen _first_ before the code exists. 
+
+It's much more difficult to have that creative conversation around a piece of code that's already set in stone, more or less. Increase your odds of success by engaging the other project members first - even for bugs and other small changes.
+
+### Review Our Contribution Standards and Processes
+
+If you're on this webpage you're already doing the right thing - please see all of the following documents if they're relevant to your changes:
+
+* [Building Akka.NET](xref:building-and-distributing)
+* [Akka.NET Coding Guidelines](xref:contributor-guidelines)
+* [Akka.NET API Compatibility Guidelines](xref:making-public-api-changes)
+* [Akka.NET Wire Compatibility Guidelines](xref:wire-compatibility)
+* [Akka.NET Documentation Guidelines](xref:documentation-guidelines)
+
+### Review Your Own Pull Requests
+
+One thing that will greatly, greatly improve the odds of your pull requests being merged: _review your own PRs first_.
+
+When you review your own pull request, here is what we want to know about each change:
+
+1. Why was this necessary?
+2. What does it do differently than before?
+3. What are some non-obvious things you'd want the next developer to know about this code?
+4. How is this change safe?
+
+These _greatly_ reduce the amount of guesswork and inspection the other maintainers have to make and will greatly improve the speed with which these pull requests can be merged.
