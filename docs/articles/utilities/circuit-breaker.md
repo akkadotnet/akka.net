@@ -4,7 +4,7 @@ title: Circuit Breaker
 ---
 # Circuit Breaker
 
-## Why are they used?
+## Why Are They Used?
 
 A circuit breaker is used to provide stability and prevent cascading failures in distributed systems. These should be used in conjunction with judicious timeouts at the interfaces between remote systems to prevent the failure of a single component from bringing down all components.
 
@@ -14,7 +14,7 @@ Introducing circuit breakers on the web service call would cause the requests to
 
 The Akka.NET library provides an implementation of a circuit breaker called `Akka.Pattern.CircuitBreaker` which has the behavior described below.
 
-## What do they do?
+## What Do They Do?
 
 * During normal operation, a circuit breaker is in the `Closed` state:
   * Exceptions or calls exceeding the configured `СallTimeout` increment a failure counter

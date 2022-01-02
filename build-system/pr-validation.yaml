@@ -48,10 +48,10 @@ jobs:
       - task: Npm@1
         inputs:
           command: "custom"
-          customCommand: "install -g markdownlint-cli"
+          customCommand: "install -g markdownlint-cli markdownlint-rule-titlecase"
       - task: CmdLine@2
         inputs:
-          script: 'markdownlint "docs/**/*.md"'
+          script: 'markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"'
   - job: WindowsBuild
     displayName: Windows Build
     pool:

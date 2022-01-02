@@ -3,7 +3,7 @@ uid: streams-testing
 title: Testing streams
 ---
 
-# Testing streams
+# Testing Streams
 
 Verifying behavior of Akka Stream sources, flows and sinks can be done using
 various code patterns and libraries. Here we will discuss testing these
@@ -18,7 +18,7 @@ flows and sinks. This makes them easily testable by wiring them up to other
 sources or sinks, or some test harnesses that `Akka.Testkit` or
 `Akka.Streams.Testkit` provide.
 
-## Built in sources, sinks and combinators
+## Built in Sources, Sinks and Combinators
 
 Testing a custom sink can be as simple as attaching a source that emits
 elements from a predefined collection, running a constructed test flow and

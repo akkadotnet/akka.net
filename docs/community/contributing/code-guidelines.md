@@ -1,10 +1,10 @@
 ---
 uid: contributor-guidelines
-title: Contributor guidelines
+title: Code Guidelines
 ---
-# Contributor guidelines
+# Code Guidelines
 
-## To be considered while porting Akka to Akka.NET
+## To Be Considered While Porting Akka to Akka.NET
 
 Here are some guidelines to keep in mind when you're considering making some
 changes to Akka.NET:
@@ -22,7 +22,7 @@ changes to Akka.NET:
   Akka.NET developers before making a change, you can [create an issue](https://github.com/akkadotnet/akka.net/issues/new)
   with the `discussion` tag or reach out to [AkkaDotNet on Twitter](https://twitter.com/AkkaDotNet).
 
-## Coding conventions
+## Coding Conventions
 
 * Use the default Resharper guidelines for code
   * Start private member fields with `_`, i.e. `_camelCased`

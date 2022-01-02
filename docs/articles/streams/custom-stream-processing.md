@@ -3,14 +3,14 @@ uid: custom-stream-processing
 title: Custom stream processing
 ---
 
-# Custom stream processing
+# Custom Stream Processing
 
 While the processing vocabulary of Akka Streams is quite rich (see the [Streams Cookbook](xref:streams-cookbook) for examples) it is sometimes necessary to define new transformation stages either because some functionality is missing from the stock operations, or for performance reasons. In this part we show how to build custom processing stages and graph junctions of various kinds.
 
 > [!NOTE]
 > A custom graph stage should not be the first tool you reach for, defining graphs using flows and the graph DSL is in general easier and does to a larger extent protect you from mistakes that might be easy to make with a custom `GraphStage`
 
-## Custom processing with GraphStage
+## Custom Processing with GraphStage
 
 The `GraphStage` abstraction can be used to create arbitrary graph processing stages with any number of input or output ports. It is a counterpart of the `GraphDSL.Create()` method which creates new stream processing stages by composing others. Where `GraphStage` differs is that it creates a stage that is itself not divisible into smaller ones, and allows state to be maintained inside it in a safe way.
 
@@ -95,7 +95,7 @@ var result1Task = mySource.Take(10).RunAggregate(0, (sum, next) => sum + next, m
 var result2Task = mySource.Take(100).RunAggregate(0, (sum, next) => sum + next, materializer);
 ```
 
-### Port states, InHandler and OutHandler
+### Port States, InHandler and OutHandler
 
 In order to interact with a port (`Inlet` or `Outlet`) of the stage we need to be able to receive events and generate new events belonging to the port. From the `GraphStageLogic` the following operations are available on an output port:
 
@@ -156,7 +156,7 @@ Note that since the above methods are implemented by temporarily replacing the h
 
 An example of how this API simplifies a stage can be found below in the second version of the Duplicator.
 
-### Custom linear processing stages using GraphStage
+### Custom Linear Processing Stages Using GraphStage
 
 Graph stages allows for custom linear processing stages through letting them have one input and one output and using `FlowShape` as their shape.
 
@@ -367,7 +367,7 @@ Completion handling usually (but not exclusively) comes into the picture when pr
 
 Stages by default automatically stop once all of their ports (input and output) have been closed externally or internally. It is possible to opt out from this behavior by invoking `SetKeepGoing(true)` (which is not supported from the stage's constructor and usually done in `PreStart`). In this case the stage **must** be explicitly closed by calling `CompleteStage()` or `FailStage(exception)`. This feature carries the risk of leaking streams and actors, therefore it should be used with care.
 
-### Logging inside GraphStages
+### Logging Inside GraphStages
 
 Logging debug or other important information in your stages is often a very good idea, especially when developing
 more advances stages which may need to be debugged at some point.
@@ -437,7 +437,7 @@ public void A_GraphStageLogic_must_support_logging_in_custom_graphstage()
 > **SPI Note:** If you're implementing a Materializer, you can add this ability to your materializer by implementing
 `IMaterializerLoggingProvider` in your `Materializer`.
 
-### Using timers
+### Using Timers
 
 It is possible to use timers in `GraphStages` by using `TimerGraphStageLogic` as the base class for the returned logic. Timers can be scheduled by calling one of `ScheduleOnce(key,delay)`, `SchedulePeriodically(key,period)` or `SchedulePeriodicallyWithInitialDelay(key,delay,period)` and passing an object as a key for that timer (can be any object, for example a String). The `OnTimer(key)` method needs to be overridden and it will be called once the timer of key fires. It is possible to cancel a timer using `CancelTimer(key)` and check the status of a timer with `IsTimerActive(key)`. Timers will be automatically cleaned up when the stage completes.
 
@@ -491,7 +491,7 @@ class TimedGate<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-### Using asynchronous side-channels
+### Using Asynchronous Side-Channels
 
 In order to receive asynchronous events that are not arriving as stream elements (for example a completion of a task or a callback from a 3rd party API) one must acquire a `AsyncCallback` by calling `GetAsyncCallback()` from the stage logic. The method `GetAsyncCallback` takes as a parameter a callback that will be called once the asynchronous event fires. It is important to **not call the callback directly**, instead, the external API must `invoke` the returned `Action`. The execution engine will take care of calling the provided callback in a thread-safe way. The callback can safely access the state of the `GraphStageLogic` implementation.
 
@@ -539,7 +539,7 @@ class KillSwitch<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-### Integration with actors
+### Integration with Actors
 
 **This section is a stub and will be extended in the next release This is an experimental feature***
 
@@ -549,7 +549,7 @@ It is possible to acquire an ActorRef that can be addressed from the outside of 
 * they cannot be returned as materialized values.
 * they cannot be accessed from the constructor of the `GraphStageLogic`, but they can be accessed from the `PreStart()` method.
 
-### Custom materialized values
+### Custom Materialized Values
 
 Custom stages can return materialized values instead of `NotUsed` by inheriting from `GraphStageWithMaterializedValue` instead of the simpler `GraphStage`. The difference is that in this case the method `CreateLogicAndMaterializedValue(inheritedAttributes)` needs to be overridden, and in addition to the stage logic the materialized value must be provided
 
@@ -599,7 +599,7 @@ class FirstValue<T> : GraphStageWithMaterializedValue<FlowShape<T, T>, Task<T>>
 }
 ```
 
-## Using attributes to affect the behavior of a stage
+## Using Attributes to Affect the Behavior of a Stage
 
 > [!NOTE]
 > This section is a stub and will be extended in the next release.
@@ -608,7 +608,7 @@ Stages can access the `Attributes` object created by the materializer. This cont
 
 See [Modularity, Composition and Hierarchy](xref:streams-modularity) for an explanation on how attributes work.
 
-### Rate decoupled graph stages
+### Rate Decoupled Graph Stages
 
 Sometimes it is desirable to decouple the rate of the upstream and downstream of a stage, synchronizing only when needed.
 
@@ -703,7 +703,7 @@ class TwoBuffer<T> : GraphStage<FlowShape<T, T>>
 }
 ```
 
-## Thread safety of custom processing stages
+## Thread Safety of Custom Processing Stages
 
 **All of the above custom stages (linear or graph) provide a few simple guarantees that implementors can rely on.**
 
@@ -715,7 +715,7 @@ In essence, the above guarantees are similar to what `Actor`'s provide, if one t
 > [!WARNING]
 > It is **not** safe to access the state of any custom stage outside of the callbacks that it provides, just like it is unsafe to access the state of an actor from the outside. This means that Future callbacks should not close over internal state of custom stages because such access can be concurrent with the provided callbacks, leading to undefined behavior.
 
-## Resources and the stage lifecycle
+## Resources and the Stage Lifecycle
 
 If a stage manages a resource with a lifecycle, for example objects that need to be shutdown when they are not
 used anymore it is important to make sure this will happen in all circumstances when the stage shuts down.

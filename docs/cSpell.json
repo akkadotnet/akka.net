@@ -3,6 +3,7 @@
     "language": "en",
     "words": [
         "actorref",
+        "arounds",
         "Akka",
         "appender",
         "asynchronicity",
@@ -99,6 +100,9 @@
         "Livescan",
         "mainlogo",
         "Synchromatics",
+        "markdownlint",
+        "mergetool",
+        "titlecase",
         "Varghese"
     ],
     "ignoreRegExpList": [

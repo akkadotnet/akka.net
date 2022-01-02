@@ -49,7 +49,7 @@ This will output:
 stream truncated
 ```
 
-## Recover with retries
+## Recover with Retries
 
 `RecoverWithRetries` allows you to put a new upstream in place of the failed one, recovering stream failures up to a specified maximum number of times.
 
@@ -88,7 +88,7 @@ seven
 eight
 ```
 
-## Delayed restarts with a backoff stage
+## Delayed Restarts with a Backoff Stage
 
 Just as Akka provides the [backoff supervision pattern for actors](xref:supervision#delayed-restarts-with-the-backoffsupervisor-pattern), Akka streams
 also provides a `RestartSource`, `RestartSink` and `RestartFlow` for implementing the so-called *exponential backoff
@@ -221,7 +221,7 @@ var result = source.Limit(1000).RunWith(Sink.Seq<int>(), materializer);
 // result here will be a Task completed with Success(List(0, 1, 4, 0, 5, 12))
 ```
 
-## Errors from SelectAsync
+## Errors From SelectAsync
 
 Stream supervision can also be applied to the tasks of `SelectAsync` and `SelectAsyncUnordered` even if such failures happen in the task rather than inside the stage itself. .
 

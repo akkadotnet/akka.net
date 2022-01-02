@@ -2,7 +2,7 @@
 uid: custom-serialization
 title: Custom serialization
 ---
-# Custom serialization
+# Custom Serialization
 
 Serialization of snapshots and payloads of Persistent messages is configurable with Akka's Serialization infrastructure. For example, if an application wants to serialize
 

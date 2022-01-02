@@ -128,6 +128,11 @@ namespace Akka.Pattern
         /// </summary>
         public double ExponentialBackoffFactor { get; }
 
+        /// <summary>
+        /// TBD
+        /// </summary>
+        public double RandomFactor { get; }
+
         //akka.io implementation is to use nested static classes and access parent member variables
         //.Net static nested classes do not have access to parent member variables -- so we configure the states here and
         //swap them above
@@ -157,7 +162,7 @@ namespace Akka.Pattern
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
         /// <returns>TBD</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
-            : this(scheduler, maxFailures, callTimeout, resetTimeout, TimeSpan.FromDays(36500), 1.0)
+            : this(scheduler, maxFailures, callTimeout, resetTimeout, TimeSpan.FromDays(36500), 1.0, 0.0)
         {
         }
 
@@ -172,8 +177,25 @@ namespace Akka.Pattern
         /// <param name="exponentialBackoffFactor"></param>
         /// <returns>TBD</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor)
+            : this(scheduler, maxFailures, callTimeout, resetTimeout, maxResetTimeout, exponentialBackoffFactor, 0.0)
+        {
+        }
+
+        /// <summary>
+        /// Create a new CircuitBreaker
+        /// </summary>
+        /// <param name="scheduler">Reference to Akka scheduler</param>
+        /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
+        /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
+        /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
+        /// <param name="maxResetTimeout"></param>
+        /// <param name="exponentialBackoffFactor"></param>
+        /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. randomFactor should be in range `0.0` (inclusive) and `1.0` (inclusive). In order to skip this additional delay pass in `0`.</param>
+        /// <returns>TBD</returns>
+        public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor, double randomFactor)
         {
             if (exponentialBackoffFactor < 1.0) throw new ArgumentException("factor must be >= 1.0", nameof(exponentialBackoffFactor));
+            if (randomFactor < 0.0 || randomFactor > 1.0) throw new ArgumentException("randomFactor must be between 0.0 and 1.0", nameof(randomFactor));
 
             Scheduler = scheduler;
             MaxFailures = maxFailures;
@@ -181,6 +203,7 @@ namespace Akka.Pattern
             ResetTimeout = resetTimeout;
             MaxResetTimeout = maxResetTimeout;
             ExponentialBackoffFactor = exponentialBackoffFactor;
+            RandomFactor = randomFactor;
             Closed = new Closed(this);
             Open = new Open(this);
             HalfOpen = new HalfOpen(this);
@@ -197,7 +220,6 @@ namespace Akka.Pattern
         }
 
         public Exception LastCaughtException { get; private set; }
-
 
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
@@ -331,16 +353,21 @@ namespace Akka.Pattern
             Closed.AddListener(callback);
             return this;
         }
-        
+
         /// <summary>
         /// The <see cref="ResetTimeout"/> will be increased exponentially for each failed attempt to close the circuit.
         /// The default exponential backoff factor is 2.
         /// </summary>
         /// <param name="maxResetTimeout">The upper bound of <see cref="ResetTimeout"/></param>
-        public CircuitBreaker WithExponentialBackoff(TimeSpan maxResetTimeout)
-        {
-            return new CircuitBreaker(Scheduler, MaxFailures, CallTimeout, ResetTimeout, maxResetTimeout, 2.0);
-        }
+        public CircuitBreaker WithExponentialBackoff(TimeSpan maxResetTimeout) => 
+            new CircuitBreaker(Scheduler, MaxFailures, CallTimeout, ResetTimeout, maxResetTimeout, 2.0, RandomFactor);
+
+        /// <summary>
+        /// Adds jitter to the delay.
+        /// </summary>
+        /// <param name="randomFactor">after calculation of the back-off an additional random delay based on this factor is added, e.g. 0.2 adds up to 20% delay. In order to skip this additional delay pass in 0.</param>
+        public CircuitBreaker WithRandomFactor(double randomFactor) => 
+            new CircuitBreaker(Scheduler, MaxFailures, CallTimeout, ResetTimeout, MaxResetTimeout, ExponentialBackoffFactor, randomFactor);
 
         /// <summary>
         /// Implements consistent transition between states. Throws IllegalStateException if an invalid transition is attempted.
