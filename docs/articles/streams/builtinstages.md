@@ -449,6 +449,18 @@ are emitted from the source
 The ``Stream`` will no longer be writable when the ``Source`` has been canceled from its downstream, and
 closing the ``Stream`` will complete the ``Source``.
 
+### LazyInitAsync
+
+Creates a real ``Sink`` upon receiving the first element. Internal sink will not be created if there are no elements, because of completion or error.
+
+* If upstream completes before an element was received then the ``Task`` is completed with ``None``.
+* If upstream fails before an element was received, ``sinkFactory`` throws an exception, or materialization of the internal sink fails then the ``Task`` is completed with the exception.
+* Otherwise the ``Task`` is completed with the materialized value of the internal sink.
+
+**cancels** never
+
+**backpressures** when initialized and when created sink backpressures
+
 ## File IO Sinks and Sources
 
 Sources and sinks for reading and writing files can be found on ``FileIO``.
@@ -756,6 +768,22 @@ If the wire-tap ``Sink`` backpressures, elements that would've been sent to it w
 **completes** when upstream completes
 
 **cancels** when downstream cancels
+
+### LazyInitAsync
+
+Creates a real ``Flow`` upon receiving the first element by calling relevant flowFactory given as an argument. Internal flow will not be created if there are no elements, because of completion or error. The materialized value of the ``Flow`` will be the materialized value of the created internal flow.
+
+The materialized value of the Flow is a ``Task<Option<TMat>>`` that is completed with ```TMat``` when the internal flow gets materialized or with ``None`` when there where no elements. If the flow materialization (including the call of the ``flowFactory``) fails then the future is completed with a failure.
+
+Adheres to the ``ActorAttributes.SupervisionStrategy`` attribute.
+
+**emits** when the internal flow is successfully created and it emits
+
+**backpressures** when the internal flow is successfully created and it backpressures
+
+**completes** when upstream completes and all elements have been emitted from the internal flow
+
+**completes** when upstream completes and all futures have been completed and all elements have been emitted
 
 ## Asynchronous Processing Stages
 
