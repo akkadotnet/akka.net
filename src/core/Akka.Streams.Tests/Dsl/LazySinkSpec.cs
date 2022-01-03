@@ -14,6 +14,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Streams.TestKit.Tests;
 using Akka.TestKit;
+using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
@@ -47,10 +48,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var lazySink = Sink.LazySink((int _) => Task.FromResult(this.SinkProbe<int>()),
-                    Fallback<TestSubscriber.Probe<int>>());
+                var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.From(Enumerable.Range(0, 11)).RunWith(lazySink, Materializer);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault);
+                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
                 probe.Request(100);
                 Enumerable.Range(0, 11).ForEach(i => probe.ExpectNext(i));
             }, Materializer);
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
                 var p = new TaskCompletionSource<Sink<int, TestSubscriber.Probe<int>>>();
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
                 var taskProbe = Source.FromPublisher(sourceProbe)
-                        .RunWith(Sink.LazySink((int _) => p.Task, Fallback<TestSubscriber.Probe<int>>()), Materializer);
+                        .RunWith(Sink.LazyInitAsync(() => p.Task), Materializer);
 
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
@@ -74,7 +74,7 @@ namespace Akka.Streams.Tests.Dsl
                 taskProbe.Wait(TimeSpan.FromMilliseconds(200)).ShouldBeFalse();
 
                 p.SetResult(this.SinkProbe<int>());
-                var probe = taskProbe.AwaitResult(RemainingOrDefault);
+                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
                 probe.Request(100);
                 probe.ExpectNext(0);
                 Enumerable.Range(1,10).ForEach(i =>
@@ -91,11 +91,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var lazySink = Sink.LazySink((int _) => Task.FromResult(Sink.Aggregate(0, (int i, int i2) => i + i2)),
-                    () => Task.FromResult(0));
+                var lazySink = Sink.LazyInitAsync(() => Task.FromResult(Sink.Aggregate(0, (int i, int i2) => i + i2)));
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                var taskResult = taskProbe.AwaitResult(RemainingOrDefault);
-                taskResult.AwaitResult(RemainingOrDefault).ShouldBe(0);
+                taskProbe.AwaitResult(RemainingOrDefault).ShouldBe(Option<Task<int>>.None);
             }, Materializer);
         }
 
@@ -104,10 +102,9 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var lazySink = Sink.LazySink((int _) => Task.FromResult(this.SinkProbe<int>()),
-                    Fallback<TestSubscriber.Probe<int>>());
+                var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.Single(1).RunWith(lazySink, Materializer);
-                var taskResult = taskProbe.AwaitResult(RemainingOrDefault);
+                var taskResult = taskProbe.AwaitResult(RemainingOrDefault).Value;
                 taskResult.Request(1).ExpectNext(1).ExpectComplete();
             }, Materializer);
         }
@@ -118,11 +115,7 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
-                var taskProbe = Source.FromPublisher(sourceProbe).RunWith(Sink.LazySink((int _) =>
-                {
-                    throw Ex;
-                }, Fallback<TestSubscriber.Probe<int>>()), Materializer);
-
+                var taskProbe = Source.FromPublisher(sourceProbe).RunWith(Sink.LazyInitAsync<int, NotUsed>(() => throw Ex), Materializer);
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
@@ -137,14 +130,13 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
-                var lazySink = Sink.LazySink((int _) => Task.FromResult(this.SinkProbe<int>()),
-                    Fallback<TestSubscriber.Probe<int>>());
+                var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.FromPublisher(sourceProbe).RunWith(lazySink, Materializer);
                 
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault);
+                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
                 probe.Request(1).ExpectNext(0);
                 sourceSub.SendError(Ex);
                 probe.ExpectError().Should().Be(Ex);
@@ -156,12 +148,8 @@ namespace Akka.Streams.Tests.Dsl
         {
             this.AssertAllStagesStopped(() =>
             {
-                var failedTask = new TaskFactory<Sink<int, TestSubscriber.Probe<int>>>().StartNew(() =>
-                {
-                    throw Ex;
-                });
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
-                var lazySink = Sink.LazySink((int _) => failedTask, Fallback<TestSubscriber.Probe<int>>());
+                var lazySink = Sink.LazyInitAsync(() => Task.FromException<Sink<int, TestSubscriber.Probe<int>>>(Ex));
                 var taskProbe =
                     Source.FromPublisher(sourceProbe)
                         .ToMaterialized(lazySink, Keep.Right)
@@ -181,62 +169,16 @@ namespace Akka.Streams.Tests.Dsl
             this.AssertAllStagesStopped(() =>
             {
                 var sourceProbe = this.CreateManualPublisherProbe<int>();
-                var lazySink = Sink.LazySink((int _) => Task.FromResult(this.SinkProbe<int>()),
-                    Fallback<TestSubscriber.Probe<int>>());
+                var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.FromPublisher(sourceProbe).RunWith(lazySink, Materializer);
                 var sourceSub = sourceProbe.ExpectSubscription();
                 sourceSub.ExpectRequest(1);
                 sourceSub.SendNext(0);
                 sourceSub.ExpectRequest(1);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault);
+                var probe = taskProbe.AwaitResult(RemainingOrDefault).Value;
                 probe.Request(1).ExpectNext(0);
                 probe.Cancel();
                 sourceSub.ExpectCancellation();
-            }, Materializer);
-        }
-
-        [Fact]
-        public void A_LazySink_must_continue_if_supervision_is_resume()
-        {
-            this.AssertAllStagesStopped(() =>
-            {
-                var sourceProbe = this.CreateManualPublisherProbe<int>();
-                var lazySink = Sink.LazySink((int a) =>
-                    {
-                        if (a == 0)
-                            throw Ex;
-                        return Task.FromResult(this.SinkProbe<int>());
-                    },
-                   Fallback<TestSubscriber.Probe<int>>());
-                var taskProbe =
-                    Source.FromPublisher(sourceProbe)
-                        .ToMaterialized(lazySink, Keep.Right)
-                        .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
-                        .Run(Materializer);
-                var sourceSub = sourceProbe.ExpectSubscription();
-                sourceSub.ExpectRequest(1);
-                sourceSub.SendNext(0);
-                sourceSub.ExpectRequest(1);
-                sourceSub.SendNext(1);
-                var probe = taskProbe.AwaitResult(RemainingOrDefault);
-                probe.Request(1);
-                probe.ExpectNext(1);
-                probe.Cancel();
-            }, Materializer);
-        }
-
-        [Fact]
-        public void A_LazySink_must_fail_task_when_zero_throws_exception()
-        {
-            this.AssertAllStagesStopped(() =>
-            {
-                var lazySink = Sink.LazySink((int _) => Task.FromResult(Sink.Aggregate<int, int>(0, (i, i1) => i + i1)),
-                    () =>
-                    {
-                        throw Ex;
-                    });
-                var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                taskProbe.Invoking(t => t.Wait(TimeSpan.FromMilliseconds(300))).Should().Throw<TestException>();
             }, Materializer);
         }
 
@@ -248,9 +190,7 @@ namespace Akka.Streams.Tests.Dsl
                 var matFail = new TestException("fail!");
 
                 var task = Source.Single("whatever")
-                    .RunWith(Sink.LazySink<string, NotUsed>(
-                        str => Task.FromResult(Sink.FromGraph(new FailingInnerMat(matFail))),
-                        () => NotUsed.Instance), Materializer);
+                    .RunWith(Sink.LazyInitAsync(() => Task.FromResult(Sink.FromGraph(new FailingInnerMat(matFail)))), Materializer);
 
                 try
                 {
@@ -260,7 +200,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 task.IsFaulted.ShouldBe(true);
                 task.Exception.ShouldNotBe(null);
-                task.Exception.InnerException.Should().BeEquivalentTo(matFail);
+                task.Exception.Flatten().InnerException.Should().BeEquivalentTo(matFail);
 
             }, Materializer);
         }
