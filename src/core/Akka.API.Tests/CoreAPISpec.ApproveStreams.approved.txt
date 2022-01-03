@@ -1316,6 +1316,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> FromSinkAndSource<TIn, TOut, TMat1, TMat2, TMat>(Akka.Streams.IGraph<Akka.Streams.SinkShape<TIn>, TMat1> sink, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat2> source, System.Func<TMat1, TMat2, TMat> combine) { }
         public static Akka.Streams.Dsl.Flow<T, T, Akka.NotUsed> Identity<T>() { }
         public static Akka.Streams.Dsl.Flow<T, T, TMat> Identity<T, TMat>() { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, System.Threading.Tasks.Task<Akka.Util.Option<TMat>>> LazyInitAsync<TIn, TOut, TMat>(System.Func<System.Threading.Tasks.Task<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>>> flowFactory) { }
     }
     public class static FlowOperations
     {
@@ -1910,6 +1911,10 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task> Ignore<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> Last<TIn>() { }
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TIn>> LastOrDefault<TIn>() { }
+        public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<Akka.Util.Option<TMat>>> LazyInitAsync<TIn, TMat>(System.Func<System.Threading.Tasks.Task<Akka.Streams.Dsl.Sink<TIn, TMat>>> sinkFactory) { }
+        [System.ObsoleteAttribute("Use LazyInitAsync instead. LazyInitAsync no more needs a fallback function and th" +
+            "e materialized value more clearly indicates if the internal sink was materialize" +
+            "d or not.")]
         public static Akka.Streams.Dsl.Sink<TIn, System.Threading.Tasks.Task<TMat>> LazySink<TIn, TMat>(System.Func<TIn, System.Threading.Tasks.Task<Akka.Streams.Dsl.Sink<TIn, TMat>>> sinkFactory, System.Func<TMat> fallback) { }
         public static Akka.Streams.Dsl.Sink<TIn, Akka.NotUsed> OnComplete<TIn>(System.Action success, System.Action<System.Exception> failure) { }
         public static Akka.Streams.Dsl.Sink<TIn, Reactive.Streams.IPublisher<TIn>> Publisher<TIn>() { }
@@ -4188,6 +4193,17 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
+    public sealed class LazyFlow<TIn, TOut, TMat> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.FlowShape<TIn, TOut>, System.Threading.Tasks.Task<Akka.Util.Option<TMat>>>
+    {
+        public LazyFlow(System.Func<TIn, System.Threading.Tasks.Task<Akka.Streams.Dsl.Flow<TIn, TOut, TMat>>> flowFactory) { }
+        public Akka.Streams.Inlet<TIn> In { get; }
+        protected override Akka.Streams.Attributes InitialAttributes { get; }
+        public Akka.Streams.Outlet<TOut> Out { get; }
+        public override Akka.Streams.FlowShape<TIn, TOut> Shape { get; }
+        public override Akka.Streams.Stage.ILogicAndMaterializedValue<System.Threading.Tasks.Task<Akka.Util.Option<TMat>>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+        public override string ToString() { }
+    }
+    [Akka.Annotations.InternalApiAttribute()]
     public sealed class LimitWeighted<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public LimitWeighted(long max, System.Func<T, long> costFunc) { }
@@ -4501,6 +4517,7 @@ namespace Akka.Streams.Implementation.Stages
         public static readonly Akka.Streams.Attributes InputStreamSource;
         public static readonly Akka.Streams.Attributes LastOrDefaultSink;
         public static readonly Akka.Streams.Attributes LastSink;
+        public static readonly Akka.Streams.Attributes LazyFlow;
         public static readonly Akka.Streams.Attributes LazySink;
         public static readonly Akka.Streams.Attributes LazySource;
         public static readonly Akka.Streams.Attributes Limit;

@@ -15,6 +15,7 @@ using Akka.Pattern;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
+using Akka.Util;
 using Reactive.Streams;
 
 // ReSharper disable UnusedMember.Global
@@ -534,12 +535,14 @@ namespace Akka.Streams.Dsl
         /// because of completion or error.
         /// </para>
         /// <para>
-        /// If <paramref name="sinkFactory"/> throws an exception and the supervision decision is <see cref="Supervision.Directive.Stop"/> 
-        /// the <see cref="Task"/> will be completed with failure. For all other supervision options it will try to create sink with next element.
+        /// If upstream completes before an element was received then the <see cref="Task"/> is completed with the value created by <paramref name="fallback"/>.
         /// </para>
-        /// <paramref name="fallback"/> will be executed when there was no elements and completed is received from upstream.
         /// <para>
-        /// Adheres to the <see cref="ActorAttributes.SupervisionStrategy"/> attribute.
+        /// If upstream fails before an element was received, <paramref name="sinkFactory"/> throws an exception, or materialization of the internal
+        /// sink fails then the <see cref="Task"/> is completed with the exception.
+        /// </para>
+        /// <para>
+        /// Otherwise the <see cref="Task"/> is completed with the materialized value of the internal sink.
         /// </para>
         /// </summary>
         /// <typeparam name="TIn">TBD</typeparam>
@@ -547,8 +550,31 @@ namespace Akka.Streams.Dsl
         /// <param name="sinkFactory">TBD</param>
         /// <param name="fallback">TBD</param>
         /// <returns>TBD</returns>
-        public static Sink<TIn, Task<TMat>> LazySink<TIn, TMat>(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory,
-            Func<TMat> fallback) => FromGraph(new LazySink<TIn, TMat>(sinkFactory, fallback));
+        [Obsolete("Use LazyInitAsync instead. LazyInitAsync no more needs a fallback function and the materialized value more clearly indicates if the internal sink was materialized or not.")]
+        public static Sink<TIn, Task<TMat>> LazySink<TIn, TMat>(Func<TIn, Task<Sink<TIn, TMat>>> sinkFactory, Func<TMat> fallback) => 
+            FromGraph(new LazySink<TIn, TMat>(sinkFactory)).MapMaterializedValue(t =>             
+              t.ContinueWith(t1 => t1.Result.GetOrElse(fallback()), TaskContinuationOptions.ExecuteSynchronously));
+
+        /// <summary>
+        /// Creates a real <see cref="Sink{TIn,TMat}"/> upon receiving the first element. Internal <see cref="Sink{TIn,TMat}"/> 
+        /// will not be created if there are no elements, because of completion or error.
+        /// <para>
+        /// If upstream completes before an element was received then the <see cref="Task"/> is completed with `default`.
+        /// </para>
+        /// <para>
+        /// If upstream fails before an element was received, <paramref name="sinkFactory"/> throws an exception, or materialization of the internal
+        /// sink fails then the <see cref="Task"/> is completed with the exception.
+        /// </para>
+        /// <para>
+        /// Otherwise the <see cref="Task"/> is completed with the materialized value of the internal sink.
+        /// </para>
+        /// </summary>
+        /// <typeparam name="TIn">TBD</typeparam>
+        /// <typeparam name="TMat">TBD</typeparam>
+        /// <param name="sinkFactory">TBD</param>
+        /// <returns></returns>
+        public static Sink<TIn, Task<Option<TMat>>> LazyInitAsync<TIn, TMat>(Func<Task<Sink<TIn, TMat>>> sinkFactory) =>
+            FromGraph(new LazySink<TIn, TMat>(_ => sinkFactory()));
 
         /// <summary>
         /// A graph with the shape of a sink logically is a sink, this method makes
