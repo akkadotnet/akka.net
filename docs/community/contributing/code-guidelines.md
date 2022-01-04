@@ -22,6 +22,8 @@ changes to Akka.NET:
   Akka.NET developers before making a change, you can [create an issue](https://github.com/akkadotnet/akka.net/issues/new)
   with the `discussion` tag or reach out to [AkkaDotNet on Twitter](https://twitter.com/AkkaDotNet).
 
+For a more complete guide on how to convert Scala code to C#, please read the [Scala To C# Conversion Guide](xref:porting-guide)
+
 ## Coding Conventions
 
 * Use the default Resharper guidelines for code
