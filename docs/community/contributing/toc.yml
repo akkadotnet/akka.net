@@ -10,6 +10,8 @@
   href: wire-compatibility.md
 - name: Code Guidelines
   href: code-guidelines.md
+- name: Scala To C# Conversion Guide
+  href: porting-guide.md
 - name: Documentation Guidelines
   href: documentation-guidelines.md
 - name: Debugging Akka.NET
