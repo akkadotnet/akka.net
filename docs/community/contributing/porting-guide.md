@@ -8,7 +8,7 @@ title: Scala To C# Conversion Guide
 * Stay as close as possible to the original JVM implementation,
 * Do not add features that don't exist in JVM Akka into the core Akka.NET
 
-## Case classes
+## Case Classes
 
 From
 
@@ -105,7 +105,7 @@ public sealed class HandingOverData : IEquatable<HandingOverData>
 }
 ```
 
-## case object
+## Case Object
 
 From
 
@@ -179,7 +179,8 @@ public class Person
 }
 ```
 
-## LINQ (collection's methods)
+## LINQ (Collection's Methods)
+
 | scala                                              | C#                                       |
 |---                                                 |---                                       |
 | collectFirst(func)                                 | FirstOrDefault(func)                     |
@@ -244,6 +245,7 @@ public void BufferOr(string grouping, object message, IActorRef originalSender, 
 ```
 
 ## Exceptions
+
 | scala                     | C#                          |
 |---                        |---                          |
 | IllegalArgumentException  | ArgumentException           |
@@ -252,7 +254,7 @@ public void BufferOr(string grouping, object message, IActorRef originalSender, 
 | NullPointerException      | NullReferenceException      |
 | NotSerializableException  | SerializationException      |
 
-## Pattern matching
+## Pattern Matching
 
 ### Constant Patterns
 
@@ -282,6 +284,7 @@ public string TestPattern(object x)
 ```
 
 C# 8 supports it even closer
+
 ```c#
 public string TestPattern(object x) 
 {
@@ -434,6 +437,7 @@ public bool MatchingRole(Member member, string role)
 ```
 
 Or in C# 8
+
 ```c#
 public bool MatchingRole(Member member, string role)
     => member switch 
@@ -549,26 +553,32 @@ if (cost <= 0) throw ArgumentException("cost must be > 0", nameof(cost));
 ```
 
 ## Not covered topics
-- Traits
-- Partial functions
-- Local functions/Nested Methods
-- Tail call recursion
-- For Comprehensions
-- Default Parameter Values
-- Implicit parameters
+
+* Traits
+* Partial functions
+* Local functions/Nested Methods
+* Tail call recursion
+* For Comprehensions
+* Default Parameter Values
+* Implicit parameters
 
 # Tests
+
 * Prefer to use `FluentAssertions` in tests, instead of `Xunit assertions` and `AkkaSpecExtensions`
 
 ## intercept[T]
+
 Akka uses intecept to check that an exception was thrown
+
 ```scala
 intercept[IllegalArgumentException] {
   val serializer = new MiscMessageSerializer(system.asInstanceOf[ExtendedActorSystem])
   serializer.manifest("INVALID")
 }
 ```
+
 in C# you have 2 options
+
 ```c#
 var serializer = new MiscMessageSerializer(Sys.AsInstanceOf<ExtendedActorSystem>());
 
