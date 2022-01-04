@@ -84,7 +84,7 @@ condition. The easiest way to do this is to leverage the Windows 10 WSL 2 Linux 
 
 * Install SWL 2 by following these [instructions](https://docs.microsoft.com/en-us/windows/wsl/install)
 * Create a `.wslconfig` file in `C:\Users\[User Name]\`
-* Copy and paste these configuration. 
+* Copy and paste these configuration.
 
 ```ini
 [wsl2]
