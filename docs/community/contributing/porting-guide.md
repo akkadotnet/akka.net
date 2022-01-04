@@ -429,9 +429,9 @@ public bool MatchingRole(Member member, string role)
     switch (member)
     {
         case Member m:
-	    return m.HasRole(role);
+            return m.HasRole(role);
         default:
-	    return true;	
+            return true;	
     }
 }
 ```
@@ -552,7 +552,7 @@ use `ArgumentException`
 if (cost <= 0) throw ArgumentException("cost must be > 0", nameof(cost));
 ```
 
-## Not covered topics
+## Not Covered Topics
 
 * Traits
 * Partial functions
@@ -566,7 +566,7 @@ if (cost <= 0) throw ArgumentException("cost must be > 0", nameof(cost));
 
 * Prefer to use `FluentAssertions` in tests, instead of `Xunit assertions` and `AkkaSpecExtensions`
 
-## intercept[T]
+## Intercept[T]
 
 Akka uses intecept to check that an exception was thrown
 
